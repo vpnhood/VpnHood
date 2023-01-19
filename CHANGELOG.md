@@ -1,4 +1,8 @@
-# v2.6.337
+# Upcoming
+### Server
+* Feature: Report server public IPs to log
+* Update: Improve IPv6 stability
+
 ### Server
 * Fix: It doesn't generate log
 * Feature: Add linux-arm64 installation

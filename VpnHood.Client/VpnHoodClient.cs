@@ -875,7 +875,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        DisposeAsync().GetAwaiter().GetResult();
+        Task.Run(async () => await DisposeAsync(), CancellationToken.None).GetAwaiter().GetResult();
     }
 
     private readonly AsyncLock _disposeLock = new();

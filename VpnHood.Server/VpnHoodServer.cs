@@ -130,7 +130,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo(
                 environmentVersion: Environment.Version,
-                version: typeof(VpnHoodServer).Assembly.GetName().Version,
+                version: GetType().Assembly.GetName().Version,
                 privateIpAddresses: await IPAddressUtil.GetPrivateIpAddresses(),
                 publicIpAddresses: _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
                 status: Status
@@ -143,7 +143,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 LastError = _lastConfigError
             };
-            var isIpv6Supported = serverInfo.PublicIpAddresses.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+
+            var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+            var publicIpV6 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+            VhLogger.Instance.LogInformation($"Public IPv4: {VhLogger.Format(publicIpV4)}, Public IPv6: {VhLogger.Format(publicIpV6)}");
 
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
@@ -162,7 +165,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
             VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
-            _tcpHost.Start(serverConfig.TcpEndPoints, isIpv6Supported);
+            _tcpHost.Start(serverConfig.TcpEndPoints, publicIpV6 != null);
 
             // set config status
             State = ServerState.Ready;

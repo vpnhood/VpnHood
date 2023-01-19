@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;

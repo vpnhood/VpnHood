@@ -1,4 +1,5 @@
 ﻿using System;
+using VpnHood.Common.Logging;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Tunneling;
@@ -10,4 +11,5 @@ public class ProxyManagerOptions
     public int? MaxUdpWorkerCount { get; set; }
     public int? MaxIcmpWorkerCount { get; set; }
     public bool UseUdpProxy2 { get; set; }
+    public LogScope? LogScope { get; set; }
 }

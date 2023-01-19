@@ -64,9 +64,13 @@ public static class IPAddressUtil
     {
         try
         {
+            //var url = addressFamily == AddressFamily.InterNetwork
+            //    ? "https://api.ipify.org?format=json"
+            //    : "https://api6.ipify.org?format=json";
+
             var url = addressFamily == AddressFamily.InterNetwork
-                ? "https://api.ipify.org?format=json"
-                : "https://api64.ipify.org?format=json";
+                ? "https://ip4.seeip.org/json"
+                : "https://ip6.seeip.org/json";
 
             using var httpClient = new HttpClient();
             httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);

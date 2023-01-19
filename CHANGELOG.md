@@ -1,4 +1,4 @@
-# Upcoming
+# v2.6.338
 ### Server
 * Feature: Report server public IPs to log
 * Update: Improve IPv6 stability

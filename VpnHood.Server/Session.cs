@@ -62,6 +62,9 @@ public class Session : IAsyncDisposable, IJob
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions, HelloRequest? helloRequest)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
+        var logScope = new LogScope();
+        logScope.Data.Add(sessionTuple);
+
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions
@@ -69,7 +72,8 @@ public class Session : IAsyncDisposable, IJob
             UdpTimeout = options.UdpTimeout,
             IcmpTimeout = options.IcmpTimeout,
             MaxUdpWorkerCount = options.MaxUdpPortCount,
-            UseUdpProxy2 = options.UseUdpProxy2
+            UseUdpProxy2 = options.UseUdpProxy2,
+            LogScope = logScope
         });
         _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
@@ -79,15 +83,14 @@ public class Session : IAsyncDisposable, IJob
         _syncCacheSize = options.SyncCacheSize;
         _tcpTimeout = options.TcpTimeout;
         _tcpConnectTimeout = options.TcpConnectTimeout;
-        _netScanExceptionReporter.Data.Add(sessionTuple);
-        _maxTcpConnectWaitExceptionReporter.Data.Add(sessionTuple);
-        _maxTcpChannelExceptionReporter.Data.Add(sessionTuple);
+        _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
+        _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
+        _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         HelloRequest = helloRequest;
         SessionResponseBase = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
         JobSection = new JobSection(options.SyncInterval);
-
 
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount is > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount.Value;

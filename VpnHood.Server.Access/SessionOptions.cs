@@ -30,4 +30,5 @@ public class SessionOptions
     public int? NetScanLimit { get; set; }
     public TimeSpan? NetScanTimeout { get; set; }
     public bool UseUdpProxy2 { get; set; }
+    public bool AllowIpV6 { get; set; } = true;
 }

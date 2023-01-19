@@ -30,6 +30,7 @@ public class UtilTest
     public async Task EventReportCounter()
     {
         using var reportCounter = new TestEventReporter(VhLogger.Instance, "UnitTest");
+        EventReporter.IsDiagnosticMode = false;
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);

@@ -5,7 +5,6 @@ using System;
 using System.Threading.Tasks;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
 

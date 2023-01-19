@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.JobController;
+using VpnHood.Common.Utils;
 
-namespace VpnHood.Common.Utils;
+namespace VpnHood.Common.Logging;
 
 public class EventReporter : IDisposable, IJob
 {
@@ -19,14 +19,16 @@ public class EventReporter : IDisposable, IJob
     public int TotalEventCount { get; private set; }
     public int LastReportEventCount { get; private set; }
     public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
-    public List<Tuple<string, object?>> Data { get; set; } = new();
+    public LogScope LogScope { get; set; }
     public static bool IsDiagnosticMode { get; set; }
 
-    public EventReporter(ILogger logger, string message, EventId eventId = new())
+    public EventReporter(ILogger logger, string message, EventId eventId = new(), LogScope? logScope = null)
     {
         _logger = logger;
         _message = message;
         _eventId = eventId;
+        LogScope = logScope ?? new LogScope();
+
 
         JobRunner.Default.Add(this);
     }
@@ -66,8 +68,8 @@ public class EventReporter : IDisposable, IJob
             Tuple.Create("Total", (object?)TotalEventCount)
         };
 
-        if (Data.Count > 0)
-            args = args.Concat(Data).ToArray();
+        if (LogScope is { Data.Count: > 0 })
+            args = args.Concat(LogScope.Data).ToArray();
 
         var log = _message + " " + string.Join(", ", args.Select(x => $"{x.Item1}: {{{x.Item1}}}"));
         _logger.LogInformation(_eventId, log, args.Select(x => x.Item2).ToArray());

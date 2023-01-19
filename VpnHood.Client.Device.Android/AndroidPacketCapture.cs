@@ -79,12 +79,19 @@ namespace VpnHood.Client.Device.Android
 
             // dnsServers
             if (DnsServers is { Length: > 0 })
+            {
                 foreach (var dnsServer in DnsServers)
-                    builder.AddDnsServer(dnsServer.ToString());
+                    if (dnsServer.AddressFamily != AddressFamily.InterNetworkV6 || AddIpV6Address)
+                        builder.AddDnsServer(dnsServer.ToString());
+            }
             else
+            {
                 builder
-                    .AddDnsServer("8.8.8.8")
-                    .AddDnsServer("2001:4860:4860::8888");
+                    .AddDnsServer("8.8.8.8");
+
+                if (AddIpV6Address)
+                    builder.AddDnsServer("2001:4860:4860::8888");
+            }
 
             // Routes
             if (IncludeNetworks?.Length > 0)

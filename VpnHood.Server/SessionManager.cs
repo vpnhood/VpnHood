@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.JobController;
@@ -61,24 +60,26 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     }
 
     private async Task<Session> CreateSessionInternal(SessionResponse sessionResponse,
-        IPEndPoint localEndPoint, HelloRequest? helloRequest)
+        IPEndPointPair ipEndPointPair, HelloRequest? helloRequest)
     {
         var session = new Session(_accessServer, sessionResponse, _socketFactory,
-            localEndPoint, SessionOptions, TrackingOptions, helloRequest);
+            ipEndPointPair.LocalEndPoint, SessionOptions, TrackingOptions, helloRequest);
 
         // add to sessions
         if (Sessions.TryAdd(session.SessionId, session))
             return session;
 
-        await session.DisposeAsync(true);
-        throw new Exception($"Could not add session to collection: SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+        session.SessionResponse.ErrorMessage = "Could not add session to collection.";
+        session.SessionResponse.ErrorCode = SessionErrorCode.SessionError;
+        await session.DisposeAsync();
+        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse);
 
     }
 
     public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
-        VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request by the access server. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
+        VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
         var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
         {
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
@@ -92,7 +93,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, helloRequest);
 
         // create the session and add it to list
-        var session = await CreateSessionInternal(sessionResponse, ipEndPointPair.RemoteEndPoint, helloRequest);
+        var session = await CreateSessionInternal(sessionResponse, ipEndPointPair, helloRequest);
 
         _ = _tracker?.TrackEvent("Usage", "SessionCreated");
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
@@ -125,7 +126,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
             // create the session even if it contains error to prevent many calls
-            session = await CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
+            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, null);
             VhLogger.Instance.LogInformation(GeneralEventId.Session, "Session has been recovered. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
@@ -144,9 +145,8 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
                 CreatedTime = DateTime.UtcNow,
                 ErrorMessage = ex.Message
 
-            }, ipEndPointPair.LocalEndPoint, null);
-
-            await session.DisposeAsync(false, false);
+            }, ipEndPointPair, null);
+            await session.DisposeAsync();
             throw;
         }
 
@@ -167,8 +167,8 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
             session = await RecoverSession(requestBase, ipEndPointPair);
         }
 
-        if (session.SessionResponseBase.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponseBase);
+        if (session.SessionResponse.ErrorCode != SessionErrorCode.Ok)
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse);
 
         return session;
     }
@@ -212,10 +212,6 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     {
         // find in session
         if (Sessions.TryGetValue(sessionId, out var session))
-        {
-            if (session.SessionResponseBase.ErrorCode == SessionErrorCode.Ok)
-                session.SessionResponseBase.ErrorCode = SessionErrorCode.SessionClosed;
-            await session.DisposeAsync(true);
-        }
+            await session.Close();
     }
 }

@@ -1,6 +1,6 @@
 $curDir = $PSScriptRoot;
 
-Start-Transcript "$curDir/storage/log/update.log";
+Start-Transcript "$curDir/storage/logs/update.log";
 try
 {
     Write-Output "Updating VpnHood Server for Windows...";

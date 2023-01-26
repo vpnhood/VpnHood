@@ -1,4 +1,11 @@
-# v2.6.338
+# Upcoming
+### Server
+* Fix: UDP port memory leak
+* Update: Separate new/close session logs
+* Update: Improve log format
+* Update: Change log files extension from txt to log
+
+# v2.6.339
 ### Server
 * Feature: Report server public IPs to log
 * Update: Improve IPv6 stability

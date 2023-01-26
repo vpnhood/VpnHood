@@ -34,16 +34,21 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         AutoCleanupInternal();
 
         // update old item if expired or return the old item
-        var res = _items.AddOrUpdate(key, valueFactory,
-            (k, oldValue) =>
-            {
-                if (!IsExpired(oldValue)) return oldValue;
-                oldValue.Dispose();
-                return valueFactory(k);
-            });
+        lock (_items)
+        {
+            var res = _items.AddOrUpdate(key, valueFactory,
+                (k, oldValue) =>
+                {
+                    if (!IsExpired(oldValue))
+                        return oldValue;
 
-        res.LastUsedTime = FastDateTime.Now;
-        return res;
+                    oldValue.Dispose();
+                    return valueFactory(k);
+                });
+
+            res.LastUsedTime = FastDateTime.Now;
+            return res;
+        }
     }
 
     public bool TryGetValue(TKey key, out TValue value)
@@ -71,14 +76,17 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     {
         AutoCleanupInternal();
 
-        var res = _items.AddOrUpdate(key, value, (_, oldValue) =>
+        lock (_items)
         {
-            oldValue.Dispose();
-            return value;
-        });
+            var res = _items.AddOrUpdate(key, value, (_, oldValue) =>
+            {
+                oldValue.Dispose();
+                return value;
+            });
 
-        res.LastUsedTime = FastDateTime.Now;
-        return res;
+            res.LastUsedTime = FastDateTime.Now;
+            return res;
+        }
     }
 
     public bool TryAdd(TKey key, TValue value)

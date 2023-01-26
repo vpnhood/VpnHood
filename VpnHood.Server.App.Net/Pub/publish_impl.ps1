@@ -1,8 +1,8 @@
 if ("$moduleDir" -eq "") {throw "moduleDir has not been defined";}
 
 # Calcualted Path
-$module_InfoFileName = $(Split-Path "$module_InfoFile" -leaf);
-$module_PackageFileName = $(Split-Path "$module_PackageFile" -leaf);
+$module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
+$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 $module_InstallerFileName = $(Split-Path "$module_InstallerFile" -leaf);
 
 # prepare publish folder
@@ -39,23 +39,23 @@ $linuxScript  | Out-File -FilePath "$publish_updaterFile" -Encoding ASCII -Force
 $json = @{
     Version = $versionParam; 
     ExeFile = $launcher_exeFile; 
-    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_InfoFileName";
+    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
     InstallScriptUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_InstallerFileName";
     UpdateCode = "5EE5047D-6E67-43D4-A90D-665813CA1E7F"
 };
     
-$json | ConvertTo-Json | Out-File "$publish_InfoFile" -Encoding ASCII;
-$json | ConvertTo-Json | Out-File "$module_InfoFile" -Encoding ASCII;
+$json | ConvertTo-Json | Out-File "$publish_infoFile" -Encoding ASCII;
+$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 
 # zip
 Write-Output "Compressing Server package...";
-if ("$module_PackageFile" -Like "*.zip")
+if ("$module_packageFile" -Like "*.zip")
 {
-    Compress-Archive -Path "$publishDir/*" -DestinationPath "$module_PackageFile" -Force -ErrorAction Stop;
+    Compress-Archive -Path "$publishDir/*" -DestinationPath "$module_packageFile" -Force -ErrorAction Stop;
 }
 else
 {
-    tar -czf "$module_PackageFile" -C "$publishDir/" *;
+    tar -czf "$module_packageFile" -C "$publishDir/" *;
 }
 
 if ($isLatest)

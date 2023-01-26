@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -8,6 +10,7 @@ using System.Threading.Tasks;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using SharpPcap;
 
 namespace VpnHood.Test;
 
@@ -38,7 +41,7 @@ public class TestWebServer : IDisposable
     public IPEndPoint UdpEndPoint3Ip6 = IPEndPoint.Parse("[::1]:20103");
     public IPEndPoint UdpEndPoint4Ip6 = IPEndPoint.Parse("[::1]:20104");
 
-    private IPEndPoint[] UdpEndPointsIp4 => new []
+    private IPEndPoint[] UdpEndPointsIp4 => new[]
     {
         UdpEndPoint1,
         UdpEndPoint2,
@@ -58,8 +61,11 @@ public class TestWebServer : IDisposable
     public Uri[] HttpUrls { get; }
     public Uri[] HttpsUrls { get; }
 
-    public string FileContent1;
-    public string FileContent2;
+    public string FileContent1 { get; set; }
+    public string FileContent2 { get; set; }
+
+    public Uri FileHttpUrl1 => new($"http://{HttpEndPoints.First()}/file1");
+    public Uri FileHttpUrl2 => new($"http://{HttpEndPoints.First()}/file2");
 
     private UdpClient[] UdpClients { get; }
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -123,7 +129,6 @@ public class TestWebServer : IDisposable
         }
     }
 
-
     public void Dispose()
     {
         _cancellationTokenSource.Cancel();
@@ -141,16 +146,24 @@ public class TestWebServer : IDisposable
             _testWebServer = testWebServer;
         }
 
+        // ReSharper disable once UnusedMember.Local
         [Route(HttpVerbs.Get, "/file1")]
-        public Task<string> File1()
+        public async Task File1()
         {
-            return Task.FromResult(_testWebServer.FileContent1);
+            Response.ContentType = MimeType.PlainText;
+            await using var stream = HttpContext.OpenResponseStream();
+            await using var streamWriter = new StreamWriter(stream);
+            await streamWriter.WriteAsync(_testWebServer.FileContent1);
         }
 
+        // ReSharper disable once UnusedMember.Local
         [Route(HttpVerbs.Get, "/file2")]
-        public Task<string> File2()
+        public async Task File2()
         {
-            return Task.FromResult(_testWebServer.FileContent1);
+            Response.ContentType = MimeType.PlainText;
+            await using var stream = HttpContext.OpenResponseStream();
+            await using var streamWriter = new StreamWriter(stream);
+            await streamWriter.WriteAsync(_testWebServer.FileContent2);
         }
     }
 }

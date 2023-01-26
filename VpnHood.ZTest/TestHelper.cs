@@ -10,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
+using PacketDotNet;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.Device;
@@ -41,7 +43,7 @@ internal static class TestHelper
     public static readonly IPEndPoint TEST_TcpEndPoint2 = IPEndPoint.Parse("17.253.144.12:443");
 
     public static readonly IPEndPoint
-        TEST_NtpEndPoint1 = IPEndPoint.Parse("132.163.96.1:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+        TEST_NtpEndPoint1 = IPEndPoint.Parse("132.163.96.3:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
 
     public static readonly IPEndPoint
         TEST_NtpEndPoint2 = IPEndPoint.Parse("132.163.96.2:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
@@ -341,17 +343,23 @@ internal static class TestHelper
         return clientConnect;
     }
 
-    public static VpnHoodApp CreateClientApp(string? appPath = default, TestDeviceOptions? deviceOptions = default)
+    public static AppOptions CreateClientAppOptions()
     {
-        //create app
         var appOptions = new AppOptions
         {
-            AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
+            AppDataPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             LogToConsole = true,
             SessionTimeout = TimeSpan.FromSeconds(2),
             SocketFactory = new TestSocketFactory(false),
             LogAnonymous = false
         };
+        return appOptions;
+    }
+
+    public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default)
+    {
+        //create app
+        appOptions ??= CreateClientAppOptions();
 
         var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);
         clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
@@ -406,6 +414,29 @@ internal static class TestHelper
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
             encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
+    }
+
+    public static async Task<bool> WaitForValue<T, TValue>(T obj, object? expectedValue, Func<T, TValue?> valueFactory, int timeout = 5000)
+    {
+        const int waitTime = 100;
+        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
+        {
+            if (Equals(valueFactory(obj), expectedValue))
+                return true;
+            await Task.Delay(waitTime);
+        }
+
+        return false;
+    }
+
+    public static async Task AssertEqualsWait<T, TValue>(T obj, TValue? expectedValue, Func<T, TValue> valueFactory, string? message = null, int timeout = 5000)
+    {
+        await WaitForValue(obj, expectedValue, valueFactory, timeout);
+
+        if (message!=null)
+            Assert.AreEqual(expectedValue, valueFactory(obj), message);
+        else
+            Assert.AreEqual(expectedValue, valueFactory(obj));
     }
 
     private static bool _isInit;

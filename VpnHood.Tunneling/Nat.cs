@@ -130,7 +130,10 @@ public class Nat : IDisposable
 
     public NatItem GetOrAdd(IPPacket ipPacket)
     {
-        return Get(ipPacket) ?? Add(ipPacket);
+        lock (_lockObject)
+        {
+            return Get(ipPacket) ?? Add(ipPacket);
+        }
     }
 
     public NatItem Add(IPPacket ipPacket, bool overwrite = false)

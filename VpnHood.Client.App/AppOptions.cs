@@ -12,9 +12,11 @@ public class AppOptions
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
     }
 
+    public Uri? UpdateInfoUrl { get; set; }
     public string AppDataPath { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogAnonymous { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = new ClientOptions().SessionTimeout;
     public SocketFactory? SocketFactory { get; set; } = null;
+    public TimeSpan UpdateCheckerInterval { get; set; } = TimeSpan.FromHours(1);
 }

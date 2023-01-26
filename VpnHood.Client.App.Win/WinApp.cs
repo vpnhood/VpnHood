@@ -93,7 +93,12 @@ public class WinApp : IDisposable
         }
 
         // init app
-        VpnHoodApp.Init(new WinAppProvider(), new AppOptions { LogToConsole = logToConsole, AppDataPath = AppLocalDataPath });
+        VpnHoodApp.Init(new WinAppProvider(), new AppOptions
+        {
+            LogToConsole = logToConsole, 
+            AppDataPath = AppLocalDataPath,
+            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
+        });
         VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
 
         // auto connect

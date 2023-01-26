@@ -52,9 +52,9 @@ $json = @{
     UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
     PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
 	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/install";
-	ReleaseDate = "$releaseDate"
-	DeprecatedVersion = "$deprecatedVersion",
-	NotificationDelay = "14.00:00:00"
+	ReleaseDate = "$releaseDate";
+	DeprecatedVersion = "$deprecatedVersion";
+	NotificationDelay = "14.00:00:00";
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 

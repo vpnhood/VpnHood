@@ -24,11 +24,11 @@ $publishDir = "$projectDir/bin/release/publish-win";
 $publish_infoDir = "$publishDir/$versionTag/publish_info";
 $publish_updaterFile = "$publish_infoDir/vhupdate.ps1";
 $publish_launcherFile = "$publish_infoDir/vhserver.ps1";
-$publish_InfoFile = "$publish_infoDir/publish.json";
+$publish_infoFile = "$publish_infoDir/publish.json";
 
-$module_InfoFile = "$moduleDir/VpnHoodServer-win-x64.json";
+$module_infoFile = "$moduleDir/VpnHoodServer-win-x64.json";
 $module_InstallerFile = "$moduleDir/VpnHoodServer-win-x64.ps1";
-$module_PackageFile = "$moduleDir/VpnHoodServer-win-x64.zip";
+$module_packageFile = "$moduleDir/VpnHoodServer-win-x64.zip";
 
 $lineEnding = "`r`n";
 $runtime = "win-x64";

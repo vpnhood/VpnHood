@@ -29,6 +29,7 @@ $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Bui
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 $releaseDate = Get-Date -asUTC -Format "s";
+$deprecatedVersion = $versionJson.DeprecatedVersion;
 
 # Packages Directory
 $packagesRootDir = "$PSScriptRoot/bin/" + $versionTag;
@@ -59,7 +60,7 @@ Function UpdateProjectVersion([string] $projectFile)
 	$packageVersion = $xml.SelectSingleNode("Project/PropertyGroup/Version");
 	if ($assemblyVersion -and $assemblyVersion.InnerText -ne $versionParam){
 		$assemblyVersion.InnerText = $versionParam;
-		$fileVersion.InnerText = $versionParam;
+		$fileVersion.InnerText = '$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))';
 		$packageVersion.InnerText = $versionParam;
 		$xml.Save($projectFile);
 	}

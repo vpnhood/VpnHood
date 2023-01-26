@@ -173,7 +173,9 @@ public class ClientAppTest
         var clientProfiles = app.ClientProfileStore.ClientProfiles;
         await app.DisposeAsync();
 
-        await using var app2 = TestHelper.CreateClientApp(app.AppDataFolderPath);
+        var appOptions = TestHelper.CreateClientAppOptions();
+        appOptions.AppDataPath = app.AppDataFolderPath;
+        await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
         Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length,
             "ClientProfiles count are not same!");
         Assert.IsNotNull(
@@ -509,10 +511,10 @@ public class ClientAppTest
         var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
         var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
 
-        app.Connect(clientProfile1.ClientProfileId).GetAwaiter();
+        await app.Connect(clientProfile1.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-        app.Connect(clientProfile2.ClientProfileId).GetAwaiter();
+        await app.Connect(clientProfile2.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,

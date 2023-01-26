@@ -32,7 +32,7 @@ public class ServerApp : IDisposable
     private FileStream? _lockStream;
     private bool _disposed;
 
-    public string AppName { get; } = "VpnHoodServer";
+    public string AppName => "VpnHoodServer";
     public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
     public string AppVersion => typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "*";
     public AppSettings AppSettings { get; }

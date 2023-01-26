@@ -1,4 +1,8 @@
-# Upcoming
+# v2.6.341
+### Client
+* Fix: UDP port memory leak
+* Update: Add build version on top right of screen
+
 ### Server
 * Fix: UDP port memory leak
 * Update: Separate new/close session logs

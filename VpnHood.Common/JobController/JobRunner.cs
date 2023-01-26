@@ -37,10 +37,11 @@ public class JobRunner
 
     public void TimerProc(object? _)
     {
+        if (!_semaphore.Wait(50))
+            return;
+
         try
         {
-            _semaphore.Wait();
-
             // run each watch dog
             foreach (var jobRef in _jobRefs)
             {

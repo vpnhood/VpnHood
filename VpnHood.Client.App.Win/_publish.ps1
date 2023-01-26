@@ -65,7 +65,7 @@ $json = @{
 	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client";
 	ReleaseDate = "$releaseDate";
 	DeprecatedVersion = "$deprecatedVersion";
-	NotificationDelay = "14.00:00:00"
+	NotificationDelay = "3.00:00:00"
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 

@@ -1,8 +1,8 @@
 {
   "Major": 2,
   "Minor": 6,
-  "Build": 340,
-  "BumpTime": "2023-01-21T02:40:49.2791232Z",
+  "Build": 341,
+  "BumpTime": "2023-01-26T20:54:43.8152202Z",
   "Prerelease": true,
   "DeprecatedVersion": "2.0.0"
 }

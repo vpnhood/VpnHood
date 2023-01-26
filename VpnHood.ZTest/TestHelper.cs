@@ -43,10 +43,10 @@ internal static class TestHelper
     public static readonly IPEndPoint TEST_TcpEndPoint2 = IPEndPoint.Parse("17.253.144.12:443");
 
     public static readonly IPEndPoint
-        TEST_NtpEndPoint1 = IPEndPoint.Parse("132.163.96.3:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+        TEST_NtpEndPoint1 = IPEndPoint.Parse("128.138.141.172:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
 
     public static readonly IPEndPoint
-        TEST_NtpEndPoint2 = IPEndPoint.Parse("132.163.96.2:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+        TEST_NtpEndPoint2 = IPEndPoint.Parse("128.138.140.211:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
 
     public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
     public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");

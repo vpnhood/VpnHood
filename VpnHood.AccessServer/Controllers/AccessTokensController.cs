@@ -126,19 +126,18 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .AccessTokens
             .Include(x => x.AccessPointGroup)
             .Include(x => x.AccessPointGroup!.Certificate)
-            .Include(x => x.AccessPointGroup!.AccessPoints)
-            .Where(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId)
+            .Where(x => x.AccessTokenId == accessTokenId)
             .SingleAsync();
 
-        if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
-            throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroupModel)}. Please configure a server for this AccessToken.");
-
-        //var accessTokenModel = result.at;
-        var certificate = accessToken.AccessPointGroup.Certificate!;
+        var certificate = accessToken.AccessPointGroup!.Certificate!;
         var x509Certificate = new X509Certificate2(certificate.RawData);
-        var accessPoints = accessToken.AccessPointGroup.AccessPoints
+        var accessPoints = VhContext.AccessPoints
+            .Where(x => x.AccessPointGroupId == accessToken.AccessPointGroupId && !x.Server!.IsDeleted)
             .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
             .ToArray();
+        
+        if (Util.IsNullOrEmpty(accessPoints))
+            throw new InvalidOperationException("Could not find any public access point for the AccessPointGroup. Please configure a server for this AccessToken.");
 
         // create token
         var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)

@@ -32,7 +32,7 @@ public class AgentServerTest : BaseTest
                     ServerId = Server.ServerId,
                     IpAddress = ServerEndPoint.Address.ToString(),
                     AccessPointGroupId = groupId,
-                    AccessPointMode = AccessPointMode.Public,
+                    AccessPointMode = AccessPointMode.PublicInToken,
                     TcpPort = ServerEndPoint.Port,
                     IsListen = true
                 }).Wait();

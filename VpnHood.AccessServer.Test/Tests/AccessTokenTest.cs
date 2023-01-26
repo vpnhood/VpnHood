@@ -277,7 +277,7 @@ public class AccessTokenTest : BaseTest
                 IpAddress = hostEndPoint.Address.ToString(),
                 TcpPort = hostEndPoint.Port,
                 AccessPointGroupId = accessPointGroup.AccessPointGroupId,
-                AccessPointMode = AccessPointMode.Public,
+                AccessPointMode = AccessPointMode.PublicInToken,
                 IsListen = true
             });
 

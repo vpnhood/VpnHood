@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Dtos;

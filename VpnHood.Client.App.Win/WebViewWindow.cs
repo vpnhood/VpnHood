@@ -19,6 +19,8 @@ public class WebViewWindow
     {
         Form = new Form
         {
+            // ReSharper disable once LocalizableElement
+            Text = "VpnHood!", //required to be the main app
             AutoScaleMode = AutoScaleMode.Font,
             ClientSize = _defWindowSize,
             Visible = false,
@@ -26,6 +28,7 @@ public class WebViewWindow
             Icon = Resource.VpnHoodIcon,
             StartPosition = FormStartPosition.Manual,
             FormBorderStyle = FormBorderStyle.None,
+            TopLevel = true,
             BackColor = _backColor
         };
         Form.FormClosing += Form_FormClosing;
@@ -60,7 +63,7 @@ public class WebViewWindow
         _webView.Size = _defWindowSize;
         _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
         _webView.BackColor = _backColor;
-        _webView.DefaultBackgroundColor= _backColor;
+        _webView.DefaultBackgroundColor = _backColor;
         Form.Controls.Add(_webView);
         ((System.ComponentModel.ISupportInitialize)(_webView)).EndInit();
     }

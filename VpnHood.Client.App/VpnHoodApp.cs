@@ -133,7 +133,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         SentTraffic = Client?.SentByteCount ?? 0,
         ClientIpGroup = _lastClientIpGroup,
         IsWaitingForAd = IsWaitingForAd,
-        VersionStatus = VersionStatus
+        VersionStatus = VersionStatus,
+        LastPublishInfo = LatestPublishInfo
     };
 
     private Guid? DefaultClientProfileId

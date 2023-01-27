@@ -1,4 +1,4 @@
-# Upcoming
+# v2.6.342
 ### Client
 * Fix: UDP port memory leak
 * Feature: Notify when new version is available

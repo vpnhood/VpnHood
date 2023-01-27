@@ -31,7 +31,7 @@ $module_updaterConfigFile= "$moduleDir/$module_title.txt";
 # publish 
 Write-Host;
 if (-not $noclean)  { dotnet clean "$projectDir" -c "Release" --output $publishDir /verbosity:$msverbosity }
-dotnet publish "$projectDir" -c "Release" --output $publishDir --framework "net7.0-windows" --self-contained --runtime "win-x64" /p:Version=$versionParam;
+dotnet publish "$projectDir" -c "Release" --output $publishDir --framework $targetFramework --self-contained --runtime "win-x64" /p:Version=$versionParam;
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
 # Build Setup

@@ -24,7 +24,7 @@ PrepareModuleFolder $moduleDir $moduleDirLatest;
 # calculated path
 $module_infoFileName = "$module_title.json";
 $module_infoFile = "$moduleDir/$module_infoFileName";
-$module_packageFileName = "$module_title.exe";
+$module_packageFileName = "$module_title.msi";
 $module_packageFile = "$solutionDir/VpnHood.Client.App.Win.Setup/release/$module_packageFileName";
 $module_updaterConfigFile= "$moduleDir/$module_title.txt";
 
@@ -47,7 +47,7 @@ URL = https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_p
 Size = $((Get-Item $module_packageFile).length)
 SHA256 = $((Get-FileHash $module_packageFile -Algorithm SHA256).Hash)
 MD5 = $((Get-FileHash $module_packageFile -Algorithm MD5).Hash)
-ServerFileName = $moduleFileName.exe
+ServerFileName = $moduleFileName.msi
 Flags = NoRedetect
 RegistryKey = HKUD\Software\VpnHood\VpnHood\Version
 Version = $versionParam

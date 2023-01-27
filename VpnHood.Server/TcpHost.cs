@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messaging;
@@ -293,8 +294,8 @@ internal class TcpHost : IAsyncDisposable
         var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
         // creating a session
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}",
-            VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), request.ClientInfo.ClientVersion);
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}, UserAgent: {UserAgent}",
+            VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
         var sessionResponse = await _sessionManager.CreateSession(request, ipEndPointPair);
         var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
         session.UseUdpChannel = request.UseUdpChannel;
@@ -306,8 +307,10 @@ internal class TcpHost : IAsyncDisposable
 
         // Report new session
         var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address) : "*";
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, "New Session, SessionId: {SessionId}, TokenId: {TokenId}, ClientId: {ClientId}, ClientIp: {ClientIp}",
-            VhLogger.FormatSessionId(session.SessionId), VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), clientIp);
+        VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
+            "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\tClientIp: {ClientIp-15}\tVersion: {Version}\tOS: {OS}",
+            VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId), session.SessionResponse.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId), clientIp, request.ClientInfo.ClientVersion, UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "SessionId: {SessionId}, Agent: {Agent}", VhLogger.FormatSessionId(session.SessionId), request.ClientInfo.UserAgent);
 
         //tracking
         if (_sessionManager.TrackingOptions.IsEnabled())
@@ -320,6 +323,7 @@ internal class TcpHost : IAsyncDisposable
         // reply hello session
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
+
         var helloResponse = new HelloSessionResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
@@ -354,7 +358,7 @@ internal class TcpHost : IAsyncDisposable
             throw new InvalidOperationException("UdpChannel is not initialized.");
 
         // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new UdpChannelSessionResponse(session.SessionResponseBase)
+        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new UdpChannelSessionResponse(session.SessionResponse)
         {
             UdpKey = session.UdpChannel.Key,
             UdpPort = session.UdpChannel.LocalPort
@@ -387,7 +391,7 @@ internal class TcpHost : IAsyncDisposable
         var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
 
         // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponseBase, cancellationToken);
+        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
 
         // Disable UdpChannel
         session.UseUdpChannel = false;

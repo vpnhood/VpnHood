@@ -48,9 +48,9 @@ gh release create "$versionTag" `
 	-F $releaseRootDir/ReleaseNote.txt `
 	$releaseClientDir/android/VpnHoodClient-android.apk `
 	$releaseClientDir/android/VpnHoodClient-android.json `
-	$releaseClientDir/windows/VpnHoodClient-win-x64.exe  `
-	$packagesRootDir/../Latest/Client/windows/VpnHoodClient-win.txt `
+	$releaseClientDir/windows/VpnHoodClient-win-x64.msi  `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.txt  `
+	$releaseClientDir/windows/VpnHoodClient-win-x64.json `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.json `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.sh `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.tar.gz `

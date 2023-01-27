@@ -104,9 +104,9 @@ internal class ApiController : WebApiController
     {
         Response.ContentType = MimeType.PlainText;
         await using var stream = HttpContext.OpenResponseStream();
-        await using var StreamWriter = new StreamWriter(stream);
+        await using var streamWriter = new StreamWriter(stream);
         var log = App.GetLogForReport();
-        await StreamWriter.WriteAsync(log);
+        await streamWriter.WriteAsync(log);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(installedApps))]

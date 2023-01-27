@@ -97,6 +97,7 @@ public class WinApp : IDisposable
         {
             LogToConsole = logToConsole, 
             AppDataPath = AppLocalDataPath,
+            //UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
         });
         VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));

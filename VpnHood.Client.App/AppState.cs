@@ -21,5 +21,6 @@ public class AppState
     public long ReceivedTraffic { get; internal set; }
     public IpGroup? ClientIpGroup { get; internal set; }
     public bool IsWaitingForAd { get; internal set; }
-    public VersionStatus VersionStatus { get; set; }
+    public VersionStatus VersionStatus { get; internal set; }
+    public PublishInfo? LastPublishInfo { get; internal set; }
 }

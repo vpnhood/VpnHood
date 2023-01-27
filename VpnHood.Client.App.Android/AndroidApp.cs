@@ -78,7 +78,10 @@ namespace VpnHood.Client.App.Android
             base.OnCreate();
 
             //app init
-            VpnHoodApp.Init(this, new AppOptions());
+            VpnHoodApp.Init(this, new AppOptions
+            {
+                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json")
+            });
             VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => UpdateNotification();
             InitNotification();
             Current = this;

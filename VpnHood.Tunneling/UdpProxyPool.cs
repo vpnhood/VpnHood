@@ -6,7 +6,6 @@ using VpnHood.Tunneling.Factory;
 using System;
 using VpnHood.Common.JobController;
 using VpnHood.Tunneling.Exceptions;
-using VpnHood.Common.Utils;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling;
@@ -25,17 +24,18 @@ public class UdpProxyPool : IPacketProxyPool, IJob
     public int ClientCount => _udpProxies.Count;
     public JobSection JobSection { get; } = new();
 
-    public UdpProxyPool(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory, 
-        TimeSpan? udpTimeout, int? maxClientCount)
+    public UdpProxyPool(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory,
+        TimeSpan? udpTimeout, int? maxClientCount, LogScope? logScope = null)
     {
         udpTimeout ??= TimeSpan.FromSeconds(120);
 
         _packetProxyReceiver = packetProxyReceiver;
         _socketFactory = socketFactory;
         _maxClientCount = maxClientCount ?? int.MaxValue;
-        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to Maximum local UDP ports.");
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
         _udpProxies.Timeout = udpTimeout;
+        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
+            "Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: logScope);
 
         JobSection.Interval = udpTimeout.Value;
         JobRunner.Default.Add(this);
@@ -80,7 +80,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
 
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp, 
+            _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp,
                 udpProxy.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint);
 
         var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();

@@ -5,12 +5,14 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -19,7 +21,7 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IAsyncDisposable, IIpFilter
+public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -41,11 +43,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
     private StreamLogger? _streamLogger;
     private IpGroup? _lastClientIpGroup;
     private AppConnectionState _lastConnectionState;
-
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
 
+    public VersionStatus VersionStatus { get; private set; } = VersionStatus.Unknown;
 
     public event EventHandler? ConnectionStateChanged;
     public bool IsWaitingForAd { get; set; }
@@ -65,11 +67,12 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
     public AppFeatures Features { get; }
     public ClientProfileStore ClientProfileStore { get; }
     public IDevice Device => _clientAppProvider.Device;
-
-
+    public PublishInfo? LatestPublishInfo { get; private set; }
+    public JobSection? JobSection { get; }
+    
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
+        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatTypeName(this)} is already initialized.");
         options ??= new AppOptions();
         Directory.CreateDirectory(options.AppDataPath); //make sure directory exists
 
@@ -86,6 +89,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
+        JobSection = new JobSection(options.UpdateCheckerInterval);
 
         // create default logger
         LogAnonymous = options.LogAnonymous;
@@ -103,8 +107,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
         Features.TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId;
         Features.IsExcludeAppsSupported = Device.IsExcludeAppsSupported;
         Features.IsIncludeAppsSupported = Device.IsIncludeAppsSupported;
+        Features.UpdateInfoUrl = options.UpdateInfoUrl;
+        _ = CheckNewVersion();
 
         _instance = this;
+        JobRunner.Default.Add(this);
     }
 
     public AppState State => new()
@@ -125,7 +132,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
         SendSpeed = Client?.SendSpeed ?? 0,
         SentTraffic = Client?.SentByteCount ?? 0,
         ClientIpGroup = _lastClientIpGroup,
-        IsWaitingForAd = IsWaitingForAd
+        IsWaitingForAd = IsWaitingForAd,
+        VersionStatus = VersionStatus,
+        LastPublishInfo = VersionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null
     };
 
     private Guid? DefaultClientProfileId
@@ -166,8 +175,12 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
         var connectionState = ConnectionState;
         if (connectionState == _lastConnectionState)
             return;
-
         _lastConnectionState = connectionState;
+
+        // Check new version after connection
+        if (VersionStatus == VersionStatus.Unknown)
+            _ = CheckNewVersion();
+        
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -501,7 +514,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
             // close client
             try
             {
-                if (ClientConnect!=null)
+                if (ClientConnect != null)
                     await ClientConnect.DisposeAsync();
             }
             catch (Exception ex)
@@ -568,6 +581,43 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
         return _ipGroupManager;
     }
 
+    public async Task CheckNewVersion()
+    {
+        if (Features.UpdateInfoUrl == null)
+            return;
+
+        try
+        {
+            VhLogger.Instance.LogTrace("Retrieving the latest publish info...");
+
+            using var httpClient = new HttpClient();
+            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl); 
+            LatestPublishInfo = Util.JsonDeserialize<PublishInfo>(publishInfoJson);
+
+            // Check version
+            if (LatestPublishInfo.Version == null)
+                throw new Exception("Version is not available in publish info.");
+
+            // set default notification delay
+            if (Features.Version <= LatestPublishInfo.DeprecatedVersion)
+                VersionStatus = VersionStatus.Deprecated;
+
+            else if (Features.Version < LatestPublishInfo.Version &&
+                     DateTime.UtcNow - LatestPublishInfo.ReleaseDate > LatestPublishInfo.NotificationDelay)
+                VersionStatus = VersionStatus.Old;
+
+            else
+                VersionStatus = VersionStatus.Latest;
+
+            VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}", 
+                VersionStatus, LatestPublishInfo.Version);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not retrieve the latest publish info information.");
+        }
+    }
+
     public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
     {
         var ipGroupManager = await GetIpGroupManager();
@@ -582,4 +632,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter
         // use advanced options
         return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);
     }
+
+    public Task RunJob()
+    {
+        VersionStatus = VersionStatus.Unknown;
+        return CheckNewVersion();
+    }
+
 }

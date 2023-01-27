@@ -28,7 +28,7 @@ public class WinApp : IDisposable
     private bool _disposed;
     private string AppLocalDataPath { get; }
 
-    public WinApp() 
+    public WinApp()
     {
         // console logger
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
@@ -93,7 +93,12 @@ public class WinApp : IDisposable
         }
 
         // init app
-        VpnHoodApp.Init(new WinAppProvider(), new AppOptions { LogToConsole = logToConsole, AppDataPath = AppLocalDataPath });
+        VpnHoodApp.Init(new WinAppProvider(), new AppOptions
+        {
+            LogToConsole = logToConsole,
+            AppDataPath = AppLocalDataPath,
+            UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
+        });
         VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
 
         // auto connect
@@ -119,7 +124,10 @@ public class WinApp : IDisposable
 
         // Message Loop
         Application.ApplicationExit += App_Exit;
-        Application.Run();
+        if (_webViewWindow != null)
+            Application.Run(_webViewWindow.Form);
+        else
+            Application.Run();
     }
 
     private void App_Exit(object? sender, EventArgs e)
@@ -160,8 +168,6 @@ public class WinApp : IDisposable
                         _webViewWindow = null;
                     }
                 });
-
-            //_webViewWindow.Init("https://www.google.com", @"C:\Users\Developer\AppData\Local\VpnHood\Temp\dd").Wait();
         }
         catch (Exception ex)
         {
@@ -358,6 +364,7 @@ public class WinApp : IDisposable
 
         _uiTimer.Dispose();
         _notifyIcon?.Dispose();
+        _webViewWindow?.Close();
         if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
         if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
     }

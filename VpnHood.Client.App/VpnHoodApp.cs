@@ -134,7 +134,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         ClientIpGroup = _lastClientIpGroup,
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = VersionStatus,
-        LastPublishInfo = LatestPublishInfo
+        LastPublishInfo = VersionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null
     };
 
     private Guid? DefaultClientProfileId

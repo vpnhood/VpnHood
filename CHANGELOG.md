@@ -1,7 +1,9 @@
-# v2.6.341
+# Upcoming
 ### Client
 * Fix: UDP port memory leak
+* Feature: Notify when new version is available
 * Update: Add build version on top right of screen
+* Update: Winodws: Switch to MSI package to prevent False positive virus detection
 
 ### Server
 * Fix: UDP port memory leak

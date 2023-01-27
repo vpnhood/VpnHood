@@ -8,7 +8,7 @@ Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass
 It is available for Windows and Android. the iOS client still needs to be ready!
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.apk"><img src="https://github.com/vpnhood/VpnHood/wiki/images/get-it-on-github.png" width="200"></a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.apk"><img src="https://github.com/vpnhood/VpnHood/wiki/images/get-apk-on-github.png" width="200"></a>
 <a href="https://github.com/vpnhood/VpnHood/wiki/Get-VpnHood-Client-from-third-party-app-stores"><img 
 src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" width="200"></a>
 <a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>

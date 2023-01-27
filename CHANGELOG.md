@@ -1,4 +1,17 @@
-# v2.6.338
+# v2.6.342
+### Client
+* Fix: UDP port memory leak
+* Feature: Notify when new version is available
+* Update: Add build version on top right of screen
+* Update: Winodws: Switch to MSI package to prevent False positive virus detection
+
+### Server
+* Fix: UDP port memory leak
+* Update: Separate new/close session logs
+* Update: Improve log format
+* Update: Change log files extension from txt to log
+
+# v2.6.339
 ### Server
 * Feature: Report server public IPs to log
 * Update: Improve IPv6 stability

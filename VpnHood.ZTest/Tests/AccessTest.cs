@@ -20,10 +20,8 @@ public class AccessTest
     [TestMethod]
     public void Foo()
     {
-        using var eventReporter = new EventReporter(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
-        eventReporter.Raised();
-        eventReporter.Raised();
-        eventReporter.Raised();
+        //var a = UserAgentParser.GetOperatingSystem("Mozilla/5.0 (Linux; Android 9; Redmi Note 8 Build/PKQ1.190616.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/108.0.5359.128 Mobile Safari/537.36");
+        //Console.WriteLine(a);
     }
 
     [TestInitialize]

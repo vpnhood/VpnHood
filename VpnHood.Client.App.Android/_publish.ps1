@@ -11,12 +11,12 @@ $moduleDir = "$packagesClientDir/android";
 $moduleDirLatest = "$packagesClientDirLatest/android";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
-$module_InfoFile = "$moduleDir/VpnHoodClient-android.json";
-$module_PackageFile = "$moduleDir/VpnHoodClient-android.apk";
+$module_infoFile = "$moduleDir/VpnHoodClient-android.json";
+$module_packageFile = "$moduleDir/VpnHoodClient-android.apk";
 
 # Calcualted Path
-$module_InfoFileName = $(Split-Path "$module_InfoFile" -leaf);
-$module_PackageFileName = $(Split-Path "$module_PackageFile" -leaf);
+$module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
+$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.Android.KeyStoreFile
@@ -49,15 +49,18 @@ if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean 
 # publish info
 $json = @{
     Version = $versionParam; 
-    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_InfoFileName";
-    PackagetUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_PackageFileName";
-	ReleaseDate = "$releaseDate"
+    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
+    PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/install";
+	ReleaseDate = "$releaseDate";
+	DeprecatedVersion = "$deprecatedVersion";
+	NotificationDelay = "14.00:00:00";
 };
-$json | ConvertTo-Json | Out-File "$module_InfoFile" -Encoding ASCII;
+$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 
 #####
 # copy to solution ouput
-Copy-Item -path $signedApk -Destination "$moduleDir/$module_PackageFileName" -Force
+Copy-Item -path $signedApk -Destination "$moduleDir/$module_packageFileName" -Force
 if ($isLatest)
 {
 	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse

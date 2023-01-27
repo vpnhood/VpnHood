@@ -5,6 +5,7 @@ namespace VpnHood.Tunneling;
 public static class GeneralEventId
 {
     public static EventId Session = new((int)EventCode.Session, nameof(Session));
+    public static EventId SessionTrack = new((int)EventCode.SessionTrack, nameof(SessionTrack));
     public static EventId Nat = new((int)EventCode.Nat, nameof(Nat));
     public static EventId Ping = new((int)EventCode.Ping, nameof(Ping));
     public static EventId Dns = new((int)EventCode.Dns, nameof(Dns));
@@ -31,5 +32,6 @@ public static class GeneralEventId
         Tls,
         AccessServer,
         NetProtect,
+        SessionTrack
     }
 }

@@ -1,11 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -31,6 +29,7 @@ public class UtilTest
     public async Task EventReportCounter()
     {
         using var reportCounter = new TestEventReporter(VhLogger.Instance, "UnitTest");
+        EventReporter.IsDiagnosticMode = false;
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);

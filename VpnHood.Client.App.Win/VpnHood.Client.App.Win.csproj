@@ -6,7 +6,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows</TargetFramework>
+    <TargetFramework>net7.0-windows7.0</TargetFramework>
     <UseWindowsForms>True</UseWindowsForms>
     <RootNamespace>VpnHood.Client.App</RootNamespace>
     <AssemblyName>VpnHoodClient</AssemblyName>
@@ -19,9 +19,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.6.338</Version>
-    <AssemblyVersion>2.6.338</AssemblyVersion>
-    <FileVersion>2.6.338</FileVersion>
+    <Version>2.6.342</Version>
+    <AssemblyVersion>2.6.342</AssemblyVersion>
+    <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>11</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>

@@ -10,10 +10,14 @@ namespace VpnHood.Common.Logging;
 
 public static class VhLogger
 {
+    private static bool _isDiagnoseMode;
     public static ILogger Instance { get; set; } = NullLogger.Instance;
-
     public static bool IsAnonymousMode { get; set; } = true;
-    public static bool IsDiagnoseMode { get; set; } = false;
+    public static bool IsDiagnoseMode
+    {
+        get => _isDiagnoseMode;
+        set { _isDiagnoseMode = value; EventReporter.IsDiagnosticMode = value; }
+    }
 
     public static ILogger CreateConsoleLogger(bool verbose = false, bool singleLine = false)
     {

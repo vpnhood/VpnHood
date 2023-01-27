@@ -1,7 +1,7 @@
 . "$PSScriptRoot/../Pub/Common.ps1"
 
 Write-Host "";
-Write-Host "*** Creating Android Bundle AAB ..." -BackgroundColor Blue -ForegroundColor White;
+Write-Host "*** Publishing Android ..." -BackgroundColor Blue -ForegroundColor White;
 
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
@@ -33,11 +33,6 @@ $xmlDoc.save($manifestFile);
 $packageId = $xmlDoc.manifest.package;
 $signedApk= Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
 
-# bundle (aab)
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
-& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-	/p:AndroidKeyStore=True /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningKeyPass=$keystorePass /p:AndroidSigningStorePass=$keystorePass 
-
 # apk
 Write-Host;
 Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
@@ -45,6 +40,15 @@ Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor
 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
 & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
+
+# apk
+Write-Host;
+Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
+
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
+& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
+	/p:AndroidKeyStore=True /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningKeyPass=$keystorePass /p:AndroidSigningStorePass=$keystorePass 
+
 
 # publish info
 $json = @{

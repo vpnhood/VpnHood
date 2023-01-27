@@ -28,6 +28,7 @@ src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" wi
 * Hot Restart (User sessions' will not close on restart)
 * Built-In User Management 
 * Built-In NAT with zero configuration
+* NetScan Protector
 * Windows (x64) 10, 11, or Windows Server
 * Linux
 

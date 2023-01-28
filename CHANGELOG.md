@@ -1,9 +1,9 @@
 # v2.6.342
 ### Client
 * Fix: UDP port memory leak
-* Feature: Notify when new version is available
-* Update: Add build version on top right of screen
-* Update: Winodws: Switch to MSI package to prevent False positive virus detection
+* Feature: Notify when a new version is available
+* Update: Add the build version on the top right of the screen
+* Update: Windows: Switch to MSI package to prevent False positive virus detection
 
 ### Server
 * Fix: UDP port memory leak

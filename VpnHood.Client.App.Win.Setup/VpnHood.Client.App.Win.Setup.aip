@@ -23,10 +23,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{762D8EF6-B269-45FF-B882-3C95E54E78F2} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{7B4DABD2-DDFB-429F-BF69-AB0606E778DD} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2023.1.27.1126" Options="16"/>
+    <ROW Property="ProductVersion" Value="2023.1.27.1538" Options="16"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{78FB5B4A-57C7-451C-8FFE-1C5944EA6FE5}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{ACBF0F8C-64BD-4290-B808-123573C2347D}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -116,7 +116,6 @@
     <ROW Component="Microsoft.Win32.Registry.AccessControl.dll" ComponentId="{987AA203-871C-46E3-BE0C-ADE9748C8BAD}" Directory_="APPDIR" Attributes="256" KeyPath="Microsoft.Win32.Registry.AccessControl.dll"/>
     <ROW Component="Microsoft.Win32.Registry.dll" ComponentId="{DB5B10E6-E88B-4E00-8AF3-10279A61921D}" Directory_="APPDIR" Attributes="256" KeyPath="Microsoft.Win32.Registry.dll"/>
     <ROW Component="Microsoft.Win32.SystemEvents.dll" ComponentId="{573FB179-8AD9-4F4D-ABA9-7A4E5AA02E48}" Directory_="APPDIR" Attributes="256" KeyPath="Microsoft.Win32.SystemEvents.dll"/>
-    <ROW Component="Microsoft.Windows.SDK.NET.dll" ComponentId="{AF4B7D05-BF51-49E0-8AAB-C5AF00A71273}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Windows.SDK.NET.dll"/>
     <ROW Component="MicrosoftEdgeWebVi" ComponentId="{281A6930-89A9-4474-B89A-96177E2138ED}" Directory_="APPDIR" Attributes="260" KeyPath="MicrosoftEdgeWebVi" Options="2"/>
     <ROW Component="PacketDotNet.dll" ComponentId="{65217842-81E7-4B90-9EB8-A2FE65D66346}" Directory_="APPDIR" Attributes="0" KeyPath="PacketDotNet.dll"/>
     <ROW Component="Path" ComponentId="{53886CB0-ED81-40D2-9599-B4254F8D31CD}" Directory_="APPDIR" Attributes="260" KeyPath="Path_1"/>
@@ -531,7 +530,6 @@
     <ROW Component="WebView2Loader.dll_1" ComponentId="{36CB5650-0569-4AED-BEA3-982764C38DD7}" Directory_="native_1_Dir" Attributes="256" KeyPath="WebView2Loader.dll_1"/>
     <ROW Component="WebView2Loader.dll_2" ComponentId="{00E69349-DB55-4D99-B856-A527C0D35BAE}" Directory_="native_2_Dir" Attributes="256" KeyPath="WebView2Loader.dll_2"/>
     <ROW Component="WebView2Loader.dll_3" ComponentId="{8F36E8E2-D8D0-46F0-87F0-604A9730B5C4}" Directory_="native_3_Dir" Attributes="0" KeyPath="WebView2Loader.dll_3"/>
-    <ROW Component="WinRT.Runtime.dll" ComponentId="{8BA6F640-7923-4DF0-AA3E-C072E363DF3B}" Directory_="APPDIR" Attributes="0" KeyPath="WinRT.Runtime.dll"/>
     <ROW Component="WindowsBase.dll" ComponentId="{D889DA7C-C1AA-48C5-B195-4D74072B91A8}" Directory_="APPDIR" Attributes="256" KeyPath="WindowsBase.dll"/>
     <ROW Component="WindowsBase.resources.dll" ComponentId="{205F96A8-9B54-48E2-B52C-192012861F4E}" Directory_="cs_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll"/>
     <ROW Component="WindowsBase.resources.dll_1" ComponentId="{F3CDB9F3-3246-40D3-8243-AEB35403D6E0}" Directory_="de_Dir" Attributes="0" KeyPath="WindowsBase.resources.dll_1"/>
@@ -579,8 +577,8 @@
     <ROW Component="wpfgfx_cor3.dll" ComponentId="{B5ABD926-8CDC-4964-AAC4-7F7DDEC9CB7B}" Directory_="APPDIR" Attributes="256" KeyPath="wpfgfx_cor3.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatsComponent">
-    <ROW Feature="MainFeature" Title="MainFeature" Description="Description" Display="1" Level="1" Directory_="APPDIR" Attributes="0"/>
-    <ROW Feature="MicrosoftEdgeWebVi" Title="Microsoft Edge WebView2 x64" Description="Microsoft Edge WebView2 x64" Display="3" Level="1" Attributes="0"/>
+    <ROW Feature="MainFeature" Title="MainFeature" Description="Description" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="MicrosoftEdgeWebVi" Title="Microsoft Edge WebView2 x64" Description="Microsoft Edge WebView2 x64" Display="2" Level="1" Attributes="0"/>
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
@@ -626,8 +624,6 @@
     <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
     <ROW File="VpnHoodClient.pdb" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.pdb" SelfReg="false"/>
     <ROW File="VpnHoodClient.runtimeconfig.json" Component_="VpnHoodClient.deps.json" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
-    <ROW File="Microsoft.Windows.SDK.NET.dll" Component_="Microsoft.Windows.SDK.NET.dll" FileName="MICRO~16.DLL|Microsoft.Windows.SDK.NET.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\Microsoft.Windows.SDK.NET.dll" SelfReg="false"/>
-    <ROW File="WinRT.Runtime.dll" Component_="WinRT.Runtime.dll" FileName="WINRTR~1.DLL|WinRT.Runtime.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinRT.Runtime.dll" SelfReg="false"/>
     <ROW File="Accessibility.dll" Component_="Accessibility.dll" FileName="ACCESS~1.DLL|Accessibility.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\Accessibility.dll" SelfReg="false"/>
     <ROW File="clretwrc.dll" Component_="clretwrc.dll" FileName="clretwrc.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\clretwrc.dll" SelfReg="false"/>
     <ROW File="clrgc.dll" Component_="clrgc.dll" FileName="clrgc.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\clrgc.dll" SelfReg="false"/>
@@ -1114,6 +1110,7 @@
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
     <ROW Fragment="MaintenanceTypeDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\MaintenanceTypeDlg.aip"/>
     <ROW Fragment="MaintenanceWelcomeDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\MaintenanceWelcomeDlg.aip"/>
+    <ROW Fragment="PrerequisitesDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\PrerequisitesDlg.aip"/>
     <ROW Fragment="SequenceDialogs.aip" Path="&lt;AI_THEMES&gt;classic\fragments\SequenceDialogs.aip"/>
     <ROW Fragment="Sequences.aip" Path="&lt;AI_FRAGS&gt;Sequences.aip"/>
     <ROW Fragment="StaticUIStrings.aip" Path="&lt;AI_FRAGS&gt;StaticUIStrings.aip"/>
@@ -1150,13 +1147,14 @@
     <ROW Name="ShortcutFlags.dll" SourcePath="&lt;AI_CUSTACTS&gt;ShortcutFlags.dll"/>
     <ROW Name="SoftwareDetector.dll" SourcePath="&lt;AI_CUSTACTS&gt;SoftwareDetector.dll"/>
     <ROW Name="aicustact.dll" SourcePath="&lt;AI_CUSTACTS&gt;aicustact.dll"/>
+    <ROW Name="file_deleter.ps1" SourcePath="&lt;AI_SCRIPTS&gt;file_deleter.ps1"/>
     <ROW Name="viewer.exe" SourcePath="&lt;AI_CUSTACTS&gt;viewer.exe" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiControlComponent">
-    <ROW Dialog_="WelcomeDlg" Control="WelcomeDlgDialogInitializer" Type="DialogInitializer" X="0" Y="0" Width="0" Height="0" Attributes="0" Order="-1" TextLocId="-" HelpLocId="-" ExtDataLocId="-"/>
+    <ROW Dialog_="PrerequisitesDlg" Control="PrerequisitesDlgDialogInitializer" Type="DialogInitializer" X="0" Y="0" Width="0" Height="0" Attributes="0" Order="-1" TextLocId="-" HelpLocId="-" ExtDataLocId="-"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiControlEventComponent">
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="EndDialog" Argument="Return" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="PrerequisitesDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="MaintenanceWelcomeDlg" Control_="Next" Event="NewDialog" Argument="MaintenanceTypeDlg" Condition="AI_MAINT" Ordering="99"/>
     <ROW Dialog_="CustomizeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_MAINT" Ordering="101"/>
     <ROW Dialog_="CustomizeDlg" Control_="Back" Event="NewDialog" Argument="MaintenanceTypeDlg" Condition="AI_MAINT" Ordering="1"/>
@@ -1174,18 +1172,20 @@
     <ROW Dialog_="VerifyReadyDlg" Control_="Install" Event="EndDialog" Argument="Return" Condition="AI_PATCH" Ordering="199"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="PatchWelcomeDlg" Condition="AI_PATCH" Ordering="203"/>
     <ROW Dialog_="ResumeDlg" Control_="Install" Event="EndDialog" Argument="Return" Condition="AI_RESUME" Ordering="299"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="SpawnDialog" Argument="OutOfRbDiskDlg" Condition="AI_INSTALL AND OutOfDiskSpace = 1 AND OutOfNoRbDiskSpace = 0 AND (PROMPTROLLBACKCOST=&quot;P&quot; OR NOT PROMPTROLLBACKCOST)" Ordering="2" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="EnableRollback" Argument="False" Condition="AI_INSTALL AND OutOfDiskSpace = 1 AND OutOfNoRbDiskSpace = 0 AND PROMPTROLLBACKCOST=&quot;D&quot;" Ordering="3" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="SpawnDialog" Argument="OutOfDiskDlg" Condition="AI_INSTALL AND ( (OutOfDiskSpace = 1 AND OutOfNoRbDiskSpace = 1) OR (OutOfDiskSpace = 1 AND PROMPTROLLBACKCOST=&quot;F&quot;) )" Ordering="4" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="WelcomeDlgDialogInitializer" Event="[AI_ButtonText_Next_Orig]" Argument="[ButtonText_Next]" Condition="AI_INSTALL" Ordering="0" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="WelcomeDlgDialogInitializer" Event="[ButtonText_Next]" Argument="[[AI_CommitButton]]" Condition="AI_INSTALL" Ordering="1" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="WelcomeDlgDialogInitializer" Event="[AI_Text_Next_Orig]" Argument="[Text_Next]" Condition="AI_INSTALL" Ordering="2" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="WelcomeDlgDialogInitializer" Event="[Text_Next]" Argument="[Text_Install]" Condition="AI_INSTALL" Ordering="3" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Back" Event="[ButtonText_Next]" Argument="[AI_ButtonText_Next_Orig]" Condition="AI_INSTALL" Ordering="0" Options="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Back" Event="[Text_Next]" Argument="[AI_Text_Next_Orig]" Condition="AI_INSTALL" Ordering="1" Options="2"/>
     <ROW Dialog_="ExitDialog" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="301"/>
     <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="102"/>
     <ROW Dialog_="UserExit" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="101"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Next" Event="EndDialog" Argument="Return" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Next" Event="SpawnDialog" Argument="OutOfRbDiskDlg" Condition="AI_INSTALL AND OutOfDiskSpace = 1 AND OutOfNoRbDiskSpace = 0 AND (PROMPTROLLBACKCOST=&quot;P&quot; OR NOT PROMPTROLLBACKCOST)" Ordering="2" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Next" Event="EnableRollback" Argument="False" Condition="AI_INSTALL AND OutOfDiskSpace = 1 AND OutOfNoRbDiskSpace = 0 AND PROMPTROLLBACKCOST=&quot;D&quot;" Ordering="3" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Next" Event="SpawnDialog" Argument="OutOfDiskDlg" Condition="AI_INSTALL AND ( (OutOfDiskSpace = 1 AND OutOfNoRbDiskSpace = 1) OR (OutOfDiskSpace = 1 AND PROMPTROLLBACKCOST=&quot;F&quot;) )" Ordering="4" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="PrerequisitesDlgDialogInitializer" Event="[AI_ButtonText_Next_Orig]" Argument="[ButtonText_Next]" Condition="AI_INSTALL" Ordering="0" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="PrerequisitesDlgDialogInitializer" Event="[ButtonText_Next]" Argument="[[AI_CommitButton]]" Condition="AI_INSTALL" Ordering="1" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="PrerequisitesDlgDialogInitializer" Event="[AI_Text_Next_Orig]" Argument="[Text_Next]" Condition="AI_INSTALL" Ordering="2" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="PrerequisitesDlgDialogInitializer" Event="[Text_Next]" Argument="[Text_Install]" Condition="AI_INSTALL" Ordering="3" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Back" Event="[ButtonText_Next]" Argument="[AI_ButtonText_Next_Orig]" Condition="AI_INSTALL" Ordering="2" Options="2"/>
+    <ROW Dialog_="PrerequisitesDlg" Control_="Back" Event="[Text_Next]" Argument="[AI_Text_Next_Orig]" Condition="AI_INSTALL" Ordering="3" Options="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCreateFolderComponent">
     <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
@@ -1284,8 +1284,6 @@
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe_1"/>
     <ROW Feature_="MainFeature" Component_="Path"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Windows.SDK.NET.dll"/>
-    <ROW Feature_="MainFeature" Component_="WinRT.Runtime.dll"/>
     <ROW Feature_="MainFeature" Component_="Accessibility.dll"/>
     <ROW Feature_="MainFeature" Component_="clretwrc.dll"/>
     <ROW Feature_="MainFeature" Component_="clrgc.dll"/>
@@ -1783,8 +1781,8 @@
     <ROW Action="AI_UnpinShortcuts" Condition="(VersionNT &gt; 600) AND (REMOVE = &quot;ALL&quot;)" Sequence="3199"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="AI_RemoveExternalUIStub" Condition="(REMOVE=&quot;ALL&quot;) AND ((VersionNT &gt; 500) OR((VersionNT = 500) AND (ServicePackLevel &gt;= 4)))" Sequence="1501"/>
-    <ROW Action="AI_AiRemoveFilesImmediate" Sequence="3499"/>
     <ROW Action="AI_VerifyPrereq" Sequence="1101"/>
+    <ROW Action="AI_AiRemoveFilesImmediate" Sequence="3499"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="747"/>
@@ -1856,12 +1854,12 @@
     <ROW Registry="Windows" Root="-1" Key="Software\Microsoft\Windows" Name="\"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiRemoveFileComponent">
-    <ROW FileKey="_" Component_="WinRT.Runtime.dll" DirProperty="APPDIR" InstallMode="2"/>
-    <ROW FileKey="__1" Component_="WinRT.Runtime.dll" DirProperty="WebView2_Dir" InstallMode="3"/>
+    <ROW FileKey="_" Component_="UIAutomationProvider.resources.dll_11" DirProperty="APPDIR" InstallMode="2"/>
+    <ROW FileKey="__1" Component_="UIAutomationProvider.resources.dll_11" DirProperty="WebView2_Dir" InstallMode="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiShortsComponent">
     <ROW Shortcut="CheckforVpnHoodUpdates" Directory_="SHORTCUTDIR" Name="CHECKF~2|Check for [|ProductName] Updates" Component_="updater.exe" Target="[#updater.exe]" Arguments="/checknow" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR"/>
-    <ROW Shortcut="UninstallProductName" Directory_="SHORTCUTDIR" Name="UNINST~1|Uninstall [|ProductName]" Component_="WinRT.Runtime.dll" Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" Hotkey="0" Icon_="SystemFoldermsiexec.exe" IconIndex="0" ShowCmd="1"/>
+    <ROW Shortcut="UninstallProductName" Directory_="SHORTCUTDIR" Name="UNINST~1|Uninstall [|ProductName]" Component_="UIAutomationProvider.resources.dll_11" Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" Hotkey="0" Icon_="SystemFoldermsiexec.exe" IconIndex="0" ShowCmd="1"/>
     <ROW Shortcut="VpnHood" Directory_="DesktopFolder" Name="VpnHood!" Component_="VpnHoodClient.exe_1" Target="[#VpnHoodClient.exe_1]" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR" CustomFlags="1"/>
     <ROW Shortcut="VpnHoodC" Directory_="SHORTCUTDIR" Name="VpnHood!" Component_="VpnHoodClient.exe_1" Target="[#VpnHoodClient.exe_1]" Hotkey="0" IconIndex="0" ShowCmd="1" WkDir="APPDIR" CustomFlags="1"/>
   </COMPONENT>

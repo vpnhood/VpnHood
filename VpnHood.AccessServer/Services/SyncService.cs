@@ -15,9 +15,6 @@ public class SyncService
     public int BatchCount { get; set; } = 1000;
     private readonly ILogger<SyncService> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly object _isBusyLock = new();
-    public bool IsBusy { get; private set; }
-
     public SyncService(ILogger<SyncService> logger,
         IServiceProvider serviceProvider)
     {
@@ -27,23 +24,9 @@ public class SyncService
 
     public async Task Sync()
     {
-        try
-        {
-            lock (_isBusyLock)
-            {
-                if (IsBusy) throw new Exception($"{nameof(SyncService)} is busy.");
-                IsBusy = true;
-            }
-
-            await SyncServerStatuses();
-            await SyncAccessUsages();
-            await SyncSessions();
-
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        await SyncServerStatuses();
+        await SyncAccessUsages();
+        await SyncSessions();
     }
 
     private async Task SyncAccessUsages()

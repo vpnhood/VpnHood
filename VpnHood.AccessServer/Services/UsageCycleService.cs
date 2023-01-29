@@ -15,11 +15,8 @@ public class UsageCycleService
     private readonly ILogger<UsageCycleService> _logger;
     private readonly IServiceProvider _serviceProvider;
     private string? _lastCycleIdCache;
-    private readonly object _isBusyLock = new();
 
     public string CurrentCycleId => DateTime.UtcNow.ToString("yyyy:MM");
-
-    public bool IsBusy { get; private set; }
 
     public UsageCycleService(ILogger<UsageCycleService> logger, IServiceProvider serviceProvider)
     {
@@ -54,47 +51,33 @@ public class UsageCycleService
         if (_lastCycleIdCache == CurrentCycleId)
             return;
 
-        try
+        _logger.LogInformation($"Checking usage cycles for {CurrentCycleId}...");
+
+        // check is current cycle already processed from db
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
+        if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
         {
-            lock (_isBusyLock) //todo convert to AsyncLock
-            {
-                if (IsBusy) throw new Exception($"{nameof(UsageCycleService)} is busy.");
-                IsBusy = true;
-            }
-            _logger.LogInformation($"Checking usage cycles for {CurrentCycleId}...");
-
-            // check is current cycle already processed from db
-            await using var scope = _serviceProvider.CreateAsyncScope();
-            await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-            if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
-            {
-                _lastCycleIdCache = CurrentCycleId;
-                return;
-            }
-
-            _logger.LogInformation($"Resetting usage cycles for {CurrentCycleId}...");
-
-
-            // reset usage for users
-            await ResetCycleTraffics(vhContext);
-
-            // add current cycle
-            await vhContext.PublicCycles.AddAsync(new PublicCycleModel { PublicCycleId = CurrentCycleId });
-            await vhContext.SaveChangesAsync();
-
-            // clear all active sessions
-            var agentCacheClient = scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
-            await agentCacheClient.InvalidateSessions();
-
             _lastCycleIdCache = CurrentCycleId;
-            _logger.LogInformation($"All usage cycles for {CurrentCycleId} has been reset.");
+            return;
         }
-        finally
-        {
-            lock (_isBusyLock)
-            {
-                IsBusy = false;
-            }
-        }
+
+        _logger.LogInformation($"Resetting usage cycles for {CurrentCycleId}...");
+
+
+        // reset usage for users
+        await ResetCycleTraffics(vhContext);
+
+        // add current cycle
+        await vhContext.PublicCycles.AddAsync(new PublicCycleModel { PublicCycleId = CurrentCycleId });
+        await vhContext.SaveChangesAsync();
+
+        // clear all active sessions
+        var agentCacheClient = scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
+        await agentCacheClient.InvalidateSessions();
+
+        _lastCycleIdCache = CurrentCycleId;
+        _logger.LogInformation($"All usage cycles for {CurrentCycleId} has been reset.");
+
     }
 }

@@ -77,6 +77,7 @@ public class Program
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();
         builder.Services.AddScoped<UsageReportService>();
+        builder.Services.AddScoped<MaintenanceService>();
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         //---------------------

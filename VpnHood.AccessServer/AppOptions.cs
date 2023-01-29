@@ -11,4 +11,5 @@ public class AppOptions
     public string AgentSystemAuthorization { get; set; } = default!;
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(60); 
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3; 
+    public TimeSpan DefragInterval { get; set; } = TimeSpan.FromDays(14); 
 }

@@ -251,9 +251,7 @@ internal class TcpHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version != 1)
-        {
             throw new NotSupportedException("The request version is not supported!");
-        }
 
         // read request code
         var requestCode = (RequestCode)buffer[1];
@@ -280,7 +278,7 @@ internal class TcpHost : IAsyncDisposable
                 break;
 
             default:
-                throw new NotSupportedException("Unknown requestCode!");
+                throw new NotSupportedException($"Unknown requestCode. requestCode: {requestCode}");
         }
     }
 

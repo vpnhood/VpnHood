@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.DatagramMessaging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Tests;
@@ -186,4 +187,15 @@ public class TunnelTest
         Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
     }
+
+    [TestMethod]
+    public void DatagramMessages()
+    {
+        var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
+        Assert.IsTrue(DatagramMessageHandler.IsDatagramMessage(ipPacket));
+        
+        var message = DatagramMessageHandler.ReadMessage(ipPacket);
+        Assert.IsTrue(message is CloseDatagramMessage);
+    }
+
 }

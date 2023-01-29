@@ -390,14 +390,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private bool IsIcmpControlMessage(IPPacket ipPacket)
+    private static bool IsIcmpControlMessage(IPPacket ipPacket)
     {
         // IPv4
         if (ipPacket is { Version: IPVersion.IPv4, Protocol: ProtocolType.Icmp })
         {
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
             return icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest; // drop all other Icmp but echo
-
         }
 
         // IPv6

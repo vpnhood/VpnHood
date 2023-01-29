@@ -353,7 +353,7 @@ public class Tunnel : IDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning($"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
+            VhLogger.Instance.LogWarning(ex, "Could not send some packets via a channel. PacketCount: {PacketCount}", packets.Count);
         }
 
         // make sure to remove the channel

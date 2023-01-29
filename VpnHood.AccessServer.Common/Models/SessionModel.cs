@@ -4,17 +4,8 @@ namespace VpnHood.AccessServer.Models;
 
 public class SessionModel
 {
-    public SessionModel()
-    {
-
-    }
-
-    public SessionModel(long sessionId)
-    {
-        SessionId = sessionId;
-    }
-
     public long SessionId { get; set; }
+    public Guid ProjectId { get; set; }
     public Guid AccessId { get; set; }
     public Guid DeviceId { get; set; }
     public string ClientVersion { get; set; } = null!;
@@ -39,6 +30,7 @@ public class SessionModel
     {
         return new SessionModel
         {
+            ProjectId = ProjectId,
             AccessId = AccessId,
             DeviceId = DeviceId,
             ServerId = ServerId,

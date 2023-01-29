@@ -278,7 +278,7 @@ public class CacheService
 
     private IEnumerable<SessionModel> GetUpdatedSessions()
     {
-        foreach (var session in Mem.Sessions.Values.Where(session => !session.IsArchived))
+        foreach (var session in Mem.Sessions.Values)
         {
             // check is updated from last usage
             var isUpdated = session.LastUsedTime > Mem.LastSavedTime || session.EndTime > Mem.LastSavedTime;
@@ -298,17 +298,32 @@ public class CacheService
 
             // archive the CloseWait sessions; keep closed session shortly in memory to report the session owner
             var minCloseWaitTime = DateTime.UtcNow - _appOptions.SessionTemporaryTimeout;
-            if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime)
+            if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime && !session.IsArchived)
             {
                 session.IsArchived = true;
                 isUpdated = true;
             }
 
 
-            if (isUpdated)
+            // already archived is marked as updated and must be saved
+            if (isUpdated || session.IsArchived)
                 yield return session;
         }
 
+    }
+
+    private static async Task ResolveDbUpdateConcurrencyException(DbUpdateConcurrencyException ex)
+    {
+        foreach (var entry in ex.Entries)
+        {
+            //var proposedValues = entry.CurrentValues;
+            var databaseValues = await entry.GetDatabaseValuesAsync();
+
+            if (entry.State == EntityState.Deleted)
+                entry.State = EntityState.Detached;
+            else if (databaseValues != null)
+                entry.OriginalValues.SetValues(databaseValues);
+        }
     }
 
     private static readonly AsyncLock SaveChangesLock = new();
@@ -355,15 +370,26 @@ public class CacheService
         // save updated sessions
         try
         {
-            _logger.LogInformation(AccessEventId.Cache, "Saving Sessions... Projects: {ProjectCount}, Servers: {ServerCount}, Sessions: {SessionCount}",
-                updatedSessions.DistinctBy(x => x.Device?.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), updatedSessions.Length);
+            _logger.LogInformation(AccessEventId.Cache,
+                "Saving Sessions... Projects: {Projects}, Servers: {Servers}, Sessions: {Sessions}, ModifiedSessions: {ModifiedSessions}",
+                updatedSessions.DistinctBy(x => x.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), Mem.Sessions.Count, updatedSessions.Length);
 
             await _vhContext.SaveChangesAsync();
+
+            // cleanup: remove archived sessions
+            foreach (var sessionPair in Mem.Sessions.Where(pair => pair.Value.IsArchived))
+                Mem.Sessions.TryRemove(sessionPair);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            await ResolveDbUpdateConcurrencyException(ex);
+            _vhContext.ChangeTracker.Clear();
+            _logger.LogError(ex, "Could not flush sessions. I've resolved it for the next try.");
         }
         catch (Exception ex)
         {
             _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not flush sessions! All archived sessions in cache has been discarded.");
+            _logger.LogError(ex, "Could not flush sessions.");
         }
 
         // save access usages
@@ -373,46 +399,47 @@ public class CacheService
         {
             await _vhContext.AccessUsages.AddRangeAsync(sessionUsages);
             await _vhContext.SaveChangesAsync();
+
+            // cleanup: remove unused accesses
+            var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
+            foreach (var accessPair in Mem.Accesses.Where(pair => pair.Value.LastUsedTime < minSessionTime))
+                Mem.Accesses.TryRemove(accessPair);
+
         }
         catch (Exception ex)
         {
             _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not write AccessUsages! All access Usage has been discarded.");
+            _logger.LogError(ex, "Could not write AccessUsages.");
         }
 
         // ServerStatus
         try
         {
             await SaveServersStatus();
+
+            //cleanup: remove lost servers
+            var minStatusTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
+            foreach (var serverPair in Mem.Servers.Where(pair => pair.Value.ServerStatus == null || pair.Value.ServerStatus.CreatedTime < minStatusTime))
+                Mem.Servers.TryRemove(serverPair);
+
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            await ResolveDbUpdateConcurrencyException(ex);
+            _vhContext.ChangeTracker.Clear();
+            _logger.LogError(ex, "Could not save servers status. I've resolved it for the next try.");
         }
         catch (Exception ex)
         {
             _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not save servers status!");
+            _logger.LogError(ex, "Could not save servers status.");
         }
 
         if (transaction != null)
             await transaction.CommitAsync();
 
         Mem.LastSavedTime = savingTime;
-        Cleanup();
         _logger.LogTrace("The cache has been saved.");
-    }
-
-    private void Cleanup()
-    {
-        // remove archived sessions
-        foreach (var sessionPair in Mem.Sessions.Where(pair => pair.Value.IsArchived))
-            Mem.Sessions.TryRemove(sessionPair);
-
-        // remove unused accesses
-        var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
-        foreach (var accessPair in Mem.Accesses.Where(pair => pair.Value.LastUsedTime < minSessionTime))
-            Mem.Accesses.TryRemove(accessPair);
-
-        //remove lost servers
-        foreach (var serverPair in Mem.Servers.Where(pair => pair.Value.ServerStatus == null || pair.Value.ServerStatus.CreatedTime < minSessionTime))
-            Mem.Servers.TryRemove(serverPair);
     }
 
     private static string ToSqlValue<T>(T? value)

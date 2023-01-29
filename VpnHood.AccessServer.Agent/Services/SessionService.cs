@@ -208,6 +208,7 @@ public class SessionService
         // create session
         var session = new SessionModel
         {
+            ProjectId = device.ProjectId,
             SessionKey = Util.GenerateSessionKey(),
             CreatedTime = DateTime.UtcNow,
             LastUsedTime = DateTime.UtcNow,

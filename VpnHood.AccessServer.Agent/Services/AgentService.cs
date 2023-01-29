@@ -239,6 +239,7 @@ public class AgentService
         // find current tokenAccessPoints in AccessPointGroup
         var tokenAccessPoints = await vhContext.AccessPoints
             .Where(x =>
+                !x.Server!.IsDeleted &&
                 x.AccessPointGroupId == server.AccessPointGroupId &&
                 x.AccessPointMode == AccessPointMode.PublicInToken)
             .AsNoTracking()
@@ -293,7 +294,6 @@ public class AgentService
         var newAccessPoints = accessPoints.Where(x => !curAccessPoints.Any(y => AccessPointEquals(x, y))).ToArray();
         await vhContext.AccessPoints.AddRangeAsync(newAccessPoints);
     }
-
 
     private static void SetServerStatus(ServerModel server, ServerStatus serverStatus, bool isConfigure)
     {

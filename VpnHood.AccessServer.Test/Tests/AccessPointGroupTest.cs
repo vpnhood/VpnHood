@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
@@ -10,6 +11,25 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AccessPointGroupTest
 {
+    [TestMethod]
+    public async Task Foo()
+    {
+        try
+        {
+            var testInit = await TestInit.Create();
+            var tr = await testInit.VhContext.Database.BeginTransactionAsync();
+            var session = await testInit.VhContext.Sessions.SingleAsync(x => x.SessionId == 5066589);
+            session.ClientVersion = "11111";
+            await testInit.VhContext.SaveChangesAsync();
+            await tr.CommitAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            Console.WriteLine(ex);
+        }
+
+    }
+
     [TestMethod]
     public async Task Crud()
     {

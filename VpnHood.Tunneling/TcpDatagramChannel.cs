@@ -31,10 +31,10 @@ public class TcpDatagramChannel : IDatagramChannel
     public Task Start()
     {
         if (Connected)
-            throw new Exception("Start has already been called!");
+            throw new Exception("TcpDatagram has been already started.");
 
         if (_disposed)
-            throw new ObjectDisposedException(nameof(TcpDatagramChannel));
+            throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
         Connected = true;
         return ReadTask();
@@ -43,7 +43,7 @@ public class TcpDatagramChannel : IDatagramChannel
     public async Task SendPacketAsync(IPPacket[] ipPackets)
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(TcpDatagramChannel));
+            throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
         var maxDataLen = Mtu;
         var dataLen = ipPackets.Sum(x => x.TotalPacketLength);

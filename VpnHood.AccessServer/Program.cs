@@ -98,8 +98,8 @@ public class Program
         await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
         await GrayMintApp.CheckDatabaseCommand<VhReportContext>(webApp, args);
         await webApp.UseMultilevelAuthorization();
-        webApp.ScheduleGrayMintSqlMaintenance<VhContext>(TimeSpan.FromDays(5));
-        webApp.ScheduleGrayMintSqlMaintenance<VhReportContext>(TimeSpan.FromDays(5)); 
+        webApp.ScheduleGrayMintSqlMaintenance<VhContext>(TimeSpan.FromDays(1));
+        webApp.ScheduleGrayMintSqlMaintenance<VhReportContext>(TimeSpan.FromDays(1));
 
         // Log Configs
         //var logger = webApp.Services.GetRequiredService<ILogger<Program>>();

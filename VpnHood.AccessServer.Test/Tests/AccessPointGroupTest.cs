@@ -14,20 +14,7 @@ public class AccessPointGroupTest
     [TestMethod]
     public async Task Foo()
     {
-        try
-        {
-            var testInit = await TestInit.Create();
-            var tr = await testInit.VhContext.Database.BeginTransactionAsync();
-            var session = await testInit.VhContext.Sessions.SingleAsync(x => x.SessionId == 5066589);
-            session.ClientVersion = "11111";
-            await testInit.VhContext.SaveChangesAsync();
-            await tr.CommitAsync();
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            Console.WriteLine(ex);
-        }
-
+        await Task.Delay(1);
     }
 
     [TestMethod]

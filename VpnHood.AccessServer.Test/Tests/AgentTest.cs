@@ -418,7 +418,7 @@ public class AgentClientSessionTest : BaseTest
         //-------------
 
         //remove last cycle
-        var cycleManager = TestInit1.WebApp.Services.GetRequiredService<UsageCycleService>();
+        var cycleManager = TestInit1.Scope.ServiceProvider.GetRequiredService<UsageCycleService>();
         await cycleManager.DeleteCycle(cycleManager.CurrentCycleId);
         await cycleManager.UpdateCycle();
 

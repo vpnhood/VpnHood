@@ -10,6 +10,7 @@ public static class AccessEventId
     public static EventId Cache { get; } = new((int)EventCode.Cache, nameof(Cache));
     public static EventId Archive { get; } = new((int)EventCode.Archive, nameof(Archive));
     public static EventId Maintenance { get; } = new((int)EventCode.Maintenance, nameof(Maintenance));
+    public static EventId Cycle { get; set; } = new((int)EventCode.Cycle, nameof(Cycle));
 
     private enum EventCode
     {
@@ -19,6 +20,7 @@ public static class AccessEventId
         Cache,
         Archive,
         Maintenance,
+        Cycle,
     }
 
 }

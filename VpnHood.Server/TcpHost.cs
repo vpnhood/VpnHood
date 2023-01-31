@@ -367,7 +367,7 @@ internal class TcpHost : IAsyncDisposable
 
     private async Task ProcessBye(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Reading the {RequestCode.Bye} request ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, $"Reading the {RequestCode.Bye} request ...");
         var request = await StreamUtil.ReadJsonAsync<RequestBase>(tcpClientStream.Stream, cancellationToken);
 
         // finding session
@@ -381,7 +381,7 @@ internal class TcpHost : IAsyncDisposable
 
     private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Reading the {nameof(TcpDatagramChannelRequest)} ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, $"Reading the {nameof(TcpDatagramChannelRequest)} ...");
         var request = await StreamUtil.ReadJsonAsync<TcpDatagramChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
         // finding session
@@ -403,7 +403,7 @@ internal class TcpHost : IAsyncDisposable
 
     private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Reading the {nameof(TcpProxyChannelRequest)} ...");
+        VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel, $"Reading the {nameof(TcpProxyChannelRequest)} ...");
         var request = await StreamUtil.ReadJsonAsync<TcpProxyChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
         // find session

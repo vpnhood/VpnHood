@@ -53,7 +53,7 @@ public class Session : IAsyncDisposable, IJob
     public JobSection JobSection { get; }
     public HelloRequest? HelloRequest { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int TcpChannelCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
+    public int TcpChannelCount => Tunnel.TcpProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
@@ -261,7 +261,7 @@ public class Session : IAsyncDisposable, IJob
         try
         {
             // connect to requested site
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
             // Apply limitation
@@ -294,7 +294,7 @@ public class Session : IAsyncDisposable, IJob
                 request.CipherKey, null, request.CipherLength);
 
             // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                 $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
 
             tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());

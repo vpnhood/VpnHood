@@ -3,18 +3,20 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace VpnHood.Common.JobController;
 
 public class JobRunner
 {
+    public ILogger Logger { get; set; } = NullLogger.Instance;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly LinkedList<WeakReference<IJob>> _jobRefs = new();
-    private readonly List<WeakReference<IJob>> _deadWatchDogRefs = new();
+    private readonly List<WeakReference<IJob>> _deadJobs = new();
     private Timer? _timer;
-
     private TimeSpan _interval = TimeSpan.FromSeconds(5);
+    public bool IsStarted => _timer != null;
+
     public TimeSpan Interval
     {
         get => _interval;
@@ -30,9 +32,10 @@ public class JobRunner
     public static JobRunner Default => DefaultLazy.Value;
     private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
 
-    public JobRunner()
+    public JobRunner(bool start = true)
     {
-        Start();
+        if (start)
+            Start();
     }
 
     public void TimerProc(object? _)
@@ -48,7 +51,7 @@ public class JobRunner
                 // the WatchDog object is dead
                 if (!jobRef.TryGetTarget(out var job))
                 {
-                    _deadWatchDogRefs.Add(jobRef);
+                    _deadJobs.Add(jobRef);
                     continue;
                 }
 
@@ -67,19 +70,19 @@ public class JobRunner
                 }
                 catch (ObjectDisposedException)
                 {
-                    _deadWatchDogRefs.Add(jobRef);
+                    _deadJobs.Add(jobRef);
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.LogError(ex, "Could not run a WatchDog.");
+                    Logger.LogError(ex, "Could not run a job.");
                 }
             }
 
             // clear dead watch dogs
-            foreach (var item in _deadWatchDogRefs)
+            foreach (var item in _deadJobs)
                 _jobRefs.Remove(item);
 
-            _deadWatchDogRefs.Clear();
+            _deadJobs.Clear();
         }
         finally
         {
@@ -104,8 +107,6 @@ public class JobRunner
             _semaphore.Release();
         }
     }
-
-    public bool IsStarted => _timer != null;
 
     public void Start()
     {

@@ -21,6 +21,14 @@ public class TcpProxyChannel : IChannel, IJob
     private const int BufferSizeMin = 0x1000;
     private bool _disposed;
 
+    public JobSection JobSection { get; }
+    public event EventHandler<ChannelEventArgs>? OnFinished;
+    public bool IsClosePending => false;
+    public bool Connected { get; private set; }
+    public long SentByteCount { get; private set; }
+    public long ReceivedByteCount { get; private set; }
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
+
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
         TimeSpan tcpTimeout, int? orgStreamReadBufferSize = BufferSizeMin, int? tunnelStreamReadBufferSize = BufferSizeMin)
     {
@@ -48,14 +56,6 @@ public class TcpProxyChannel : IChannel, IJob
         JobSection = new JobSection(tcpTimeout);
         JobRunner.Default.Add(this);
     }
-
-    public JobSection JobSection { get; }
-
-    public event EventHandler<ChannelEventArgs>? OnFinished;
-    public bool Connected { get; private set; }
-    public long SentByteCount { get; private set; }
-    public long ReceivedByteCount { get; private set; }
-    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public async Task Start()
     {
@@ -100,7 +100,7 @@ public class TcpProxyChannel : IChannel, IJob
             IsConnectionValid(_tunnelTcpClientStream.TcpClient.Client))
             return;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
+        VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
             $"Disposing a {VhLogger.FormatTypeName(this)} due to its error state.");
 
         Dispose();

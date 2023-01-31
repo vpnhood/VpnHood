@@ -59,7 +59,7 @@ public class VpnHoodAppUi : IDisposable
 
     private void Start()
     {
-        _url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
+        _url = $"http://{Util.GetFreeTcpEndPoint(IPAddress.Loopback, DefaultPort)}";
         _server = CreateWebServer(Url, GetSpaPath());
         try
         {

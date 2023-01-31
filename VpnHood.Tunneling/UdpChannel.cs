@@ -21,11 +21,13 @@ public class UdpChannel : IDatagramChannel
     private readonly bool _isClient;
     private readonly object _lockCleanup = new();
     private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
-
     private readonly uint _sessionId;
     private readonly UdpClient _udpClient;
     private bool _disposed;
     private IPEndPoint? _lastRemoteEp;
+
+    public bool IsClosePending => false;
+    
     public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");

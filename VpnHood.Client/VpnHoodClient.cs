@@ -749,7 +749,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             request, cancellationToken);
 
         // add the new channel
-        var channel = new TcpDatagramChannel(tcpClientStream);
+        var lifespan = TimeSpan.FromSeconds(new Random().Next(120, 360));
+        var channel = new TcpDatagramChannel(tcpClientStream, lifespan);
         try { Tunnel.AddChannel(channel); }
         catch { channel.Dispose(); throw; }
 
@@ -766,7 +767,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             {
                 RequestCode.Hello => GeneralEventId.Session,
                 RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
-                RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
+                RequestCode.TcpProxyChannel => GeneralEventId.TcpProxyChannel,
                 _ => GeneralEventId.Tcp
             };
             VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}.");

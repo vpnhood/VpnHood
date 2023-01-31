@@ -51,7 +51,7 @@ public class ServerTest
     [TestMethod]
     public async Task Reconfigure()
     {
-        var serverEndPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
+        var serverEndPoint = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint } };
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         var serverConfig = fileAccessServer.ServerConfig;

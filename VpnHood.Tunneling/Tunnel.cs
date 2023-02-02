@@ -8,6 +8,7 @@ using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Tunneling;
 
@@ -47,6 +48,7 @@ public class Tunnel : IDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
     }
+
     public int TcpProxyChannelCount
     {
         get
@@ -133,17 +135,19 @@ public class Tunnel : IDisposable
         lock (_channelListLock)
         {
             if (DatagramChannels.Contains(datagramChannel))
-                throw new Exception($"{VhLogger.FormatTypeName(datagramChannel)} already exists in the collection!");
+                throw new Exception("the DatagramChannel already exists in the collection.");
 
             datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
             DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                $"A {VhLogger.FormatTypeName(datagramChannel)} has been added. ChannelCount: {DatagramChannels.Length}");
+                "A DatagramChannel has been added. ChannelCount: {ChannelCount}", DatagramChannels.Length);
 
             // remove additional Datagram channels
             while (DatagramChannels.Length > MaxDatagramChannelCount)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
+                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, 
+                    "Removing an exceeded DatagramChannel. ChannelCount: {ChannelCount}", DatagramChannels.Length);
+
                 RemoveChannel(DatagramChannels[0]);
             }
         }
@@ -213,6 +217,7 @@ public class Tunnel : IDisposable
         }
 
         // dispose or close-pending
+        // ReSharper disable once MergeIntoPattern
         if (channel.Connected && channel.IsClosePending)
             _closePendingChannels.TryAdd(channel, new TimeoutItem<IChannel>(channel, true));
         else
@@ -243,14 +248,19 @@ public class Tunnel : IDisposable
         if (VhLogger.IsDiagnoseMode)
             PacketUtil.LogPackets(e.IpPackets, $"Packets received from {nameof(Tunnel)}.");
 
+        // check datagram message
+        // performance critical; don't create another array by linq
+        if (e.IpPackets.Any(DatagramMessageHandler.IsDatagramMessage))
+            e = new ChannelPacketReceivedEventArgs(
+                e.IpPackets.Where(x => !DatagramMessageHandler.IsDatagramMessage(x)).ToArray(), e.Channel);
+
         try
         {
             OnPacketReceived?.Invoke(sender, e);
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.Log(LogLevel.Error,
-                $"Packets dropped! Error in processing channel received packets. Message: {ex}");
+            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex, "Packets dropped! Error in processing channel received packets.");
         }
     }
 
@@ -276,7 +286,7 @@ public class Tunnel : IDisposable
 
             // check timeout
             if (FastDateTime.Now - dateTime > _datagramPacketTimeout)
-                throw new TimeoutException("Could not send the datagram packets.");
+                throw new TimeoutException("Could not send datagram packets.");
         }
 
         // add all packets to the queue
@@ -291,7 +301,7 @@ public class Tunnel : IDisposable
         }
 
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPackets(ipPackets, $"Packet sent to {nameof(Tunnel)} queue.");
+            PacketUtil.LogPackets(ipPackets, "Packet sent to tunnel queue.");
     }
 
     private async Task SendPacketTask(IDatagramChannel channel)

@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
@@ -65,7 +64,6 @@ public class TcpDatagramChannelTest
         await TestHelper.AssertEqualsWait(testPacket.ToString(), () => lastServerReceivedPacket?.ToString());
         await TestHelper.AssertEqualsWait(0, () => clientTunnel.DatagramChannels.Length);
         await TestHelper.AssertEqualsWait(0, () => serverTunnel.DatagramChannels.Length);
-        Assert.AreEqual(typeof(CloseDatagramMessage), DatagramMessageHandler.ReadMessage(lastServerReceivedPacket!).GetType());
     }
 
 

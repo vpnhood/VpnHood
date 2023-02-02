@@ -55,18 +55,26 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly SendingPackets _sendingPacket = new();
     private readonly TcpProxyHost _tcpProxyHost;
     private bool _disposed;
-    private Timer? _intervalCheckTimer;
-    private bool _isManagingDatagramChannels;
+    private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
     private ClientState _state = ClientState.None;
     private readonly IPAddress? _dnsServerIpV4;
     private readonly IPAddress? _dnsServerIpV6;
     private readonly IIpFilter? _ipFilter;
+    private readonly TimeSpan _minTcpDatagramLifespan;
+    private readonly TimeSpan _maxTcpDatagramLifespan;
+    private bool _udpChannelAdded;
+    private DateTime _lastReceivedPacketTime = DateTime.MinValue;
+
     private int ProtocolVersion { get; }
+    public Version? ServerVersion { get; private set; }
+    private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
+
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal SocketFactory SocketFactory { get; }
+    public event EventHandler? StateChanged;
     public IPAddress? PublicAddress { get; private set; }
     public bool IsIpV6Supported { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
@@ -88,16 +96,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public string UserAgent { get; }
     public IPEndPoint? HostEndPoint { get; private set; }
     public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
-    public event EventHandler? StateChanged;
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
-        if (options.TcpProxyLoopbackAddressIpV4 == null) throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV4));
-        if (options.TcpProxyLoopbackAddressIpV6 == null) throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV6));
+        if (options.TcpProxyLoopbackAddressIpV4 == null)
+            throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV4));
+
+        if (options.TcpProxyLoopbackAddressIpV6 == null)
+            throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV6));
+
+        if (!Util.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
+            throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
+
         SocketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
         DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
         _dnsServerIpV4 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
         _dnsServerIpV6 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+        _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
+        _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
 
         Token = token ?? throw new ArgumentNullException(nameof(token));
         Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
@@ -209,9 +225,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Establish first connection and create a session
             await ConnectInternal(_cancellationToken);
 
-            // run interval checker
-            _intervalCheckTimer = new Timer(state => _ = DoWatch(), null, 0, 5000);
-
             // create Tcp Proxy Host
             VhLogger.Instance.LogTrace($"Starting {nameof(TcpProxyHost)}...");
             _tcpProxyHost.Start();
@@ -296,13 +309,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
     {
-        if (e.Channel is IDatagramChannel)
-            _ = DoWatch();
-    }
+        // device is sleep. Don't wake it up
+        if (!Util.IsInfinite(_maxTcpDatagramLifespan) && FastDateTime.Now - _lastReceivedPacketTime > _maxTcpDatagramLifespan)
+            return;
 
-    private async Task DoWatch()
-    {
-        await ManageDatagramChannels(_cancellationToken);
+        if (e.Channel is IDatagramChannel)
+            _ = ManageDatagramChannels(_cancellationToken);
     }
 
     // WARNING: Performance Critical!
@@ -314,6 +326,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UpdateDnsRequest(ipPacket, false);
 
         _packetCapture.SendPacketToInbound(e.IpPackets);
+        _lastReceivedPacketTime = FastDateTime.Now;
     }
 
     // WARNING: Performance Critical!
@@ -378,15 +391,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
 
                 // send packets
+                if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationToken);
+                if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait(_cancellationToken);
                 if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                 if (proxyPackets.Count > 0) _proxyManager.SendPacket(proxyPackets.ToArray());
-                if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait(_cancellationToken);
                 if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
             }
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError($"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
+            VhLogger.Instance.LogError(ex, "Could not process packet the capture packets.");
         }
     }
 
@@ -502,13 +516,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     /// <returns>true if managing is in progress</returns>
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
     {
-        // check is in progress
-        lock (this)
-        {
-            if (_isManagingDatagramChannels)
-                return;
-            _isManagingDatagramChannels = true;
-        }
+        if (!await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken))
+            return;
 
         try
         {
@@ -538,8 +547,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (!UseUdpChannel)
             {
                 // remove UDP datagram channels
-                foreach (var channel in Tunnel.DatagramChannels.Where(x => x is UdpChannel))
-                    Tunnel.RemoveChannel(channel);
+                if (_udpChannelAdded)
+                    foreach (var channel in Tunnel.DatagramChannels.Where(x => x is UdpChannel))
+                        Tunnel.RemoveChannel(channel);
+                _udpChannelAdded = false;
 
                 // make sure there is enough DatagramChannel
                 var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
@@ -547,7 +558,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     return;
 
                 // creating DatagramChannels
-                List<Task> tasks = new();
+                var tasks = new List<Task>();
                 for (var i = curDatagramChannelCount; i < Tunnel.MaxDatagramChannelCount; i++)
                     tasks.Add(AddTcpDatagramChannel(cancellationToken));
 
@@ -555,19 +566,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     .ContinueWith(x =>
                     {
                         if (x.IsFaulted)
-                            VhLogger.Instance.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
-                        _isManagingDatagramChannels = false;
+                            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, x.Exception, "Could not add a TcpDatagramChannel.");
                     }, cancellationToken);
             }
         }
         catch (Exception ex)
         {
             if (_disposed) return;
-            VhLogger.Instance.LogError(ex.Message);
+            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex, "Could not Manage DatagramChannels.");
         }
         finally
         {
-            _isManagingDatagramChannels = false;
+            _datagramChannelsSemaphore.Release();
         }
     }
 
@@ -575,12 +585,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         if (HostEndPoint == null)
             throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
+
         if (udpPort == 0) throw new ArgumentException(nameof(udpPort));
         if (udpKey == null || udpKey.Length == 0) throw new ArgumentNullException(nameof(udpKey));
 
         var udpEndPoint = new IPEndPoint(HostEndPoint.Address, udpPort);
         VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-            $"Creating {nameof(UdpChannel)}... ServerEp: {VhLogger.Format(udpEndPoint)}");
+            "Creating a UdpChannel... ServerEp: {ServerEp}", VhLogger.Format(udpEndPoint));
 
         var udpClient = SocketFactory.CreateUdpClient(HostEndPoint.AddressFamily);
         if (_packetCapture.CanProtectSocket)
@@ -589,8 +600,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // add channel
         var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);
-        try { Tunnel.AddChannel(udpChannel); }
-        catch { udpChannel.Dispose(); throw; }
+        try
+        {
+            _udpChannelAdded = true; // let have it before add channel to make sure it will be removed if any exception occur
+            Tunnel.AddChannel(udpChannel);
+        }
+        catch
+        {
+            udpChannel.Dispose(); throw;
+        }
     }
 
     internal async Task<TcpClientStream> GetTlsConnectionToServer(EventId eventId, CancellationToken cancellationToken)
@@ -702,6 +720,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
         PublicAddress = sessionResponse.ClientPublicAddress;
         IsIpV6Supported = sessionResponse.IsIpV6Supported;
+        ServerVersion = Version.Parse(sessionResponse.ServerVersion);
 
         // Get IncludeIpRange for clientIp
         if (_ipFilter != null)
@@ -722,7 +741,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (UseUdpChannel && sessionResponse.UdpPort != 0 && sessionResponse.UdpKey != null)
             AddUdpChannel(sessionResponse.UdpPort, sessionResponse.UdpKey);
 
-        await ManageDatagramChannels(cancellationToken);
+        _ = ManageDatagramChannels(cancellationToken);
 
         // done
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -735,12 +754,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task<TcpDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         var tcpClientStream = await GetTlsConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
-        return await AddTcpDatagramChannel(tcpClientStream, cancellationToken);
-    }
 
-    private async Task<TcpDatagramChannel> AddTcpDatagramChannel(TcpClientStream tcpClientStream,
-        CancellationToken cancellationToken)
-    {
         // Create the Request Message
         var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
 
@@ -748,8 +762,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         await SendRequest<SessionResponseBase>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel,
             request, cancellationToken);
 
+        // find timespan
+        var lifespan = !Util.IsInfinite(_maxTcpDatagramLifespan) && IsTcpDatagramLifespanSupported
+            ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds, (int)_maxTcpDatagramLifespan.TotalSeconds))
+            : Timeout.InfiniteTimeSpan;
+
         // add the new channel
-        var lifespan = TimeSpan.FromSeconds(new Random().Next(120, 360));
         var channel = new TcpDatagramChannel(tcpClientStream, lifespan);
         try { Tunnel.AddChannel(channel); }
         catch { channel.Dispose(); throw; }
@@ -824,9 +842,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // create cancellation token
-            var cts = new CancellationTokenSource();
-            await using var timer = new Timer(_ => cts.Cancel(), null, timeout, Timeout.InfiniteTimeSpan);
-            var cancellationToken = cts.Token;
+            using var cancellationTokenSource = new CancellationTokenSource(timeout);
+            var cancellationToken = cancellationTokenSource.Token;
 
             using var tcpClientStream = await GetTlsConnectionToServer(GeneralEventId.Session, cancellationToken);
 
@@ -909,14 +926,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // log suppressedBy
         if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf)
             VhLogger.Instance.LogWarning("You suppressed by a session of yourself!");
+
         else if (SessionStatus.SuppressedBy == SessionSuppressType.Other)
             VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
-        if (_intervalCheckTimer != null)
-            await _intervalCheckTimer.DisposeAsync();
-
         VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpProxyHost)}...");
         _tcpProxyHost.Dispose();
 

@@ -29,8 +29,10 @@ public class ClientOptions
     public SocketFactory SocketFactory { get; set; } = new();
     public int MaxDatagramChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
-    
-#if  DEBUG
+    public TimeSpan MinTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan MaxTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(10);
+
+#if DEBUG
     public int ProtocolVersion { get; set; }
 #endif
 }

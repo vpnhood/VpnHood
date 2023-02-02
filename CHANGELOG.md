@@ -1,3 +1,11 @@
+# Upcoming
+### Client
+Update: Improve stability when using no UDP mode
+
+### Server
+Feature: Improve stability by adding lifetime to TcpDatagarmChannel
+Fix: IpV6 detection
+
 # v2.6.342
 ### Client
 * Fix: UDP port memory leak

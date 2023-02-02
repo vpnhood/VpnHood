@@ -1,6 +1,5 @@
 ﻿using System;
 using VpnHood.Common.Logging;
-using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Tunneling;
 

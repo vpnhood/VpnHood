@@ -93,6 +93,12 @@ internal static class TestHelper
         Assert.AreEqual(clientState, client.State);
     }
 
+    public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
+    {
+        return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach to expected value.", timeout);
+    }
+
+
     private static PingReply SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = 3000)
     {
         using var pingT = new Ping();

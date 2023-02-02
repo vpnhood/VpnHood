@@ -32,7 +32,7 @@ public static class DatagramMessageHandler
     public static DatagramBaseMessage ReadMessage(IPPacket ipPacket)
     {
         if (!IsDatagramMessage(ipPacket))
-            throw new ArgumentException("packet is not an Datagram message.", nameof(ipPacket));
+            throw new ArgumentException("packet is not a Datagram message.", nameof(ipPacket));
 
         var udpPacket = PacketUtil.ExtractUdp(ipPacket);
 

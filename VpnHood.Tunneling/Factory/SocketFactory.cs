@@ -9,7 +9,7 @@ namespace VpnHood.Tunneling.Factory;
 
 public class SocketFactory : ISocketFactory
 {
-    private bool _isKeepAliveHasError = false;
+    private bool _hasKeepAliveError;
 
     public virtual TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
@@ -24,7 +24,7 @@ public class SocketFactory : ISocketFactory
 
     public virtual void SetKeepAlive(Socket socket, bool enable)
     {
-        if (_isKeepAliveHasError)
+        if (_hasKeepAliveError)
             return;
 
         try
@@ -39,7 +39,7 @@ public class SocketFactory : ISocketFactory
         }
         catch (Exception ex)
         {
-            _isKeepAliveHasError = true;
+            _hasKeepAliveError = true;
             VhLogger.Instance.LogWarning(ex, "KeepAlive is not supported! Consider upgrading your OS.");
         }
     }

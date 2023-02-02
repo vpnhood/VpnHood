@@ -241,4 +241,10 @@ public static class Util
         // Byte
         return bytes.ToString("0");
     }
+
+    public static bool IsInfinite(TimeSpan timeSpan)
+    {
+        return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
+    }
+
 }

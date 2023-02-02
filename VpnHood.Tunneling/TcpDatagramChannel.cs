@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,7 +39,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
     {
         _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
         tcpClientStream.TcpClient.NoDelay = true;
-        if (lifespan != Timeout.InfiniteTimeSpan)
+        if (!Util.IsInfinite(lifespan))
         {
             _lifeTime = FastDateTime.Now + lifespan;
             JobRunner.Default.Add(this);
@@ -107,12 +108,23 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
 
                 LastActivityTime = FastDateTime.Now;
                 ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
-                FireReceivedPackets(ipPackets);
 
                 // check datagram message
+                List<IPPacket>? processedPackets = null;
                 foreach (var ipPacket in ipPackets)
-                    if (DatagramMessageHandler.IsDatagramMessage(ipPacket))
-                        ProcessMessage(DatagramMessageHandler.ReadMessage(ipPacket));
+                    if (ProcessMessage(ipPacket))
+                    {
+                        processedPackets ??= new List<IPPacket>();
+                        processedPackets.Add(ipPacket);
+                    }
+
+                // remove all processed packets
+                if (processedPackets != null)
+                    ipPackets = ipPackets.Except(processedPackets).ToArray();
+
+                // fire new packets
+                if (ipPackets.Length > 0)
+                    OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
             }
         }
         catch (Exception ex)
@@ -126,9 +138,13 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    private void ProcessMessage(DatagramBaseMessage message)
+    private bool ProcessMessage(IPPacket ipPacket)
     {
-        if (message is not CloseDatagramMessage) return;
+        if (!DatagramMessageHandler.IsDatagramMessage(ipPacket))
+            return false;
+
+        var message = DatagramMessageHandler.ReadMessage(ipPacket);
+        if (message is not CloseDatagramMessage) return false;
 
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.DatagramChannel,
             "Receiving the close message from the peer. Lifetime: {Lifetime}, CurrentClosePending: {IsClosePending}", _lifeTime, IsClosePending);
@@ -138,6 +154,8 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
             Dispose();
         else
             _ = SendCloseMessageAsync();
+
+        return true;
     }
 
     private Task SendCloseMessageAsync()
@@ -154,25 +172,9 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
         return SendPacketAsync(new[] { ipPacket });
     }
 
-    private void FireReceivedPackets(IPPacket[] ipPackets)
-    {
-        if (_disposed)
-            return;
-
-        try
-        {
-            OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
-                $"Error in processing received packets! Error: {ex.Message}");
-        }
-    }
-
     public Task RunJob()
     {
-        if (!IsClosePending && FastDateTime.Now > _lifeTime)
+        if (!IsClosePending && FastDateTime.Now > _lifeTime  )
             _ = SendCloseMessageAsync();
 
         return Task.CompletedTask;

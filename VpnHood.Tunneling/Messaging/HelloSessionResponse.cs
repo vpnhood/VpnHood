@@ -27,4 +27,5 @@ public class HelloSessionResponse : SessionResponse
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress ClientPublicAddress { get; set; } = null!;
+
 }

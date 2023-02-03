@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json;
@@ -24,6 +25,34 @@ public static class IPAddressUtil
         if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
 
         return ret.ToArray();
+    }
+
+    public static async Task<bool> IsIpv6Supported()
+    {
+        var ping = new Ping();
+        var ping1 = ping.SendPingAsync("2001:4860:4860::8888");
+        var ping2 = ping.SendPingAsync("2001:4860:4860::8844");
+        try
+        {
+            if ((await ping1).Status == IPStatus.Success)
+                return true;
+        }
+        catch
+        {
+            //ignore
+        }
+
+        try
+        {
+            if ((await ping2).Status == IPStatus.Success)
+                return true;
+        }
+        catch
+        {
+             // ignore
+        }
+
+        return false;
     }
 
     public static async Task<IPAddress[]> GetPublicIpAddresses()
@@ -69,8 +98,8 @@ public static class IPAddressUtil
             //    : "https://api6.ipify.org?format=json";
 
             var url = addressFamily == AddressFamily.InterNetwork
-                ? "https://ip4.seeip.org/json"
-                : "https://ip6.seeip.org/json";
+                ? "https://api4.my-ip.io/ip.json"
+                : "https://api6.my-ip.io/ip.json";
 
             using var httpClient = new HttpClient();
             httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
@@ -252,7 +281,7 @@ public static class IPAddressUtil
         else
         {
             var bytes = ipAddress.GetAddressBytes();
-            for (var i=6; i< bytes.Length; i++)
+            for (var i = 6; i < bytes.Length; i++)
                 bytes[i] = 0;
             return new IPAddress(bytes);
         }

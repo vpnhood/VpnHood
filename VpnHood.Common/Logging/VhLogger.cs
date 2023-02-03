@@ -11,7 +11,18 @@ namespace VpnHood.Common.Logging;
 public static class VhLogger
 {
     private static bool _isDiagnoseMode;
-    public static ILogger Instance { get; set; } = NullLogger.Instance;
+    private static ILogger _instance = NullLogger.Instance;
+
+    public static ILogger Instance
+    {
+        get => _instance;
+        set
+        {
+            _instance = value;
+            JobController.JobRunner.Default.Logger = value;
+        }
+    }
+
     public static bool IsAnonymousMode { get; set; } = true;
     public static bool IsDiagnoseMode
     {

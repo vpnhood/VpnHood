@@ -5,17 +5,17 @@ namespace VpnHood.Common.JobController;
 public class JobLock : IDisposable
 {
     private readonly JobSection _jobSection;
-    public bool ShouldEnter { get; }
+    public bool IsEntered { get; }
 
-    internal JobLock(JobSection jobSection, bool shouldEnter)
+    internal JobLock(JobSection jobSection, bool isEntered)
     {
         _jobSection = jobSection;
-        ShouldEnter = shouldEnter;
+        IsEntered = isEntered;
     }
 
     public void Dispose()
     {
-        if (ShouldEnter)
+        if (IsEntered)
             _jobSection.Leave();
     }
 }

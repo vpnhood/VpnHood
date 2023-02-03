@@ -13,7 +13,7 @@ public static class GeneralEventId
     public static EventId Tls = new((int)EventCode.Tls, nameof(Tls));
     public static EventId Udp = new((int)EventCode.Udp, nameof(Udp));
     public static EventId Track = new((int)EventCode.Track, nameof(Track));
-    public static EventId StreamChannel = new((int)EventCode.StreamChannel, nameof(StreamChannel));
+    public static EventId TcpProxyChannel = new((int)EventCode.StreamChannel, nameof(TcpProxyChannel));
     public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
     public static EventId AccessServer = new((int)EventCode.AccessServer, nameof(AccessServer));
     public static EventId NetProtect = new((int)EventCode.NetProtect, nameof(NetProtect));

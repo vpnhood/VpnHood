@@ -224,7 +224,7 @@ internal class TcpProxyHost : IDisposable
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope(
                 $"LocalPort: {natItem.SourcePort}, RemoteEp: {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
             var loopbackAddress = ipVersion == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
@@ -249,7 +249,7 @@ internal class TcpProxyHost : IDisposable
                 Util.GenerateSessionKey(),
                 natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
-            tcpProxyClientStream = await Client.GetTlsConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
+            tcpProxyClientStream = await Client.GetTlsConnectionToServer(GeneralEventId.TcpProxyChannel, cancellationToken);
             tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
             tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
             tcpProxyClientStream.TcpClient.SendTimeout = orgTcpClient.SendTimeout;
@@ -260,7 +260,7 @@ internal class TcpProxyHost : IDisposable
                 RequestCode.TcpProxyChannel, request, cancellationToken);
 
             // create a TcpProxyChannel
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream());
 
@@ -277,7 +277,7 @@ internal class TcpProxyHost : IDisposable
         {
             tcpProxyClientStream?.Dispose();
             orgTcpClient.Dispose();
-            VhLogger.Instance.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
+            VhLogger.Instance.LogError(GeneralEventId.TcpProxyChannel, $"{ex.Message}");
         }
     }
 }

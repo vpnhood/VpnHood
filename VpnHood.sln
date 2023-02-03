@@ -50,6 +50,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Samples.SimpleClien
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Samples.SimpleClient.Win", "Samples\VpnHood.Samples.SimpleClient.Win\VpnHood.Samples.SimpleClient.Win.csproj", "{1247900C-916A-426B-8733-D43B17FAA694}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.ZUdpTrafficTest", "VpnHood.ZUdpTrafficTest\VpnHood.ZUdpTrafficTest.csproj", "{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -124,6 +126,10 @@ Global
 		{1247900C-916A-426B-8733-D43B17FAA694}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

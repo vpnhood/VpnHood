@@ -30,14 +30,14 @@ public class ClientServerTest
     [TestMethod]
     public void Redirect_Server()
     {
-        var serverEndPoint1 = Util.GetFreeEndPoint(IPAddress.Loopback);
+        var serverEndPoint1 = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions1 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint1 } };
         using var fileAccessServer1 = TestHelper.CreateFileAccessServer(fileAccessServerOptions1);
         using var testAccessServer1 = new TestAccessServer(fileAccessServer1);
         using var server1 = TestHelper.CreateServer(testAccessServer1);
 
         // Create Server 2
-        var serverEndPoint2 = Util.GetFreeEndPoint(IPAddress.Loopback);
+        var serverEndPoint2 = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions2 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint2 } };
         using var fileAccessServer2 = TestHelper.CreateFileAccessServer(fileAccessServerOptions2, fileAccessServer1.StoragePath);
         using var testAccessServer2 = new TestAccessServer(fileAccessServer2);
@@ -58,7 +58,7 @@ public class ClientServerTest
     public async Task TcpChannel()
     {
         // Create Server
-        var serverEp = Util.GetFreeEndPoint(IPAddress.IPv6Loopback);
+        var serverEp = Util.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.TcpEndPoints= new[] { serverEp };
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);

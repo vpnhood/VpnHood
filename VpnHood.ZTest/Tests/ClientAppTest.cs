@@ -474,7 +474,7 @@ public class ClientAppTest
         var token2 = TestHelper.CreateAccessToken(server);
 
         //create web server and set token url to it
-        var endPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
+        var endPoint = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
         using var webServer = new WebServer(endPoint.Port);
         token1.Url = $"http://{endPoint}/accesskey";
 

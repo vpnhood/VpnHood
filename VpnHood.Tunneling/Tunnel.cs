@@ -53,7 +53,7 @@ public class Tunnel : IDisposable
     {
         get
         {
-            lock (_closePendingChannels)
+            lock (_channelListLock)
                 return _tcpProxyChannels.Count;
         }
     }
@@ -273,7 +273,7 @@ public class Tunnel : IDisposable
     {
         var dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-
+        
         // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
         // ReSharper disable once InconsistentlySynchronizedField
         while (_packetQueue.Count > _maxQueueLength)

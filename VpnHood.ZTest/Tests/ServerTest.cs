@@ -174,7 +174,7 @@ public class ServerTest
         try
         {
             await TestHelper.Test_HttpsAsync();
-            Assert.Fail("Must fail. Session does not exist any more.");
+            Assert.Fail("Must fail. Session should not exist any more.");
         }
         catch { /*ignored*/ }
 

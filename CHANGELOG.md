@@ -1,4 +1,4 @@
-# v2.6.345
+# v2.6.346
 ### Client
 * Update: Improve stability when using no UDP mode
 

@@ -51,7 +51,7 @@ public class ServerTest
     [TestMethod]
     public async Task Reconfigure()
     {
-        var serverEndPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
+        var serverEndPoint = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint } };
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         var serverConfig = fileAccessServer.ServerConfig;
@@ -174,7 +174,7 @@ public class ServerTest
         try
         {
             await TestHelper.Test_HttpsAsync();
-            Assert.Fail("Must fail. Session does not exist any more.");
+            Assert.Fail("Must fail. Session should not exist any more.");
         }
         catch { /*ignored*/ }
 

@@ -146,7 +146,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
             var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
             var publicIpV6 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
-            VhLogger.Instance.LogInformation($"Public IPv4: {VhLogger.Format(publicIpV4)}, Public IPv6: {VhLogger.Format(publicIpV6)}");
+            var isIpV6Supported = publicIpV6 != null || await IPAddressUtil.IsIpv6Supported();
+            VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}, IsV6Supported: {IsV6Supported}",
+                VhLogger.Format(publicIpV4), VhLogger.Format(publicIpV6), isIpV6Supported);
 
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
@@ -165,7 +167,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
             VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
-            _tcpHost.Start(serverConfig.TcpEndPoints, publicIpV6 != null);
+            _tcpHost.Start(serverConfig.TcpEndPoints, isIpV6Supported && serverConfig.AllowIpV6);
 
             // set config status
             State = ServerState.Ready;

@@ -3,7 +3,7 @@
     "VpnHood.Client.App.Net": {
       "commandName": "Executable",
       "executablePath": "dotnet",
-      "commandLineArgs": "VpnHoodClient.dll"
+      "commandLineArgs": "VpnHoodClient.dll server"
     }
   }
 }

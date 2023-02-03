@@ -10,8 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
-using PacketDotNet;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.Device;
@@ -93,6 +91,11 @@ internal static class TestHelper
             Thread.Sleep(waitTime);
 
         Assert.AreEqual(clientState, client.State);
+    }
+
+    public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
+    {
+        return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach to expected value.", timeout);
     }
 
     private static PingReply SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = 3000)
@@ -213,7 +216,7 @@ internal static class TestHelper
     {
         var options = new FileAccessServerOptions
         {
-            TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) },
+            TcpEndPoints = new[] { Util.GetFreeTcpEndPoint(IPAddress.Loopback) },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,
@@ -433,11 +436,35 @@ internal static class TestHelper
     {
         await WaitForValue(obj, expectedValue, valueFactory, timeout);
 
-        if (message!=null)
+        if (message != null)
             Assert.AreEqual(expectedValue, valueFactory(obj), message);
         else
             Assert.AreEqual(expectedValue, valueFactory(obj));
     }
+
+    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
+    {
+        const int waitTime = 100;
+        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
+        {
+            if (Equals(valueFactory(), expectedValue))
+                return true;
+            await Task.Delay(waitTime);
+        }
+
+        return false;
+    }
+
+    public static async Task AssertEqualsWait<TValue>(TValue? expectedValue, Func<TValue> valueFactory, string? message = null, int timeout = 5000)
+    {
+        await WaitForValue(expectedValue, valueFactory, timeout);
+
+        if (message != null)
+            Assert.AreEqual(expectedValue, valueFactory(), message);
+        else
+            Assert.AreEqual(expectedValue, valueFactory());
+    }
+
 
     private static bool _isInit;
     internal static void Init()

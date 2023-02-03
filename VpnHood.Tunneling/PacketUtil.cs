@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using PacketDotNet.Ieee80211;
 using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;

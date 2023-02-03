@@ -300,7 +300,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
                 if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
                 if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
                 if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.StreamChannel) return VhLogger.IsDiagnoseMode;
+                if (eventId == GeneralEventId.TcpProxyChannel) return VhLogger.IsDiagnoseMode;
                 if (eventId == GeneralEventId.DatagramChannel) return true;
                 return true;
             });

@@ -12,9 +12,7 @@ public static class StreamUtil
     public static byte[]? ReadWaitForFill(Stream stream, int count)
     {
         var buffer = new byte[count];
-        if (!ReadWaitForFill(stream, buffer, 0, buffer.Length))
-            return null;
-        return buffer;
+        return ReadWaitForFill(stream, buffer, 0, buffer.Length) ? buffer : null;
     }
 
     public static async Task<byte[]?> ReadWaitForFillAsync(Stream stream, int count,

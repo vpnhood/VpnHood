@@ -27,7 +27,7 @@ public static class Util
         return ex is ObjectDisposedException or IOException or SocketException;
     }
 
-    public static IPEndPoint GetFreeEndPoint(IPAddress ipAddress, int defaultPort = 0)
+    public static IPEndPoint GetFreeTcpEndPoint(IPAddress ipAddress, int defaultPort = 0)
     {
         try
         {
@@ -241,4 +241,10 @@ public static class Util
         // Byte
         return bytes.ToString("0");
     }
+
+    public static bool IsInfinite(TimeSpan timeSpan)
+    {
+        return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
+    }
+
 }

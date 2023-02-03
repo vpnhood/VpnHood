@@ -22,4 +22,5 @@ public class ServerConfig
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
     public bool LogAnonymizer { get; set; } = false;
+    public bool AllowIpV6 { get; set; } = true;
 }

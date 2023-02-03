@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Server.Exceptions;
+﻿namespace VpnHood.Common.Logging;
 
 public interface ISelfLog
 {

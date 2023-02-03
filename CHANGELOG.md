@@ -1,10 +1,10 @@
 # v2.6.345
 ### Client
-Update: Improve stability when using no UDP mode
+* Update: Improve stability when using no UDP mode
 
 ### Server
-Feature: Improve stability by adding lifetime to TcpDatagarmChannel
-Fix: IpV6 detection
+* Feature: Improve stability by adding lifetime to TcpDatagarmChannel
+* Fix: IpV6 detection
 
 # v2.6.342
 ### Client

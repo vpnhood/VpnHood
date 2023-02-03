@@ -23,6 +23,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     private readonly IAccessServer _accessServer;
     private readonly SocketFactory _socketFactory;
     private readonly ITracker? _tracker;
+    private bool _disposed;
 
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
@@ -49,7 +50,6 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         DisposeAsync().GetAwaiter().GetResult();
     }
 
-    private bool _disposed;
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;

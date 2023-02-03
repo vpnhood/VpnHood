@@ -98,7 +98,6 @@ internal static class TestHelper
         return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach to expected value.", timeout);
     }
 
-
     private static PingReply SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = 3000)
     {
         using var pingT = new Ping();
@@ -437,7 +436,7 @@ internal static class TestHelper
     {
         await WaitForValue(obj, expectedValue, valueFactory, timeout);
 
-        if (message!=null)
+        if (message != null)
             Assert.AreEqual(expectedValue, valueFactory(obj), message);
         else
             Assert.AreEqual(expectedValue, valueFactory(obj));

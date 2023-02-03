@@ -101,7 +101,7 @@ public class TunnelTest
         aes.GenerateKey();
 
         var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        UdpChannel serverUdpChannel = new(false, serverUdpClient, 200, aes.Key);
+        var serverUdpChannel = new UdpChannel(false, serverUdpClient, 200, aes.Key);
         serverUdpChannel.Start();
 
         var serverReceivedPackets = Array.Empty<IPPacket>();
@@ -115,8 +115,9 @@ public class TunnelTest
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         if (serverUdpClient.Client.LocalEndPoint == null)
             throw new Exception("Client connection has not been established!");
+
         clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
-        UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
+        var clientUdpChannel = new UdpChannel(true, clientUdpClient, 200, aes.Key);
         clientUdpChannel.Start();
 
         var clientReceivedPackets = Array.Empty<IPPacket>();
@@ -186,4 +187,7 @@ public class TunnelTest
         Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
     }
+
+
+
 }

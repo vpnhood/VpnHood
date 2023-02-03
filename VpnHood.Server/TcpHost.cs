@@ -251,9 +251,7 @@ internal class TcpHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version != 1)
-        {
             throw new NotSupportedException("The request version is not supported!");
-        }
 
         // read request code
         var requestCode = (RequestCode)buffer[1];
@@ -280,7 +278,7 @@ internal class TcpHost : IAsyncDisposable
                 break;
 
             default:
-                throw new NotSupportedException("Unknown requestCode!");
+                throw new NotSupportedException($"Unknown requestCode. requestCode: {requestCode}");
         }
     }
 
@@ -369,7 +367,7 @@ internal class TcpHost : IAsyncDisposable
 
     private async Task ProcessBye(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Reading the {RequestCode.Bye} request ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, $"Reading the {RequestCode.Bye} request ...");
         var request = await StreamUtil.ReadJsonAsync<RequestBase>(tcpClientStream.Stream, cancellationToken);
 
         // finding session
@@ -383,7 +381,7 @@ internal class TcpHost : IAsyncDisposable
 
     private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Reading the {nameof(TcpDatagramChannelRequest)} ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, $"Reading the {nameof(TcpDatagramChannelRequest)} ...");
         var request = await StreamUtil.ReadJsonAsync<TcpDatagramChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
         // finding session
@@ -405,7 +403,7 @@ internal class TcpHost : IAsyncDisposable
 
     private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Reading the {nameof(TcpProxyChannelRequest)} ...");
+        VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel, $"Reading the {nameof(TcpProxyChannelRequest)} ...");
         var request = await StreamUtil.ReadJsonAsync<TcpProxyChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
         // find session

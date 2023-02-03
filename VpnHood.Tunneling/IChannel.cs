@@ -5,6 +5,7 @@ namespace VpnHood.Tunneling;
 
 public interface IChannel : IDisposable
 {
+    bool IsClosePending { get; }
     bool Connected { get; }
     DateTime LastActivityTime { get; }
     long SentByteCount { get; }

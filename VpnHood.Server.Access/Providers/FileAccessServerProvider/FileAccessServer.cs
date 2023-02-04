@@ -250,11 +250,14 @@ public class FileAccessServer : IAccessServer
     {
         // read access item
         var fileName = GetAccessItemFileName(tokenId);
-        using var fileLock = await AsyncLock.LockAsync(fileName);
-        if (!File.Exists(fileName))
-            return null;
+        string json;
+        using (await AsyncLock.LockAsync(fileName).ConfigureAwait(false))
+        {
+            if (!File.Exists(fileName))
+                return null;
 
-        var json = await File.ReadAllTextAsync(fileName);
+            json = await File.ReadAllTextAsync(fileName);
+        }
         var accessItem = Util.JsonDeserialize<AccessItem>(json);
         await ReadAccessItemUsage(accessItem);
         return accessItem;
@@ -275,13 +278,15 @@ public class FileAccessServer : IAccessServer
         try
         {
             var fileName = GetUsageFileName(accessItem.Token.TokenId);
-            using var fileLock = await AsyncLock.LockAsync(fileName);
-            if (File.Exists(fileName))
+            using (await AsyncLock.LockAsync(fileName).ConfigureAwait(false))
             {
-                var json = await File.ReadAllTextAsync(fileName);
-                var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
-                accessItem.AccessUsage.ReceivedTraffic = accessItemUsage.ReceivedTraffic;
-                accessItem.AccessUsage.SentTraffic = accessItemUsage.SentTraffic;
+                if (File.Exists(fileName))
+                {
+                    var json = await File.ReadAllTextAsync(fileName);
+                    var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
+                    accessItem.AccessUsage.ReceivedTraffic = accessItemUsage.ReceivedTraffic;
+                    accessItem.AccessUsage.SentTraffic = accessItemUsage.SentTraffic;
+                }
             }
         }
         catch (Exception ex)
@@ -303,8 +308,10 @@ public class FileAccessServer : IAccessServer
 
         // write accessItem
         var fileName = GetUsageFileName(accessItem.Token.TokenId);
-        using var fileLock = await AsyncLock.LockAsync(fileName);
-        await File.WriteAllTextAsync(fileName, json);
+        using (await AsyncLock.LockAsync(fileName).ConfigureAwait(false))
+        {
+            await File.WriteAllTextAsync(fileName, json);
+        }
     }
 
     private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)

@@ -1,5 +1,7 @@
-﻿using System;
+﻿using AsyncKeyedLock;
+using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,19 +10,21 @@ namespace VpnHood.Common.Utils;
 public class AsyncLock
 {
     private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> SemaphoreSlims = new();
+    private static readonly AsyncKeyedLocker<string> AsyncKeyedLocker = new(o =>
+    {
+        o.PoolSize = 20;
+        o.PoolInitialFill = 1;
+    });
 
     private class Semaphore : ILockAsyncResult
     {
         private readonly SemaphoreSlim _semaphoreSlim;
-        private readonly string? _name;
         private bool _disposed;
         public bool Succeeded { get; }
 
-        public Semaphore(SemaphoreSlim semaphoreSlim, bool succeeded, string? name)
+        public Semaphore(SemaphoreSlim semaphoreSlim, bool succeeded)
         {
             _semaphoreSlim = semaphoreSlim;
-            _name = name;
             Succeeded = succeeded;
         }
 
@@ -30,11 +34,6 @@ public class AsyncLock
                 return;
 
             _semaphoreSlim.Release();
-            lock (SemaphoreSlims)
-            {
-                if (_semaphoreSlim.CurrentCount == 0 && _name != null)
-                    SemaphoreSlims.TryRemove(_name, out _);
-            }
             _disposed = true;
         }
     }
@@ -47,26 +46,18 @@ public class AsyncLock
     public async Task<ILockAsyncResult> LockAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         var succeeded = await _semaphoreSlim.WaitAsync(timeout, cancellationToken);
-        return new Semaphore(_semaphoreSlim, succeeded, null);
+        return new Semaphore(_semaphoreSlim, succeeded);
     }
 
-    public static async Task<ILockAsyncResult> LockAsync(string name)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<IDisposable> LockAsync(string name)
     {
-        SemaphoreSlim semaphoreSlim;
-        lock (SemaphoreSlims)
-            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, new SemaphoreSlim(1, 1));
-
-        await semaphoreSlim.WaitAsync();
-        return new Semaphore(semaphoreSlim, true, name);
+        return AsyncKeyedLocker.LockAsync(name);
     }
 
-    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static ValueTask<AsyncKeyedLockTimeoutReleaser<string>> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        SemaphoreSlim semaphoreSlim;
-        lock (SemaphoreSlims)
-            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, new SemaphoreSlim(1, 1));
-
-        var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken);
-        return new Semaphore(semaphoreSlim, succeeded, name);
+        return AsyncKeyedLocker.LockAsync(name, timeout, cancellationToken);
     }
 }

@@ -102,54 +102,55 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
     {
-        using var recoverLock = await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}");
-        var session = GetSessionById(sessionRequest.SessionId);
-        if (session != null)
-            return session;
-
-        // Get session from the access server
-        VhLogger.Instance.LogTrace(GeneralEventId.Session,
-            "Trying to recover a session from the access server. SessionId: {SessionId}",
-            VhLogger.FormatSessionId(sessionRequest.SessionId));
-
-        try
+        using (await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").ConfigureAwait(false))
         {
-            var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId,
-                ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address);
+            var session = GetSessionById(sessionRequest.SessionId);
+            if (session != null)
+                return session;
 
-            // Check session key for recovery
-            if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
-                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
-
-            // session is authorized so we can pass any error to client
-            if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-                throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
-
-            // create the session even if it contains error to prevent many calls
-            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, null);
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Session has been recovered. SessionId: {SessionId}",
+            // Get session from the access server
+            VhLogger.Instance.LogTrace(GeneralEventId.Session,
+                "Trying to recover a session from the access server. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
-            return session;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Could not recover a session. SessionId: {SessionId}",
-                VhLogger.FormatSessionId(sessionRequest.SessionId));
-
-            // Create a dead session if it is not created
-            session = await CreateSessionInternal(new SessionResponse(SessionErrorCode.SessionError)
+            try
             {
-                SessionId = sessionRequest.SessionId,
-                SessionKey = sessionRequest.SessionKey,
-                CreatedTime = DateTime.UtcNow,
-                ErrorMessage = ex.Message
+                var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId,
+                    ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address);
 
-            }, ipEndPointPair, null);
-            await session.DisposeAsync();
-            throw;
+                // Check session key for recovery
+                if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
+                    throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
+
+                // session is authorized so we can pass any error to client
+                if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
+                    throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
+
+                // create the session even if it contains error to prevent many calls
+                session = await CreateSessionInternal(sessionResponse, ipEndPointPair, null);
+                VhLogger.Instance.LogInformation(GeneralEventId.Session, "Session has been recovered. SessionId: {SessionId}",
+                    VhLogger.FormatSessionId(sessionRequest.SessionId));
+
+                return session;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.Session, "Could not recover a session. SessionId: {SessionId}",
+                    VhLogger.FormatSessionId(sessionRequest.SessionId));
+
+                // Create a dead session if it is not created
+                session = await CreateSessionInternal(new SessionResponse(SessionErrorCode.SessionError)
+                {
+                    SessionId = sessionRequest.SessionId,
+                    SessionKey = sessionRequest.SessionKey,
+                    CreatedTime = DateTime.UtcNow,
+                    ErrorMessage = ex.Message
+
+                }, ipEndPointPair, null);
+                await session.DisposeAsync();
+                throw;
+            }
         }
-
     }
 
     internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair)

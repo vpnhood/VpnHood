@@ -99,7 +99,7 @@ internal class TcpProxyHost : IDisposable
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public IPPacket[] ProcessOutgoingPacket(IPPacket[] ipPackets)
+    public IPPacket[] ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException($"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
@@ -164,7 +164,7 @@ internal class TcpProxyHost : IDisposable
                     }
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket); 
+                PacketUtil.UpdateIpPacket(ipPacket);
                 ret.Add(ipPacket);
             }
             catch (Exception ex)
@@ -174,7 +174,7 @@ internal class TcpProxyHost : IDisposable
             }
         }
 
-        return ret.ToArray();
+        return ret.ToArray(); //it is shared buffer; too array is necessary
     }
 
     //private async Task ProcessClient2(TcpClient orgTcpClient, CancellationToken cancellationToken)
@@ -236,7 +236,7 @@ internal class TcpProxyHost : IDisposable
             {
                 await Client.AddPassthruTcpStream(
                     new TcpClientStream(orgTcpClient, orgTcpClient.GetStream()),
-                    new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
+                    new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                     cancellationToken);
                 return;
             }

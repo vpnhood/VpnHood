@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -52,7 +53,7 @@ public class WinDivertPacketCapture : IPacketCapture
             $"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
     }
 
-    public void SendPacketToInbound(IPPacket[] ipPackets)
+    public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
             SendPacket(ipPacket, false);
@@ -68,7 +69,7 @@ public class WinDivertPacketCapture : IPacketCapture
         SendPacket(ipPacket, true);
     }
 
-    public void SendPacketToOutbound(IPPacket[] ipPackets)
+    public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
             SendPacket(ipPacket, true);

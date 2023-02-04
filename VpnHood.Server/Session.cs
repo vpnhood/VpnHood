@@ -22,6 +22,7 @@ namespace VpnHood.Server;
 
 public class Session : IAsyncDisposable, IJob
 {
+    private readonly IRequestFilter _requestFilter;
     private readonly IAccessServer _accessServer;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
@@ -38,6 +39,7 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
     private readonly EventReporter _maxTcpChannelExceptionReporter = new(VhLogger.Instance, "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance, "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
+    private readonly EventReporter _filterReporter = new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
     private bool _isSyncing;
     private long _syncReceivedTraffic;
     private long _syncSentTraffic;
@@ -57,8 +59,11 @@ public class Session : IAsyncDisposable, IJob
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
-        IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions, HelloRequest? helloRequest)
+    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, 
+        IRequestFilter requestFilter,
+        ISocketFactory socketFactory,
+        IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
+        HelloRequest? helloRequest)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -82,6 +87,7 @@ public class Session : IAsyncDisposable, IJob
         _syncCacheSize = options.SyncCacheSize;
         _tcpTimeout = options.TcpTimeout;
         _tcpConnectTimeout = options.TcpConnectTimeout;
+        _requestFilter = requestFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -96,6 +102,7 @@ public class Session : IAsyncDisposable, IJob
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
+        // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
             NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
 
@@ -109,6 +116,7 @@ public class Session : IAsyncDisposable, IJob
 
     public bool UseUdpChannel
     {
+        // ReSharper disable once MergeIntoPattern
         get => Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel;
         set
         {
@@ -146,7 +154,23 @@ public class Session : IAsyncDisposable, IJob
         if (IsDisposed)
             return;
 
-        _proxyManager.SendPacket(e.IpPackets);
+        // filter requests
+        foreach (var ipPacket in e.IpPackets)
+        {
+            var ipPacket2 = _requestFilter.Process(ipPacket);
+            if (ipPacket2 == null)
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
+                    "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",
+                    ipPacket.Protocol, ipPacket.DestinationAddress);
+
+                _filterReporter.Raised();
+                continue;
+            }
+
+            _ = _proxyManager.SendPacket(ipPacket2);
+
+        }
     }
 
     public Task Sync() => Sync(true, false);
@@ -304,9 +328,6 @@ public class Session : IAsyncDisposable, IJob
         }
         catch (Exception ex)
         {
-            _netScanExceptionReporter.Dispose();
-            _maxTcpChannelExceptionReporter.Dispose();
-            _maxTcpConnectWaitExceptionReporter.Dispose();
             tcpClient2?.Dispose();
             tcpClientStream2?.Dispose();
             tcpProxyChannel?.Dispose();
@@ -326,6 +347,19 @@ public class Session : IAsyncDisposable, IJob
 
     private void VerifyTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request)
     {
+        // filter
+        var newEndPoint = _requestFilter.Process(ProtocolType.Tcp, request.DestinationEndPoint);
+        if (newEndPoint == null)
+        {
+            VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
+                "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",  
+                ProtocolType.Tcp, request.DestinationEndPoint);
+
+            _filterReporter.Raised();
+            throw new RequestBlockedException(tcpClientStream.RemoteEndPoint, this);
+        }
+        request.DestinationEndPoint = newEndPoint;
+
         lock (_verifyRequestLock)
         {
             // NetScan limit
@@ -356,6 +390,42 @@ public class Session : IAsyncDisposable, IJob
         LogTrack(protocol.ToString(), null, remoteEndPoint, false, true, "NetScan");
         _netScanExceptionReporter.Raised();
         throw new NetScanException(remoteEndPoint, this);
+    }
+
+    public ValueTask Close()
+    {
+        return DisposeAsync(true, true);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true, false);
+    }
+
+    private async ValueTask DisposeAsync(bool sync, bool byUser)
+    {
+        if (IsDisposed) return;
+        IsDisposed = true;
+
+        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+        Tunnel.Dispose();
+        _proxyManager.Dispose();
+        _netScanExceptionReporter.Dispose();
+        _maxTcpChannelExceptionReporter.Dispose();
+        _maxTcpConnectWaitExceptionReporter.Dispose();
+
+        if (sync)
+            await Sync(true, byUser);
+
+        // if there is no reason it is temporary
+        var reason = "Cleanup";
+        if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
+            reason = byUser ? "User" : "Access";
+
+        // Report removing session
+        VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
+            "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
+            SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode, SessionResponse.ErrorMessage ?? "None");
     }
 
     private class SessionProxyManager : ProxyManager
@@ -389,36 +459,4 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    public ValueTask Close()
-    {
-        return DisposeAsync(true, true);
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return DisposeAsync(true, false);
-    }
-
-    private async ValueTask DisposeAsync(bool sync, bool byUser)
-    {
-        if (IsDisposed) return;
-        IsDisposed = true;
-
-        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        Tunnel.Dispose();
-        _proxyManager.Dispose();
-
-        if (sync)
-            await Sync(true, byUser);
-
-        // if there is no reason it is temporary
-        var reason = "Cleanup";
-        if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            reason = byUser ? "User" : "Access";
-
-        // Report removing session
-        VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
-            "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
-            SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode, SessionResponse.ErrorMessage ?? "None");
-    }
 }

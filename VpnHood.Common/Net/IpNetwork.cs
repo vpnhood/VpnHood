@@ -52,6 +52,8 @@ public class IpNetwork
         Parse("169.254.0.0/16")
     };
 
+    public static IpNetwork[] LoopbackNetworksV4 { get; } = { Parse("127.0.0.0/8") };
+    public static IpNetwork[] LoopbackNetworksV6 { get; } = { Parse("::1/128") };
     public static IpNetwork AllV6 { get; } = Parse("::/0");
     public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
     public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert();

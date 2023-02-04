@@ -21,6 +21,7 @@ namespace VpnHood.Server;
 public class SessionManager : IDisposable, IAsyncDisposable, IJob
 {
     private readonly IAccessServer _accessServer;
+    private readonly IRequestFilter _requestFilter;
     private readonly SocketFactory _socketFactory;
     private readonly ITracker? _tracker;
     private bool _disposed;
@@ -30,9 +31,13 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
-    public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker)
+    public SessionManager(IAccessServer accessServer, 
+        IRequestFilter requestFilter, 
+        SocketFactory socketFactory, 
+        ITracker? tracker)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
+        _requestFilter = requestFilter;
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _tracker = tracker;
         ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
@@ -62,7 +67,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     private async Task<Session> CreateSessionInternal(SessionResponse sessionResponse,
         IPEndPointPair ipEndPointPair, HelloRequest? helloRequest)
     {
-        var session = new Session(_accessServer, sessionResponse, _socketFactory,
+        var session = new Session(_accessServer, sessionResponse, _requestFilter, _socketFactory,
             ipEndPointPair.LocalEndPoint, SessionOptions, TrackingOptions, helloRequest);
 
         // add to sessions

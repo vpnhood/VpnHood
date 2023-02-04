@@ -182,7 +182,7 @@ public class TunnelTest
         };
 
         // send packet to server through tunnel
-        await clientTunnel.SendPacket(packets.ToArray());
+        await clientTunnel.SendPackets(packets.ToArray());
         await Task.Delay(5000);
         Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);

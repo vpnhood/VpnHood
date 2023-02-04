@@ -1,3 +1,10 @@
+# Upcoming
+### Client
+* Update: Performance improvement
+
+### Server
+* Fix: Missing some NetProtector log
+
 # v2.6.346
 ### Client
 * Update: Improve stability when using no UDP mode

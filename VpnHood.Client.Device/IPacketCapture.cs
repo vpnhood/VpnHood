@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
@@ -43,7 +44,7 @@ public interface IPacketCapture : IDisposable
     event EventHandler OnStopped;
     void ProtectSocket(Socket socket);
     void SendPacketToInbound(IPPacket ipPacket);
-    void SendPacketToInbound(IPPacket[] packets);
+    void SendPacketToInbound(IEnumerable<IPPacket> packets);
     void SendPacketToOutbound(IPPacket ipPacket);
-    void SendPacketToOutbound(IPPacket[] ipPackets);
+    void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets);
 }

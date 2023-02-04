@@ -377,6 +377,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                         else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6 or ProtocolType.Udp)
                             tunnelPackets.Add(ipPacket);
+                        
+                        else
+                            droppedPackets.Add(ipPacket);
+
                     }
                     else
                     {
@@ -403,6 +407,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             else
                                 proxyPackets.Add(ipPacket);
                         }
+                        
+                        else
+                            droppedPackets.Add(ipPacket);
+
                     }
                 }
 

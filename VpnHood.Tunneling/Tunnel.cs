@@ -266,10 +266,10 @@ public class Tunnel : IDisposable
 
     public Task SendPacket(IPPacket ipPacket)
     {
-        return SendPacket(new[] { ipPacket });
+        return SendPackets(new[] { ipPacket });
     }
 
-    public async Task SendPacket(IPPacket[] ipPackets)
+    public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
     {
         var dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
@@ -292,6 +292,7 @@ public class Tunnel : IDisposable
         // add all packets to the queue
         lock (_packetQueue)
         {
+            // ReSharper disable once PossibleMultipleEnumeration
             foreach (var ipPacket in ipPackets)
                 _packetQueue.Enqueue(ipPacket);
 
@@ -300,6 +301,7 @@ public class Tunnel : IDisposable
                 _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
         }
 
+        // ReSharper disable once PossibleMultipleEnumeration
         if (VhLogger.IsDiagnoseMode)
             PacketUtil.LogPackets(ipPackets, "Packet sent to tunnel queue.");
     }

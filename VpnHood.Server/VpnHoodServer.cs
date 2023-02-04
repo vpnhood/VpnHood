@@ -39,7 +39,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
         AccessServer = accessServer;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
+        SessionManager = new SessionManager(accessServer, options.RequestFilter, options.SocketFactory, options.Tracker);
         JobSection = new JobSection(options.ConfigureInterval);
 
         _configureInterval = options.ConfigureInterval;

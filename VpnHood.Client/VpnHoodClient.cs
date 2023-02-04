@@ -35,6 +35,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public readonly List<IPPacket> ProxyPackets = new();
         public readonly List<IPPacket> TcpHostPackets = new();
         public readonly List<IPPacket> TunnelPackets = new();
+        public readonly List<IPPacket> DroppedPackets = new();
 
         public void Clear()
         {
@@ -42,6 +43,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             PassthruPackets.Clear();
             TcpHostPackets.Clear();
             ProxyPackets.Clear();
+            DroppedPackets.Clear();
         }
     }
 
@@ -178,9 +180,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task AddPassthruTcpStream(TcpClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
         CancellationToken cancellationToken)
     {
-        // config Tcp
-        SocketFactory.SetKeepAlive(orgTcpClientStream.TcpClient.Client, true);
-
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
         tcpClient.ReceiveBufferSize = orgTcpClientStream.TcpClient.ReceiveBufferSize;
         tcpClient.SendBufferSize = orgTcpClientStream.TcpClient.SendBufferSize;
@@ -344,58 +343,75 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var tcpHostPackets = _sendingPacket.TcpHostPackets;
                 var passthruPackets = _sendingPacket.PassthruPackets;
                 var proxyPackets = _sendingPacket.ProxyPackets;
+                var droppedPackets = _sendingPacket.DroppedPackets;
                 foreach (var ipPacket in e.IpPackets)
                 {
                     if (_disposed) return;
-                    var isInRange = IsInIpRange(ipPacket.DestinationAddress);
+                    var isIpV6 = ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6;
 
-                    // Check IPv6 support
-                    if (isInRange && !IsIpV6Supported && ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6)
-                        continue;
-
-                    // Check IPv6 control message such as Solicitations
-                    if (IsIcmpControlMessage(ipPacket))
-                        continue;
-
-                    // DNS packet must go through tunnel
+                    // DNS packet must go through tunnel even if it is not in range
                     if (!_packetCapture.IsDnsServersSupported && UpdateDnsRequest(ipPacket, true))
                     {
-                        tunnelPackets.Add(ipPacket);
-                    }
-                    // passthru packet if IsSendToOutboundSupported is supported
-                    else if (!isInRange && _packetCapture.CanSendPacketToOutbound)
-                    {
-                        passthruPackets.Add(ipPacket);
-                    }
-
-                    // ICMP packet must go through tunnel because PingProxy is not supported
-                    else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
-                    {
-                        tunnelPackets.Add(ipPacket);
-                    }
-
-                    // TCP packets. isInRange is supported by TcpProxyHost
-                    else if (ipPacket.Protocol == ProtocolType.Tcp)
-                    {
-                        tcpHostPackets.Add(ipPacket);
-                    }
-
-                    // Udp
-                    else if (ipPacket.Protocol == ProtocolType.Udp)
-                    {
-                        if (isInRange)
-                            tunnelPackets.Add(ipPacket);
+                        // Drop IPv6 if not support
+                        if (isIpV6 && !IsIpV6Supported)
+                            droppedPackets.Add(ipPacket);
                         else
-                            proxyPackets.Add(ipPacket);
+                            tunnelPackets.Add(ipPacket);
+                    }
+
+                    else if (_packetCapture.CanSendPacketToOutbound)
+                    {
+                        if (!IsInIpRange(ipPacket.DestinationAddress))
+                            passthruPackets.Add(ipPacket);
+
+                        // Drop IPv6 if not support
+                        else if (isIpV6 && !IsIpV6Supported)
+                            droppedPackets.Add(ipPacket);
+
+                        // Check IPv6 control message such as Solicitations
+                        else if (IsIcmpControlMessage(ipPacket))
+                            droppedPackets.Add(ipPacket);
+
+                        else if (ipPacket.Protocol == ProtocolType.Tcp)
+                            tcpHostPackets.Add(ipPacket);
+
+                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6 or ProtocolType.Udp)
+                            tunnelPackets.Add(ipPacket);
+                    }
+                    else
+                    {
+                        // Drop IPv6 if not support
+                        if (isIpV6 && !IsIpV6Supported)
+                            droppedPackets.Add(ipPacket);
+
+                        // Check IPv6 control message such as Solicitations
+                        else if (IsIcmpControlMessage(ipPacket))
+                            droppedPackets.Add(ipPacket);
+
+                        else if (ipPacket.Protocol == ProtocolType.Tcp)
+                            tcpHostPackets.Add(ipPacket);
+
+                        // ICMP packet must go through tunnel because PingProxy does not supported protect socket
+                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
+                            tunnelPackets.Add(ipPacket);
+
+                        // Udp
+                        else if (ipPacket.Protocol == ProtocolType.Udp)
+                        {
+                            if (IsInIpRange(ipPacket.DestinationAddress))
+                                tunnelPackets.Add(ipPacket);
+                            else
+                                proxyPackets.Add(ipPacket);
+                        }
                     }
                 }
 
                 // send packets
                 if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationToken);
-                if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait(_cancellationToken);
+                if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets).Wait(_cancellationToken);
                 if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
-                if (proxyPackets.Count > 0) _proxyManager.SendPacket(proxyPackets.ToArray());
-                if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
+                if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationToken);
+                if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets));
             }
         }
         catch (Exception ex)

@@ -4,6 +4,7 @@
 
 ### Server
 * Fix: Missing some NetProtector log
+* Security: Always block access to loopback addresses
 
 # v2.6.346
 ### Client

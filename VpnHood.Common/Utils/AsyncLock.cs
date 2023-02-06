@@ -39,8 +39,8 @@ public class AsyncLock
 
         public void Dispose()
         {
-            if (_disposed || !Succeeded)
-                return;
+            if (_disposed || !Succeeded) return;
+            _disposed = true;
 
             _semaphoreSlimEx.Release();
             lock (SemaphoreSlims)
@@ -49,7 +49,6 @@ public class AsyncLock
                 if (_semaphoreSlimEx.ReferenceCount == 0 && _name != null)
                     SemaphoreSlims.TryRemove(_name, out _);
             }
-            _disposed = true;
         }
     }
 

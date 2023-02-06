@@ -63,9 +63,9 @@ public class AsyncLock
         return new SemaphoreLock(_semaphoreSlimEx, succeeded, null);
     }
 
-    public static async Task<ILockAsyncResult> LockAsync(string name)
+    public static Task<ILockAsyncResult> LockAsync(string name)
     {
-        return await LockAsync(name, Timeout.InfiniteTimeSpan);
+        return LockAsync(name, Timeout.InfiniteTimeSpan);
     }
 
     public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)

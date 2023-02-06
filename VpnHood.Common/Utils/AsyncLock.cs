@@ -73,7 +73,7 @@ public class AsyncLock
         SemaphoreSlimEx semaphoreSlim;
         lock (SemaphoreSlims)
         {
-            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, (_)=>new SemaphoreSlimEx(1, 1));
+            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, _ => new SemaphoreSlimEx(1, 1));
             semaphoreSlim.ReferenceCount++;
         }
 

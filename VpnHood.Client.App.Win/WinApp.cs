@@ -358,8 +358,7 @@ public class WinApp : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
+        if (_disposed) return;
         _disposed = true;
 
         _uiTimer.Dispose();

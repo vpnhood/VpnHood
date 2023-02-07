@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
@@ -48,6 +47,7 @@ public class UdpEchoServer
                 _sendSpeedometer.AddSucceeded(buffer);
             }
         }
+        // ReSharper disable once FunctionNeverReturns
     }
 
     public void Start()
@@ -72,5 +72,6 @@ public class UdpEchoServer
                 _sendSpeedometer.AddSucceeded(buffer);
             }
         }
+        // ReSharper disable once FunctionNeverReturns
     }
 }

@@ -28,11 +28,11 @@ internal class TcpProxyHost : IDisposable
     public IPAddress CatcherAddressIpV4 { get; }
     public IPAddress CatcherAddressIpV6 { get; }
 
-    public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddressIpV4, IPAddress loopbackAddressIpV6)
+    public TcpProxyHost(VpnHoodClient client, IPAddress catcherAddressIpV4, IPAddress catcherAddressIpV6)
     {
         Client = client ?? throw new ArgumentNullException(nameof(client));
-        CatcherAddressIpV4 = loopbackAddressIpV4 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV4));
-        CatcherAddressIpV6 = loopbackAddressIpV6 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV6));
+        CatcherAddressIpV4 = catcherAddressIpV4 ?? throw new ArgumentNullException(nameof(catcherAddressIpV4));
+        CatcherAddressIpV6 = catcherAddressIpV6 ?? throw new ArgumentNullException(nameof(catcherAddressIpV6));
     }
 
     public void Dispose()

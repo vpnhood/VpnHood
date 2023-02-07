@@ -10,8 +10,8 @@ namespace VpnHood.Test;
 
 public class TestNetFilter : NetFilter
 {
-    private ConcurrentDictionary<Tuple<ProtocolType, IPEndPoint>, IPEndPoint> NetMap { get; set; } = new();
-    private ConcurrentDictionary<Tuple<ProtocolType, IPEndPoint>, IPEndPoint> NetMapR { get; set; } = new();
+    private ConcurrentDictionary<Tuple<ProtocolType, IPEndPoint>, IPEndPoint> NetMap { get; } = new();
+    private ConcurrentDictionary<Tuple<ProtocolType, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
 
     public void Init(Tuple<ProtocolType, IPEndPoint, IPEndPoint>[] items)
     {

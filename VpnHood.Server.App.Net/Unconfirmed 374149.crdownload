@@ -611,7 +611,7 @@
   <xs:simpleType name="NLog.Targets.NetworkTargetConnectionsOverflowAction">
     <xs:restriction base="xs:string">
       <xs:enumeration value="Grow" />
-      <xs:enumeration value="AllowNewConnection" />
+      <xs:enumeration value="AllowNewConnnection" />
       <xs:enumeration value="Discard" />
       <xs:enumeration value="DiscardMessage" />
       <xs:enumeration value="Block" />

@@ -25,14 +25,14 @@ internal class TcpProxyHost : IDisposable
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private VpnHoodClient Client { get; }
-    public IPAddress LoopbackAddressIpV4 { get; }
-    public IPAddress LoopbackAddressIpV6 { get; }
+    public IPAddress CatcherAddressIpV4 { get; }
+    public IPAddress CatcherAddressIpV6 { get; }
 
     public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddressIpV4, IPAddress loopbackAddressIpV6)
     {
         Client = client ?? throw new ArgumentNullException(nameof(client));
-        LoopbackAddressIpV4 = loopbackAddressIpV4 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV4));
-        LoopbackAddressIpV6 = loopbackAddressIpV6 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV6));
+        CatcherAddressIpV4 = loopbackAddressIpV4 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV4));
+        CatcherAddressIpV6 = loopbackAddressIpV6 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV6));
     }
 
     public void Dispose()
@@ -110,7 +110,7 @@ internal class TcpProxyHost : IDisposable
         foreach (var item in ipPackets)
         {
             var ipPacket = item;
-            var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
+            var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             if (localEndPoint == null)
                 continue;
@@ -227,7 +227,7 @@ internal class TcpProxyHost : IDisposable
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
-            var loopbackAddress = ipVersion == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
+            var loopbackAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 

@@ -101,8 +101,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
-        if (options.TcpProxyLoopbackAddressIpV4 == null)
-            throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV4));
+        if (options.TcpProxyCatcherAddressIpV4 == null)
+            throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV4));
 
         if (options.TcpProxyLoopbackAddressIpV6 == null)
             throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV6));
@@ -145,7 +145,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
         // create proxy host
-        _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyLoopbackAddressIpV4, options.TcpProxyLoopbackAddressIpV6);
+        _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyLoopbackAddressIpV6);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -293,10 +293,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Make sure LoopbackAddress is included
         var ipRanges = IpNetwork.ToIpRange(includeNetworks);
-        if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.LoopbackAddressIpV4)))
-            includeNetworks.Add(new IpNetwork(_tcpProxyHost.LoopbackAddressIpV4));
-        if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.LoopbackAddressIpV6)))
-            includeNetworks.Add(new IpNetwork(_tcpProxyHost.LoopbackAddressIpV6));
+        if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.CatcherAddressIpV4)))
+            includeNetworks.Add(new IpNetwork(_tcpProxyHost.CatcherAddressIpV4));
+        if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.CatcherAddressIpV6)))
+            includeNetworks.Add(new IpNetwork(_tcpProxyHost.CatcherAddressIpV6));
 
         // Make sure that hostEndPoint is not included when packetCapture unable to protect socket
         if (!_packetCapture.CanProtectSocket && ipRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
@@ -467,8 +467,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return true;
 
         // check tcp-loopback
-        if (ipAddress.Equals(_tcpProxyHost.LoopbackAddressIpV4) ||
-            ipAddress.Equals(_tcpProxyHost.LoopbackAddressIpV6))
+        if (ipAddress.Equals(_tcpProxyHost.CatcherAddressIpV4) ||
+            ipAddress.Equals(_tcpProxyHost.CatcherAddressIpV6))
             return true;
 
         // check the cache

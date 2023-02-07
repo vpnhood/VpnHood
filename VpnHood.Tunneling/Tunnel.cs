@@ -313,6 +313,7 @@ public class Tunnel : IDisposable
         // ** Warning: This is one of the most busy loop in the app. Performance is critical!
         try
         {
+            // ReSharper disable once MergeIntoPattern
             while (channel.Connected && !channel.IsClosePending && !_disposed)
             {
                 if (_disposed)

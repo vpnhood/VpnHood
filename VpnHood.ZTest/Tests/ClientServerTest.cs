@@ -425,7 +425,7 @@ public class ClientServerTest
         // ----------
         testAccessServer.EmbedIoAccessServer.Start();
         await using var client2 = TestHelper.CreateClient(token);
-        TestHelper.WaitForClientState(client2, ClientState.Connected);
+        await TestHelper.WaitForClientStateAsync(client2, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode after server started by stopping the server
@@ -441,7 +441,7 @@ public class ClientServerTest
         {
             // ignored
         }
-        TestHelper.WaitForClientState(client3, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client3, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client3.SessionStatus.ErrorCode);
 
         // ----------
@@ -449,7 +449,7 @@ public class ClientServerTest
         // ----------
         testAccessServer.EmbedIoAccessServer.Start();
         await using var client4 = TestHelper.CreateClient(token);
-        TestHelper.WaitForClientState(client4, ClientState.Connected);
+        await TestHelper.WaitForClientStateAsync(client4, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode by replying 404 from access-server
@@ -465,7 +465,7 @@ public class ClientServerTest
         {
             // ignored
         }
-        TestHelper.WaitForClientState(client5, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client5, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client5.SessionStatus.ErrorCode);
 
         // ----------
@@ -473,7 +473,7 @@ public class ClientServerTest
         // ----------
         testAccessServer.EmbedIoAccessServer.HttpException = null;
         await using var client6 = TestHelper.CreateClient(token);
-        TestHelper.WaitForClientState(client6, ClientState.Connected);
+        await TestHelper.WaitForClientStateAsync(client6, ClientState.Connected);
     }
 
     [TestMethod]
@@ -510,7 +510,7 @@ public class ClientServerTest
             // ignored
         }
 
-        TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
+        await TestHelper.WaitForClientStateAsync(clientConnect.Client, ClientState.Connected);
         Assert.AreEqual(1, clientConnect.AttemptCount);
         await TestTunnel(server, clientConnect.Client);
 
@@ -528,7 +528,7 @@ public class ClientServerTest
             // ignored
         }
 
-        TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(clientConnect.Client, ClientState.Disposed);
         Assert.AreEqual(1, clientConnect.AttemptCount);
     }
 
@@ -545,7 +545,7 @@ public class ClientServerTest
         await using var client = TestHelper.CreateClient(token);
         Assert.IsTrue(fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
-        TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
 
         Assert.IsFalse(session.IsAlive);
     }

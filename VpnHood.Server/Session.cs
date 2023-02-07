@@ -22,7 +22,7 @@ namespace VpnHood.Server;
 
 public class Session : IAsyncDisposable, IJob
 {
-    private readonly IRequestFilter _requestFilter;
+    private readonly INetFilter _netFilter;
     private readonly IAccessServer _accessServer;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
@@ -60,7 +60,7 @@ public class Session : IAsyncDisposable, IJob
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
     internal Session(IAccessServer accessServer, SessionResponse sessionResponse, 
-        IRequestFilter requestFilter,
+        INetFilter netFilter,
         ISocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
         HelloRequest? helloRequest)
@@ -87,7 +87,7 @@ public class Session : IAsyncDisposable, IJob
         _syncCacheSize = options.SyncCacheSize;
         _tcpTimeout = options.TcpTimeout;
         _tcpConnectTimeout = options.TcpConnectTimeout;
-        _requestFilter = requestFilter;
+        _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -157,7 +157,7 @@ public class Session : IAsyncDisposable, IJob
         // filter requests
         foreach (var ipPacket in e.IpPackets)
         {
-            var ipPacket2 = _requestFilter.Process(ipPacket);
+            var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
@@ -348,7 +348,7 @@ public class Session : IAsyncDisposable, IJob
     private void VerifyTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request)
     {
         // filter
-        var newEndPoint = _requestFilter.Process(ProtocolType.Tcp, request.DestinationEndPoint);
+        var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
         if (newEndPoint == null)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
@@ -444,6 +444,7 @@ public class Session : IAsyncDisposable, IJob
             if (VhLogger.IsDiagnoseMode)
                 PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
+            ipPacket = _session._netFilter.ProcessReply(ipPacket);
             return _session.Tunnel.SendPacket(ipPacket);
         }
 

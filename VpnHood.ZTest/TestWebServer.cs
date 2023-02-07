@@ -28,32 +28,25 @@ public class TestWebServer : IDisposable
         IPEndPoint.Parse("127.10.1.1:15007"),
         IPEndPoint.Parse("127.10.1.1:15008"),
     };
-
-    public IPEndPoint UdpEndPoint1 = IPEndPoint.Parse("127.10.1.1:20101");
-    public IPEndPoint UdpEndPoint2 = IPEndPoint.Parse("127.10.1.1:20102");
-    public IPEndPoint UdpEndPoint3 = IPEndPoint.Parse("127.10.1.1:20103");
-    public IPEndPoint UdpEndPoint4 = IPEndPoint.Parse("127.10.1.1:20104");
-
-    public IPEndPoint UdpEndPoint1Ip6 = IPEndPoint.Parse("[::1]:20101");
-    public IPEndPoint UdpEndPoint2Ip6 = IPEndPoint.Parse("[::1]:20102");
-    public IPEndPoint UdpEndPoint3Ip6 = IPEndPoint.Parse("[::1]:20103");
-    public IPEndPoint UdpEndPoint4Ip6 = IPEndPoint.Parse("[::1]:20104");
-
-    private IPEndPoint[] UdpEndPointsIp4 => new[]
+    
+    public IPEndPoint[] UdpEndPoints { get;  } = 
     {
-        UdpEndPoint1,
-        UdpEndPoint2,
-        UdpEndPoint3,
-        UdpEndPoint4,
+        IPEndPoint.Parse("127.10.1.1:20101"),
+        IPEndPoint.Parse("127.10.1.1:20102"),
+        IPEndPoint.Parse("127.10.1.1:20103"),
+        IPEndPoint.Parse("[::1]:20101"),
+        IPEndPoint.Parse("[::1]:20102"),
+        IPEndPoint.Parse("[::1]:20103")
     };
 
-    private IPEndPoint[] UdpEndPointsIp6 => new[]
-    {
-        UdpEndPoint1Ip6,
-        UdpEndPoint2Ip6,
-        UdpEndPoint3Ip6,
-        UdpEndPoint4Ip6,
-    };
+    public IPEndPoint UdpV4EndPoint1 => UdpV4EndPoints[0];
+    public IPEndPoint UdpV4EndPoint2 => UdpV4EndPoints[1];
+    public IPEndPoint UdpV4EndPoint4 => UdpV4EndPoints[2];
+    public IPEndPoint UdpV6EndPoint1 => UdpV6EndPoints[0];
+    public IPEndPoint UdpV6EndPoint2 => UdpV6EndPoints[1];
+    public IPEndPoint UdpV6EndPoint4 => UdpV6EndPoints[2];
+    public IPEndPoint[] UdpV4EndPoints  => UdpEndPoints.Where(x=>x.AddressFamily== AddressFamily.InterNetwork).ToArray();
+    public IPEndPoint[] UdpV6EndPoints  => UdpEndPoints.Where(x=>x.AddressFamily== AddressFamily.InterNetworkV6).ToArray();
 
 
     public Uri[] HttpUrls { get; }
@@ -72,7 +65,7 @@ public class TestWebServer : IDisposable
     {
         HttpUrls = HttpEndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
         HttpsUrls = HttpsEndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
-        UdpClients = UdpEndPointsIp4.Concat(UdpEndPointsIp6).Select(x => new UdpClient(x)).ToArray();
+        UdpClients = UdpEndPoints.Select(x => new UdpClient(x)).ToArray();
 
         // Init files
         FileContent1 = string.Empty;

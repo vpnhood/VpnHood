@@ -178,7 +178,7 @@ public class ServerTest
         }
         catch { /*ignored*/ }
 
-        TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.AccessError, client.SessionStatus.ErrorCode);
     }
 }

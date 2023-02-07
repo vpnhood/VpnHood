@@ -11,7 +11,7 @@ public class ServerOptions
     public SocketFactory SocketFactory { get; set; } = new();
     public ITracker? Tracker { get; set; }
     public ISystemInfoProvider? SystemInfoProvider { get; set; }
-    public IRequestFilter RequestFilter { get; set; } = new RequestFilter();
+    public INetFilter NetFilter { get; set; } = new NetFilter();
     public bool AutoDisposeAccessServer { get; set; } = true;
     public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; set; } = Directory.GetCurrentDirectory();

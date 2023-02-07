@@ -28,10 +28,11 @@ public class DiagnoserTest
 
         try
         {
-            clientApp.Connect(clientProfile.ClientProfileId).Wait();
+            await clientApp.Connect(clientProfile.ClientProfileId);
         }
-        catch (AggregateException ex) when (ex.InnerException is NoInternetException)
+        catch (Exception ex) 
         {
+            Assert.AreEqual(nameof(NoInternetException), ex.GetType().Name);
         }
     }
 }

@@ -304,9 +304,10 @@ public class ClientAppTest
             .Select(x => new IpRange(x))
             .Concat(new[]
             {
-                new IpRange(TestHelper.TEST_PingAddress1),
+                new IpRange(TestHelper.TEST_PingV4Address1),
                 new IpRange(TestHelper.TEST_NsEndPoint1.Address),
-                new IpRange(TestHelper.TEST_NtpEndPoint1.Address)
+                new IpRange(TestHelper.TEST_UdpV4EndPoint1.Address),
+                new IpRange(TestHelper.TEST_UdpV6EndPoint1.Address),
             });
 
         // ************
@@ -314,43 +315,53 @@ public class ClientAppTest
         app.UserSettings.CustomIpRanges = ipList.ToArray();
         app.UserSettings.IpGroupFilters = new[] { "custom" };
         app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
-        _ = app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
-
-        IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
+        TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+        
+        await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
 
         // ************
         // *** TEST ***: Test Exclude ip filters
         app.UserSettings.IpGroupFiltersMode = FilterMode.Exclude;
-        _ = app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-        IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
+        await IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
     }
 
-    public static void IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
+    public static async Task IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
     {
         // TCP
         var oldReceivedByteCount = app.State.ReceivedTraffic;
-        TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri1);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
         // TCP
         oldReceivedByteCount = app.State.ReceivedTraffic;
-        TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
         if (testPing)
         {
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
+            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
+            try
+            {
+                TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2, timeout: 1000);
+                Assert.Fail("Exception expected as server should not exists.");
+            }
+            catch
+            {
+                // ignore. just send the packet
+            }
+
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
         }
 
@@ -358,12 +369,21 @@ public class ClientAppTest
         {
             // UDP
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
+            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
             // UDP
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
+            try
+            {
+                await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint2, timeout: 1000);
+                Assert.Fail("Exception expected as server should not exists.");
+            }
+            catch
+            {
+                // ignore. just send the packet
+            }
+
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
         }
 
@@ -380,16 +400,16 @@ public class ClientAppTest
         }
     }
 
-    public static void IpFilters_TestExclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
+    public static async Task IpFilters_TestExclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)
     {
         // TCP
         var oldReceivedByteCount = app.State.ReceivedTraffic;
-        TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri1);
         Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
         // TCP
         oldReceivedByteCount = app.State.ReceivedTraffic;
-        TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
 
@@ -397,12 +417,20 @@ public class ClientAppTest
         {
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
+            try
+            {
+                TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1, timeout: 1000);
+                Assert.Fail("Exception expected as server should not exists.");
+            }
+            catch
+            {
+                // ignore. just send the packet
+            }
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
+            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
         }
 
@@ -411,13 +439,21 @@ public class ClientAppTest
             // UDP
             VhLogger.Instance.LogTrace("Testing UDP include...");
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
+            try
+            {
+                await TestHelper.Test_Udp(udpEndPoint: TestHelper.TEST_UdpV4EndPoint1, timeout: 1000);
+                Assert.Fail("Exception expected as server should not exists.");
+            }
+            catch 
+            {
+                // ignore. just send the packet
+            }
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
             // UDP
             VhLogger.Instance.LogTrace("Testing UDP exclude...");
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
+            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
         }
 

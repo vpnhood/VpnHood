@@ -10,11 +10,11 @@ public class ClientOptions
     /// <summary>
     ///     a never used IPv4 that must be outside the local network
     /// </summary>
-    public IPAddress TcpProxyLoopbackAddressIpV4 { get; set; } = IPAddress.Parse("11.0.0.0");
+    public IPAddress TcpProxyCatcherAddressIpV4 { get; set; } = IPAddress.Parse("11.0.0.0");
     /// <summary>
     ///     a never used IPv6 ip that must be outside the machine
     /// </summary>
-    public IPAddress TcpProxyLoopbackAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
+    public IPAddress TcpProxyCatcherAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
 
     public IPAddress[] DnsServers { get; set; } = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4"), 
         IPAddress.Parse("2001:4860:4860::8888"), IPAddress.Parse("2001:4860:4860::8844") };

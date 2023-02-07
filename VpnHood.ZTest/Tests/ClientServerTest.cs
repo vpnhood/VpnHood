@@ -100,7 +100,7 @@ public class ClientServerTest
             UseUdpChannel = false,
             MaxDatagramChannelCount = 6
         });
-        TestHelper.Test_Udp();
+        await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
         Thread.Sleep(1000);
         Assert.AreEqual(3, client.DatagramChannelsCount);
         await client.DisposeAsync();
@@ -113,7 +113,7 @@ public class ClientServerTest
             UseUdpChannel = false,
             MaxDatagramChannelCount = 1
         });
-        TestHelper.Test_Udp();
+        await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
         Thread.Sleep(1000);
         Assert.AreEqual(1, client2.DatagramChannelsCount);
         await client.DisposeAsync();
@@ -197,39 +197,39 @@ public class ClientServerTest
             "Not enough data has been sent through the client!");
 
         // ************
-        // *** TEST ***: UDP
+        // *** TEST ***: UDP v4
         oldClientSentByteCount = client.SentByteCount;
         oldClientReceivedByteCount = client.ReceivedByteCount;
         oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
         oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
-        TestHelper.Test_Udp();
+        await TestHelper.Test_Udp();
 
-        Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 10,
+        Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 10,
+        Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 10,
+        Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 10,
+        Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 500,
             "Not enough data has been sent through the client!");
 
         // ************
-        // *** TEST ***: Icmp
+        // *** TEST ***: IcmpV4
         oldClientSentByteCount = client.SentByteCount;
         oldClientReceivedByteCount = client.ReceivedByteCount;
         oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
         oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
-        TestHelper.Test_Ping();
+        TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
 
-        Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100,
+        Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 100,
+        Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 100,
+        Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100,
+        Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 500,
             "Not enough data has been sent through the client!");
     }
 
@@ -265,7 +265,7 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void Datagram_channel_after_client_reconnection()
+    public async Task Datagram_channel_after_client_reconnection()
     {
         //create a shared udp client among connection
         // make sure using same local port to test Nat properly
@@ -274,22 +274,22 @@ public class ClientServerTest
 
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        using var client1 = TestHelper.CreateClient(token);
+        await using var client1 = TestHelper.CreateClient(token);
 
         // test Icmp & Udp
         TestHelper.Test_Ping(ping);
-        TestHelper.Test_Udp(udpClient);
+        await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
 
         // create client
-        using var client2 = TestHelper.CreateClient(token);
+        await using var client2 = TestHelper.CreateClient(token);
 
         // test Icmp & Udp
         TestHelper.Test_Ping(ping);
-        TestHelper.Test_Udp(udpClient);
+        await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
     }
 
     [TestMethod]
@@ -376,7 +376,7 @@ public class ClientServerTest
             // ignored
         }
 
-        TestHelper.WaitForClientState(client, ClientState.Disposed, 5000);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed, 5000);
     }
 
     [TestMethod]

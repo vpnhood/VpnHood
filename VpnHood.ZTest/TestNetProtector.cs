@@ -52,10 +52,10 @@ internal static class TestNetProtector
         }
 
         // let server outbound call, go out: Icmp
-        if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp || 
-            ipPacket.Protocol == PacketDotNet.ProtocolType.IcmpV6)
-            //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            return ipPacket.TimeToLive == ServerPingTtl - 1;
+        //if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp || 
+        //    ipPacket.Protocol == PacketDotNet.ProtocolType.IcmpV6)
+        //    //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+        //    return ipPacket.TimeToLive == ServerPingTtl - 1;
 
         return false;
     }

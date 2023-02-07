@@ -104,7 +104,7 @@ public class ServerTest
         await using var client = TestHelper.CreateClient(token);
         Assert.IsTrue(fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
-        TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
         Thread.Sleep(1000);
 
         Assert.IsFalse(session.IsAlive);

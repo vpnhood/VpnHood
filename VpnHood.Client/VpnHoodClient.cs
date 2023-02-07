@@ -104,8 +104,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (options.TcpProxyCatcherAddressIpV4 == null)
             throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV4));
 
-        if (options.TcpProxyLoopbackAddressIpV6 == null)
-            throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV6));
+        if (options.TcpProxyCatcherAddressIpV6 == null)
+            throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV6));
 
         if (!Util.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
@@ -145,7 +145,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
         // create proxy host
-        _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyLoopbackAddressIpV6);
+        _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -549,6 +549,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (UseUdpChannel)
             {
                 // check current channels
+                // ReSharper disable once MergeIntoPattern
                 if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel)
                     return;
 

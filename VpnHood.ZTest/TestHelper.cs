@@ -8,7 +8,6 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
@@ -143,16 +142,16 @@ internal static class TestHelper
 
     public static async Task Test_Udp(IPEndPoint udpEndPoint, int timeout = 30000)
     {
-        if (udpEndPoint?.AddressFamily == AddressFamily.InterNetwork)
+        if (udpEndPoint.AddressFamily == AddressFamily.InterNetwork)
         {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
-            await Test_Udp(udpClientIpV4, udpEndPoint ?? TEST_UdpV4EndPoint1, timeout);
+            await Test_Udp(udpClientIpV4, udpEndPoint, timeout);
         }
 
-        else if (udpEndPoint?.AddressFamily == AddressFamily.InterNetworkV6)
+        else if (udpEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
         {
             using var udpClientIpV6 = new UdpClient(AddressFamily.InterNetworkV6);
-            await Test_Udp(udpClientIpV6, udpEndPoint ?? TEST_UdpV6EndPoint1, timeout);
+            await Test_Udp(udpClientIpV6, udpEndPoint, timeout);
         }
     }
  
@@ -387,41 +386,6 @@ internal static class TestHelper
         clientApp.UserSettings.PacketCaptureIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
 
         return clientApp;
-    }
-
-    private static DateTime GetNetworkTimeByNtp(UdpClient udpClient, IPEndPoint endPoint, int retry)
-    {
-        for (var i = 0; i < retry + 1; i++)
-            try
-            {
-                return GetNetworkTimeByNtp(udpClient, endPoint);
-            }
-            catch (Exception ex) when (i < retry)
-            {
-                VhLogger.Instance.LogWarning($"GetNetworkTimeByNTP failed: {i + 1}, Message: {ex.Message}");
-            }
-
-        throw new InvalidProgramException("It should be unreachable!");
-    }
-
-    private static DateTime GetNetworkTimeByNtp(UdpClient udpClient, IPEndPoint endPoint)
-    {
-        var ntpDataRequest = new byte[48];
-        ntpDataRequest[0] =
-            0x1B; //LeapIndicator = 0 (no warning), VersionNum = 3 (IPv4 only), Mode = 3 (Client Mode)
-
-        udpClient.Send(ntpDataRequest, ntpDataRequest.Length, endPoint);
-        var ntpData = udpClient.Receive(ref endPoint);
-
-        var intPart = ((ulong)ntpData[40] << 24) | ((ulong)ntpData[41] << 16) | ((ulong)ntpData[42] << 8) |
-                      ntpData[43];
-        var fractionPart = ((ulong)ntpData[44] << 24) | ((ulong)ntpData[45] << 16) | ((ulong)ntpData[46] << 8) |
-                           ntpData[47];
-
-        var milliseconds = intPart * 1000 + fractionPart * 1000 / 0x100000000L;
-        var networkDateTime = new DateTime(1900, 1, 1).AddMilliseconds((long)milliseconds);
-
-        return networkDateTime;
     }
 
     public static SessionRequestEx CreateSessionRequestEx(Token token, Guid? clientId = null)

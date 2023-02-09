@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,10 +13,19 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest
 {
-  
+
     [TestMethod]
     public async Task Foo()
     {
+        var tcpClient = new TcpClient(new IPEndPoint(IPAddress.Any, 0));
+        await tcpClient.ConnectAsync("www.foo.com", 80);
+
+        var udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
+        await udpClient.SendAsync(new byte[100], 100, IPEndPoint.Parse("8.8.8.8:53"));
+
+
+
+
         Console.WriteLine(DateTime.Now + Timeout.InfiniteTimeSpan);
         await Task.Delay(0);
     }
@@ -85,14 +96,14 @@ public class AccessTest
     }
 
     [TestMethod]
-    public async Task  Server_reject_expired_access_at_runtime()
+    public async Task Server_reject_expired_access_at_runtime()
     {
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         await using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create an short expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(2));
+        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
         // connect and download
         await using var client1 = TestHelper.CreateClient(accessToken);
@@ -101,8 +112,13 @@ public class AccessTest
         {
             await Task.Delay(2000);
             await TestHelper.Test_HttpsAsync(timeout: 1000);
+            await Task.Delay(1000); // make sure session is synced after usage
+            await TestHelper.Test_HttpsAsync(timeout: 1000);
         }
-        catch { /* ignored */ }
+        catch
+        {
+            // ignored
+        }
 
         await TestHelper.WaitForClientStateAsync(client1, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
@@ -185,6 +201,8 @@ public class AccessTest
         // new connection attempt will result to disconnect of client1
         try
         {
+            await TestHelper.Test_HttpsAsync();
+            await Task.Delay(1000);
             await TestHelper.Test_HttpsAsync();
         }
         catch

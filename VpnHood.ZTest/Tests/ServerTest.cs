@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -174,9 +176,15 @@ public class ServerTest
         try
         {
             await TestHelper.Test_HttpsAsync();
+            await Task.Delay(500);
+            await TestHelper.Test_HttpsAsync();
             Assert.Fail("Must fail. Session should not exist any more.");
         }
-        catch { /*ignored*/ }
+        catch (Exception ex)
+        {
+            Assert.AreEqual(nameof(HttpRequestException), ex.GetType().Name);
+            // ignored
+        }
 
         await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.AccessError, client.SessionStatus.ErrorCode);

@@ -173,7 +173,10 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    public Task Sync() => Sync(true, false);
+    public Task Sync()
+    {
+        return Sync(true, false);
+    }
 
     private async Task Sync(bool force, bool closeSession)
     {

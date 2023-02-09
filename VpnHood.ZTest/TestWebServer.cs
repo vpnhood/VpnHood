@@ -15,14 +15,14 @@ namespace VpnHood.Test;
 public class TestWebServer : IDisposable
 {
     private readonly WebServer _webServer;
-    public IPEndPoint[] HttpsEndPoints { get; } = {
+    public IPEndPoint[] HttpsV4EndPoints { get; } = {
         IPEndPoint.Parse("127.10.1.1:15001"),
         IPEndPoint.Parse("127.10.1.1:15002"),
         IPEndPoint.Parse("127.10.1.1:15003"),
         IPEndPoint.Parse("127.10.1.1:15004"),
     };
 
-    public IPEndPoint[] HttpEndPoints { get; } = {
+    public IPEndPoint[] HttpV4EndPoints { get; } = {
         IPEndPoint.Parse("127.10.1.1:15005"),
         IPEndPoint.Parse("127.10.1.1:15006"),
         IPEndPoint.Parse("127.10.1.1:15007"),
@@ -39,6 +39,12 @@ public class TestWebServer : IDisposable
         IPEndPoint.Parse("[::1]:20103")
     };
 
+    public IPEndPoint HttpsV4EndPoint1 => HttpsV4EndPoints[0];
+    public IPEndPoint HttpsV4EndPoint2 => HttpsV4EndPoints[1];
+    public IPEndPoint HttpsV4EndPoint3 => HttpsV4EndPoints[2];
+    public IPEndPoint HttpV4EndPoint1 => HttpV4EndPoints[0];
+    public IPEndPoint HttpV4EndPoint2 => HttpV4EndPoints[1];
+    public IPEndPoint HttpV4EndPoint3 => HttpV4EndPoints[2];
     public IPEndPoint UdpV4EndPoint1 => UdpV4EndPoints[0];
     public IPEndPoint UdpV4EndPoint2 => UdpV4EndPoints[1];
     public IPEndPoint UdpV4EndPoint4 => UdpV4EndPoints[2];
@@ -55,16 +61,16 @@ public class TestWebServer : IDisposable
     public string FileContent1 { get; set; }
     public string FileContent2 { get; set; }
 
-    public Uri FileHttpUrl1 => new($"http://{HttpEndPoints.First()}/file1");
-    public Uri FileHttpUrl2 => new($"http://{HttpEndPoints.First()}/file2");
+    public Uri FileHttpUrl1 => new($"http://{HttpV4EndPoints.First()}/file1");
+    public Uri FileHttpUrl2 => new($"http://{HttpV4EndPoints.First()}/file2");
 
     private UdpClient[] UdpClients { get; }
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
     private TestWebServer()
     {
-        HttpUrls = HttpEndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
-        HttpsUrls = HttpsEndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
+        HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
+        HttpsUrls = HttpsV4EndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
         UdpClients = UdpEndPoints.Select(x => new UdpClient(x)).ToArray();
 
         // Init files
@@ -80,14 +86,13 @@ public class TestWebServer : IDisposable
         var webServerOptions = new WebServerOptions
         {
             Certificate = new X509Certificate2("Assets/VpnHood.UnitTest.pfx", (string?)null, X509KeyStorageFlags.Exportable),
-            AutoRegisterCertificate = false,
-            Mode = HttpListenerMode.EmbedIO
+            AutoRegisterCertificate = false
         };
 
-        foreach (var endpoint in HttpEndPoints)
+        foreach (var endpoint in HttpV4EndPoints)
             webServerOptions.AddUrlPrefix($"http://{endpoint}");
 
-        foreach (var endpoint in HttpsEndPoints)
+        foreach (var endpoint in HttpsV4EndPoints)
             webServerOptions.AddUrlPrefix($"https://{endpoint}");
 
         _webServer = new WebServer(webServerOptions)

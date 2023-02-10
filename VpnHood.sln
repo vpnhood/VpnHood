@@ -41,6 +41,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\Version.json = Pub\Version.json
 	EndProjectSection
+	ProjectSection(FolderGlobals) = preProject
+		C_5_4Users_4Developer_4source_4repos_4Vh_4VpnHood_4Pub_4Version_1json__JsonSchema = 
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{5194E054-10CD-4832-B733-33B02A08E4B6}"
 EndProject
@@ -50,7 +53,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Samples.SimpleClien
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Samples.SimpleClient.Win", "Samples\VpnHood.Samples.SimpleClient.Win\VpnHood.Samples.SimpleClient.Win.csproj", "{1247900C-916A-426B-8733-D43B17FAA694}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.ZUdpTrafficTest", "VpnHood.ZUdpTrafficTest\VpnHood.ZUdpTrafficTest.csproj", "{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.ZUdpTrafficTest", "VpnHood.ZUdpTrafficTest\VpnHood.ZUdpTrafficTest.csproj", "{8DF23016-35C1-41AA-94C5-B0D0A5B96F15}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

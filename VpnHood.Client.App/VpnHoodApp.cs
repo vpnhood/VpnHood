@@ -442,7 +442,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         if (filterMode == FilterMode.Include)
             return ipRanges;
 
-        return IpRange.Invert(ipRanges);
+        return IpRange.Invert(ipRanges).ToArray();
     }
 
     private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
@@ -453,7 +453,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         if (filterMode == FilterMode.Include)
             return await GetIpRanges(ipGroupIds);
 
-        return IpRange.Invert(await GetIpRanges(ipGroupIds));
+        return IpRange.Invert(await GetIpRanges(ipGroupIds)).ToArray();
     }
 
     private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
@@ -475,7 +475,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
                 VhLogger.Instance.LogError(ex, $"Could not add {nameof(IpRange)} of Group {ipGroupId}");
             }
 
-        return IpRange.Sort(ipRanges);
+        return IpRange.Sort(ipRanges).ToArray();
     }
 
     private void PacketCapture_OnStopped(object sender, EventArgs e)

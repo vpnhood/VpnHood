@@ -19,8 +19,8 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.6.346</Version>
-    <AssemblyVersion>2.6.346</AssemblyVersion>
+    <Version>2.6.348</Version>
+    <AssemblyVersion>2.6.348</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>11</LangVersion>

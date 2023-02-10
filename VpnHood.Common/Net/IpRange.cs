@@ -231,7 +231,6 @@ public class IpRange
         return Sort(ipRanges);
     }
 
-
     private class IpRangeSearchComparer : IComparer<IpRange>
     {
         public int Compare(IpRange x, IpRange y)

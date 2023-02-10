@@ -152,7 +152,7 @@ public class IpNetwork
 
     public static IOrderedEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks.OrderBy(x => x._firstIpAddressValue);
+        return ipNetworks.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
     public static IEnumerable<IpNetwork> Invert(IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
@@ -200,4 +200,3 @@ public class IpNetwork
         return HashCode.Combine(FirstIpAddress, LastIpAddress);
     }
 }
-

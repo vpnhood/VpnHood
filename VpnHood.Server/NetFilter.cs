@@ -8,7 +8,7 @@ namespace VpnHood.Server;
 
 public class NetFilter : INetFilter
 {
-    private readonly IpRange[] _loopbackIpRange = IpNetwork.ToIpRange(IpNetwork.LoopbackNetworksV4.Concat(IpNetwork.LoopbackNetworksV6));
+    private readonly IpRange[] _loopbackIpRange = IpNetwork.ToIpRange(IpNetwork.LoopbackNetworksV4.Concat(IpNetwork.LoopbackNetworksV6)).ToArray();
     private IpRange[] _sortedBlockedIpRanges = Array.Empty<IpRange>();
 
     public NetFilter()
@@ -19,7 +19,7 @@ public class NetFilter : INetFilter
     public IpRange[] BlockedIpRanges
     {
         get => _sortedBlockedIpRanges;
-        set => _sortedBlockedIpRanges = IpRange.Sort(value.Concat(_loopbackIpRange));
+        set => _sortedBlockedIpRanges = IpRange.Sort(value.Concat(_loopbackIpRange)).ToArray();
     }
 
     public virtual bool IsIpAddressBlocked(IPAddress ipAddress)

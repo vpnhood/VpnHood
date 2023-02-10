@@ -115,7 +115,7 @@ public class IpGroupManager
                 ipRanges.Add(ipRange);
                 _ipRangeGroups.Add(ipRange, ipGroup);
             }
-            _sortedIpRanges = IpRange.Sort(ipRanges.ToArray(), false);
+            _sortedIpRanges = IpRange.Sort(ipRanges, false).ToArray();
         }
         finally
         {

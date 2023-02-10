@@ -4,7 +4,9 @@
 
 ### Server
 * Fix: Missing some NetProtector log
+* Fix: Winodws: AutoUpdater
 * Security: Always block access to loopback addresses
+* Update: log file archive format
 
 # v2.6.346
 ### Client

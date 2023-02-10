@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Text.Json.Serialization;
 
 namespace VpnHood.Common.Net;
+// ReSharper disable PossibleMultipleEnumeration
 
 [JsonConverter(typeof(IpRangeConverter))]
 public class IpRange
@@ -38,13 +39,13 @@ public class IpRange
     public IPAddress LastIpAddress { get; }
     public BigInteger Total => new BigInteger(LastIpAddress.GetAddressBytes(), true, true) - new BigInteger(FirstIpAddress.GetAddressBytes(), true, true) + 1;
 
-    public static IpRange[] Sort(IEnumerable<IpRange> ipRanges, bool unify = true)
+    public static IOrderedEnumerable<IpRange> Sort(IEnumerable<IpRange> ipRanges, bool unify = true)
     {
         var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
-        return unify ? Unify(sortedRanges) : sortedRanges.ToArray();
+        return unify ? Unify(sortedRanges) : sortedRanges;
     }
 
-    private static IpRange[] Unify(IEnumerable<IpRange> sortedIpRanges)
+    private static IOrderedEnumerable<IpRange> Unify(IEnumerable<IpRange> sortedIpRanges)
     {
         List<IpRange> res = new();
         foreach (var ipRange in sortedIpRanges)
@@ -62,17 +63,17 @@ public class IpRange
             }
         }
 
-        return res.ToArray();
+        return res.OrderBy(x=>x.FirstIpAddress, new IPAddressComparer());
     }
 
-    public static IpRange[] Invert(IpRange[] ipRanges, bool includeIPv4 = true, bool includeIPv6 = true)
+    public static IEnumerable<IpRange> Invert(IEnumerable<IpRange> ipRanges, bool includeIPv4 = true, bool includeIPv6 = true)
     {
         List<IpRange> list = new();
 
         // IP4
         if (includeIPv4)
         {
-            var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+            var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetwork);
             if (ipRanges2.Any())
                 list.AddRange(InvertInternal(ipRanges2));
             else
@@ -82,21 +83,20 @@ public class IpRange
         // IP6
         if (includeIPv6)
         {
-            var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
+            var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
             if (ipRanges2.Any())
                 list.AddRange(InvertInternal(ipRanges2));
             else
                 list.Add(new IpRange(IPAddressUtil.MinIPv6Value, IPAddressUtil.MaxIPv6Value));
         }
 
-        return list.ToArray();
+        return list;
     }
 
-
-    private static IpRange[] InvertInternal(IEnumerable<IpRange> ipRanges)
+    private static IEnumerable<IpRange> InvertInternal(IEnumerable<IpRange> ipRanges)
     {
         // sort
-        var ipRangesSorted = Sort(ipRanges);
+        var ipRangesSorted = Sort(ipRanges).ToArray();
 
         // extract
         List<IpRange> res = new();
@@ -108,13 +108,15 @@ public class IpRange
 
             if (i == 0 && !IPAddressUtil.IsMinValue(ipRange.FirstIpAddress))
                 res.Add(new IpRange(minIpValue, IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
+
             if (i > 0)
                 res.Add(new IpRange(IPAddressUtil.Increment(ipRangesSorted[i - 1].LastIpAddress), IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
+
             if (i == ipRangesSorted.Length - 1 && !IPAddressUtil.IsMaxValue(ipRange.LastIpAddress))
                 res.Add(new IpRange(IPAddressUtil.Increment(ipRange.LastIpAddress), maxIpValue));
         }
 
-        return res.ToArray();
+        return res;
     }
 
     public static IpRange Parse(string value)
@@ -168,6 +170,65 @@ public class IpRange
     {
         var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
         return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
+    }
+
+    public static IEnumerable<IpRange> Intersect(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
+    {
+        // ReSharper disable once PossibleMultipleEnumeration
+        var v4SortedRanges1 = ipRanges1
+            .Where(x => x.AddressFamily == AddressFamily.InterNetwork)
+            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+
+        // ReSharper disable once PossibleMultipleEnumeration
+        var v4SortedRanges2 = ipRanges2
+            .Where(x => x.AddressFamily == AddressFamily.InterNetwork)
+            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+
+        // ReSharper disable once PossibleMultipleEnumeration
+        var v6SortedRanges1 = ipRanges1
+            .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)
+            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+
+        // ReSharper disable once PossibleMultipleEnumeration
+        var v6SortedRanges2 = ipRanges2
+            .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)
+            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+
+
+        var ipRangesV4 = IntersectInternal(v4SortedRanges1, v4SortedRanges2);
+        var ipRangesV6 = IntersectInternal(v6SortedRanges1, v6SortedRanges2);
+        var ret = ipRangesV4.Concat(ipRangesV6);
+        return ret;
+    }
+
+    private static IEnumerable<IpRange> IntersectInternal(IEnumerable<IpRange> ipRanges1,
+        IEnumerable<IpRange> ipRanges2)
+    {
+        ipRanges1 = Sort(ipRanges1);
+        ipRanges2 = Sort(ipRanges2);
+
+        var ipRanges = new List<IpRange>();
+        foreach (var ipRange1 in ipRanges1)
+            foreach (var ipRange2 in ipRanges2)
+            {
+                if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
+                    ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,
+                        IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+
+                else if (ipRange1.IsInRange(ipRange2.LastIpAddress))
+                    ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
+                        ipRange2.LastIpAddress));
+
+                else if (ipRange2.IsInRange(ipRange1.FirstIpAddress))
+                    ipRanges.Add(new IpRange(ipRange1.FirstIpAddress,
+                        IPAddressUtil.Min(ipRange1.LastIpAddress, ipRange2.LastIpAddress)));
+
+                else if (ipRange2.IsInRange(ipRange1.LastIpAddress))
+                    ipRanges.Add(new IpRange(IPAddressUtil.Max(ipRange1.FirstIpAddress, ipRange2.FirstIpAddress),
+                        ipRange1.LastIpAddress));
+            }
+
+        return Sort(ipRanges);
     }
 
 

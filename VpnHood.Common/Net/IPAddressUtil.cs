@@ -49,7 +49,7 @@ public static class IPAddressUtil
         }
         catch
         {
-             // ignore
+            // ignore
         }
 
         return false;
@@ -285,5 +285,14 @@ public static class IPAddressUtil
                 bytes[i] = 0;
             return new IPAddress(bytes);
         }
+    }
+
+    public static IPAddress Min(IPAddress ipAddress1, IPAddress ipAddress2)
+    {
+        return Compare(ipAddress1, ipAddress2) < 0 ? ipAddress1 : ipAddress2;
+    }
+    public static IPAddress Max(IPAddress ipAddress1, IPAddress ipAddress2)
+    {
+        return Compare(ipAddress1, ipAddress2) > 0 ? ipAddress1 : ipAddress2;
     }
 }

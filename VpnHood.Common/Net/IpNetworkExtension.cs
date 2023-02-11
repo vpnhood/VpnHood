@@ -21,7 +21,7 @@ public static class IpNetworkExtension
         return IpNetwork.FromIpRange(ipRanges);
     }
 
-    public static IEnumerable<IpNetwork> ToIpNetwork(this IpRange ipRange)
+    public static IEnumerable<IpNetwork> ToIpNetworks(this IpRange ipRange)
     {
         return IpNetwork.FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
     }

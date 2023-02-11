@@ -813,6 +813,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 RequestCode.TcpProxyChannel => GeneralEventId.TcpProxyChannel,
                 _ => GeneralEventId.Tcp
             };
+            Console.WriteLine("SessionId: " + SessionId);
             VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}.");
 
             // building request
@@ -855,6 +856,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             // dispose by session timeout or known exception
+            Console.WriteLine($"zabool: {ex.Message}"); //todo
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);

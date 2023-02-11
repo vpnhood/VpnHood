@@ -101,13 +101,13 @@ internal static class TestHelper
         return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
     }
 
-    private static PingReply SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = DefaultTimeout)
+    private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = DefaultTimeout)
     {
         using var pingT = new Ping();
         ping ??= pingT;
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
-        return ping.Send(ipAddress ?? TEST_PingV4Address1, timeout, buffer);
+        return ping.SendPingAsync(ipAddress ?? TEST_PingV4Address1, timeout, buffer);
     }
 
     private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = DefaultTimeout)
@@ -134,10 +134,11 @@ internal static class TestHelper
         return res.Length > 100;
     }
 
-    public static void Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = DefaultTimeout)
+    public static async Task Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = DefaultTimeout)
     {
-        var pingReply = SendPing(ping, ipAddress, timeout);
-        Assert.AreEqual(IPStatus.Success, pingReply.Status);
+        var pingReply = await SendPing(ping, ipAddress, timeout);
+        if (pingReply.Status != IPStatus.Success)
+            throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
 
     public static void Test_Dns(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
@@ -343,7 +344,7 @@ internal static class TestHelper
         if (options.TcpTimeout == new ClientOptions().TcpTimeout) options.TcpTimeout = TimeSpan.FromSeconds(3);
         options.SocketFactory = new TestSocketFactory(false);
         options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        options.ExcludeLocalNetwork = false;
+        options.IncludeLocalNetwork = true;
 
         var client = new VpnHoodClient(
             packetCapture,
@@ -373,7 +374,7 @@ internal static class TestHelper
             clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
         clientOptions.SocketFactory = new SocketFactory();
         clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.ExcludeLocalNetwork = false;
+        clientOptions.IncludeLocalNetwork = true;
 
         var clientConnect = new VpnHoodConnect(
             packetCapture,
@@ -413,6 +414,7 @@ internal static class TestHelper
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIpRangesFilterMode = FilterMode.Include;
         clientApp.UserSettings.PacketCaptureIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
 
         return clientApp;
     }

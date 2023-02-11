@@ -221,7 +221,7 @@ public class ClientServerTest
         oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
         oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
-        TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+        await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
 
         Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 500,
             "Not enough data has been sent through the client!");
@@ -281,14 +281,14 @@ public class ClientServerTest
         await using var client1 = TestHelper.CreateClient(token);
 
         // test Icmp & Udp
-        TestHelper.Test_Ping(ping);
+        await TestHelper.Test_Ping(ping);
         await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
 
         // create client
         await using var client2 = TestHelper.CreateClient(token);
 
         // test Icmp & Udp
-        TestHelper.Test_Ping(ping);
+        await TestHelper.Test_Ping(ping);
         await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
     }
 

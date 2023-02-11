@@ -69,7 +69,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
     public IDevice Device => _clientAppProvider.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection? JobSection { get; }
-    
+    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().TcpTimeout;
+
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatTypeName(this)} is already initialized.");
@@ -390,10 +391,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
-            ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
             IpFilter = this,
             PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
+            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
+            TcpTimeout = TcpTimeout
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;

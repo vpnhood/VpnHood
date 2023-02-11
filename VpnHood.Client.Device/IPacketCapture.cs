@@ -9,6 +9,7 @@ namespace VpnHood.Client.Device;
 
 public interface IPacketCapture : IDisposable
 {
+    int MaxIncludeNetworkCount => 40;
     bool Started { get; }
 
     bool IsDnsServersSupported { get; }

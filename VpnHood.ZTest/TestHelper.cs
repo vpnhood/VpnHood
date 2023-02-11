@@ -184,9 +184,23 @@ internal static class TestHelper
         Test_HttpsAsync(httpClient, uri, timeout).Wait();
     }
 
-    public static async Task Test_HttpsAsync(HttpClient? httpClient = default, Uri? uri = default, int timeout = DefaultTimeout)
+    public static async Task<bool> Test_HttpsAsync(HttpClient? httpClient = default, Uri? uri = default, int timeout = DefaultTimeout, bool throwError = true)
     {
-        Assert.IsTrue(await SendHttpGet(httpClient, uri, timeout), "Https get doesn't work!");
+        if (throwError)
+        {
+            Assert.IsTrue(await SendHttpGet(httpClient, uri, timeout), "Https get doesn't work!");
+            return true;
+        }
+
+        try
+        {
+            return await SendHttpGet(httpClient, uri, timeout);
+        }
+        catch
+        {
+            return false;
+        }
+
     }
 
     public static IPAddress[] TestIpAddresses
@@ -413,7 +427,20 @@ internal static class TestHelper
             encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
     }
 
-    public static async Task<bool> WaitForValue<T, TValue>(T obj, object? expectedValue, Func<T, TValue?> valueFactory, int timeout = 5000)
+    public static async Task<bool> WaitForValue<T, TValue>(T obj, object? expectedValue, Func<T, Task<TValue?>> valueFactory, int timeout = DefaultTimeout)
+    {
+        const int waitTime = 100;
+        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
+        {
+            if (Equals(await valueFactory(obj), expectedValue))
+                return true;
+            await Task.Delay(waitTime);
+        }
+
+        return false;
+    }
+
+    public static async Task<bool> WaitForValue<T, TValue>(T obj, object? expectedValue, Func<T, TValue?> valueFactory, int timeout = DefaultTimeout)
     {
         const int waitTime = 100;
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)

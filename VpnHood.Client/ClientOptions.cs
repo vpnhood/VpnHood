@@ -23,7 +23,7 @@ public class ClientOptions
     public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromSeconds(60);
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; } = false;
-    public bool ExcludeLocalNetwork { get; set; } = true;
+    public bool IncludeLocalNetwork { get; set; }
     public IIpFilter? IpFilter { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
     public SocketFactory SocketFactory { get; set; } = new();

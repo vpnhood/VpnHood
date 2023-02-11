@@ -36,6 +36,16 @@ public static class IpNetworkExtension
         return IpNetwork.Intersect(ipNetworks1, ipNetworks2);
     }
 
+    public static IEnumerable<IpNetwork> Exclude(this IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
+    {
+        return IpNetwork.Exclude(ipNetworks, excludeIpNetworks);
+    }
+
+    public static IEnumerable<IpRange> Exclude(this IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpIpRanges)
+    {
+        return IpRange.Exclude(ipRanges, excludeIpIpRanges);
+    }
+
     public static IOrderedEnumerable<IpRange> Sort(this IEnumerable<IpRange> ipRanges, bool unify = true)
     {
         return IpRange.Sort(ipRanges, unify);

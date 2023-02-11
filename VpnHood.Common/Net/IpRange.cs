@@ -63,7 +63,7 @@ public class IpRange
             }
         }
 
-        return res.OrderBy(x=>x.FirstIpAddress, new IPAddressComparer());
+        return res.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
     public static IEnumerable<IpRange> Invert(IEnumerable<IpRange> ipRanges, bool includeIPv4 = true, bool includeIPv6 = true)
@@ -170,6 +170,11 @@ public class IpRange
     {
         var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
         return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
+    }
+
+    public static IEnumerable<IpRange> Exclude(IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
+    {
+        return Invert(excludeIpRanges).Intersect(ipRanges);
     }
 
     public static IEnumerable<IpRange> Intersect(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)

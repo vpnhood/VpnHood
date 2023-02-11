@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using EmbedIO;
@@ -245,7 +246,7 @@ public class ClientAppTest
 
         try
         {
-            app.Connect(clientProfile.ClientProfileId).Wait();
+            await app.Connect(clientProfile.ClientProfileId);
         }
         catch
         {
@@ -317,7 +318,7 @@ public class ClientAppTest
         app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
         await app.Connect(clientProfile.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
-        TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+        await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
         
         await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
@@ -347,19 +348,19 @@ public class ClientAppTest
         {
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+            await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
             try
             {
-                TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2, timeout: 1000);
+                await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore. just send the packet
+                Assert.AreEqual(nameof(PingException), ex.GetType().Name);
             }
 
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
@@ -379,9 +380,9 @@ public class ClientAppTest
                 await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore. just send the packet
+                Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
             }
 
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
@@ -419,18 +420,18 @@ public class ClientAppTest
             oldReceivedByteCount = app.State.ReceivedTraffic;
             try
             {
-                TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1, timeout: 1000);
+                await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore. just send the packet
+                Assert.AreEqual(nameof(PingException), ex.GetType().Name);
             }
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
             // ping
             oldReceivedByteCount = app.State.ReceivedTraffic;
-            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2);
+            await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
         }
 
@@ -444,9 +445,9 @@ public class ClientAppTest
                 await TestHelper.Test_Udp(udpEndPoint: TestHelper.TEST_UdpV4EndPoint1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
-            catch 
+            catch (Exception ex)
             {
-                // ignore. just send the packet
+                Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
             }
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 

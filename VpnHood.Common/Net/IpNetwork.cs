@@ -165,6 +165,11 @@ public class IpNetwork
         return FromIpRange(IpRange.Intersect(ToIpRange(ipNetworks1), ToIpRange(ipNetworks2)));
     }
 
+    public static IEnumerable<IpNetwork> Exclude(IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
+    {
+        return FromIpRange(IpRange.Exclude(ToIpRange(ipNetworks), ToIpRange(excludeIpNetworks)));
+    }
+
     public IpRange ToIpRange()
     {
         return new IpRange(FirstIpAddress, LastIpAddress);

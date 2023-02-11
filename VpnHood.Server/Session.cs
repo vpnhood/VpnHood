@@ -211,12 +211,9 @@ public class Session : IAsyncDisposable, IJob
 
         try
         {
-            Console.WriteLine("Zapata"); //todo
             SessionResponse = closeSession
                 ? await _accessServer.Session_Close(SessionId, usageParam)
                 : await _accessServer.Session_AddUsage(SessionId, usageParam);
-            Console.WriteLine($"Zapata: {SessionResponse.ErrorCode}"); //todo
-
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)

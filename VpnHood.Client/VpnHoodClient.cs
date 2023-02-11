@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -87,7 +88,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPAddress[] DnsServers { get; }
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
-    public bool ExcludeLocalNetwork { get; }
+    public bool IncludeLocalNetwork { get; }
     public long ReceiveSpeed => Tunnel.ReceiveSpeed;
     public long ReceivedByteCount => Tunnel.ReceivedByteCount;
     public long SendSpeed => Tunnel.SendSpeed;
@@ -130,7 +131,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         TcpTimeout = options.TcpTimeout;
-        ExcludeLocalNetwork = options.ExcludeLocalNetwork;
+        IncludeLocalNetwork = options.IncludeLocalNetwork;
         UseUdpChannel = options.UseUdpChannel;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         Nat = new Nat(true);
@@ -228,8 +229,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             VhLogger.Instance.LogTrace($"Starting {nameof(TcpProxyHost)}...");
             _tcpProxyHost.Start();
 
-            // Preparing device
-            if (!_packetCapture.Started)
+            // Preparing device;
+            if (!_packetCapture.Started) //make sure it is not a shared packet capture
             {
                 ConfigPacketFilter(HostEndPoint);
                 _packetCapture.StartCapture();
@@ -252,58 +253,35 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Built-in IpV6 support
         if (_packetCapture.IsAddIpV6AddressSupported)
-            _packetCapture.AddIpV6Address = IsIpV6Supported;
+            _packetCapture.AddIpV6Address = true; //lets block ipV6 if not supported
 
-        // Filter
-        var includeNetworks = new List<IpNetwork>();
+        // Start with all networks and filter step by step
+        var includeNetworks = (IEnumerable<IpNetwork>)new[]
+        {
+            IpNetwork.AllV4,
+            IpNetwork.AllV6
+        };
+
         if (PacketCaptureIncludeIpRanges?.Length > 0)
+            includeNetworks = includeNetworks.Intersect(PacketCaptureIncludeIpRanges.ToIpNetworks());
+
+        // exclude server if ProtectSocket is not supported to prevent loop
+        if (!_packetCapture.CanProtectSocket)
+            includeNetworks = includeNetworks.Exclude(new[] { new IpNetwork(hostEndPoint.Address) });
+
+        // exclude local networks
+        if (!IncludeLocalNetwork)
+            includeNetworks = includeNetworks.Exclude(IpNetwork.LocalNetworksV4.Concat(IpNetwork.LocalNetworksV6));
+
+        // Make sure CatcherAddress is included
+        includeNetworks = includeNetworks.Concat(new[]
         {
-            // remove hostEndPoint from include
-            var exclude = IpRange.Invert(PacketCaptureIncludeIpRanges).ToList();
-            exclude.Add(new IpRange(hostEndPoint.Address));
-            var include = IpRange.Invert(exclude.ToArray());
+            new IpNetwork(_tcpProxyHost.CatcherAddressIpV4),
+            new IpNetwork(_tcpProxyHost.CatcherAddressIpV6)
+        });
 
-            includeNetworks.AddRange(IpNetwork.FromIpRange(include));
-        }
-        else
-        {
-            // Calculate exclude networks
-            var excludeNetworks = new List<IpNetwork>();
-            if (ExcludeLocalNetwork)
-            {
-                excludeNetworks.AddRange(IpNetwork.LocalNetworksV4);
-                excludeNetworks.AddRange(IpNetwork.LocalNetworksV6);
-            }
-
-            // exclude server if ProtectSocket is not supported to prevent loop back
-            if (!_packetCapture.CanProtectSocket)
-                excludeNetworks.Add(new IpNetwork(hostEndPoint.Address));
-
-            // convert excludeNetworks into includeNetworks
-            if (excludeNetworks.Count > 0)
-                includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks));
-        }
-
-        // Make sure include all if nothing is included
-        if (includeNetworks.Count == 0)
-        {
-            includeNetworks.Add(IpNetwork.AllV4);
-            includeNetworks.Add(IpNetwork.AllV6);
-        }
-
-        // Make sure LoopbackAddress is included
-        var ipRanges = IpNetwork.ToIpRange(includeNetworks);
-        if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.CatcherAddressIpV4)))
-            includeNetworks.Add(new IpNetwork(_tcpProxyHost.CatcherAddressIpV4));
-        if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.CatcherAddressIpV6)))
-            includeNetworks.Add(new IpNetwork(_tcpProxyHost.CatcherAddressIpV6));
-
-        // Make sure that hostEndPoint is not included when packetCapture unable to protect socket
-        if (!_packetCapture.CanProtectSocket && ipRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
-            throw new InvalidOperationException($"Host IP can not be included in {nameof(PacketCaptureIncludeIpRanges)}! HostIp: {hostEndPoint.Address}");
-
-        VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", includeNetworks.Select(x => x.ToString()))}");
-        _packetCapture.IncludeNetworks = includeNetworks.ToArray();
+        _packetCapture.IncludeNetworks = includeNetworks.Sort().ToArray(); //sort and unify
+        VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(x => x.ToString()))}");
     }
 
     private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
@@ -377,7 +355,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                         else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6 or ProtocolType.Udp)
                             tunnelPackets.Add(ipPacket);
-                        
+
                         else
                             droppedPackets.Add(ipPacket);
 
@@ -407,7 +385,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             else
                                 proxyPackets.Add(ipPacket);
                         }
-                        
+
                         else
                             droppedPackets.Add(ipPacket);
 
@@ -813,7 +791,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 RequestCode.TcpProxyChannel => GeneralEventId.TcpProxyChannel,
                 _ => GeneralEventId.Tcp
             };
-            Console.WriteLine("SessionId: " + SessionId);
             VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}.");
 
             // building request
@@ -856,7 +833,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             // dispose by session timeout or known exception
-            Console.WriteLine($"zabool: {ex.Message}"); //todo
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);

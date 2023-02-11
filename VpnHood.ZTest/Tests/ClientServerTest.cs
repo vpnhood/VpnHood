@@ -619,13 +619,13 @@ public class ClientServerTest
         using var tcpClient4 = new TcpClient();
 
         await tcpClient1.ConnectAsync(TestHelper.TEST_HttpsUri1.Host, 443);
-        await Task.Delay(250);
+        await Task.Delay(300);
         await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsUri1.Host, 443);
-        await Task.Delay(250);
+        await Task.Delay(300);
         await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsUri2.Host, 443);
-        await Task.Delay(250);
+        await Task.Delay(300);
         await tcpClient4.ConnectAsync(TestHelper.TEST_HttpsUri2.Host, 443);
-        await Task.Delay(250);
+        await Task.Delay(300);
 
         var session = server.SessionManager.GetSessionById(client.SessionId);
         Assert.AreEqual(fileAccessServerOptions.SessionOptions.MaxTcpChannelCount, session?.TcpChannelCount);

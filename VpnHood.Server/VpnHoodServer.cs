@@ -82,7 +82,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
     public async Task RunJob()
     {
-        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         if (State == ServerState.Waiting && _configureTask.IsCompleted)
         {
@@ -165,7 +165,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
             // starting the listeners
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
-            VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
+            VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatType(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
             _tcpHost.Start(serverConfig.TcpEndPoints, isIpV6Supported && serverConfig.AllowIpV6);
 

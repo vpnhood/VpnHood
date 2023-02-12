@@ -68,12 +68,12 @@ public static class VhLogger
         return IsAnonymousMode ? Util.RedactIpAddress(ipAddress) : ipAddress.ToString();
     }
 
-    public static string FormatTypeName(object? obj)
+    public static string FormatType(object? obj)
     {
         return obj?.GetType().Name ?? "<null>";
     }
 
-    public static string FormatTypeName<T>()
+    public static string FormatType<T>()
     {
         return typeof(T).Name;
     }

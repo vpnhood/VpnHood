@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -7,6 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Test.Tests;
 
@@ -17,17 +19,12 @@ public class AccessTest
     [TestMethod]
     public async Task Foo()
     {
-        var tcpClient = new TcpClient(new IPEndPoint(IPAddress.Any, 0));
-        await tcpClient.ConnectAsync("www.foo.com", 80);
+        await Task.Delay(100);
 
-        var udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
-        await udpClient.SendAsync(new byte[100], 100, IPEndPoint.Parse("8.8.8.8:53"));
+        var b = IpNetwork.LocalNetworks;
 
+        var c = b.Intersect(IpNetwork.LocalNetworks).Concat(IpNetwork.LocalNetworks.Invert()).Sort().ToArray();
 
-
-
-        Console.WriteLine(DateTime.Now + Timeout.InfiniteTimeSpan);
-        await Task.Delay(0);
     }
 
     [TestInitialize]
@@ -108,7 +105,7 @@ public class AccessTest
         // connect and download
         await using var client1 = TestHelper.CreateClient(accessToken);
 
-        await TestHelper.WaitForValue(ClientState.Disposed, async () =>
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_HttpsAsync(throwError: false);
             return client1.State;
@@ -191,12 +188,11 @@ public class AccessTest
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
 
-        await TestHelper.WaitForValue(ClientState.Disposed, async () =>
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_HttpsAsync(throwError: false);
             return client1.State;
-        });
-        Assert.AreEqual(ClientState.Disposed, client1.State, "Client1 has not been stopped yet!");
+        }, "Client1 has not been stopped yet.");
         Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
 
@@ -214,7 +210,7 @@ public class AccessTest
 
 
         // wait for finishing client2
-        await TestHelper.WaitForValue(ClientState.Disposed, async () =>
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_HttpsAsync(throwError: false);
             return client2.State;

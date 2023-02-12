@@ -95,14 +95,9 @@ namespace VpnHood.Client.Device.Android
             }
 
             // Routes
-            if (IncludeNetworks?.Length > 0)
-                foreach (var network in IncludeNetworks)
-                    builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
-            else
-                builder
-                    .AddRoute("0.0.0.0", 0)
-                    .AddRoute("::", 0);
-
+            var includeNetworks = IncludeNetworks ?? IpNetwork.All;
+            foreach (var network in includeNetworks)
+                builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
 
             // set mtu
             if (Mtu != 0)

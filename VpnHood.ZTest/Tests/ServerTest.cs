@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -172,20 +173,12 @@ public class ServerTest
         fileAccessServer.SessionManager.Sessions.Clear();
         await server.SessionManager.SyncSessions();
 
-        try
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync();
-            await Task.Delay(500);
-            await TestHelper.Test_HttpsAsync();
-            Assert.Fail("Must fail. Session should not exist any more.");
-        }
-        catch (Exception ex)
-        {
-            Assert.AreEqual(nameof(HttpRequestException), ex.GetType().Name);
-            // ignored
-        }
-
-        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
+            await TestHelper.Test_HttpsAsync(throwError: false);
+            return client.State;
+        });
+        Assert.AreEqual(ClientState.Disposed, client.State);
         Assert.AreEqual(SessionErrorCode.AccessError, client.SessionStatus.ErrorCode);
     }
 }

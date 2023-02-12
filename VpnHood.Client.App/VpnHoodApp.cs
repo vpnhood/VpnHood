@@ -73,7 +73,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
 
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatTypeName(this)} is already initialized.");
+        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatType(this)} is already initialized.");
         options ??= new AppOptions();
         Directory.CreateDirectory(options.AppDataPath); //make sure directory exists
 
@@ -436,10 +436,10 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
             CheckConnectionStateChanged();
     }
 
-    private IpRange[]? GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)
+    private static IpRange[] GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)
     {
         if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipRanges))
-            return null;
+            return IpNetwork.All.ToIpRanges().ToArray();
 
         if (filterMode == FilterMode.Include)
             return ipRanges;

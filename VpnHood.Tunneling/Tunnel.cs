@@ -203,14 +203,14 @@ public class Tunnel : IDisposable
                 DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatTypeName(channel), DatagramChannels.Length, channel.Connected, channel.IsClosePending);
+                    VhLogger.FormatType(channel), DatagramChannels.Length, channel.Connected, channel.IsClosePending);
             }
             else if (channel is TcpProxyChannel tcpProxyChannel)
             {
                 _tcpProxyChannels.Remove(tcpProxyChannel);
                 VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
                     "A TcpProxyChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatTypeName(channel), _tcpProxyChannels.Count, channel.Connected, channel.IsClosePending);
+                    VhLogger.FormatType(channel), _tcpProxyChannels.Count, channel.Connected, channel.IsClosePending);
             }
             else
                 throw new ArgumentOutOfRangeException(nameof(channel), "Unknown Channel.");

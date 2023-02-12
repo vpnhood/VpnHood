@@ -429,35 +429,38 @@ internal static class TestHelper
             encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
     }
 
-    public static async Task<bool> WaitForValue<T, TValue>(T obj, object? expectedValue, Func<T, Task<TValue?>> valueFactory, int timeout = DefaultTimeout)
+    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
     {
         const int waitTime = 100;
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
-            if (Equals(await valueFactory(obj), expectedValue))
+            if (Equals(expectedValue, valueFactory()))
                 return true;
+
             await Task.Delay(waitTime);
         }
 
         return false;
     }
 
-    public static async Task<bool> WaitForValue<T, TValue>(T obj, object? expectedValue, Func<T, TValue?> valueFactory, int timeout = DefaultTimeout)
+    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
     {
         const int waitTime = 100;
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
-            if (Equals(valueFactory(obj), expectedValue))
+            if (Equals(expectedValue, await valueFactory()))
                 return true;
+
             await Task.Delay(waitTime);
         }
 
         return false;
     }
+
 
     public static async Task AssertEqualsWait<T, TValue>(T obj, TValue? expectedValue, Func<T, TValue> valueFactory, string? message = null, int timeout = 5000)
     {
-        await WaitForValue(obj, expectedValue, valueFactory, timeout);
+        await WaitForValue(expectedValue, ()=>valueFactory(obj), timeout);
 
         if (message != null)
             Assert.AreEqual(expectedValue, valueFactory(obj), message);
@@ -465,20 +468,7 @@ internal static class TestHelper
             Assert.AreEqual(expectedValue, valueFactory(obj));
     }
 
-    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
-    {
-        const int waitTime = 100;
-        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
-        {
-            if (Equals(valueFactory(), expectedValue))
-                return true;
-            await Task.Delay(waitTime);
-        }
-
-        return false;
-    }
-
-    public static async Task AssertEqualsWait<TValue>(TValue? expectedValue, Func<TValue> valueFactory, string? message = null, int timeout = 5000)
+    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<TValue?> valueFactory, string? message = null, int timeout = 5000)
     {
         await WaitForValue(expectedValue, valueFactory, timeout);
 
@@ -486,6 +476,16 @@ internal static class TestHelper
             Assert.AreEqual(expectedValue, valueFactory(), message);
         else
             Assert.AreEqual(expectedValue, valueFactory());
+    }
+
+    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, string? message = null, int timeout = 5000)
+    {
+        await WaitForValue(expectedValue, valueFactory, timeout);
+
+        if (message != null)
+            Assert.AreEqual(expectedValue, await valueFactory(), message);
+        else
+            Assert.AreEqual(expectedValue, await valueFactory());
     }
 
 

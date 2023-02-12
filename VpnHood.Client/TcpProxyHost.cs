@@ -48,14 +48,14 @@ internal class TcpProxyHost : IDisposable
     public void Start()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
-        using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
-        VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatTypeName(this)}...");
+        using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatType<TcpProxyHost>()}");
+        VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(this)}...");
 
         // IpV4
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
         _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-        VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+        VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
@@ -65,7 +65,7 @@ internal class TcpProxyHost : IDisposable
             _tcpListenerIpV6.Start();
             _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
             VhLogger.Instance.LogInformation(
-                $"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
+                $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
             _ = AcceptTcpClientLoop(_tcpListenerIpV6);
         }
         catch (Exception ex)
@@ -94,7 +94,7 @@ internal class TcpProxyHost : IDisposable
         }
         finally
         {
-            VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} Listener on {localEp} has been closed.");
+            VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} Listener on {localEp} has been closed.");
         }
     }
 
@@ -170,7 +170,7 @@ internal class TcpProxyHost : IDisposable
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError(
-                    $"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
+                    $"{VhLogger.FormatType(this)}: Error in processing packet! Error: {ex}");
             }
         }
 

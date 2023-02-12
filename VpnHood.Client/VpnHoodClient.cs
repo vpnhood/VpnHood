@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -69,14 +68,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private bool _udpChannelAdded;
     private DateTime _lastReceivedPacketTime = DateTime.MinValue;
-
     private int ProtocolVersion { get; }
-    public Version? ServerVersion { get; private set; }
     private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
 
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal SocketFactory SocketFactory { get; }
+
+    public Version? ServerVersion { get; private set; }
     public event EventHandler? StateChanged;
     public IPAddress? PublicAddress { get; private set; }
     public bool IsIpV6Supported { get; private set; }
@@ -95,7 +94,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public long SentByteCount => Tunnel.SentByteCount;
     public bool UseUdpChannel { get; set; }
     public IpRange[]? IncludeIpRanges { get; private set; }
-    public IpRange[]? PacketCaptureIncludeIpRanges { get; }
+    public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
     public IPEndPoint? HostEndPoint { get; private set; }
     public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
@@ -226,7 +225,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await ConnectInternal(_cancellationToken);
 
             // create Tcp Proxy Host
-            VhLogger.Instance.LogTrace($"Starting {nameof(TcpProxyHost)}...");
+            VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatType(_tcpProxyHost)}...");
             _tcpProxyHost.Start();
 
             // Preparing device;
@@ -255,32 +254,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_packetCapture.IsAddIpV6AddressSupported)
             _packetCapture.AddIpV6Address = true; //lets block ipV6 if not supported
 
-        // Start with all networks and filter step by step
-        var includeNetworks = (IEnumerable<IpNetwork>)new[]
-        {
-            IpNetwork.AllV4,
-            IpNetwork.AllV6
-        };
-
-        if (PacketCaptureIncludeIpRanges?.Length > 0)
-            includeNetworks = includeNetworks.Intersect(PacketCaptureIncludeIpRanges.ToIpNetworks());
+        // Start with user PacketCaptureIncludeIpRanges
+        var includeIpRanges = (IEnumerable<IpRange>)PacketCaptureIncludeIpRanges;
 
         // exclude server if ProtectSocket is not supported to prevent loop
         if (!_packetCapture.CanProtectSocket)
-            includeNetworks = includeNetworks.Exclude(new[] { new IpNetwork(hostEndPoint.Address) });
+            includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostEndPoint.Address) });
 
         // exclude local networks
         if (!IncludeLocalNetwork)
-            includeNetworks = includeNetworks.Exclude(IpNetwork.LocalNetworksV4.Concat(IpNetwork.LocalNetworksV6));
+            includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included
-        includeNetworks = includeNetworks.Concat(new[]
+        includeIpRanges = includeIpRanges.Concat(new[]
         {
-            new IpNetwork(_tcpProxyHost.CatcherAddressIpV4),
-            new IpNetwork(_tcpProxyHost.CatcherAddressIpV6)
+            new IpRange(_tcpProxyHost.CatcherAddressIpV4),
+            new IpRange(_tcpProxyHost.CatcherAddressIpV6)
         });
 
-        _packetCapture.IncludeNetworks = includeNetworks.Sort().ToArray(); //sort and unify
+        _packetCapture.IncludeNetworks = includeIpRanges.Sort().ToIpNetworks().ToArray(); //sort and unify
         VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(x => x.ToString()))}");
     }
 
@@ -725,9 +717,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IsIpV6Supported = sessionResponse.IsIpV6Supported;
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
 
+        // PacketCaptureIpRanges
+        if (!Util.IsNullOrEmpty(sessionResponse.PacketCaptureIpRanges))
+            PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.Intersect(sessionResponse.PacketCaptureIpRanges).ToArray();
+
+        // IncludeIpRanges
+        if (!Util.IsNullOrEmpty(sessionResponse.IncludeIpRanges))
+        {
+            IncludeIpRanges ??= IpNetwork.All.ToIpRanges().ToArray();
+            IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges).ToArray();
+        }
+
         // Get IncludeIpRange for clientIp
-        if (_ipFilter != null)
-            IncludeIpRanges = await _ipFilter.GetIncludeIpRanges(sessionResponse.ClientPublicAddress);
+        var filterIpRanges = _ipFilter != null ? await _ipFilter.GetIncludeIpRanges(sessionResponse.ClientPublicAddress) : null;
+        if (!Util.IsNullOrEmpty(filterIpRanges))
+        {
+            IncludeIpRanges ??= IpNetwork.All.ToIpRanges().ToArray();
+            IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges).ToArray();
+        }
 
         // Preparing tunnel
         Tunnel.MaxDatagramChannelCount = sessionResponse.MaxDatagramChannelCount != 0
@@ -814,7 +821,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // client is disposed mean while
             if (_disposed)
-                throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+                throw new ObjectDisposedException(VhLogger.FormatType(this));
 
             if (response.ErrorCode == SessionErrorCode.RedirectHost) throw new RedirectHostException(response);
             if (response.ErrorCode == SessionErrorCode.Maintenance) throw new MaintenanceException();
@@ -935,19 +942,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpProxyHost)}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(_tcpProxyHost)}...");
         _tcpProxyHost.Dispose();
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Tunnel)}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(Tunnel)}...");
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
         Tunnel.Dispose();
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_proxyManager)}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(_proxyManager)}...");
         _proxyManager.Dispose();
 
         // dispose NAT
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(Nat)}...");
         Nat.Dispose();
 
         // close PacketCapture

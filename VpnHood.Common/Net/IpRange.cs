@@ -66,9 +66,9 @@ public class IpRange
         return res.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
-    public static IEnumerable<IpRange> Invert(IEnumerable<IpRange> ipRanges, bool includeIPv4 = true, bool includeIPv6 = true)
+    public static IOrderedEnumerable<IpRange> Invert(IEnumerable<IpRange> ipRanges, bool includeIPv4 = true, bool includeIPv6 = true)
     {
-        List<IpRange> list = new();
+        var list = new List<IpRange>();
 
         // IP4
         if (includeIPv4)
@@ -90,7 +90,7 @@ public class IpRange
                 list.Add(new IpRange(IPAddressUtil.MinIPv6Value, IPAddressUtil.MaxIPv6Value));
         }
 
-        return list;
+        return Sort(list);
     }
 
     private static IEnumerable<IpRange> InvertInternal(IEnumerable<IpRange> ipRanges)
@@ -172,12 +172,12 @@ public class IpRange
         return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
     }
 
-    public static IEnumerable<IpRange> Exclude(IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
+    public static IOrderedEnumerable<IpRange> Exclude(IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
-        return Invert(excludeIpRanges).Intersect(ipRanges);
+        return Intersect(Invert(excludeIpRanges), ipRanges);
     }
 
-    public static IEnumerable<IpRange> Intersect(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
+    public static IOrderedEnumerable<IpRange> Intersect(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
     {
         // ReSharper disable once PossibleMultipleEnumeration
         var v4SortedRanges1 = ipRanges1
@@ -203,7 +203,7 @@ public class IpRange
         var ipRangesV4 = IntersectInternal(v4SortedRanges1, v4SortedRanges2);
         var ipRangesV6 = IntersectInternal(v6SortedRanges1, v6SortedRanges2);
         var ret = ipRangesV4.Concat(ipRangesV6);
-        return ret;
+        return Sort(ret);
     }
 
     private static IEnumerable<IpRange> IntersectInternal(IEnumerable<IpRange> ipRanges1,
@@ -233,7 +233,7 @@ public class IpRange
                         ipRange1.LastIpAddress));
             }
 
-        return Sort(ipRanges);
+        return ipRanges;
     }
 
     private class IpRangeSearchComparer : IComparer<IpRange>

@@ -51,7 +51,7 @@ public class VpnHoodConnect : IAsyncDisposable
     public Task Connect()
     {
         if (IsDisposed)
-            throw new ObjectDisposedException($"{VhLogger.FormatTypeName(this)} is disposed!");
+            throw new ObjectDisposedException($"{VhLogger.FormatType(this)} is disposed!");
 
         if (Client.State != ClientState.None && Client.State != ClientState.Disposed)
             throw new InvalidOperationException("Connection is already in progress!");

@@ -16,7 +16,7 @@ public static class IpNetworkExtension
         return IpNetwork.ToIpRange(ipNetworks);
     }
 
-    public static IEnumerable<IpNetwork> ToIpNetworks(this IEnumerable<IpRange> ipRanges)
+    public static IOrderedEnumerable<IpNetwork> ToIpNetworks(this IEnumerable<IpRange> ipRanges)
     {
         return IpNetwork.FromIpRange(ipRanges);
     }
@@ -26,24 +26,24 @@ public static class IpNetworkExtension
         return IpNetwork.FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
     }
 
-    public static IEnumerable<IpNetwork> Invert(this IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
+    public static IOrderedEnumerable<IpNetwork> Invert(this IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
     {
         return IpNetwork.Invert(ipNetworks, includeIPv4, includeIPv6);
     }
 
-    public static IEnumerable<IpNetwork> Intersect(this IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
+    public static IOrderedEnumerable<IpNetwork> Intersect(this IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
     {
         return IpNetwork.Intersect(ipNetworks1, ipNetworks2);
     }
 
-    public static IEnumerable<IpNetwork> Exclude(this IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
+    public static IOrderedEnumerable<IpNetwork> Exclude(this IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
     {
         return IpNetwork.Exclude(ipNetworks, excludeIpNetworks);
     }
 
-    public static IEnumerable<IpRange> Exclude(this IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpIpRanges)
+    public static IOrderedEnumerable<IpRange> Exclude(this IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
-        return IpRange.Exclude(ipRanges, excludeIpIpRanges);
+        return IpRange.Exclude(ipRanges, excludeIpRanges);
     }
 
     public static IOrderedEnumerable<IpRange> Sort(this IEnumerable<IpRange> ipRanges, bool unify = true)
@@ -51,7 +51,7 @@ public static class IpNetworkExtension
         return IpRange.Sort(ipRanges, unify);
     }
 
-    public static IEnumerable<IpRange> Invert(this IEnumerable<IpRange> ipRanges,
+    public static IOrderedEnumerable<IpRange> Invert(this IEnumerable<IpRange> ipRanges,
         bool includeIPv4 = true, bool includeIPv6 = true)
     {
         return IpRange.Invert(ipRanges, includeIPv4, includeIPv6);
@@ -67,7 +67,7 @@ public static class IpNetworkExtension
         return IpRange.FindRangeFast(sortedIpRanges, ipAddress);
     }
 
-    public static IEnumerable<IpRange> Intersect(this IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
+    public static IOrderedEnumerable<IpRange> Intersect(this IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
     {
         return IpRange.Intersect(ipRanges1, ipRanges2);
     }

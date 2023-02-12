@@ -101,7 +101,7 @@ public class TcpProxyChannel : IChannel, IJob
             return;
 
         VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
-            $"Disposing a {VhLogger.FormatTypeName(this)} due to its error state.");
+            $"Disposing a {VhLogger.FormatType(this)} due to its error state.");
 
         Dispose();
     }

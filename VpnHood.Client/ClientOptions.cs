@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using VpnHood.Common.Net;
 using VpnHood.Tunneling.Factory;
@@ -25,7 +26,7 @@ public class ClientOptions
     public bool UseUdpChannel { get; set; } = false;
     public bool IncludeLocalNetwork { get; set; }
     public IIpFilter? IpFilter { get; set; }
-    public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
+    public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
     public SocketFactory SocketFactory { get; set; } = new();
     public int MaxDatagramChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();

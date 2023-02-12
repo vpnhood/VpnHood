@@ -15,7 +15,7 @@ public class IpNetwork
     private readonly BigInteger _lastIpAddressValue;
 
     public IpNetwork(IPAddress prefix)
-        : this(prefix, prefix.AddressFamily==AddressFamily.InterNetwork ? 32 : 128)
+        : this(prefix, prefix.AddressFamily == AddressFamily.InterNetwork ? 32 : 128)
     {
     }
 
@@ -56,7 +56,9 @@ public class IpNetwork
     public static IpNetwork[] LoopbackNetworksV6 { get; } = { Parse("::1/128") };
     public static IpNetwork AllV6 { get; } = Parse("::/0");
     public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
-    public static IEnumerable<IpNetwork> LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert();
+    public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert().ToArray();
+    public static IpNetwork[] LocalNetworks { get; } = LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
+    public static IpNetwork[] All { get; } = { AllV4, AllV6 };
 
     public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
     {
@@ -104,7 +106,7 @@ public class IpNetwork
         var bits = addressFamily == AddressFamily.InterNetworkV6 ? 128 : 32;
         var first = IPAddressUtil.ToBigInteger(firstIpAddress);
         var last = IPAddressUtil.ToBigInteger(lastIpAddress);
-        
+
         if (first > last) yield break;
         last++;
         // mask == 1 << len
@@ -132,7 +134,7 @@ public class IpNetwork
         }
     }
 
-    public IEnumerable<IpNetwork> Invert()
+    public IOrderedEnumerable<IpNetwork> Invert()
     {
         return Invert(new[] { this }, AddressFamily == AddressFamily.InterNetwork, AddressFamily == AddressFamily.InterNetworkV6);
     }
@@ -152,20 +154,20 @@ public class IpNetwork
 
     public static IOrderedEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+        return FromIpRange(ToIpRange(ipNetworks));
     }
 
-    public static IEnumerable<IpNetwork> Invert(IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
+    public static IOrderedEnumerable<IpNetwork> Invert(IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
     {
         return FromIpRange(IpRange.Invert(ToIpRange(ipNetworks), includeIPv4, includeIPv6));
     }
 
-    public static IEnumerable<IpNetwork> Intersect(IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
+    public static IOrderedEnumerable<IpNetwork> Intersect(IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
     {
         return FromIpRange(IpRange.Intersect(ToIpRange(ipNetworks1), ToIpRange(ipNetworks2)));
     }
 
-    public static IEnumerable<IpNetwork> Exclude(IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
+    public static IOrderedEnumerable<IpNetwork> Exclude(IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
     {
         return FromIpRange(IpRange.Exclude(ToIpRange(ipNetworks), ToIpRange(excludeIpNetworks)));
     }
@@ -180,12 +182,13 @@ public class IpNetwork
         return ipNetworks.Select(x => x.ToIpRange());
     }
 
-    public static IEnumerable<IpNetwork> FromIpRange(IEnumerable<IpRange> ipRanges)
+    public static IOrderedEnumerable<IpNetwork> FromIpRange(IEnumerable<IpRange> ipRanges)
     {
-        List<IpNetwork> ipNetworks = new();
+        var ipNetworks = new List<IpNetwork>();
         foreach (var ipRange in IpRange.Sort(ipRanges))
             ipNetworks.AddRange(FromIpRange(ipRange));
-        return ipNetworks;
+
+        return ipNetworks.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
     public override string ToString()

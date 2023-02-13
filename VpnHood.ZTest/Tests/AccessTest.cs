@@ -21,9 +21,7 @@ public class AccessTest
     {
         await Task.Delay(100);
 
-        var b = IpNetwork.LocalNetworks;
-
-        var c = b.Intersect(IpNetwork.LocalNetworks).Concat(IpNetwork.LocalNetworks.Invert()).Sort().ToArray();
+        Console.WriteLine(IpNetwork.IsAll(IpNetwork.All.ToIpRanges().ToIpNetworks().Sort()));
 
     }
 

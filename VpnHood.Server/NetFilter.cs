@@ -19,12 +19,12 @@ public class NetFilter : INetFilter
     public IpRange[] BlockedIpRanges
     {
         get => _sortedBlockedIpRanges;
-        set => _sortedBlockedIpRanges = IpRange.Sort(value.Concat(_loopbackIpRange)).ToArray();
+        set => _sortedBlockedIpRanges = value.Concat(_loopbackIpRange).Sort().ToArray();
     }
 
     public virtual bool IsIpAddressBlocked(IPAddress ipAddress)
     {
-        return IpRange.IsInRangeFast(BlockedIpRanges, ipAddress);
+        return IpRange.IsInSortedRanges(BlockedIpRanges, ipAddress);
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable

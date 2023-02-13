@@ -1,8 +1,11 @@
 # Upcoming
 ### Client
+* Farture: Follow server supported networks by ip range
 * Update: Performance improvement
 
 ### Server
+* Farture: Filter server local networks
+* Farture: Filter networks by ip ranges
 * Fix: Missing some NetProtector log
 * Fix: Winodws: AutoUpdater
 * Security: Always block access to loopback addresses

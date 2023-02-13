@@ -41,10 +41,10 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
             : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount, logScope: options.LogScope);
     }
 
-    public void SendPacket(IPPacket[] ipPackets)
+    public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
-            _ = SendPacket(ipPacket);
+            await SendPacket(ipPacket);
     }
 
     public async Task SendPacket(IPPacket ipPacket)

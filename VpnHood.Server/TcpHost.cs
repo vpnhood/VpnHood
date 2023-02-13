@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
@@ -30,6 +31,8 @@ internal class TcpHost : IAsyncDisposable
     private Task? _startTask;
     private bool _disposed;
 
+    public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
+    public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public bool IsStarted { get; private set; }
 
     public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
@@ -335,6 +338,8 @@ internal class TcpHost : IAsyncDisposable
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IsIpV6Supported = _isIpV6Supported,
+            IncludeIpRanges = NetFilterIncludeIpRanges,
+            PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);

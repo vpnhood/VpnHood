@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Server;
+﻿namespace VpnHood.Server.Configurations;
 
 public class TrackingOptions
 {
@@ -9,6 +9,6 @@ public class TrackingOptions
     public bool TrackUdp { get; set; } = true;
     public bool TrackTcp { get; set; } = true;
     public bool TrackIcmp { get; set; } = true;
-        
+
     public bool IsEnabled() => TrackClientIp || TrackLocalPort || TrackDestinationIp || TrackDestinationPort;
 }

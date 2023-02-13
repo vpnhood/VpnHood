@@ -14,10 +14,12 @@ $msverbosity = "minimal";
 $versionFile = Join-Path $PSScriptRoot "version.json"
 $versionJson = (Get-Content $versionFile | Out-String | ConvertFrom-Json);
 $bumpTime = [datetime]::Parse($versionJson.BumpTime);
+$version = [version]::Parse($versionJson.Version);
 if ( $bump -gt 0 )
 {
 	$isVersionBumped = $true;
-	$versionJson.Build = $versionJson.Build + 1;
+	$version = [version]::new($version.Major, $version.Minor, $version.Build + 1);
+	$versionJson.Version = $version.ToString(3);
 	$versionJson.BumpTime = [datetime]::UtcNow.ToString("o");
 	$versionJson.Prerelease = ($bump -eq 2);
 	$versionJson | ConvertTo-Json -depth 10 | Out-File $versionFile;
@@ -25,7 +27,6 @@ if ( $bump -gt 0 )
 
 $prerelease=$versionJson.Prerelease;
 $isLatest=$versionJson.Prerelease -eq $false; 
-$version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 $releaseDate = Get-Date -asUTC -Format "s";

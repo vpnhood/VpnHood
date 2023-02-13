@@ -13,6 +13,7 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.SystemInformation;
 
 namespace VpnHood.Server;
@@ -39,7 +40,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
         AccessServer = accessServer;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
+        SessionManager = new SessionManager(accessServer, options.NetFilter, options.SocketFactory, options.Tracker);
         JobSection = new JobSection(options.ConfigureInterval);
 
         _configureInterval = options.ConfigureInterval;
@@ -82,7 +83,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
     public async Task RunJob()
     {
-        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         if (State == ServerState.Waiting && _configureTask.IsCompleted)
         {
@@ -161,11 +162,12 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
+            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizer;
 
             // starting the listeners
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
-            VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
+            VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatType(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
             _tcpHost.Start(serverConfig.TcpEndPoints, isIpV6Supported && serverConfig.AllowIpV6);
 
@@ -182,6 +184,37 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {JobSection.Interval.TotalSeconds} seconds.");
             await _tcpHost.Stop();
         }
+    }
+
+    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions)
+    {
+        // ReSharper disable PossibleMultipleEnumeration
+
+        // net filters
+        var includeIpRanges = IpNetwork.All.ToIpRanges();
+        if (!Util.IsNullOrEmpty(netFilterOptions.IncludeIpRanges))
+            includeIpRanges = includeIpRanges.Intersect(netFilterOptions.IncludeIpRanges);
+
+        if (!Util.IsNullOrEmpty(netFilterOptions.ExcludeIpRanges))
+            includeIpRanges = includeIpRanges.Exclude(netFilterOptions.ExcludeIpRanges);
+
+        // packet capture
+        var packetCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
+        if (netFilterOptions.ExcludeLocalNetwork)
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+
+        if (!Util.IsNullOrEmpty(netFilterOptions.PacketCaptureIncludeIpRanges))
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Intersect(netFilterOptions.PacketCaptureIncludeIpRanges);
+
+        if (!Util.IsNullOrEmpty(netFilterOptions.PacketCaptureExcludeIpRanges))
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(netFilterOptions.PacketCaptureExcludeIpRanges);
+
+        // assign to workers
+        netFilter.BlockedIpRanges = includeIpRanges.Intersect(packetCaptureIncludeIpRanges).Invert().ToArray();
+        tcpHost.NetFilterIncludeIpRanges = includeIpRanges.ToIpNetworks().IsAll() ? null : includeIpRanges.ToArray();
+        tcpHost.NetFilterPacketCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.ToIpNetworks().IsAll() ? null : packetCaptureIncludeIpRanges.ToArray();
+
+        // ReSharper restore PossibleMultipleEnumeration
     }
 
     private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)

@@ -20,7 +20,7 @@ internal static class TestNetProtector
 
     public static void ProtectSocket(Socket socket)
     {
-        var localEndPoint = (IPEndPoint?) socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
+        var localEndPoint = (IPEndPoint?)socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
         if (socket.ProtocolType == ProtocolType.Tcp) TcpProtected.Add(localEndPoint.Port);
         else if (socket.ProtocolType == ProtocolType.Udp) UdpProtected.Add(localEndPoint.Port);
     }
@@ -28,7 +28,7 @@ internal static class TestNetProtector
     // ReSharper disable once UnusedMember.Global
     public static bool IsProtectedSocket(Socket socket)
     {
-        var localEndPoint = (IPEndPoint?) socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
+        var localEndPoint = (IPEndPoint?)socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
         return socket.ProtocolType switch
         {
             ProtocolType.Tcp => TcpProtected.Contains(localEndPoint.Port),
@@ -51,12 +51,6 @@ internal static class TestNetProtector
             return UdpProtected.Contains(udpPacket.SourcePort);
         }
 
-        // let server outbound call, go out: Icmp
-        if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp || 
-            ipPacket.Protocol == PacketDotNet.ProtocolType.IcmpV6)
-            //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            return ipPacket.TimeToLive == ServerPingTtl - 1;
-
         return false;
     }
 
@@ -67,7 +61,7 @@ internal static class TestNetProtector
             for (var i = _freeTcpPort; i <= 0xFFFF; i++)
                 try
                 {
-                    var localEndPoint = new IPEndPoint(addressFamily ==AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any, i);
+                    var localEndPoint = new IPEndPoint(addressFamily == AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any, i);
                     var tcpClient = new TcpClient(localEndPoint);
 
                     if (protect)
@@ -92,7 +86,7 @@ internal static class TestNetProtector
             for (var i = _freeUdpPort; i <= 0xFFFF; i++)
                 try
                 {
-                    var localEndPoint = new IPEndPoint(addressFamily ==AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any, i);
+                    var localEndPoint = new IPEndPoint(addressFamily == AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any, i);
                     var udpClient = new UdpClient(localEndPoint);
 
                     if (protect)

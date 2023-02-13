@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -94,14 +95,9 @@ namespace VpnHood.Client.Device.Android
             }
 
             // Routes
-            if (IncludeNetworks?.Length > 0)
-                foreach (var network in IncludeNetworks)
-                    builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
-            else
-                builder
-                    .AddRoute("0.0.0.0", 0)
-                    .AddRoute("::", 0);
-
+            var includeNetworks = IncludeNetworks ?? IpNetwork.All;
+            foreach (var network in includeNetworks)
+                builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
 
             // set mtu
             if (Mtu != 0)
@@ -127,13 +123,13 @@ namespace VpnHood.Client.Device.Android
             _outStream?.Write(ipPacket.Bytes);
         }
 
-        public void SendPacketToInbound(IPPacket[] ipPackets)
+        public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 _outStream?.Write(ipPacket.Bytes);
         }
 
-        public void SendPacketToOutbound(IPPacket[] ipPackets)
+        public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
         {
             throw new NotSupportedException();
         }

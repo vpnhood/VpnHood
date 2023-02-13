@@ -1,4 +1,4 @@
-# v2.7.349
+# v2.7.350
 ### Client
 * Farture: Follow server supported networks by ip range
 * Update: Performance improvement

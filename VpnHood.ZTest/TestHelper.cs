@@ -345,7 +345,7 @@ internal static class TestHelper
         if (options.TcpTimeout == new ClientOptions().TcpTimeout) options.TcpTimeout = TimeSpan.FromSeconds(3);
         options.SocketFactory = new TestSocketFactory(false);
         options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        options.IncludeLocalNetwork = true;
+        options.ExcludeLocalNetwork = false;
 
         var client = new VpnHoodClient(
             packetCapture,
@@ -375,7 +375,7 @@ internal static class TestHelper
             clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
         clientOptions.SocketFactory = new SocketFactory();
         clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.IncludeLocalNetwork = true;
+        clientOptions.ExcludeLocalNetwork = false;
 
         var clientConnect = new VpnHoodConnect(
             packetCapture,
@@ -413,8 +413,7 @@ internal static class TestHelper
         clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
-        clientApp.UserSettings.PacketCaptureIpRangesFilterMode = FilterMode.Include;
-        clientApp.UserSettings.PacketCaptureIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
 
         return clientApp;

@@ -59,6 +59,7 @@ public class IpNetwork
     public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert().ToArray();
     public static IpNetwork[] LocalNetworks { get; } = LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
     public static IpNetwork[] All { get; } = { AllV4, AllV6 };
+    public static IpNetwork[] None { get; } = Array.Empty<IpNetwork>();
 
     public static bool IsAll(IOrderedEnumerable<IpNetwork> ipNetworks)
     {

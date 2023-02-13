@@ -113,7 +113,7 @@ public class IpGroupManager
                 ipRanges.Add(ipRange);
                 _ipRangeGroups.Add(ipRange, ipGroup);
             }
-            _sortedIpRanges = IpRange.Sort(ipRanges.ToArray(), false);
+            _sortedIpRanges = IpRange.Sort(ipRanges.ToArray(), false).ToArray();
         }
         finally
         {
@@ -124,7 +124,7 @@ public class IpGroupManager
     public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress)
     {
         await LoadIpRangeGroup();
-        var findIpRange = IpRange.FindRangeFast(_sortedIpRanges!, ipAddress);
+        var findIpRange = IpRange.FindInSortedRanges(_sortedIpRanges!, ipAddress);
         return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
     }
 

@@ -7,8 +7,8 @@ $changeLog = $text -replace "# Upcoming", "# v$versionParam";
 $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
 
 # create release note
-$releaseNote = $text -replace "# Upcoming", "$versionTag`n";
-$releaseNote = $releaseNote -replace "# $versionTag`n", ""; # remove version hash
+$releaseNote = $changeLog;
+$releaseNote = $releaseNote -replace "# $versionTag`r`n", ""; # remove version hash
 $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
 # $releaseNote += "To see a list of all changes visit: [Changelog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
 $releaseNote | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;

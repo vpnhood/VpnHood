@@ -82,7 +82,7 @@ public class UdpChannel : IDatagramChannel
         var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
         if (dataLen > maxDataLen)
             throw new InvalidOperationException(
-                $"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
+                $"Total packets length is too big for {VhLogger.FormatType(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
 
         // copy packets to buffer
         var buffer = _buffer;
@@ -191,7 +191,7 @@ public class UdpChannel : IDatagramChannel
             int ret;
             if (VhLogger.IsDiagnoseMode)
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                    $"{VhLogger.FormatTypeName(this)} is sending {bufferCount} bytes...");
+                    $"{VhLogger.FormatType(this)} is sending {bufferCount} bytes...");
 
             var cryptoPos = _cryptorPosBase + SentByteCount;
             _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
@@ -209,7 +209,7 @@ public class UdpChannel : IDatagramChannel
 
             if (ret != bufferCount)
                 throw new Exception(
-                    $"{VhLogger.FormatTypeName(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
+                    $"{VhLogger.FormatType(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
 
             SentByteCount += ret;
             LastActivityTime = FastDateTime.Now;
@@ -217,7 +217,7 @@ public class UdpChannel : IDatagramChannel
         catch (Exception ex)
         {
             VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp,
-                $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
+                $"{VhLogger.FormatType(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
             if (IsInvalidState(ex))
                 Dispose();
         }

@@ -52,7 +52,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
             throw new Exception("TcpDatagram has been already started.");
 
         if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+            throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         Connected = true;
         return ReadTask();
@@ -61,7 +61,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
     public async Task SendPacketAsync(IPPacket[] ipPackets)
     {
         if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+            throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         try
         {
@@ -70,7 +70,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
             var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
             if (dataLen > Mtu)
                 throw new InvalidOperationException(
-                    $"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {Mtu}, Packets Size: {dataLen}");
+                    $"Total packets length is too big for {VhLogger.FormatType(this)}. MaxSize: {Mtu}, Packets Size: {dataLen}");
 
             // copy packets to buffer
             var buffer = _buffer;

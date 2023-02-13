@@ -10,6 +10,7 @@ using Swan.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 
 // ReSharper disable UnusedMember.Local

@@ -7,35 +7,48 @@ namespace VpnHood.Common.Utils;
 
 public class AsyncLock
 {
-    private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> SemaphoreSlims = new();
+    private readonly SemaphoreSlimEx _semaphoreSlimEx = new(1, 1);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlimEx> SemaphoreSlims = new();
 
-    private class Semaphore : ILockAsyncResult
+    public interface ILockAsyncResult : IDisposable
     {
-        private readonly SemaphoreSlim _semaphoreSlim;
+        public bool Succeeded { get; }
+    }
+
+    private class SemaphoreSlimEx : SemaphoreSlim
+    {
+        public SemaphoreSlimEx(int initialCount, int maxCount)
+            : base(initialCount, maxCount) { }
+
+        public int ReferenceCount { get; set; }
+    }
+
+    private class SemaphoreLock : ILockAsyncResult
+    {
+        private readonly SemaphoreSlimEx _semaphoreSlimEx;
         private readonly string? _name;
         private bool _disposed;
         public bool Succeeded { get; }
 
-        public Semaphore(SemaphoreSlim semaphoreSlim, bool succeeded, string? name)
+        public SemaphoreLock(SemaphoreSlimEx semaphoreSlimEx, bool succeeded, string? name)
         {
-            _semaphoreSlim = semaphoreSlim;
+            _semaphoreSlimEx = semaphoreSlimEx;
             _name = name;
             Succeeded = succeeded;
         }
 
         public void Dispose()
         {
-            if (_disposed || !Succeeded)
-                return;
+            if (_disposed || !Succeeded) return;
+            _disposed = true;
 
-            _semaphoreSlim.Release();
+            _semaphoreSlimEx.Release();
             lock (SemaphoreSlims)
             {
-                if (_semaphoreSlim.CurrentCount == 0 && _name != null)
+                _semaphoreSlimEx.ReferenceCount--;
+                if (_semaphoreSlimEx.ReferenceCount == 0 && _name != null)
                     SemaphoreSlims.TryRemove(_name, out _);
             }
-            _disposed = true;
         }
     }
 
@@ -46,27 +59,25 @@ public class AsyncLock
 
     public async Task<ILockAsyncResult> LockAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        var succeeded = await _semaphoreSlim.WaitAsync(timeout, cancellationToken);
-        return new Semaphore(_semaphoreSlim, succeeded, null);
+        var succeeded = await _semaphoreSlimEx.WaitAsync(timeout, cancellationToken);
+        return new SemaphoreLock(_semaphoreSlimEx, succeeded, null);
     }
 
-    public static async Task<ILockAsyncResult> LockAsync(string name)
+    public static Task<ILockAsyncResult> LockAsync(string name)
     {
-        SemaphoreSlim semaphoreSlim;
-        lock (SemaphoreSlims)
-            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, new SemaphoreSlim(1, 1));
-
-        await semaphoreSlim.WaitAsync();
-        return new Semaphore(semaphoreSlim, true, name);
+        return LockAsync(name, Timeout.InfiniteTimeSpan);
     }
 
     public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        SemaphoreSlim semaphoreSlim;
+        SemaphoreSlimEx semaphoreSlim;
         lock (SemaphoreSlims)
-            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, new SemaphoreSlim(1, 1));
+        {
+            semaphoreSlim = SemaphoreSlims.GetOrAdd(name, _ => new SemaphoreSlimEx(1, 1));
+            semaphoreSlim.ReferenceCount++;
+        }
 
         var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken);
-        return new Semaphore(semaphoreSlim, succeeded, name);
+        return new SemaphoreLock(semaphoreSlim, succeeded, name);
     }
 }

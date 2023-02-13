@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using VpnHood.Common.Net;
 
 namespace VpnHood.Client.App;
@@ -19,7 +20,7 @@ public class UserSettings
     public string[]? AppFilters { get; set; }
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
     public bool UseUdpChannel { get; set; } = new ClientOptions().UseUdpChannel;
-    public bool IncludeLocalNetwork { get; set; } = new ClientOptions().IncludeLocalNetwork;
-    public IpRange[]? PacketCaptureIpRanges { get; set; }
-    public FilterMode PacketCaptureIpRangesFilterMode { get; set; }
+    public bool ExcludeLocalNetwork { get; set; } = new ClientOptions().ExcludeLocalNetwork;
+    public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRange[]? PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
 }

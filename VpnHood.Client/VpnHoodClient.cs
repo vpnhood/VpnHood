@@ -63,7 +63,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ClientState _state = ClientState.None;
     private readonly IPAddress? _dnsServerIpV4;
     private readonly IPAddress? _dnsServerIpV6;
-    private readonly IIpFilter? _ipFilter;
+    private readonly IIpRangeProvider? _ipRangeProvider;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private bool _udpChannelAdded;
@@ -87,13 +87,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPAddress[] DnsServers { get; }
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
-    public bool IncludeLocalNetwork { get; }
+    public bool ExcludeLocalNetwork { get; }
     public long ReceiveSpeed => Tunnel.ReceiveSpeed;
     public long ReceivedByteCount => Tunnel.ReceivedByteCount;
     public long SendSpeed => Tunnel.SendSpeed;
     public long SentByteCount => Tunnel.SentByteCount;
     public bool UseUdpChannel { get; set; }
-    public IpRange[]? IncludeIpRanges { get; private set; }
+    public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
     public IPEndPoint? HostEndPoint { get; private set; }
@@ -110,27 +110,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (!Util.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
-        SocketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
         DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
         _dnsServerIpV4 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
         _dnsServerIpV6 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
-
-        Token = token ?? throw new ArgumentNullException(nameof(token));
-        Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
-        UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
         _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
-
-        ProtocolVersion = 2;
         _autoDisposePacketCapture = options.AutoDisposePacketCapture;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory, new ProxyManagerOptions());
-        _ipFilter = options.IpFilter;
+        _ipRangeProvider = options.IpRangeProvider;
+        SocketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
+        Token = token ?? throw new ArgumentNullException(nameof(token));
+        Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
+        UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
+        ProtocolVersion = 2;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         TcpTimeout = options.TcpTimeout;
-        IncludeLocalNetwork = options.IncludeLocalNetwork;
+        ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         UseUdpChannel = options.UseUdpChannel;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         Nat = new Nat(true);
@@ -235,6 +233,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 _packetCapture.StartCapture();
             }
 
+            // disable IncludeIpRanges if it contains all networks
+            if (IncludeIpRanges.ToIpNetworks().IsAll()) IncludeIpRanges = Array.Empty<IpRange>();
             State = ClientState.Connected;
         }
         catch (Exception ex)
@@ -262,7 +262,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostEndPoint.Address) });
 
         // exclude local networks
-        if (!IncludeLocalNetwork)
+        if (ExcludeLocalNetwork)
             includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included
@@ -723,18 +723,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // IncludeIpRanges
         if (!Util.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToIpNetworks().IsAll())
-        {
-            IncludeIpRanges ??= IpNetwork.All.ToIpRanges().ToArray();
             IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges).ToArray();
-        }
 
         // Get IncludeIpRange for clientIp
-        var filterIpRanges = _ipFilter != null ? await _ipFilter.GetIncludeIpRanges(sessionResponse.ClientPublicAddress) : null;
+        var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress) : null;
         if (!Util.IsNullOrEmpty(filterIpRanges))
-        {
-            IncludeIpRanges ??= IpNetwork.All.ToIpRanges().ToArray();
             IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges).ToArray();
-        }
 
         // Preparing tunnel
         Tunnel.MaxDatagramChannelCount = sessionResponse.MaxDatagramChannelCount != 0
@@ -744,6 +738,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // report Suppressed
         if (sessionResponse.SuppressedTo == SessionSuppressType.YourSelf)
             VhLogger.Instance.LogWarning("You suppressed a session of yourself!");
+
         else if (sessionResponse.SuppressedTo == SessionSuppressType.Other)
             VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 

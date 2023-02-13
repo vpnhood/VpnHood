@@ -533,17 +533,11 @@ public class ClientServerTest
 
         fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
         server.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
-
-        try
+        await TestHelper.AssertEqualsWait(ClientState.Connected, async () =>
         {
-            await TestHelper.Test_HttpsAsync();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        await TestHelper.WaitForClientStateAsync(clientConnect.Client, ClientState.Connected);
+            await TestHelper.Test_HttpsAsync(throwError: false);
+            return clientConnect.Client.State;
+        });
         Assert.AreEqual(1, clientConnect.AttemptCount);
         await TestTunnel(server, clientConnect.Client);
 
@@ -551,17 +545,11 @@ public class ClientServerTest
         // *** TEST ***: dispose after second try (2st time)
         Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
         await server.SessionManager.CloseSession(clientConnect.Client.SessionId);
-
-        try
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        await TestHelper.WaitForClientStateAsync(clientConnect.Client, ClientState.Disposed);
+            await TestHelper.Test_HttpsAsync(throwError: false);
+            return clientConnect.Client.State;
+        });
         Assert.AreEqual(1, clientConnect.AttemptCount);
     }
 

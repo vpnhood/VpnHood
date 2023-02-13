@@ -1,6 +1,6 @@
 # v2.7.350
 ### Client
-* Farture: Follow server supported networks by ip range
+* Feature: Follow server-supported networks by IP range
 * Update: Performance improvement
 * Windows: Fix Auto Updater
 

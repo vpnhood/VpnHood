@@ -1,14 +1,14 @@
 # v2.7.350
 ### Client
-* Farture: Follow server supported networks by ip range
+* Feature: Follow server-supported networks by IP range
 * Update: Performance improvement
 * Windows: Fix Auto Updater
 
 ### Server
 * Farture: Filter server local networks
-* Farture: Filter networks by ip ranges
+* Farture: Filter networks by IP ranges
 * Fix: Missing some NetProtector log
-* Fix: Winodws: AutoUpdater
+* Fix: Windows: AutoUpdater
 * Security: Always block access to loopback addresses
 * Update: log file archive format
 

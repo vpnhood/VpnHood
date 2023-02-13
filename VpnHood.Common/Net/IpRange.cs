@@ -159,14 +159,14 @@ public class IpRange
     /// <param name="sortedIpRanges">a sorted ipRanges</param>
     /// <param name="ipAddress">search value</param>
     /// <returns></returns>
-    public static bool IsInRangeFast(IpRange[] sortedIpRanges, IPAddress ipAddress)
+    public static bool IsInSortedRanges(IpRange[] sortedIpRanges, IPAddress ipAddress)
     {
-        return FindRangeFast(sortedIpRanges, ipAddress) != null;
+        return FindInSortedRanges(sortedIpRanges, ipAddress) != null;
     }
 
     /// <param name="sortedIpRanges">a sorted ipRanges</param>
     /// <param name="ipAddress">search value</param>
-    public static IpRange? FindRangeFast(IpRange[] sortedIpRanges, IPAddress ipAddress)
+    public static IpRange? FindInSortedRanges(IpRange[] sortedIpRanges, IPAddress ipAddress)
     {
         var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
         return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
@@ -174,7 +174,7 @@ public class IpRange
 
     public static IOrderedEnumerable<IpRange> Exclude(IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
-        return Intersect(Invert(excludeIpRanges), ipRanges);
+        return Intersect(ipRanges, Invert(excludeIpRanges));
     }
 
     public static IOrderedEnumerable<IpRange> Intersect(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)

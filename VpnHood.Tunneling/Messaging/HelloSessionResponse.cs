@@ -29,5 +29,5 @@ public class HelloSessionResponse : SessionResponse
     public int MaxDatagramChannelCount { get; set; }
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }
-    public IpRange[]? PacketCaptureIpRanges { get; set; }
+    public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
 }

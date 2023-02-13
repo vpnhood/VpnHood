@@ -60,6 +60,11 @@ public class IpNetwork
     public static IpNetwork[] LocalNetworks { get; } = LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
     public static IpNetwork[] All { get; } = { AllV4, AllV6 };
 
+    public static bool IsAll(IOrderedEnumerable<IpNetwork> ipNetworks)
+    {
+        return ipNetworks.SequenceEqual(All);
+    }
+
     public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
     {
         return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);

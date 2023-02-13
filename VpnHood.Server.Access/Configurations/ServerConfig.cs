@@ -2,9 +2,8 @@
 using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
-using VpnHood.Common.Net;
 
-namespace VpnHood.Server;
+namespace VpnHood.Server.Configurations;
 
 public class ServerConfig
 {
@@ -13,6 +12,10 @@ public class ServerConfig
 
     [JsonPropertyName("Session")]
     public SessionOptions SessionOptions { get; set; } = new();
+
+    [JsonPropertyName("NetFilter")]
+    public NetFilterOptions NetFilterOptions { get; set; } = new();
+
     public string ConfigCode { get; set; } = string.Empty;
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
@@ -24,7 +27,4 @@ public class ServerConfig
     public int? MaxCompletionPortThreads { get; set; }
     public bool LogAnonymizer { get; set; } = false;
     public bool AllowIpV6 { get; set; } = true;
-    public bool AllowLocalNetwork { get; set; } 
-    public IpRange[]? AllowIpRanges { get; set; }
-    public FilterMode IpGroupFiltersMode { get; set; } = FilterMode.All;
 }

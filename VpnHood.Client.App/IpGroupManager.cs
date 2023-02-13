@@ -124,7 +124,7 @@ public class IpGroupManager
     public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress)
     {
         await LoadIpRangeGroup();
-        var findIpRange = IpRange.FindRangeFast(_sortedIpRanges!, ipAddress);
+        var findIpRange = IpRange.FindInSortedRanges(_sortedIpRanges!, ipAddress);
         return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
     }
 

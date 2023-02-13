@@ -446,7 +446,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return isInRange;
 
         // check include
-        isInRange = IpRange.IsInRangeFast(IncludeIpRanges, ipAddress);
+        isInRange = IpRange.IsInSortedRanges(IncludeIpRanges, ipAddress);
 
         // cache the result
         // we really don't need to keep that much ips in the cache
@@ -718,11 +718,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
 
         // PacketCaptureIpRanges
-        if (!Util.IsNullOrEmpty(sessionResponse.PacketCaptureIpRanges))
-            PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.Intersect(sessionResponse.PacketCaptureIpRanges).ToArray();
+        if (!Util.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))
+            PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.Intersect(sessionResponse.PacketCaptureIncludeIpRanges).ToArray();
 
         // IncludeIpRanges
-        if (!Util.IsNullOrEmpty(sessionResponse.IncludeIpRanges))
+        if (!Util.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToIpNetworks().IsAll())
         {
             IncludeIpRanges ??= IpNetwork.All.ToIpRanges().ToArray();
             IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges).ToArray();

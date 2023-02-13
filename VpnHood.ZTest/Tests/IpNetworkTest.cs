@@ -91,13 +91,13 @@ public class IpNetworkTest
         };
 
         ipRanges = ipRanges.Sort().ToArray();
-        Assert.IsFalse(ipRanges.IsInRangeFast(IPAddress.Parse("9.9.9.7")));
-        Assert.IsTrue(ipRanges.IsInRangeFast(IPAddress.Parse("8.8.8.8")));
-        Assert.IsTrue(ipRanges.IsInRangeFast(IPAddress.Parse("9.9.9.9")));
-        Assert.IsFalse(ipRanges.IsInRangeFast(IPAddress.Parse("4.4.4.5")));
-        Assert.IsTrue(ipRanges.IsInRangeFast(IPAddress.Parse("4.4.4.3")));
-        Assert.IsTrue(ipRanges.IsInRangeFast(IPAddress.Parse("FF::F0")));
-        Assert.IsFalse(ipRanges.IsInRangeFast(IPAddress.Parse("AF::F0")));
+        Assert.IsFalse(ipRanges.IsInSortedRanges(IPAddress.Parse("9.9.9.7")));
+        Assert.IsTrue(ipRanges.IsInSortedRanges(IPAddress.Parse("8.8.8.8")));
+        Assert.IsTrue(ipRanges.IsInSortedRanges(IPAddress.Parse("9.9.9.9")));
+        Assert.IsFalse(ipRanges.IsInSortedRanges(IPAddress.Parse("4.4.4.5")));
+        Assert.IsTrue(ipRanges.IsInSortedRanges(IPAddress.Parse("4.4.4.3")));
+        Assert.IsTrue(ipRanges.IsInSortedRanges(IPAddress.Parse("FF::F0")));
+        Assert.IsFalse(ipRanges.IsInSortedRanges(IPAddress.Parse("AF::F0")));
     }
 
     [TestMethod]

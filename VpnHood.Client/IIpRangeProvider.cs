@@ -4,7 +4,7 @@ using VpnHood.Common.Net;
 
 namespace VpnHood.Client;
 
-public interface IIpFilter
+public interface IIpRangeProvider
 {
     Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp);
 }

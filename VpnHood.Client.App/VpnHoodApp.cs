@@ -21,7 +21,7 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
+public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -387,13 +387,20 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         var token = ClientProfileStore.GetToken(tokenId, true);
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
+        // calculate packetCaptureIpRanges
+        var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
+        if (!Util.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
+            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
+        if (!Util.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
+            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
+
         // create clientOptions
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
-            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
-            IpFilter = this,
-            PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
+            ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+            IpRangeProvider = this,
+            PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             TcpTimeout = TcpTimeout
         };
@@ -411,6 +418,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
                 UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
             });
+
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);
         ClientConnect.StateChanged += ClientConnect_StateChanged;
 

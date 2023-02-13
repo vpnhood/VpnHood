@@ -21,7 +21,7 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
+public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -69,10 +69,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
     public IDevice Device => _clientAppProvider.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection? JobSection { get; }
-    
+    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().TcpTimeout;
+
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatTypeName(this)} is already initialized.");
+        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatType(this)} is already initialized.");
         options ??= new AppOptions();
         Directory.CreateDirectory(options.AppDataPath); //make sure directory exists
 
@@ -386,14 +387,22 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         var token = ClientProfileStore.GetToken(tokenId, true);
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
+        // calculate packetCaptureIpRanges
+        var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
+        if (!Util.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
+            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
+        if (!Util.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
+            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
+
         // create clientOptions
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
             ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-            IpFilter = this,
-            PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
+            IpRangeProvider = this,
+            PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
+            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
+            TcpTimeout = TcpTimeout
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
@@ -409,6 +418,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
                 UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
             });
+
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);
         ClientConnect.StateChanged += ClientConnect_StateChanged;
 
@@ -434,15 +444,15 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
             CheckConnectionStateChanged();
     }
 
-    private IpRange[]? GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)
+    private static IpRange[] GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)
     {
         if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipRanges))
-            return null;
+            return IpNetwork.All.ToIpRanges().ToArray();
 
         if (filterMode == FilterMode.Include)
             return ipRanges;
 
-        return IpRange.Invert(ipRanges);
+        return IpRange.Invert(ipRanges).ToArray();
     }
 
     private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
@@ -453,7 +463,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
         if (filterMode == FilterMode.Include)
             return await GetIpRanges(ipGroupIds);
 
-        return IpRange.Invert(await GetIpRanges(ipGroupIds));
+        return IpRange.Invert(await GetIpRanges(ipGroupIds)).ToArray();
     }
 
     private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
@@ -475,7 +485,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpFilter, IJob
                 VhLogger.Instance.LogError(ex, $"Could not add {nameof(IpRange)} of Group {ipGroupId}");
             }
 
-        return IpRange.Sort(ipRanges);
+        return IpRange.Sort(ipRanges).ToArray();
     }
 
     private void PacketCapture_OnStopped(object sender, EventArgs e)

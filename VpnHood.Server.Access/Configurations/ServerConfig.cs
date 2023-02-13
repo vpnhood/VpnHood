@@ -3,7 +3,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.Server;
+namespace VpnHood.Server.Configurations;
 
 public class ServerConfig
 {
@@ -12,6 +12,10 @@ public class ServerConfig
 
     [JsonPropertyName("Session")]
     public SessionOptions SessionOptions { get; set; } = new();
+
+    [JsonPropertyName("NetFilter")]
+    public NetFilterOptions NetFilterOptions { get; set; } = new();
+
     public string ConfigCode { get; set; } = string.Empty;
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

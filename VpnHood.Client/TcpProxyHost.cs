@@ -25,14 +25,14 @@ internal class TcpProxyHost : IDisposable
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private VpnHoodClient Client { get; }
-    public IPAddress LoopbackAddressIpV4 { get; }
-    public IPAddress LoopbackAddressIpV6 { get; }
+    public IPAddress CatcherAddressIpV4 { get; }
+    public IPAddress CatcherAddressIpV6 { get; }
 
-    public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddressIpV4, IPAddress loopbackAddressIpV6)
+    public TcpProxyHost(VpnHoodClient client, IPAddress catcherAddressIpV4, IPAddress catcherAddressIpV6)
     {
         Client = client ?? throw new ArgumentNullException(nameof(client));
-        LoopbackAddressIpV4 = loopbackAddressIpV4 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV4));
-        LoopbackAddressIpV6 = loopbackAddressIpV6 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV6));
+        CatcherAddressIpV4 = catcherAddressIpV4 ?? throw new ArgumentNullException(nameof(catcherAddressIpV4));
+        CatcherAddressIpV6 = catcherAddressIpV6 ?? throw new ArgumentNullException(nameof(catcherAddressIpV6));
     }
 
     public void Dispose()
@@ -48,14 +48,14 @@ internal class TcpProxyHost : IDisposable
     public void Start()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
-        using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
-        VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatTypeName(this)}...");
+        using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatType<TcpProxyHost>()}");
+        VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(this)}...");
 
         // IpV4
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
         _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-        VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+        VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
@@ -65,7 +65,7 @@ internal class TcpProxyHost : IDisposable
             _tcpListenerIpV6.Start();
             _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
             VhLogger.Instance.LogInformation(
-                $"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
+                $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
             _ = AcceptTcpClientLoop(_tcpListenerIpV6);
         }
         catch (Exception ex)
@@ -94,12 +94,12 @@ internal class TcpProxyHost : IDisposable
         }
         finally
         {
-            VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} Listener on {localEp} has been closed.");
+            VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} Listener on {localEp} has been closed.");
         }
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public IPPacket[] ProcessOutgoingPacket(IPPacket[] ipPackets)
+    public IPPacket[] ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException($"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
@@ -110,7 +110,7 @@ internal class TcpProxyHost : IDisposable
         foreach (var item in ipPackets)
         {
             var ipPacket = item;
-            var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
+            var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             if (localEndPoint == null)
                 continue;
@@ -164,17 +164,17 @@ internal class TcpProxyHost : IDisposable
                     }
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket); 
+                PacketUtil.UpdateIpPacket(ipPacket);
                 ret.Add(ipPacket);
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError(
-                    $"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
+                    $"{VhLogger.FormatType(this)}: Error in processing packet! Error: {ex}");
             }
         }
 
-        return ret.ToArray();
+        return ret.ToArray(); //it is shared buffer; too array is necessary
     }
 
     //private async Task ProcessClient2(TcpClient orgTcpClient, CancellationToken cancellationToken)
@@ -227,7 +227,7 @@ internal class TcpProxyHost : IDisposable
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
-            var loopbackAddress = ipVersion == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
+            var loopbackAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
@@ -236,7 +236,7 @@ internal class TcpProxyHost : IDisposable
             {
                 await Client.AddPassthruTcpStream(
                     new TcpClientStream(orgTcpClient, orgTcpClient.GetStream()),
-                    new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
+                    new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                     cancellationToken);
                 return;
             }

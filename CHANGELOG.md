@@ -1,7 +1,8 @@
-# Upcoming
+# v2.7.349
 ### Client
 * Farture: Follow server supported networks by ip range
 * Update: Performance improvement
+* Windows: Fix Auto Updater
 
 ### Server
 * Farture: Filter server local networks

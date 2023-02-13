@@ -3,14 +3,14 @@ using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.Server;
+namespace VpnHood.Server.Configurations;
 
 public class ServerInfo
 {
     [JsonConstructor]
-    public ServerInfo(Version version, 
+    public ServerInfo(Version version,
         Version environmentVersion,
-        IPAddress[] privateIpAddresses, 
+        IPAddress[] privateIpAddresses,
         IPAddress[] publicIpAddresses,
         ServerStatus status)
     {

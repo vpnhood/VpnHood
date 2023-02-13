@@ -39,7 +39,8 @@ public class ClientServerTest
         // Create Server 2
         var serverEndPoint2 = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions2 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint2 } };
-        using var fileAccessServer2 = TestHelper.CreateFileAccessServer(fileAccessServerOptions2, fileAccessServer1.StoragePath);
+        using var fileAccessServer2 =
+            TestHelper.CreateFileAccessServer(fileAccessServerOptions2, fileAccessServer1.StoragePath);
         using var testAccessServer2 = new TestAccessServer(fileAccessServer2);
         using var server2 = TestHelper.CreateServer(testAccessServer2);
 
@@ -60,7 +61,7 @@ public class ClientServerTest
         // Create Server
         var serverEp = Util.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.TcpEndPoints= new[] { serverEp };
+        fileAccessServerOptions.TcpEndPoints = new[] { serverEp };
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
         await using var server = TestHelper.CreateServer(testAccessServer);
@@ -68,7 +69,7 @@ public class ClientServerTest
 
         // Create Client
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = false });
-        
+
         await TestTunnel(server, client);
 
         // check HostEndPoint in server
@@ -172,7 +173,8 @@ public class ClientServerTest
         using var httpClient = new HttpClient();
         try
         {
-            await httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}", new CancellationTokenSource(2000).Token);
+            await httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}",
+                new CancellationTokenSource(2000).Token);
             Assert.Fail("Exception expected!");
         }
         catch
@@ -253,13 +255,29 @@ public class ClientServerTest
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        using var client = TestHelper.CreateClient(token, options: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
+        using var client = TestHelper.CreateClient(token,
+            options: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
         TestHelper.Test_Https();
 
         server.Dispose();
-        try { TestHelper.Test_Https(); } catch { /* ignored */ }
+        try
+        {
+            TestHelper.Test_Https();
+        }
+        catch
+        {
+            /* ignored */
+        }
+
         Thread.Sleep(1000);
-        try { TestHelper.Test_Https(); } catch { /* ignored */ }
+        try
+        {
+            TestHelper.Test_Https();
+        }
+        catch
+        {
+            /* ignored */
+        }
 
         TestHelper.WaitForClientState(client, ClientState.Disposed);
     }
@@ -307,7 +325,15 @@ public class ClientServerTest
 
         // disconnect server
         server.Dispose();
-        try { TestHelper.Test_Https(); } catch { /* ignored */ }
+        try
+        {
+            TestHelper.Test_Https();
+        }
+        catch
+        {
+            /* ignored */
+        }
+
         Assert.AreEqual(ClientState.Connecting, client.State);
 
         // recreate server and reconnect
@@ -335,7 +361,10 @@ public class ClientServerTest
             stream.WriteByte(1);
             stream.ReadByte();
         }
-        catch (Exception ex) when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset })
+        catch (Exception ex) when (ex.InnerException is SocketException
+        {
+            SocketErrorCode: SocketError.ConnectionReset
+        })
         {
             // OK
         }
@@ -441,6 +470,7 @@ public class ClientServerTest
         {
             // ignored
         }
+
         await TestHelper.WaitForClientStateAsync(client3, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client3.SessionStatus.ErrorCode);
 
@@ -465,6 +495,7 @@ public class ClientServerTest
         {
             // ignored
         }
+
         await TestHelper.WaitForClientStateAsync(client5, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client5.SessionStatus.ErrorCode);
 
@@ -576,13 +607,14 @@ public class ClientServerTest
             Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
         }
     }
+#endif
 
     [TestMethod]
     public async Task Server_limit_by_Max_TcpConnectWait()
     {
         // create access server
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount= 2;
+        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount = 2;
         await using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create client
@@ -631,5 +663,5 @@ public class ClientServerTest
         Assert.AreEqual(fileAccessServerOptions.SessionOptions.MaxTcpChannelCount, session?.TcpChannelCount);
     }
 
-#endif
+
 }

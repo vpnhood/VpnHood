@@ -41,6 +41,12 @@ public static class IpNetworkExtension
         return IpNetwork.Exclude(ipNetworks, excludeIpNetworks);
     }
 
+    public static bool IsAll(this IOrderedEnumerable<IpNetwork> ipNetworks)
+    {
+        return IpNetwork.IsAll(ipNetworks);
+    }
+
+
     public static IOrderedEnumerable<IpRange> Exclude(this IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
         return IpRange.Exclude(ipRanges, excludeIpRanges);
@@ -57,14 +63,14 @@ public static class IpNetworkExtension
         return IpRange.Invert(ipRanges, includeIPv4, includeIPv6);
     }
 
-    public static bool IsInRangeFast(this IpRange[] sortedIpRanges, IPAddress ipAddress)
+    public static bool IsInSortedRanges(this IpRange[] sortedIpRanges, IPAddress ipAddress)
     {
-        return IpRange.IsInRangeFast(sortedIpRanges, ipAddress);
+        return IpRange.IsInSortedRanges(sortedIpRanges, ipAddress);
     }
 
-    public static IpRange? FindRangeFast(this IpRange[] sortedIpRanges, IPAddress ipAddress)
+    public static IpRange? FindInSortedRanges(this IpRange[] sortedIpRanges, IPAddress ipAddress)
     {
-        return IpRange.FindRangeFast(sortedIpRanges, ipAddress);
+        return IpRange.FindInSortedRanges(sortedIpRanges, ipAddress);
     }
 
     public static IOrderedEnumerable<IpRange> Intersect(this IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)

@@ -21,6 +21,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Test.Factory;
@@ -49,8 +50,8 @@ internal static class TestHelper
     public static readonly IPAddress TEST_PingV6Address1 = IPAddress.Parse("2001:4860:4866::2200");
 
     public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
-    public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
-    public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("192.168.199.199:9999");
+    public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("198.18.255.1");
+    public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("198.18.255.2:9999");
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
 

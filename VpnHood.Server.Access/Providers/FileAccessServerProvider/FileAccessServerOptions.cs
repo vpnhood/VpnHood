@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Server.Providers.FileAccessServerProvider;
+﻿using VpnHood.Server.Configurations;
+
+namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
 public class FileAccessServerOptions : ServerConfig
 {

@@ -203,14 +203,14 @@ public class Tunnel : IDisposable
                 DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatTypeName(channel), DatagramChannels.Length, channel.Connected, channel.IsClosePending);
+                    VhLogger.FormatType(channel), DatagramChannels.Length, channel.Connected, channel.IsClosePending);
             }
             else if (channel is TcpProxyChannel tcpProxyChannel)
             {
                 _tcpProxyChannels.Remove(tcpProxyChannel);
                 VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
                     "A TcpProxyChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatTypeName(channel), _tcpProxyChannels.Count, channel.Connected, channel.IsClosePending);
+                    VhLogger.FormatType(channel), _tcpProxyChannels.Count, channel.Connected, channel.IsClosePending);
             }
             else
                 throw new ArgumentOutOfRangeException(nameof(channel), "Unknown Channel.");
@@ -266,10 +266,10 @@ public class Tunnel : IDisposable
 
     public Task SendPacket(IPPacket ipPacket)
     {
-        return SendPacket(new[] { ipPacket });
+        return SendPackets(new[] { ipPacket });
     }
 
-    public async Task SendPacket(IPPacket[] ipPackets)
+    public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
     {
         var dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
@@ -292,6 +292,7 @@ public class Tunnel : IDisposable
         // add all packets to the queue
         lock (_packetQueue)
         {
+            // ReSharper disable once PossibleMultipleEnumeration
             foreach (var ipPacket in ipPackets)
                 _packetQueue.Enqueue(ipPacket);
 
@@ -300,6 +301,7 @@ public class Tunnel : IDisposable
                 _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
         }
 
+        // ReSharper disable once PossibleMultipleEnumeration
         if (VhLogger.IsDiagnoseMode)
             PacketUtil.LogPackets(ipPackets, "Packet sent to tunnel queue.");
     }
@@ -311,6 +313,7 @@ public class Tunnel : IDisposable
         // ** Warning: This is one of the most busy loop in the app. Performance is critical!
         try
         {
+            // ReSharper disable once MergeIntoPattern
             while (channel.Connected && !channel.IsClosePending && !_disposed)
             {
                 if (_disposed)

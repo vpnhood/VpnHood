@@ -12,6 +12,7 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -22,6 +23,7 @@ namespace VpnHood.Server;
 
 public class Session : IAsyncDisposable, IJob
 {
+    private readonly INetFilter _netFilter;
     private readonly IAccessServer _accessServer;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
@@ -38,6 +40,7 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
     private readonly EventReporter _maxTcpChannelExceptionReporter = new(VhLogger.Instance, "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance, "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
+    private readonly EventReporter _filterReporter = new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
     private bool _isSyncing;
     private long _syncReceivedTraffic;
     private long _syncSentTraffic;
@@ -57,8 +60,11 @@ public class Session : IAsyncDisposable, IJob
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
-        IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions, HelloRequest? helloRequest)
+    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, 
+        INetFilter netFilter,
+        ISocketFactory socketFactory,
+        IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
+        HelloRequest? helloRequest)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -82,6 +88,7 @@ public class Session : IAsyncDisposable, IJob
         _syncCacheSize = options.SyncCacheSize;
         _tcpTimeout = options.TcpTimeout;
         _tcpConnectTimeout = options.TcpConnectTimeout;
+        _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -96,6 +103,7 @@ public class Session : IAsyncDisposable, IJob
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
+        // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
             NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
 
@@ -109,6 +117,7 @@ public class Session : IAsyncDisposable, IJob
 
     public bool UseUdpChannel
     {
+        // ReSharper disable once MergeIntoPattern
         get => Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel;
         set
         {
@@ -146,10 +155,29 @@ public class Session : IAsyncDisposable, IJob
         if (IsDisposed)
             return;
 
-        _proxyManager.SendPacket(e.IpPackets);
+        // filter requests
+        foreach (var ipPacket in e.IpPackets)
+        {
+            var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
+            if (ipPacket2 == null)
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
+                    "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",
+                    ipPacket.Protocol, ipPacket.DestinationAddress);
+
+                _filterReporter.Raised();
+                continue;
+            }
+
+            _ = _proxyManager.SendPacket(ipPacket2);
+
+        }
     }
 
-    public Task Sync() => Sync(true, false);
+    public Task Sync()
+    {
+        return Sync(true, false);
+    }
 
     private async Task Sync(bool force, bool closeSession)
     {
@@ -304,9 +332,6 @@ public class Session : IAsyncDisposable, IJob
         }
         catch (Exception ex)
         {
-            _netScanExceptionReporter.Dispose();
-            _maxTcpChannelExceptionReporter.Dispose();
-            _maxTcpConnectWaitExceptionReporter.Dispose();
             tcpClient2?.Dispose();
             tcpClientStream2?.Dispose();
             tcpProxyChannel?.Dispose();
@@ -326,6 +351,19 @@ public class Session : IAsyncDisposable, IJob
 
     private void VerifyTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request)
     {
+        // filter
+        var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
+        if (newEndPoint == null)
+        {
+            VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
+                "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",  
+                ProtocolType.Tcp, request.DestinationEndPoint);
+
+            _filterReporter.Raised();
+            throw new RequestBlockedException(tcpClientStream.RemoteEndPoint, this);
+        }
+        request.DestinationEndPoint = newEndPoint;
+
         lock (_verifyRequestLock)
         {
             // NetScan limit
@@ -358,37 +396,6 @@ public class Session : IAsyncDisposable, IJob
         throw new NetScanException(remoteEndPoint, this);
     }
 
-    private class SessionProxyManager : ProxyManager
-    {
-        private readonly Session _session;
-        protected override bool IsPingSupported => true;
-
-        public SessionProxyManager(Session session, ISocketFactory socketFactory, ProxyManagerOptions options)
-            : base(socketFactory, options)
-        {
-            _session = session;
-        }
-
-        public override Task OnPacketReceived(IPPacket ipPacket)
-        {
-            if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
-
-            return _session.Tunnel.SendPacket(ipPacket);
-        }
-
-        public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
-            bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
-        {
-            _session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint, null);
-        }
-
-        public override void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
-        {
-            _session.VerifyNetScan(protocolType, remoteEndPoint);
-        }
-    }
-
     public ValueTask Close()
     {
         return DisposeAsync(true, true);
@@ -407,6 +414,9 @@ public class Session : IAsyncDisposable, IJob
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         Tunnel.Dispose();
         _proxyManager.Dispose();
+        _netScanExceptionReporter.Dispose();
+        _maxTcpChannelExceptionReporter.Dispose();
+        _maxTcpConnectWaitExceptionReporter.Dispose();
 
         if (sync)
             await Sync(true, byUser);
@@ -421,4 +431,37 @@ public class Session : IAsyncDisposable, IJob
             "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
             SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode, SessionResponse.ErrorMessage ?? "None");
     }
+
+    private class SessionProxyManager : ProxyManager
+    {
+        private readonly Session _session;
+        protected override bool IsPingSupported => true;
+
+        public SessionProxyManager(Session session, ISocketFactory socketFactory, ProxyManagerOptions options)
+            : base(socketFactory, options)
+        {
+            _session = session;
+        }
+
+        public override Task OnPacketReceived(IPPacket ipPacket)
+        {
+            if (VhLogger.IsDiagnoseMode)
+                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
+
+            ipPacket = _session._netFilter.ProcessReply(ipPacket);
+            return _session.Tunnel.SendPacket(ipPacket);
+        }
+
+        public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+            bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
+        {
+            _session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint, null);
+        }
+
+        public override void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
+        {
+            _session.VerifyNetScan(protocolType, remoteEndPoint);
+        }
+    }
+
 }

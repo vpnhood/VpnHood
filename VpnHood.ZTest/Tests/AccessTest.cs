@@ -1,22 +1,28 @@
 ﻿using System;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
 public class AccessTest
 {
-  
+
     [TestMethod]
     public async Task Foo()
     {
-        Console.WriteLine(DateTime.Now + Timeout.InfiniteTimeSpan);
-        await Task.Delay(0);
+        await Task.Delay(100);
+
+        Console.WriteLine(IpNetwork.IsAll(IpNetwork.All.ToIpRanges().ToIpNetworks().Sort()));
+
     }
 
     [TestInitialize]
@@ -85,33 +91,30 @@ public class AccessTest
     }
 
     [TestMethod]
-    public async Task  Server_reject_expired_access_at_runtime()
+    public async Task Server_reject_expired_access_at_runtime()
     {
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
         await using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create an short expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(2));
+        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
         // connect and download
         await using var client1 = TestHelper.CreateClient(accessToken);
 
-        try
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await Task.Delay(2000);
-            await TestHelper.Test_HttpsAsync(timeout: 1000);
-        }
-        catch { /* ignored */ }
-
-        await TestHelper.WaitForClientStateAsync(client1, ClientState.Disposed);
+            await TestHelper.Test_HttpsAsync(throwError: false);
+            return client1.State;
+        });
         Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
     }
 
     [TestMethod]
-    public void Server_reject_trafficOverflow_access()
+    public async Task Server_reject_trafficOverflow_access()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
 
         // create an fast expiring token
         var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
@@ -119,13 +122,13 @@ public class AccessTest
         // ----------
         // check: client must disconnect at runtime on traffic overflow
         // ----------
-        using var client1 = TestHelper.CreateClient(accessToken);
+        await using var client1 = TestHelper.CreateClient(accessToken);
         Assert.AreEqual(50, client1.SessionStatus.AccessUsage?.MaxTraffic);
 
         // first try should just break the connection
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_HttpsAsync();
         }
         catch
         {
@@ -136,7 +139,7 @@ public class AccessTest
         // second try should get the AccessTrafficOverflow status
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_HttpsAsync();
         }
         catch
         {
@@ -150,7 +153,7 @@ public class AccessTest
         // ----------
         try
         {
-            using var client2 = TestHelper.CreateClient(accessToken);
+            await using var client2 = TestHelper.CreateClient(accessToken);
             Assert.Fail("Exception expected! Traffic must been overflowed!");
         }
         catch (AssertFailedException)
@@ -179,22 +182,15 @@ public class AccessTest
         // suppress by yourself
         await using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
             clientId: client1.ClientId, options: new ClientOptions { AutoDisposePacketCapture = false });
+
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
 
-        // new connection attempt will result to disconnect of client1
-        try
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        // wait for finishing client1
-        await TestHelper.WaitForClientStateAsync(client1, ClientState.Disposed);
-        Assert.AreEqual(ClientState.Disposed, client1.State, "Client1 has not been stopped yet!");
+            await TestHelper.Test_HttpsAsync(throwError: false);
+            return client1.State;
+        }, "Client1 has not been stopped yet.");
         Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
 
@@ -205,42 +201,18 @@ public class AccessTest
         await using var client4 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
             clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
-        // send a request to check first open client
-        try
-        {
-            await TestHelper.Test_HttpsAsync();
-        }
-        catch
-        {
-            // ignored
-        }
-
         // create a client with another token
         var accessTokenX = TestHelper.CreateAccessToken(server);
         await using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(),
             token: accessTokenX, options: new ClientOptions { AutoDisposePacketCapture = false });
 
-        // send a request to check first open client
-        try
-        {
-            await TestHelper.Test_HttpsAsync();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        try
-        {
-            await TestHelper.Test_HttpsAsync();
-        }
-        catch
-        {
-            // ignored
-        }
 
         // wait for finishing client2
-        await TestHelper.WaitForClientStateAsync(client2, ClientState.Disposed);
+        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        {
+            await TestHelper.Test_HttpsAsync(throwError: false);
+            return client2.State;
+        });
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.Other, client2.SessionStatus.SuppressedBy);
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);

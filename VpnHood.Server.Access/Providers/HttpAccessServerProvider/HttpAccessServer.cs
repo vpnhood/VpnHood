@@ -10,6 +10,7 @@ using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.HttpAccessServerProvider;

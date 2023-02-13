@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 using VpnHood.Tunneling;

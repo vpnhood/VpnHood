@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Common.Net;
+namespace VpnHood.Client.App;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FilterMode

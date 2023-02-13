@@ -296,18 +296,20 @@ public class ClientServerTest
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client1 = TestHelper.CreateClient(token);
-
-        // test Icmp & Udp
-        await TestHelper.Test_Ping(ping);
-        await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
+        await using (TestHelper.CreateClient(token))
+        {
+            // test Icmp & Udp
+            await TestHelper.Test_Ping(ping);
+            await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
+        }
 
         // create client
-        await using var client2 = TestHelper.CreateClient(token);
-
-        // test Icmp & Udp
-        await TestHelper.Test_Ping(ping);
-        await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
+        await using (TestHelper.CreateClient(token))
+        {
+            // test Icmp & Udp
+            await TestHelper.Test_Ping(ping);
+            await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
+        }
     }
 
     [TestMethod]

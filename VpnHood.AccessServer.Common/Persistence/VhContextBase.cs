@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Models;
 
@@ -326,6 +327,12 @@ public abstract class VhContextBase : DbContext
             entity
                 .Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();
+        });
+
+        modelBuilder.Entity<ServerConfigModel>(entity =>
+        {
+            entity.HasKey(x => x.ServerConfigId);
+            entity.OwnsOne(x => x.Config, ownedNavigationBuilder => ownedNavigationBuilder.ToJson());
         });
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.Models;
+﻿using VpnHood.Common.Net;
+
+namespace VpnHood.AccessServer.Models;
 
 public class AccessModel
 {

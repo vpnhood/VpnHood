@@ -16,15 +16,20 @@ public class ServerConfig
     [JsonPropertyName("NetFilter")]
     public NetFilterOptions NetFilterOptions { get; set; } = new();
 
-    public string ConfigCode { get; set; } = string.Empty;
-
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[] TcpEndPoints { get; set; } = { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
+    public IPEndPoint[]? TcpEndPoints { get; set; }
 
     [JsonConverter(typeof(TimeSpanConverter))]
-    public TimeSpan UpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(120);
+    public TimeSpan? UpdateStatusInterval { get; set; }
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
-    public bool LogAnonymizer { get; set; } = false;
-    public bool AllowIpV6 { get; set; } = true;
+    public bool? LogAnonymizer { get; set; }
+    public bool? AllowIpV6 { get; set; }
+    public string ConfigCode { get; set; } = string.Empty;
+
+    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
+    [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
+    [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
+    [JsonIgnore] public bool AllowIpV6Value => AllowIpV6 ?? true;
+
 }

@@ -44,4 +44,23 @@ public class SessionOptions
     [JsonIgnore] public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
     [JsonIgnore] public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
     [JsonIgnore] public bool UseUdpProxy2Value => UseUdpProxy2 ?? false;
+
+    public void Merge(SessionOptions obj)
+    {
+        if (obj.Timeout != null) Timeout = obj.Timeout;
+        if (obj.UdpTimeout != null) UdpTimeout = obj.UdpTimeout;
+        if (obj.TcpTimeout != null) TcpTimeout = obj.TcpTimeout;
+        if (obj.IcmpTimeout != null) IcmpTimeout = obj.IcmpTimeout;
+        if (obj.SyncInterval != null) SyncInterval = obj.SyncInterval;
+        if (obj.SyncCacheSize != null) SyncCacheSize = obj.SyncCacheSize;
+        if (obj.MaxDatagramChannelCount != null) MaxDatagramChannelCount = obj.MaxDatagramChannelCount;
+        if (obj.MaxUdpPortCount != null) MaxUdpPortCount = obj.MaxUdpPortCount;
+        if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
+        if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
+        if (obj.MaxTcpConnectWaitCount != null) MaxTcpConnectWaitCount = obj.MaxTcpConnectWaitCount;
+        if (obj.MaxTcpChannelCount != null) MaxTcpChannelCount = obj.MaxTcpChannelCount;
+        if (obj.NetScanLimit != null) NetScanLimit = obj.NetScanLimit;
+        if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
+        if (obj.UseUdpProxy2 != null) UseUdpProxy2 = obj.UseUdpProxy2;
+    }
 }

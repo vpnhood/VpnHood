@@ -192,7 +192,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
             return;
 
         // update all sessions status
-        var minSessionActivityTime = FastDateTime.Now - SessionOptions.Timeout;
+        var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime)
             .ToArray();

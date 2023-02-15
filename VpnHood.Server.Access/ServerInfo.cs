@@ -2,7 +2,6 @@
 using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
-using VpnHood.Server.Configurations;
 
 namespace VpnHood.Server;
 

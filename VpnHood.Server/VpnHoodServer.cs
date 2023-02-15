@@ -158,18 +158,18 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             serverConfig.SessionOptions.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            JobSection.Interval = serverConfig.UpdateStatusInterval;
+            JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions);
-            VhLogger.IsAnonymousMode = serverConfig.LogAnonymizer;
+            VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
             // starting the listeners
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
             VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatType(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
-            _tcpHost.Start(serverConfig.TcpEndPoints, isIpV6Supported && serverConfig.AllowIpV6);
+            _tcpHost.Start(serverConfig.TcpEndPointsValue,  isIpV6Supported && serverConfig.AllowIpV6Value);
 
             // set config status
             State = ServerState.Ready;
@@ -200,7 +200,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
         // packet capture
         var packetCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
-        if (netFilterOptions.ExcludeLocalNetwork)
+        if (netFilterOptions.ExcludeLocalNetworkValue)
             packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         if (!Util.IsNullOrEmpty(netFilterOptions.PacketCaptureIncludeIpRanges))

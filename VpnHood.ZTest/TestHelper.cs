@@ -233,7 +233,7 @@ internal static class TestHelper
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
         return fileAccessServer.AccessItem_Create(
-            hostEndPoints ?? fileAccessServer.ServerConfig.TcpEndPoints,
+            hostEndPoints ?? fileAccessServer.ServerConfig.TcpEndPointsValue,
             tokenName: $"Test Server {++_accessItemIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,

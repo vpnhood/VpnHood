@@ -12,6 +12,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.App.SystemInformation;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 using VpnHood.Server.SystemInformation;
@@ -202,7 +203,7 @@ public class ServerApp : IDisposable
         cmdApp.OnExecuteAsync(async (cancellationToken) =>
         {
             // LogAnonymizer is on by default
-            VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizer ?? false;
+            VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
             
             // find listener port
             if (IsAnotherInstanceRunning())

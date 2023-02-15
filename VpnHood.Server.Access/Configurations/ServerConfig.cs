@@ -27,9 +27,22 @@ public class ServerConfig
     public bool? AllowIpV6 { get; set; }
     public string ConfigCode { get; set; } = string.Empty;
 
+    // Inherit
     [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
     [JsonIgnore] public bool AllowIpV6Value => AllowIpV6 ?? true;
 
+    public void Merge(ServerConfig obj)
+    {
+        TrackingOptions.Merge(obj.TrackingOptions);
+        SessionOptions.Merge(obj.SessionOptions);
+        NetFilterOptions.Merge(obj.NetFilterOptions);
+        if (obj.TcpEndPoints != null) TcpEndPoints = obj.TcpEndPoints;
+        if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
+        if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
+        if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
+        if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;
+        if (obj.AllowIpV6 != null) AllowIpV6 = obj.AllowIpV6;
+    }
 }

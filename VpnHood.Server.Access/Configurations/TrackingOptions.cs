@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.Server.Configurations;
 
@@ -21,4 +24,15 @@ public class TrackingOptions
     [JsonIgnore] public bool TrackUdpValue => TrackUdp ?? true;
     [JsonIgnore] public bool TrackTcpValue => TrackTcp ?? true;
     [JsonIgnore] public bool TrackIcmpValue => TrackIcmp ?? true;
+
+    public void Merge(TrackingOptions obj)
+    {
+        if (obj.TrackClientIp != null) TrackClientIp = obj.TrackClientIp;
+        if (obj.TrackLocalPort != null) TrackLocalPort = obj.TrackLocalPort;
+        if (obj.TrackDestinationIp != null) TrackDestinationIp = obj.TrackDestinationIp;
+        if (obj.TrackDestinationPort != null) TrackDestinationPort = obj.TrackDestinationPort;
+        if (obj.TrackUdp != null) TrackUdp = obj.TrackUdp;
+        if (obj.TrackTcp != null) TrackTcp = obj.TrackTcp;
+        if (obj.TrackIcmp != null) TrackIcmp = obj.TrackIcmp;
+    }
 }

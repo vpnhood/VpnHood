@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
@@ -30,7 +34,7 @@ public class ServerTest
         var fileAccessServer = TestHelper.CreateFileAccessServer(serverOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
         await using var server = TestHelper.CreateServer(testAccessServer);
-        
+
         // Create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
@@ -132,7 +136,8 @@ public class ServerTest
         Assert.AreEqual(ClientState.Connected, client.State);
     }
 
-    [TestMethod] public async Task Recover_should_call_access_server_only_once()
+    [TestMethod]
+    public async Task Recover_should_call_access_server_only_once()
     {
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
@@ -179,4 +184,59 @@ public class ServerTest
         Assert.AreEqual(ClientState.Disposed, client.State);
         Assert.AreEqual(SessionErrorCode.AccessError, client.SessionStatus.ErrorCode);
     }
+
+    [TestMethod]
+    public void Merge_config()
+    {
+        var oldServerConfig = new ServerConfig();
+        var newServerConfig = new ServerConfig
+        {
+            AllowIpV6 = true,
+            LogAnonymizer = true,
+            MaxCompletionPortThreads = 10,
+            MinCompletionPortThreads = 11,
+            UpdateStatusInterval = TimeSpan.FromHours(11),
+            NetFilterOptions = new NetFilterOptions
+            {
+                ExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.2") },
+                IncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.3") },
+                PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.4") },
+                PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.5") },
+                ExcludeLocalNetwork = false,
+            },
+            TcpEndPoints = new[] { IPEndPoint.Parse("2.2.2.2:4433") },
+            TrackingOptions = new TrackingOptions
+            {
+                TrackClientIp = true,
+                TrackDestinationIp = false,
+                TrackDestinationPort = true,
+                TrackIcmp = false,
+                TrackLocalPort = true,
+                TrackTcp = false,
+                TrackUdp = true,
+            },
+            SessionOptions = new SessionOptions
+            {
+                IcmpTimeout = TimeSpan.FromMinutes(50),
+                MaxDatagramChannelCount = 13,
+                MaxTcpChannelCount = 14,
+                MaxTcpConnectWaitCount = 16,
+                MaxUdpPortCount = 17,
+                NetScanLimit = 18,
+                NetScanTimeout = TimeSpan.FromMinutes(51),
+                SyncCacheSize = 19,
+                SyncInterval = TimeSpan.FromMinutes(52),
+                TcpBufferSize = 20,
+                TcpConnectTimeout = TimeSpan.FromMinutes(53),
+                TcpTimeout = TimeSpan.FromMinutes(54),
+                Timeout = TimeSpan.FromMinutes(55),
+                UdpTimeout = TimeSpan.FromMinutes(56),
+                UseUdpProxy2 = true
+            }
+        };
+
+        oldServerConfig.Merge(newServerConfig);
+        Assert.AreEqual(JsonSerializer.Serialize(oldServerConfig), JsonSerializer.Serialize(newServerConfig));
+    }
+
 }

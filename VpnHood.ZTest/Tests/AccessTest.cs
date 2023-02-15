@@ -6,6 +6,7 @@ using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Server.Configurations;
 
 namespace VpnHood.Test.Tests;
 
@@ -17,9 +18,6 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(100);
-
-        Console.WriteLine(IpNetwork.IsAll(IpNetwork.All.ToIpRanges().ToIpNetworks().Sort()));
-
     }
 
     [TestInitialize]

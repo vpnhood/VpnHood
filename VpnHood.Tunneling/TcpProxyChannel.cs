@@ -30,7 +30,7 @@ public class TcpProxyChannel : IChannel, IJob
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
-        TimeSpan tcpTimeout, int? orgStreamReadBufferSize = BufferSizeMin, int? tunnelStreamReadBufferSize = BufferSizeMin)
+        TimeSpan tcpTimeout, int? orgStreamReadBufferSize = BufferSizeDefault, int? tunnelStreamReadBufferSize = BufferSizeDefault)
     {
         _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
         _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));

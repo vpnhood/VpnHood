@@ -71,7 +71,7 @@ public class FileAccessServerCommand
     {
         var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
         var defaultPublicEps = new List<IPEndPoint>();
-        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPoints
+        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPointsValue
             .Select(x => x.Port)
             .Distinct();
 
@@ -97,6 +97,7 @@ public class FileAccessServerCommand
                 throw new InvalidOperationException("Can not set -domain and -ep options together.");
 
             var publicEndPoints = Array.Empty<IPEndPoint>();
+            var tcpEndPoints = accessServer.ServerConfig.TcpEndPointsValue;
             if (!useDomainOption.HasValue())
             {
                 publicEndPoints  = publicEndPointOption.HasValue()
@@ -106,7 +107,7 @@ public class FileAccessServerCommand
                 // set default ports
                 foreach (var item in publicEndPoints.Where(x => x.Port == 0))
                 {
-                    var bestEp = accessServer.ServerConfig.TcpEndPoints.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
+                    var bestEp = tcpEndPoints.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
                     item.Port = bestEp?.Port ?? 443;
                 }
 
@@ -124,7 +125,7 @@ public class FileAccessServerCommand
                 publicEndPoints: publicEndPoints,
                 maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
                 isValidHostName: useDomainOption.HasValue(),
-                hostPort: accessServer.ServerConfig.TcpEndPoints.FirstOrDefault()?.Port ?? 443
+                hostPort: tcpEndPoints.FirstOrDefault()?.Port ?? 443
                 );
 
             Console.WriteLine("The following token has been generated: ");

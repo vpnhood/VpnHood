@@ -74,20 +74,20 @@ public class Session : IAsyncDisposable, IJob
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions
         {
-            UdpTimeout = options.UdpTimeout,
-            IcmpTimeout = options.IcmpTimeout,
+            UdpTimeout = options.UdpTimeoutValue,
+            IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpWorkerCount = options.MaxUdpPortCount,
-            UseUdpProxy2 = options.UseUdpProxy2,
+            UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope
         });
         _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
-        _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCount;
-        _maxTcpChannelCount = options.MaxTcpChannelCount;
+        _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
+        _maxTcpChannelCount = options.MaxTcpChannelCountValue;
         _tcpBufferSize = options.TcpBufferSize;
-        _syncCacheSize = options.SyncCacheSize;
-        _tcpTimeout = options.TcpTimeout;
-        _tcpConnectTimeout = options.TcpConnectTimeout;
+        _syncCacheSize = options.SyncCacheSizeValue;
+        _tcpTimeout = options.TcpTimeoutValue;
+        _tcpConnectTimeout = options.TcpConnectTimeoutValue;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -96,10 +96,13 @@ public class Session : IAsyncDisposable, IJob
         SessionResponse = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        JobSection = new JobSection(options.SyncInterval);
+        JobSection = new JobSection(options.SyncIntervalValue);
 
-        var tunnelOptions = new TunnelOptions();
-        if (options.MaxDatagramChannelCount is > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount.Value;
+        var tunnelOptions = new TunnelOptions
+        {
+            MaxDatagramChannelCount = options.MaxDatagramChannelCountValue
+        };
+
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
@@ -241,15 +244,15 @@ public class Session : IAsyncDisposable, IJob
     public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,
         bool isNewLocal, bool isNewRemote, string? failReason)
     {
-        if (!_trackingOptions.IsEnabled())
+        if (!_trackingOptions.IsEnabled)
             return;
 
-        if (_trackingOptions is { TrackDestinationIp: false, TrackDestinationPort: false } && !isNewLocal && failReason == null)
+        if (_trackingOptions is { TrackDestinationIpValue: false, TrackDestinationPortValue: false } && !isNewLocal && failReason == null)
             return;
 
-        if (!_trackingOptions.TrackTcp && protocol.Equals("tcp", StringComparison.OrdinalIgnoreCase) ||
-            !_trackingOptions.TrackUdp && protocol.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
-            !_trackingOptions.TrackUdp && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
+        if (!_trackingOptions.TrackTcpValue && protocol.Equals("tcp", StringComparison.OrdinalIgnoreCase) ||
+            !_trackingOptions.TrackUdpValue && protocol.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
+            !_trackingOptions.TrackUdpValue && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
             return;
 
         var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
@@ -260,12 +263,12 @@ public class Session : IAsyncDisposable, IJob
         failReason ??= "Ok";
 
         if (localEndPoint != null)
-            localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint.Port.ToString() : "*";
+            localPortStr = _trackingOptions.TrackLocalPortValue ? localEndPoint.Port.ToString() : "*";
 
         if (destinationEndPoint != null)
         {
-            destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
-            destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
+            destinationIpStr = _trackingOptions.TrackDestinationIpValue ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+            destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
         }
 

@@ -50,7 +50,9 @@ public class TcpProxyChannel : IChannel, IJob
                 $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}");
 
         // We don't know about client or server delay, so lets pessimistic
+        orgTcpClientStream.TcpClient.ReceiveBufferSize = _orgStreamReadBufferSize;
         orgTcpClientStream.TcpClient.NoDelay = true;
+        tunnelTcpClientStream.TcpClient.ReceiveBufferSize = _tunnelStreamReadBufferSize;
         tunnelTcpClientStream.TcpClient.NoDelay = true;
 
         JobSection = new JobSection(tcpTimeout);

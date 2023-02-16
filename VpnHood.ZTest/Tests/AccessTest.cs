@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
 using VpnHood.Server.Configurations;
 
 namespace VpnHood.Test.Tests;
@@ -18,6 +18,17 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(100);
+
+        var serverConfig = new ServerConfig();
+        serverConfig.ApplyDefaults();
+        var s = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions
+        {
+            IgnoreReadOnlyProperties= false,
+            WriteIndented= true,
+        });
+
+        Console.WriteLine(s);
+
     }
 
     [TestInitialize]

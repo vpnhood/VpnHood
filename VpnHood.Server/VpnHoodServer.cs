@@ -154,8 +154,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo);
-            VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
-            serverConfig.SessionOptions.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
@@ -169,7 +167,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
             VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatType(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
-            _tcpHost.Start(serverConfig.TcpEndPointsValue,  isIpV6Supported && serverConfig.AllowIpV6Value);
+            _tcpHost.Start(serverConfig.TcpEndPointsValue, isIpV6Supported && serverConfig.AllowIpV6Value);
 
             // set config status
             State = ServerState.Ready;
@@ -233,20 +231,31 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
+        var serverConfig = await ReadConfigImpl(serverInfo);
+        serverConfig.SessionOptions.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
+        serverConfig.ApplyDefaults();
+        VhLogger.Instance.LogInformation($"RemoteConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
+
+        if (_config != null)
+        {
+            _config.ConfigCode = serverConfig.ConfigCode;
+            serverConfig.Merge(_config);
+            VhLogger.Instance.LogWarning("Remote configuration has been overwritten by the local settings.");
+            VhLogger.Instance.LogInformation($"RemoteConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
+        }
+
+        // override defaults
+
+        return serverConfig;
+    }
+
+    private async Task<ServerConfig> ReadConfigImpl(ServerInfo serverInfo)
+    {
         try
         {
             var serverConfig = await AccessServer.Server_Configure(serverInfo);
             try { await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig)); }
             catch { /* Ignore */ }
-
-            if (_config != null)
-            {
-                VhLogger.Instance.LogInformation($"RemoteConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
-                VhLogger.Instance.LogWarning("Remote configuration has been overwritten by the local settings.");
-                _config.ConfigCode = serverConfig.ConfigCode;
-                return _config;
-            }
-
             return serverConfig;
         }
         catch (MaintenanceException)

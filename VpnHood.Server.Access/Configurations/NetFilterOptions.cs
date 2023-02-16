@@ -21,5 +21,9 @@ public class NetFilterOptions
         if (obj.IncludeIpRanges != null) IncludeIpRanges = obj.IncludeIpRanges;
         if (obj.ExcludeIpRanges != null) ExcludeIpRanges = obj.ExcludeIpRanges;
     }
+    public void ApplyDefaults()
+    {
+        ExcludeLocalNetwork = ExcludeLocalNetworkValue;
+    }
 
 }

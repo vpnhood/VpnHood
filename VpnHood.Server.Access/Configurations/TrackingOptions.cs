@@ -35,4 +35,16 @@ public class TrackingOptions
         if (obj.TrackTcp != null) TrackTcp = obj.TrackTcp;
         if (obj.TrackIcmp != null) TrackIcmp = obj.TrackIcmp;
     }
+
+    public void ApplyDefaults()
+    {
+        TrackClientIp = TrackClientIpValue;
+        TrackLocalPort = TrackLocalPortValue;
+        TrackDestinationIp = TrackDestinationIpValue;
+        TrackDestinationPort = TrackDestinationPortValue;
+        TrackUdp = TrackUdpValue;
+        TrackTcp = TrackTcpValue;
+        TrackIcmp = TrackIcmpValue;
+    }
+
 }

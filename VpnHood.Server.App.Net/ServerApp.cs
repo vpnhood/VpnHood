@@ -12,7 +12,6 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.App.SystemInformation;
-using VpnHood.Server.Configurations;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 using VpnHood.Server.SystemInformation;

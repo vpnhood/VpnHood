@@ -1,4 +1,4 @@
-# Upcoming
+# v2.7.351
 ### Server
 * Farture: Merge Server Configuration
 * Fix: Setting TCP kernel buffer

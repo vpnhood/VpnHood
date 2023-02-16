@@ -1,3 +1,8 @@
+# Upcoming
+### Server
+* Farture: Merge Server Configuration
+* Fix: Setting TCP kernel buffer
+
 # v2.7.350
 ### Client
 * Feature: Follow server-supported networks by IP range

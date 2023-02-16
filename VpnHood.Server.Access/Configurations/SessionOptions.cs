@@ -63,4 +63,23 @@ public class SessionOptions
         if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
         if (obj.UseUdpProxy2 != null) UseUdpProxy2 = obj.UseUdpProxy2;
     }
+
+    public void ApplyDefaults()
+    {
+        Timeout = TimeoutValue;
+        UdpTimeout = UdpTimeoutValue;
+        TcpTimeout = TcpTimeoutValue;
+        IcmpTimeout = IcmpTimeoutValue;
+        SyncInterval = SyncIntervalValue;
+        SyncCacheSize = SyncCacheSizeValue;
+        MaxDatagramChannelCount = MaxDatagramChannelCountValue;
+        MaxUdpPortCount = MaxUdpPortCountValue;
+        TcpBufferSize = TcpBufferSize;
+        TcpConnectTimeout = TcpConnectTimeoutValue;
+        MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;
+        MaxTcpChannelCount = MaxTcpChannelCountValue;
+        NetScanLimit = NetScanLimit;
+        NetScanTimeout = NetScanTimeout;
+        UseUdpProxy2 = UseUdpProxy2Value;
+    }
 }

@@ -1,8 +1,13 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
+using System.Reflection.Metadata;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
+using VpnHood.Server.Configurations;
 
 namespace VpnHood.AccessServer.Persistence;
 
@@ -23,6 +28,7 @@ public abstract class VhContextBase : DbContext
     public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
+    public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
 
     protected VhContextBase(DbContextOptions options)
         : base(options)
@@ -288,6 +294,13 @@ public abstract class VhContextBase : DbContext
                 .WithMany(d => d.AccessPointGroups)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(e => e.ServerProfile)
+                .WithMany(d => d.AccessPointGroups)
+                .HasForeignKey(e => new { e.ProjectId, e.ServerProfileId })
+                .HasPrincipalKey(e => new { e.ProjectId, e.ServerProfileId })
+                .OnDelete(DeleteBehavior.NoAction);
+
         });
 
         modelBuilder.Entity<AccessModel>(entity =>
@@ -329,10 +342,9 @@ public abstract class VhContextBase : DbContext
                 .ValueGeneratedOnAdd();
         });
 
-        modelBuilder.Entity<ServerConfigModel>(entity =>
+        modelBuilder.Entity<ServerProfileModel>(entity =>
         {
-            entity.HasKey(x => x.ServerConfigId);
-            entity.OwnsOne(x => x.Config, ownedNavigationBuilder => ownedNavigationBuilder.ToJson());
+            entity.HasKey(x => x.ServerProfileId);
         });
     }
 }

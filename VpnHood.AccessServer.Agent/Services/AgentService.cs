@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;
@@ -208,7 +209,7 @@ public class AgentService
                 TrackDestinationPort = trackClientRequest is TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
                 TrackDestinationIp = trackClientRequest is TrackClientRequest.LocalPortAndDstPortAndDstIp,
             },
-            SessionOptions = new Server.SessionOptions
+            SessionOptions = new Server.Configurations.SessionOptions
             {
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),

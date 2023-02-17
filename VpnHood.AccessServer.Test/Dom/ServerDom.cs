@@ -15,7 +15,7 @@ public class ServerDom
     public Api.Server Server { get; }
     public List<SessionDom> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; }
-    public ServerConfig ServerConfig { get; private set; } = default!;
+    public Server.Configurations.ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
     public ServerDom(TestInit testInit, AgentClient agentClient, Api.Server server, ServerInfo serverInfo)
@@ -28,7 +28,7 @@ public class ServerDom
 
     public static async Task<ServerDom> Create(TestInit testInit, Guid? accessPointGroupId, bool configure = true)
     {
-        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, 
+        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId,
             new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
 
         var myServer = new ServerDom(
@@ -62,7 +62,7 @@ public class ServerDom
         var sessionRequestEx = TestInit.CreateSessionRequestEx(
             accessToken,
             clientId,
-            ServerConfig.TcpEndPoints.First(),
+            ServerConfig.TcpEndPointsValue.First(),
             await TestInit.NewIpV4());
 
         var testSession = await SessionDom.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient);
@@ -73,13 +73,13 @@ public class ServerDom
     public async Task<AccessPoint> AddAccessPoint(Guid accessPointGroupId, IPAddress ipAddress, AccessPointMode mode = AccessPointMode.Private, bool isListen = false)
     {
         var ret = await AddAccessPoint(new AccessPointCreateParams
-            {
-                ServerId = ServerId, 
-                AccessPointGroupId = accessPointGroupId ,
-                IpAddress = ipAddress.ToString(), 
-                AccessPointMode= mode,
-                IsListen = isListen
-            });
+        {
+            ServerId = ServerId,
+            AccessPointGroupId = accessPointGroupId,
+            IpAddress = ipAddress.ToString(),
+            AccessPointMode = mode,
+            IsListen = isListen
+        });
 
         return ret;
     }

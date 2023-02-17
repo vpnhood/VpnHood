@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
+using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Controllers;

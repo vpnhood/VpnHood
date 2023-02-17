@@ -152,7 +152,7 @@ public class AccessTokenTest : BaseTest
             .Single(x => x.AccessTokenId == accessToken2B.AccessTokenId)
             .Secret;
 
-        var certificateData = await farm2.DefaultServer.AgentClient.GetSslCertificateData(farm2.DefaultServer.ServerConfig.TcpEndPoints.First());
+        var certificateData = await farm2.DefaultServer.AgentClient.GetSslCertificateData(farm2.DefaultServer.ServerConfig.TcpEndPointsValue.First());
         var x509Certificate2 = new X509Certificate2(certificateData);
 
         var accessKey = await farm2.TestInit.AccessTokensClient.GetAccessKeyAsync(testInit.ProjectId, accessToken2B.AccessTokenId);
@@ -164,7 +164,7 @@ public class AccessTokenTest : BaseTest
             Convert.ToBase64String(token.CertificateHash));
 
         Assert.AreEqual(Convert.ToBase64String(secret2B), Convert.ToBase64String(token.Secret));
-        Assert.IsFalse(token.HostEndPoints?.Any(x => x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPoints.First())));
+        Assert.IsFalse(token.HostEndPoints?.Any(x => x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPointsValue.First())));
         Assert.IsTrue(token.HostEndPoints?.Any(x => x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
         Assert.AreEqual(accessToken2B.SupportCode, token.SupportId);
 

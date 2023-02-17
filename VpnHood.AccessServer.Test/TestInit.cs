@@ -56,6 +56,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public IpLocksClient IpLocksClient => new(Http);
     public AccessesClient AccessesClient => new(Http);
     public DevicesClient DevicesClient => new(Http);
+    public ServerProfilesClient ServerProfilesClient => new(Http);
     public HttpAccessServer AgentClient2 { get; private set; } = default!;
     public HttpAccessServer AgentClient1 { get; private set; } = default!;
 

@@ -54,7 +54,7 @@ public class ServersController : SuperController<ServersController>
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
         if (await IsFreePlan(projectId) &&
-            VhContext.Servers.Where(x => x.ProjectId == projectId && !x.IsDeleted).Count() >= QuotaConstants.ServerCount)
+            VhContext.Servers.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
         // validate

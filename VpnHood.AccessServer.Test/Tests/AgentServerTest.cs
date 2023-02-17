@@ -13,6 +13,7 @@ using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
+using VpnHood.Server.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -75,7 +76,7 @@ public class AgentServerTest : BaseTest
         var agentClient = TestInit1.CreateAgentClient(server.ServerId);
         var serverConfig = await agentClient.Server_Configure(serverInfo);
         Assert.AreEqual(TestInit1.AgentOptions.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
-        Assert.AreEqual(serverConfig.TcpEndPoints.Length, serverConfig.TcpEndPoints.Distinct().Count(),
+        Assert.AreEqual(serverConfig.TcpEndPointsValue.Length, serverConfig.TcpEndPointsValue.Distinct().Count(),
             "Duplicate listener!");
 
         //-----------
@@ -96,7 +97,7 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // private[1]
         accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[1].ToString());
@@ -106,7 +107,7 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen);
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // private[2]
         accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[2].ToString());
@@ -116,7 +117,7 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen);
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // public[0]
         accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[0].ToString());
@@ -126,7 +127,7 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // public[1]
         accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[1].ToString());
@@ -136,7 +137,7 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsFalse(accessPoint.IsListen);
-        Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
+        Assert.IsFalse(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // public[2]
         accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[2].ToString());
@@ -146,7 +147,7 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsFalse(accessPoint.IsListen);
-        Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
+        Assert.IsFalse(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // PublicInToken should never be deleted
         return accessPoints.SingleOrDefault(x => x.AccessPointMode == AccessPointMode.PublicInToken);

@@ -1,7 +1,8 @@
-# v2.7.351
+# Upcoming
 ### Server
 * Farture: Merge Server Configuration
 * Fix: Setting TCP kernel buffer
+* Update: Move NetFilter ecent from log to track
 
 # v2.7.350
 ### Client

@@ -7,10 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using PacketDotNet.Ieee80211;
 using VpnHood.Common.Client;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
@@ -60,7 +62,7 @@ public class Session : IAsyncDisposable, IJob
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, 
+    internal Session(IAccessServer accessServer, SessionResponse sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
@@ -164,10 +166,8 @@ public class Session : IAsyncDisposable, IJob
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
-                    "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",
-                    ipPacket.Protocol, ipPacket.DestinationAddress);
-
+                var ipeEndPointPair = PacketUtil.GetPacketEndPoints(ipPacket);
+                LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
                 _filterReporter.Raised();
                 continue;
             }
@@ -358,10 +358,7 @@ public class Session : IAsyncDisposable, IJob
         var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
         if (newEndPoint == null)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
-                "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",  
-                ProtocolType.Tcp, request.DestinationEndPoint);
-
+            LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raised();
             throw new RequestBlockedException(tcpClientStream.RemoteEndPoint, this);
         }

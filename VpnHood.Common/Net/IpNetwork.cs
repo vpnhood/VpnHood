@@ -154,7 +154,7 @@ public class IpNetwork
         }
         catch
         {
-            throw new FormatException($"Could not parse IPNetwork from: {value}!");
+            throw new FormatException($"Could not parse IPNetwork from: {value}.");
         }
     }
 

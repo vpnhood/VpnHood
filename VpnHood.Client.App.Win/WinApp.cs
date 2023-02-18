@@ -18,6 +18,7 @@ namespace VpnHood.Client.App;
 
 public class WinApp : IDisposable
 {
+    private const string LocalHostIpAddress = "127.10.10.10";
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
     private readonly Timer _uiTimer;
@@ -27,6 +28,7 @@ public class WinApp : IDisposable
     private WebViewWindow? _webViewWindow;
     private bool _disposed;
     private string AppLocalDataPath { get; }
+    public Uri LocalHostUrl = new($"http://myvpnhood");
 
     public WinApp()
     {
@@ -82,6 +84,17 @@ public class WinApp : IDisposable
             return;
         }
 
+        // configure local host
+        var registerLocalDomain = false;
+        try
+        {
+            RegisterLocalDomain();
+            registerLocalDomain = true;
+        }
+        catch
+        {
+        }
+
         // configuring Windows Firewall
         try
         {
@@ -99,7 +112,7 @@ public class WinApp : IDisposable
             AppDataPath = AppLocalDataPath,
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
         });
-        VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
+        VpnHoodAppUi.Init(new MemoryStream(Resource.SPA), url2: registerLocalDomain ? LocalHostUrl : null);
 
         // auto connect
         if (autoConnect &&
@@ -158,7 +171,7 @@ public class WinApp : IDisposable
         try
         {
             if (!WebViewWindow.IsInstalled) return;
-            _webViewWindow = new WebViewWindow(new Uri(VhAppUi.Url), Path.Combine(VhApp.AppDataFolderPath, "Temp"));
+            _webViewWindow = new WebViewWindow(VhAppUi.Url1, Path.Combine(VhApp.AppDataFolderPath, "Temp"));
             _webViewWindow.EnsureCoreWebView2Async()
                 .ContinueWith(x =>
                 {
@@ -226,17 +239,20 @@ public class WinApp : IDisposable
     public void OpenMainWindow()
     {
         if (_webViewWindow != null)
-        {
             _webViewWindow.Show();
-            return;
-        }
+        else
+            OpenMainWindowInBrowser();
+    }
 
+    public void OpenMainWindowInBrowser()
+    {
         Process.Start(new ProcessStartInfo
         {
-            FileName = VhAppUi.Url,
+            FileName = VhAppUi.Url2?.AbsoluteUri ?? VhAppUi.Url1.AbsoluteUri,
             UseShellExecute = true,
             Verb = "open"
         });
+
     }
 
     private void InitNotifyIcon()
@@ -253,9 +269,11 @@ public class WinApp : IDisposable
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(AppUiResource.Open, null, (_, _) => OpenMainWindow());
+        var menuItem = menu.Items.Add(AppUiResource.OpenInBrowser, null, (_, _) => OpenMainWindowInBrowser());
+        menuItem.Name = "openInBrowser";
 
         menu.Items.Add("-");
-        var menuItem = menu.Items.Add("Connect");
+        menuItem = menu.Items.Add(AppUiResource.Connect);
         menuItem.Name = "connect";
         menuItem.Click += ConnectMenuItem_Click;
 
@@ -292,8 +310,8 @@ public class WinApp : IDisposable
     {
         var menu = (ContextMenuStrip)sender!;
         menu.Items["connect"].Enabled = VhApp.IsIdle;
-        menu.Items["disconnect"].Enabled =
-            !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
+        menu.Items["disconnect"].Enabled = !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
+        menu.Items["openInBrowser"].Visible = _webViewWindow != null;
     }
 
     private static string FindExePath(string exe)
@@ -366,5 +384,17 @@ public class WinApp : IDisposable
         _webViewWindow?.Close();
         if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
         if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
+    }
+
+    private void RegisterLocalDomain()
+    {
+        var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+        var hosts = File.ReadLines(hostsFilePath);
+        var hostItem = $"{LocalHostIpAddress} {LocalHostUrl.Host}";
+        if (!hosts.Contains(hostItem))
+        {
+            hosts = hosts.Concat(new[] { hostItem });
+            File.WriteAllLines(hostsFilePath, hosts.ToArray());
+        }
     }
 }

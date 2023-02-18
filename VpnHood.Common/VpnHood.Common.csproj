@@ -12,8 +12,8 @@
     <PackageId>VpnHood.Common</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>VpnHood Common Library is shared among all other VpnHood modules.</Description>
-    <Version>2.7.353</Version>
-    <AssemblyVersion>2.7.353</AssemblyVersion>
+    <Version>2.7.354</Version>
+    <AssemblyVersion>2.7.354</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

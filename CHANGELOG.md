@@ -1,7 +1,8 @@
-# Upcoming
+# v2.7.352
 ### Server
 * Farture: Merge Server Configuration
 * Fix: Setting TCP kernel buffer
+* Fix: Error in parsing IPNetwork as range
 * Update: Move NetFilter ecent from log to track
 
 # v2.7.350

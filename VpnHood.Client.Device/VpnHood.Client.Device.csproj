@@ -14,8 +14,8 @@
     <RepositoryType></RepositoryType>
     <PackageId>VpnHood.Client.Device</PackageId>
     <RootNamespace>VpnHood.Client.Device</RootNamespace>
-    <Version>2.7.351</Version>
-    <AssemblyVersion>2.7.351</AssemblyVersion>
+    <Version>2.7.352</Version>
+    <AssemblyVersion>2.7.352</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

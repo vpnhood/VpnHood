@@ -18,16 +18,8 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(100);
-
-        var serverConfig = new ServerConfig();
-        serverConfig.ApplyDefaults();
-        var s = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions
-        {
-            IgnoreReadOnlyProperties= false,
-            WriteIndented= true,
-        });
-
-        Console.WriteLine(s);
+        var file = Environment.GetFolderPath(Environment.SpecialFolder.System);
+        Console.WriteLine(file);
 
     }
 

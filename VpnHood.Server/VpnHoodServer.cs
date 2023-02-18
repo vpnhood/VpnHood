@@ -111,7 +111,12 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
         // Report current OS Version
         VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
-        VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetSystemInfo()}");
+        VhLogger.Instance.LogInformation("OS: {OS}", SystemInfoProvider.GetSystemInfo());
+
+        // Report TcpBuffers
+        var tcpClient = new TcpClient();
+        VhLogger.Instance.LogInformation("DefaultTcpKernelSentBufferSize: {DefaultTcpKernelSentBufferSize}, \"DefaultTcpKernelReceiveBufferSize: {DefaultTcpKernelReceiveBufferSize}",
+            tcpClient.SendBufferSize, tcpClient.ReceiveBufferSize);
 
         // Configure
         State = ServerState.Waiting;

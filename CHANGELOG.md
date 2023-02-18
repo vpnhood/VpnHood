@@ -4,6 +4,7 @@
 * Fix: Setting TCP kernel buffer
 * Fix: Error in parsing IPNetwork as range
 * Update: Move NetFilter ecent from log to track
+* Update: Set Send Kernel TCP buffer sizes
 
 # v2.7.350
 ### Client

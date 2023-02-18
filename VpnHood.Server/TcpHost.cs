@@ -392,18 +392,7 @@ internal class TcpHost : IAsyncDisposable
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
-
-        // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
-
-        // Disable UdpChannel
-        session.UseUdpChannel = false;
-
-        // add channel
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a {nameof(TcpDatagramChannel)} channel. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-        var channel = new TcpDatagramChannel(tcpClientStream);
-        try { session.Tunnel.AddChannel(channel); }
-        catch { channel.Dispose(); throw; }
+        await session.ProcessTcpDatagramChannelRequest(tcpClientStream, cancellationToken);
     }
 
     private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)

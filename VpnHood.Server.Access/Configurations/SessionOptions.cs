@@ -25,6 +25,8 @@ public class SessionOptions
     public int? MaxDatagramChannelCount { get; set; }
     public int? MaxUdpPortCount { get; set; }
     public int? TcpBufferSize { get; set; }
+    public int? TcpKernelSendBufferSize { get; set; }
+    public int? TcpKernelReceiveBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
     public int? MaxTcpConnectWaitCount { get; set; }
     public int? MaxTcpChannelCount { get; set; }
@@ -56,6 +58,8 @@ public class SessionOptions
         if (obj.MaxDatagramChannelCount != null) MaxDatagramChannelCount = obj.MaxDatagramChannelCount;
         if (obj.MaxUdpPortCount != null) MaxUdpPortCount = obj.MaxUdpPortCount;
         if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
+        if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
+        if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
         if (obj.MaxTcpConnectWaitCount != null) MaxTcpConnectWaitCount = obj.MaxTcpConnectWaitCount;
         if (obj.MaxTcpChannelCount != null) MaxTcpChannelCount = obj.MaxTcpChannelCount;
@@ -74,7 +78,9 @@ public class SessionOptions
         SyncCacheSize = SyncCacheSizeValue;
         MaxDatagramChannelCount = MaxDatagramChannelCountValue;
         MaxUdpPortCount = MaxUdpPortCountValue;
-        TcpBufferSize = TcpBufferSize;
+        TcpBufferSize = TcpBufferSize; //no default
+        TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
+        TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
         TcpConnectTimeout = TcpConnectTimeoutValue;
         MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;
         MaxTcpChannelCount = MaxTcpChannelCountValue;

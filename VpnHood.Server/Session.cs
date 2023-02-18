@@ -17,6 +17,7 @@ using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Server;
@@ -33,6 +34,8 @@ public class Session : IAsyncDisposable, IJob
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
     private readonly int? _tcpBufferSize;
+    private readonly int? _tcpKernelSendBufferSize;
+    private readonly int? _tcpKernelReceiveBufferSize;
     private readonly TimeSpan _tcpTimeout;
     private readonly long _syncCacheSize;
     private readonly TimeSpan _tcpConnectTimeout;
@@ -85,6 +88,8 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
         _tcpBufferSize = options.TcpBufferSize;
+        _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
+        _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
         _syncCacheSize = options.SyncCacheSizeValue;
         _tcpTimeout = options.TcpTimeoutValue;
         _tcpConnectTimeout = options.TcpConnectTimeoutValue;
@@ -278,14 +283,48 @@ public class Session : IAsyncDisposable, IJob
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
+    private void ConfigTcpClient(TcpClient tcpClient)
+    {
+        if (_tcpKernelReceiveBufferSize!=null) 
+            tcpClient.ReceiveBufferSize= _tcpKernelReceiveBufferSize.Value;
+
+        if (_tcpKernelSendBufferSize!=null) 
+            tcpClient.ReceiveBufferSize= _tcpKernelSendBufferSize.Value;
+    }
+
+    public async Task ProcessTcpDatagramChannelRequest(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
+    {
+        ConfigTcpClient(tcpClientStream.TcpClient);
+
+        // send OK reply
+        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, SessionResponse, cancellationToken);
+
+        // Disable UdpChannel
+        UseUdpChannel = false;
+
+        // add channel
+        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, 
+            "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
+        var channel = new TcpDatagramChannel(tcpClientStream);
+        try
+        {
+            Tunnel.AddChannel(channel);
+        }
+        catch
+        {
+            channel.Dispose(); 
+            throw;
+        }
+    }
+
     public async Task ProcessTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request,
         CancellationToken cancellationToken)
     {
         var isRequestedEpException = false;
         var isTcpConnectIncreased = false;
 
-        TcpClient? tcpClient2 = null;
-        TcpClientStream? tcpClientStream2 = null;
+        TcpClient? tcpClientHost = null;
+        TcpClientStream? tcpClientStreamHost = null;
         TcpProxyChannel? tcpProxyChannel = null;
         try
         {
@@ -300,17 +339,17 @@ public class Session : IAsyncDisposable, IJob
             Interlocked.Increment(ref _tcpConnectWaitCount);
             isTcpConnectIncreased = true;
 
-            tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
-            _socketFactory.SetKeepAlive(tcpClient2.Client, true);
+            tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
+            _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
 
             //tracking
-            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint,
+            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint, request.DestinationEndPoint,
                 true, true, null);
 
             // connect to requested destination
             isRequestedEpException = true;
             await Util.RunTask(
-                tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
+                tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
                 _tcpConnectTimeout, cancellationToken);
             isRequestedEpException = false;
 
@@ -326,15 +365,18 @@ public class Session : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                 $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
 
-            tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
-            tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
+            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
+
+            ConfigTcpClient(tcpClientStream.TcpClient);
+            ConfigTcpClient(tcpClientStreamHost.TcpClient);
+            tcpProxyChannel = new TcpProxyChannel(tcpClientStreamHost, tcpClientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
 
             Tunnel.AddChannel(tcpProxyChannel);
         }
         catch (Exception ex)
         {
-            tcpClient2?.Dispose();
-            tcpClientStream2?.Dispose();
+            tcpClientHost?.Dispose();
+            tcpClientStreamHost?.Dispose();
             tcpProxyChannel?.Dispose();
 
             if (isRequestedEpException)
@@ -461,5 +503,5 @@ public class Session : IAsyncDisposable, IJob
             _session.VerifyNetScan(protocolType, remoteEndPoint);
         }
     }
-
+   
 }

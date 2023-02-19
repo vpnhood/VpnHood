@@ -27,6 +27,7 @@ public class WinApp : IDisposable
     private readonly CommandListener _commandListener;
     private WebViewWindow? _webViewWindow;
     private bool _disposed;
+    private bool _showWindowAfterStart;
     private string AppLocalDataPath { get; }
     public Uri LocalHostUrl = new($"http://myvpnhood");
 
@@ -72,15 +73,15 @@ public class WinApp : IDisposable
     {
         const bool logToConsole = true;
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        var showWindow = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        _showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
         if (IsAnotherInstanceRunning())
         {
             // open main window if app is already running and user run the app again
-            if (showWindow)
+            if (_showWindowAfterStart)
                 _commandListener.SendCommand("/openWindow");
-            VhLogger.Instance.LogInformation($"{nameof(WinApp)} is already running!");
+            VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} is already running!");
             return;
         }
 
@@ -127,8 +128,8 @@ public class WinApp : IDisposable
         // Create webview if installed
         InitWevView();
 
-        // MainWindow
-        if (showWindow)
+        // show MainWindow if _webViewWindow does not exist otherwise wait for InitCompleted event
+        if (_webViewWindow == null && _showWindowAfterStart)
             OpenMainWindow();
 
         //Ui Timer
@@ -137,10 +138,7 @@ public class WinApp : IDisposable
 
         // Message Loop
         Application.ApplicationExit += App_Exit;
-        if (_webViewWindow != null)
-            Application.Run(_webViewWindow.Form);
-        else
-            Application.Run();
+        Application.Run();
     }
 
     private void App_Exit(object? sender, EventArgs e)
@@ -172,6 +170,7 @@ public class WinApp : IDisposable
         {
             if (!WebViewWindow.IsInstalled) return;
             _webViewWindow = new WebViewWindow(VhAppUi.Url1, Path.Combine(VhApp.AppDataFolderPath, "Temp"));
+            _webViewWindow.InitCompleted += WebViewWindow_InitCompleted;
             _webViewWindow.EnsureCoreWebView2Async()
                 .ContinueWith(x =>
                 {
@@ -189,6 +188,11 @@ public class WinApp : IDisposable
         }
     }
 
+    private void WebViewWindow_InitCompleted(object? sender, EventArgs e)
+    {
+        if (_showWindowAfterStart)
+            OpenMainWindow();
+    }
 
     private void CheckForUpdate()
     {
@@ -238,7 +242,7 @@ public class WinApp : IDisposable
 
     public void OpenMainWindow()
     {
-        if (_webViewWindow != null)
+        if (_webViewWindow != null && _webViewWindow.IsInitCompleted)
             _webViewWindow.Show();
         else
             OpenMainWindowInBrowser();
@@ -268,8 +272,10 @@ public class WinApp : IDisposable
         };
 
         var menu = new ContextMenuStrip();
-        menu.Items.Add(AppUiResource.Open, null, (_, _) => OpenMainWindow());
-        var menuItem = menu.Items.Add(AppUiResource.OpenInBrowser, null, (_, _) => OpenMainWindowInBrowser());
+        var menuItem = menu.Items.Add(AppUiResource.Open, null, (_, _) => OpenMainWindow());
+        menuItem.Name = "open";
+
+        menuItem = menu.Items.Add(AppUiResource.OpenInBrowser, null, (_, _) => OpenMainWindowInBrowser());
         menuItem.Name = "openInBrowser";
 
         menu.Items.Add("-");
@@ -294,6 +300,7 @@ public class WinApp : IDisposable
     private void ConnectMenuItem_Click(object? sender, EventArgs e)
     {
         if (VhApp.Settings.UserSettings.DefaultClientProfileId != null)
+        {
             try
             {
                 _ = VhApp.Connect(VhApp.Settings.UserSettings.DefaultClientProfileId.Value);
@@ -302,8 +309,11 @@ public class WinApp : IDisposable
             {
                 OpenMainWindow();
             }
+        }
         else
+        {
             OpenMainWindow();
+        }
     }
 
     private void Menu_Opening(object? sender, CancelEventArgs e)
@@ -311,7 +321,8 @@ public class WinApp : IDisposable
         var menu = (ContextMenuStrip)sender!;
         menu.Items["connect"].Enabled = VhApp.IsIdle;
         menu.Items["disconnect"].Enabled = !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
-        menu.Items["openInBrowser"].Visible = _webViewWindow != null;
+        menu.Items["open"].Visible = _webViewWindow != null && _webViewWindow.IsInitCompleted;
+        menu.Items["openInBrowser"].Visible = true;
     }
 
     private static string FindExePath(string exe)

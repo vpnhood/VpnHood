@@ -14,6 +14,10 @@ public class WebViewWindow
     private readonly Color _backColor = Color.FromArgb(34, 67, 166);
     private readonly Size _defWindowSize = new(400, 700);
     private readonly WebView2 _webView = new();
+    
+    public bool IsInitCompleted { get; private set; }
+    public event EventHandler? InitCompleted;
+    public Form Form { get; }
 
     public WebViewWindow(Uri url, string dataFolderPath)
     {
@@ -40,10 +44,7 @@ public class WebViewWindow
         _defWindowSize = new Size(_defWindowSize.Width * (Form.DeviceDpi / 96),
         _defWindowSize.Height * (Form.DeviceDpi / 96));
         UpdatePosition();
-
     }
-
-    public Form Form { get; }
 
     public static bool IsInstalled =>
         Environment.Is64BitOperatingSystem
@@ -94,7 +95,6 @@ public class WebViewWindow
             return;
         }
 
-
         UpdatePosition();
         Form.Show();
         Form.BringToFront();
@@ -108,6 +108,8 @@ public class WebViewWindow
         {
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+            IsInitCompleted = true;
+            InitCompleted?.Invoke(this, EventArgs.Empty);
         }
     }
 

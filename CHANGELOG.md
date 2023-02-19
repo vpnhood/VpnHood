@@ -1,6 +1,7 @@
 # v2.7.354
 ### Client
 * Farture: Windows: Add "Open in Browser" item to system menu
+* Update: windows: ""Open in browser" if WebView is not initialized properly
 
 ### Server
 * Farture: Merge Server Configuration

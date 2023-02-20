@@ -22,6 +22,7 @@ using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using NLog;
 using NLog.Web;
+using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer;
 
@@ -105,8 +106,8 @@ public class Program
 
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("App: {Config}",
-            JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true }));
+        var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
+        logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, new[] { nameof(AppOptions.AgentSystemAuthorization) }));
 
         using (var scope = webApp.Services.CreateScope())
         {

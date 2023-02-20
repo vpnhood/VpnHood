@@ -97,7 +97,7 @@ public class ServerProfilesController : SuperController<ServerProfilesController
     {
         var res = serverConfig != null ? JsonSerializer.Serialize(serverConfig) : null;
         
-        if (res.Length > 0xFFFF)
+        if (res?.Length > 0xFFFF)
             throw new Exception("ServerConfig is too big");
 
         return res;

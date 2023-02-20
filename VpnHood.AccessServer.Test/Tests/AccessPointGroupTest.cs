@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+using GrayMint.Common.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
@@ -15,6 +16,21 @@ public class AccessPointGroupTest
     public async Task Foo()
     {
         await Task.Delay(1);
+        var obj = new
+        {
+            A = "100",
+            B = 10,
+            C = new
+            {
+                zz = "asfsaf",
+                gh = 1
+            }
+        };
+        var json = JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true});
+
+        var z = GmUtil.RedactJsonValue(json, new[] { "A", "B", "zz", "gh"} );
+        Console.WriteLine(z);
+
     }
 
     [TestMethod]

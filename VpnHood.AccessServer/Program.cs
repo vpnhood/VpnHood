@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
@@ -102,9 +104,9 @@ public class Program
         webApp.ScheduleGrayMintSqlMaintenance<VhReportContext>(TimeSpan.FromDays(1));
 
         // Log Configs
-        //var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
-        //logger.LogInformation("App: {Config}",
-        //    JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true }));
+        var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("App: {Config}",
+            JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true }));
 
         using (var scope = webApp.Services.CreateScope())
         {

@@ -17,7 +17,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-point-groups")]
 public class AccessPointGroupsController : SuperController<AccessPointGroupsController>
 {
-    public AccessPointGroupsController(ILogger<AccessPointGroupsController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+    public AccessPointGroupsController(ILogger<AccessPointGroupsController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
     }
@@ -26,7 +26,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
     {
         createParams ??= new AccessPointGroupCreateParams();
-        await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission(projectId, Permissions.AccessPointGroupWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessPointGroup_{CurrentUserId}");
@@ -41,7 +41,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
         }
         else
         {
-            await VerifyUserPermission( projectId, Permissions.CertificateWrite);
+            await VerifyUserPermission(projectId, Permissions.CertificateWrite);
             certificate = CertificatesController.CreateInternal(projectId, null);
             VhContext.Certificates.Add(certificate);
         }
@@ -76,7 +76,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     [HttpPatch("{accessPointGroupId}")]
     public async Task<AccessPointGroup> Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
     {
-        await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission(projectId, Permissions.AccessPointGroupWrite);
 
         var accessPointGroup = await VhContext.AccessPointGroups.SingleAsync(x =>
             x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
@@ -98,43 +98,60 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     }
 
     [HttpGet("{accessPointGroupId}")]
-    public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
+    public async Task<ServerFarmData> Get(Guid projectId, Guid accessPointGroupId)
     {
-        await VerifyUserPermission( projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
-        var ret = await VhContext.AccessPointGroups
+        var serverFarm = await VhContext.AccessPointGroups
+            .Include(x => x.Servers)
             .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
 
-        return ret.ToDto();
+        var ret = new ServerFarmData
+        {
+            ServerFarm = serverFarm.ToDto(),
+            ServerCount = serverFarm.Servers!.Count
+        };
+
+        return ret;
     }
 
     [HttpGet]
-    public async Task<AccessPointGroup[]> List(Guid projectId, string? search = null,
+    public async Task<ServerFarmData[]> List(Guid projectId, string? search = null,
         int recordIndex = 0, int recordCount = 101)
     {
-        await VerifyUserPermission( projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
-        var ret = await VhContext.AccessPointGroups
+        var query = VhContext.AccessPointGroups
             .Include(x => x.AccessPoints)
-            .Where(x => x.ProjectId == projectId && (
+            .Include(x => x.Servers)
+            .Where(x => x.ProjectId == projectId)
+            .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.AccessPointGroupName!.Contains(search) ||
-                x.AccessPointGroupId.ToString().StartsWith(search)))
-            .OrderByDescending(x=>x.CreatedTime)
+                x.AccessPointGroupId.ToString().StartsWith(search))
+            .OrderByDescending(x => x.CreatedTime);
+
+        var serverFarms = await query
             .Skip(recordIndex)
             .Take(recordCount)
-            .Select(x=>x.ToDto())
             .ToArrayAsync();
 
-        return ret;
+        var ret = serverFarms
+            .Select(serverFarm => new ServerFarmData
+            {
+                ServerFarm = serverFarm.ToDto(),
+                ServerCount = serverFarm.Servers!.Count
+            });
+
+        return ret.ToArray();
     }
 
 
     [HttpDelete("{accessPointGroupId:guid}")]
     public async Task Delete(Guid projectId, Guid accessPointGroupId)
     {
-        await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission(projectId, Permissions.AccessPointGroupWrite);
 
         var accessPointGroup = await VhContext.AccessPointGroups
             .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroupId == accessPointGroupId);

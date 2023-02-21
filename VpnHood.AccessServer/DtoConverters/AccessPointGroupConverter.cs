@@ -7,13 +7,14 @@ public static class AccessPointGroupConverter
 {
     public static AccessPointGroup ToDto(this AccessPointGroupModel model)
     {
-        var accessPointGroup = new AccessPointGroup
+        var dto = new AccessPointGroup
         {
             AccessPointGroupName = model.AccessPointGroupName,
-            AccessPointGroupId= model.AccessPointGroupId,
-            CertificateId= model.CertificateId,
-            CreatedTime= model.CreatedTime
+            AccessPointGroupId = model.AccessPointGroupId,
+            CertificateId = model.CertificateId,
+            CreatedTime = model.CreatedTime
         };
-        return accessPointGroup;
+
+        return dto;
     }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GrayMint.Common.Utils;
+using Microsoft.Extensions.Azure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
@@ -50,8 +51,9 @@ public class AccessPointGroupTest
         var publicIp2 = await testInit.NewIpV4();
         await serverDom.AddAccessPoint(farm1.AccessPointGroupId, publicIp2);
 
-        await farm1.Reload();
+        var accessFarmData= await farm1.Reload();
         Assert.AreEqual(name, farm1.AccessPointGroup.AccessPointGroupName);
+        Assert.AreEqual(1, accessFarmData.ServerCount);
 
         var accessPoints = await farm1.GetAccessPoints();
         Assert.IsTrue(accessPoints.Any(x => x.IpAddress == publicIp1.ToString()));

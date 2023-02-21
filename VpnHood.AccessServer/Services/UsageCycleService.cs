@@ -30,6 +30,7 @@ public class UsageCycleService
         await _vhContext.PublicCycles
             .Where(x => x.PublicCycleId == cycleId)
             .ExecuteDeleteAsync();
+
         _lastCycleIdCache = null;
     }
 

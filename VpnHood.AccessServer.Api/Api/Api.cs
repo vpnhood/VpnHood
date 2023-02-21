@@ -422,7 +422,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessPointGroup>> ListAsync(System.Guid projectId, string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerFarmData>> ListAsync(System.Guid projectId, string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -476,7 +476,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<AccessPointGroup>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ServerFarmData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -586,7 +586,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AccessPointGroup> GetAsync(System.Guid projectId, System.Guid accessPointGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerFarmData> GetAsync(System.Guid projectId, System.Guid accessPointGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -631,7 +631,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessPointGroup>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ServerFarmData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6508,6 +6508,23 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerFarmData
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarm")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required]
+        public AccessPointGroup ServerFarm { get; set; } = new AccessPointGroup();
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public int ServerCount { get; set; } = default!;
 
     }
 

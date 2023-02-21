@@ -22,9 +22,11 @@ public class AccessPointGroupDom
         AccessPointGroup = accessPointGroup;
     }
 
-    public async Task Reload()
+    public async Task<ServerFarmData> Reload()
     {
-        AccessPointGroup = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId);
+        var serverFarmData = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId);
+        AccessPointGroup = serverFarmData.ServerFarm;
+        return serverFarmData;
     }
 
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic)

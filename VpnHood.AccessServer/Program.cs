@@ -86,6 +86,8 @@ public class Program
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();
         builder.Services.AddScoped<UsageReportService>();
+        builder.Services.AddScoped<ServerService>();
+        builder.Services.AddScoped<ServerFarmService>();
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         // NLog: Setup NLog for Dependency injection

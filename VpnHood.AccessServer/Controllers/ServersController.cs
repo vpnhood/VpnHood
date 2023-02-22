@@ -29,6 +29,7 @@ public class ServersController : SuperController<ServersController>
     private readonly AgentCacheClient _agentCacheClient;
     private readonly AgentSystemClient _agentSystemClient;
     private readonly UsageReportService _usageReportService;
+    private readonly ServerService _serverService;
 
     public ServersController(
         ILogger<ServersController> logger,
@@ -36,12 +37,14 @@ public class ServersController : SuperController<ServersController>
         IOptions<AppOptions> appOptions,
         MultilevelAuthService multilevelAuthService,
         AgentCacheClient agentCacheClient,
-        AgentSystemClient agentSystemClient, UsageReportService usageReportService)
+        AgentSystemClient agentSystemClient, UsageReportService usageReportService, 
+        ServerService serverService)
         : base(logger, vhContext, multilevelAuthService)
     {
         _agentCacheClient = agentCacheClient;
         _agentSystemClient = agentSystemClient;
         _usageReportService = usageReportService;
+        _serverService = serverService;
         _appOptions = appOptions.Value;
     }
 
@@ -167,62 +170,13 @@ public class ServersController : SuperController<ServersController>
     }
 
     [HttpGet]
-    public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0,
-        int recordCount = 1000)
+    public async Task<ServerData[]> List(
+        Guid projectId, Guid? serverId = null, Guid? serverFarmId = null,
+        int recordIndex = 0, int recordCount = 1000)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-
-        // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
-
-        var query = VhContext.Servers
-            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Include(server => server.AccessPointGroup)
-            .Include(server => server.AccessPoints!)
-            .ThenInclude(accessPoint => accessPoint.AccessPointGroup)
-            .Where(server => serverId == null || server.ServerId == serverId);
-
-        var serverModels = await query
-            .AsNoTracking()
-            .OrderBy(x => x.ServerId)
-            .Skip(recordIndex)
-            .Take(recordCount)
-            .ToArrayAsync();
-
-        // update all status
-        var serverStatus = await VhContext.ServerStatuses
-            .AsNoTracking()
-            .Where(serverStatus =>
-                serverStatus.IsLast && serverStatus.ProjectId == projectId &&
-                (serverId == null || serverStatus.ServerId == serverId))
-            .ToDictionaryAsync(x => x.ServerId);
-
-        foreach (var serverModel in serverModels)
-            if (serverStatus.TryGetValue(serverModel.ServerId, out var serverStatusEx))
-                serverModel.ServerStatus = serverStatusEx;
-
-        // create Dto
-        var serverDatas = serverModels
-        .Select(serverModel => new ServerData
-        {
-            AccessPoints = serverModel.AccessPoints!.Select(x => x.ToDto(x.AccessPointGroup?.AccessPointGroupName)).ToArray(),
-            Server = serverModel.ToDto(
-                serverModel.AccessPointGroup?.AccessPointGroupName,
-                serverModel.ServerStatus?.ToDto(),
-                _appOptions.LostServerThreshold)
-        }).ToArray();
-
-        // update from cache
-        var cachedServers = await _agentCacheClient.GetServers(projectId);
-        foreach (var serverData in serverDatas)
-        {
-            var cachedServer = cachedServers.SingleOrDefault(x => x.ServerId == serverData.Server.ServerId);
-            if (cachedServer == null) continue;
-            serverData.Server.ServerStatus = cachedServer.ServerStatus;
-            serverData.Server.ServerState = cachedServer.ServerState;
-        }
-
-        return serverDatas;
+        var ret = await _serverService.List(projectId, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
+        return ret;
     }
 
     [HttpPost("{serverId:guid}/reconfigure")]

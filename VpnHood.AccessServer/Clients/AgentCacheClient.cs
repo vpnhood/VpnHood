@@ -13,13 +13,7 @@ public class AgentCacheClient : ApiClientBase
     public AgentCacheClient(IHttpClientFactory httpClientFactory) 
         : base(httpClientFactory.CreateClient(AppOptions.AgentHttpClientName))
     {
-    }
-
-    protected override JsonSerializerOptions CreateSerializerSettings()
-    {
-        var serializerSettings = base.CreateSerializerSettings();
-        serializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-        return serializerSettings;
+        JsonSerializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     }
 
     public Task InvalidateProject(Guid projectId)
@@ -55,6 +49,7 @@ public class AgentCacheClient : ApiClientBase
     {
         return HttpGetAsync<Session>($"/api/cache/sessions/{sessionId}");
     }
+
     public Task InvalidateSessions()
     {
         return HttpPostAsync("/api/cache/sessions/invalidate", null, null);

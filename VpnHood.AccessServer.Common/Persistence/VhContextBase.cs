@@ -285,6 +285,7 @@ public abstract class VhContextBase : DbContext
             entity.HasKey(e => e.AccessPointGroupId);
 
             entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupName })
+                .HasFilter($"{nameof(AccessPointGroupModel.AccessPointGroupName)} IS NOT NULL")
                 .IsUnique();
 
             entity.Property(e => e.AccessPointGroupName)

@@ -24,7 +24,7 @@ public class AccessPointGroupDom
 
     public async Task<ServerFarmData> Reload()
     {
-        var serverFarmData = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId);
+        var serverFarmData = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId, includeSummary: true);
         AccessPointGroup = serverFarmData.ServerFarm;
         return serverFarmData;
     }

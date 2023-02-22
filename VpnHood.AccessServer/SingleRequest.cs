@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer;
 
-internal class SingleRequest : IDisposable
+internal class SingleRequest : IDisposable //todo replace with asyncLock
 {
     private static readonly Dictionary<string, DateTime> Collection = new();
     private readonly string _name;

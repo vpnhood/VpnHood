@@ -13,7 +13,7 @@ public class AccessPointGroupModel
     public virtual ProjectModel? Project { get; set; }
     public virtual CertificateModel? Certificate { get; set; }
 
+    public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
     public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
     public virtual ICollection<ServerModel>? Servers { get; set; }
-
 }

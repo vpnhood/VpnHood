@@ -11,14 +11,9 @@ public class AgentSystemClient : ApiClientBase
     public AgentSystemClient(IHttpClientFactory httpClientFactory)
         : base(httpClientFactory.CreateClient(AppOptions.AgentHttpClientName))
     {
+        JsonSerializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     }
 
-    protected override JsonSerializerOptions CreateSerializerSettings()
-    {
-        var serializerSettings = base.CreateSerializerSettings();
-        serializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-        return serializerSettings;
-    }
     public Task<string> GetServerAgentAuthorization(Guid serverId)
     {
         return HttpGetAsync<string>($"/api/system/servers/{serverId}/agent-authorization");

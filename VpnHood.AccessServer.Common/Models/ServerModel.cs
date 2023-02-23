@@ -17,10 +17,11 @@ public class ServerModel
     public string? Description { get; set; }
     public Guid AuthorizationCode { get; set; }
     public byte[] Secret { get; set; } = default!;
-    public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
+    public Guid AccessPointGroupId { get; set; }
     public Guid ConfigCode { get; set; }
     public Guid? LastConfigCode { get; set; }
     public string? LastConfigError { get; set; }
+    public bool AutoConfigure { get; set; }
     public bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
@@ -54,7 +55,8 @@ public class ServerModel
             ServerId= ServerId,
             ServerName=ServerName,
             TotalMemory= TotalMemory,
-            Version= Version
+            Version= Version,
+            AutoConfigure = AutoConfigure
         };
     }
 }

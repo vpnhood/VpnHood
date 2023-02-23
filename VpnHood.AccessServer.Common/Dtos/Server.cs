@@ -14,6 +14,7 @@ public class Server
     public int? LogicalCoreCount { get; set; }
     public DateTime? ConfigureTime { get; set; }
     public DateTime CreatedTime { get; set; }
+    public bool AutoConfigure { get; set; }
     public bool IsEnabled { get; set; }
     public string? Description { get; set; }
     public string? LastConfigError { get; set; }

@@ -36,23 +36,23 @@ public class AccessTest
     [TestMethod]
     public async Task Get()
     {
-        var sample = await AccessPointGroupDom.Create();
-        var sampleAccessToken = await sample.CreateAccessToken(true);
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken(true);
 
-        var sessionDom = await sampleAccessToken.CreateSession();
+        var sessionDom = await accessTokenDom.CreateSession();
         await sessionDom.AddUsage(20, 10);
-        await sample.TestInit.FlushCache();
+        await farm.TestInit.FlushCache();
 
-        var accessDatas = await sample.TestInit.AccessesClient.ListAsync(sample.TestInit.ProjectId, sampleAccessToken.AccessTokenId);
-        var accessData = accessDatas.Single(x => x.Access.AccessTokenId == sampleAccessToken.AccessTokenId);
+        var accessDatas = await farm.TestInit.AccessesClient.ListAsync(farm.TestInit.ProjectId, accessTokenDom.AccessTokenId);
+        var accessData = accessDatas.Single(x => x.Access.AccessTokenId == accessTokenDom.AccessTokenId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
 
         // check single get
-        accessData = await sample.TestInit.AccessesClient.GetAsync(sample.TestInit.ProjectId, accessData.Access.AccessId);
+        accessData = await farm.TestInit.AccessesClient.GetAsync(farm.TestInit.ProjectId, accessData.Access.AccessId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
-        Assert.AreEqual(sampleAccessToken.AccessTokenId, accessData.Access.AccessTokenId);
+        Assert.AreEqual(accessTokenDom.AccessTokenId, accessData.Access.AccessTokenId);
         Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientId, accessData.Device?.ClientId);
     }
 

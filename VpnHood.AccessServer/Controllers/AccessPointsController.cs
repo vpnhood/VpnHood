@@ -50,8 +50,8 @@ public class AccessPointsController : SuperController<AccessPointsController>
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == createParams.ServerId);
 
         // Make sure ServerFarm is manual
-        if (server.AccessPointGroupId != null)
-            throw new InvalidOperationException("To configure access points, you must set the server's farm to manual.");
+        if (server.AutoConfigure)
+            throw new InvalidOperationException($"To configure access points, you must set the server's {nameof(server.AutoConfigure)} to false.");
 
         // add the access point
         var ret = new AccessPointModel
@@ -124,8 +124,8 @@ public class AccessPointsController : SuperController<AccessPointsController>
             .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
         // Make sure ServerFarm is manual
-        if (accessPoint.Server!.AccessPointGroupId != null)
-            throw new InvalidOperationException("To configure access points, you must set the server's farm to manual.");
+        if (accessPoint.Server!.AutoConfigure)
+            throw new InvalidOperationException($"To configure access points, you must set the server's {nameof(Dtos.Server.AutoConfigure)} to false.");
 
         // update
         if (updateParams.IpAddress != null) accessPoint.IpAddress = updateParams.IpAddress;
@@ -162,8 +162,8 @@ public class AccessPointsController : SuperController<AccessPointsController>
             .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
         // Make sure server farm is manual
-        if (accessPoint.Server!.AccessPointGroupId != null)
-            throw new InvalidOperationException("To configure access points, you must set the server's farm to manual.");
+        if (accessPoint.Server!.AutoConfigure)
+            throw new InvalidOperationException($"To configure access points, you must set the server's {nameof(Dtos.Server.AutoConfigure)} to false.");
 
         // update the access point
         VhContext.AccessPoints.Remove(accessPoint);

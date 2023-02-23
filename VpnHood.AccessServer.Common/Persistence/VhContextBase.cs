@@ -185,6 +185,11 @@ public abstract class VhContextBase : DbContext
             entity.Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
+            entity.HasOne(e => e.Project)
+                .WithMany(d => d.Servers)
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             entity.Ignore(e => e.ServerStatus);
         });
 

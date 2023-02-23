@@ -26,10 +26,10 @@ public class ServerDom
         ServerInfo = serverInfo;
     }
 
-    public static async Task<ServerDom> Create(TestInit testInit, Guid? accessPointGroupId, bool configure = true)
+    public static async Task<ServerDom> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true)
     {
         var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId,
-            new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
+            new ServerCreateParams { AccessPointGroupId = accessPointGroupId});
 
         var myServer = new ServerDom(
             testInit: testInit,
@@ -42,6 +42,11 @@ public class ServerDom
             await myServer.Configure();
 
         return myServer;
+    }
+
+    public async Task Update(ServerUpdateParams updateParams)
+    {
+        await TestInit.ServersClient.UpdateAsync(TestInit.ProjectId, ServerId, updateParams);
     }
 
     public async Task Configure()

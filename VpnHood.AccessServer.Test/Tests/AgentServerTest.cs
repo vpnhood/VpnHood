@@ -13,7 +13,6 @@ using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
-using VpnHood.Server.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -158,8 +157,7 @@ public class AgentServerTest : BaseTest
     {
         // create serverInfo
         var serverClient = TestInit1.ServersClient;
-        var server =
-            await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
         var accessPointClient = TestInit1.AccessPointsClient;
         var accessPoint1 = await accessPointClient.CreateAsync(TestInit1.ProjectId,
@@ -405,42 +403,41 @@ public class AgentServerTest : BaseTest
         Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
     }
 
+    [TestMethod]
+    public async Task Reconfig_by_changing_farm()
+    {
+        var farm1 = await AccessPointGroupDom.Create();
+        var farm2 = await AccessPointGroupDom.Create();
+
+        var oldCode = farm1.DefaultServer.ServerInfo.Status.ConfigCode;
+        await farm1.DefaultServer.Update(new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId } });
+
+        var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
+        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
+            "Updating AccessPointGroupId should lead to a new ConfigCode");
+    }
+
 
     [TestMethod]
     public async Task Reconfig()
     {
-        var serverClient = TestInit1.ServersClient;
-        var agentClient = TestInit1.CreateAgentClient();
-
-        var serverId = TestInit1.ServerId1;
-        var oldCode = TestInit1.ServerInfo1.Status.ConfigCode;
-
-        //-----------
-        // check
-        //-----------
-        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId,
-            new ServerUpdateParams
-            { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
-        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId,
-            new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
-        var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
-        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
-            "Updating AccessPointGroupId should lead to a new ConfigCode");
-        oldCode = serverCommand.ConfigCode;
+        var farm = await AccessPointGroupDom.Create();
+        var testInit = farm.TestInit;
+        var serverDom = farm.DefaultServer;
+        var oldCode = testInit.ServerInfo1.Status.ConfigCode;
 
         //-----------
         // check
         //-----------
-        var accessPointClient = TestInit1.AccessPointsClient;
-        var accessPoint = await accessPointClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = serverId,
-                IpAddress = await TestInit1.NewIpV4String(),
-                AccessPointGroupId = TestInit1.AccessPointGroupId2,
-                IsListen = true
-            });
-        serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
+        var accessPointClient = testInit.AccessPointsClient;
+        var accessPoint = await serverDom.AddAccessPoint(new AccessPointCreateParams
+        {
+            IpAddress = await testInit.NewIpV4String(),
+            AccessPointGroupId = farm.AccessPointGroupId,
+            IsListen = true
+        });
+
+        var serverCommand = await testInit.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
             "add an AccessPoint should lead to a new ConfigCode.");
         oldCode = serverCommand.ConfigCode;
@@ -448,10 +445,10 @@ public class AgentServerTest : BaseTest
         //-----------
         // check
         //-----------
-        await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
+        await accessPointClient.UpdateAsync(testInit.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { IsListen = new PatchOfBoolean { Value = !accessPoint.IsListen } });
         var serverStatus = new ServerStatus { ConfigCode = oldCode };
-        serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(serverStatus);
+        serverCommand = await testInit.AgentClient1.Server_UpdateStatus(serverStatus);
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
             "updating AccessPoint should lead to a new ConfigCode.");
         oldCode = serverCommand.ConfigCode;
@@ -459,8 +456,8 @@ public class AgentServerTest : BaseTest
         //-----------
         // check
         //-----------
-        await agentClient.Server_Configure(await TestInit1.NewServerInfo());
-        var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverId);
+        await serverDom.AgentClient.Server_Configure(await testInit.NewServerInfo());
+        var serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverStatus.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be set by Server_UpdateStatus.");
 
@@ -476,8 +473,8 @@ public class AgentServerTest : BaseTest
         // check
         //-----------
         serverStatus = new ServerStatus { ConfigCode = Guid.NewGuid().ToString() };
-        await TestInit1.AgentClient1.Server_UpdateStatus(serverStatus);
-        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverId);
+        await testInit.AgentClient1.Server_UpdateStatus(serverStatus);
+        serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverStatus.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be changed even by incorrect ConfigCode");
         Assert.AreEqual(oldCode, serverModel.ConfigCode.ToString(),
@@ -486,17 +483,17 @@ public class AgentServerTest : BaseTest
         //-----------
         // check
         //-----------
-        await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
-        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverId);
+        await testInit.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
+        serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverModel.ConfigCode, serverModel.LastConfigCode,
             "LastConfigCode should be changed correct ConfigCode");
 
         //-----------
         // check Reconfig After Config finish
         //-----------
-        await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
+        await accessPointClient.UpdateAsync(testInit.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { UdpPort = new PatchOfInteger { Value = 9090 } });
-        var serverData = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, serverId);
+        var serverData = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom.ServerId);
         Assert.AreEqual(ServerState.Configuring, serverData.Server.ServerState);
     }
 

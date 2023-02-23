@@ -4848,10 +4848,13 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Server> CreateAsync(System.Guid projectId, ServerCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Server> CreateAsync(System.Guid projectId, ServerCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
+
+            if (createParams == null)
+                throw new System.ArgumentNullException("createParams");
 
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/projects/{projectId}/servers");
@@ -7365,6 +7368,11 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("autoConfigure")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool AutoConfigure { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
@@ -7481,8 +7489,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
 
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.Guid? AccessPointGroupId { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid AccessPointGroupId { get; set; } = default!;
 
     }
 
@@ -7504,6 +7513,11 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfBoolean? GenerateNewSecret { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("autoConfigure")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfBoolean? AutoConfigure { get; set; } = default!;
 
     }
 

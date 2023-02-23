@@ -202,30 +202,45 @@ public class AgentClientSessionTest : BaseTest
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var accessTokenClient = TestInit1.AccessTokensClient;
+        var farm1 = await AccessPointGroupDom.Create();
+        var serverDom11 = await farm1.AddNewServer();
+        var serverDom12 = await farm1.AddNewServer();
+        var accessTokenDom11 = await farm1.CreateAccessToken(true);
 
-        // create first public token
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+        var farm2 = await AccessPointGroupDom.Create();
+        var serverDom21 = await farm2.AddNewServer();
+        var serverDom22 = await farm2.AddNewServer();
+        var accessTokenDom21 = await farm2.CreateAccessToken(true);
 
-        var agentClient = TestInit1.CreateAgentClient(TestInit1.ServerId2);
 
-        //-----------
-        // check: access should grant to public token 1 by another public endpoint
-        //-----------
-        var sessionResponseEx =
-            await agentClient.Session_Create(
-                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
 
         //-----------
-        // check: access should not grant to public token 1 by private server endpoint
+        // check: access should grant to public token by any server
         //-----------
-        sessionResponseEx =
-            await agentClient.Session_Create(
-                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
-        Assert.AreEqual(SessionErrorCode.AccessError, sessionResponseEx.ErrorCode);
-        Assert.IsTrue(sessionResponseEx.ErrorMessage?.Contains("Invalid EndPoint", StringComparison.OrdinalIgnoreCase));
+        var session = await serverDom11.AddSession(accessTokenDom11.AccessToken);
+        Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
+
+        session = await serverDom12.AddSession(accessTokenDom11.AccessToken);
+        Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
+
+        session = await serverDom21.AddSession(accessTokenDom21.AccessToken);
+        Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
+
+        session = await serverDom22.AddSession(accessTokenDom21.AccessToken);
+        Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
+
+        //-----------
+        // check: access should not grant by another farm token
+        //-----------
+        try
+        {
+            session = await serverDom21.AddSession(accessTokenDom11.AccessToken);
+            Assert.Fail("NotExistsException was Expected");
+        }
+        catch (ApiException e)
+        {
+            Assert.AreEqual(nameof(NotExistsException), e.ExceptionTypeName);
+        }
     }
 
     [TestMethod]

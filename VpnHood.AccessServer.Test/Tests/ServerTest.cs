@@ -34,6 +34,7 @@ public class ServerTest : BaseTest
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
+        var farm2 = await AccessPointGroupDom.Create(testInit);
 
         //-----------
         // check: Create
@@ -80,16 +81,18 @@ public class ServerTest : BaseTest
         var server1CUpdateParam = new ServerUpdateParams
         {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
-            AccessPointGroupId = new PatchOfNullableGuid { Value = testInit.AccessPointGroupId2 },
+            AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId },
+            AutoConfigure = new PatchOfBoolean{Value = !server1A.AutoConfigure },
             GenerateNewSecret = new PatchOfBoolean { Value = false }
         };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         var server1C = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
         var install1C = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+        Assert.AreEqual(server1CUpdateParam.AutoConfigure.Value, server1C.Server.AutoConfigure);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
         Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
-        Assert.IsTrue(server1C.AccessPoints.All(x => x.AccessPointGroupId == testInit.AccessPointGroupId2));
+        Assert.IsTrue(server1C.AccessPoints.All(x => x.AccessPointGroupId == farm2.AccessPointGroupId));
 
         //-----------
         // check: Update (change Secret)

@@ -37,7 +37,7 @@ public class ServersController : SuperController<ServersController>
         IOptions<AppOptions> appOptions,
         MultilevelAuthService multilevelAuthService,
         AgentCacheClient agentCacheClient,
-        AgentSystemClient agentSystemClient, UsageReportService usageReportService, 
+        AgentSystemClient agentSystemClient, UsageReportService usageReportService,
         ServerService serverService)
         : base(logger, vhContext, multilevelAuthService)
     {
@@ -49,10 +49,9 @@ public class ServersController : SuperController<ServersController>
     }
 
     [HttpPost]
-    public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams? createParams)
+    public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams createParams)
     {
         await VerifyUserPermission(projectId, Permissions.ServerWrite);
-        createParams ??= new ServerCreateParams();
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
@@ -61,9 +60,7 @@ public class ServersController : SuperController<ServersController>
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
         // validate
-        var accessPointGroup = createParams.AccessPointGroupId != null
-            ? await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
-            : null;
+        var accessPointGroup = await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
         // Resolve Name Template
         createParams.ServerName = createParams.ServerName?.Trim();
@@ -86,15 +83,16 @@ public class ServersController : SuperController<ServersController>
             IsEnabled = true,
             Secret = Util.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
-            AccessPointGroupId = accessPointGroup?.AccessPointGroupId,
+            AccessPointGroupId = accessPointGroup.AccessPointGroupId,
             AccessPoints = new List<AccessPointModel>(),
-            ConfigCode = Guid.NewGuid()
+            ConfigCode = Guid.NewGuid(),
+            AutoConfigure = true
         };
         await VhContext.Servers.AddAsync(serverModel);
         await VhContext.SaveChangesAsync();
 
         var server = serverModel.ToDto(
-            accessPointGroup?.AccessPointGroupName,
+            accessPointGroup.AccessPointGroupName,
             null, _appOptions.LostServerThreshold);
         return server;
     }
@@ -112,29 +110,30 @@ public class ServersController : SuperController<ServersController>
 
         if (updateParams.AccessPointGroupId != null && server.AccessPointGroupId != updateParams.AccessPointGroupId)
         {
-            // make sure new access group belong to this server
-            var accessPointGroup = updateParams.AccessPointGroupId.Value != null
-                ? await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId)
-                : null;
+            // make sure new access group belong to this account
+            var accessPointGroup = await VhContext.AccessPointGroups
+                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
 
             // update server accessPointGroup and all AccessPoints accessPointGroup
             server.AccessPointGroup = accessPointGroup;
-            server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
-            if (accessPointGroup != null)
+            server.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
+            foreach (var accessPoint in server.AccessPoints!)
             {
-                foreach (var accessPoint in server.AccessPoints!)
-                {
-                    accessPoint.AccessPointGroup = accessPointGroup;
-                    accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
-                }
+                accessPoint.AccessPointGroup = accessPointGroup;
+                accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
             }
 
             // Schedule server reconfig
             server.ConfigCode = Guid.NewGuid();
         }
 
-        if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
+        if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
+        if (updateParams.AutoConfigure != null && updateParams.AutoConfigure != server.AutoConfigure)
+        {
+            server.AutoConfigure = updateParams.AutoConfigure;
+            server.ConfigCode = Guid.NewGuid();
+        }
 
         await VhContext.SaveChangesAsync();
         var serverCache = await _agentCacheClient.GetServer(server.ServerId);
@@ -163,7 +162,7 @@ public class ServersController : SuperController<ServersController>
 
         var server = await VhContext.Servers
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .SingleAsync(server=> server.ServerId == serverId);
+            .SingleAsync(server => server.ServerId == serverId);
 
         server.IsDeleted = true;
         await VhContext.SaveChangesAsync();

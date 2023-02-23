@@ -18,11 +18,10 @@ public class AccessPointTest : BaseTest
     {
         var testInit = await TestInit.Create();
         var farm = await AccessPointGroupDom.Create(testInit);
+        var serverDom = farm.DefaultServer;
+        await serverDom.Update(new ServerUpdateParams { AutoConfigure = new PatchOfBoolean { Value = false } });
 
-        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams
-        {
-            AccessPointGroupId = null
-        });
+        var server = serverDom.Server;
 
         var accessPointClient = testInit.AccessPointsClient;
         var publicEndPoint1 = await testInit.NewEndPoint();
@@ -90,7 +89,7 @@ public class AccessPointTest : BaseTest
 
         //Create a server
         var serverClient = testInit.ServersClient;
-        var server = await serverClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+        var server = await serverClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = farm.AccessPointGroupId });
         var serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == server.ServerId);
 
         var serverConfigCode = serverModel.ConfigCode;
@@ -121,7 +120,7 @@ public class AccessPointTest : BaseTest
         //-----------
         await serverClient.UpdateAsync(testInit.ProjectId, server.ServerId, new ServerUpdateParams
         {
-            AccessPointGroupId = new PatchOfNullableGuid { Value = farm.AccessPointGroupId }
+            AutoConfigure = new PatchOfBoolean { Value = true }
         });
         serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == server.ServerId);
         Assert.AreNotEqual(serverConfigCode, serverModel.ConfigCode);

@@ -165,7 +165,7 @@ public class AgentService
         SetServerStatus(server, serverInfo.Status, true);
 
         // Update AccessPoints
-        if (server.AccessPointGroupId != null)
+        if (server.AutoConfigure)
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         // update db if lastError has been changed; prevent bombing the db
@@ -234,9 +234,6 @@ public class AgentService
 
     private static async Task UpdateServerAccessPoints(VhContext vhContext, ServerModel server, ServerInfo serverInfo)
     {
-        if (server.AccessPointGroupId == null)
-            throw new InvalidOperationException($"{nameof(server.AccessPointGroupId)} is not set!");
-
         // find current tokenAccessPoints in AccessPointGroup
         var tokenAccessPoints = await vhContext.AccessPoints
             .Where(x =>
@@ -254,7 +251,7 @@ public class AgentService
              {
                  AccessPointId = Guid.NewGuid(),
                  ServerId = server.ServerId,
-                 AccessPointGroupId = server.AccessPointGroupId.Value,
+                 AccessPointGroupId = server.AccessPointGroupId,
                  AccessPointMode = AccessPointMode.Private,
                  IsListen = true,
                  IpAddress = ipAddress.ToString(),
@@ -269,7 +266,7 @@ public class AgentService
             {
                 AccessPointId = Guid.NewGuid(),
                 ServerId = server.ServerId,
-                AccessPointGroupId = server.AccessPointGroupId.Value,
+                AccessPointGroupId = server.AccessPointGroupId,
                 AccessPointMode = tokenAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(ipAddress))
                     ? AccessPointMode.PublicInToken
                     : AccessPointMode.Public, // prefer last value

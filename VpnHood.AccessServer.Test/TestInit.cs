@@ -66,7 +66,6 @@ public class TestInit : IDisposable, IHttpClientFactory
     public UserModel User2 { get; } = NewUser("User2");
     public Guid ProjectId { get; private set; }
     public Guid ServerId1 { get; private set; }
-    public Guid ServerId2 { get; private set; }
     public string PublicServerDns { get; } = $"publicfoo.{Guid.NewGuid()}.com";
     public string PrivateServerDns { get; } = $"privatefoo.{Guid.NewGuid()}.com";
     public IPEndPoint HostEndPointG1S1 { get; private set; } = null!; //in token
@@ -77,7 +76,6 @@ public class TestInit : IDisposable, IHttpClientFactory
     public IPAddress ClientIp2 { get; private set; } = null!;
     public AccessToken AccessToken1 { get; private set; } = null!;
     public Guid AccessPointGroupId1 { get; private set; }
-    public Guid AccessPointGroupId2 { get; private set; }
     public ServerInfo ServerInfo1 { get; private set; } = default!;
     public ServerInfo ServerInfo2 { get; private set; } = default!;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -273,19 +271,17 @@ public class TestInit : IDisposable, IHttpClientFactory
         var certificate1 = await CertificatesClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
         AccessPointGroupId1 = (await AccessPointGroupsClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
 
-        var certificate2 = await CertificatesClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
-        AccessPointGroupId2 = (await AccessPointGroupsClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
-
         if (createServers)
         {
-            var server1 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams());
-            var server2 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams());
+            var server1 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams { AccessPointGroupId = AccessPointGroupId1 });
+            await ServersClient.UpdateAsync(project.ProjectId, server1.ServerId, new ServerUpdateParams { AutoConfigure = new PatchOfBoolean { Value = false } });
+
+            var server2 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams{ AccessPointGroupId = AccessPointGroupId1 });
+            await ServersClient.UpdateAsync(project.ProjectId, server2.ServerId, new ServerUpdateParams { AutoConfigure = new PatchOfBoolean { Value = false } });
+
             ServerId1 = server1.ServerId;
-            ServerId2 = server2.ServerId;
             await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
-            await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, AccessPointMode.Public);
             await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
-            await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
             // configure servers
             AgentClient1 = await CreateAgentClient(server1.ServerId, ServerInfo1);
@@ -326,7 +322,7 @@ public class TestInit : IDisposable, IHttpClientFactory
             {
                 Secret = Util.GenerateSessionKey(),
                 AccessTokenName = $"Access1_{Guid.NewGuid()}",
-                AccessPointGroupId = AccessPointGroupId2,
+                AccessPointGroupId = AccessPointGroupId1,
                 IsPublic = true
             });
         fillData.AccessTokens.Add(accessToken);

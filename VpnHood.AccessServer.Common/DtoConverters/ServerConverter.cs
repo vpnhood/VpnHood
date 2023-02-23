@@ -29,7 +29,8 @@ public static class ServerConverter
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
             LogicalCoreCount = model.LogicalCoreCount,
-            Version = model.Version
+            Version = model.Version,
+            AutoConfigure = model.AutoConfigure
         };
     }
 

@@ -14,7 +14,8 @@ public class SampleFarm : AccessPointGroupDom
         AccessToken publicToken1,
         AccessToken publicToken2,
         AccessToken privateToken1,
-        AccessToken privateToken2) : base(testInit, accessPointGroup)
+        AccessToken privateToken2) 
+        : base(testInit, accessPointGroup)
     {
         Server1 = server1;
         Server2 = server2;
@@ -67,8 +68,8 @@ public class SampleFarm : AccessPointGroupDom
             );
 
         // create 2 sessions per each token
-        var sessionTasks1 = accessTokens.Select(x => sampleFarm.Server1.AddSession(x));
-        var sessionTasks2 = accessTokens.Select(x => sampleFarm.Server2.AddSession(x));
+        var sessionTasks1 = accessTokens.Select(x => sampleFarm.Server1.CreateSession(x));
+        var sessionTasks2 = accessTokens.Select(x => sampleFarm.Server2.CreateSession(x));
         await Task.WhenAll(sessionTasks1.Concat(sessionTasks2));
         return sampleFarm;
     }

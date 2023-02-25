@@ -1,6 +1,4 @@
-﻿using VpnHood.Server.Configurations;
-
-namespace VpnHood.AccessServer.Dtos;
+﻿namespace VpnHood.AccessServer.Dtos;
 
 public class ServerProfileCreateParams
 {

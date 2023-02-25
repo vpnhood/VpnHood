@@ -25,17 +25,10 @@ public class AgentServerTest : BaseTest
             IPEndPoint? serverEndPoint = null)
         {
             ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
-            Server = testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams()).Result;
-            testInit.AccessPointsClient.CreateAsync(testInit.ProjectId,
-                new AccessPointCreateParams
-                {
-                    ServerId = Server.ServerId,
-                    IpAddress = ServerEndPoint.Address.ToString(),
-                    AccessPointGroupId = groupId,
-                    AccessPointMode = AccessPointMode.PublicInToken,
-                    TcpPort = ServerEndPoint.Port,
-                    IsListen = true
-                }).Wait();
+            Server = testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams()
+            {
+                AccessPoints = new[] { testInit.NewAccessPoint(ServerEndPoint).Result }
+            }).Result;
             AgentClient = testInit.CreateAgentClient(Server.ServerId);
             ServerStatus.SessionCount = 0;
 
@@ -60,30 +53,29 @@ public class AgentServerTest : BaseTest
     }
 
     // return the only PublicInToken AccessPoint
-    private async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
+    private async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(ServerDom serverDom)
     {
-        var accessPointClient = TestInit1.AccessPointsClient;
-
         // create serverInfo
-        var serverInfo = await TestInit1.NewServerInfo();
         var publicIp = await TestInit1.NewIpV6();
         var privateIp = await TestInit1.NewIpV4();
-        serverInfo.PrivateIpAddresses = new[] { publicIp, privateIp, await TestInit1.NewIpV6(), privateIp };
-        serverInfo.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
+        serverDom.ServerInfo.PrivateIpAddresses = new[] { publicIp, privateIp, await TestInit1.NewIpV6(), privateIp };
+        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
 
         //Configure
-        var agentClient = TestInit1.CreateAgentClient(server.ServerId);
-        var serverConfig = await agentClient.Server_Configure(serverInfo);
-        Assert.AreEqual(TestInit1.AgentOptions.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
-        Assert.AreEqual(serverConfig.TcpEndPointsValue.Length, serverConfig.TcpEndPointsValue.Distinct().Count(),
+        await serverDom.Configure();
+        Assert.AreEqual(TestInit1.AgentOptions.ServerUpdateStatusInterval, serverDom.ServerConfig.UpdateStatusInterval);
+        Assert.AreEqual(serverDom.ServerConfig.TcpEndPointsValue.Length, serverDom.ServerConfig.TcpEndPointsValue.Distinct().Count(),
             "Duplicate listener!");
 
         //-----------
         // check: Configure with AutoUpdate is true (ServerModel.AccessPointGroupId is set)
         //-----------
-        var accessPoints = (await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId)).ToArray();
-        var totalServerInfoIpAddress =
-            serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
+        await serverDom.Reload();
+        var server = serverDom.Server;
+        var accessPoints = serverDom.Server.AccessPoints.ToArray();
+        var serverInfo = serverDom.ServerInfo;
+        var serverConfig = serverDom.ServerConfig;
+        var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
         Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length);
 
         // private[0]
@@ -94,7 +86,6 @@ public class AgentServerTest : BaseTest
             "shared publicIp and privateIp must be see as publicIp");
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
-        Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -104,7 +95,6 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
-        Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen);
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -114,7 +104,6 @@ public class AgentServerTest : BaseTest
         Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
-        Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen);
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -124,7 +113,6 @@ public class AgentServerTest : BaseTest
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
-        Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -134,7 +122,6 @@ public class AgentServerTest : BaseTest
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
-        Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsFalse(accessPoint.IsListen);
         Assert.IsFalse(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -144,7 +131,6 @@ public class AgentServerTest : BaseTest
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
-        Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsFalse(accessPoint.IsListen);
         Assert.IsFalse(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -152,84 +138,16 @@ public class AgentServerTest : BaseTest
         return accessPoints.SingleOrDefault(x => x.AccessPointMode == AccessPointMode.PublicInToken);
     }
 
-    [TestMethod]
-    public async Task Configure_off_auto_update_accessPoints()
-    {
-        // create serverInfo
-        var serverClient = TestInit1.ServersClient;
-        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-        var accessPointClient = TestInit1.AccessPointsClient;
-        var accessPoint1 = await accessPointClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = server.ServerId,
-                IpAddress = await TestInit1.NewIpV4String(),
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                AccessPointMode = AccessPointMode.PublicInToken,
-                IsListen = true,
-                TcpPort = 4848,
-                UdpPort = 150
-            });
-
-        var accessPoint2 = await accessPointClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = server.ServerId,
-                IpAddress = await TestInit1.NewIpV4String(),
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                AccessPointMode = AccessPointMode.Private,
-                IsListen = true,
-                TcpPort = 5010,
-                UdpPort = 0
-            });
-
-        var serverInfo1 = await TestInit1.NewServerInfo();
-        var publicIp = await TestInit1.NewIpV6();
-        serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
-        serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
-
-        // Configure
-        var agentClient1 = TestInit1.CreateAgentClient(server.ServerId);
-        await agentClient1.Server_Configure(serverInfo1);
-
-        // Test that accessPoints have not been changed
-        var accessPoints = await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId);
-        Assert.AreEqual(2, accessPoints.Count);
-
-        // AccessPoint1
-        var expectedAccessPoint = accessPoint1;
-        var actualAccessPoint = accessPoints.Single(x => x.IpAddress == expectedAccessPoint.IpAddress);
-        Assert.AreEqual(expectedAccessPoint.AccessPointMode, actualAccessPoint.AccessPointMode);
-        Assert.AreEqual(expectedAccessPoint.TcpPort, actualAccessPoint.TcpPort);
-        Assert.AreEqual(expectedAccessPoint.UdpPort, actualAccessPoint.UdpPort);
-        Assert.AreEqual(expectedAccessPoint.AccessPointGroupId, actualAccessPoint.AccessPointGroupId);
-        Assert.AreEqual(expectedAccessPoint.IsListen, actualAccessPoint.IsListen);
-
-        // AccessPoint2
-        expectedAccessPoint = accessPoint2;
-        actualAccessPoint = accessPoints.Single(x => x.IpAddress == expectedAccessPoint.IpAddress);
-        Assert.AreEqual(expectedAccessPoint.AccessPointMode, actualAccessPoint.AccessPointMode);
-        Assert.AreEqual(expectedAccessPoint.TcpPort, actualAccessPoint.TcpPort);
-        Assert.AreEqual(expectedAccessPoint.UdpPort, actualAccessPoint.UdpPort);
-        Assert.AreEqual(expectedAccessPoint.AccessPointGroupId, actualAccessPoint.AccessPointGroupId);
-        Assert.AreEqual(expectedAccessPoint.IsListen, actualAccessPoint.IsListen);
-    }
 
     [TestMethod]
     public async Task Configure_on_auto_update_accessPoints()
     {
         // create serverInfo
-        var accessPointGroupClient = TestInit1.AccessPointGroupsClient;
-
-        var accessPointGroup1 =
-            await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        var serverClient = TestInit1.ServersClient;
-        var server = await serverClient.CreateAsync(TestInit1.ProjectId,
-            new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
-
-        var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(server);
-        var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
+        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var serverDom = await farm.AddNewServer();
+        var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(serverDom);
+        var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(serverDom);
 
         // --------
         // Check: The only PublicInToken should be changed by second configure
@@ -243,37 +161,32 @@ public class AgentServerTest : BaseTest
         // --------
 
         // create serverInfo
-        var serverInfo = await TestInit1.NewServerInfo();
-        serverInfo.PrivateIpAddresses = new[] { await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
-        serverInfo.PublicIpAddresses = new[]
+        serverDom.ServerInfo.PrivateIpAddresses = new[] { await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
+        serverDom.ServerInfo.PublicIpAddresses = new[]
         {
             await TestInit1.NewIpV4(), await TestInit1.NewIpV6(), IPAddress.Parse(publicInTokenAccessPoint2.IpAddress)
         };
 
         //Configure
-        var agentClient = TestInit1.CreateAgentClient(server.ServerId);
-        await agentClient.Server_Configure(serverInfo);
-        var accessPointClient = TestInit1.AccessPointsClient;
-        var accessPoints = await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId);
+        await serverDom.Configure();
+        await serverDom.Reload();
+        var accessPoints = serverDom.Server.AccessPoints.ToArray();
         Assert.AreEqual(publicInTokenAccessPoint2.IpAddress,
             accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken).IpAddress);
 
         // --------
         // Check: another server with same group should not have any PublicInTokenAccess
         // --------
-        server = await serverClient.CreateAsync(TestInit1.ProjectId,
-            new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
-        var publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
+        serverDom = await farm.AddNewServer();
+        var publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(serverDom);
         Assert.IsNull(publicInTokenAccessPoint);
 
         // --------
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
-        var accessPointGroup2 =
-            await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        server = await serverClient.CreateAsync(TestInit1.ProjectId,
-            new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
-        publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
+        var farm2 = await AccessPointGroupDom.Create();
+        serverDom = await farm2.AddNewServer();
+        publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(serverDom);
         Assert.IsNotNull(publicInTokenAccessPoint);
     }
 
@@ -336,64 +249,61 @@ public class AgentServerTest : BaseTest
     [TestMethod]
     public async Task Configure()
     {
-        // create serverInfo
-        var serverClient = TestInit1.ServersClient;
-        var serverId = (await serverClient.CreateAsync(TestInit1.ProjectId,
-            new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
+        var farm = await AccessPointGroupDom.Create();
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
 
         // create serverInfo
-        var agentClient1 = TestInit1.CreateAgentClient(serverId);
-        var serverInfo1 = await TestInit1.NewServerInfo();
         var publicIp = await TestInit1.NewIpV6();
-        serverInfo1.PrivateIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
-        serverInfo1.PublicIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
+        var serverInfo = await TestInit1.NewServerInfo();
+        farm.DefaultServer.ServerInfo = serverInfo;
+        serverInfo.PrivateIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
+        serverInfo.PublicIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
 
         //Configure
-        await agentClient1.Server_Configure(serverInfo1);
-        await TestInit1.Sync();
-        var serverConfig = await agentClient1.Server_Configure(serverInfo1); // last status will not be synced
+        await farm.DefaultServer.Configure(false);
+        await farm.TestInit.Sync();
+        await farm.DefaultServer.Configure(false); // last status will not be synced so try again
         await TestInit1.Sync();
 
-        var serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
-        var server = serverData.Server;
-        var serverStatusEx = serverData.Server.ServerStatus;
+        await farm.DefaultServer.Reload();
+        var server = farm.DefaultServer.Server;
+        var serverStatusEx = farm.DefaultServer.Server.ServerStatus;
 
-        Assert.AreEqual(serverId, server.ServerId);
-        Assert.AreEqual(serverInfo1.Version.ToString(), server.Version);
-        Assert.AreEqual(serverInfo1.EnvironmentVersion.ToString(), server.EnvironmentVersion ?? "0.0.0");
-        Assert.AreEqual(serverInfo1.OsInfo, server.OsInfo);
-        Assert.AreEqual(serverInfo1.MachineName, server.MachineName);
-        Assert.AreEqual(serverInfo1.TotalMemory, server.TotalMemory);
-        Assert.AreEqual(serverInfo1.LogicalCoreCount, server.LogicalCoreCount);
+        Assert.AreEqual(serverInfo.Version.ToString(), server.Version);
+        Assert.AreEqual(serverInfo.EnvironmentVersion.ToString(), server.EnvironmentVersion ?? "0.0.0");
+        Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
+        Assert.AreEqual(serverInfo.MachineName, server.MachineName);
+        Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
+        Assert.AreEqual(serverInfo.LogicalCoreCount, server.LogicalCoreCount);
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.IsNotNull(serverStatusEx);
 
-        Assert.AreEqual(serverInfo1.Status.AvailableMemory, serverStatusEx.AvailableMemory);
+        Assert.AreEqual(serverInfo.Status.AvailableMemory, serverStatusEx.AvailableMemory);
         Assert.AreEqual(ServerState.Configuring, server.ServerState);
-        Assert.AreEqual(serverInfo1.Status.TcpConnectionCount, serverStatusEx.TcpConnectionCount);
-        Assert.AreEqual(serverInfo1.Status.UdpConnectionCount, serverStatusEx.UdpConnectionCount);
-        Assert.AreEqual(serverInfo1.Status.SessionCount, serverStatusEx.SessionCount);
-        Assert.AreEqual(serverInfo1.Status.ThreadCount, serverStatusEx.ThreadCount);
-        Assert.AreEqual(serverInfo1.Status.CpuUsage, serverStatusEx.CpuUsage);
-        Assert.AreEqual(serverInfo1.Status.TunnelSendSpeed, serverStatusEx.TunnelSendSpeed);
-        Assert.AreEqual(serverInfo1.Status.TunnelReceiveSpeed, serverStatusEx.TunnelReceiveSpeed);
+        Assert.AreEqual(serverInfo.Status.TcpConnectionCount, serverStatusEx.TcpConnectionCount);
+        Assert.AreEqual(serverInfo.Status.UdpConnectionCount, serverStatusEx.UdpConnectionCount);
+        Assert.AreEqual(serverInfo.Status.SessionCount, serverStatusEx.SessionCount);
+        Assert.AreEqual(serverInfo.Status.ThreadCount, serverStatusEx.ThreadCount);
+        Assert.AreEqual(serverInfo.Status.CpuUsage, serverStatusEx.CpuUsage);
+        Assert.AreEqual(serverInfo.Status.TunnelSendSpeed, serverStatusEx.TunnelSendSpeed);
+        Assert.AreEqual(serverInfo.Status.TunnelReceiveSpeed, serverStatusEx.TunnelReceiveSpeed);
         Assert.IsTrue(dateTime <= serverStatusEx.CreatedTime);
 
         //-----------
         // check: Check ServerStatus log is inserted
         //-----------
-        var serverStatus = TestInit.NewServerStatus(serverConfig.ConfigCode);
+        var serverStatus = TestInit.NewServerStatus(null);
+        await farm.DefaultServer.UpdateStatus(serverStatus);
 
         dateTime = DateTime.UtcNow;
         await Task.Delay(500);
-        await agentClient1.Server_UpdateStatus(serverStatus);
-        await TestInit1.Sync();
-        await agentClient1.Server_UpdateStatus(serverStatus); // last status will not be synced
-        await TestInit1.Sync();
+        await farm.DefaultServer.UpdateStatus(serverStatus);
+        await farm.TestInit.Sync();
+        await farm.DefaultServer.UpdateStatus(serverStatus); // last status will not be synced
+        await farm.TestInit.Sync();
 
-        serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
-        server = serverData.Server;
+        await farm.DefaultServer.Reload();
+        server = farm.DefaultServer.Server;
         Assert.AreEqual(serverStatus.AvailableMemory, server.ServerStatus?.AvailableMemory);
         Assert.AreNotEqual(ServerState.Configuring, server.ServerState);
         Assert.AreEqual(serverStatus.TcpConnectionCount, server.ServerStatus?.TcpConnectionCount);
@@ -429,12 +339,10 @@ public class AgentServerTest : BaseTest
         //-----------
         // check
         //-----------
-        var accessPointClient = testInit.AccessPointsClient;
-        var accessPoint = await serverDom.AddAccessPoint(new AccessPointCreateParams
+        var accessPoint = await testInit.NewAccessPoint();
+        await serverDom.Update(new ServerUpdateParams
         {
-            IpAddress = await testInit.NewIpV4String(),
-            AccessPointGroupId = farm.AccessPointGroupId,
-            IsListen = true
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
         });
 
         var serverCommand = await testInit.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
@@ -445,8 +353,11 @@ public class AgentServerTest : BaseTest
         //-----------
         // check
         //-----------
-        await accessPointClient.UpdateAsync(testInit.ProjectId, accessPoint.AccessPointId,
-            new AccessPointUpdateParams { IsListen = new PatchOfBoolean { Value = !accessPoint.IsListen } });
+        accessPoint = await testInit.NewAccessPoint();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
+        });
         var serverStatus = new ServerStatus { ConfigCode = oldCode };
         serverCommand = await testInit.AgentClient1.Server_UpdateStatus(serverStatus);
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
@@ -491,8 +402,11 @@ public class AgentServerTest : BaseTest
         //-----------
         // check Reconfig After Config finish
         //-----------
-        await accessPointClient.UpdateAsync(testInit.ProjectId, accessPoint.AccessPointId,
-            new AccessPointUpdateParams { UdpPort = new PatchOfInteger { Value = 9090 } });
+        accessPoint = await testInit.NewAccessPoint();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
+        });
         var serverData = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom.ServerId);
         Assert.AreEqual(ServerState.Configuring, serverData.Server.ServerState);
     }
@@ -513,8 +427,7 @@ public class AgentServerTest : BaseTest
             testServers.Add(testServer);
         }
 
-        testServers.Add(new TestServer(testInit, accessPointGroup.AccessPointGroupId, true, true,
-            await testInit.NewEndPointIp6()));
+        testServers.Add(new TestServer(testInit, accessPointGroup.AccessPointGroupId, true, true, await testInit.NewEndPointIp6()));
         testServers.Add(new TestServer(testInit, accessPointGroup.AccessPointGroupId, true, false));
 
         // create access token
@@ -529,15 +442,13 @@ public class AgentServerTest : BaseTest
         for (var i = 0; i < 9; i++)
         {
             var testServer = testServers[0];
-            var sessionRequestEx =
-                testInit.CreateSessionRequestEx(accessToken, hostEndPoint: testServer.ServerEndPoint);
+            var sessionRequestEx = testInit.CreateSessionRequestEx(accessToken, hostEndPoint: testServer.ServerEndPoint);
             var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
             if (sessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
             {
                 Assert.IsNotNull(sessionResponseEx.RedirectHostEndPoint);
                 sessionRequestEx.HostEndPoint = sessionResponseEx.RedirectHostEndPoint!;
-                testServer = testServers.First(x =>
-                    sessionResponseEx.RedirectHostEndPoint!.Equals(x.ServerEndPoint));
+                testServer = testServers.First(x => sessionResponseEx.RedirectHostEndPoint!.Equals(x.ServerEndPoint));
                 sessionResponseEx = await testServer.AgentClient.Session_Create(sessionRequestEx);
             }
 
@@ -647,65 +558,42 @@ public class AgentServerTest : BaseTest
     [TestMethod]
     public async Task GetCertificateData()
     {
-        // create new AccessPoint
-        var privateEp = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
-        var publicEp1 = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
-        var publicEp2 = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
-        var accessPointClient = TestInit1.AccessPointsClient;
-        await accessPointClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = TestInit1.ServerId1,
-                IpAddress = publicEp1.Address.ToString(),
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                TcpPort = publicEp1.Port,
-                AccessPointMode = AccessPointMode.Public,
-                IsListen = true
-            });
+        var testInit = await TestInit.Create();
+        var dnsName1 = $"{Guid.NewGuid()}.com";
+        var certificate1 = await testInit.CertificatesClient.CreateAsync(testInit.ProjectId, new CertificateCreateParams { SubjectName = $"CN={dnsName1}" });
+        var farm1 = await AccessPointGroupDom.Create(testInit, createParams: new AccessPointGroupCreateParams
+        {
+            CertificateId = certificate1.CertificateId
+        });
 
-        await accessPointClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = TestInit1.ServerId1,
-                IpAddress = publicEp2.Address.ToString(),
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                TcpPort = publicEp2.Port,
-                AccessPointMode = AccessPointMode.PublicInToken,
-                IsListen = false
-            });
+        var dnsName2 = $"{Guid.NewGuid()}.com";
+        var certificate2 = await testInit.CertificatesClient.CreateAsync(testInit.ProjectId, new CertificateCreateParams { SubjectName = $"CN={dnsName2}" });
+        var farm2 = await AccessPointGroupDom.Create(testInit, createParams: new AccessPointGroupCreateParams
+        {
+            CertificateId = certificate1.CertificateId
+        });
 
-        await accessPointClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = TestInit1.ServerId1,
-                IpAddress = privateEp.Address.ToString(),
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                TcpPort = privateEp.Port,
-                AccessPointMode = AccessPointMode.Private,
-                IsListen = true
-            });
 
         //-----------
         // check: get certificate by publicIp
         //-----------
-        var agentClient = TestInit1.CreateAgentClient();
-        var certBuffer = await agentClient.GetSslCertificateData(publicEp1);
+        var certBuffer = await farm1.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm1.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
         var certificate = new X509Certificate2(certBuffer);
-        Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
+        Assert.AreEqual(dnsName1, certificate.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // check: get certificate by privateIp
         //-----------
-        certBuffer = await agentClient.GetSslCertificateData(privateEp);
+        certBuffer = await farm2.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
         certificate = new X509Certificate2(certBuffer);
-        Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
+        Assert.AreEqual(dnsName2, certificate.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // check: check not found
         //-----------
         try
         {
-            await agentClient.GetSslCertificateData(publicEp2);
+            await farm1.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
             Assert.Fail("NotExistsException expected!");
         }
         catch (ApiException ex)

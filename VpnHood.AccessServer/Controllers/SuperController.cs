@@ -76,13 +76,7 @@ public class SuperController<T> : ControllerBase
         var project = await VhContext.Projects.FindAsync(projectId);
         return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");
     }
-    protected async Task<bool> IsFreePlan(Guid projectId)
-    {
-        var project = await GetProject(projectId);
-        return project.SubscriptionType == SubscriptionType.Free;
-    }
-
-
+    
     protected async Task VerifyUserPermission(Guid secureObjectId, Permission permission)
     {
         await using var trans = await VhContext.WithNoLockTransaction();

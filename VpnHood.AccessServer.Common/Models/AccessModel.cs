@@ -1,8 +1,6 @@
-﻿using VpnHood.Common.Net;
+﻿namespace VpnHood.AccessServer.Models;
 
-namespace VpnHood.AccessServer.Models;
-
-public class AccessModel
+public class AccessModel : ICloneable
 {
     public Guid AccessId { get; set; }
     public Guid AccessTokenId { get; set; }
@@ -24,7 +22,7 @@ public class AccessModel
     public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual DeviceModel? Device { get; set; }
 
-    public AccessModel Clone()
+    public object Clone()
     {
         return new AccessModel
         {

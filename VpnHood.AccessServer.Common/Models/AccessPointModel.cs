@@ -1,17 +1,53 @@
-﻿using VpnHood.AccessServer.Dtos;
+﻿using System.Collections;
+using System.Net;
+using System.Text.Json.Serialization;
+using VpnHood.AccessServer.Dtos;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.Models;
 
-public class AccessPointModel
+public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointModel>
 {
-    public Guid AccessPointId { get; set; }
-    public string IpAddress { get; set; } = default!;
-    public AccessPointMode AccessPointMode { get; set; }
-    public bool IsListen { get; set; }
-    public int TcpPort { get; set; }
-    public int UdpPort { get; set; }
-    public Guid AccessPointGroupId { get; set; }
-    public Guid ServerId { get; set; }
-    public virtual ServerModel? Server { get; set; }
-    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
+    [JsonConverter(typeof(IPAddressConverter))]
+    public required IPAddress IpAddress { get; init; }
+    public required AccessPointMode AccessPointMode { get; init; }
+    public required bool IsListen { get; init; }
+    public required int TcpPort { get; init; }
+    public required int UdpPort { get; init; }
+
+    [JsonIgnore]
+    public bool IsPublic => AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public;
+
+    public bool Equals(object? other, IEqualityComparer comparer)
+    {
+        return Equals(this);
+    }
+
+    public int GetHashCode(IEqualityComparer comparer)
+    {
+        return GetHashCode();
+    }
+
+    public bool Equals(AccessPointModel? other)
+    {
+        return Equals((object?)this);
+    }
+    
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(IpAddress, AccessPointMode, IsListen, TcpPort, UdpPort);
+    }
+
+    public override bool Equals(object? other)
+    {
+        return
+            other == this ||
+            other is AccessPointModel otherAccessPoint &&
+            Equals(IpAddress, otherAccessPoint.IpAddress) &&
+            AccessPointMode == otherAccessPoint.AccessPointMode &&
+            IsListen == otherAccessPoint.IsListen &&
+            TcpPort == otherAccessPoint.TcpPort &&
+            UdpPort == otherAccessPoint.UdpPort;
+    }
+
 }

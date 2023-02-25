@@ -6,6 +6,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using GrayMint.Common.Exceptions;
+using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -16,8 +17,7 @@ public class ServerFarmTest
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
-        var name = Guid.NewGuid().ToString();
-        var farm1 = await AccessPointGroupDom.Create(testInit, name: name, serverCount: 0);
+        var farm1 = await AccessPointGroupDom.Create(testInit,  serverCount: 0);
         var serverDom = await farm1.AddNewServer();
         await farm1.CreateAccessToken(true);
         await farm1.CreateAccessToken(true);
@@ -26,22 +26,46 @@ public class ServerFarmTest
         // check: create
         //-----------
         var publicIp1 = await testInit.NewIpV4();
-        await serverDom.AddAccessPoint(farm1.AccessPointGroupId, publicIp1);
-
         var publicIp2 = await testInit.NewIpV4();
-        await serverDom.AddAccessPoint(farm1.AccessPointGroupId, publicIp2);
+        await serverDom.Update(new Api.ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf
+            {
+                Value = new[]
+                {
+                    new AccessPoint
+                    {
+                        AccessPointMode = AccessPointMode.PublicInToken,
+                        IpAddress = publicIp1.ToString(),
+                        TcpPort = 443,
+                        IsListen = true,
+                        UdpPort = 0,
+                    },
+                    new AccessPoint
+                    {
+                        AccessPointMode = AccessPointMode.PublicInToken,
+                        IpAddress = publicIp2.ToString(),
+                        TcpPort = 443,
+                        IsListen = true,
+                        UdpPort = 0,
+                    }
+                }
+            }
+        });
 
         var accessFarmData = await farm1.Reload();
-        Assert.AreEqual(name, farm1.AccessPointGroup.AccessPointGroupName);
+        Assert.AreEqual(farm1.AccessPointGroup.AccessPointGroupName, farm1.AccessPointGroup.AccessPointGroupName);
         Assert.AreEqual(1, accessFarmData.Summary!.ServerCount);
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
         Assert.AreEqual(2, accessFarmData.Summary!.UnusedTokenCount);
         Assert.AreEqual(0, accessFarmData.Summary!.InactiveTokenCount);
         Assert.AreEqual(1, accessFarmData.Summary!.ServerCount);
 
-        var accessPoints = await farm1.GetAccessPoints();
-        Assert.IsTrue(accessPoints.Any(x => x.IpAddress == publicIp1.ToString()));
-        Assert.IsTrue(accessPoints.Any(x => x.IpAddress == publicIp2.ToString()));
+        var accessTokenDom = await farm1.CreateAccessToken(true);
+        var accessKey = await accessTokenDom.GetAccessKey();
+        var token = Token.FromAccessKey(accessKey);
+        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.Equals(publicIp1)));
+        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.Equals(publicIp2)));
 
         //-----------
         // check: update 
@@ -64,7 +88,11 @@ public class ServerFarmTest
         //-----------
         try
         {
-            await AccessPointGroupDom.Create(testInit, name: farm1.AccessPointGroup.AccessPointGroupName);
+            await AccessPointGroupDom.Create(testInit,
+                new AccessPointGroupCreateParams
+                {
+                    AccessPointGroupName = farm1.AccessPointGroup.AccessPointGroupName
+                });
             Assert.Fail("Exception Expected!");
         }
         catch (ApiException ex)

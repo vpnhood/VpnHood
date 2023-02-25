@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -117,10 +116,10 @@ public class SessionService
             };
 
         // can serverModel request this endpoint?
-        if (!ValidateServerEndPoint(server, requestEndPoint, accessToken.AccessPointGroupId))
+        if (accessToken.AccessPointGroupId != server.AccessPointGroupId)
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
-                ErrorMessage = "Invalid EndPoint request."
+                ErrorMessage = "Token does not belong to server farm."
             };
 
         // check is token locked
@@ -264,41 +263,14 @@ public class SessionService
         return ret;
     }
 
-    private static bool ValidateServerEndPoint(ServerModel serverModel, IPEndPoint requestEndPoint, Guid accessPointGroupId)
+    public async Task<SessionResponseEx> GetSession(ServerModel server, uint sessionId, string hostEndPoint, string? clientIp)
     {
-        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-            ? IPAddress.IPv6Any
-            : IPAddress.Any;
-
-        // validate request to this serverModel
-        var ret = serverModel.AccessPoints!.Any(x =>
-            x.TcpPort == requestEndPoint.Port &&
-            x.AccessPointGroupId == accessPointGroupId &&
-            (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
-        );
-
-        return ret;
-    }
-
-    public async Task<SessionResponseEx> GetSession(ServerModel serverModel, uint sessionId, string hostEndPoint, string? clientIp)
-    {
-        // validate argument
-        if (serverModel.AccessPoints == null)
-            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverModel));
-
         _ = clientIp; //we don't use it now
+        _ = hostEndPoint; //we don't use it now
+
         try
         {
-            var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
-            var session = await _cacheService.GetSession(serverModel.ServerId, sessionId);
-            var accessToken = session.Access!.AccessToken!;
-
-            // can serverModel request this endpoint?
-            if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
-                return new SessionResponseEx(SessionErrorCode.AccessError)
-                {
-                    ErrorMessage = "Invalid EndPoint request!"
-                };
+            var session = await _cacheService.GetSession(server.ServerId, sessionId);
 
             // build response
             var ret = await BuildSessionResponse(session, DateTime.UtcNow);
@@ -309,8 +281,8 @@ public class SessionService
         catch (KeyNotFoundException)
         {
             _logger.LogWarning(AccessEventId.Session,
-                "Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}", 
-                sessionId, serverModel.ServerId);
+                "Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}",
+                sessionId, server.ServerId);
             throw;
         }
     }
@@ -417,7 +389,7 @@ public class SessionService
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
         var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessTokenModel is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;
-        
+
         // check projectId
         if (accessToken.ProjectId != serverModel.ProjectId)
             throw new AuthenticationException();
@@ -461,8 +433,8 @@ public class SessionService
         // close session
         if (closeSession)
         {
-            _logger.LogInformation(AccessEventId.Session, 
-                "Session has been closed by user. SessionId: {SessionId}, ResponseCode: {ResponseCode}", 
+            _logger.LogInformation(AccessEventId.Session,
+                "Session has been closed by user. SessionId: {SessionId}, ResponseCode: {ResponseCode}",
                 sessionId, sessionResponse.ErrorCode);
 
             if (sessionResponse.ErrorCode == SessionErrorCode.Ok)
@@ -474,43 +446,35 @@ public class SessionService
         return new SessionResponseBase(sessionResponse);
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServerModel, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
     {
         // prevent re-redirect if device has already redirected to this serverModel
-        var cacheKey = $"LastDeviceServer/{deviceId}";
+        var cacheKey = $"LastDeviceServer/{accessPointGroupId}/{deviceId}";
         if (!_agentOptions.AllowRedirect ||
-            (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServerModel.ServerId))
+            (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
-            if (IsServerReady(currentServerModel))
+            if (IsServerReady(currentServer))
                 return currentEndPoint;
         }
 
         // get all servers of this farm
-        var servers = (await _cacheService.GetServers()).Values.ToArray();
-        servers = servers.Where(server => server.ProjectId == currentServerModel.ProjectId && IsServerReady(server)).ToArray();
+        var farmServers = (await _cacheService.GetServers()).Values
+            .Where(server => 
+                server.ProjectId == currentServer.ProjectId && 
+                server.AccessPointGroupId == currentServer.AccessPointGroupId &&
+                server.AccessPoints.Any(accessPoint=> accessPoint.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public) &&
+                IsServerReady(server))
+            .ToArray();
 
-        // find all accessPoints belong to this farm
-        var accessPoints = new List<AccessPointModel>();
-        foreach (var server in servers)
-            foreach (var accessPoint in server.AccessPoints!.Where(x =>
-                         x.AccessPointGroupId == accessPointGroupId &&
-                         x.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public &&
-                         IPAddress.Parse(x.IpAddress).AddressFamily == currentEndPoint.AddressFamily))
-            {
-                accessPoint.Server = server;
-                accessPoints.Add(accessPoint);
-            }
+        // find the best free server
+        var bestServer = farmServers
+            .MinBy(server => server.ServerStatus!.SessionCount);
 
-        // find the best free serverModel
-        var best = accessPoints
-            .GroupBy(x => x.ServerId)
-            .Select(x => x.First())
-            .MinBy(x => x.Server!.ServerStatus!.SessionCount);
-
-        if (best != null)
+        if (bestServer != null)
         {
-            _memoryCache.Set(cacheKey, best.ServerId, TimeSpan.FromMinutes(5));
-            var ret = new IPEndPoint(IPAddress.Parse(best.IpAddress), best.TcpPort);
+            _memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
+            var serverEndPoint = bestServer.AccessPoints.First(accessPoint => accessPoint.IsPublic);
+            var ret = new IPEndPoint(serverEndPoint.IpAddress, serverEndPoint.TcpPort);
             return ret;
         }
 

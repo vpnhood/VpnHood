@@ -85,28 +85,20 @@ public class AgentClientSessionTest : BaseTest
     [TestMethod]
     public async Task Session_Create_success()
     {
-        // create token
-        var accessTokenClient = TestInit1.AccessTokensClient;
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams
-            {
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                MaxTraffic = 100,
-                ExpirationTime = new DateTime(2040, 1, 1),
-                Lifetime = 0,
-                MaxDevice = 22
-            });
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
+        {
+            MaxTraffic = 100,
+            ExpirationTime = new DateTime(2040, 1, 1),
+            Lifetime = 0,
+            MaxDevice = 22
+        });
 
         var beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken,
-            hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: TestInit1.ClientIp1);
-        sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
-        var clientInfo = sessionRequestEx.ClientInfo;
+        var sessionDom = await accessTokenDom.CreateSession();
+        var accessTokenData = await accessTokenDom.Reload();
 
-        var agentClient = TestInit1.CreateAgentClient();
-        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        var accessTokenData = await accessTokenClient.GetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId);
-
+        var sessionResponseEx = sessionDom.SessionResponseEx;
         Assert.IsNotNull(sessionResponseEx.AccessUsage);
         Assert.IsTrue(sessionResponseEx.SessionId > 0);
         Assert.AreEqual(new DateTime(2040, 1, 1), sessionResponseEx.AccessUsage!.ExpirationTime);
@@ -119,18 +111,19 @@ public class AgentClientSessionTest : BaseTest
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
 
         // check Device id and its properties are created 
-        var deviceClient = TestInit1.DevicesClient;
-        var device = await deviceClient.FindByClientIdAsync(TestInit1.ProjectId, clientInfo.ClientId);
+        var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
+        var device = await farm.TestInit.DevicesClient.FindByClientIdAsync(farm.TestInit.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
-        sessionRequestEx.ClientIp = TestInit1.ClientIp2;
+        var sessionRequestEx = sessionDom.SessionRequestEx;
+        sessionRequestEx.ClientIp = farm.TestInit.ClientIp2;
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
-        await agentClient.Session_Create(sessionRequestEx);
-        device = await deviceClient.FindByClientIdAsync(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
+        await farm.DefaultServer.AgentClient.Session_Create(sessionRequestEx);
+        device = await farm.TestInit.DevicesClient.FindByClientIdAsync(farm.TestInit.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
@@ -149,7 +142,7 @@ public class AgentClientSessionTest : BaseTest
     public async Task Session_Get()
     {
         var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(false);
+        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.SessionKey);
@@ -167,7 +160,7 @@ public class AgentClientSessionTest : BaseTest
     public async Task Session_Get_should_update_session_lastUsedTime()
     {
         var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(false);
+        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
         var session = await sessionDom.GetSessionFromCache();
@@ -185,7 +178,7 @@ public class AgentClientSessionTest : BaseTest
     public async Task Session_AddUsage_should_update_session_LastUsedTime()
     {
         var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(false);
+        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
         var session = await sessionDom.GetSessionFromCache();
@@ -217,16 +210,16 @@ public class AgentClientSessionTest : BaseTest
         //-----------
         // check: access should grant to public token by any server
         //-----------
-        var session = await serverDom11.AddSession(accessTokenDom11.AccessToken);
+        var session = await serverDom11.CreateSession(accessTokenDom11.AccessToken);
         Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
 
-        session = await serverDom12.AddSession(accessTokenDom11.AccessToken);
+        session = await serverDom12.CreateSession(accessTokenDom11.AccessToken);
         Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
 
-        session = await serverDom21.AddSession(accessTokenDom21.AccessToken);
+        session = await serverDom21.CreateSession(accessTokenDom21.AccessToken);
         Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
 
-        session = await serverDom22.AddSession(accessTokenDom21.AccessToken);
+        session = await serverDom22.CreateSession(accessTokenDom21.AccessToken);
         Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
 
         //-----------
@@ -234,7 +227,7 @@ public class AgentClientSessionTest : BaseTest
         //-----------
         try
         {
-            session = await serverDom21.AddSession(accessTokenDom11.AccessToken);
+            session = await serverDom21.CreateSession(accessTokenDom11.AccessToken);
             Assert.Fail("NotExistsException was Expected");
         }
         catch (ApiException e)
@@ -300,27 +293,27 @@ public class AgentClientSessionTest : BaseTest
         var createSessionTasks = new List<Task<SessionDom>>();
         for (var i = 0; i < 50; i++)
         {
-            createSessionTasks.Add(sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1));
-            createSessionTasks.Add(sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1));
-            createSessionTasks.Add(sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken2));
-            createSessionTasks.Add(sampleFarm1.Server2.AddSession(sampleFarm1.PrivateToken1));
-            createSessionTasks.Add(sampleFarm1.Server2.AddSession(sampleFarm1.PrivateToken2));
+            createSessionTasks.Add(sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1));
+            createSessionTasks.Add(sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1));
+            createSessionTasks.Add(sampleFarm1.Server2.CreateSession(sampleFarm1.PublicToken2));
+            createSessionTasks.Add(sampleFarm1.Server2.CreateSession(sampleFarm1.PrivateToken1));
+            createSessionTasks.Add(sampleFarm1.Server2.CreateSession(sampleFarm1.PrivateToken2));
 
-            createSessionTasks.Add(sampleFarm2.Server1.AddSession(sampleFarm2.PublicToken1));
-            createSessionTasks.Add(sampleFarm2.Server1.AddSession(sampleFarm2.PublicToken1));
-            createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2));
-            createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken1));
-            createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken2));
+            createSessionTasks.Add(sampleFarm2.Server1.CreateSession(sampleFarm2.PublicToken1));
+            createSessionTasks.Add(sampleFarm2.Server1.CreateSession(sampleFarm2.PublicToken1));
+            createSessionTasks.Add(sampleFarm2.Server2.CreateSession(sampleFarm2.PublicToken2));
+            createSessionTasks.Add(sampleFarm2.Server2.CreateSession(sampleFarm2.PrivateToken1));
+            createSessionTasks.Add(sampleFarm2.Server2.CreateSession(sampleFarm2.PrivateToken2));
         }
 
         await Task.WhenAll(createSessionTasks);
         await TestInit1.Sync();
 
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1);
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1);
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PrivateToken1);
-        await sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken1);
-        await sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2);
+        await sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1);
+        await sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1);
+        await sampleFarm1.Server1.CreateSession(sampleFarm1.PrivateToken1);
+        await sampleFarm1.Server2.CreateSession(sampleFarm1.PublicToken1);
+        await sampleFarm2.Server2.CreateSession(sampleFarm2.PublicToken2);
 
         var tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage());
         tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage()));
@@ -541,7 +534,7 @@ public class AgentClientSessionTest : BaseTest
         var sample = await AccessPointGroupDom.Create(TestInit1);
 
         // create token
-        var sampleAccessToken = await sample.CreateAccessToken(false);
+        var sampleAccessToken = await sample.CreateAccessToken();
         var sessionDom = await sampleAccessToken.CreateSession();
         await sessionDom.AddUsage(10051, 20051);
         await sessionDom.AddUsage(20, 30);

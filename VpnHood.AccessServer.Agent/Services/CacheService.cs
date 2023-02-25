@@ -37,7 +37,7 @@ public class CacheService
 
     public async Task Init(bool force = true)
     {
-        if (!force && Mem.Projects.Count > 0)
+        if (!force && !Mem.Projects.IsEmpty)
             return;
 
         _logger.LogTrace("Loading the old projects and servers...");
@@ -122,7 +122,6 @@ public class CacheService
             return server;
 
         server = await _vhContext.Servers
-            .Include(x => x.AccessPoints)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
             .AsNoTracking()
             .SingleAsync(x => x.ServerId == serverId && !x.IsDeleted);
@@ -358,7 +357,8 @@ public class CacheService
         var accesses = updatedSessions
             .Select(x => x.Access)
             .DistinctBy(x => x!.AccessId)
-            .Select(access => access!.Clone());
+            .Select(access => (AccessModel)access!.Clone());
+
         foreach (var access in accesses)
         {
             var entry = _vhContext.Accesses.Attach(access);

@@ -26,7 +26,7 @@ public class ServerTest : BaseTest
         await serverClient.ReconfigureAsync(TestInit1.ProjectId, TestInit1.ServerId1);
 
         //TestInit1.VhContext.ChangeTracker.Clear();
-        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == TestInit1.ServerId1);
+        serverModel = await TestInit1.VhContext.Servers.SingleAsync(x => x.ServerId == TestInit1.ServerId1);
         Assert.AreNotEqual(oldConfigCode, serverModel.ConfigCode);
     }
 
@@ -82,7 +82,7 @@ public class ServerTest : BaseTest
         {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
             AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId },
-            AutoConfigure = new PatchOfBoolean{Value = !server1A.AutoConfigure },
+            AutoConfigure = new PatchOfBoolean { Value = !server1A.AutoConfigure },
             GenerateNewSecret = new PatchOfBoolean { Value = false }
         };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
@@ -92,7 +92,6 @@ public class ServerTest : BaseTest
         Assert.AreEqual(server1CUpdateParam.AutoConfigure.Value, server1C.Server.AutoConfigure);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
         Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
-        Assert.IsTrue(server1C.AccessPoints.All(x => x.AccessPointGroupId == farm2.AccessPointGroupId));
 
         //-----------
         // check: Update (change Secret)
@@ -137,26 +136,12 @@ public class ServerTest : BaseTest
     [TestMethod]
     public async Task Quota()
     {
-        var testInit2 = await TestInit.Create();
+        var farm = await AccessPointGroupDom.Create();
+        QuotaConstants.ServerCount = farm.Servers.Count; //update quota
 
-        //-----------
-        // check: Create
-        //-----------
-        var serverClient = testInit2.ServersClient;
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = Guid.NewGuid().ToString() });
-        
-        var servers = await serverClient.ListAsync(testInit2.ProjectId);
-
-        //-----------
-        // check: Quota
-        //-----------
-        QuotaConstants.ServerCount = servers.Count;
         try
         {
-            await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams
-            {
-                ServerName = $"{Guid.NewGuid()}"
-            });
+            await farm.AddNewServer();
             Assert.Fail($"{nameof(QuotaException)} is expected");
         }
         catch (ApiException ex)
@@ -206,15 +191,19 @@ public class ServerTest : BaseTest
     }
 
     [TestMethod]
-    public async Task Validate_create()
+    public async Task Fail_should_not_create_for_another_project_farm()
     {
+        var p1Farm = await AccessPointGroupDom.Create();
+        var p2Farm = await AccessPointGroupDom.Create();
+
         try
         {
-            var testInit2 = await TestInit.Create();
-            var serverClient = TestInit1.ServersClient;
-            await serverClient.CreateAsync(TestInit1.ProjectId,
+            await p1Farm.TestInit.ServersClient.CreateAsync(p1Farm.ProjectId,
                 new ServerCreateParams
-                { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1 });
+                {
+                    ServerName = $"{Guid.NewGuid()}",
+                    AccessPointGroupId = p2Farm.AccessPointGroupId
+                });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (ApiException ex)
@@ -224,25 +213,23 @@ public class ServerTest : BaseTest
     }
 
     [TestMethod]
-    public async Task Validate_update()
+    public async Task Fail_should_not_update_to_another_project_farm()
     {
-        var testInit2 = await TestInit.Create();
+        var p1Farm = await AccessPointGroupDom.Create();
+        var p2Farm = await AccessPointGroupDom.Create();
 
         try
         {
-            var serverClient = TestInit1.ServersClient;
-            var server = await serverClient.CreateAsync(TestInit1.ProjectId,
-                new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-
-            await serverClient.UpdateAsync(TestInit1.ProjectId, server.ServerId,
-                new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = testInit2.AccessPointGroupId1 } });
-
-            Assert.Fail("KeyNotFoundException is expected!");
+            await p1Farm.DefaultServer.Update(new ServerUpdateParams
+            {
+                AccessPointGroupId = new PatchOfNullableGuid { Value= p2Farm.AccessPointGroupId }
+            });
+            
+            Assert.Fail($"{nameof(NotExistsException)} was expected.");
         }
         catch (ApiException ex)
         {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
-
         }
     }
 

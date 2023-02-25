@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -91,21 +92,21 @@ public class IpLockTest : BaseTest
     [TestMethod]
     public async Task lock_unlock_ip()
     {
-        var ipLockClient = TestInit1.IpLocksClient;
-        var agentClient = TestInit1.CreateAgentClient();
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken();
 
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1, hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: await TestInit1.NewIpV4Db());
-        sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
-        sessionRequestEx.ClientInfo.ClientVersion = "1.0.0";
+        var clientIp = await farm.TestInit.NewIpV4();
+        await accessTokenDom.CreateSession(clientIp: clientIp);
 
         // check lock
-        await ipLockClient.CreateAsync(TestInit1.ProjectId, new IpLockCreateParams { IpAddress = sessionRequestEx.ClientIp!.ToString(), IsLocked = true });
-        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
+        await farm.TestInit.IpLocksClient.CreateAsync(farm.ProjectId, new IpLockCreateParams { IpAddress = clientIp.ToString(), IsLocked = true });
+        var sessionDom = await accessTokenDom.CreateSession(clientIp: clientIp, assertError: false);
+        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionDom.SessionResponseEx.ErrorCode);
 
         // check unlock
-        await ipLockClient.UpdateAsync(TestInit1.ProjectId, sessionRequestEx.ClientIp!.ToString(), new IpLockUpdateParams { IsLocked = new PatchOfBoolean { Value = false } });
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        Assert.AreNotEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
+        await farm.TestInit.IpLocksClient.UpdateAsync(farm.ProjectId, clientIp.ToString(), 
+            new IpLockUpdateParams { IsLocked = new PatchOfBoolean { Value = false } });
+        sessionDom = await accessTokenDom.CreateSession(clientIp: clientIp);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
     }
 }

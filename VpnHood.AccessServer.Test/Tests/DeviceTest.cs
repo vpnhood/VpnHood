@@ -17,8 +17,8 @@ public class DeviceTest
         var farm1 = await AccessPointGroupDom.Create();
         var farm2 = await AccessPointGroupDom.Create();
 
-        var accessTokenDom1 = await farm1.CreateAccessToken(false);
-        var accessTokenDom2 = await farm2.CreateAccessToken(false);
+        var accessTokenDom1 = await farm1.CreateAccessToken();
+        var accessTokenDom2 = await farm2.CreateAccessToken();
 
         var session1 = await accessTokenDom1.CreateSession();
         var session2 = await accessTokenDom2.CreateSession();
@@ -77,7 +77,7 @@ public class DeviceTest
     public async Task List()
     {
         var sampler = await AccessPointGroupDom.Create();
-        var sampleAccessToken = await sampler.CreateAccessToken(false);
+        var sampleAccessToken = await sampler.CreateAccessToken();
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleSession1.AddUsage(10);
 
@@ -94,7 +94,7 @@ public class DeviceTest
     public async Task Usages()
     {
         var sampler = await AccessPointGroupDom.Create();
-        var sampleAccessToken = await sampler.CreateAccessToken(false);
+        var sampleAccessToken = await sampler.CreateAccessToken();
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleSession1.AddUsage(10);
 

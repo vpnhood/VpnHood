@@ -2,6 +2,5 @@
 
 public class ServerData
 {
-    public Server Server { get; set; } = null!;
-    public AccessPoint[] AccessPoints { get; set; } = null!;
+    public required Server Server { get; init; }
 }

@@ -51,11 +51,11 @@ public class TestInit : IDisposable, IHttpClientFactory
     public ServersClient ServersClient => new(Http);
     public CertificatesClient CertificatesClient => new(Http);
     public AccessTokensClient AccessTokensClient => new(Http);
-    public AccessPointsClient AccessPointsClient => new(Http);
     public ProjectsClient ProjectsClient => new(Http);
     public IpLocksClient IpLocksClient => new(Http);
     public AccessesClient AccessesClient => new(Http);
     public DevicesClient DevicesClient => new(Http);
+    public SystemClient SystemClient => new(Http);
     public ServerProfilesClient ServerProfilesClient => new(Http);
     public HttpAccessServer AgentClient2 { get; private set; } = default!;
     public HttpAccessServer AgentClient1 { get; private set; } = default!;
@@ -125,6 +125,20 @@ public class TestInit : IDisposable, IHttpClientFactory
         };
     }
 
+    public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken, 
+        bool isListen = true, int udpPrt = 0)
+    {
+        ipEndPoint ??= await NewEndPoint();
+        return new AccessPoint
+        {
+            UdpPort = udpPrt,
+            IpAddress = ipEndPoint.Address.ToString(),
+            TcpPort = ipEndPoint.Port,
+            AccessPointMode = AccessPointMode.PublicInToken,
+            IsListen = isListen
+        };
+    }
+
     [AssemblyInitialize]
     public static void AssemblyInitialize(TestContext _)
     {
@@ -153,7 +167,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         Http.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
     }
 
-    public static async Task<TestInit> Create(bool useSharedProject = false, Dictionary<string, string?>? appSettings = null, string environment = "Development", 
+    public static async Task<TestInit> Create(bool useSharedProject = false, Dictionary<string, string?>? appSettings = null, string environment = "Development",
         bool createServers = true)
     {
         appSettings ??= new Dictionary<string, string?>();
@@ -273,15 +287,39 @@ public class TestInit : IDisposable, IHttpClientFactory
 
         if (createServers)
         {
-            var server1 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams { AccessPointGroupId = AccessPointGroupId1 });
-            await ServersClient.UpdateAsync(project.ProjectId, server1.ServerId, new ServerUpdateParams { AutoConfigure = new PatchOfBoolean { Value = false } });
+            var server1 = await ServersClient.CreateAsync(project.ProjectId,
+                new ServerCreateParams
+                {
+                    AccessPointGroupId = AccessPointGroupId1,
+                    AccessPoints = new[]
+                    {
+                        new AccessPoint {
+                            AccessPointMode = AccessPointMode.PublicInToken,
+                            IpAddress = HostEndPointG1S1.Address.ToString(),
+                            IsListen = true,
+                            TcpPort = HostEndPointG1S1.Port,
+                            UdpPort = 0
+                        }
+                    }
+                });
 
-            var server2 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams{ AccessPointGroupId = AccessPointGroupId1 });
-            await ServersClient.UpdateAsync(project.ProjectId, server2.ServerId, new ServerUpdateParams { AutoConfigure = new PatchOfBoolean { Value = false } });
+            var server2 = await ServersClient.CreateAsync(project.ProjectId,
+                new ServerCreateParams
+                {
+                    AccessPointGroupId = AccessPointGroupId1,
+                    AccessPoints = new[]
+                    {
+                        new AccessPoint {
+                            AccessPointMode = AccessPointMode.Public,
+                            IpAddress = HostEndPointG1S1.Address.ToString(),
+                            IsListen = true,
+                            TcpPort = HostEndPointG1S1.Port,
+                            UdpPort = 0
+                        }
+                    }
+                });
 
             ServerId1 = server1.ServerId;
-            await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
-            await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
 
             // configure servers
             AgentClient1 = await CreateAgentClient(server1.ServerId, ServerInfo1);
@@ -296,132 +334,6 @@ public class TestInit : IDisposable, IHttpClientFactory
                 AccessTokenName = $"Access1_{Guid.NewGuid()}",
                 AccessPointGroupId = AccessPointGroupId1
             });
-    }
-
-    /// <summary>
-    /// AccessToken1 (public)
-    ///     // Client1 => 1 session => 2 ItemUsageInfo
-    ///     // Client2 => 1 session => 2 ItemUsageInfo
-    /// AccessToken2 (public) 
-    ///     // Client3 => 1 session => 2 ItemUsageInfo
-    ///     // Client4 => 1 session => 2 ItemUsageInfo
-    /// AccessToken3 (private) 
-    ///     // Client5 => 1 session => 2 ItemUsageInfo
-    ///     // Client6 => 1 session => 2 ItemUsageInfo
-    /// </summary>
-    public async Task<TestFillData> Fill()
-    {
-        var fillData = new TestFillData();
-        var agentClient = CreateAgentClient();
-
-        // ----------------
-        // Create accessToken1 public
-        // ----------------
-        var accessToken = await AccessTokensClient.CreateAsync(ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access1_{Guid.NewGuid()}",
-                AccessPointGroupId = AccessPointGroupId1,
-                IsPublic = true
-            });
-        fillData.AccessTokens.Add(accessToken);
-
-        // accessToken1 - sessions1
-        var sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
-        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        fillData.SessionResponses.Add(sessionResponseEx);
-        fillData.SessionRequests.Add(sessionRequestEx);
-
-        // accessToken1 - sessions2
-        sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        fillData.SessionResponses.Add(sessionResponseEx);
-        fillData.SessionRequests.Add(sessionRequestEx);
-
-        // ----------------
-        // Create accessToken2 public
-        // ----------------
-        accessToken = await AccessTokensClient.CreateAsync(ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access2_{Guid.NewGuid()}",
-                AccessPointGroupId = AccessPointGroupId1,
-                IsPublic = true
-            });
-        fillData.AccessTokens.Add(accessToken);
-
-        // accessToken2 - sessions1
-        sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        fillData.SessionResponses.Add(sessionResponseEx);
-        fillData.SessionRequests.Add(sessionRequestEx);
-
-        // accessToken2 - sessions2
-        sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        fillData.SessionResponses.Add(sessionResponseEx);
-        fillData.SessionRequests.Add(sessionRequestEx);
-
-        // ----------------
-        // Create accessToken3 private
-        // ----------------
-        accessToken = await AccessTokensClient.CreateAsync(ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access3_{Guid.NewGuid()}",
-                AccessPointGroupId = AccessPointGroupId1,
-                IsPublic = false
-            });
-        fillData.AccessTokens.Add(accessToken);
-
-        // accessToken3 - sessions1
-        sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        fillData.SessionResponses.Add(sessionResponseEx);
-        fillData.SessionRequests.Add(sessionRequestEx);
-
-        // accessToken3 - sessions2
-        // actualAccessCount++; it is private!
-        sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
-        fillData.SessionResponses.Add(sessionResponseEx);
-        fillData.SessionRequests.Add(sessionRequestEx);
-
-        return fillData;
-    }
-
-    private async Task InitAccessPoint(Api.Server server,
-        IPEndPoint hostEndPoint,
-        Guid accessPointGroupId,
-        AccessPointMode accessPointMode, bool isListen = true)
-    {
-        // create server accessPoints
-        await AccessPointsClient.CreateAsync(ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = server.ServerId,
-                IpAddress = hostEndPoint.Address.ToString(),
-                AccessPointGroupId = accessPointGroupId,
-                TcpPort = hostEndPoint.Port,
-                IsListen = isListen,
-                AccessPointMode = accessPointMode,
-            }
-        );
     }
 
     public static ServerStatus NewServerStatus(string? configCode)
@@ -466,7 +378,7 @@ public class TestInit : IDisposable, IHttpClientFactory
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",
             LogicalCoreCount = 2,
-            TotalMemory= 20000000,
+            TotalMemory = 20000000,
         };
 
         return serverInfo;
@@ -485,7 +397,7 @@ public class TestInit : IDisposable, IHttpClientFactory
 
         var accessKey = AccessTokensClient.GetAccessKeyAsync(accessToken.ProjectId, accessToken.AccessTokenId).Result;
         var vhToken = Token.FromAccessKey(accessKey);
-        
+
         var secret = vhToken.Secret;
         var sessionRequestEx = new SessionRequestEx(
             accessToken.AccessTokenId,
@@ -503,7 +415,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     {
         serverId ??= ServerId1;
         var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId.Value).Result;
-        
+
         var http = AgentApp.CreateClient();
         var options = new Server.Providers.HttpAccessServerProvider.HttpAccessServerOptions(
             installManual.AppSettings.HttpAccessServer.BaseUrl,
@@ -530,11 +442,11 @@ public class TestInit : IDisposable, IHttpClientFactory
         return serverInfo;
     }
 
-    public async Task Sync()
+    public async Task Sync(bool flushCache = true)
     {
-        await FlushCache();
-        var syncManager = WebApp.Services.GetRequiredService<SyncService>();
-        await syncManager.Sync();
+        if (flushCache)
+            await FlushCache();
+        await SystemClient.SyncAsync();
     }
 
     public async Task FlushCache()

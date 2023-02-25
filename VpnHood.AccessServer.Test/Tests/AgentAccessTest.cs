@@ -15,7 +15,7 @@ public class AgentAccessTest : BaseTest
     public async Task Access_token_is_not_enabled()
     {
         var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(false);
+        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
         await accessTokenDom.TestInit.AccessTokensClient.UpdateAsync(accessPointGroupDom.TestInit.ProjectId, accessTokenDom.AccessTokenId,
             new AccessTokenUpdateParams
             {
@@ -30,19 +30,17 @@ public class AgentAccessTest : BaseTest
     [TestMethod]
     public async Task Access_token_expired_by_expiration_date()
     {
-        var accessTokenClient = TestInit1.AccessTokensClient;
+        var farm = await AccessPointGroupDom.Create();
 
         // create accessTokenModel
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
+        var accessTokenDom = await farm.CreateAccessToken(
             new AccessTokenCreateParams
             {
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 ExpirationTime = new DateTime(1900, 1, 1)
             });
-        var agentClient = TestInit1.CreateAgentClient();
 
-        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
-        Assert.AreEqual(SessionErrorCode.AccessExpired, sessionResponseEx.ErrorCode);
+        var sessionDom = await accessTokenDom.CreateSession(assertError: false);
+        Assert.AreEqual(SessionErrorCode.AccessExpired, sessionDom.SessionResponseEx.ErrorCode);
     }
 
     [TestMethod]
@@ -71,7 +69,7 @@ public class AgentAccessTest : BaseTest
     public async Task Access_token_firstUsedTime_and_lastUsedTime()
     {
         var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(false);
+        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
         Assert.IsNull(accessTokenDom.AccessToken.LastUsedTime);
         Assert.IsNull(accessTokenDom.AccessToken.FirstUsedTime);
 

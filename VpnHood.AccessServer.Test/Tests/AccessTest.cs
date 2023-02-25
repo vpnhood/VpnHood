@@ -13,24 +13,7 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
-        //var serverStatus = await testInit.VhContext.ServerStatuses.Where(x =>
-        //    x.ServerId == Guid.Parse("2F407E77-D088-4B6A-836D-08CFE7674A26") && x.IsLast).SingleAsync();
 
-        //serverStatus.IsLast = false;
-        //serverStatus.SessionCount = 10;
-        //await testInit.VhContext.SaveChangesAsync();
-
-
-        //await tran.RollbackAsync();
-        //var sample = await AccessPointGroupDom.Create();
-        //var token = await sample.CreateAccessToken(false);
-        //await sample.TestInit.CacheService.InvalidateSessions();
-
-        //var sessionTasks = new List<Task<SessionDom>>();
-        //for (var i = 0; i < 40; i++)
-        //    sessionTasks.Add(token.CreateSession());
-
-        //await Task.WhenAll(sessionTasks);
     }
 
     [TestMethod]
@@ -118,7 +101,7 @@ public class AccessTest
         // ----------------
         // Create accessToken3 private in AccessPointGroup2
         // ----------------
-        var accessToken3 = await sample2.CreateAccessToken(false);
+        var accessToken3 = await sample2.CreateAccessToken();
         sample2AccessCount++;
 
         // accessToken3 - sessions1

@@ -30,7 +30,8 @@ public static class ServerConverter
             TotalMemory = model.TotalMemory,
             LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version,
-            AutoConfigure = model.AutoConfigure
+            AutoConfigure = model.AutoConfigure,
+            AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),  
         };
     }
 

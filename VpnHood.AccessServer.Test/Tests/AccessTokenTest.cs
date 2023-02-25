@@ -19,23 +19,16 @@ public class AccessTokenTest : BaseTest
     [TestMethod]
     public async Task SupportCode_is_unique_per_project()
     {
-        var testInit2 = await TestInit.Create();
+        var farmP1 = await AccessPointGroupDom.Create();
+        var farmP2 = await AccessPointGroupDom.Create();
 
-        var accessTokenClient1 = TestInit1.AccessTokensClient;
-        var accessToken11 = await accessTokenClient1.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+        var accessTokenDom11 = await farmP1.CreateAccessToken();
+        var accessTokenDom12 = await farmP1.CreateAccessToken();
+        var accessTokenDom21 = await farmP2.CreateAccessToken();
+        var accessTokenDom22 = await farmP2.CreateAccessToken();
 
-        var accessTokenClient2 = testInit2.AccessTokensClient;
-        var accessToken21 = await accessTokenClient2.CreateAsync(testInit2.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
-
-        var accessToken12 = await accessTokenClient1.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-        var accessToken22 = await accessTokenClient2.CreateAsync(testInit2.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
-
-        Assert.AreEqual(accessToken11.SupportCode + 1, accessToken12.SupportCode);
-        Assert.AreEqual(accessToken21.SupportCode + 1, accessToken22.SupportCode);
+        Assert.AreEqual(accessTokenDom11.AccessToken.SupportCode + 1, accessTokenDom12.AccessToken.SupportCode);
+        Assert.AreEqual(accessTokenDom21.AccessToken.SupportCode + 1, accessTokenDom22.AccessToken.SupportCode);
     }
 
     [TestMethod]
@@ -200,15 +193,9 @@ public class AccessTokenTest : BaseTest
     [TestMethod]
     public async Task Quota()
     {
-        var testInit2 = await TestInit.Create();
-        var accessTokenClient = testInit2.AccessTokensClient;
-
-        //-----------
-        // check: Create
-        //-----------
-        await accessTokenClient.CreateAsync(testInit2.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
-        var accessTokens = await accessTokenClient.ListAsync(testInit2.ProjectId);
+        var farm = await AccessPointGroupDom.Create();
+        await farm.CreateAccessToken();
+        var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
 
         //-----------
         // check: Quota
@@ -216,8 +203,7 @@ public class AccessTokenTest : BaseTest
         QuotaConstants.AccessTokenCount = accessTokens.Count;
         try
         {
-            await accessTokenClient.CreateAsync(testInit2.ProjectId,
-                new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+            await farm.CreateAccessToken();
             Assert.Fail($"{nameof(QuotaException)} was expected.");
         }
         catch (ApiException ex)
@@ -229,12 +215,12 @@ public class AccessTokenTest : BaseTest
     [TestMethod]
     public async Task Validate_create()
     {
-        var testInit2 = await TestInit.Create();
-        var accessTokenClient = TestInit1.AccessTokensClient;
+        var farm1 = await AccessPointGroupDom.Create();
+        var farm2 = await AccessPointGroupDom.Create();
         try
         {
-            await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-                new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+            await farm1.TestInit.AccessTokensClient.CreateAsync(farm1.ProjectId,
+                new AccessTokenCreateParams { AccessPointGroupId = farm2.AccessPointGroupId });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (ApiException ex)
@@ -246,13 +232,16 @@ public class AccessTokenTest : BaseTest
     [TestMethod]
     public async Task Validate_update()
     {
-        var testInit2 = await TestInit.Create();
-        var accessTokenClient = TestInit1.AccessTokensClient;
+        var farm1 = await AccessPointGroupDom.Create();
+        var farm2 = await AccessPointGroupDom.Create();
+
+        var accessTokenDom1 = await farm1.CreateAccessToken();
         try
         {
-            await accessTokenClient.UpdateAsync(TestInit1.ProjectId, TestInit1.AccessToken1.AccessTokenId,
-                new AccessTokenUpdateParams
-                { AccessPointGroupId = new PatchOfGuid { Value = testInit2.AccessPointGroupId1 } });
+            await accessTokenDom1.Update(new AccessTokenUpdateParams
+            {
+                AccessPointGroupId = new PatchOfGuid { Value = farm2.AccessPointGroupId }
+            });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (ApiException ex)
@@ -264,63 +253,38 @@ public class AccessTokenTest : BaseTest
     [TestMethod]
     public async Task List()
     {
-        // create a new group with new server endpoint
-        var accessPointGroup =
-            await TestInit1.AccessPointGroupsClient.CreateAsync(TestInit1.ProjectId,
-                new AccessPointGroupCreateParams());
-        var hostEndPoint = await TestInit1.NewEndPoint();
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom1 = await farm.CreateAccessToken(true);
+        var accessTokenDom2 = await farm.CreateAccessToken();
 
-        await TestInit1.AccessPointsClient.CreateAsync(TestInit1.ProjectId,
-            new AccessPointCreateParams
-            {
-                ServerId = TestInit1.ServerId1,
-                IpAddress = hostEndPoint.Address.ToString(),
-                TcpPort = hostEndPoint.Port,
-                AccessPointGroupId = accessPointGroup.AccessPointGroupId,
-                AccessPointMode = AccessPointMode.PublicInToken,
-                IsListen = true
-            });
-
-        // Create new accessTokens
-        var publicAccessToken = await TestInit1.AccessTokensClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
-        var privateAccessToken = await TestInit1.AccessTokensClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
-
-        // add usage
         var usageInfo = new UsageInfo { ReceivedTraffic = 10000000, SentTraffic = 10000000 };
-        var agentClient = await TestInit1.CreateAgentClient(TestInit1.ServerId1, null);
-        var publicSessionResponseEx =
-            await agentClient.Session_Create(
-                TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
-        await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
 
-        // add usage by another session
-        publicSessionResponseEx =
-            await agentClient.Session_Create(
-                TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
-        await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
+        // add usage by session1 of the public token
+        var sessionDom1 = await accessTokenDom1.CreateSession();
+        await sessionDom1.AddUsage(usageInfo);
+        await sessionDom1.AddUsage(usageInfo);
 
-        //private session
-        var privateSessionResponseEx =
-            await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(privateAccessToken,
-                hostEndPoint: hostEndPoint));
-        await agentClient.Session_AddUsage(privateSessionResponseEx.SessionId, usageInfo);
-        await TestInit1.Sync();
+        // add usage by session2 of the public token
+        var sessionDom2 = await accessTokenDom1.CreateSession();
+        await sessionDom2.AddUsage(usageInfo);
+
+        // add usage by session of the private token
+        var sessionDom3 = await accessTokenDom2.CreateSession();
+        await sessionDom3.AddUsage(usageInfo);
+        await farm.TestInit.Sync();
 
         // list
-        var accessTokenClient = TestInit1.AccessTokensClient;
-        var accessTokens = await accessTokenClient.ListAsync(TestInit1.ProjectId,
-            accessPointGroupId: accessPointGroup.AccessPointGroupId,
-            usageStartTime: TestInit1.CreatedTime.AddSeconds(-1));
-        var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId == publicAccessToken.AccessTokenId);
+        var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
+            accessPointGroupId: farm.AccessPointGroupId,
+            usageStartTime: farm.TestInit.CreatedTime.AddSeconds(-1));
+
+        var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
 
         // list by time
-        accessTokens = await accessTokenClient.ListAsync(TestInit1.ProjectId,
-            accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: DateTime.UtcNow.AddDays(-2));
+        accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
+            accessPointGroupId: farm.AccessPointGroupId, usageStartTime: DateTime.UtcNow.AddDays(-2));
         publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);

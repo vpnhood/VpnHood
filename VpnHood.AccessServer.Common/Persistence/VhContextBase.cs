@@ -1,13 +1,10 @@
-﻿using System;
-using System.Data;
-using System.Reflection.Metadata;
+﻿using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
-using VpnHood.Server.Configurations;
 
 namespace VpnHood.AccessServer.Persistence;
 
@@ -22,7 +19,6 @@ public abstract class VhContextBase : DbContext
     public virtual DbSet<PublicCycleModel> PublicCycles { get; set; } = default!;
     public virtual DbSet<ServerModel> Servers { get; set; } = default!;
     public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
-    public virtual DbSet<AccessPointModel> AccessPoints { get; set; } = default!;
     public virtual DbSet<AccessPointGroupModel> AccessPointGroups { get; set; } = default!;
     public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
     public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
@@ -158,6 +154,23 @@ public abstract class VhContextBase : DbContext
                 .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL and IsDeleted = 0")
                 .IsUnique();
 
+            entity.OwnsMany(e=>e.AccessPoints, ap=>
+            {
+                ap.ToTable(nameof(ServerModel.AccessPoints));
+                ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
+            });
+
+
+            //entity.Property(e => e.AccessPoints)
+            //    .HasColumnType("varchar(200)")
+            //    .HasConversion(
+            //        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            //        v => JsonSerializer.Deserialize<AccessPointModel[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<AccessPointModel>(),
+            //        new ValueComparer<AccessPointModel[]>(
+            //            (c1, c2) => Common.Utils.Util.SequenceNullOrEquals(c1, c2),
+            //            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            //            c => c));
+
             entity.Property(e => e.Description)
                 .HasMaxLength(400);
 
@@ -265,23 +278,6 @@ public abstract class VhContextBase : DbContext
             entity.HasOne(e => e.Server)
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.NoAction);
-        });
-
-
-        modelBuilder.Entity<AccessPointModel>(entity =>
-        {
-            entity.HasKey(e => e.AccessPointId);
-
-            entity.Property(e => e.IpAddress)
-                .HasMaxLength(40);
-
-            entity.HasIndex(e => new { e.ServerId, e.IpAddress, e.TcpPort, e.IsListen })
-                .IsUnique();
-
-            entity.HasOne(e => e.AccessPointGroup)
-                .WithMany(d => d.AccessPoints)
-                .HasForeignKey(e => e.AccessPointGroupId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

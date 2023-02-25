@@ -36,8 +36,8 @@ public class ProjectTest : BaseTest
         {
             GoogleAnalyticsTrackId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            TrackClientIp = new PatchOfBoolean {Value =  false},
-            TrackClientRequest = new PatchOfTrackClientRequest { Value =  TrackClientRequest.Nothing},
+            TrackClientIp = new PatchOfBoolean { Value = false },
+            TrackClientRequest = new PatchOfTrackClientRequest { Value = TrackClientRequest.Nothing },
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         var project1C = await projectsClient.GetAsync(projectId);
@@ -96,7 +96,7 @@ public class ProjectTest : BaseTest
     public async Task Invalidate_agent_cache_after_update()
     {
         var sampler = await AccessPointGroupDom.Create();
-        var sampleAccessToken = await sampler.CreateAccessToken(false);
+        var sampleAccessToken = await sampler.CreateAccessToken();
         await sampleAccessToken.CreateSession();
 
         var newProjectName = Guid.NewGuid().ToString();
@@ -134,12 +134,25 @@ public class ProjectTest : BaseTest
     [TestMethod]
     public async Task GetUsage()
     {
-        var testInit2 = await TestInit.Create();
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom1 = await farm.CreateAccessToken();
+        var accessTokenDom2 = await farm.CreateAccessToken();
 
-        var fillData = await testInit2.Fill();
-        await testInit2.Sync();
+        var sessionDom = await accessTokenDom1.CreateSession();
+        await sessionDom.AddUsage();
+       
+        sessionDom = await accessTokenDom1.CreateSession();
+        await sessionDom.AddUsage();
 
-        var res = await TestInit1.ProjectsClient.GetUsageAsync(testInit2.ProjectId, DateTime.UtcNow.AddDays(-1));
-        Assert.AreEqual(fillData.SessionRequests.Count, res.DeviceCount);
+        sessionDom = await accessTokenDom2.CreateSession();
+        await sessionDom.AddUsage();
+
+        sessionDom = await accessTokenDom2.CreateSession();
+        await sessionDom.AddUsage();
+
+        await farm.TestInit.Sync();
+
+        var res = await farm.TestInit.ProjectsClient.GetUsageAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
+        Assert.AreEqual(4, res.DeviceCount);
     }
 }

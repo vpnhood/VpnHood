@@ -2,22 +2,24 @@
 
 public class Server
 {
-    public Guid ServerId { get; set; }
-    public Guid? AccessPointGroupId { get; set; }
-    public string? AccessPointGroupName { get; set; }
-    public string? Version { get; set; }
-    public string? ServerName { get; set; }
-    public string? EnvironmentVersion { get; set; }
-    public string? OsInfo { get; set; }
-    public string? MachineName { get; set; }
-    public long? TotalMemory { get; set; }
-    public int? LogicalCoreCount { get; set; }
-    public DateTime? ConfigureTime { get; set; }
-    public DateTime CreatedTime { get; set; }
-    public bool AutoConfigure { get; set; }
-    public bool IsEnabled { get; set; }
-    public string? Description { get; set; }
-    public string? LastConfigError { get; set; }
-    public ServerState ServerState { get; set; }
-    public ServerStatusEx? ServerStatus { get; set; }
+    public required Guid ServerId { get; init; }
+    public required Guid? AccessPointGroupId { get; init; }
+    public required string? AccessPointGroupName { get; init; }
+    public required string? Version { get; init; }
+    public required string? ServerName { get; init; }
+    public required string? EnvironmentVersion { get; init; }
+    public required string? OsInfo { get; init; }
+    public required string? MachineName { get; init; }
+    public required long? TotalMemory { get; init; }
+    public required int? LogicalCoreCount { get; init; }
+    public required DateTime? ConfigureTime { get; init; }
+    public required DateTime CreatedTime { get; init; }
+    public required bool AutoConfigure { get; init; }
+    public required bool IsEnabled { get; init; }
+    public required string? Description { get; init; }
+    public required string? LastConfigError { get; init; }
+    public required ServerState ServerState { get; set; }
+    public required ServerStatusEx? ServerStatus { get; set; }
+    public required AccessPoint[] AccessPoints { get; init; }
+
 }

@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
@@ -24,12 +23,18 @@ namespace VpnHood.AccessServer.Controllers;
 public class AccessTokensController : SuperController<AccessTokensController>
 {
     private readonly UsageReportService _usageReportService;
+    private readonly SubscriptionService _subscriptionService;
 
-    public AccessTokensController(ILogger<AccessTokensController> logger, VhContext vhContext,
-        UsageReportService usageReportService, MultilevelAuthService multilevelAuthService)
+    public AccessTokensController(
+        ILogger<AccessTokensController> logger, 
+        VhContext vhContext,
+        UsageReportService usageReportService, 
+        MultilevelAuthService multilevelAuthService, 
+        SubscriptionService subscriptionService)
         : base(logger, vhContext, multilevelAuthService)
     {
         _usageReportService = usageReportService;
+        _subscriptionService = subscriptionService;
     }
 
     [HttpPost]
@@ -39,10 +44,8 @@ public class AccessTokensController : SuperController<AccessTokensController>
         await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
         // check user quota
-        using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
-        if (await IsFreePlan(projectId) &&
-            VhContext.AccessTokens.Count(accesToken => accesToken.ProjectId == projectId && !accesToken.IsDeleted) >= QuotaConstants.AccessTokenCount)
-            throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateAccessTokens");
+        await _subscriptionService.AuthorizeCreateAccessToken(projectId);
 
         var accessPointGroup = await VhContext.AccessPointGroups
             .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
@@ -131,12 +134,20 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
         var certificate = accessToken.AccessPointGroup!.Certificate!;
         var x509Certificate = new X509Certificate2(certificate.RawData);
-        var accessPoints = VhContext.AccessPoints
-            .Where(x => x.AccessPointGroupId == accessToken.AccessPointGroupId && !x.Server!.IsDeleted)
-            .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
+
+        // find all public accessPoints 
+        var farmServers = await VhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .Where(server => server.AccessPointGroupId == accessToken.AccessPointGroupId )
+            .ToArrayAsync();
+
+        var tokenAccessPoints = farmServers
+            .SelectMany(server => server.AccessPoints)
+            .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
             .ToArray();
-        
-        if (Util.IsNullOrEmpty(accessPoints))
+
+       
+        if (Util.IsNullOrEmpty(tokenAccessPoints))
             throw new InvalidOperationException("Could not find any public access point for the AccessPointGroup. Please configure a server for this AccessToken.");
 
         // create token
@@ -146,7 +157,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             TokenId = accessToken.AccessTokenId,
             Name = accessToken.AccessTokenName,
             SupportId = accessToken.SupportCode,
-            HostEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray(),
+            HostEndPoints = tokenAccessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
             HostPort = 0, //valid hostname is not supported yet
             IsValidHostName = false,
             IsPublic = accessToken.IsPublic,

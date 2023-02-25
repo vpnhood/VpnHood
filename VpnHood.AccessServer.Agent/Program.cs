@@ -22,7 +22,6 @@ public class Program
         LogManager.Setup();
 
         var builder = WebApplication.CreateBuilder(args);
-        var a = builder.Configuration.GetSection("App").Get<AgentOptions>();
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions { AddSwaggerVersioning = false });
         builder.Services

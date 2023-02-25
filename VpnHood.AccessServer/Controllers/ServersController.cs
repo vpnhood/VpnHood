@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,14 +9,11 @@ using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common.Utils;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -52,101 +48,16 @@ public class ServersController : SuperController<ServersController>
     public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams createParams)
     {
         await VerifyUserPermission(projectId, Permissions.ServerWrite);
-
-        // check user quota
-        using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
-        if (await IsFreePlan(projectId) &&
-            VhContext.Servers.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerCount)
-            throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
-
-        // validate
-        var accessPointGroup = await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
-
-        // Resolve Name Template
-        createParams.ServerName = createParams.ServerName?.Trim();
-        if (string.IsNullOrWhiteSpace(createParams.ServerName)) createParams.ServerName = Resource.NewServerTemplate;
-        if (createParams.ServerName.Contains("##"))
-        {
-            var names = await VhContext.Servers
-                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-                .Select(x => x.ServerName)
-                .ToArrayAsync();
-            createParams.ServerName = AccessUtil.FindUniqueName(createParams.ServerName, names);
-        }
-
-        var serverModel = new ServerModel
-        {
-            ProjectId = projectId,
-            ServerId = Guid.NewGuid(),
-            CreatedTime = DateTime.UtcNow,
-            ServerName = createParams.ServerName,
-            IsEnabled = true,
-            Secret = Util.GenerateSessionKey(),
-            AuthorizationCode = Guid.NewGuid(),
-            AccessPointGroupId = accessPointGroup.AccessPointGroupId,
-            AccessPoints = new List<AccessPointModel>(),
-            ConfigCode = Guid.NewGuid(),
-            AutoConfigure = true
-        };
-        await VhContext.Servers.AddAsync(serverModel);
-        await VhContext.SaveChangesAsync();
-
-        var server = serverModel.ToDto(
-            accessPointGroup.AccessPointGroupName,
-            null, _appOptions.LostServerThreshold);
-        return server;
+        return await _serverService.Create(projectId, createParams);
     }
 
     [HttpPatch("{serverId:guid}")]
     public async Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         await VerifyUserPermission(projectId, Permissions.ServerWrite);
-
-        // validate
-        var server = await VhContext.Servers
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .Include(x => x.AccessPoints)
-            .SingleAsync(x => x.ServerId == serverId);
-
-        if (updateParams.AccessPointGroupId != null && server.AccessPointGroupId != updateParams.AccessPointGroupId)
-        {
-            // make sure new access group belong to this account
-            var accessPointGroup = await VhContext.AccessPointGroups
-                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
-
-            // update server accessPointGroup and all AccessPoints accessPointGroup
-            server.AccessPointGroup = accessPointGroup;
-            server.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
-            foreach (var accessPoint in server.AccessPoints!)
-            {
-                accessPoint.AccessPointGroup = accessPointGroup;
-                accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
-            }
-
-            // Schedule server reconfig
-            server.ConfigCode = Guid.NewGuid();
-        }
-
-        if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
-        if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
-        if (updateParams.AutoConfigure != null && updateParams.AutoConfigure != server.AutoConfigure)
-        {
-            server.AutoConfigure = updateParams.AutoConfigure;
-            server.ConfigCode = Guid.NewGuid();
-        }
-
-        await VhContext.SaveChangesAsync();
-        var serverCache = await _agentCacheClient.GetServer(server.ServerId);
-        await _agentCacheClient.InvalidateServer(server.ServerId);
-
-        var serverDto = server.ToDto(
-            server.AccessPointGroup?.AccessPointGroupName,
-            serverCache?.ServerStatus,
-            _appOptions.LostServerThreshold);
-
-        return serverDto;
+        return await _serverService.Update(projectId, serverId, updateParams);
     }
-
+    
     [HttpGet("{serverId:guid}")]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {

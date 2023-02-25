@@ -14,7 +14,6 @@ using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -104,7 +103,6 @@ public class ProjectsController : SuperController<ProjectsController>
         };
 
         await VhContext.Projects.AddAsync(project);
-
 
         // Grant permissions
         var secureObject = await _multilevelAuthService.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);

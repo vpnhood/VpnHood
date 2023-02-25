@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.Models;
+﻿using System.Collections.ObjectModel;
+
+namespace VpnHood.AccessServer.Models;
 
 public class ServerModel
 {
@@ -23,40 +25,11 @@ public class ServerModel
     public string? LastConfigError { get; set; }
     public bool AutoConfigure { get; set; }
     public bool IsDeleted { get; set; }
+    public List<AccessPointModel> AccessPoints { get; set; } = new();
 
     public virtual ProjectModel? Project { get; set; }
     public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
     public virtual ServerStatusModel? ServerStatus { get; set; }
-
     public virtual ICollection<SessionModel>? Sessions { get; set; }
-    public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
-
-    public ServerModel Clone()
-    {
-        return new ServerModel
-        {
-            AccessPointGroupId= AccessPointGroupId,
-            AuthorizationCode= AuthorizationCode,
-            ConfigCode= ConfigCode,
-            LastConfigCode= LastConfigCode,
-            LastConfigError= LastConfigError,
-            ConfigureTime= ConfigureTime,
-            CreatedTime= CreatedTime,
-            Description= Description,
-            EnvironmentVersion= EnvironmentVersion,
-            IsDeleted= IsDeleted,
-            IsEnabled= IsEnabled,
-            LogicalCoreCount= LogicalCoreCount,
-            MachineName= MachineName,
-            OsInfo= OsInfo,
-            ProjectId = ProjectId,
-            Secret= Secret,
-            ServerId= ServerId,
-            ServerName=ServerName,
-            TotalMemory= TotalMemory,
-            Version= Version,
-            AutoConfigure = AutoConfigure
-        };
-    }
 }

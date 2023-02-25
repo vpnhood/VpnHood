@@ -9,4 +9,5 @@ public class ServerUpdateParams
     public Patch<Guid?>? AccessPointGroupId { get; set; }
     public Patch<bool>? GenerateNewSecret { get; set; }
     public Patch<bool>? AutoConfigure { get; set; }
+    public Patch<AccessPoint[]>? AccessPoints { get; set; }
 }

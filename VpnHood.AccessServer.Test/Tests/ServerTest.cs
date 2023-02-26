@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
@@ -15,116 +14,109 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class ServerTest : BaseTest
+public class ServerTest
 {
     [TestMethod]
     public async Task Reconfig()
     {
-        var serverClient = new ServersClient(TestInit1.Http);
-        var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == TestInit1.ServerId1);
-        var oldConfigCode = serverModel.ConfigCode;
-        await serverClient.ReconfigureAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var farm = await AccessPointGroupDom.Create();
+        var oldConfigCode = farm.DefaultServer.ServerConfig.ConfigCode;
+        await farm.DefaultServer.Client.ReconfigureAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
-        //TestInit1.VhContext.ChangeTracker.Clear();
-        serverModel = await TestInit1.VhContext.Servers.SingleAsync(x => x.ServerId == TestInit1.ServerId1);
-        Assert.AreNotEqual(oldConfigCode, serverModel.ConfigCode);
+        await farm.DefaultServer.Configure();
+        Assert.AreNotEqual(oldConfigCode, farm.DefaultServer.ServerConfig.ConfigCode);
     }
 
     [TestMethod]
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
-        var farm2 = await AccessPointGroupDom.Create(testInit);
+        var farm1 = await AccessPointGroupDom.Create(testInit, serverCount: 0);
 
         //-----------
         // check: Create
         //-----------
-        var serverClient = testInit.ServersClient;
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
-        var server1A = await serverClient.CreateAsync(testInit.ProjectId, server1ACreateParam);
-        var install1A = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
+        var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
+        var install1A = await farm1.TestInit.ServersClient.GetInstallManualAsync(testInit.ProjectId, serverDom.ServerId);
 
         //-----------
         // check: Get
         //-----------
-        var serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(server1ACreateParam.ServerName, serverData1.Server.ServerName);
-        Assert.AreEqual(ServerState.NotInstalled, serverData1.Server.ServerState);
+        await serverDom.Reload();
+        Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
+        Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        var agentClient = testInit.CreateAgentClient(server1A.ServerId);
-        var serverInfo = await testInit.NewServerInfo();
-        serverInfo.Status.SessionCount = 0;
-        var serverConfig = await agentClient.Server_Configure(serverInfo);
-        serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Configuring, serverData1.Server.ServerState);
+        serverDom.ServerInfo = await testInit.NewServerInfo();
+        serverDom.ServerInfo.Status.SessionCount = 0;
+        await serverDom.Configure(false);
+        await serverDom.Reload();
+        Assert.AreEqual(ServerState.Configuring, serverDom.Server.ServerState);
 
         // ServerState.Idle
-        serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
-        await agentClient.Server_UpdateStatus(serverInfo.Status);
-        serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Idle, serverData1.Server.ServerState);
+        serverDom.ServerInfo.Status.SessionCount = 0;
+        await serverDom.SendStatus();
+        await serverDom.Reload();
+        Assert.AreEqual(ServerState.Idle, serverDom.Server.ServerState);
 
         // ServerState.Active
-        await agentClient.Server_UpdateStatus(TestInit.NewServerStatus(serverConfig.ConfigCode));
-        serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Active, serverData1.Server.ServerState);
+        serverDom.ServerInfo.Status = TestInit.NewServerStatus(serverDom.ServerConfig.ConfigCode);
+        await serverDom.SendStatus();
+        await serverDom.Reload();
+        Assert.AreEqual(ServerState.Active, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        await serverClient.ReconfigureAsync(testInit.ProjectId, server1A.ServerId);
-        serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Configuring, serverData1.Server.ServerState);
+        await serverDom.Client.ReconfigureAsync(testInit.ProjectId, serverDom.ServerId);
+        await serverDom.Reload();
+        Assert.AreEqual(ServerState.Configuring, serverDom.Server.ServerState);
 
         //-----------
         // check: Update (Don't change Secret)
         //-----------
-        var server1CUpdateParam = new ServerUpdateParams
+        var serverUpdateParam = new ServerUpdateParams
         {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
-            AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId },
-            AutoConfigure = new PatchOfBoolean { Value = !server1A.AutoConfigure },
+            AutoConfigure = new PatchOfBoolean { Value = !serverDom.Server.AutoConfigure },
             GenerateNewSecret = new PatchOfBoolean { Value = false }
         };
-        await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        var server1C = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        var install1C = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
+        await serverDom.Update(serverUpdateParam);
+        await serverDom.Reload();
+        var install1C = await serverDom.Client.GetInstallManualAsync(testInit.ProjectId, serverDom.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
-        Assert.AreEqual(server1CUpdateParam.AutoConfigure.Value, server1C.Server.AutoConfigure);
-        Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
-        Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
+        Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
+        Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
 
         //-----------
         // check: Update (change Secret)
         //-----------
-        server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
-        await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        install1C = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
+        serverUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
+        await serverDom.Update(serverUpdateParam);
+        install1C = await serverDom.Client.GetInstallManualAsync(testInit.ProjectId, serverDom.Server.ServerId);
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
-        // check: Update (null accessPointGroupId)
+        // check: Update (accessPointGroupId)
         //-----------
-        server1CUpdateParam = new ServerUpdateParams
-        {
-            AccessPointGroupId = new PatchOfNullableGuid { Value = null }
-        };
-        await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        server1C = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.IsNull(server1C.Server.AccessPointGroupId);
+        var farm2 = await AccessPointGroupDom.Create(farm1.TestInit);
+        serverUpdateParam = new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId } };
+        await serverDom.Client.UpdateAsync(testInit.ProjectId, serverDom.ServerId, serverUpdateParam);
+        await serverDom.Reload();
+        Assert.AreEqual(farm2.AccessPointGroupId, serverDom.Server.AccessPointGroupId);
 
         //-----------
-        // check: Get
+        // check: List
         //-----------
-        var servers = await serverClient.ListAsync(testInit.ProjectId);
-        Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
+        var servers = await serverDom.Client.ListAsync(testInit.ProjectId);
+        Assert.IsTrue(servers.Any(x => x.Server.ServerName == serverDom.Server.ServerName && x.Server.ServerId == serverDom.ServerId));
 
         //-----------
         // check: Delete
         //-----------
-        await serverClient.DeleteAsync(testInit.ProjectId, server1A.ServerId);
+        await serverDom.Client.DeleteAsync(testInit.ProjectId, serverDom.ServerId);
         try
         {
-            await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
+            await serverDom.Reload();
             Assert.Fail($"{nameof(NotExistsException)} was expected");
         }
         catch (ApiException ex)
@@ -153,8 +145,8 @@ public class ServerTest : BaseTest
     [TestMethod]
     public async Task GetInstallManual()
     {
-        var install = await TestInit1.ServersClient
-            .GetInstallManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var farm = await AccessPointGroupDom.Create();
+        var install = await farm.DefaultServer.Client.GetInstallManualAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
         var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
@@ -167,10 +159,10 @@ public class ServerTest : BaseTest
     [TestMethod]
     public async Task ServerInstallByUserName()
     {
-        var serverClient = TestInit1.ServersClient;
+        var farm = await AccessPointGroupDom.Create();
         try
         {
-            await serverClient.InstallBySshUserPasswordAsync(TestInit1.ProjectId, TestInit1.ServerId1,
+            await farm.DefaultServer.Client.InstallBySshUserPasswordAsync(farm.ProjectId, farm.DefaultServer.ServerId,
                 new ServerInstallBySshUserPasswordParams { HostName = "127.0.0.1", UserName = "user", Password = "pass" });
         }
         catch (ApiException ex)
@@ -181,7 +173,7 @@ public class ServerTest : BaseTest
 
         try
         {
-            await serverClient.InstallBySshUserKeyAsync(TestInit1.ProjectId, TestInit1.ServerId1,
+            await farm.DefaultServer.Client.InstallBySshUserKeyAsync(farm.ProjectId, farm.DefaultServer.ServerId,
                 new ServerInstallBySshUserKeyParams { HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key });
         }
         catch (ApiException ex)
@@ -222,9 +214,9 @@ public class ServerTest : BaseTest
         {
             await p1Farm.DefaultServer.Update(new ServerUpdateParams
             {
-                AccessPointGroupId = new PatchOfNullableGuid { Value= p2Farm.AccessPointGroupId }
+                AccessPointGroupId = new PatchOfNullableGuid { Value = p2Farm.AccessPointGroupId }
             });
-            
+
             Assert.Fail($"{nameof(NotExistsException)} was expected.");
         }
         catch (ApiException ex)
@@ -282,7 +274,69 @@ public class ServerTest : BaseTest
     [TestMethod]
     public async Task GetStatusHistory()
     {
-        var res = await TestInit1.ServersClient.GetStatusHistoryAsync(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var farm = await AccessPointGroupDom.Create();
+        var res = await farm.TestInit.ServersClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
+    }
+
+    [TestMethod]
+    public async Task Crud_AccessPoints()
+    {
+        var testInit = await TestInit.Create();
+        var farm = await AccessPointGroupDom.Create(testInit, serverCount: 0);
+
+        var accessPoint1 = await testInit.NewAccessPoint();
+        var accessPoint2 = await testInit.NewAccessPoint();
+
+        // create server
+        var serverDom = await farm.AddNewServer(new ServerCreateParams
+        {
+            AccessPoints = new[] { accessPoint1, accessPoint2 }
+        });
+
+        //-----------
+        // check: accessPointGroupId is created
+        //-----------
+        var accessPoint1B = serverDom.Server.AccessPoints.ToArray()[0];
+        var accessPoint2B = serverDom.Server.AccessPoints.ToArray()[1];
+        Assert.AreEqual(accessPoint1.IpAddress, accessPoint1B.IpAddress);
+        Assert.AreEqual(accessPoint1.TcpPort, accessPoint1B.TcpPort);
+        Assert.AreEqual(accessPoint1.UdpPort, accessPoint1B.UdpPort);
+        Assert.AreEqual(accessPoint1.AccessPointMode, accessPoint1B.AccessPointMode); // first group must be default
+        Assert.AreEqual(accessPoint1.IsListen, accessPoint1B.IsListen); // first group must be default
+
+        await serverDom.Reload();
+        Assert.AreEqual(accessPoint1.IpAddress, accessPoint1B.IpAddress);
+        Assert.AreEqual(accessPoint1.TcpPort, accessPoint1B.TcpPort);
+        Assert.AreEqual(accessPoint1.UdpPort, accessPoint1B.UdpPort);
+        Assert.AreEqual(accessPoint1.AccessPointMode, accessPoint1B.AccessPointMode); // first group must be default
+        Assert.AreEqual(accessPoint1.IsListen, accessPoint1B.IsListen); // first group must be default
+
+        Assert.AreEqual(accessPoint2.IpAddress, accessPoint2B.IpAddress);
+        Assert.AreEqual(accessPoint2.TcpPort, accessPoint2B.TcpPort);
+        Assert.AreEqual(accessPoint2.UdpPort, accessPoint2B.UdpPort);
+        Assert.AreEqual(accessPoint2.AccessPointMode, accessPoint2B.AccessPointMode); // first group must be default
+        Assert.AreEqual(accessPoint2.IsListen, accessPoint2B.IsListen); // first group must be default
+
+        //-----------
+        // check: update 
+        //-----------
+        var oldConfig = (await serverDom.UpdateStatus(serverDom.ServerInfo.Status)).ConfigCode;
+        var accessPoint3 = await testInit.NewAccessPoint();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint3 } }
+        });
+        var newConfig = (await serverDom.UpdateStatus(serverDom.ServerInfo.Status)).ConfigCode;
+        Assert.AreNotEqual(oldConfig, newConfig);
+
+        await serverDom.Reload();
+        Assert.AreEqual(1, serverDom.Server.AccessPoints.ToArray().Length);
+        var accessPoint3B = serverDom.Server.AccessPoints.ToArray()[0];
+        Assert.AreEqual(accessPoint3.IpAddress, accessPoint3B.IpAddress);
+        Assert.AreEqual(accessPoint3.TcpPort, accessPoint3B.TcpPort);
+        Assert.AreEqual(accessPoint3.UdpPort, accessPoint3B.UdpPort);
+        Assert.AreEqual(accessPoint3.AccessPointMode, accessPoint3B.AccessPointMode); // first group must be default
+        Assert.AreEqual(accessPoint3.IsListen, accessPoint3B.IsListen); // first group must be default
     }
 }

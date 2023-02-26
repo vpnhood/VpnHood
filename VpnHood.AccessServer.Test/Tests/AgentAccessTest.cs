@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AgentAccessTest : BaseTest
+public class AgentAccessTest
 {
     [TestMethod]
     public async Task Access_token_is_not_enabled()

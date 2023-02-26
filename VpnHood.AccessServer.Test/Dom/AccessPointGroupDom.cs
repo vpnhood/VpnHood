@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 
@@ -43,7 +44,7 @@ public class AccessPointGroupDom
     {
         var serverFarmData = await testInit.AccessPointGroupsClient.GetAsync(testInit.ProjectId, serverFarmId);
         var serverFarm = new AccessPointGroupDom(testInit, serverFarmData.ServerFarm);
-        await serverFarm.Reload();
+        await serverFarm.ReattachServers();
         return serverFarm;
     }
 
@@ -52,11 +53,21 @@ public class AccessPointGroupDom
     {
         var serverFarmData = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId, includeSummary: true);
         AccessPointGroup = serverFarmData.ServerFarm;
-
-        var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId, serverFarmId: AccessPointGroupId);
-        Servers = servers.Select(serverData => ServerDom.Attach(TestInit, serverData.Server)).ToList();
         return serverFarmData;
     }
+
+    public async Task ReattachServers()
+    {
+        var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId, serverFarmId: AccessPointGroupId);
+        Servers = servers.Select(serverData => ServerDom.Attach(TestInit, serverData.Server)).ToList();
+    }
+
+    public async Task ReloadServers()
+    {
+        foreach (var server in Servers)
+            await server.Reload();
+    }
+
 
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic = false)
     {
@@ -81,22 +92,38 @@ public class AccessPointGroupDom
         return new AccessTokenDom(TestInit, ret);
     }
 
-    public async Task<ServerDom> AddNewServer(bool autoConfigure = true)
+    public async Task<ServerDom> AddNewServer(int sessionCount)
     {
-        var sampleServer = await ServerDom.Create(TestInit, AccessPointGroupId, autoConfigure);
+        var serverDom = await AddNewServer(true, false);
+        serverDom.ServerStatus.SessionCount = 0;
+        await serverDom.SendStatus();
+        return serverDom;
+    }
+
+    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true)
+    {
+        var sampleServer = await ServerDom.Create(TestInit, AccessPointGroupId, configure, sendStatus);
         Servers.Add(sampleServer);
         return sampleServer;
     }
 
-    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true)
+    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
     {
         // ReSharper disable once LocalizableElement
         if (createParams.AccessPointGroupId != AccessPointGroupId && createParams.AccessPointGroupId != Guid.Empty)
             throw new ArgumentException($"{nameof(createParams.AccessPointGroupId)} must be the same as this farm", nameof(createParams));
 
         createParams.AccessPointGroupId = AccessPointGroupId;
-        var sampleServer = await ServerDom.Create(TestInit, createParams, configure);
+        var sampleServer = await ServerDom.Create(TestInit, createParams, configure, sendStatus);
         Servers.Add(sampleServer);
         return sampleServer;
+    }
+
+    public ServerDom FindServerByEndPoint(IPEndPoint ipEndPoint)
+    {
+        var serverDom = Servers.Single(x => x.Server.AccessPoints.Any(accessPoint =>
+            new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(ipEndPoint)));
+
+        return serverDom;
     }
 }

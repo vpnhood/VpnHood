@@ -20,7 +20,7 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
 
     public bool Equals(object? other, IEqualityComparer comparer)
     {
-        return Equals(this);
+        return Equals(other);
     }
 
     public int GetHashCode(IEqualityComparer comparer)
@@ -30,7 +30,7 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
 
     public bool Equals(AccessPointModel? other)
     {
-        return Equals((object?)this);
+        return Equals((object?)other);
     }
     
     public override int GetHashCode()
@@ -40,8 +40,10 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
 
     public override bool Equals(object? other)
     {
+        if (other == this)
+            return true;
+
         return
-            other == this ||
             other is AccessPointModel otherAccessPoint &&
             Equals(IpAddress, otherAccessPoint.IpAddress) &&
             AccessPointMode == otherAccessPoint.AccessPointMode &&

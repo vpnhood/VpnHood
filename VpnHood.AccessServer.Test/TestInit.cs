@@ -19,14 +19,12 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.Services;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using VpnHood.Server.Providers.HttpAccessServerProvider;
 using UserModel = VpnHood.AccessServer.Models.UserModel;
 
 namespace VpnHood.AccessServer.Test;
@@ -57,27 +55,12 @@ public class TestInit : IDisposable, IHttpClientFactory
     public DevicesClient DevicesClient => new(Http);
     public SystemClient SystemClient => new(Http);
     public ServerProfilesClient ServerProfilesClient => new(Http);
-    public HttpAccessServer AgentClient2 { get; private set; } = default!;
-    public HttpAccessServer AgentClient1 { get; private set; } = default!;
 
     public UserModel UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public UserModel UserProjectOwner1 { get; } = NewUser("Project Owner 1");
     public UserModel User1 { get; } = NewUser("User1");
     public UserModel User2 { get; } = NewUser("User2");
     public Guid ProjectId { get; private set; }
-    public Guid ServerId1 { get; private set; }
-    public string PublicServerDns { get; } = $"publicfoo.{Guid.NewGuid()}.com";
-    public string PrivateServerDns { get; } = $"privatefoo.{Guid.NewGuid()}.com";
-    public IPEndPoint HostEndPointG1S1 { get; private set; } = null!; //in token
-    public IPEndPoint HostEndPointG1S2 { get; private set; } = null!;
-    public IPEndPoint HostEndPointG2S1 { get; private set; } = null!; //in token
-    public IPEndPoint HostEndPointG2S2 { get; private set; } = null!;
-    public IPAddress ClientIp1 { get; private set; } = null!;
-    public IPAddress ClientIp2 { get; private set; } = null!;
-    public AccessToken AccessToken1 { get; private set; } = null!;
-    public Guid AccessPointGroupId1 { get; private set; }
-    public ServerInfo ServerInfo1 { get; private set; } = default!;
-    public ServerInfo ServerInfo2 { get; private set; } = default!;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
@@ -232,16 +215,6 @@ public class TestInit : IDisposable, IHttpClientFactory
         QuotaConstants.AccessPointCount = 0xFFFFFF;
         QuotaConstants.AccessPointGroupCount = 0xFFFFFF;
 
-        HostEndPointG1S1 = await NewEndPoint();
-        HostEndPointG1S2 = await NewEndPoint();
-        HostEndPointG2S1 = await NewEndPoint();
-        HostEndPointG2S2 = await NewEndPoint();
-        ClientIp1 = await NewIpV4();
-        ClientIp2 = await NewIpV4();
-        ServerInfo1 = await NewServerInfo();
-        ServerInfo2 = await NewServerInfo();
-
-
         await using var scope = WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var multilevelAuthRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
@@ -281,59 +254,6 @@ public class TestInit : IDisposable, IHttpClientFactory
 
         // create Project1
         ProjectId = project.ProjectId;
-
-        var certificate1 = await CertificatesClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
-        AccessPointGroupId1 = (await AccessPointGroupsClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
-
-        if (createServers)
-        {
-            var server1 = await ServersClient.CreateAsync(project.ProjectId,
-                new ServerCreateParams
-                {
-                    AccessPointGroupId = AccessPointGroupId1,
-                    AccessPoints = new[]
-                    {
-                        new AccessPoint {
-                            AccessPointMode = AccessPointMode.PublicInToken,
-                            IpAddress = HostEndPointG1S1.Address.ToString(),
-                            IsListen = true,
-                            TcpPort = HostEndPointG1S1.Port,
-                            UdpPort = 0
-                        }
-                    }
-                });
-
-            var server2 = await ServersClient.CreateAsync(project.ProjectId,
-                new ServerCreateParams
-                {
-                    AccessPointGroupId = AccessPointGroupId1,
-                    AccessPoints = new[]
-                    {
-                        new AccessPoint {
-                            AccessPointMode = AccessPointMode.Public,
-                            IpAddress = HostEndPointG1S1.Address.ToString(),
-                            IsListen = true,
-                            TcpPort = HostEndPointG1S1.Port,
-                            UdpPort = 0
-                        }
-                    }
-                });
-
-            ServerId1 = server1.ServerId;
-
-            // configure servers
-            AgentClient1 = await CreateAgentClient(server1.ServerId, ServerInfo1);
-            AgentClient2 = await CreateAgentClient(server2.ServerId, ServerInfo2);
-        }
-
-        // Create AccessToken1
-        AccessToken1 = await AccessTokensClient.CreateAsync(ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access1_{Guid.NewGuid()}",
-                AccessPointGroupId = AccessPointGroupId1
-            });
     }
 
     public static ServerStatus NewServerStatus(string? configCode)
@@ -384,7 +304,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         return serverInfo;
     }
 
-    public SessionRequestEx CreateSessionRequestEx(AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
+    public SessionRequestEx CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null)
     {
         var rand = new Random();
 
@@ -403,7 +323,7 @@ public class TestInit : IDisposable, IHttpClientFactory
             accessToken.AccessTokenId,
             clientInfo,
             Util.EncryptClientId(clientInfo.ClientId, secret),
-            hostEndPoint ?? HostEndPointG1S1)
+            hostEndPoint)
         {
             ClientIp = clientIp ?? NewIpV4().Result
         };
@@ -411,10 +331,9 @@ public class TestInit : IDisposable, IHttpClientFactory
         return sessionRequestEx;
     }
 
-    public AgentClient CreateAgentClient(Guid? serverId = null)
+    public AgentClient CreateAgentClient(Guid serverId)
     {
-        serverId ??= ServerId1;
-        var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId.Value).Result;
+        var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId).Result;
 
         var http = AgentApp.CreateClient();
         var options = new Server.Providers.HttpAccessServerProvider.HttpAccessServerOptions(
@@ -423,23 +342,6 @@ public class TestInit : IDisposable, IHttpClientFactory
         );
 
         return new AgentClient(http, options);
-    }
-
-    public async Task<AgentClient> CreateAgentClient(Guid? serverId, ServerInfo? serverInfo)
-    {
-        var agentClient = CreateAgentClient(serverId);
-        serverInfo ??= await NewServerInfo();
-        await ConfigAgent(agentClient, serverInfo);
-        return agentClient;
-    }
-
-    public async Task<ServerInfo> ConfigAgent(AgentClient agentClient, ServerInfo? serverInfo = null)
-    {
-        serverInfo ??= await NewServerInfo();
-        var serverConfig = await agentClient.Server_Configure(serverInfo);
-        serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
-        await agentClient.Server_UpdateStatus(serverInfo.Status);
-        return serverInfo;
     }
 
     public async Task Sync(bool flushCache = true)

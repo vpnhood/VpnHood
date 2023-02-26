@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -103,7 +104,7 @@ public class AgentService
         await CheckServerVersion(server);
         SetServerStatus(server, serverStatus, false);
 
-        if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
+        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode)
         {
             _logger.LogInformation(AccessEventId.Server,
                 "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
@@ -149,12 +150,11 @@ public class AgentService
         server.LogicalCoreCount = serverInfo.LogicalCoreCount;
         server.Version = serverInfo.Version.ToString();
         server.LastConfigError = serverInfo.LastError;
-        server.LastConfigCode = null;
         SetServerStatus(server, serverInfo.Status, true);
 
         // Update AccessPoints
         if (server.AutoConfigure)
-            server.AccessPoints = await CreateServerAccessPoints(server.AccessPointGroupId, serverInfo);
+            server.AccessPoints = await CreateServerAccessPoints(server.ServerId, server.AccessPointGroupId, serverInfo);
 
         // update db if lastError has been changed; prevent bombing the db
         if (saveServer)
@@ -170,7 +170,6 @@ public class AgentService
             serverUpdate.Version = server.Version;
             serverUpdate.LastConfigError = server.LastConfigError;
             serverUpdate.AccessPoints = server.AccessPoints;
-            serverUpdate.LastConfigCode = null;
             await _vhContext.SaveChangesAsync();
         }
 
@@ -205,28 +204,18 @@ public class AgentService
         return ret;
     }
 
-    private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid farmId, ServerInfo serverInfo)
+    private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid serverId, Guid farmId, ServerInfo serverInfo)
     {
         // find all public accessPoints 
         var farmServers = await _vhContext.Servers
             .Where(server => server.AccessPointGroupId == farmId && !server.IsDeleted)
             .ToArrayAsync();
 
-        var tokenAccessPoints = farmServers
-                .SelectMany(serverModel => serverModel.AccessPoints)
-                .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
-                .ToList();
-
-        // add first publicIp as a AccessPointMode.PublicInToken if farm does not have any
-        if (!tokenAccessPoints.Any() && serverInfo.PublicIpAddresses.Any())
-            tokenAccessPoints.Add(new AccessPointModel
-            {
-                AccessPointMode = AccessPointMode.PublicInToken,
-                IpAddress = serverInfo.PublicIpAddresses.First(),
-                TcpPort = 443,
-                UdpPort = 0,
-                IsListen = false
-            });
+        // all old PublicInToken AccessPoints in the same farm
+        var oldAccessPoints = farmServers
+            .SelectMany(serverModel => serverModel.AccessPoints)
+            .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
+            .ToList();
 
         // create private addresses
         var accessPoints = serverInfo.PrivateIpAddresses
@@ -247,17 +236,53 @@ public class AgentService
             .Distinct()
             .Select(ipAddress => new AccessPointModel
             {
-                AccessPointMode = tokenAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
-                    ? AccessPointMode.PublicInToken
-                    : AccessPointMode.Public, // prefer last value
+                AccessPointMode = oldAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
+                    ? AccessPointMode.PublicInToken // prefer last value
+                    : AccessPointMode.Public,
                 IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
                 IpAddress = ipAddress,
                 TcpPort = 443,
                 UdpPort = 0
             }));
 
+        // has other server in the farm offer any PublicInToken
+        var hasOtherServerOwnPublicToken = farmServers.Any(server =>
+            server.ServerId != serverId &&
+            server.AccessPoints.Any(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken));
+
+        // make sure at least one PublicInToken is selected
+        if (!hasOtherServerOwnPublicToken)
+        {
+            SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetwork);
+            SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetworkV6);
+        }
+
         return accessPoints.ToList();
     }
+
+    private static void SelectAccessPointAsPublicInToken(ICollection<AccessPointModel> accessPoints, AddressFamily addressFamily)
+    {
+        if (accessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))
+            return; // already set
+
+        var firstPublic = accessPoints.FirstOrDefault(x =>
+            x.AccessPointMode == AccessPointMode.Public &&
+            x.IpAddress.AddressFamily == addressFamily);
+
+        if (firstPublic == null)
+            return; // not public found to select as PublicInToken
+
+        accessPoints.Remove(firstPublic);
+        accessPoints.Add(new AccessPointModel
+        {
+            AccessPointMode = AccessPointMode.PublicInToken,
+            IsListen = firstPublic.IsListen,
+            IpAddress = firstPublic.IpAddress,
+            TcpPort = firstPublic.TcpPort,
+            UdpPort = firstPublic.UdpPort
+        });
+    }
+
 
     private static void SetServerStatus(ServerModel server, ServerStatus serverStatus, bool isConfigure)
     {

@@ -27,7 +27,7 @@ public class ServerFarmTest
         //-----------
         var publicIp1 = await testInit.NewIpV4();
         var publicIp2 = await testInit.NewIpV4();
-        await serverDom.Update(new Api.ServerUpdateParams
+        await serverDom.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf
             {

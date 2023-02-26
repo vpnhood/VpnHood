@@ -14,7 +14,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessTokenTest : BaseTest
+public class AccessTokenTest
 {
     [TestMethod]
     public async Task SupportCode_is_unique_per_project()

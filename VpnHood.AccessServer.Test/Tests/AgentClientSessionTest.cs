@@ -5,49 +5,36 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 
 [TestClass]
-public class AgentClientSessionTest : BaseTest
+public class AgentClientSessionTest
 {
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var accessTokenClient = TestInit1.AccessTokensClient;
-
-        // create accessTokenModel
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams
-            {
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                MaxTraffic = 14
-            });
-
-        // get access
-        var agentClient = TestInit1.CreateAgentClient();
-        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
+        {
+            MaxTraffic = 14
+        });
 
         //-----------
         // check: add usage
         //-----------
-        var sessionResponse = await agentClient.Session_AddUsage(sessionResponseEx.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
-        await TestInit1.FlushCache();
+        var sessionDom = await accessTokenDom.CreateSession();
+        var sessionResponse = await sessionDom.AddUsage(5, 10);
+        await farm.TestInit.FlushCache();
         Assert.AreEqual(5, sessionResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, sessionResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, sessionResponse.ErrorCode);
@@ -56,27 +43,17 @@ public class AgentClientSessionTest : BaseTest
     [TestMethod]
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
-        var accessTokenClient = TestInit1.AccessTokensClient;
-
-        // create accessTokenModel
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams
-            {
-                AccessPointGroupId = TestInit1.AccessPointGroupId1,
-                MaxTraffic = 0
-            });
-        var agentClient = TestInit1.CreateAgentClient();
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
+        {
+            MaxTraffic = 0
+        });
 
         //-----------
         // check: add usage
         //-----------
-        var sessionResponseEx =
-            await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
-        var sessionResponse = await agentClient.Session_AddUsage(sessionResponseEx.SessionId, new UsageInfo
-        {
-            SentTraffic = 5,
-            ReceivedTraffic = 10
-        });
+        var sessionDom = await accessTokenDom.CreateSession();
+        var sessionResponse = await sessionDom.AddUsage(5, 10);
         Assert.AreEqual(5, sessionResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, sessionResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponse.ErrorCode);
@@ -119,7 +96,7 @@ public class AgentClientSessionTest : BaseTest
 
         // check updating same client
         var sessionRequestEx = sessionDom.SessionRequestEx;
-        sessionRequestEx.ClientIp = farm.TestInit.ClientIp2;
+        sessionRequestEx.ClientIp = await farm.TestInit.NewIpV4();
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
         await farm.DefaultServer.AgentClient.Session_Create(sessionRequestEx);
@@ -128,13 +105,14 @@ public class AgentClientSessionTest : BaseTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
-    private async Task<Models.AccessModel> GetAccessFromSession(long sessionId)
+    private async Task<Models.AccessModel> GetAccessFromSession(SessionDom sessionDom)
     {
-        await using var scope = TestInit1.WebApp.Services.CreateAsyncScope();
-        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
+        await using var scope =  sessionDom.TestInit.WebApp.Services.CreateAsyncScope();
+        var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var session = await vhContext.Sessions
             .Include(x => x.Access)
-            .SingleAsync(x => x.SessionId == sessionId);
+            .SingleAsync(x => x.SessionId == sessionDom.SessionId);
+
         return session.Access!;
     }
 
@@ -146,7 +124,7 @@ public class AgentClientSessionTest : BaseTest
 
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.SessionKey);
-        
+
         // GetSession
         var oldSessionResponseEx = sessionDom.SessionResponseEx;
         await sessionDom.Reload();
@@ -227,7 +205,7 @@ public class AgentClientSessionTest : BaseTest
         //-----------
         try
         {
-            session = await serverDom21.CreateSession(accessTokenDom11.AccessToken);
+            await serverDom21.CreateSession(accessTokenDom11.AccessToken);
             Assert.Fail("NotExistsException was Expected");
         }
         catch (ApiException e)
@@ -239,14 +217,11 @@ public class AgentClientSessionTest : BaseTest
     [TestMethod]
     public async Task Session_Close()
     {
-        TestInit1.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
-
-        var sampleFarm1 = await SampleFarm.Create(TestInit1);
+        var testInit = await TestInit.Create();
+        testInit.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
+        var sampleFarm1 = await SampleFarm.Create(testInit);
         var session = sampleFarm1.Server1.Sessions.First();
-        var responseBase = await session.AddUsage();
-        var lastAccessUsage = responseBase.AccessUsage;
-
-        responseBase = await session.CloseSession();
+        var responseBase = await session.CloseSession();
         Assert.AreEqual(SessionErrorCode.Ok, responseBase.ErrorCode);
 
         //-----------
@@ -260,16 +235,16 @@ public class AgentClientSessionTest : BaseTest
         //-----------
         var responseBase2 = await session.AddUsage(10, 5);
         Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session must be closed!");
-        Assert.AreEqual(responseBase.AccessUsage!.SentTraffic + 10, responseBase2.AccessUsage!.SentTraffic, 
+        Assert.AreEqual(responseBase.AccessUsage!.SentTraffic + 10, responseBase2.AccessUsage!.SentTraffic,
             "AddUsage must work on closed a session!");
-        Assert.AreEqual(responseBase.AccessUsage!.ReceivedTraffic + 5, responseBase2.AccessUsage!.ReceivedTraffic, 
+        Assert.AreEqual(responseBase.AccessUsage!.ReceivedTraffic + 5, responseBase2.AccessUsage!.ReceivedTraffic,
             "AddUsage must work on closed a session!");
 
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(TestInit1.AgentOptions.SessionPermanentlyTimeout);
-        await TestInit1.Sync();
+        await Task.Delay(testInit.AgentOptions.SessionPermanentlyTimeout);
+        await testInit.Sync();
         try
         {
             responseBase = await session.AddUsage(0);
@@ -287,8 +262,9 @@ public class AgentClientSessionTest : BaseTest
     [TestMethod]
     public async Task Session_Bombard()
     {
-        var sampleFarm1 = await SampleFarm.Create(TestInit1);
-        var sampleFarm2 = await SampleFarm.Create(TestInit1);
+        var testInit = await TestInit.Create();
+        var sampleFarm1 = await SampleFarm.Create(testInit);
+        var sampleFarm2 = await SampleFarm.Create(testInit);
 
         var createSessionTasks = new List<Task<SessionDom>>();
         for (var i = 0; i < 50; i++)
@@ -307,7 +283,7 @@ public class AgentClientSessionTest : BaseTest
         }
 
         await Task.WhenAll(createSessionTasks);
-        await TestInit1.Sync();
+        await testInit.Sync();
 
         await sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1);
         await sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1);
@@ -321,7 +297,7 @@ public class AgentClientSessionTest : BaseTest
         tasks = tasks.Concat(sampleFarm2.Server2.Sessions.Select(x => x.AddUsage()));
         await Task.WhenAll(tasks);
 
-        await TestInit1.FlushCache();
+        await testInit.FlushCache();
         tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage());
         tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage()));
         tasks = tasks.Concat(sampleFarm2.Server1.Sessions.Select(x => x.AddUsage()));
@@ -329,36 +305,25 @@ public class AgentClientSessionTest : BaseTest
         await Task.WhenAll(tasks);
 
 
-        await TestInit1.Sync();
+        await testInit.Sync();
     }
 
     [TestMethod]
     public async Task Session_AddUsage_Public()
     {
-        // create token
-        var accessTokenClient = TestInit1.AccessTokensClient;
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = true });
-
-        var agentClient = TestInit1.CreateAgentClient(TestInit1.ServerId1);
-        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx1 = await agentClient.Session_Create(sessionRequestEx1);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken(isPublic: true);
+        var sessionDom1 = await accessTokenDom.CreateSession();
 
         //--------------
         // check: zero usage
         //--------------
-        var baseResponse = await agentClient.Session_AddUsage(
-            sessionResponseEx1.SessionId, new UsageInfo
-            {
-                SentTraffic = 0,
-                ReceivedTraffic = 0
-            });
-        Assert.AreEqual(0, baseResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(0, baseResponse.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
+        var response = await sessionDom1.AddUsage(0);
+        Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
+        Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
-        var access = await GetAccessFromSession(sessionResponseEx1.SessionId);
+        var access = await GetAccessFromSession(sessionDom1);
         Assert.AreEqual(0, access.TotalSentTraffic);
         Assert.AreEqual(0, access.TotalReceivedTraffic);
         Assert.AreEqual(0, access.TotalTraffic);
@@ -366,35 +331,25 @@ public class AgentClientSessionTest : BaseTest
         //-----------
         // check: add usage
         //-----------
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
-        await TestInit1.FlushCache();
-        Assert.AreEqual(5, baseResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
+        response = await sessionDom1.AddUsage(5, 10);
+        await farm.TestInit.FlushCache();
+        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
+        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
-        access = await GetAccessFromSession(sessionResponseEx1.SessionId);
+        access = await GetAccessFromSession(sessionDom1);
         Assert.AreEqual(5, access.TotalSentTraffic);
         Assert.AreEqual(10, access.TotalReceivedTraffic);
         Assert.AreEqual(15, access.TotalTraffic);
 
         // again
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
-        await TestInit1.FlushCache();
-        Assert.AreEqual(10, baseResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(20, baseResponse.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
+        response = await sessionDom1.AddUsage(5, 10);
+        await farm.TestInit.FlushCache();
+        Assert.AreEqual(10, response.AccessUsage?.SentTraffic);
+        Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
-        access = await GetAccessFromSession(sessionResponseEx1.SessionId);
+        access = await GetAccessFromSession(sessionDom1);
         Assert.AreEqual(10, access.TotalSentTraffic);
         Assert.AreEqual(20, access.TotalReceivedTraffic);
         Assert.AreEqual(30, access.TotalTraffic);
@@ -402,21 +357,15 @@ public class AgentClientSessionTest : BaseTest
         //-----------
         // check: add usage for client 2
         //-----------
-        var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
-        await TestInit1.FlushCache();
+        var sessionDom2 = await accessTokenDom.CreateSession();
+        response = await sessionDom2.AddUsage(5,10);
+        await farm.TestInit.FlushCache();
 
-        Assert.AreEqual(5, baseResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
+        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
+        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
-        access = await GetAccessFromSession(sessionResponseEx2.SessionId);
+        access = await GetAccessFromSession(sessionDom2);
         Assert.AreEqual(5, access.TotalSentTraffic);
         Assert.AreEqual(10, access.TotalReceivedTraffic);
         Assert.AreEqual(15, access.TotalTraffic);
@@ -426,104 +375,71 @@ public class AgentClientSessionTest : BaseTest
         //-------------
 
         //remove last cycle
-        var cycleManager = TestInit1.Scope.ServiceProvider.GetRequiredService<UsageCycleService>();
+        var cycleManager = farm.TestInit.Scope.ServiceProvider.GetRequiredService<UsageCycleService>();
         await cycleManager.DeleteCycle(cycleManager.CurrentCycleId);
         await cycleManager.UpdateCycle();
 
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
-        Assert.AreEqual(5, baseResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
+        response = await sessionDom2.AddUsage(5, 10);
+        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
+        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         //-------------
         // check: another Session_Create for same client should return same result
         //-------------
-        sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
-        Assert.AreEqual(5, sessionResponseEx2.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, sessionResponseEx2.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx2.ErrorCode);
+        var sessionDom3 = await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
+        Assert.AreEqual(5, sessionDom3.SessionResponseEx.AccessUsage?.SentTraffic);
+        Assert.AreEqual(10, sessionDom3.SessionResponseEx.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom3.SessionResponseEx.ErrorCode);
 
         //-------------
         // check: Session for another client should be reset too
         //-------------
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 50,
-                ReceivedTraffic = 100
-            });
-        await TestInit1.FlushCache();
-        Assert.AreEqual(50, baseResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(100, baseResponse.AccessUsage?.ReceivedTraffic);
+        response = await sessionDom1.AddUsage(50, 100);
+        await farm.TestInit.FlushCache();
+        Assert.AreEqual(50, response.AccessUsage?.SentTraffic);
+        Assert.AreEqual(100, response.AccessUsage?.ReceivedTraffic);
     }
 
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        var accessTokenClient = TestInit1.AccessTokensClient;
-
-        // create token
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
-
-        var agentClient = TestInit1.CreateAgentClient();
-        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx1 = await agentClient.Session_Create(sessionRequestEx1);
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken(isPublic: false);
+        var sessionDom1 = await accessTokenDom.CreateSession();
 
         //--------------
         // check: zero usage
         //--------------
-        var response = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 0,
-                ReceivedTraffic = 0
-            });
+        var response = await sessionDom1.AddUsage(0);
         Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
-
-        Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         //-----------
         // check: add usage by client 1
         //-----------
-        response = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
-        await TestInit1.FlushCache();
+        response = await sessionDom1.AddUsage(5, 10);
+        await farm.TestInit.FlushCache();
         Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
-        var accessData = await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
+        var accessData = await accessTokenDom.Reload();
         Assert.AreEqual(5, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(10, accessData.Access?.TotalReceivedTraffic);
 
-        // again by client 2
-        var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
-        var response2 = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId,
-            new UsageInfo
-            {
-                SentTraffic = 5,
-                ReceivedTraffic = 10
-            });
+        //-----------
+        // check: add usage by client 2
+        //-----------
+        var sessionDom2 = await accessTokenDom.CreateSession();
+        var response2 = await sessionDom2.AddUsage(5, 10);
         Assert.AreEqual(10, response2.AccessUsage?.SentTraffic);
         Assert.AreEqual(20, response2.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
 
-        await TestInit1.FlushCache();
-        accessData = await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
+        await farm.TestInit.FlushCache();
+        accessData = await accessTokenDom.Reload();
         Assert.AreEqual(10, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(20, accessData.Access?.TotalReceivedTraffic);
     }
@@ -531,25 +447,23 @@ public class AgentClientSessionTest : BaseTest
     [TestMethod]
     public async Task AccessUsage_Inserted()
     {
-        var sample = await AccessPointGroupDom.Create(TestInit1);
+        var farm = await AccessPointGroupDom.Create();
 
         // create token
-        var sampleAccessToken = await sample.CreateAccessToken();
+        var sampleAccessToken = await farm.CreateAccessToken();
         var sessionDom = await sampleAccessToken.CreateSession();
         await sessionDom.AddUsage(10051, 20051);
         await sessionDom.AddUsage(20, 30);
         await sessionDom.CloseSession();
 
-        await TestInit1.FlushCache();
+        await farm.TestInit.FlushCache();
 
-        await using var vhContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhContext>();
-        var session = await vhContext.Sessions
+        var session = await farm.TestInit.VhContext.Sessions
             .Include(x => x.Access)
             .Include(x => x.Access!.AccessToken)
             .SingleAsync(x => x.SessionId == sessionDom.SessionId);
 
-        var deviceClient = TestInit1.DevicesClient;
-        var deviceData = await deviceClient.GetAsync(TestInit1.ProjectId, session.DeviceId);
+        var deviceData = await farm.TestInit.DevicesClient.GetAsync(farm.ProjectId, session.DeviceId);
 
         Assert.AreEqual(sampleAccessToken.AccessTokenId, session.Access?.AccessTokenId);
         Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
@@ -557,9 +471,9 @@ public class AgentClientSessionTest : BaseTest
         Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
 
         // check sync
-        await TestInit1.Sync();
-        await using var vhReportContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhReportContext>();
-        var accessUsage = await vhReportContext.AccessUsages
+        await farm.TestInit.Sync();
+
+        var accessUsage = await farm.TestInit.VhReportContext.AccessUsages
             .OrderByDescending(x => x.AccessUsageId)
             .FirstAsync(x => x.SessionId == sessionDom.SessionId);
 

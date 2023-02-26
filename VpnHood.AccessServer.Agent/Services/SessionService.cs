@@ -1,11 +1,9 @@
 ﻿using System.Net;
-using System.Net.Sockets;
 using System.Security.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
@@ -204,6 +202,20 @@ public class SessionService
         access.AccessToken = accessToken;
         access.LastUsedTime = DateTime.UtcNow;
 
+        // check supported version
+        var minSupportedVersion = Version.Parse("2.3.289");
+        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
+            return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
+
+        // Check Redirect to another serverModel if everything was ok
+        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        if (bestEndPoint == null)
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
+
+        // redirect if current server does not server the best EndPoint
+        if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestEndPoint)))
+            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
+
         // create session
         var session = new SessionModel
         {
@@ -229,19 +241,6 @@ public class SessionService
         var ret = await BuildSessionResponse(session, accessedTime);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
-
-        // check supported version
-        var minSupportedVersion = Version.Parse("2.3.289");
-        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
-            return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
-
-        // Check Redirect to another serverModel if everything was ok
-        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
-        if (bestEndPoint == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
-
-        if (!bestEndPoint.Equals(requestEndPoint))
-            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
 
         // update AccessToken
         accessToken.FirstUsedTime ??= session.CreatedTime;
@@ -458,11 +457,12 @@ public class SessionService
         }
 
         // get all servers of this farm
-        var farmServers = (await _cacheService.GetServers()).Values
-            .Where(server => 
-                server.ProjectId == currentServer.ProjectId && 
+        var servers = await _cacheService.GetServers();
+        var farmServers = servers.Values
+            .Where(server =>
+                server.ProjectId == currentServer.ProjectId &&
                 server.AccessPointGroupId == currentServer.AccessPointGroupId &&
-                server.AccessPoints.Any(accessPoint=> accessPoint.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public) &&
+                server.AccessPoints.Any(accessPoint => accessPoint.IsPublic) &&
                 IsServerReady(server))
             .ToArray();
 

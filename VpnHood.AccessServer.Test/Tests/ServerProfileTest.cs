@@ -22,7 +22,7 @@ public class ServerProfileTest
         // -----------
         var serverConfig = new ServerConfig();
         serverConfig.SessionOptions.NetScanLimit = 1000;
-        var serverProfile = await testInit.ServerProfilesClient.CreateAsync(testInit.ProjectId, new Api.ServerProfileCreateParams
+        var serverProfile = await testInit.ServerProfilesClient.CreateAsync(testInit.ProjectId, new ServerProfileCreateParams
         {
             ServerConfig = JsonSerializer.Serialize(serverConfig)
         });

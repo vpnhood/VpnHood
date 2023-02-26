@@ -13,12 +13,13 @@ using VpnHood.Common.Client;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class ProjectTest : BaseTest
+public class ProjectTest
 {
     [TestMethod]
     public async Task Crud()
     {
-        var projectsClient = TestInit1.ProjectsClient;
+        var testInit = await TestInit.Create();
+        var projectsClient = testInit.ProjectsClient;
         var projectId = Guid.NewGuid();
         var project1A = await projectsClient.CreateAsync(projectId);
         Assert.AreEqual(projectId, project1A.ProjectId);
@@ -64,20 +65,20 @@ public class ProjectTest : BaseTest
         //-----------
         // Check: default group is created
         //-----------
-        var accessPointGroups = await TestInit1.AccessPointGroupsClient.ListAsync(projectId);
+        var accessPointGroups = await testInit.AccessPointGroupsClient.ListAsync(projectId);
         Assert.IsTrue(accessPointGroups.Count > 0);
 
         //-----------
         // Check: a public and private token is created
         //-----------
-        var accessTokens = await TestInit1.AccessTokensClient.ListAsync(projectId);
+        var accessTokens = await testInit.AccessTokensClient.ListAsync(projectId);
         Assert.IsTrue(accessTokens.Any(x => x.AccessToken.IsPublic));
         Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
 
         //-----------
         // Check: Admin, Guest permission groups
         //-----------
-        var authRepo = TestInit1.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
+        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
         var rolePermissions = await authRepo.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
         var adminRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
         var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectViewer.PermissionGroupId);
@@ -112,17 +113,18 @@ public class ProjectTest : BaseTest
     [TestMethod]
     public async Task MaxUserProjects()
     {
-        await TestInit1.SetHttpUser(TestInit1.UserSystemAdmin1.Email!);
-        var userClient = new UserClient(TestInit1.Http);
-        var user1 = await userClient.GetAsync(TestInit1.User1.UserId);
+        var testInit = await TestInit.Create();
+        await testInit.SetHttpUser(testInit.UserSystemAdmin1.Email!);
+        var userClient = new UserClient(testInit.Http);
+        var user1 = await userClient.GetAsync(testInit.User1.UserId);
         await userClient.UpdateAsync(user1.UserId, new UserUpdateParams { MaxProjects = new PatchOfInteger { Value = 2 } });
 
-        await TestInit1.SetHttpUser(TestInit1.User1.Email!);
-        await TestInit1.ProjectsClient.CreateAsync();
-        await TestInit1.ProjectsClient.CreateAsync();
+        await testInit.SetHttpUser(testInit.User1.Email!);
+        await testInit.ProjectsClient.CreateAsync();
+        await testInit.ProjectsClient.CreateAsync();
         try
         {
-            await TestInit1.ProjectsClient.CreateAsync();
+            await testInit.ProjectsClient.CreateAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
         catch (ApiException ex)

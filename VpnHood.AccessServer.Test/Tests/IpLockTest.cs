@@ -9,11 +9,12 @@ using VpnHood.Common.Messaging;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class IpLockTest : BaseTest
+public class IpLockTest
 {
     [TestMethod]
     public async Task Crud()
     {
+        var testInit1 = await TestInit.Create();
         var testInit2 = await TestInit.Create();
 
         var ipLockClient = testInit2.IpLocksClient;
@@ -23,7 +24,7 @@ public class IpLockTest : BaseTest
         //-----------
         var createParams1 = new IpLockCreateParams
         {
-            IpAddress = await TestInit1.NewIpV4String(),
+            IpAddress = await testInit1.NewIpV4String(),
             IsLocked = true,
             Description = "Sigma"
         };
@@ -31,7 +32,7 @@ public class IpLockTest : BaseTest
 
         var createParams2 = new IpLockCreateParams
         {
-            IpAddress = await TestInit1.NewIpV4String(),
+            IpAddress = await testInit1.NewIpV4String(),
             IsLocked = false,
             Description = "Sigma2"
         };

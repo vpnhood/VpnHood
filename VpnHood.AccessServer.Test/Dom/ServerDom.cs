@@ -5,17 +5,18 @@ using System.Threading.Tasks;
 using VpnHood.Server;
 using VpnHood.AccessServer.Api;
 using System.Net;
-using System.Data;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
 public class ServerDom
 {
     public TestInit TestInit { get; }
+    public ServersClient Client => TestInit.ServersClient;
     public AgentClient AgentClient { get; }
     public Api.Server Server { get; private set; }
     public List<SessionDom> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; set; }
+    public ServerStatus ServerStatus => ServerInfo.Status;
     public Server.Configurations.ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
@@ -73,7 +74,7 @@ public class ServerDom
         Server = serverData.Server;
     }
 
-    public static async Task<ServerDom> Create(TestInit testInit, ServerCreateParams createParams, bool autoConfigure = true)
+    public static async Task<ServerDom> Create(TestInit testInit, ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
     {
         var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, createParams);
 
@@ -83,18 +84,18 @@ public class ServerDom
             serverInfo: await testInit.NewServerInfo()
             );
 
-        if (autoConfigure)
+        if (configure)
         {
-            await myServer.Configure();
+            await myServer.Configure(sendStatus);
             await myServer.Reload();
         }
 
         return myServer;
     }
 
-    public static Task<ServerDom> Create(TestInit testInit, Guid accessPointGroupId, bool autoConfigure = true)
+    public static Task<ServerDom> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true, bool sendStatus = true)
     {
-        return Create(testInit, new ServerCreateParams { AccessPointGroupId = accessPointGroupId }, autoConfigure);
+        return Create(testInit, new ServerCreateParams { AccessPointGroupId = accessPointGroupId }, configure, sendStatus);
     }
 
     public async Task Update(ServerUpdateParams updateParams)
@@ -109,21 +110,28 @@ public class ServerDom
             await UpdateStatus(ServerInfo.Status);
     }
 
+    public async Task<ServerCommand> SendStatus(bool overwriteConfigCode = true)
+    {
+        if (overwriteConfigCode)
+            ServerInfo.Status.ConfigCode = ServerConfig.ConfigCode;
+        return await AgentClient.Server_UpdateStatus(ServerInfo.Status);
+    }
+
     public async Task<ServerCommand> UpdateStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
     {
         if (overwriteConfigCode) serverStatus.ConfigCode = ServerConfig.ConfigCode;
         return await AgentClient.Server_UpdateStatus(serverStatus);
     }
 
-    public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null)
+    public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null, bool assertError = true)
     {
         var sessionRequestEx = TestInit.CreateSessionRequestEx(
             accessToken,
-            clientId,
             ServerConfig.TcpEndPointsValue.First(),
+            clientId,
             await TestInit.NewIpV4());
 
-        var testSession = await SessionDom.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient);
+        var testSession = await SessionDom.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);
         Sessions.Add(testSession);
         return testSession;
     }

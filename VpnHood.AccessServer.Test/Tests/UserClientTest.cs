@@ -7,18 +7,19 @@ using VpnHood.AccessServer.Api;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class UserClientTest : BaseTest
+public class UserClientTest
 {
     [TestMethod]
     public async Task RegisterCurrentUser()
     {
+        var testInit = await TestInit.Create();
         var userEmail = $"{Guid.NewGuid()}@gmail.com";
 
         // ------------
         // Check: New user should not exist if not he hasn't registered yet
         // ------------
-        await TestInit1.SetHttpUser(userEmail, new Claim[]{new ("test_usage", "test")});
-        var userClient = new UserClient(TestInit1.Http);
+        await testInit.SetHttpUser(userEmail, new Claim[]{new ("test_usage", "test")});
+        var userClient = new UserClient(testInit.Http);
         try
         {
             await userClient.GetCurrentUserAsync();
@@ -37,6 +38,6 @@ public class UserClientTest : BaseTest
         Assert.AreEqual(userEmail, user.Email);
 
         // Get Project Get
-        await TestInit1.ProjectsClient.ListAsync();
+        await testInit.ProjectsClient.ListAsync();
     }
 }

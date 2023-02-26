@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common;
@@ -19,12 +20,12 @@ public class AccessTokenDom
         AccessToken = accessToken;
     }
 
-    public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null, bool assertError = true)
+    public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null, AddressFamily addressFamily = AddressFamily.InterNetwork, bool assertError = true)
     {
         // get server ip
         var accessKey = await GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
-        var serverEndPoint = token.HostEndPoints?.FirstOrDefault() ?? throw new Exception("There is no HostEndPoint.");
+        var serverEndPoint = token.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
 
         // find server of the farm that listen to token EndPoint
         var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId);
@@ -36,8 +37,8 @@ public class AccessTokenDom
 
         var sessionRequestEx = TestInit.CreateSessionRequestEx(
             AccessToken,
-            clientId,
             serverEndPoint,
+            clientId,
             clientIp ?? await TestInit.NewIpV4()
             );
 

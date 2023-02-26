@@ -1,6 +1,4 @@
-﻿using System.Collections.ObjectModel;
-
-namespace VpnHood.AccessServer.Models;
+﻿namespace VpnHood.AccessServer.Models;
 
 public class ServerModel
 {

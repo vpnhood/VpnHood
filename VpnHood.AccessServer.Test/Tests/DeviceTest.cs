@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
@@ -39,38 +38,36 @@ public class DeviceTest
     [TestMethod]
     public async Task Locked()
     {
-        var testInit = await TestInit.Create();
+        var farm = await AccessPointGroupDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken();
         var clientId = Guid.NewGuid();
-        var sessionRequestEx = testInit.CreateSessionRequestEx(testInit.AccessToken1, clientId: clientId,
-            clientIp: IPAddress.Parse("1.1.1.1"));
-
-        var agentClient = testInit.CreateAgentClient();
-        await agentClient.Session_Create(sessionRequestEx);
-
-        var deviceClient = testInit.DevicesClient;
-        var device = await deviceClient.FindByClientIdAsync(testInit.ProjectId, clientId);
+        await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);
+        var deviceClient = farm.TestInit.DevicesClient;
+        
+        var device = await deviceClient.FindByClientIdAsync(farm.ProjectId, clientId);
         Assert.IsNull(device.LockedTime);
 
-        await deviceClient.UpdateAsync(testInit.ProjectId, device.DeviceId,
+        await deviceClient.UpdateAsync(farm.ProjectId, device.DeviceId,
             new DeviceUpdateParams { IsLocked = new PatchOfBoolean { Value = false } });
-        device = (await deviceClient.GetAsync(testInit.ProjectId, device.DeviceId)).Device;
+        device = (await deviceClient.GetAsync(farm.ProjectId, device.DeviceId)).Device;
         Assert.IsNull(device.LockedTime);
 
-        await deviceClient.UpdateAsync(testInit.ProjectId, device.DeviceId,
+        await Task.Delay(1000);
+        await deviceClient.UpdateAsync(farm.ProjectId, device.DeviceId,
             new DeviceUpdateParams { IsLocked = new PatchOfBoolean { Value = true } });
-        device = (await deviceClient.GetAsync(testInit.ProjectId, device.DeviceId)).Device;
-        Assert.IsTrue(device.LockedTime > testInit.CreatedTime);
+        device = (await deviceClient.GetAsync(farm.ProjectId, device.DeviceId)).Device;
+        Assert.IsTrue(device.LockedTime > farm.CreatedTime);
 
         // check access
-        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
+        var sessionDom = await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId, assertError: false);
+        Assert.AreEqual(SessionErrorCode.AccessLocked, sessionDom.SessionResponseEx.ErrorCode);
 
-        await deviceClient.UpdateAsync(testInit.ProjectId, device.DeviceId,
+        await deviceClient.UpdateAsync(farm.ProjectId, device.DeviceId,
             new DeviceUpdateParams { IsLocked = new PatchOfBoolean { Value = false } });
-        device = (await deviceClient.GetAsync(testInit.ProjectId, device.DeviceId)).Device;
+        device = (await deviceClient.GetAsync(farm.ProjectId, device.DeviceId)).Device;
         Assert.IsNull(device.LockedTime);
-        sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
+        sessionDom = await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
     }
 
     [TestMethod]

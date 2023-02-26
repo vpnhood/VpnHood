@@ -1,54 +1,56 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
 
 namespace VpnHood.Tunneling;
 
-public class BufferCryptor : IDisposable
-{
-    private readonly ICryptoTransform _crypto;
-
-    public BufferCryptor(byte[] key)
+    public class BufferCryptor : IDisposable
     {
+        private readonly ICryptoTransform _crypto;
+        private readonly byte[] _iv;
+
+        public BufferCryptor(byte[] key)
+        {
         //init cryptor
-        using var aes = Aes.Create();
-        aes.KeySize = key.Length * 8;
-        aes.Mode = CipherMode.ECB;
-        aes.Padding = PaddingMode.None;
-        aes.Key = key;
-        _crypto = aes.CreateEncryptor(aes.Key, aes.IV);
-    }
+            using var aes = Aes.Create();
+            aes.KeySize = key.Length * 8;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.None;
+            aes.Key = key;
+            aes.GenerateIV();
+            _iv = aes.IV;
+            _crypto = aes.CreateEncryptor(aes.Key, _iv);
+        }
 
-    public void Dispose()
-    {
-        _crypto.Dispose();
-    }
+        public void Dispose()
+        {
+            _crypto.Dispose();
+        }
 
-    public void Cipher(byte[] buffer, int offset, int count, long cryptoPos)
-    {
+        public void Cipher(byte[] buffer, int offset, int count, long cryptoPos)
+        {
         //find block number
-        var blockSizeInByte = _crypto.OutputBlockSize;
-        var blockNumber = cryptoPos / blockSizeInByte + 1;
-        var keyPos = cryptoPos % blockSizeInByte;
+            var blockSizeInByte = _crypto.OutputBlockSize;
+            var blockNumber = cryptoPos / blockSizeInByte;
+            var keyPos = cryptoPos % blockSizeInByte;
 
         //buffer
-        var outputBuffer = new byte[blockSizeInByte];
-        var nonce = new byte[blockSizeInByte];
-        var init = false;
+            var outputBuffer = new byte[blockSizeInByte];
+            var nonce = new byte[blockSizeInByte];
+            var init = false;
 
-        for (var i = offset; i < count; i++)
-        {
-            //encrypt the nonce to form next xor buffer (unique key)
-            if (!init || keyPos % blockSizeInByte == 0)
+            for (var i = offset; i < offset + count; i++)
             {
-                BitConverter.GetBytes(blockNumber).CopyTo(nonce, 0);
-                _crypto.TransformBlock(nonce, 0, nonce.Length, outputBuffer, 0);
-                if (init) keyPos = 0;
-                init = true;
-                blockNumber++;
-            }
+                if (!init || keyPos % blockSizeInByte == 0)
+                {
+                    BitConverter.GetBytes(blockNumber).CopyTo(nonce, 0);
+                    _crypto.TransformBlock(nonce, 0, nonce.Length, outputBuffer, 0);
+                    if (init) keyPos = 0;
+                    init = true;
+                    blockNumber++;
+                }
 
-            buffer[i] ^= outputBuffer[keyPos]; //simple XOR with generated unique key
-            keyPos++;
+                buffer[i] ^= outputBuffer[keyPos];
+                keyPos++;
+            }
         }
-    }
 }

@@ -168,21 +168,21 @@ public class AccessTokensController : SuperController<AccessTokensController>
     }
 
     [HttpGet("{accessTokenId:guid}")]
-    public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageStartTime = null, DateTime? usageEndTime = null)
+    public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
-            usageStartTime: usageStartTime, usageEndTime: usageEndTime);
+            usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
         return items.Single();
     }
 
     [HttpGet]
     public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null,
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
 
         // no lock
@@ -223,10 +223,10 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
         var results = await query.ToArrayAsync();
         // fill usage if requested
-        if (usageStartTime != null)
+        if (usageBeginTime != null)
         {
             var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId).ToArray();
-            var usages = await _usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageStartTime, usageEndTime);
+            var usages = await _usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageBeginTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.accessTokenData.AccessToken.AccessTokenId, out var usage))

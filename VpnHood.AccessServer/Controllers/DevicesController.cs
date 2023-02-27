@@ -29,7 +29,7 @@ public class DevicesController : SuperController<DevicesController>
     }
 
     [HttpGet("{deviceId:guid}")]
-    public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageStartTime = null, DateTime? usageEndTime = null)
+    public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
@@ -40,9 +40,9 @@ public class DevicesController : SuperController<DevicesController>
             .SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
 
         var ret = new DeviceData { Device = deviceModel.ToDto() };
-        if (usageStartTime != null)
+        if (usageBeginTime != null)
         {
-            var usages = await List(projectId, deviceId: deviceId, usageStartTime: usageStartTime.Value, usageEndTime: usageEndTime);
+            var usages = await List(projectId, deviceId: deviceId, usageBeginTime: usageBeginTime.Value, usageEndTime: usageEndTime);
             ret.Usage = usages.SingleOrDefault(x => x.Device.DeviceId == deviceModel.DeviceId)?.Usage ?? new TrafficUsage();
         }
 
@@ -76,11 +76,11 @@ public class DevicesController : SuperController<DevicesController>
 
     [HttpGet]
     public async Task<DeviceData[]> List(Guid projectId,
-        Guid? deviceId = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null,
+        Guid? deviceId = null, DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 100)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
         // get list of devices
         await using var trans = await VhContext.WithNoLockTransaction();
@@ -101,11 +101,11 @@ public class DevicesController : SuperController<DevicesController>
             .ToArrayAsync();
 
         // fill usage if requested
-        if (usageStartTime != null)
+        if (usageBeginTime != null)
         {
             var deviceIds = results.Select(x => x.Device.DeviceId).ToArray();
             var usages = await _usageReportService.GetDevicesUsage(projectId, deviceIds,
-                null, null, usageStartTime, usageEndTime);
+                null, null, usageBeginTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.Device.DeviceId, out var usage))
@@ -118,11 +118,11 @@ public class DevicesController : SuperController<DevicesController>
     [HttpGet("usages")]
     public async Task<DeviceData[]> ListUsages(Guid projectId,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null,
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 100)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
         var usagesDictionary = await _usageReportService.GetDevicesUsage(projectId,
             accessTokenId: accessTokenId, serverFarmId: serverFarmId);
@@ -141,7 +141,7 @@ public class DevicesController : SuperController<DevicesController>
         // get all devices accessed during usage time
         await using var trans = await VhContext.WithNoLockTransaction();
         var devices = await VhContext.Devices
-            .Where(device => device.ModifiedTime >= usageStartTime && device.ModifiedTime <= usageEndTime)
+            .Where(device => device.ModifiedTime >= usageBeginTime && device.ModifiedTime <= usageEndTime)
             .ToDictionaryAsync(device => device.DeviceId, device => device);
 
         // create DeviceData

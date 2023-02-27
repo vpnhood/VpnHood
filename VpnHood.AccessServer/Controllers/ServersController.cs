@@ -266,15 +266,15 @@ public class ServersController : SuperController<ServersController>
     }
 
     [HttpGet("status-history")]
-    public async Task<ServerStatusHistory[]> GetStatusHistory(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null,
+    public async Task<ServerStatusHistory[]> GetStatusHistory(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverId = null)
     {
-        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
+        if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
         var ret =
-            await _usageReportService.GetServersStatusHistory(projectId, usageStartTime.Value, usageEndTime, serverId);
+            await _usageReportService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
         return ret;
     }
 }

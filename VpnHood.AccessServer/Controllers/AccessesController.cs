@@ -30,7 +30,7 @@ public class AccessesController : SuperController<AccessesController>
 
     [HttpGet]
     public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
-        DateTime? startTime = null, DateTime? endTime = null,
+        DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
@@ -44,7 +44,7 @@ public class AccessesController : SuperController<AccessesController>
                 (access.AccessToken!.ServerFarmId == serverFarmId || serverFarmId == null) &&
                 (access.AccessId == accessId || accessId == null) &&
                 (access.AccessTokenId == accessTokenId || accessTokenId == null) &&
-                (access.CreatedTime >= startTime || startTime == null) &&
+                (access.CreatedTime >= beginTime || beginTime == null) &&
                 (access.CreatedTime <= endTime || endTime == null));
 
         query = query

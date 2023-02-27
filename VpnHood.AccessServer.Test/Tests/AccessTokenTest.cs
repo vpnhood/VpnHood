@@ -276,7 +276,7 @@ public class AccessTokenTest
         // list
         var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
             serverFarmId: farm.ServerFarmId,
-            usageStartTime: farm.TestInit.CreatedTime.AddSeconds(-1));
+            usageBeginTime: farm.TestInit.CreatedTime.AddSeconds(-1));
 
         var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
@@ -284,7 +284,7 @@ public class AccessTokenTest
 
         // list by time
         accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
-            serverFarmId: farm.ServerFarmId, usageStartTime: DateTime.UtcNow.AddDays(-2));
+            serverFarmId: farm.ServerFarmId, usageBeginTime: DateTime.UtcNow.AddDays(-2));
         publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);

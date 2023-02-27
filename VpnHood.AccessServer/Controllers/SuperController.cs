@@ -84,12 +84,12 @@ public class SuperController<T> : ControllerBase
         await MultilevelAuthService.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
     }
 
-    protected async Task VerifyUsageQueryPermission(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime)
+    protected async Task VerifyUsageQueryPermission(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime)
     {
         var projectModel = await GetProject(projectId);
-        usageStartTime ??= DateTime.UtcNow;
+        usageBeginTime ??= DateTime.UtcNow;
         usageEndTime ??= DateTime.UtcNow;
-        var requestTimeSpan = usageEndTime - usageStartTime;
+        var requestTimeSpan = usageEndTime - usageBeginTime;
         var maxTimeSpan = projectModel.SubscriptionType == SubscriptionType.Free
             ? QuotaConstants.UsageQueryTimeSpanFree
             : QuotaConstants.UsageQueryTimeSpanPremium;

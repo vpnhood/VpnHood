@@ -177,14 +177,14 @@ public class ProjectsController : SuperController<ProjectsController>
     }
 
     [HttpGet("usage")]
-    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null,
+    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)
     {
-        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
+        if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var usage = await _usageReportService.GetUsage(projectId, usageStartTime.Value, usageEndTime,
+        var usage = await _usageReportService.GetUsage(projectId, usageBeginTime.Value, usageEndTime,
             serverFarmId: serverFarmId, serverId: serverId);
         return usage;
     }

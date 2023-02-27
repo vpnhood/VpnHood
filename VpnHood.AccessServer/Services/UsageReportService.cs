@@ -27,12 +27,12 @@ public class UsageReportService
         _appOptions = appOptions.Value;
     }
 
-    public async Task<Usage> GetUsage(Guid projectId, DateTime usageStartTime, DateTime? usageEndTime = null,
+    public async Task<Usage> GetUsage(Guid projectId, DateTime usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null, Guid? deviceId = null)
     {
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
-            usageStartTime, usageEndTime, out var cacheExpiration);
+            usageBeginTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage? cacheRes) && cacheRes != null)
             return cacheRes;
 
@@ -41,7 +41,7 @@ public class UsageReportService
         var query = _vhReportContext.AccessUsages
             .Where(accessUsage =>
                 (accessUsage.ProjectId == projectId) &&
-                (accessUsage.CreatedTime >= usageStartTime) &&
+                (accessUsage.CreatedTime >= usageBeginTime) &&
                 (serverId == null || accessUsage.ServerId == serverId) &&
                 (deviceId == null || accessUsage.DeviceId == deviceId) &&
                 (serverFarmId == null || accessUsage.ServerId == serverFarmId) &&
@@ -73,7 +73,7 @@ public class UsageReportService
     }
 
     public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid projectId,
-        DateTime usageStartTime, DateTime? usageEndTime = null, Guid? serverId = null)
+        DateTime usageBeginTime, DateTime? usageEndTime = null, Guid? serverId = null)
     {
         usageEndTime ??= DateTime.UtcNow;
 
@@ -82,7 +82,7 @@ public class UsageReportService
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
-            usageStartTime, usageEndTime, out var cacheExpiration);
+            usageBeginTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
             return cacheRes;
 
@@ -90,16 +90,16 @@ public class UsageReportService
         var serverUpdateStatusInterval = _appOptions.ServerUpdateStatusInterval * 2;
         usageEndTime = usageEndTime.Value.Subtract(serverUpdateStatusInterval);
         var step1 = serverUpdateStatusInterval.TotalMinutes;
-        var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageStartTime).TotalMinutes / 12 / step1);
+        var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageBeginTime).TotalMinutes / 12 / step1);
 
-        var baseTime = usageStartTime;
+        var baseTime = usageBeginTime;
 
         // per server in status interval
         var serverStatuses = _vhReportContext.ServerStatuses
             .Where(x =>
                 x.ProjectId == projectId &&
                 (serverId == null || x.ServerId == serverId) &&
-                x.CreatedTime >= usageStartTime &&
+                x.CreatedTime >= usageBeginTime &&
                 x.CreatedTime <= usageEndTime)
             .GroupBy(serverStatus => new
             {
@@ -142,10 +142,10 @@ public class UsageReportService
 
         // add missed step
         var stepSize = step2 * step1;
-        var stepCount = (int)((usageEndTime - usageStartTime).Value.TotalMinutes / stepSize) + 1;
+        var stepCount = (int)((usageEndTime - usageBeginTime).Value.TotalMinutes / stepSize) + 1;
         for (var i = 0; i < stepCount; i++)
         {
-            var time = usageStartTime.AddMinutes(i * stepSize);
+            var time = usageBeginTime.AddMinutes(i * stepSize);
             if (res.Count <= i || res[i].Time != time)
                 res.Insert(i, new ServerStatusHistory { Time = time });
         }
@@ -159,10 +159,10 @@ public class UsageReportService
 
 
     public async Task<Dictionary<Guid, Usage>> GetAccessTokensUsage(Guid projectId, Guid[]? accessTokenIds = null, Guid? serverFarmId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null)
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_usage_{projectId}_{serverFarmId}",
-            usageStartTime, usageEndTime, out var cacheExpiration);
+            usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage>? usages) && usages != null)
@@ -182,7 +182,7 @@ public class UsageReportService
         {
             cacheKey = AccessUtil.GenerateCacheKey(
                 $"accessToken_usage_{projectId}_{serverFarmId}_{string.Join(',', queryAccessTokenIds)}",
-                usageStartTime, usageEndTime, out _);
+                usageBeginTime, usageEndTime, out _);
 
             if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
                 return usages;
@@ -195,7 +195,7 @@ public class UsageReportService
                 (accessUsage.ProjectId == projectId) &&
                 (serverFarmId == null || accessUsage.ServerFarmId == serverFarmId) &&
                 (queryAccessTokenIds == null || queryAccessTokenIds.Contains(accessUsage.AccessTokenId)) &&
-                (accessUsage.CreatedTime >= usageStartTime) &&
+                (accessUsage.CreatedTime >= usageBeginTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
             .GroupBy(accessUsage => accessUsage.AccessTokenId)
             .Select(g => new
@@ -228,10 +228,10 @@ public class UsageReportService
 
     public async Task<Dictionary<Guid, TrafficUsage>> GetDevicesUsage(Guid projectId,
         Guid[]? deviceIds = null, Guid? accessTokenId = null, Guid? serverFarmId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null)
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         var cacheKey = AccessUtil.GenerateCacheKey($"device_usage_{projectId}_{accessTokenId}_{serverFarmId}",
-            usageStartTime, usageEndTime, out var cacheExpiration);
+            usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage>? usages) && usages != null)
@@ -251,7 +251,7 @@ public class UsageReportService
         {
             cacheKey = AccessUtil.GenerateCacheKey(
                 $"device_usage_{projectId}_{accessTokenId}_{serverFarmId}_{string.Join(',', queryDeviceIds)}",
-                usageStartTime, usageEndTime, out _);
+                usageBeginTime, usageEndTime, out _);
 
             if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
                 return usages;
@@ -264,7 +264,7 @@ public class UsageReportService
                 (accessUsage.ProjectId == projectId) &&
                 (serverFarmId == null || accessUsage.ServerFarmId == serverFarmId) &&
                 (queryDeviceIds == null || queryDeviceIds.Contains(accessUsage.DeviceId)) &&
-                (accessUsage.CreatedTime >= usageStartTime) &&
+                (accessUsage.CreatedTime >= usageBeginTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
             group new { accessUsage } by (Guid?)accessUsage.DeviceId
             into g

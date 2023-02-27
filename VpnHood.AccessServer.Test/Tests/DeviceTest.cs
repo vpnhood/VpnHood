@@ -83,7 +83,7 @@ public class DeviceTest
 
         await sampler.TestInit.Sync();
         var res = await sampler.TestInit.DevicesClient.ListAsync(
-            sampler.ProjectId, usageStartTime: sampler.TestInit.CreatedTime);
+            sampler.ProjectId, usageBeginTime: sampler.TestInit.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }
 
@@ -100,7 +100,7 @@ public class DeviceTest
 
         await sampler.TestInit.Sync();
         var res = await sampler.TestInit.DevicesClient.ListAsync(
-            sampler.ProjectId, usageStartTime: sampler.TestInit.CreatedTime);
+            sampler.ProjectId, usageBeginTime: sampler.TestInit.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }
 

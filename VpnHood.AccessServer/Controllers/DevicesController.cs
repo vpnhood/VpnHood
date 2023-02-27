@@ -117,7 +117,7 @@ public class DevicesController : SuperController<DevicesController>
 
     [HttpGet("usages")]
     public async Task<DeviceData[]> ListUsages(Guid projectId,
-        Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+        Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 100)
     {
@@ -125,7 +125,7 @@ public class DevicesController : SuperController<DevicesController>
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
         var usagesDictionary = await _usageReportService.GetDevicesUsage(projectId,
-            accessTokenId: accessTokenId, accessPointGroupId: accessPointGroupId);
+            accessTokenId: accessTokenId, serverFarmId: serverFarmId);
 
         var usages = usagesDictionary
             .OrderByDescending(x => x.Value.SentTraffic + x.Value.ReceivedTraffic)

@@ -14,7 +14,7 @@ public class SyncTest
     [TestMethod]
     public async Task Sync_ServerStatuses()
     {
-        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer(false);
         var vhContext = farm.TestInit.VhContext;
         var vhReportContext = farm.TestInit.VhReportContext;
@@ -61,7 +61,7 @@ public class SyncTest
     [TestMethod]
     public async Task Sync_AccessUsages()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var testInit = farm.TestInit;
 
         // init
@@ -94,7 +94,7 @@ public class SyncTest
     [TestMethod]
     public async Task Sync_Sessions()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var tokenDom = await farm.CreateAccessToken();
 
         farm.TestInit.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);

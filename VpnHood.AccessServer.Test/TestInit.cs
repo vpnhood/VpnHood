@@ -45,7 +45,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public AgentSystemClient AgentSystemClient => Scope.ServiceProvider.GetRequiredService<AgentSystemClient>();
-    public AccessPointGroupsClient AccessPointGroupsClient => new(Http);
+    public ServerFarmsClient ServerFarmsClient => new(Http);
     public ServersClient ServersClient => new(Http);
     public CertificatesClient CertificatesClient => new(Http);
     public AccessTokensClient AccessTokensClient => new(Http);
@@ -213,7 +213,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         QuotaConstants.CertificateCount = 0xFFFFFF;
         QuotaConstants.AccessTokenCount = 0xFFFFFF;
         QuotaConstants.AccessPointCount = 0xFFFFFF;
-        QuotaConstants.AccessPointGroupCount = 0xFFFFFF;
+        QuotaConstants.ServerFarmCount = 0xFFFFFF;
 
         await using var scope = WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();

@@ -37,7 +37,7 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(ServerModel serverModel, DeviceModel device, string accessPointGroupName, string accessTokenName)
+    private static async Task TrackSession(ServerModel serverModel, DeviceModel device, string serverFarmName, string accessTokenName)
     {
         var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
@@ -49,7 +49,7 @@ public class SessionService
             IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
         };
 
-        var trackData = new TrackData($"{accessPointGroupName}/{accessTokenName}", accessTokenName);
+        var trackData = new TrackData($"{serverFarmName}/{accessTokenName}", accessTokenName);
         await analyticsTracker.Track(trackData);
     }
 
@@ -67,7 +67,7 @@ public class SessionService
 
         var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
         var accessTokenName = string.IsNullOrEmpty(accessTokenModel.AccessTokenName) ? accessTokenModel.AccessTokenId.ToString() : accessTokenModel.AccessTokenName;
-        var groupName = accessTokenModel.AccessPointGroup?.AccessPointGroupName ?? accessTokenModel.AccessPointGroupId.ToString();
+        var groupName = accessTokenModel.ServerFarm?.ServerFarmName ?? accessTokenModel.ServerFarmId.ToString();
         var serverName = string.IsNullOrEmpty(serverModel.ServerName) ? serverModel.ServerId.ToString() : serverModel.ServerName;
         var trackDatas = new TrackData[]
         {
@@ -102,7 +102,7 @@ public class SessionService
 
         // Get accessTokenModel and check projectId
         var accessToken = await _vhContext.AccessTokens
-            .Include(x => x.AccessPointGroup)
+            .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId);
 
@@ -114,7 +114,7 @@ public class SessionService
             };
 
         // can serverModel request this endpoint?
-        if (accessToken.AccessPointGroupId != server.AccessPointGroupId)
+        if (accessToken.ServerFarmId != server.ServerFarmId)
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
                 ErrorMessage = "Token does not belong to server farm."
@@ -208,7 +208,7 @@ public class SessionService
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another serverModel if everything was ok
-        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
         if (bestEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
 
@@ -257,7 +257,7 @@ public class SessionService
         await _cacheService.AddSession(session);
         _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.SessionId);
 
-        _ = TrackSession(server, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(server, device, accessToken.ServerFarm!.ServerFarmName ?? "Group-" + accessToken.ServerFarmId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }
@@ -421,7 +421,7 @@ public class SessionService
             ProjectId = serverModel.ProjectId,
             ServerId = serverModel.ServerId,
             AccessTokenId = accessToken.AccessTokenId,
-            AccessPointGroupId = accessToken.AccessPointGroupId,
+            ServerFarmId = accessToken.ServerFarmId,
         });
 
         _ = TrackUsage(serverModel, accessToken, session.Device!, usageInfo);
@@ -445,10 +445,10 @@ public class SessionService
         return new SessionResponseBase(sessionResponse);
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServer, IPEndPoint currentEndPoint, Guid serverFarmId, Guid deviceId)
     {
         // prevent re-redirect if device has already redirected to this serverModel
-        var cacheKey = $"LastDeviceServer/{accessPointGroupId}/{deviceId}";
+        var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}";
         if (!_agentOptions.AllowRedirect ||
             (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
@@ -461,7 +461,7 @@ public class SessionService
         var farmServers = servers.Values
             .Where(server =>
                 server.ProjectId == currentServer.ProjectId &&
-                server.AccessPointGroupId == currentServer.AccessPointGroupId &&
+                server.ServerFarmId == currentServer.ServerFarmId &&
                 server.AccessPoints.Any(accessPoint => 
                     accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily==currentEndPoint.AddressFamily) &&
                 IsServerReady(server))

@@ -45,7 +45,7 @@ public static class PermissionGroups
             Permissions.ServerReadConfig,
             Permissions.ServerInstall,
             Permissions.AccessPointWrite,
-            Permissions.AccessPointGroupWrite,
+            Permissions.ServerFarmWrite,
             Permissions.IpLockWrite,
         }
     };

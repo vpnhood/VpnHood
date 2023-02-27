@@ -5,13 +5,13 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class AccessTokenConverter
 {
-    public static AccessToken ToDto(this AccessTokenModel model, string? accessPointGroupName)
+    public static AccessToken ToDto(this AccessTokenModel model, string? serverFarmName)
     {
         var accessToken = new AccessToken
         {
-            AccessPointGroupId = model.AccessPointGroupId,
+            ServerFarmId = model.ServerFarmId,
             AccessTokenId = model.AccessTokenId,
-            AccessPointGroupName = accessPointGroupName,
+            ServerFarmName = serverFarmName,
             AccessTokenName = model.AccessTokenName,
             CreatedTime = model.CreatedTime,
             ModifiedTime = model.ModifiedTime,

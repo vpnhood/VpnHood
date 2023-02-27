@@ -34,7 +34,7 @@ public class AgentServerTest
             "Duplicate listener!");
 
         //-----------
-        // check: Configure with AutoUpdate is true (ServerModel.AccessPointGroupId is set)
+        // check: Configure with AutoUpdate is true (ServerModel.ServerFarmId is set)
         //-----------
         await serverDom.Reload();
         var accessPoints = serverDom.Server.AccessPoints.ToArray();
@@ -106,7 +106,7 @@ public class AgentServerTest
     public async Task Configure_when_AutoConfigure_is_on()
     {
         // create serverInfo
-        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer();
         var publicInTokenAccessPoints1 = await Configure_auto_update_accessPoints_on_internal(serverDom);
         var publicInTokenAccessPoints2 = await Configure_auto_update_accessPoints_on_internal(serverDom);
@@ -164,7 +164,7 @@ public class AgentServerTest
         // --------
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
-        var farm2 = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm2 = await ServerFarmDom.Create(serverCount: 0);
         serverDom = await farm2.AddNewServer();
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(serverDom);
         Assert.IsNotNull(publicInTokenAccessPoint);
@@ -173,7 +173,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Update_Tracking()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
 
         await farm.TestInit.ProjectsClient.UpdateAsync(farm.ProjectId, new ProjectUpdateParams
         {
@@ -229,7 +229,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Configure()
     {
-        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm = await ServerFarmDom.Create(serverCount: 0);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
         var serverDom = await farm.AddNewServer(false);
 
@@ -292,7 +292,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var testInit = farm.TestInit;
         var serverDom = farm.DefaultServer;
 
@@ -376,23 +376,23 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig_by_changing_farm()
     {
-        var farm1 = await AccessPointGroupDom.Create();
-        var farm2 = await AccessPointGroupDom.Create(farm1.TestInit);
+        var farm1 = await ServerFarmDom.Create();
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
 
         var oldCode = farm1.DefaultServer.ServerInfo.Status.ConfigCode;
         await farm1.DefaultServer.Client.UpdateAsync(farm1.ProjectId, farm1.DefaultServer.ServerId,
-            new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId } });
+            new ServerUpdateParams { ServerFarmId = new PatchOfNullableGuid { Value = farm2.ServerFarmId } });
 
         var serverCommand = await farm1.DefaultServer.UpdateStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
-            "Updating AccessPointGroupId should lead to a new ConfigCode");
+            "Updating ServerFarmId should lead to a new ConfigCode");
     }
 
     [TestMethod]
     public async Task Configure_when_AutoConfigure_is_off()
     {
         // create serverInfo
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessPoints = farm.DefaultServer.Server.AccessPoints.ToArray();
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
@@ -411,7 +411,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestInit.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
@@ -459,7 +459,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Fail_Configure_by_old_version()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         farm.DefaultServer.ServerInfo.Version = Version.Parse("0.0.1");
 
         //Configure
@@ -488,7 +488,7 @@ public class AgentServerTest
     {
         const long gb = 0x40000000;
 
-        var sampler = await AccessPointGroupDom.Create(serverCount: 0);
+        var sampler = await ServerFarmDom.Create(serverCount: 0);
         var sampleServer = await sampler.AddNewServer(false);
 
         sampleServer.ServerInfo.TotalMemory = 60L * gb;
@@ -519,7 +519,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task ServerStatus_recovery_by_cache()
     {
-        var sampler = await AccessPointGroupDom.Create(serverCount: 1);
+        var sampler = await ServerFarmDom.Create(serverCount: 1);
         var server = await sampler.AddNewServer();
 
         // Clear Cache
@@ -538,14 +538,14 @@ public class AgentServerTest
         var testInit = await TestInit.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
         var certificate1 = await testInit.CertificatesClient.CreateAsync(testInit.ProjectId, new CertificateCreateParams { SubjectName = $"CN={dnsName1}" });
-        var farm1 = await AccessPointGroupDom.Create(testInit, createParams: new AccessPointGroupCreateParams
+        var farm1 = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate1.CertificateId
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
         var certificate2 = await testInit.CertificatesClient.CreateAsync(testInit.ProjectId, new CertificateCreateParams { SubjectName = $"CN={dnsName2}" });
-        var farm2 = await AccessPointGroupDom.Create(testInit, createParams: new AccessPointGroupCreateParams
+        var farm2 = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate2.CertificateId
         });
@@ -569,7 +569,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Server_UpdateStatus()
     {
-        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm = await ServerFarmDom.Create(serverCount: 0);
         var testInit = farm.TestInit;
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();

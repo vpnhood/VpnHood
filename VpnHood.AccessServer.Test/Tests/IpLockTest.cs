@@ -93,7 +93,7 @@ public class IpLockTest
     [TestMethod]
     public async Task lock_unlock_ip()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
 
         var clientIp = await farm.TestInit.NewIpV4();

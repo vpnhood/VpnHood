@@ -19,7 +19,7 @@ public static class Permissions
     public static Permission ServerReadConfig { get; set; } = new(52, nameof(ServerReadConfig));
     public static Permission ServerInstall { get; set; } = new(53, nameof(ServerInstall));
     public static Permission AccessPointWrite { get; set; } = new(61, nameof(AccessPointWrite));
-    public static Permission AccessPointGroupWrite { get; set; } = new(71, nameof(AccessPointGroupWrite));
+    public static Permission ServerFarmWrite { get; set; } = new(71, nameof(ServerFarmWrite));
     public static Permission IpLockWrite { get; set; } = new(90, nameof(IpLockWrite));
 
     public static Permission[] All { get; } =
@@ -39,7 +39,7 @@ public static class Permissions
         ServerReadConfig,
         ServerInstall,
         AccessPointWrite,
-        AccessPointGroupWrite,
+        ServerFarmWrite,
         IpLockWrite,
     };
 

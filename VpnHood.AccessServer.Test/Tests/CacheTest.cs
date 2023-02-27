@@ -17,7 +17,7 @@ public class CacheTest
             ["App:SaveCacheInterval"] = "00:00:00.100"
         });
 
-        var farmDom = await AccessPointGroupDom.Create(testInit);
+        var farmDom = await ServerFarmDom.Create(testInit);
         var accessTokenDom = await farmDom.CreateAccessToken(true);
         var sessionDom = await accessTokenDom.CreateSession();
         await sessionDom.CloseSession();
@@ -32,7 +32,7 @@ public class CacheTest
     [TestMethod]
     public async Task Save_Cache_after_deleting_a_token()
     {
-        var farmDom = await AccessPointGroupDom.Create();
+        var farmDom = await ServerFarmDom.Create();
 
         // session1
         var accessTokenDom1 = await farmDom.CreateAccessToken();

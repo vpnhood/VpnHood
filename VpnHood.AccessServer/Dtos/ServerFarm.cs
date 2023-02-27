@@ -2,10 +2,10 @@
 
 namespace VpnHood.AccessServer.Dtos;
 
-public class AccessPointGroup
+public class ServerFarm
 {
-    public required Guid AccessPointGroupId { get; set; }
-    public required string? AccessPointGroupName { get; set; }
+    public required Guid ServerFarmId { get; set; }
+    public required string? ServerFarmName { get; set; }
     public required Guid CertificateId { get; set; }
     public required DateTime CreatedTime { get; set; }
 }

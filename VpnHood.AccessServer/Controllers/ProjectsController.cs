@@ -59,10 +59,10 @@ public class ProjectsController : SuperController<ProjectsController>
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 
         // Groups
-        var accessPointGroup = new AccessPointGroupModel
+        var serverFarm = new ServerFarmModel
         {
-            AccessPointGroupId = Guid.NewGuid(),
-            AccessPointGroupName = "Group1",
+            ServerFarmId = Guid.NewGuid(),
+            ServerFarmName = "Group1",
             Certificate = CertificatesController.CreateInternal(projectId.Value, null)
         };
 
@@ -71,16 +71,16 @@ public class ProjectsController : SuperController<ProjectsController>
         {
             ProjectId = projectId.Value,
             SubscriptionType = SubscriptionType.Free,
-            AccessPointGroups = new HashSet<AccessPointGroupModel>
+            ServerFarms = new HashSet<ServerFarmModel>
             {
-                accessPointGroup,
+                serverFarm,
             },
             AccessTokens = new HashSet<AccessTokenModel>
             {
                 new()
                 {
                     AccessTokenId = Guid.NewGuid(),
-                    AccessPointGroup = accessPointGroup,
+                    ServerFarm = serverFarm,
                     AccessTokenName = "Public",
                     SupportCode = 1000,
                     Secret = Util.GenerateSessionKey(),
@@ -91,7 +91,7 @@ public class ProjectsController : SuperController<ProjectsController>
                 new()
                 {
                     AccessTokenId = Guid.NewGuid(),
-                    AccessPointGroup = accessPointGroup,
+                    ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
                     SupportCode = 1001,
@@ -178,14 +178,14 @@ public class ProjectsController : SuperController<ProjectsController>
 
     [HttpGet("usage")]
     public async Task<Usage> GetUsage(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null,
-        Guid? accessPointGroupId = null, Guid? serverId = null)
+        Guid? serverFarmId = null, Guid? serverId = null)
     {
         if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
         var usage = await _usageReportService.GetUsage(projectId, usageStartTime.Value, usageEndTime,
-            accessPointGroupId: accessPointGroupId, serverId: serverId);
+            serverFarmId: serverFarmId, serverId: serverId);
         return usage;
     }
 }

@@ -6,6 +6,6 @@ public class ServerProfileModel
     public Guid ProjectId { get; set; }
     public string? ServerConfig { get; set; }
 
-    public virtual ICollection<AccessPointGroupModel>? AccessPointGroups { get; set; }
+    public virtual ICollection<ServerFarmModel>? ServerFarms { get; set; }
 
 }

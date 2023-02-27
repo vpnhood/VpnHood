@@ -14,9 +14,9 @@ public class AgentAccessTest
     [TestMethod]
     public async Task Access_token_is_not_enabled()
     {
-        var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
-        await accessTokenDom.TestInit.AccessTokensClient.UpdateAsync(accessPointGroupDom.TestInit.ProjectId, accessTokenDom.AccessTokenId,
+        var serverFarmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await serverFarmDom.CreateAccessToken();
+        await accessTokenDom.TestInit.AccessTokensClient.UpdateAsync(serverFarmDom.TestInit.ProjectId, accessTokenDom.AccessTokenId,
             new AccessTokenUpdateParams
             {
                 IsEnabled = new PatchOfBoolean { Value = false }
@@ -30,7 +30,7 @@ public class AgentAccessTest
     [TestMethod]
     public async Task Access_token_expired_by_expiration_date()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
 
         // create accessTokenModel
         var accessTokenDom = await farm.CreateAccessToken(
@@ -46,8 +46,8 @@ public class AgentAccessTest
     [TestMethod]
     public async Task Access_token_expired_by_lifetime()
     {
-        var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(new AccessTokenCreateParams
+        var serverFarmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await serverFarmDom.CreateAccessToken(new AccessTokenCreateParams
         {
             Lifetime = 1
         });
@@ -57,7 +57,7 @@ public class AgentAccessTest
         // Shift FirstUseTime to one day before
         var accessTokenModel = await accessTokenDom.TestInit.VhContext.AccessTokens.SingleAsync(x =>
             x.AccessTokenId == accessTokenDom.AccessTokenId);
-        accessTokenModel.FirstUsedTime = accessPointGroupDom.CreatedTime.AddHours(-25);
+        accessTokenModel.FirstUsedTime = serverFarmDom.CreatedTime.AddHours(-25);
         await accessTokenDom.TestInit.VhContext.SaveChangesAsync();
 
         // Create new Session
@@ -68,8 +68,8 @@ public class AgentAccessTest
     [TestMethod]
     public async Task Access_token_firstUsedTime_and_lastUsedTime()
     {
-        var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
+        var serverFarmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await serverFarmDom.CreateAccessToken();
         Assert.IsNull(accessTokenDom.AccessToken.LastUsedTime);
         Assert.IsNull(accessTokenDom.AccessToken.FirstUsedTime);
 

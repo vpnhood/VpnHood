@@ -19,7 +19,7 @@ public class ServerTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var oldConfigCode = farm.DefaultServer.ServerConfig.ConfigCode;
         await farm.DefaultServer.Client.ReconfigureAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
@@ -31,7 +31,7 @@ public class ServerTest
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
-        var farm1 = await AccessPointGroupDom.Create(testInit, serverCount: 0);
+        var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0);
 
         //-----------
         // check: Create
@@ -96,13 +96,13 @@ public class ServerTest
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
-        // check: Update (accessPointGroupId)
+        // check: Update (serverFarmId)
         //-----------
-        var farm2 = await AccessPointGroupDom.Create(farm1.TestInit);
-        serverUpdateParam = new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = farm2.AccessPointGroupId } };
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
+        serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfNullableGuid { Value = farm2.ServerFarmId } };
         await serverDom.Client.UpdateAsync(testInit.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();
-        Assert.AreEqual(farm2.AccessPointGroupId, serverDom.Server.AccessPointGroupId);
+        Assert.AreEqual(farm2.ServerFarmId, serverDom.Server.ServerFarmId);
 
         //-----------
         // check: List
@@ -128,7 +128,7 @@ public class ServerTest
     [TestMethod]
     public async Task Quota()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         QuotaConstants.ServerCount = farm.Servers.Count; //update quota
 
         try
@@ -145,7 +145,7 @@ public class ServerTest
     [TestMethod]
     public async Task GetInstallManual()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var install = await farm.DefaultServer.Client.GetInstallManualAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
         var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
@@ -159,7 +159,7 @@ public class ServerTest
     [TestMethod]
     public async Task ServerInstallByUserName()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         try
         {
             await farm.DefaultServer.Client.InstallBySshUserPasswordAsync(farm.ProjectId, farm.DefaultServer.ServerId,
@@ -185,8 +185,8 @@ public class ServerTest
     [TestMethod]
     public async Task Fail_should_not_create_for_another_project_farm()
     {
-        var p1Farm = await AccessPointGroupDom.Create();
-        var p2Farm = await AccessPointGroupDom.Create();
+        var p1Farm = await ServerFarmDom.Create();
+        var p2Farm = await ServerFarmDom.Create();
 
         try
         {
@@ -194,7 +194,7 @@ public class ServerTest
                 new ServerCreateParams
                 {
                     ServerName = $"{Guid.NewGuid()}",
-                    AccessPointGroupId = p2Farm.AccessPointGroupId
+                    ServerFarmId = p2Farm.ServerFarmId
                 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
@@ -207,14 +207,14 @@ public class ServerTest
     [TestMethod]
     public async Task Fail_should_not_update_to_another_project_farm()
     {
-        var p1Farm = await AccessPointGroupDom.Create();
-        var p2Farm = await AccessPointGroupDom.Create();
+        var p1Farm = await ServerFarmDom.Create();
+        var p2Farm = await ServerFarmDom.Create();
 
         try
         {
             await p1Farm.DefaultServer.Update(new ServerUpdateParams
             {
-                AccessPointGroupId = new PatchOfNullableGuid { Value = p2Farm.AccessPointGroupId }
+                ServerFarmId = new PatchOfNullableGuid { Value = p2Farm.ServerFarmId }
             });
 
             Assert.Fail($"{nameof(NotExistsException)} was expected.");
@@ -228,7 +228,7 @@ public class ServerTest
     [TestMethod]
     public async Task GetStatusSummary()
     {
-        var sampler = await AccessPointGroupDom.Create(serverCount: 0);
+        var sampler = await ServerFarmDom.Create(serverCount: 0);
         sampler.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
         sampler.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 
@@ -274,7 +274,7 @@ public class ServerTest
     [TestMethod]
     public async Task GetStatusHistory()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var res = await farm.TestInit.ServersClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
@@ -283,7 +283,7 @@ public class ServerTest
     public async Task Crud_AccessPoints()
     {
         var testInit = await TestInit.Create();
-        var farm = await AccessPointGroupDom.Create(testInit, serverCount: 0);
+        var farm = await ServerFarmDom.Create(testInit, serverCount: 0);
 
         var accessPoint1 = await testInit.NewAccessPoint();
         var accessPoint2 = await testInit.NewAccessPoint();
@@ -295,7 +295,7 @@ public class ServerTest
         });
 
         //-----------
-        // check: accessPointGroupId is created
+        // check: serverFarmId is created
         //-----------
         var accessPoint1B = serverDom.Server.AccessPoints.ToArray()[0];
         var accessPoint2B = serverDom.Server.AccessPoints.ToArray()[1];

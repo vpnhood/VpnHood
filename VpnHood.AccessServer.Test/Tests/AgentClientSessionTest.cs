@@ -23,7 +23,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 14
@@ -43,7 +43,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 0
@@ -62,7 +62,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_success()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 100,
@@ -119,8 +119,8 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Get()
     {
-        var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
+        var serverFarmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.SessionKey);
@@ -137,12 +137,12 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Get_should_update_session_lastUsedTime()
     {
-        var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
+        var serverFarmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
         var session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= accessPointGroupDom.CreatedTime);
+        Assert.IsTrue(session.LastUsedTime >= serverFarmDom.CreatedTime);
 
         // get the token again
         var time = DateTime.UtcNow;
@@ -155,12 +155,12 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_should_update_session_LastUsedTime()
     {
-        var accessPointGroupDom = await AccessPointGroupDom.Create();
-        var accessTokenDom = await accessPointGroupDom.CreateAccessToken();
+        var serverFarmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await serverFarmDom.CreateAccessToken();
 
         var sessionDom = await accessTokenDom.CreateSession();
         var session = await sessionDom.GetSessionFromCache();
-        Assert.IsTrue(session.LastUsedTime >= accessPointGroupDom.CreatedTime);
+        Assert.IsTrue(session.LastUsedTime >= serverFarmDom.CreatedTime);
 
         // get the token again
         var time = DateTime.UtcNow;
@@ -173,12 +173,12 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var farm1 = await AccessPointGroupDom.Create();
+        var farm1 = await ServerFarmDom.Create();
         var serverDom11 = await farm1.AddNewServer();
         var serverDom12 = await farm1.AddNewServer();
         var accessTokenDom11 = await farm1.CreateAccessToken(true);
 
-        var farm2 = await AccessPointGroupDom.Create();
+        var farm2 = await ServerFarmDom.Create();
         var serverDom21 = await farm2.AddNewServer();
         var serverDom22 = await farm2.AddNewServer();
         var accessTokenDom21 = await farm2.CreateAccessToken(true);
@@ -311,7 +311,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_Public()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(isPublic: true);
         var sessionDom1 = await accessTokenDom.CreateSession();
 
@@ -404,7 +404,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(isPublic: false);
         var sessionDom1 = await accessTokenDom.CreateSession();
 
@@ -447,7 +447,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task AccessUsage_Inserted()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
 
         // create token
         var sampleAccessToken = await farm.CreateAccessToken();
@@ -485,17 +485,17 @@ public class AgentClientSessionTest
         Assert.AreEqual(session.ServerId, accessUsage.ServerId);
         Assert.AreEqual(session.DeviceId, accessUsage.DeviceId);
         Assert.AreEqual(session.Access!.AccessTokenId, accessUsage.AccessTokenId);
-        Assert.AreEqual(session.Access!.AccessToken?.AccessPointGroupId, accessUsage.AccessPointGroupId);
+        Assert.AreEqual(session.Access!.AccessToken?.ServerFarmId, accessUsage.ServerFarmId);
     }
 
     [TestMethod]
     public async Task Session_Create_Status_SuppressToOther()
     {
-        var sampler = await AccessPointGroupDom.Create();
+        var sampler = await ServerFarmDom.Create();
         var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId,
             new AccessTokenCreateParams
             {
-                AccessPointGroupId = sampler.AccessPointGroupId,
+                ServerFarmId = sampler.ServerFarmId,
                 MaxDevice = 2
             });
 
@@ -520,11 +520,11 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_SuppressToYourself()
     {
-        var sampler = await AccessPointGroupDom.Create();
+        var sampler = await ServerFarmDom.Create();
         var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId,
             new AccessTokenCreateParams
             {
-                AccessPointGroupId = sampler.AccessPointGroupId,
+                ServerFarmId = sampler.ServerFarmId,
                 MaxDevice = 2
             });
 

@@ -13,8 +13,8 @@ public class DeviceTest
     [TestMethod]
     public async Task ClientId_is_unique_per_project()
     {
-        var farm1 = await AccessPointGroupDom.Create();
-        var farm2 = await AccessPointGroupDom.Create();
+        var farm1 = await ServerFarmDom.Create();
+        var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
         var accessTokenDom2 = await farm2.CreateAccessToken();
@@ -38,7 +38,7 @@ public class DeviceTest
     [TestMethod]
     public async Task Locked()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
         var clientId = Guid.NewGuid();
         await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);
@@ -73,7 +73,7 @@ public class DeviceTest
     [TestMethod]
     public async Task List()
     {
-        var sampler = await AccessPointGroupDom.Create();
+        var sampler = await ServerFarmDom.Create();
         var sampleAccessToken = await sampler.CreateAccessToken();
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleSession1.AddUsage(10);
@@ -90,7 +90,7 @@ public class DeviceTest
     [TestMethod]
     public async Task Usages()
     {
-        var sampler = await AccessPointGroupDom.Create();
+        var sampler = await ServerFarmDom.Create();
         var sampleAccessToken = await sampler.CreateAccessToken();
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleSession1.AddUsage(10);

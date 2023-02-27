@@ -2,6 +2,6 @@
 
 public class ServerFarmData
 {
-    public required AccessPointGroup ServerFarm { get; init; }
+    public required ServerFarm ServerFarm { get; init; }
     public ServerFarmSummary? Summary { get; init; }
 }

@@ -65,8 +65,8 @@ public class ProjectTest
         //-----------
         // Check: default group is created
         //-----------
-        var accessPointGroups = await testInit.AccessPointGroupsClient.ListAsync(projectId);
-        Assert.IsTrue(accessPointGroups.Count > 0);
+        var serverFarms = await testInit.ServerFarmsClient.ListAsync(projectId);
+        Assert.IsTrue(serverFarms.Count > 0);
 
         //-----------
         // Check: a public and private token is created
@@ -96,7 +96,7 @@ public class ProjectTest
     [TestMethod]
     public async Task Invalidate_agent_cache_after_update()
     {
-        var sampler = await AccessPointGroupDom.Create();
+        var sampler = await ServerFarmDom.Create();
         var sampleAccessToken = await sampler.CreateAccessToken();
         await sampleAccessToken.CreateSession();
 
@@ -136,7 +136,7 @@ public class ProjectTest
     [TestMethod]
     public async Task GetUsage()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom1 = await farm.CreateAccessToken();
         var accessTokenDom2 = await farm.CreateAccessToken();
 

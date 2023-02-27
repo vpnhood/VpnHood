@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.Dtos;
 public class AccessTokenCreateParams
 {
     public Guid? AccessTokenId { get; set; }
-    public Guid AccessPointGroupId { get; set; }
+    public Guid ServerFarmId { get; set; }
     public string? AccessTokenName { get; set; }
     public byte[]? Secret { get; set; }
     public long MaxTraffic { get; set; }

@@ -17,7 +17,7 @@ public class ServerFarmTest
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
-        var farm1 = await AccessPointGroupDom.Create(testInit,  serverCount: 0);
+        var farm1 = await ServerFarmDom.Create(testInit,  serverCount: 0);
         var serverDom = await farm1.AddNewServer();
         await farm1.CreateAccessToken(true);
         await farm1.CreateAccessToken(true);
@@ -54,7 +54,7 @@ public class ServerFarmTest
         });
 
         var accessFarmData = await farm1.Reload();
-        Assert.AreEqual(farm1.AccessPointGroup.AccessPointGroupName, farm1.AccessPointGroup.AccessPointGroupName);
+        Assert.AreEqual(farm1.ServerFarm.ServerFarmName, farm1.ServerFarm.ServerFarmName);
         Assert.AreEqual(1, accessFarmData.Summary!.ServerCount);
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
         Assert.AreEqual(2, accessFarmData.Summary!.UnusedTokenCount);
@@ -72,26 +72,26 @@ public class ServerFarmTest
         //-----------
         var certificateClient = testInit.CertificatesClient;
         var certificate2 = await certificateClient.CreateAsync(farm1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
-        var updateParam = new AccessPointGroupUpdateParams
+        var updateParam = new ServerFarmUpdateParams
         {
             CertificateId = new PatchOfGuid { Value = certificate2.CertificateId },
-            AccessPointGroupName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" }
+            ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" }
         };
 
-        await testInit.AccessPointGroupsClient.UpdateAsync(farm1.ProjectId, farm1.AccessPointGroupId, updateParam);
+        await testInit.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
         await farm1.Reload();
-        Assert.AreEqual(updateParam.AccessPointGroupName.Value, farm1.AccessPointGroup.AccessPointGroupName);
-        Assert.AreEqual(updateParam.CertificateId.Value, farm1.AccessPointGroup.CertificateId);
+        Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
+        Assert.AreEqual(updateParam.CertificateId.Value, farm1.ServerFarm.CertificateId);
 
         //-----------
         // check: AlreadyExists exception
         //-----------
         try
         {
-            await AccessPointGroupDom.Create(testInit,
-                new AccessPointGroupCreateParams
+            await ServerFarmDom.Create(testInit,
+                new ServerFarmCreateParams
                 {
-                    AccessPointGroupName = farm1.AccessPointGroup.AccessPointGroupName
+                    ServerFarmName = farm1.ServerFarm.ServerFarmName
                 });
             Assert.Fail("Exception Expected!");
         }
@@ -104,9 +104,9 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Delete_farm_and_its_dependents()
     {
-        var farm2 = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm2 = await ServerFarmDom.Create(serverCount: 0);
         var accessTokenDom = await farm2.CreateAccessToken(true);
-        await farm2.TestInit.AccessPointGroupsClient.DeleteAsync(farm2.ProjectId, farm2.AccessPointGroupId);
+        await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
         try
         {
             await farm2.Reload();
@@ -131,16 +131,16 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Fail_delete_a_farm_with_server()
     {
-        var farm1 = await AccessPointGroupDom.Create(serverCount: 0);
+        var farm1 = await ServerFarmDom.Create(serverCount: 0);
 
         //-----------
         // check: can not delete a farm with server
         //-----------
-        var farm2 = await AccessPointGroupDom.Create(farm1.TestInit, serverCount: 0);
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit, serverCount: 0);
         var serverDom = await farm2.AddNewServer();
         try
         {
-            await farm2.TestInit.AccessPointGroupsClient.DeleteAsync(farm2.ProjectId, farm2.AccessPointGroupId);
+            await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
             Assert.Fail("Exception Expected!");
         }
         catch (ApiException ex)
@@ -151,9 +151,9 @@ public class ServerFarmTest
         // move server to farm1
         await farm2.TestInit.ServersClient.UpdateAsync(farm2.ProjectId, serverDom.ServerId, new ServerUpdateParams
         {
-            AccessPointGroupId = new PatchOfNullableGuid { Value = farm1.AccessPointGroupId }
+            ServerFarmId = new PatchOfNullableGuid { Value = farm1.ServerFarmId }
         });
-        await farm2.TestInit.AccessPointGroupsClient.DeleteAsync(farm2.ProjectId, farm2.AccessPointGroupId);
+        await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
         try
         {
             await farm2.Reload();

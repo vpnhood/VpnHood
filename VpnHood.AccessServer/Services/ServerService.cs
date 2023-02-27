@@ -41,8 +41,8 @@ public class ServerService
         await _subscriptionService.AuthorizeCreateServer(projectId);
 
         // validate
-        var accessPointGroup = await _vhContext.AccessPointGroups
-            .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
+        var serverFarm = await _vhContext.ServerFarms
+            .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == createParams.ServerFarmId);
 
         // Resolve Name Template
         var serverName = createParams.ServerName?.Trim();
@@ -65,7 +65,7 @@ public class ServerService
             IsEnabled = true,
             Secret = Util.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
-            AccessPointGroupId = accessPointGroup.AccessPointGroupId,
+            ServerFarmId = serverFarm.ServerFarmId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? Array.Empty<AccessPoint>()),
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
@@ -75,7 +75,7 @@ public class ServerService
         await _vhContext.SaveChangesAsync();
 
         var server = serverModel.ToDto(
-            accessPointGroup.AccessPointGroupName,
+            serverFarm.ServerFarmName,
             null, _appOptions.LostServerThreshold);
         return server;
 
@@ -91,15 +91,15 @@ public class ServerService
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerId == serverId);
 
-        if (updateParams.AccessPointGroupId != null)
+        if (updateParams.ServerFarmId != null)
         {
             // make sure new access group belong to this account
-            var accessPointGroup = await _vhContext.AccessPointGroups
-                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
+            var serverFarm = await _vhContext.ServerFarms
+                .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == updateParams.ServerFarmId);
 
-            // update server accessPointGroup and all AccessPoints accessPointGroup
-            server.AccessPointGroup = accessPointGroup;
-            server.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
+            // update server serverFarm and all AccessPoints serverFarm
+            server.ServerFarm = serverFarm;
+            server.ServerFarmId = serverFarm.ServerFarmId;
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
@@ -111,7 +111,7 @@ public class ServerService
         }
 
         // reconfig if required
-        if (updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.AccessPoints != null || updateParams.AccessPointGroupId != null)
+        if (updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.AccessPoints != null || updateParams.ServerFarmId != null)
             server.ConfigCode = Guid.NewGuid();
 
         await _vhContext.SaveChangesAsync();
@@ -119,7 +119,7 @@ public class ServerService
         await _agentCacheClient.InvalidateServer(server.ServerId);
 
         var serverDto = server.ToDto(
-            server.AccessPointGroup?.AccessPointGroupName,
+            server.ServerFarm?.ServerFarmName,
             serverCache?.ServerStatus,
             _appOptions.LostServerThreshold);
 
@@ -137,9 +137,9 @@ public class ServerService
 
         var query = _vhContext.Servers
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Include(server => server.AccessPointGroup)
+            .Include(server => server.ServerFarm)
             .Where(server => serverId == null || server.ServerId == serverId)
-            .Where(server => serverFarmId == null || server.AccessPointGroupId == serverFarmId);
+            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId);
 
         var serverModels = await query
             .AsNoTracking()
@@ -154,7 +154,7 @@ public class ServerService
             .Where(serverStatus =>
                 serverStatus.IsLast && serverStatus.ProjectId == projectId &&
                 (serverId == null || serverStatus.ServerId == serverId) &&
-                (serverFarmId == null || serverStatus.Server!.AccessPointGroupId == serverFarmId))
+                (serverFarmId == null || serverStatus.Server!.ServerFarmId == serverFarmId))
             .ToDictionaryAsync(x => x.ServerId);
 
         foreach (var serverModel in serverModels)
@@ -166,7 +166,7 @@ public class ServerService
             .Select(serverModel => new ServerData
             {
                 Server = serverModel.ToDto(
-                    serverModel.AccessPointGroup?.AccessPointGroupName,
+                    serverModel.ServerFarm?.ServerFarmName,
                     serverModel.ServerStatus?.ToDto(),
                     _appOptions.LostServerThreshold)
             })

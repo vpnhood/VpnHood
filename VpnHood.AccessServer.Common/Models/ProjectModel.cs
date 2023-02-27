@@ -12,7 +12,7 @@ public class ProjectModel
     public TrackClientRequest TrackClientRequest { get; set; } = TrackClientRequest.LocalPortAndDstPortAndDstIp;
 
     public virtual ICollection<ServerModel>? Servers { get; set; }
-    public virtual ICollection<AccessPointGroupModel>? AccessPointGroups { get; set; }
+    public virtual ICollection<ServerFarmModel>? ServerFarms { get; set; }
     public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
     public virtual ICollection<DeviceModel>? Devices { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }

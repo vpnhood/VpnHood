@@ -20,6 +20,6 @@ public class AccessUsageModel
     // Denormal
     public Guid ProjectId { get; set; }
     public Guid AccessTokenId { get; set; }
-    public Guid AccessPointGroupId { get; set; }
+    public Guid ServerFarmId { get; set; }
     public Guid DeviceId { get; set; }
 }

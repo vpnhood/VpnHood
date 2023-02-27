@@ -7,7 +7,7 @@ public class AccessTokenUpdateParams
 {
     public Patch<string>? AccessTokenName { get; set; }
 
-    public Patch<Guid>? AccessPointGroupId { get; set; }
+    public Patch<Guid>? ServerFarmId { get; set; }
 
     public Patch<DateTime?>? ExpirationTime { get; set; }
 

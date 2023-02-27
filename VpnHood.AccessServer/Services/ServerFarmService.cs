@@ -27,11 +27,11 @@ public class ServerFarmService
         _serverService = serverService;
         _logger = logger;
     }
-    public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams createParams)
+    public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
         // check user quota
-        if (_vhContext.AccessPointGroups.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessPointGroupCount)
-            throw new QuotaException(nameof(VhContext.AccessPointGroups), QuotaConstants.AccessPointGroupCount);
+        if (_vhContext.ServerFarms.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerFarmCount)
+            throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
 
         // create a certificate if it is not given
         CertificateModel certificate;
@@ -46,38 +46,38 @@ public class ServerFarmService
         }
 
         // create default name
-        createParams.AccessPointGroupName = createParams.AccessPointGroupName?.Trim();
-        if (string.IsNullOrWhiteSpace(createParams.AccessPointGroupName)) createParams.AccessPointGroupName = Resource.NewServerFarmTemplate;
-        if (createParams.AccessPointGroupName.Contains("##"))
+        createParams.ServerFarmName = createParams.ServerFarmName?.Trim();
+        if (string.IsNullOrWhiteSpace(createParams.ServerFarmName)) createParams.ServerFarmName = Resource.NewServerFarmTemplate;
+        if (createParams.ServerFarmName.Contains("##"))
         {
-            var names = await _vhContext.AccessPointGroups
+            var names = await _vhContext.ServerFarms
                 .Where(x => x.ProjectId == projectId)
-                .Select(x => x.AccessPointGroupName)
+                .Select(x => x.ServerFarmName)
                 .ToArrayAsync();
 
-            createParams.AccessPointGroupName = AccessUtil.FindUniqueName(createParams.AccessPointGroupName, names);
+            createParams.ServerFarmName = AccessUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
 
         var id = Guid.NewGuid();
-        var ret = new AccessPointGroupModel
+        var ret = new ServerFarmModel
         {
             ProjectId = projectId,
-            AccessPointGroupId = id,
-            AccessPointGroupName = createParams.AccessPointGroupName,
+            ServerFarmId = id,
+            ServerFarmName = createParams.ServerFarmName,
             CertificateId = certificate.CertificateId,
             CreatedTime = DateTime.UtcNow
         };
 
-        await _vhContext.AccessPointGroups.AddAsync(ret);
+        await _vhContext.ServerFarms.AddAsync(ret);
         await _vhContext.SaveChangesAsync();
         return ret.ToDto();
     }
 
-    public async Task<AccessPointGroup> Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
+    public async Task<ServerFarm> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
-        var accessPointGroup = await _vhContext.AccessPointGroups
+        var serverFarm = await _vhContext.ServerFarms
             .Where(x => x.ProjectId == projectId )
-            .SingleAsync(x => x.AccessPointGroupId == accessPointGroupId);
+            .SingleAsync(x => x.ServerFarmId == serverFarmId);
 
         // check createParams.CertificateId access
         var certificate = updateParams.CertificateId != null
@@ -85,17 +85,17 @@ public class ServerFarmService
             : null;
 
         // change other properties
-        if (updateParams.AccessPointGroupName != null)
-            accessPointGroup.AccessPointGroupName = updateParams.AccessPointGroupName.Value;
+        if (updateParams.ServerFarmName != null)
+            serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
 
         if (certificate != null)
-            accessPointGroup.CertificateId = certificate.CertificateId;
+            serverFarm.CertificateId = certificate.CertificateId;
 
         // update
-        _vhContext.AccessPointGroups.Update(accessPointGroup);
+        _vhContext.ServerFarms.Update(serverFarm);
         await _vhContext.SaveChangesAsync();
 
-        return accessPointGroup.ToDto();
+        return serverFarm.ToDto();
     }
 
 
@@ -103,13 +103,13 @@ public class ServerFarmService
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = _vhContext.AccessPointGroups
+        var query = _vhContext.ServerFarms
             .Where(x => x.ProjectId == projectId)
-            .Where(x => serverFarmId == null || x.AccessPointGroupId == serverFarmId)
+            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
-                x.AccessPointGroupName!.Contains(search) ||
-                x.AccessPointGroupId.ToString().StartsWith(search))
+                x.ServerFarmName!.Contains(search) ||
+                x.ServerFarmId.ToString().StartsWith(search))
             .OrderByDescending(x => x.CreatedTime);
 
         var serverFarms = await query
@@ -132,14 +132,14 @@ public class ServerFarmService
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = _vhContext.AccessPointGroups
+        var query = _vhContext.ServerFarms
             .Include(x => x.AccessTokens)
             .Where(x => x.ProjectId == projectId )
-            .Where(x => serverFarmId == null || x.AccessPointGroupId == serverFarmId)
+            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
-                x.AccessPointGroupName!.Contains(search) ||
-                x.AccessPointGroupId.ToString().StartsWith(search))
+                x.ServerFarmName!.Contains(search) ||
+                x.ServerFarmId.ToString().StartsWith(search))
             .OrderByDescending(x => x.CreatedTime);
 
         // get farms
@@ -159,17 +159,17 @@ public class ServerFarmService
             Summary = new ServerFarmSummary
             {
                 SessionCount = serverDatas
-                    .Where(serverData => serverData.Server.AccessPointGroupId == serverFarm.AccessPointGroupId)
+                    .Where(serverData => serverData.Server.ServerFarmId == serverFarm.ServerFarmId)
                     .Sum(serverData => serverData.Server.ServerStatus?.SessionCount ?? 0),
 
                 TransferSpeed = serverDatas
-                    .Where(serverData => serverData.Server.AccessPointGroupId == serverFarm.AccessPointGroupId)
+                    .Where(serverData => serverData.Server.ServerFarmId == serverFarm.ServerFarmId)
                     .Sum(serverData =>
                         serverData.Server.ServerStatus?.TunnelReceiveSpeed ?? 0 +
                         serverData.Server.ServerStatus?.TunnelSendSpeed ?? 0),
 
                 ServerCount = serverDatas
-                    .Count(serverData => serverData.Server.AccessPointGroupId == serverFarm.AccessPointGroupId),
+                    .Count(serverData => serverData.Server.ServerFarmId == serverFarm.ServerFarmId),
 
                 ActiveTokenCount = serverFarm.AccessTokens!.Count(x => x.LastUsedTime >= now.AddDays(-7)),
                 InactiveTokenCount = serverFarm.AccessTokens!.Count(x => x.LastUsedTime < now.AddDays(-7)),
@@ -183,9 +183,9 @@ public class ServerFarmService
 
     public async Task Delete(Guid projectId, Guid serverFarmId)
     {
-        var serverFarm = await _vhContext.AccessPointGroups
+        var serverFarm = await _vhContext.ServerFarms
             .Include(x => x.Servers)
-            .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroupId == serverFarmId);
+            .SingleAsync(e => e.ProjectId == projectId && e.ServerFarmId == serverFarmId);
 
         if (serverFarm.Servers!.Any(x => !x.IsDeleted))
             throw new InvalidOperationException("A farm with a server can not be deleted.");

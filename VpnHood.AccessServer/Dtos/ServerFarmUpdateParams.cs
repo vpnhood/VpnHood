@@ -3,8 +3,8 @@ using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Dtos;
 
-public class AccessPointGroupUpdateParams
+public class ServerFarmUpdateParams
 {
-    public Patch<string?>? AccessPointGroupName {get;set;}
+    public Patch<string?>? ServerFarmName {get;set;}
     public Patch<Guid>? CertificateId { get;set;}
 }

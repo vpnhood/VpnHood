@@ -122,7 +122,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessData>> ListAsync(System.Guid projectId, System.Guid? accessTokenId = null, System.Guid? accessPointGroupId = null, System.Guid? accessId = null, System.DateTime? startTime = null, System.DateTime? endTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessData>> ListAsync(System.Guid projectId, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.Guid? accessId = null, System.DateTime? startTime = null, System.DateTime? endTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -134,9 +134,9 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (accessPointGroupId != null)
+            if (serverFarmId != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (accessId != null)
             {
@@ -320,12 +320,12 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessPointGroupsClient 
+    public partial class ServerFarmsClient 
     {
         private System.Net.Http.HttpClient _httpClient;
         private System.Lazy<System.Text.Json.JsonSerializerOptions> _settings;
 
-        public AccessPointGroupsClient(System.Net.Http.HttpClient httpClient)
+        public ServerFarmsClient(System.Net.Http.HttpClient httpClient)
         {
             _httpClient = httpClient;
             _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings);
@@ -348,7 +348,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AccessPointGroup> CreateAsync(System.Guid projectId, AccessPointGroupCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerFarm> CreateAsync(System.Guid projectId, ServerFarmCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -393,7 +393,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessPointGroup>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ServerFarm>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -509,21 +509,21 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AccessPointGroup> UpdateAsync(System.Guid projectId, System.Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerFarm> UpdateAsync(System.Guid projectId, System.Guid serverFarmId, ServerFarmUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
 
-            if (accessPointGroupId == null)
-                throw new System.ArgumentNullException("accessPointGroupId");
+            if (serverFarmId == null)
+                throw new System.ArgumentNullException("serverFarmId");
 
             if (updateParams == null)
                 throw new System.ArgumentNullException("updateParams");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{accessPointGroupId}");
+            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{serverFarmId}");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{accessPointGroupId}", System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture)));
+            urlBuilder_.Replace("{serverFarmId}", System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture)));
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -561,7 +561,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessPointGroup>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ServerFarm>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -590,18 +590,18 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ServerFarmData> GetAsync(System.Guid projectId, System.Guid accessPointGroupId, bool? includeSummary = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerFarmData> GetAsync(System.Guid projectId, System.Guid serverFarmId, bool? includeSummary = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
 
-            if (accessPointGroupId == null)
-                throw new System.ArgumentNullException("accessPointGroupId");
+            if (serverFarmId == null)
+                throw new System.ArgumentNullException("serverFarmId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{accessPointGroupId}?");
+            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{serverFarmId}?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{accessPointGroupId}", System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture)));
+            urlBuilder_.Replace("{serverFarmId}", System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture)));
             if (includeSummary != null)
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("includeSummary") + "=").Append(System.Uri.EscapeDataString(ConvertToString(includeSummary, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
@@ -941,7 +941,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenData>> ListAsync(System.Guid projectId, string? search = null, System.Guid? accessTokenId = null, System.Guid? accessPointGroupId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenData>> ListAsync(System.Guid projectId, string? search = null, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -957,9 +957,9 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (accessPointGroupId != null)
+            if (serverFarmId != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (usageStartTime != null)
             {
@@ -2305,7 +2305,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<DeviceData>> ListUsagesAsync(System.Guid projectId, System.Guid? accessTokenId = null, System.Guid? accessPointGroupId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<DeviceData>> ListUsagesAsync(System.Guid projectId, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2317,9 +2317,9 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (accessPointGroupId != null)
+            if (serverFarmId != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (usageStartTime != null)
             {
@@ -3503,7 +3503,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Usage> GetUsageAsync(System.Guid? projectId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, System.Guid? accessPointGroupId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Usage> GetUsageAsync(System.Guid? projectId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/projects/usage?");
@@ -3519,9 +3519,9 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime") + "=").Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (accessPointGroupId != null)
+            if (serverFarmId != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (serverId != null)
             {
@@ -5993,16 +5993,16 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int SupportCode { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessPointGroupId { get; set; } = default!;
+        public System.Guid ServerFarmId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessPointGroupName { get; set; } = default!;
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
 
@@ -6125,19 +6125,19 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessPointGroup
+    public partial class ServerFarm
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessPointGroupId { get; set; } = default!;
+        public System.Guid ServerFarmId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessPointGroupName { get; set; } = default!;
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
@@ -6154,13 +6154,13 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessPointGroupCreateParams
+    public partial class ServerFarmCreateParams
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessPointGroupName { get; set; } = default!;
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
@@ -6170,13 +6170,13 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessPointGroupUpdateParams
+    public partial class ServerFarmUpdateParams
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString? AccessPointGroupName { get; set; } = default!;
+        public PatchOfString? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
@@ -6217,7 +6217,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required]
-        public AccessPointGroup ServerFarm { get; set; } = new AccessPointGroup();
+        public ServerFarm ServerFarm { get; set; } = new ServerFarm();
 
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
 
@@ -6276,11 +6276,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public System.Guid? AccessTokenId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessPointGroupId { get; set; } = default!;
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenName")]
 
@@ -6333,10 +6333,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfString? AccessTokenName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid? AccessPointGroupId { get; set; } = default!;
+        public PatchOfGuid? ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
@@ -6827,15 +6827,15 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.Guid? AccessPointGroupId { get; set; } = default!;
+        public System.Guid? ServerFarmId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessPointGroupName { get; set; } = default!;
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("version")]
 
@@ -7057,11 +7057,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public string? ServerName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessPointGroupId { get; set; } = default!;
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
 
@@ -7079,10 +7079,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfString? ServerName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfNullableGuid? AccessPointGroupId { get; set; } = default!;
+        public PatchOfNullableGuid? ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("generateNewSecret")]
 

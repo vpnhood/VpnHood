@@ -16,7 +16,7 @@ public abstract class VhContextBase : DbContext
     public virtual DbSet<PublicCycleModel> PublicCycles { get; set; } = default!;
     public virtual DbSet<ServerModel> Servers { get; set; } = default!;
     public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
-    public virtual DbSet<AccessPointGroupModel> AccessPointGroups { get; set; } = default!;
+    public virtual DbSet<ServerFarmModel> ServerFarms { get; set; } = default!;
     public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
     public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
@@ -278,24 +278,24 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<AccessPointGroupModel>(entity =>
+        modelBuilder.Entity<ServerFarmModel>(entity =>
         {
-            entity.HasKey(e => e.AccessPointGroupId);
+            entity.HasKey(e => e.ServerFarmId);
 
-            entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupName })
-                .HasFilter($"{nameof(AccessPointGroupModel.AccessPointGroupName)} IS NOT NULL")
+            entity.HasIndex(e => new { e.ProjectId, e.ServerFarmName })
+                .HasFilter($"{nameof(ServerFarmModel.ServerFarmName)} IS NOT NULL")
                 .IsUnique();
 
-            entity.Property(e => e.AccessPointGroupName)
+            entity.Property(e => e.ServerFarmName)
                 .HasMaxLength(100);
 
             entity.HasOne(e => e.Project)
-                .WithMany(d => d.AccessPointGroups)
+                .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity.HasOne(e => e.ServerProfile)
-                .WithMany(d => d.AccessPointGroups)
+                .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => new { e.ProjectId, e.ServerProfileId })
                 .HasPrincipalKey(e => new { e.ProjectId, e.ServerProfileId })
                 .OnDelete(DeleteBehavior.NoAction);

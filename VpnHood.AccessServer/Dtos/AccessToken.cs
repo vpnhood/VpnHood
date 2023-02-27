@@ -8,8 +8,8 @@ public class AccessToken
     public Guid AccessTokenId { get; set; }
     public string? AccessTokenName { get; set; }
     public int SupportCode { get; set; }
-    public Guid AccessPointGroupId { get; set; }
-    public string? AccessPointGroupName { get; set; }
+    public Guid ServerFarmId { get; set; }
+    public string? ServerFarmName { get; set; }
     public long MaxTraffic { get; set; }
     public int Lifetime { get; set; }
     public int MaxDevice { get; set; }

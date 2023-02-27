@@ -19,8 +19,8 @@ public class AccessTokenTest
     [TestMethod]
     public async Task SupportCode_is_unique_per_project()
     {
-        var farmP1 = await AccessPointGroupDom.Create();
-        var farmP2 = await AccessPointGroupDom.Create();
+        var farmP1 = await ServerFarmDom.Create();
+        var farmP2 = await ServerFarmDom.Create();
 
         var accessTokenDom11 = await farmP1.CreateAccessToken();
         var accessTokenDom12 = await farmP1.CreateAccessToken();
@@ -37,7 +37,7 @@ public class AccessTokenTest
         //-----------
         // Check: Should not create a session with deleted access key
         //-----------
-        var farm1 = await AccessPointGroupDom.Create();
+        var farm1 = await ServerFarmDom.Create();
         var testInit = farm1.TestInit;
 
         //-----------
@@ -47,7 +47,7 @@ public class AccessTokenTest
         expirationTime1 = expirationTime1.AddMilliseconds(-expirationTime1.Millisecond);
         var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
         {
-            AccessPointGroupId = farm1.AccessPointGroupId,
+            ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
             Url = "https://foo.com/accessKey1",
             MaxTraffic = 11,
@@ -57,7 +57,7 @@ public class AccessTokenTest
         });
         Assert.AreNotEqual(0, accessTokenDom1.AccessToken.SupportCode);
         Assert.AreEqual("tokenName1", accessTokenDom1.AccessToken.AccessTokenName);
-        Assert.AreEqual(farm1.AccessPointGroupId, accessTokenDom1.AccessToken.AccessPointGroupId);
+        Assert.AreEqual(farm1.ServerFarmId, accessTokenDom1.AccessToken.ServerFarmId);
         Assert.IsNull(accessTokenDom1.AccessToken.FirstUsedTime);
         Assert.AreEqual(expirationTime1, accessTokenDom1.AccessToken.ExpirationTime);
         Assert.AreEqual(11, accessTokenDom1.AccessToken.MaxTraffic);
@@ -65,11 +65,11 @@ public class AccessTokenTest
         Assert.AreEqual(13, accessTokenDom1.AccessToken.Lifetime);
         Assert.AreEqual("https://foo.com/accessKey1", accessTokenDom1.AccessToken.Url);
 
-        var farm2 = await AccessPointGroupDom.Create(testInit);
+        var farm2 = await ServerFarmDom.Create(testInit);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
         var accessTokenDom2 = await farm2.CreateAccessToken(new AccessTokenCreateParams
         {
-            AccessPointGroupId = farm2.AccessPointGroupId,
+            ServerFarmId = farm2.ServerFarmId,
             AccessTokenName = "tokenName2",
             Url = "https://foo.com/accessKey2",
             MaxTraffic = 21,
@@ -80,7 +80,7 @@ public class AccessTokenTest
         });
         Assert.AreNotEqual(0, accessTokenDom2.AccessToken.SupportCode);
         Assert.AreEqual("tokenName2", accessTokenDom2.AccessToken.AccessTokenName);
-        Assert.AreEqual(farm2.AccessPointGroupId, accessTokenDom2.AccessToken.AccessPointGroupId);
+        Assert.AreEqual(farm2.ServerFarmId, accessTokenDom2.AccessToken.ServerFarmId);
         Assert.IsNull(accessTokenDom2.AccessToken.FirstUsedTime);
         Assert.IsNull(accessTokenDom2.AccessToken.LastUsedTime);
         Assert.AreEqual(expirationTime2, accessTokenDom2.AccessToken.ExpirationTime);
@@ -97,7 +97,7 @@ public class AccessTokenTest
             .AccessToken;
         Assert.IsTrue((accessToken2B.ExpirationTime!.Value - accessTokenDom2.AccessToken.ExpirationTime!.Value) < TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenId, accessToken2B.AccessTokenId);
-        Assert.AreEqual(accessTokenDom2.AccessToken.AccessPointGroupId, accessToken2B.AccessPointGroupId);
+        Assert.AreEqual(accessTokenDom2.AccessToken.ServerFarmId, accessToken2B.ServerFarmId);
         Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenName, accessToken2B.AccessTokenName);
         Assert.AreEqual(accessTokenDom2.AccessToken.ProjectId, accessToken2B.ProjectId);
         Assert.AreEqual(accessTokenDom2.AccessToken.IsPublic, accessToken2B.IsPublic);
@@ -113,7 +113,7 @@ public class AccessTokenTest
         var updateParams = new AccessTokenUpdateParams
         {
             AccessTokenName = new PatchOfString { Value = $"new_name_{Guid.NewGuid()}" },
-            AccessPointGroupId = new PatchOfGuid { Value = farm2.AccessPointGroupId },
+            ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId },
             ExpirationTime = new PatchOfNullableDateTime { Value = DateTime.UtcNow.AddDays(4) },
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },
@@ -128,7 +128,7 @@ public class AccessTokenTest
 
         Assert.IsTrue(accessToken2B.ExpirationTime!.Value - updateParams.ExpirationTime.Value < TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessTokenDom2.AccessTokenId, accessToken2B.AccessTokenId);
-        Assert.AreEqual(updateParams.AccessPointGroupId.Value, accessToken2B.AccessPointGroupId);
+        Assert.AreEqual(updateParams.ServerFarmId.Value, accessToken2B.ServerFarmId);
         Assert.AreEqual(updateParams.AccessTokenName.Value, accessToken2B.AccessTokenName);
         Assert.AreEqual(accessTokenDom2.AccessToken.ProjectId, accessToken2B.ProjectId);
         Assert.AreEqual(accessTokenDom2.AccessToken.IsPublic, accessToken2B.IsPublic);
@@ -193,7 +193,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Quota()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         await farm.CreateAccessToken();
         var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
 
@@ -215,12 +215,12 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Validate_create()
     {
-        var farm1 = await AccessPointGroupDom.Create();
-        var farm2 = await AccessPointGroupDom.Create();
+        var farm1 = await ServerFarmDom.Create();
+        var farm2 = await ServerFarmDom.Create();
         try
         {
             await farm1.TestInit.AccessTokensClient.CreateAsync(farm1.ProjectId,
-                new AccessTokenCreateParams { AccessPointGroupId = farm2.AccessPointGroupId });
+                new AccessTokenCreateParams { ServerFarmId = farm2.ServerFarmId });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (ApiException ex)
@@ -232,15 +232,15 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Validate_update()
     {
-        var farm1 = await AccessPointGroupDom.Create();
-        var farm2 = await AccessPointGroupDom.Create();
+        var farm1 = await ServerFarmDom.Create();
+        var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
         try
         {
             await accessTokenDom1.Update(new AccessTokenUpdateParams
             {
-                AccessPointGroupId = new PatchOfGuid { Value = farm2.AccessPointGroupId }
+                ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
             });
             Assert.Fail("KeyNotFoundException is expected!");
         }
@@ -253,7 +253,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task List()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom1 = await farm.CreateAccessToken(true);
         var accessTokenDom2 = await farm.CreateAccessToken();
 
@@ -275,7 +275,7 @@ public class AccessTokenTest
 
         // list
         var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
-            accessPointGroupId: farm.AccessPointGroupId,
+            serverFarmId: farm.ServerFarmId,
             usageStartTime: farm.TestInit.CreatedTime.AddSeconds(-1));
 
         var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId);
@@ -284,7 +284,7 @@ public class AccessTokenTest
 
         // list by time
         accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
-            accessPointGroupId: farm.AccessPointGroupId, usageStartTime: DateTime.UtcNow.AddDays(-2));
+            serverFarmId: farm.ServerFarmId, usageStartTime: DateTime.UtcNow.AddDays(-2));
         publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);

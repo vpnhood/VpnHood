@@ -19,7 +19,7 @@ public class AccessTest
     [TestMethod]
     public async Task Get()
     {
-        var farm = await AccessPointGroupDom.Create();
+        var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(true);
 
         var sessionDom = await accessTokenDom.CreateSession();
@@ -43,13 +43,13 @@ public class AccessTest
     public async Task List()
     {
         var testInit2 = await TestInit.Create();
-        var sample1 = await AccessPointGroupDom.Create(testInit2);
+        var sample1 = await ServerFarmDom.Create(testInit2);
         var actualAccessCount = 0;
         var usageCount = 0;
         var deviceCount = 0;
 
         // ----------------
-        // Create accessToken1 public in AccessPointGroup1
+        // Create accessToken1 public in ServerFarm1
         // ----------------
         var sampleAccessToken1 = await sample1.CreateAccessToken(true);
         var usageInfo = new UsageInfo { ReceivedTraffic = 1000, SentTraffic = 500};
@@ -71,9 +71,9 @@ public class AccessTest
         await sessionDom.AddUsage(usageInfo);
 
         // ----------------
-        // Create accessToken2 public in AccessPointGroup2
+        // Create accessToken2 public in ServerFarm2
         // ----------------
-        var sample2 = await AccessPointGroupDom.Create(testInit2);
+        var sample2 = await ServerFarmDom.Create(testInit2);
         var accessToken2 = await sample2.CreateAccessToken(true);
         var sample2UsageCount = 0;
         var sample2AccessCount = 0;
@@ -99,7 +99,7 @@ public class AccessTest
         await sessionDom.AddUsage(usageInfo);
         
         // ----------------
-        // Create accessToken3 private in AccessPointGroup2
+        // Create accessToken3 private in ServerFarm2
         // ----------------
         var accessToken3 = await sample2.CreateAccessToken();
         sample2AccessCount++;
@@ -131,7 +131,7 @@ public class AccessTest
         Assert.AreEqual(usageInfo.ReceivedTraffic * usageCount,  res.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
-        res = await testInit2.AccessesClient.ListAsync(testInit2.ProjectId, accessPointGroupId: sample2.AccessPointGroupId);
+        res = await testInit2.AccessesClient.ListAsync(testInit2.ProjectId, serverFarmId: sample2.ServerFarmId);
         Assert.AreEqual(sample2AccessCount, res.Count);
         Assert.AreEqual(usageInfo.SentTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleSentTraffic));
         Assert.AreEqual(usageInfo.ReceivedTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleReceivedTraffic));

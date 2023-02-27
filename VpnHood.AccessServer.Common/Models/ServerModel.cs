@@ -17,7 +17,7 @@ public class ServerModel
     public string? Description { get; set; }
     public Guid AuthorizationCode { get; set; }
     public byte[] Secret { get; set; } = default!;
-    public Guid AccessPointGroupId { get; set; }
+    public Guid ServerFarmId { get; set; }
     public Guid ConfigCode { get; set; }
     public Guid? LastConfigCode { get; set; }
     public string? LastConfigError { get; set; }
@@ -26,7 +26,7 @@ public class ServerModel
     public List<AccessPointModel> AccessPoints { get; set; } = new();
 
     public virtual ProjectModel? Project { get; set; }
-    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
+    public virtual ServerFarmModel? ServerFarm { get; set; }
     public virtual ServerStatusModel? ServerStatus { get; set; }
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }

@@ -29,7 +29,7 @@ public class AccessesController : SuperController<AccessesController>
     }
 
     [HttpGet]
-    public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? accessId = null,
+    public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
         DateTime? startTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
@@ -38,10 +38,10 @@ public class AccessesController : SuperController<AccessesController>
         var query = VhContext.Accesses
             .Include(x => x.Device)
             .Include(x => x.AccessToken)
-            .ThenInclude(x => x!.AccessPointGroup)
+            .ThenInclude(x => x!.ServerFarm)
             .Where(access =>
                 (access.AccessToken!.ProjectId == projectId) &&
-                (access.AccessToken!.AccessPointGroupId == accessPointGroupId || accessPointGroupId == null) &&
+                (access.AccessToken!.ServerFarmId == serverFarmId || serverFarmId == null) &&
                 (access.AccessId == accessId || accessId == null) &&
                 (access.AccessTokenId == accessTokenId || accessTokenId == null) &&
                 (access.CreatedTime >= startTime || startTime == null) &&
@@ -56,7 +56,7 @@ public class AccessesController : SuperController<AccessesController>
         var ret = res
             .Select(accessModel => new AccessData(
                 accessModel.ToDto(), 
-                accessModel.AccessToken!.ToDto(accessModel.AccessToken!.AccessPointGroup?.AccessPointGroupName), 
+                accessModel.AccessToken!.ToDto(accessModel.AccessToken!.ServerFarm?.ServerFarmName), 
                 accessModel.Device?.ToDto()))
             .ToArray();
         return ret;

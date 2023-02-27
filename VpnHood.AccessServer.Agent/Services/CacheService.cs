@@ -67,7 +67,7 @@ public class CacheService
             .Include(session => session.Device)
             .Include(session => session.Access)
             .Include(session => session.Access!.AccessToken)
-            .Include(session => session.Access!.AccessToken!.AccessPointGroup)
+            .Include(session => session.Access!.AccessToken!.ServerFarm)
             .Where(session => !session.IsArchived)
             .AsNoTracking()
             .ToDictionaryAsync(session => session.SessionId);
@@ -177,7 +177,7 @@ public class CacheService
         // load from db
         access = await _vhContext.Accesses
             .Include(x => x.AccessToken)
-            .Include(x => x.AccessToken!.AccessPointGroup)
+            .Include(x => x.AccessToken!.ServerFarm)
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
 
@@ -200,7 +200,7 @@ public class CacheService
         // load from db
         access = await _vhContext.Accesses
             .Include(accessModel => accessModel.AccessToken)
-            .Include(accessModel => accessModel.AccessToken!.AccessPointGroup)
+            .Include(accessModel => accessModel.AccessToken!.ServerFarm)
             .AsNoTracking()
             .SingleOrDefaultAsync(accessModel => accessModel.AccessId == accessId);
 

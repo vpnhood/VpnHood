@@ -7,43 +7,43 @@ using VpnHood.AccessServer.Api;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class AccessPointGroupDom
+public class ServerFarmDom
 {
     public TestInit TestInit { get; }
-    public AccessPointGroup AccessPointGroup { get; private set; }
+    public ServerFarm ServerFarm { get; private set; }
     public List<ServerDom> Servers { get; private set; } = new();
-    public Guid AccessPointGroupId => AccessPointGroup.AccessPointGroupId;
+    public Guid ServerFarmId => ServerFarm.ServerFarmId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
     public Guid ProjectId => TestInit.ProjectId;
     public ServerDom DefaultServer => Servers.First();
 
-    protected AccessPointGroupDom(TestInit testInit, AccessPointGroup accessPointGroup)
+    protected ServerFarmDom(TestInit testInit, ServerFarm serverFarm)
     {
         TestInit = testInit;
-        AccessPointGroup = accessPointGroup;
+        ServerFarm = serverFarm;
     }
 
-    public static async Task<AccessPointGroupDom> Create(TestInit? testInit = default, AccessPointGroupCreateParams? createParams = default, int serverCount = 1)
+    public static async Task<ServerFarmDom> Create(TestInit? testInit = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
     {
         testInit ??= await TestInit.Create(createServers: false);
-        createParams ??= new AccessPointGroupCreateParams
+        createParams ??= new ServerFarmCreateParams
         {
-            AccessPointGroupName = Guid.NewGuid().ToString()
+            ServerFarmName = Guid.NewGuid().ToString()
         };
 
-        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, createParams);
+        var serverFarm = await testInit.ServerFarmsClient.CreateAsync(testInit.ProjectId, createParams);
 
-        var ret = new AccessPointGroupDom(testInit, accessPointGroup);
+        var ret = new ServerFarmDom(testInit, serverFarm);
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
 
         return ret;
     }
 
-    public static async Task<AccessPointGroupDom> Attach(TestInit testInit, Guid serverFarmId)
+    public static async Task<ServerFarmDom> Attach(TestInit testInit, Guid serverFarmId)
     {
-        var serverFarmData = await testInit.AccessPointGroupsClient.GetAsync(testInit.ProjectId, serverFarmId);
-        var serverFarm = new AccessPointGroupDom(testInit, serverFarmData.ServerFarm);
+        var serverFarmData = await testInit.ServerFarmsClient.GetAsync(testInit.ProjectId, serverFarmId);
+        var serverFarm = new ServerFarmDom(testInit, serverFarmData.ServerFarm);
         await serverFarm.ReattachServers();
         return serverFarm;
     }
@@ -51,14 +51,14 @@ public class AccessPointGroupDom
 
     public async Task<ServerFarmData> Reload()
     {
-        var serverFarmData = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId, includeSummary: true);
-        AccessPointGroup = serverFarmData.ServerFarm;
+        var serverFarmData = await TestInit.ServerFarmsClient.GetAsync(ProjectId, ServerFarmId, includeSummary: true);
+        ServerFarm = serverFarmData.ServerFarm;
         return serverFarmData;
     }
 
     public async Task ReattachServers()
     {
-        var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId, serverFarmId: AccessPointGroupId);
+        var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId, serverFarmId: ServerFarmId);
         Servers = servers.Select(serverData => ServerDom.Attach(TestInit, serverData.Server)).ToList();
     }
 
@@ -74,7 +74,7 @@ public class AccessPointGroupDom
         var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId,
             new AccessTokenCreateParams
             {
-                AccessPointGroupId = AccessPointGroup.AccessPointGroupId,
+                ServerFarmId = ServerFarm.ServerFarmId,
                 IsPublic = isPublic
             });
 
@@ -83,10 +83,10 @@ public class AccessPointGroupDom
 
     public async Task<AccessTokenDom> CreateAccessToken(AccessTokenCreateParams createParams)
     {
-        if (createParams.AccessPointGroupId != Guid.Empty && createParams.AccessPointGroupId != AccessPointGroupId)
-            throw new InvalidOperationException($"{nameof(AccessPointGroupId)} must be an empty guid or current id!");
+        if (createParams.ServerFarmId != Guid.Empty && createParams.ServerFarmId != ServerFarmId)
+            throw new InvalidOperationException($"{nameof(ServerFarmId)} must be an empty guid or current id!");
 
-        createParams.AccessPointGroupId = AccessPointGroup.AccessPointGroupId;
+        createParams.ServerFarmId = ServerFarm.ServerFarmId;
 
         var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId, createParams);
         return new AccessTokenDom(TestInit, ret);
@@ -94,7 +94,7 @@ public class AccessPointGroupDom
 
     public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true)
     {
-        var sampleServer = await ServerDom.Create(TestInit, AccessPointGroupId, configure, sendStatus);
+        var sampleServer = await ServerDom.Create(TestInit, ServerFarmId, configure, sendStatus);
         Servers.Add(sampleServer);
         return sampleServer;
     }
@@ -102,10 +102,10 @@ public class AccessPointGroupDom
     public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
     {
         // ReSharper disable once LocalizableElement
-        if (createParams.AccessPointGroupId != AccessPointGroupId && createParams.AccessPointGroupId != Guid.Empty)
-            throw new ArgumentException($"{nameof(createParams.AccessPointGroupId)} must be the same as this farm", nameof(createParams));
+        if (createParams.ServerFarmId != ServerFarmId && createParams.ServerFarmId != Guid.Empty)
+            throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm", nameof(createParams));
 
-        createParams.AccessPointGroupId = AccessPointGroupId;
+        createParams.ServerFarmId = ServerFarmId;
         var sampleServer = await ServerDom.Create(TestInit, createParams, configure, sendStatus);
         Servers.Add(sampleServer);
         return sampleServer;

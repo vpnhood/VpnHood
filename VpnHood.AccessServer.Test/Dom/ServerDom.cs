@@ -93,9 +93,9 @@ public class ServerDom
         return myServer;
     }
 
-    public static Task<ServerDom> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true, bool sendStatus = true)
+    public static Task<ServerDom> Create(TestInit testInit, Guid serverFarmId, bool configure = true, bool sendStatus = true)
     {
-        return Create(testInit, new ServerCreateParams { AccessPointGroupId = accessPointGroupId }, configure, sendStatus);
+        return Create(testInit, new ServerCreateParams { ServerFarmId = serverFarmId }, configure, sendStatus);
     }
 
     public async Task Update(ServerUpdateParams updateParams)

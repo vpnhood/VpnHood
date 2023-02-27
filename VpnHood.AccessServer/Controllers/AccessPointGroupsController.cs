@@ -13,12 +13,12 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-point-groups")]
-public class AccessPointGroupsController : SuperController<AccessPointGroupsController>
+public class ServerFarmsController : SuperController<ServerFarmsController>
 {
     private readonly ServerFarmService _serverFarmService;
 
-    public AccessPointGroupsController(
-        ILogger<AccessPointGroupsController> logger,
+    public ServerFarmsController(
+        ILogger<ServerFarmsController> logger,
         VhContext vhContext, MultilevelAuthService multilevelAuthService,
         ServerFarmService serverFarmService)
         : base(logger, vhContext, multilevelAuthService)
@@ -27,31 +27,31 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     }
 
     [HttpPost]
-    public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
+    public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams? createParams)
     {
-        createParams ??= new AccessPointGroupCreateParams();
-        await VerifyUserPermission(projectId, Permissions.AccessPointGroupWrite);
+        createParams ??= new ServerFarmCreateParams();
+        await VerifyUserPermission(projectId, Permissions.ServerFarmWrite);
         if (createParams.CertificateId != null)
             await VerifyUserPermission(projectId, Permissions.CertificateWrite);
 
-        using var asyncLock = await AsyncLock.LockAsync($"CreateAccessPointGroup_{projectId}");
+        using var asyncLock = await AsyncLock.LockAsync($"CreateServerFarm_{projectId}");
         return await _serverFarmService.Create(projectId, createParams);
     }
 
-    [HttpPatch("{accessPointGroupId}")]
-    public async Task<AccessPointGroup> Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
+    [HttpPatch("{serverFarmId}")]
+    public async Task<ServerFarm> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
-        await VerifyUserPermission(projectId, Permissions.AccessPointGroupWrite);
-        return await _serverFarmService.Update(projectId, accessPointGroupId, updateParams);
+        await VerifyUserPermission(projectId, Permissions.ServerFarmWrite);
+        return await _serverFarmService.Update(projectId, serverFarmId, updateParams);
     }
 
-    [HttpGet("{accessPointGroupId}")]
-    public async Task<ServerFarmData> Get(Guid projectId, Guid accessPointGroupId, bool includeSummary = false)
+    [HttpGet("{serverFarmId}")]
+    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         var dtos = includeSummary
-            ? await _serverFarmService.ListWithSummary(projectId, serverFarmId: accessPointGroupId)
-            : await _serverFarmService.List(projectId, serverFarmId: accessPointGroupId);
+            ? await _serverFarmService.ListWithSummary(projectId, serverFarmId: serverFarmId)
+            : await _serverFarmService.List(projectId, serverFarmId: serverFarmId);
 
         return dtos.Single();
     }
@@ -70,7 +70,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     [HttpDelete("{serverFarmId:guid}")]
     public async Task Delete(Guid projectId, Guid serverFarmId)
     {
-        await VerifyUserPermission(projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission(projectId, Permissions.ServerFarmWrite);
         await _serverFarmService.Delete(projectId, serverFarmId);
     }
 }

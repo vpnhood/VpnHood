@@ -47,8 +47,8 @@ public class AccessTokensController : SuperController<AccessTokensController>
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateAccessTokens");
         await _subscriptionService.AuthorizeCreateAccessToken(projectId);
 
-        var accessPointGroup = await VhContext.AccessPointGroups
-            .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
+        var serverFarm = await VhContext.ServerFarms
+            .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == createParams.ServerFarmId);
 
         // create support id
         var supportCode = await VhContext.AccessTokens
@@ -60,7 +60,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
         {
             AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
             ProjectId = projectId,
-            AccessPointGroupId = accessPointGroup.AccessPointGroupId,
+            ServerFarmId = serverFarm.ServerFarmId,
             AccessTokenName = createParams.AccessTokenName,
             MaxTraffic = createParams.MaxTraffic,
             MaxDevice = createParams.MaxDevice,
@@ -78,7 +78,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
         await VhContext.AccessTokens.AddAsync(accessToken);
         await VhContext.SaveChangesAsync();
 
-        return accessToken.ToDto(accessToken.AccessPointGroup?.AccessPointGroupName);
+        return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
     [HttpPatch("{accessTokenId:guid}")]
@@ -86,16 +86,16 @@ public class AccessTokensController : SuperController<AccessTokensController>
     {
         await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
-        // validate accessTokenModel.AccessPointGroupId
-        var accessPointGroup = (updateParams.AccessPointGroupId != null)
-            ? await VhContext.AccessPointGroups.SingleAsync(x =>
+        // validate accessTokenModel.ServerFarmId
+        var serverFarm = (updateParams.ServerFarmId != null)
+            ? await VhContext.ServerFarms.SingleAsync(x =>
                 x.ProjectId == projectId &&
-                x.AccessPointGroupId == updateParams.AccessPointGroupId)
+                x.ServerFarmId == updateParams.ServerFarmId)
             : null;
 
         // update
         var accessToken = await VhContext.AccessTokens
-            .Include(x => x.AccessPointGroup)
+            .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.AccessTokenId == accessTokenId);
         if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
@@ -105,17 +105,17 @@ public class AccessTokensController : SuperController<AccessTokensController>
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
         if (updateParams.Url != null) accessToken.Url = updateParams.Url;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
-        if (updateParams.AccessPointGroupId != null)
+        if (updateParams.ServerFarmId != null)
         {
-            accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
-            accessToken.AccessPointGroup = accessPointGroup;
+            accessToken.ServerFarmId = updateParams.ServerFarmId;
+            accessToken.ServerFarm = serverFarm;
         }
 
         if (VhContext.ChangeTracker.HasChanges())
             accessToken.ModifiedTime = DateTime.UtcNow;
         await VhContext.SaveChangesAsync();
 
-        return accessToken.ToDto(accessToken.AccessPointGroup?.AccessPointGroupName);
+        return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
@@ -127,18 +127,18 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
         var accessToken = await VhContext
             .AccessTokens
-            .Include(x => x.AccessPointGroup)
-            .Include(x => x.AccessPointGroup!.Certificate)
+            .Include(x => x.ServerFarm)
+            .Include(x => x.ServerFarm!.Certificate)
             .Where(x => x.AccessTokenId == accessTokenId)
             .SingleAsync();
 
-        var certificate = accessToken.AccessPointGroup!.Certificate!;
+        var certificate = accessToken.ServerFarm!.Certificate!;
         var x509Certificate = new X509Certificate2(certificate.RawData);
 
         // find all public accessPoints 
         var farmServers = await VhContext.Servers
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Where(server => server.AccessPointGroupId == accessToken.AccessPointGroupId )
+            .Where(server => server.ServerFarmId == accessToken.ServerFarmId )
             .ToArrayAsync();
 
         var tokenAccessPoints = farmServers
@@ -148,7 +148,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
        
         if (Util.IsNullOrEmpty(tokenAccessPoints))
-            throw new InvalidOperationException("Could not find any public access point for the AccessPointGroup. Please configure a server for this AccessToken.");
+            throw new InvalidOperationException("Could not find any public access point for the ServerFarm. Please configure a server for this AccessToken.");
 
         // create token
         var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
@@ -177,7 +177,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
     [HttpGet]
     public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
-        Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+        Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
     {
@@ -194,23 +194,23 @@ public class AccessTokensController : SuperController<AccessTokensController>
         // find access tokens
         var query =
             from accessToken in VhContext.AccessTokens
-            join accessPointGroup in VhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
+            join serverFarm in VhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
             join access in VhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
                 (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
-                (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
+                (serverFarmId == null || accessToken.ServerFarmId == serverFarmId) &&
                 (string.IsNullOrEmpty(search) ||
                  (accessToken.AccessTokenId == searchGuid && searchGuid != Guid.Empty) ||
                  (accessToken.SupportCode == searchInt && searchInt != -1) ||
-                 (accessToken.AccessPointGroupId == searchGuid && searchGuid != Guid.Empty) ||
+                 (accessToken.ServerFarmId == searchGuid && searchGuid != Guid.Empty) ||
                  accessToken.AccessTokenName!.StartsWith(search))
             orderby accessToken.SupportCode descending
             select new
             {
-                accessPointGroup, // force to fetch accessPointGroup;
-                accessTokenData = new AccessTokenData(accessToken.ToDto(accessPointGroup.AccessPointGroupName))
+                serverFarm, // force to fetch serverFarm;
+                accessTokenData = new AccessTokenData(accessToken.ToDto(serverFarm.ServerFarmName))
                 {
                     Access = access != null ? access.ToDto() : null
                 }
@@ -226,7 +226,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
         if (usageStartTime != null)
         {
             var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId).ToArray();
-            var usages = await _usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, accessPointGroupId, usageStartTime, usageEndTime);
+            var usages = await _usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageStartTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.accessTokenData.AccessToken.AccessTokenId, out var usage))

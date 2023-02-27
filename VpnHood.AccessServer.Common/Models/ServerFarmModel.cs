@@ -1,9 +1,9 @@
 ﻿namespace VpnHood.AccessServer.Models;
 
-public class AccessPointGroupModel
+public class ServerFarmModel
 {
-    public Guid AccessPointGroupId { get; set; }
-    public string? AccessPointGroupName { get; set; }
+    public Guid ServerFarmId { get; set; }
+    public string? ServerFarmName { get; set; }
     public Guid ProjectId { get; set; }
     public Guid CertificateId { get; set; }
     public Guid? ServerProfileId { get; set; }

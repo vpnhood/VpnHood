@@ -69,9 +69,9 @@ public class AgentService
         _logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
             server.ServerId, hostEndPoint);
 
-        var serverFarm = await _vhContext.AccessPointGroups
+        var serverFarm = await _vhContext.ServerFarms
             .Include(serverFarm => serverFarm.Certificate)
-            .SingleAsync(serverFarm => serverFarm.AccessPointGroupId == server.AccessPointGroupId);
+            .SingleAsync(serverFarm => serverFarm.ServerFarmId == server.ServerFarmId);
 
         return serverFarm.Certificate!.RawData;
     }
@@ -154,7 +154,7 @@ public class AgentService
 
         // Update AccessPoints
         if (server.AutoConfigure)
-            server.AccessPoints = await CreateServerAccessPoints(server.ServerId, server.AccessPointGroupId, serverInfo);
+            server.AccessPoints = await CreateServerAccessPoints(server.ServerId, server.ServerFarmId, serverInfo);
 
         // update db if lastError has been changed; prevent bombing the db
         if (saveServer)
@@ -208,7 +208,7 @@ public class AgentService
     {
         // find all public accessPoints 
         var farmServers = await _vhContext.Servers
-            .Where(server => server.AccessPointGroupId == farmId && !server.IsDeleted)
+            .Where(server => server.ServerFarmId == farmId && !server.IsDeleted)
             .ToArrayAsync();
 
         // all old PublicInToken AccessPoints in the same farm

@@ -10,7 +10,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Messaging;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -236,7 +235,7 @@ public class AgentServerTest
 
         // create serverInfo and configure
         var publicIp = await farm.TestInit.NewIpV6();
-        var serverInfo = await farm.TestInit.NewServerInfo();
+        var serverInfo = await farm.TestInit.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo = serverInfo;
         serverInfo.PrivateIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
         serverInfo.PublicIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
@@ -269,7 +268,7 @@ public class AgentServerTest
         //-----------
         // check: Check ServerStatus log is inserted
         //-----------
-        var serverStatus = TestInit.NewServerStatus(null);
+        var serverStatus = TestInit.NewServerStatus(null, randomStatus: true);
         await serverDom.UpdateStatus(serverStatus);
 
         dateTime = DateTime.UtcNow;
@@ -328,7 +327,7 @@ public class AgentServerTest
         // check
         //-----------
         oldCode = serverCommand.ConfigCode;
-        serverDom.ServerInfo = await testInit.NewServerInfo();
+        serverDom.ServerInfo = await testInit.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo.Status.ConfigCode = Guid.NewGuid().ToString();
         await serverDom.SendStatus(false);
         var serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
@@ -416,12 +415,12 @@ public class AgentServerTest
         farm.TestInit.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(sessionCount: 0);
-        var serverDom2 = await farm.AddNewServer(sessionCount: 0);
+        var serverDom1 = await farm.AddNewServer();
+        var serverDom2 = await farm.AddNewServer();
         var serverDom3 = await farm.AddNewServer(sendStatus: false);
         var serverDom4 = await farm.AddNewServer(configure: false);
         var serverDom5 = await farm.AddNewServer(sendStatus: false);
-        var serverDom6 = await farm.AddNewServer(sessionCount: 0);
+        var serverDom6 = await farm.AddNewServer();
 
         // configure serverDom5 with ipv6
         serverDom5.ServerInfo.PublicIpAddresses = new[] { await serverDom5.TestInit.NewIpV6(), await serverDom5.TestInit.NewIpV6() };
@@ -431,44 +430,25 @@ public class AgentServerTest
         // make sure all accessPoints are initialized
         await farm.ReloadServers();
 
-        // all session to zero
-        foreach (var server in farm.Servers)
-            server.ServerInfo.Status.SessionCount = 0;
-
         // create access token
         var accessTokenDom = await farm.CreateAccessToken();
 
         // create sessions
-        for (var i = 0; i < 9; i++)
+        for (var i = 0; i < 10; i++)
         {
-            var sessionDom = await accessTokenDom.CreateSession(addressFamily: AddressFamily.InterNetwork, assertError: false);
-            if (sessionDom.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
-            {
-                Assert.IsNotNull(sessionDom.SessionResponseEx.RedirectHostEndPoint);
-
-                // find server for the redirect endpoint
-                var serverDomRedirect = farm.FindServerByEndPoint(sessionDom.SessionResponseEx.RedirectHostEndPoint);
-                sessionDom = await serverDomRedirect.CreateSession(accessTokenDom.AccessToken);
-            }
-
-            Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode, sessionDom.SessionResponseEx.ErrorMessage);
-
+            var addressFamily = i == 9  ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
+            var sessionDom = await accessTokenDom.CreateSession(addressFamily: addressFamily, autoRedirect: true);
+            
             // find the server that create the session
             var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
-
             serverDom.ServerInfo.Status.SessionCount++;
             await serverDom.SendStatus();
         }
 
-        // an IPv6 session
-        var sessionDomIpv6 = await accessTokenDom.CreateSession(addressFamily: AddressFamily.InterNetworkV6, assertError: false);
-        var serverDomIPv6 = farm.FindServerByEndPoint(sessionDomIpv6.SessionRequestEx.HostEndPoint);
-        serverDomIPv6.ServerInfo.Status.SessionCount++;
-
         // some server should not be selected
         Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount, "Should not use server in Configuring state.");
-        Assert.AreEqual(1, serverDom4.ServerStatus.SessionCount, "IpVersion ws not respected.");
-        Assert.AreEqual(0, serverDom5.ServerStatus.SessionCount, "Should not use server in Configuring state.");
+        Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount, "Should not use server in Configuring state.");
+        Assert.AreEqual(1, serverDom5.ServerStatus.SessionCount, "IpVersion was not respected.");
 
         // each server sessions must be 3
         Assert.AreEqual(3, serverDom1.ServerStatus.SessionCount);

@@ -48,7 +48,7 @@ public class ServerTest
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        serverDom.ServerInfo = await testInit.NewServerInfo();
+        serverDom.ServerInfo = await testInit.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.Configure(false);
         await serverDom.Reload();
@@ -61,7 +61,7 @@ public class ServerTest
         Assert.AreEqual(ServerState.Idle, serverDom.Server.ServerState);
 
         // ServerState.Active
-        serverDom.ServerInfo.Status = TestInit.NewServerStatus(serverDom.ServerConfig.ConfigCode);
+        serverDom.ServerInfo.Status = TestInit.NewServerStatus(serverDom.ServerConfig.ConfigCode, true);
         await serverDom.SendStatus();
         await serverDom.Reload();
         Assert.AreEqual(ServerState.Active, serverDom.Server.ServerState);

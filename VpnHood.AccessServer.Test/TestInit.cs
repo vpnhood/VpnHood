@@ -108,7 +108,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         };
     }
 
-    public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken, 
+    public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
         bool isListen = true, int udpPrt = 0)
     {
         ipEndPoint ??= await NewEndPoint();
@@ -256,25 +256,41 @@ public class TestInit : IDisposable, IHttpClientFactory
         ProjectId = project.ProjectId;
     }
 
-    public static ServerStatus NewServerStatus(string? configCode)
+    public static ServerStatus NewServerStatus(string? configCode, bool randomStatus = false)
     {
         var rand = new Random();
-        return new ServerStatus
-        {
-            SessionCount = rand.Next(1, 1000),
-            AvailableMemory = rand.Next(150, 300) * 1000000000L,
-            UsedMemory = rand.Next(0, 150) * 1000000000L,
-            TcpConnectionCount = rand.Next(100, 500),
-            UdpConnectionCount = rand.Next(501, 1000),
-            ThreadCount = rand.Next(0, 50),
-            ConfigCode = configCode,
-            CpuUsage = 5,
-            TunnelReceiveSpeed = 2000000,
-            TunnelSendSpeed = 1000000
-        };
+        var ret = randomStatus
+            ? new ServerStatus
+            {
+                SessionCount = rand.Next(1, 1000),
+                AvailableMemory = rand.Next(150, 300) * 1000000000L,
+                UsedMemory = rand.Next(0, 150) * 1000000000L,
+                TcpConnectionCount = rand.Next(100, 500),
+                UdpConnectionCount = rand.Next(501, 1000),
+                ThreadCount = rand.Next(0, 50),
+                ConfigCode = configCode,
+                CpuUsage = rand.Next(0, 100),
+                TunnelReceiveSpeed = 2000000,
+                TunnelSendSpeed = 1000000
+            }
+            : new ServerStatus
+            {
+                SessionCount = 0,
+                AvailableMemory = 16 * 1000000000L,
+                UsedMemory = 1 * 1000000000L,
+                TcpConnectionCount = 0,
+                UdpConnectionCount = 0,
+                ThreadCount = 5,
+                ConfigCode = configCode,
+                CpuUsage = 25,
+                TunnelReceiveSpeed = 0,
+                TunnelSendSpeed = 0
+            };
+
+        return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo()
+    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false)
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
@@ -293,7 +309,7 @@ public class TestInit : IDisposable, IHttpClientFactory
                 await NewIpV6(),
                 publicIp,
             },
-            status: NewServerStatus(null))
+            status: NewServerStatus(null, randomStatus))
         {
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",

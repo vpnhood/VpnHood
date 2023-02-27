@@ -462,7 +462,8 @@ public class SessionService
             .Where(server =>
                 server.ProjectId == currentServer.ProjectId &&
                 server.AccessPointGroupId == currentServer.AccessPointGroupId &&
-                server.AccessPoints.Any(accessPoint => accessPoint.IsPublic) &&
+                server.AccessPoints.Any(accessPoint => 
+                    accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily==currentEndPoint.AddressFamily) &&
                 IsServerReady(server))
             .ToArray();
 
@@ -473,7 +474,8 @@ public class SessionService
         if (bestServer != null)
         {
             _memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
-            var serverEndPoint = bestServer.AccessPoints.First(accessPoint => accessPoint.IsPublic);
+            var serverEndPoint = bestServer.AccessPoints.First(accessPoint => 
+                accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily);
             var ret = new IPEndPoint(serverEndPoint.IpAddress, serverEndPoint.TcpPort);
             return ret;
         }

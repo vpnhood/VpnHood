@@ -81,7 +81,7 @@ public class ServerDom
         var myServer = new ServerDom(
             testInit: testInit,
             server: server,
-            serverInfo: await testInit.NewServerInfo()
+            serverInfo: await testInit.NewServerInfo(randomStatus: false)
             );
 
         if (configure)

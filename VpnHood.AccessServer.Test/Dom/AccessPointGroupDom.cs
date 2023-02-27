@@ -92,14 +92,6 @@ public class AccessPointGroupDom
         return new AccessTokenDom(TestInit, ret);
     }
 
-    public async Task<ServerDom> AddNewServer(int sessionCount)
-    {
-        var serverDom = await AddNewServer(true, false);
-        serverDom.ServerStatus.SessionCount = 0;
-        await serverDom.SendStatus();
-        return serverDom;
-    }
-
     public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true)
     {
         var sampleServer = await ServerDom.Create(TestInit, AccessPointGroupId, configure, sendStatus);
@@ -121,8 +113,9 @@ public class AccessPointGroupDom
 
     public ServerDom FindServerByEndPoint(IPEndPoint ipEndPoint)
     {
-        var serverDom = Servers.Single(x => x.Server.AccessPoints.Any(accessPoint =>
-            new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(ipEndPoint)));
+        var serverDom = Servers.First(x =>
+            x.Server.AccessPoints.Any(accessPoint => 
+                new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(ipEndPoint)));
 
         return serverDom;
     }

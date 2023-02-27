@@ -32,6 +32,7 @@ public class SessionDom
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
         if (assertError)
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
+
         var ret = new SessionDom(testInit, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
         return ret;
     }

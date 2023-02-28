@@ -12,13 +12,13 @@
     <RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
     <PackageTags>Vpn AccessServer</PackageTags>
     <AssemblyName>VpnHood.AccessServer</AssemblyName>
-    <AssemblyVersion>1.0.61.0</AssemblyVersion>
-    <FileVersion>1.0.61.0</FileVersion>
+    <AssemblyVersion>1.0.62.0</AssemblyVersion>
+    <FileVersion>1.0.62.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <StartupObject></StartupObject>
-    <Version>2.0.60</Version>
+    <Version>2.0.61</Version>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest</AnalysisLevel>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>

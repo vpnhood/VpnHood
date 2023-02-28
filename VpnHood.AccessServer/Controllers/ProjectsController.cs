@@ -62,7 +62,7 @@ public class ProjectsController : SuperController<ProjectsController>
         var serverFarm = new ServerFarmModel
         {
             ServerFarmId = Guid.NewGuid(),
-            ServerFarmName = "Group1",
+            ServerFarmName = "Server Farm 1",
             Certificate = CertificatesController.CreateInternal(projectId.Value, null)
         };
 

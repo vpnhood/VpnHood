@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.ServerDtos;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Services;

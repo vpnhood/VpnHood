@@ -151,7 +151,7 @@ public class ServerFarmTest
         // move server to farm1
         await farm2.TestInit.ServersClient.UpdateAsync(farm2.ProjectId, serverDom.ServerId, new ServerUpdateParams
         {
-            ServerFarmId = new PatchOfNullableGuid { Value = farm1.ServerFarmId }
+            ServerFarmId = new PatchOfGuid { Value = farm1.ServerFarmId }
         });
         await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
         try

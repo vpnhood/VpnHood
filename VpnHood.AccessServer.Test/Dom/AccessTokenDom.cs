@@ -82,6 +82,13 @@ public class AccessTokenDom
         return await TestInit.AccessTokensClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
     }
 
+    public async Task<Token> GetToken()
+    {
+        var accessKey = await GetAccessKey();
+        var token = Token.FromAccessKey(accessKey);
+        return token;
+    }
+
     public async Task Update(AccessTokenUpdateParams updateParams)
     {
         await TestInit.AccessTokensClient.UpdateAsync(TestInit.ProjectId, AccessTokenId, updateParams);

@@ -381,7 +381,7 @@ public class AgentServerTest
 
         var oldCode = farm1.DefaultServer.ServerInfo.Status.ConfigCode;
         await farm1.DefaultServer.Client.UpdateAsync(farm1.ProjectId, farm1.DefaultServer.ServerId,
-            new ServerUpdateParams { ServerFarmId = new PatchOfNullableGuid { Value = farm2.ServerFarmId } });
+            new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } });
 
         var serverCommand = await farm1.DefaultServer.UpdateStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,

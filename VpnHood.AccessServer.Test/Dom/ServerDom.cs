@@ -135,4 +135,9 @@ public class ServerDom
         Sessions.Add(testSession);
         return testSession;
     }
+
+    public Task Delete()
+    {
+        return Client.DeleteAsync(TestInit.ProjectId, ServerId);
+    }
 }

@@ -151,23 +151,6 @@ public abstract class VhContextBase : DbContext
                 .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL and IsDeleted = 0")
                 .IsUnique();
 
-            entity.OwnsMany(e=>e.AccessPoints, ap=>
-            {
-                ap.ToTable(nameof(ServerModel.AccessPoints));
-                ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
-            });
-
-
-            //entity.Property(e => e.AccessPoints)
-            //    .HasColumnType("varchar(200)")
-            //    .HasConversion(
-            //        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-            //        v => JsonSerializer.Deserialize<AccessPointModel[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<AccessPointModel>(),
-            //        new ValueComparer<AccessPointModel[]>(
-            //            (c1, c2) => Common.Utils.Util.SequenceNullOrEquals(c1, c2),
-            //            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-            //            c => c));
-
             entity.Property(e => e.Description)
                 .HasMaxLength(400);
 
@@ -200,7 +183,30 @@ public abstract class VhContextBase : DbContext
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            entity.HasOne(e => e.ServerFarm)
+                .WithMany(d => d.Servers)
+                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
+                .HasPrincipalKey(e => new { e.ProjectId, e.ServerFarmId })
+                .OnDelete(DeleteBehavior.NoAction);
+
             entity.Ignore(e => e.ServerStatus);
+
+            entity.OwnsMany(e => e.AccessPoints, ap =>
+            {
+                ap.ToTable(nameof(ServerModel.AccessPoints));
+                ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
+            });
+
+            //entity.Property(e => e.AccessPoints)
+            //    .HasColumnType("varchar(200)")
+            //    .HasConversion(
+            //        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            //        v => JsonSerializer.Deserialize<AccessPointModel[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<AccessPointModel>(),
+            //        new ValueComparer<AccessPointModel[]>(
+            //            (c1, c2) => Common.Utils.Util.SequenceNullOrEquals(c1, c2),
+            //            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            //            c => c));
+
         });
 
         modelBuilder.Entity<ServerStatusModel>(entity =>

@@ -12,6 +12,7 @@ using VpnHood.Common.Utils;
 using System.Net;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Dtos.ServerDtos;
 
 namespace VpnHood.AccessServer.Services;
 

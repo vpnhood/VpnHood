@@ -99,7 +99,7 @@ public class ServerTest
         // check: Update (serverFarmId)
         //-----------
         var farm2 = await ServerFarmDom.Create(farm1.TestInit);
-        serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfNullableGuid { Value = farm2.ServerFarmId } };
+        serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } };
         await serverDom.Client.UpdateAsync(testInit.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();
         Assert.AreEqual(farm2.ServerFarmId, serverDom.Server.ServerFarmId);
@@ -214,7 +214,7 @@ public class ServerTest
         {
             await p1Farm.DefaultServer.Update(new ServerUpdateParams
             {
-                ServerFarmId = new PatchOfNullableGuid { Value = p2Farm.ServerFarmId }
+                ServerFarmId = new PatchOfGuid { Value = p2Farm.ServerFarmId }
             });
 
             Assert.Fail($"{nameof(NotExistsException)} was expected.");
@@ -224,6 +224,39 @@ public class ServerTest
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
+
+    [TestMethod]
+    public async Task Fail_make_sure_the_deleted_server_AccessPoints_not_exists_in_the_token()
+    {
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+
+        // get first server token
+        var server1Dom = await farm.AddNewServer();
+        var server1TokenIp = server1Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
+
+        // check server access point in token
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
+
+        // add another server
+        var server2Dom = await farm.AddNewServer(new ServerCreateParams
+        {
+            AccessPoints = new[] {await farm.TestInit.NewAccessPoint()}
+        });
+        var server2TokenIp = server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
+        accessToken = await farm.CreateAccessToken();
+        token = await accessToken.GetToken();
+        
+        // both server AccessPoint must exists
+        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
+        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server2TokenIp.IpAddress));
+
+        // delete server 1 and check that its token should not exist in access-token anymore
+        await server1Dom.Delete();
+        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
+    }
+
 
     [TestMethod]
     public async Task GetStatusSummary()

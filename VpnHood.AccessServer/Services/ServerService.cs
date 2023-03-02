@@ -183,6 +183,10 @@ public class ServerService
             serverData.Server.ServerState = cachedServer.ServerState;
         }
 
+        // update server status if it is lost
+        foreach (var serverData in serverDatas.Where(x => x.Server.ServerState is ServerState.Lost or ServerState.NotInstalled))
+            serverData.Server.ServerStatus = null;
+
         return serverDatas;
     }
 

@@ -129,6 +129,20 @@ public class ServerFarmTest
     }
 
     [TestMethod]
+    public async Task List_with_summary()
+    {
+        var farm1 = await ServerFarmDom.Create(serverCount: 1);
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit, serverCount: 1);
+        await farm1.DefaultServer.CreateSession((await farm1.CreateAccessToken()).AccessToken);
+        await farm2.DefaultServer.CreateSession((await farm2.CreateAccessToken()).AccessToken);
+
+        var farms = await farm1.TestInit.ServerFarmsClient.ListAsync(farm1.TestInit.ProjectId, includeSummary: true);
+        Assert.AreEqual(3, farms.Count);
+        Assert.IsTrue(farms.Any(x=>x.ServerFarm.ServerFarmId==farm1.ServerFarmId));
+        Assert.IsTrue(farms.Any(x=>x.ServerFarm.ServerFarmId==farm2.ServerFarmId));
+    }
+
+    [TestMethod]
     public async Task Fail_delete_a_farm_with_server()
     {
         var farm1 = await ServerFarmDom.Create(serverCount: 0);
@@ -157,7 +171,7 @@ public class ServerFarmTest
         try
         {
             await farm2.Reload();
-            Assert.Fail("Exception Expected!");
+            Assert.Fail("Exception Expected.");
         }
         catch (ApiException ex)
         {

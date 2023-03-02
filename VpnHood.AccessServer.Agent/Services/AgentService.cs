@@ -201,6 +201,10 @@ public class AgentService
             }
         };
 
+        // old version does not support null values
+        if (serverInfo.Version < new Version(2,7,355))
+            ret.ApplyDefaults();
+
         return ret;
     }
 

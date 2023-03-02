@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.AccessTokenDoms;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;

@@ -15,7 +15,7 @@ public class TimedHostedService : IHostedService, IJob
     private readonly SyncService _syncService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JobRunner _jobRunner;
-    private CancellationTokenSource _cancellationTokenSource = new();
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     public JobSection JobSection { get; }
 
     public TimedHostedService(
@@ -31,7 +31,6 @@ public class TimedHostedService : IHostedService, IJob
         var interval = appOptions.Value.AutoMaintenanceInterval ?? TimeSpan.MaxValue;
         JobSection = new JobSection(interval);
         _jobRunner = new JobRunner(false, logger);
-        if (_jobRunner.Interval < interval) _jobRunner.Interval = interval;
         _jobRunner.Add(this);
     }
 

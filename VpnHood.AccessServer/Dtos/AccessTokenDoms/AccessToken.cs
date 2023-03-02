@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.AccessTokenDoms;
 
 public class AccessToken
 {

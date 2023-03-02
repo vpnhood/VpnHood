@@ -142,7 +142,7 @@ public class ServerService
             .Where(server => serverId == null || server.ServerId == serverId)
             .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId);
 
-        var serverModels = await query
+        var servers = await query
             .AsNoTracking()
             .OrderBy(x => x.ServerId)
             .Skip(recordIndex)
@@ -158,12 +158,12 @@ public class ServerService
                 (serverFarmId == null || serverStatus.Server!.ServerFarmId == serverFarmId))
             .ToDictionaryAsync(x => x.ServerId);
 
-        foreach (var serverModel in serverModels)
+        foreach (var serverModel in servers)
             if (serverStatus.TryGetValue(serverModel.ServerId, out var serverStatusEx))
                 serverModel.ServerStatus = serverStatusEx;
 
         // create Dto
-        var serverDatas = serverModels
+        var serverDatas = servers
             .Select(serverModel => new ServerData
             {
                 Server = serverModel.ToDto(

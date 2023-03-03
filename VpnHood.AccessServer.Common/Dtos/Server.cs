@@ -3,7 +3,7 @@
 public class Server
 {
     public required Guid ServerId { get; init; }
-    public required Guid? ServerFarmId { get; init; }
+    public required Guid ServerFarmId { get; init; }
     public required string? ServerFarmName { get; init; }
     public required string? Version { get; init; }
     public required string? ServerName { get; init; }

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Dtos.ServerFarmDto;
+using VpnHood.AccessServer.Dtos.ServerFarmDtos;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;

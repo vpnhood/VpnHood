@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos.ServerFarmDto;
+﻿namespace VpnHood.AccessServer.Dtos.ServerFarmDtos;
 
 public class ServerFarmSummary
 {

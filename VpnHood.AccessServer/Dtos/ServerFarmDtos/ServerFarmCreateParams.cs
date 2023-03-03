@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.Dtos.ServerFarmDto;
+namespace VpnHood.AccessServer.Dtos.ServerFarmDtos;
 
 public class ServerFarmCreateParams
 {

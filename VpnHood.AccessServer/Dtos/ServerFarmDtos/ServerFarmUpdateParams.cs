@@ -1,7 +1,7 @@
 ﻿using System;
 using GrayMint.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos.ServerFarmDto;
+namespace VpnHood.AccessServer.Dtos.ServerFarmDtos;
 
 public class ServerFarmUpdateParams
 {

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos.ServerFarmDto;
+using VpnHood.AccessServer.Dtos.ServerFarmDtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;

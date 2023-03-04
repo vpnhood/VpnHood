@@ -23,6 +23,7 @@ using VpnHood.AccessServer.Services;
 using NLog;
 using NLog.Web;
 using GrayMint.Common.Utils;
+using GrayMint.Common.AspNetCore.Auth.CognitoAuthentication;
 
 namespace VpnHood.AccessServer;
 
@@ -39,29 +40,33 @@ public class Program
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
         // add authentication
-        var addAzureB2C = Environment.GetEnvironmentVariable("IsTest") != true.ToString();
+        var isTest = Environment.GetEnvironmentVariable("IsTest") == true.ToString();
         var authenticationBuilder = builder.Services
             .AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
-        
-        if (addAzureB2C)
-            authenticationBuilder.AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"));
+
+        if (!isTest)
+        {
+            authenticationBuilder.AddCognitoAuthentication(builder.Configuration.GetSection("Auth"));
+            //authenticationBuilder.AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"));
+        }
 
         // set default Authorization Policy
         builder.Services
             .AddAuthorization(options =>
             {
                 var policyBuilder = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser();
+                    .RequireAuthenticatedUser()
+                    .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme);
 
-                if (addAzureB2C)
-                    policyBuilder.AddAuthenticationSchemes("AzureB2C", BotAuthenticationDefaults.AuthenticationScheme);
+                if (!isTest)
+                    policyBuilder.AddAuthenticationSchemes(CognitoAuthenticationDefaults.AuthenticationScheme);
+                    //policyBuilder.AddAuthenticationSchemes("AzureB2C");
 
                 options.DefaultPolicy = policyBuilder.Build();
             });
 
         builder.Services.AddMultilevelAuthorization();
-
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 

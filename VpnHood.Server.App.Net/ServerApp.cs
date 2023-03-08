@@ -202,7 +202,7 @@ public class ServerApp : IDisposable
         cmdApp.OnExecuteAsync(async (cancellationToken) =>
         {
             // LogAnonymizer is on by default
-            VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizer ?? false;
+            VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
             
             // find listener port
             if (IsAnotherInstanceRunning())

@@ -121,6 +121,9 @@ public class IpRange
 
     public static IpRange Parse(string value)
     {
+        if (value.IndexOf('/') != -1)
+            return IpNetwork.Parse(value).ToIpRange();
+
         var items = value.Replace("to", "-").Split('-');
         if (items.Length == 1)
             return new IpRange(IPAddress.Parse(items[0].Trim()));

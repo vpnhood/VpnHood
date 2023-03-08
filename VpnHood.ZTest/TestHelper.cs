@@ -456,8 +456,6 @@ internal static class TestHelper
 
         return false;
     }
-
-
     public static async Task AssertEqualsWait<T, TValue>(T obj, TValue? expectedValue, Func<T, TValue> valueFactory, string? message = null, int timeout = 5000)
     {
         await WaitForValue(expectedValue, ()=>valueFactory(obj), timeout);

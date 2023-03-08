@@ -285,11 +285,11 @@ public class Session : IAsyncDisposable, IJob
 
     private void ConfigTcpClient(TcpClient tcpClient)
     {
-        if (_tcpKernelReceiveBufferSize!=null) 
-            tcpClient.ReceiveBufferSize= _tcpKernelReceiveBufferSize.Value;
+        if (_tcpKernelReceiveBufferSize != null)
+            tcpClient.ReceiveBufferSize = _tcpKernelReceiveBufferSize.Value;
 
-        if (_tcpKernelSendBufferSize!=null) 
-            tcpClient.ReceiveBufferSize= _tcpKernelSendBufferSize.Value;
+        if (_tcpKernelSendBufferSize != null)
+            tcpClient.ReceiveBufferSize = _tcpKernelSendBufferSize.Value;
     }
 
     public async Task ProcessTcpDatagramChannelRequest(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
@@ -303,7 +303,7 @@ public class Session : IAsyncDisposable, IJob
         UseUdpChannel = false;
 
         // add channel
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, 
+        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
         var channel = new TcpDatagramChannel(tcpClientStream);
         try
@@ -312,7 +312,7 @@ public class Session : IAsyncDisposable, IJob
         }
         catch
         {
-            channel.Dispose(); 
+            channel.Dispose();
             throw;
         }
     }
@@ -503,5 +503,5 @@ public class Session : IAsyncDisposable, IJob
             _session.VerifyNetScan(protocolType, remoteEndPoint);
         }
     }
-   
+
 }

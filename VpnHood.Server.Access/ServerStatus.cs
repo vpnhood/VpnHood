@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Server.Configurations;
+﻿namespace VpnHood.Server;
 
 public class ServerStatus
 {

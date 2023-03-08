@@ -12,7 +12,7 @@ using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-point-groups")]
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-farms")]
 public class ServerFarmsController : SuperController<ServerFarmsController>
 {
     private readonly ServerFarmService _serverFarmService;

@@ -3408,7 +3408,7 @@ namespace VpnHood.AccessServer.Api
                 throw new System.ArgumentNullException("projectId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups");
+            urlBuilder_.Append("api/v1/projects/{projectId}/server-farms");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
 
             var client_ = _httpClient;
@@ -3482,7 +3482,7 @@ namespace VpnHood.AccessServer.Api
                 throw new System.ArgumentNullException("projectId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups?");
+            urlBuilder_.Append("api/v1/projects/{projectId}/server-farms?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             if (search != null)
             {
@@ -3575,7 +3575,7 @@ namespace VpnHood.AccessServer.Api
                 throw new System.ArgumentNullException("updateParams");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{serverFarmId}");
+            urlBuilder_.Append("api/v1/projects/{projectId}/server-farms/{serverFarmId}");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             urlBuilder_.Replace("{serverFarmId}", System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture)));
 
@@ -3653,7 +3653,7 @@ namespace VpnHood.AccessServer.Api
                 throw new System.ArgumentNullException("serverFarmId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{serverFarmId}?");
+            urlBuilder_.Append("api/v1/projects/{projectId}/server-farms/{serverFarmId}?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             urlBuilder_.Replace("{serverFarmId}", System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture)));
             if (includeSummary != null)
@@ -3732,7 +3732,7 @@ namespace VpnHood.AccessServer.Api
                 throw new System.ArgumentNullException("serverFarmId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/access-point-groups/{serverFarmId}");
+            urlBuilder_.Append("api/v1/projects/{projectId}/server-farms/{serverFarmId}");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             urlBuilder_.Replace("{serverFarmId}", System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture)));
 

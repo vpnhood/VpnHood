@@ -125,7 +125,7 @@ public class MainActivity : Activity
         WebView.SetWebContentsDebuggingEnabled(true);
 #endif
         if (_appUi == null) throw new Exception($"{_appUi} is not initialized!");
-        WebView.LoadUrl($"{_appUi.Url}?nocache={_appUi.SpaHash}");
+        WebView.LoadUrl($"{_appUi.Url1}?nocache={_appUi.SpaHash}");
     }
 
     private void WebViewClient_PageLoaded(object sender, EventArgs e)

@@ -3,7 +3,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.Server.Configurations;
+namespace VpnHood.Server;
 
 public class ServerInfo
 {

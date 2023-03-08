@@ -444,17 +444,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             CheckConnectionStateChanged();
     }
 
-    private static IpRange[] GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)
-    {
-        if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipRanges))
-            return IpNetwork.All.ToIpRanges().ToArray();
-
-        if (filterMode == FilterMode.Include)
-            return ipRanges;
-
-        return IpRange.Invert(ipRanges).ToArray();
-    }
-
     private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
     {
         if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipGroupIds))

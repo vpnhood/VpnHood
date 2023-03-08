@@ -307,14 +307,14 @@ internal class TcpHost : IAsyncDisposable
                 "This client is outdated and not supported anymore! Please update your app.");
 
         // Report new session
-        var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address) : "*";
+        var clientIp = _sessionManager.TrackingOptions.TrackClientIpValue ? VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address) : "*";
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
             "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\tClientIp: {ClientIp-15}\tVersion: {Version}\tOS: {OS}",
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId), session.SessionResponse.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId), clientIp, request.ClientInfo.ClientVersion, UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "SessionId: {SessionId}, Agent: {Agent}", VhLogger.FormatSessionId(session.SessionId), request.ClientInfo.UserAgent);
 
         //tracking
-        if (_sessionManager.TrackingOptions.IsEnabled())
+        if (_sessionManager.TrackingOptions.IsEnabled)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Track,
                 "{Proto}; SessionId {SessionId}; TokenId {TokenId}; ClientIp {clientIp}".Replace("; ", "\t"),
@@ -392,18 +392,7 @@ internal class TcpHost : IAsyncDisposable
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
-
-        // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
-
-        // Disable UdpChannel
-        session.UseUdpChannel = false;
-
-        // add channel
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a {nameof(TcpDatagramChannel)} channel. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-        var channel = new TcpDatagramChannel(tcpClientStream);
-        try { session.Tunnel.AddChannel(channel); }
-        catch { channel.Dispose(); throw; }
+        await session.ProcessTcpDatagramChannelRequest(tcpClientStream, cancellationToken);
     }
 
     private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)

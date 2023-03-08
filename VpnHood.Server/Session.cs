@@ -17,6 +17,7 @@ using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Server;
@@ -33,6 +34,8 @@ public class Session : IAsyncDisposable, IJob
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
     private readonly int? _tcpBufferSize;
+    private readonly int? _tcpKernelSendBufferSize;
+    private readonly int? _tcpKernelReceiveBufferSize;
     private readonly TimeSpan _tcpTimeout;
     private readonly long _syncCacheSize;
     private readonly TimeSpan _tcpConnectTimeout;
@@ -60,7 +63,7 @@ public class Session : IAsyncDisposable, IJob
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, 
+    internal Session(IAccessServer accessServer, SessionResponse sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
@@ -74,20 +77,22 @@ public class Session : IAsyncDisposable, IJob
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions
         {
-            UdpTimeout = options.UdpTimeout,
-            IcmpTimeout = options.IcmpTimeout,
+            UdpTimeout = options.UdpTimeoutValue,
+            IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpWorkerCount = options.MaxUdpPortCount,
-            UseUdpProxy2 = options.UseUdpProxy2,
+            UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope
         });
         _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
-        _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCount;
-        _maxTcpChannelCount = options.MaxTcpChannelCount;
+        _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
+        _maxTcpChannelCount = options.MaxTcpChannelCountValue;
         _tcpBufferSize = options.TcpBufferSize;
-        _syncCacheSize = options.SyncCacheSize;
-        _tcpTimeout = options.TcpTimeout;
-        _tcpConnectTimeout = options.TcpConnectTimeout;
+        _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
+        _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
+        _syncCacheSize = options.SyncCacheSizeValue;
+        _tcpTimeout = options.TcpTimeoutValue;
+        _tcpConnectTimeout = options.TcpConnectTimeoutValue;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -96,10 +101,13 @@ public class Session : IAsyncDisposable, IJob
         SessionResponse = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        JobSection = new JobSection(options.SyncInterval);
+        JobSection = new JobSection(options.SyncIntervalValue);
 
-        var tunnelOptions = new TunnelOptions();
-        if (options.MaxDatagramChannelCount is > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount.Value;
+        var tunnelOptions = new TunnelOptions
+        {
+            MaxDatagramChannelCount = options.MaxDatagramChannelCountValue
+        };
+
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
@@ -161,10 +169,8 @@ public class Session : IAsyncDisposable, IJob
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
-                    "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",
-                    ipPacket.Protocol, ipPacket.DestinationAddress);
-
+                var ipeEndPointPair = PacketUtil.GetPacketEndPoints(ipPacket);
+                LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
                 _filterReporter.Raised();
                 continue;
             }
@@ -241,15 +247,15 @@ public class Session : IAsyncDisposable, IJob
     public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,
         bool isNewLocal, bool isNewRemote, string? failReason)
     {
-        if (!_trackingOptions.IsEnabled())
+        if (!_trackingOptions.IsEnabled)
             return;
 
-        if (_trackingOptions is { TrackDestinationIp: false, TrackDestinationPort: false } && !isNewLocal && failReason == null)
+        if (_trackingOptions is { TrackDestinationIpValue: false, TrackDestinationPortValue: false } && !isNewLocal && failReason == null)
             return;
 
-        if (!_trackingOptions.TrackTcp && protocol.Equals("tcp", StringComparison.OrdinalIgnoreCase) ||
-            !_trackingOptions.TrackUdp && protocol.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
-            !_trackingOptions.TrackUdp && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
+        if (!_trackingOptions.TrackTcpValue && protocol.Equals("tcp", StringComparison.OrdinalIgnoreCase) ||
+            !_trackingOptions.TrackUdpValue && protocol.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
+            !_trackingOptions.TrackUdpValue && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
             return;
 
         var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
@@ -260,12 +266,12 @@ public class Session : IAsyncDisposable, IJob
         failReason ??= "Ok";
 
         if (localEndPoint != null)
-            localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint.Port.ToString() : "*";
+            localPortStr = _trackingOptions.TrackLocalPortValue ? localEndPoint.Port.ToString() : "*";
 
         if (destinationEndPoint != null)
         {
-            destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
-            destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
+            destinationIpStr = _trackingOptions.TrackDestinationIpValue ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+            destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
         }
 
@@ -277,14 +283,48 @@ public class Session : IAsyncDisposable, IJob
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
+    private void ConfigTcpClient(TcpClient tcpClient)
+    {
+        if (_tcpKernelReceiveBufferSize != null)
+            tcpClient.ReceiveBufferSize = _tcpKernelReceiveBufferSize.Value;
+
+        if (_tcpKernelSendBufferSize != null)
+            tcpClient.ReceiveBufferSize = _tcpKernelSendBufferSize.Value;
+    }
+
+    public async Task ProcessTcpDatagramChannelRequest(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
+    {
+        ConfigTcpClient(tcpClientStream.TcpClient);
+
+        // send OK reply
+        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, SessionResponse, cancellationToken);
+
+        // Disable UdpChannel
+        UseUdpChannel = false;
+
+        // add channel
+        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+            "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
+        var channel = new TcpDatagramChannel(tcpClientStream);
+        try
+        {
+            Tunnel.AddChannel(channel);
+        }
+        catch
+        {
+            channel.Dispose();
+            throw;
+        }
+    }
+
     public async Task ProcessTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request,
         CancellationToken cancellationToken)
     {
         var isRequestedEpException = false;
         var isTcpConnectIncreased = false;
 
-        TcpClient? tcpClient2 = null;
-        TcpClientStream? tcpClientStream2 = null;
+        TcpClient? tcpClientHost = null;
+        TcpClientStream? tcpClientStreamHost = null;
         TcpProxyChannel? tcpProxyChannel = null;
         try
         {
@@ -299,17 +339,17 @@ public class Session : IAsyncDisposable, IJob
             Interlocked.Increment(ref _tcpConnectWaitCount);
             isTcpConnectIncreased = true;
 
-            tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
-            _socketFactory.SetKeepAlive(tcpClient2.Client, true);
+            tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
+            _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
 
             //tracking
-            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint,
+            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint, request.DestinationEndPoint,
                 true, true, null);
 
             // connect to requested destination
             isRequestedEpException = true;
             await Util.RunTask(
-                tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
+                tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
                 _tcpConnectTimeout, cancellationToken);
             isRequestedEpException = false;
 
@@ -325,15 +365,18 @@ public class Session : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                 $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
 
-            tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
-            tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
+            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
+
+            ConfigTcpClient(tcpClientStream.TcpClient);
+            ConfigTcpClient(tcpClientStreamHost.TcpClient);
+            tcpProxyChannel = new TcpProxyChannel(tcpClientStreamHost, tcpClientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
 
             Tunnel.AddChannel(tcpProxyChannel);
         }
         catch (Exception ex)
         {
-            tcpClient2?.Dispose();
-            tcpClientStream2?.Dispose();
+            tcpClientHost?.Dispose();
+            tcpClientStreamHost?.Dispose();
             tcpProxyChannel?.Dispose();
 
             if (isRequestedEpException)
@@ -355,10 +398,7 @@ public class Session : IAsyncDisposable, IJob
         var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
         if (newEndPoint == null)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.NetFilter,
-                "A request has been blocked. Protocol: {Protocol}, Destination: {Destination}",  
-                ProtocolType.Tcp, request.DestinationEndPoint);
-
+            LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raised();
             throw new RequestBlockedException(tcpClientStream.RemoteEndPoint, this);
         }

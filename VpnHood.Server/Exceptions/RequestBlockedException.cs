@@ -13,5 +13,10 @@ internal class RequestBlockedException : ServerSessionException
     }
 
     protected override LogLevel LogLevel => LogLevel.Information;
-    protected override EventId EventId => GeneralEventId.NetProtect;
+    protected override EventId EventId => GeneralEventId.NetFilter;
+    
+    public override void Log()
+    {
+        //let EventReporter manage it
+    }
 }

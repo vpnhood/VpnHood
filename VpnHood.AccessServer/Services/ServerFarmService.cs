@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerFarmDtos;
@@ -15,22 +14,16 @@ namespace VpnHood.AccessServer.Services;
 public class ServerFarmService
 {
     private readonly VhContext _vhContext;
-    private readonly ServerService _serverService;
-    private readonly ILogger<ServerFarmService> _logger;
 
     public ServerFarmService(
-        VhContext vhContext,
-        ServerService serverService,
-        ILogger<ServerFarmService> logger)
+        VhContext vhContext)
     {
         _vhContext = vhContext;
-        _serverService = serverService;
-        _logger = logger;
     }
     public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
         // check user quota
-        if (_vhContext.ServerFarms.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerFarmCount)
+        if (_vhContext.ServerFarms.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerFarmCount)
             throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
 
         // create a certificate if it is not given
@@ -51,7 +44,7 @@ public class ServerFarmService
         if (createParams.ServerFarmName.Contains("##"))
         {
             var names = await _vhContext.ServerFarms
-                .Where(x => x.ProjectId == projectId)
+                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .Select(x => x.ServerFarmName)
                 .ToArrayAsync();
 
@@ -76,7 +69,7 @@ public class ServerFarmService
     public async Task<ServerFarm> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         var serverFarm = await _vhContext.ServerFarms
-            .Where(x => x.ProjectId == projectId )
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerFarmId == serverFarmId);
 
         // check createParams.CertificateId access
@@ -104,7 +97,7 @@ public class ServerFarmService
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = _vhContext.ServerFarms
-            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
@@ -132,16 +125,29 @@ public class ServerFarmService
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
+        var now = DateTime.UtcNow;
         var query = _vhContext.ServerFarms
+            .Include(x => x.Servers)
             .Include(x => x.AccessTokens)
-            .Where(x => x.ProjectId == projectId )
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName!.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
-            .OrderByDescending(x => x.CreatedTime);
-
+            .Select(x => new ServerFarmData
+            {
+                ServerFarm = x.ToDto(),
+                Summary = new ServerFarmSummary
+                {
+                    ActiveTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime >= now.AddDays(-7)),
+                    InactiveTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime < now.AddDays(-7)),
+                    UnusedTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.FirstUsedTime == null),
+                    TotalTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted),
+                    ServerCount = x.Servers!.Count(server=>!server.IsDeleted)
+                }
+            });
+   
         // get farms
         var serverFarms = await query
             .Skip(recordIndex)
@@ -149,48 +155,24 @@ public class ServerFarmService
             .AsNoTracking()
             .ToArrayAsync();
 
-        // get server data
-        var serverDatas = await _serverService.List(projectId);
-
-        var now = DateTime.UtcNow;
-        var ret = serverFarms.Select(serverFarm => new ServerFarmData
-        {
-            ServerFarm = serverFarm.ToDto(),
-            Summary = new ServerFarmSummary
-            {
-                SessionCount = serverDatas
-                    .Where(serverData => serverData.Server.ServerFarmId == serverFarm.ServerFarmId)
-                    .Sum(serverData => serverData.Server.ServerStatus?.SessionCount ?? 0),
-
-                TransferSpeed = serverDatas
-                    .Where(serverData => serverData.Server.ServerFarmId == serverFarm.ServerFarmId)
-                    .Sum(serverData =>
-                        serverData.Server.ServerStatus?.TunnelReceiveSpeed ?? 0 +
-                        serverData.Server.ServerStatus?.TunnelSendSpeed ?? 0),
-
-                ServerCount = serverDatas
-                    .Count(serverData => serverData.Server.ServerFarmId == serverFarm.ServerFarmId),
-
-                ActiveTokenCount = serverFarm.AccessTokens!.Count(x => x.LastUsedTime >= now.AddDays(-7)),
-                InactiveTokenCount = serverFarm.AccessTokens!.Count(x => x.LastUsedTime < now.AddDays(-7)),
-                UnusedTokenCount = serverFarm.AccessTokens!.Count(x => x.FirstUsedTime == null),
-                TotalTokenCount = serverFarm.AccessTokens!.Count
-            }
-        });
-
-        return ret.ToArray();
+        return serverFarms.ToArray();
     }
 
     public async Task Delete(Guid projectId, Guid serverFarmId)
     {
         var serverFarm = await _vhContext.ServerFarms
             .Include(x => x.Servers)
-            .SingleAsync(e => e.ProjectId == projectId && e.ServerFarmId == serverFarmId);
+            .Include(x => x.AccessTokens)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == serverFarmId);
 
         if (serverFarm.Servers!.Any(x => !x.IsDeleted))
             throw new InvalidOperationException("A farm with a server can not be deleted.");
 
-        _vhContext.Remove(serverFarm);
+        serverFarm.IsDeleted = true;
+        foreach(var accessToken in serverFarm.AccessTokens!)
+            accessToken.IsDeleted = true;
+
         await _vhContext.SaveChangesAsync();
     }
 }

@@ -223,7 +223,7 @@ public class ServersController : SuperController<ServersController>
 
 
     [HttpGet("status-summary")]
-    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId)
+    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
@@ -237,6 +237,7 @@ public class ServersController : SuperController<ServersController>
                 { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId && !server.IsDeleted
+            where (serverFarmId == null || server.ServerFarmId == serverFarmId)
             select server.ToDto(
                 null,
                 serverStatus != null ? serverStatus.ToDto() : null,

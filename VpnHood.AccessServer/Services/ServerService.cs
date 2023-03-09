@@ -43,7 +43,8 @@ public class ServerService
 
         // validate
         var serverFarm = await _vhContext.ServerFarms
-            .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == createParams.ServerFarmId);
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.ServerFarmId == createParams.ServerFarmId);
 
         // Resolve Name Template
         var serverName = createParams.ServerName?.Trim();
@@ -96,7 +97,8 @@ public class ServerService
         {
             // make sure new access group belong to this account
             var serverFarm = await _vhContext.ServerFarms
-                .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == updateParams.ServerFarmId);
+                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+                .SingleAsync(x => x.ServerFarmId == updateParams.ServerFarmId);
 
             // update server serverFarm and all AccessPoints serverFarm
             server.ServerFarm = serverFarm;

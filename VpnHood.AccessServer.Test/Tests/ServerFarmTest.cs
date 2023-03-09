@@ -17,7 +17,7 @@ public class ServerFarmTest
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
-        var farm1 = await ServerFarmDom.Create(testInit,  serverCount: 0);
+        var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0);
         var serverDom = await farm1.AddNewServer();
         await farm1.CreateAccessToken(true);
         await farm1.CreateAccessToken(true);
@@ -59,7 +59,6 @@ public class ServerFarmTest
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
         Assert.AreEqual(2, accessFarmData.Summary!.UnusedTokenCount);
         Assert.AreEqual(0, accessFarmData.Summary!.InactiveTokenCount);
-        Assert.AreEqual(1, accessFarmData.Summary!.ServerCount);
 
         var accessTokenDom = await farm1.CreateAccessToken(true);
         var accessKey = await accessTokenDom.GetAccessKey();
@@ -104,13 +103,23 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Delete_farm_and_its_dependents()
     {
-        var farm2 = await ServerFarmDom.Create(serverCount: 0);
-        var accessTokenDom = await farm2.CreateAccessToken(true);
-        await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
+        var farm1 = await ServerFarmDom.Create();
+        var accessTokenDom = await farm1.CreateAccessToken(true);
+        var session = await accessTokenDom.CreateSession();
+        await session.AddUsage();
+        await session.AddUsage();
+        //await farm1.TestInit.FlushCache();
+
+        // remove server from farm
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
+        await farm1.DefaultServer.Update(new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } });
+
+        // delete the server
+        await farm1.Client.DeleteAsync(farm1.ProjectId, farm1.ServerFarmId);
         try
         {
-            await farm2.Reload();
-            Assert.Fail("Exception Expected!");
+            await farm1.Reload();
+            Assert.Fail("Exception Expected.");
         }
         catch (ApiException ex)
         {
@@ -120,7 +129,7 @@ public class ServerFarmTest
         try
         {
             await accessTokenDom.Reload();
-            Assert.Fail("Exception Expected!");
+            Assert.Fail("Exception Expected.");
         }
         catch (ApiException ex)
         {
@@ -138,8 +147,8 @@ public class ServerFarmTest
 
         var farms = await farm1.TestInit.ServerFarmsClient.ListAsync(farm1.TestInit.ProjectId, includeSummary: true);
         Assert.AreEqual(3, farms.Count);
-        Assert.IsTrue(farms.Any(x=>x.ServerFarm.ServerFarmId==farm1.ServerFarmId));
-        Assert.IsTrue(farms.Any(x=>x.ServerFarm.ServerFarmId==farm2.ServerFarmId));
+        Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
+        Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
     }
 
     [TestMethod]

@@ -71,6 +71,7 @@ public class AgentService
 
         var serverFarm = await _vhContext.ServerFarms
             .Include(serverFarm => serverFarm.Certificate)
+            .Where(serverFarm => !serverFarm.IsDeleted)
             .SingleAsync(serverFarm => serverFarm.ServerFarmId == server.ServerFarmId);
 
         return serverFarm.Certificate!.RawData;

@@ -148,7 +148,7 @@ public abstract class VhContextBase : DbContext
             entity.HasKey(e => e.ServerId);
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerName })
-                .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL and IsDeleted = 0")
+                .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL and {nameof(ServerModel.IsDeleted)} = 0")
                 .IsUnique();
 
             entity.Property(e => e.Description)
@@ -254,42 +254,12 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<SessionModel>(entity =>
-        {
-            entity.HasKey(e => e.SessionId);
-
-            //index for finding other active sessions of an AccessId
-            entity.HasIndex(e => e.AccessId)
-                .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
-
-            entity.HasIndex(e => new { e.EndTime }); //for sync 
-
-            entity.Property(e => e.IsArchived);
-
-            entity.Property(e => e.SessionId)
-                .ValueGeneratedOnAdd();
-
-            entity.Property(e => e.DeviceIp)
-                .HasMaxLength(50);
-
-            entity.Property(e => e.Country)
-                .HasMaxLength(10);
-
-            entity.Property(e => e.ClientVersion)
-                .HasMaxLength(20);
-
-            entity.HasOne(e => e.Server)
-                .WithMany(d => d.Sessions)
-                .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.NoAction);
-        });
-
         modelBuilder.Entity<ServerFarmModel>(entity =>
         {
             entity.HasKey(e => e.ServerFarmId);
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerFarmName })
-                .HasFilter($"{nameof(ServerFarmModel.ServerFarmName)} IS NOT NULL")
+                .HasFilter($"{nameof(ServerFarmModel.ServerFarmName)} IS NOT NULL AND {nameof(ServerFarmModel.IsDeleted)} = 0")
                 .IsUnique();
 
             entity.Property(e => e.ServerFarmName)
@@ -336,6 +306,37 @@ public abstract class VhContextBase : DbContext
                 .HasForeignKey(e => e.DeviceId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
+
+        modelBuilder.Entity<SessionModel>(entity =>
+        {
+            entity.HasKey(e => e.SessionId);
+
+            //index for finding other active sessions of an AccessId
+            entity.HasIndex(e => e.AccessId)
+                .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
+
+            entity.HasIndex(e => new { e.EndTime }); //for sync 
+
+            entity.Property(e => e.IsArchived);
+
+            entity.Property(e => e.SessionId)
+                .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.DeviceIp)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.Country)
+                .HasMaxLength(10);
+
+            entity.Property(e => e.ClientVersion)
+                .HasMaxLength(20);
+
+            entity.HasOne(e => e.Server)
+                .WithMany()
+                .HasForeignKey(e => e.ServerId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
 
         modelBuilder.Entity<AccessUsageModel>(entity =>
         {

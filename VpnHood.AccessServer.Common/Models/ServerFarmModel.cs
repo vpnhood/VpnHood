@@ -8,6 +8,7 @@ public class ServerFarmModel
     public Guid CertificateId { get; set; }
     public Guid? ServerProfileId { get; set; }
     public DateTime CreatedTime { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ServerProfileModel? ServerProfile { get; set; }
     public virtual ProjectModel? Project { get; set; }

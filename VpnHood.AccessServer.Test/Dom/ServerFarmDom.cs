@@ -16,6 +16,7 @@ public class ServerFarmDom
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
     public Guid ProjectId => TestInit.ProjectId;
     public ServerDom DefaultServer => Servers.First();
+    public ServerFarmsClient Client => TestInit.ServerFarmsClient;
 
     protected ServerFarmDom(TestInit testInit, ServerFarm serverFarm)
     {

@@ -5022,14 +5022,19 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ServersStatusSummary> GetStatusSummaryAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServersStatusSummary> GetStatusSummaryAsync(System.Guid projectId, System.Guid? serverFarmId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/servers/status-summary");
+            urlBuilder_.Append("api/v1/projects/{projectId}/servers/status-summary?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
+            if (serverFarmId != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            urlBuilder_.Length--;
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6765,16 +6770,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int ServerCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int SessionCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("transferSpeed")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TransferSpeed { get; set; } = default!;
 
     }
 

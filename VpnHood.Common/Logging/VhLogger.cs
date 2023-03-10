@@ -65,7 +65,7 @@ public static class VhLogger
     public static string Format(IPAddress? ipAddress)
     {
         if (ipAddress == null) return "<null>";
-        return IsAnonymousMode ? Util.RedactIpAddress(ipAddress) : ipAddress.ToString();
+        return IsAnonymousMode ? VhUtil.RedactIpAddress(ipAddress) : ipAddress.ToString();
     }
 
     public static string FormatType(object? obj)

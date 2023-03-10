@@ -270,7 +270,7 @@ public class Session : IAsyncDisposable, IJob
 
         if (destinationEndPoint != null)
         {
-            destinationIpStr = _trackingOptions.TrackDestinationIpValue ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+            destinationIpStr = _trackingOptions.TrackDestinationIpValue ? VhUtil.RedactIpAddress(destinationEndPoint.Address) : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
         }
@@ -348,7 +348,7 @@ public class Session : IAsyncDisposable, IJob
 
             // connect to requested destination
             isRequestedEpException = true;
-            await Util.RunTask(
+            await VhUtil.RunTask(
                 tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
                 _tcpConnectTimeout, cancellationToken);
             isRequestedEpException = false;

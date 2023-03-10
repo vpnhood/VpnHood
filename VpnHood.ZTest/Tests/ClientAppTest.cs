@@ -152,12 +152,12 @@ public class ClientAppTest
         // ************
         // *** TEST ***: GetToken should not return then secret
         var token2 = app.ClientProfileStore.GetToken(clientProfile.TokenId);
-        Assert.IsTrue(Util.IsNullOrEmpty(token2.Secret), "token should not have secret");
+        Assert.IsTrue(VhUtil.IsNullOrEmpty(token2.Secret), "token should not have secret");
 
         // ************
         // *** TEST ***: ClientProfileItems should not return then secret
         var clientProfiles = app.ClientProfileStore.ClientProfileItems;
-        Assert.IsTrue(clientProfiles.All(x => Util.IsNullOrEmpty(x.Token.Secret)), "token should not have secret");
+        Assert.IsTrue(clientProfiles.All(x => VhUtil.IsNullOrEmpty(x.Token.Secret)), "token should not have secret");
     }
 
     [TestMethod]
@@ -511,7 +511,7 @@ public class ClientAppTest
         var token2 = TestHelper.CreateAccessToken(server);
 
         //create web server and set token url to it
-        var endPoint = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var endPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         using var webServer = new WebServer(endPoint.Port);
         token1.Url = $"http://{endPoint}/accesskey";
 

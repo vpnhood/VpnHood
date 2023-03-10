@@ -260,7 +260,7 @@ internal static class TestHelper
     {
         var options = new FileAccessServerOptions
         {
-            TcpEndPoints = new[] { Util.GetFreeTcpEndPoint(IPAddress.Loopback) },
+            TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,
@@ -426,7 +426,7 @@ internal static class TestHelper
         return new SessionRequestEx(token.TokenId,
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
-            encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
+            encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
     }
 
     public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)

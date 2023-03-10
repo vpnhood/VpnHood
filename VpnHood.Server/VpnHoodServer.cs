@@ -195,10 +195,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
         // net filters
         var includeIpRanges = IpNetwork.All.ToIpRanges();
-        if (!Util.IsNullOrEmpty(netFilterOptions.IncludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(netFilterOptions.IncludeIpRanges))
             includeIpRanges = includeIpRanges.Intersect(netFilterOptions.IncludeIpRanges);
 
-        if (!Util.IsNullOrEmpty(netFilterOptions.ExcludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(netFilterOptions.ExcludeIpRanges))
             includeIpRanges = includeIpRanges.Exclude(netFilterOptions.ExcludeIpRanges);
 
         // packet capture
@@ -206,10 +206,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         if (netFilterOptions.ExcludeLocalNetworkValue)
             packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
-        if (!Util.IsNullOrEmpty(netFilterOptions.PacketCaptureIncludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(netFilterOptions.PacketCaptureIncludeIpRanges))
             packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Intersect(netFilterOptions.PacketCaptureIncludeIpRanges);
 
-        if (!Util.IsNullOrEmpty(netFilterOptions.PacketCaptureExcludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(netFilterOptions.PacketCaptureExcludeIpRanges))
             packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(netFilterOptions.PacketCaptureExcludeIpRanges);
 
         // assign to workers
@@ -270,7 +270,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             {
                 if (File.Exists(_lastConfigFilePath))
                 {
-                    var ret = Util.JsonDeserialize<ServerConfig>(await File.ReadAllTextAsync(_lastConfigFilePath));
+                    var ret = VhUtil.JsonDeserialize<ServerConfig>(await File.ReadAllTextAsync(_lastConfigFilePath));
                     VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
                     return ret;
                 }

@@ -70,7 +70,7 @@ public class ServerApp : IDisposable
         }
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         AppSettings = File.Exists(appSettingsFilePath)
-            ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
+            ? VhUtil.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
         VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 
@@ -161,7 +161,7 @@ public class ServerApp : IDisposable
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
-        if (!Util.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop")
+        if (!VhUtil.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop")
         {
             VhLogger.Instance.LogInformation("I have received the stop command!");
             _vpnHoodServer?.SessionManager.SyncSessions().Wait();

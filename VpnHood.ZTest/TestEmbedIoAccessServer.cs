@@ -30,7 +30,7 @@ public class TestEmbedIoAccessServer : IDisposable
         try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
 
         FileAccessServer = fileFileAccessServer;
-        BaseUri = new Uri($"http://{Util.GetFreeTcpEndPoint(IPAddress.Loopback)}");
+        BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
             _webServer.Start();

@@ -79,7 +79,7 @@ public class ClientProfileStore
         try
         {
             using var client = new HttpClient();
-            var accessKey = await Util.RunTask(client.GetStringAsync(token.Url), TimeSpan.FromSeconds(20));
+            var accessKey = await VhUtil.RunTask(client.GetStringAsync(token.Url), TimeSpan.FromSeconds(20));
             var newToken = Token.FromAccessKey(accessKey);
             if (newToken.TokenId != token.TokenId)
                 throw new InvalidOperationException($"Could not updated Token because {nameof(token.TokenId)} has been changed! TokenId: {VhLogger.FormatId(token.TokenId)}");

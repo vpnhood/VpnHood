@@ -55,7 +55,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
         {
             return await base.HttpSendAsync<T>(urlPart, parameters, request, cancellationToken);
         }
-        catch (Exception ex) when (Util.IsConnectionRefusedException(ex))
+        catch (Exception ex) when (VhUtil.IsConnectionRefusedException(ex))
         {
             IsMaintenanceMode = true;
             throw new MaintenanceException();

@@ -187,7 +187,7 @@ public class DiagnoseUtil
         udpClient.Client.SendTimeout = timeout;
         udpClient.Client.ReceiveTimeout = timeout;
         await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint);
-        var receiveTask = await Util.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout));
+        var receiveTask = await VhUtil.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout));
         buffer = receiveTask.Buffer;
 
         //The response message has the same header and question structure, so we move index to the answer part directly.

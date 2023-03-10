@@ -39,7 +39,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
     {
         _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
         tcpClientStream.TcpClient.NoDelay = true;
-        if (!Util.IsInfinite(lifespan))
+        if (!VhUtil.IsInfinite(lifespan))
         {
             _lifeTime = FastDateTime.Now + lifespan;
             JobRunner.Default.Add(this);

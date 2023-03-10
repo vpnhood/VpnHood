@@ -107,7 +107,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (options.TcpProxyCatcherAddressIpV6 == null)
             throw new ArgumentNullException(nameof(options.TcpProxyCatcherAddressIpV6));
 
-        if (!Util.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
+        if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
         DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
@@ -186,7 +186,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // connect to host
         _packetCapture.ProtectSocket(tcpClient.Client);
-        await Util.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
+        await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
         // create add add channel
         var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()), TunnelUtil.TcpTimeout);
@@ -279,7 +279,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
     {
         // device is sleep. Don't wake it up
-        if (!Util.IsInfinite(_maxTcpDatagramLifespan) && FastDateTime.Now - _lastReceivedPacketTime > _maxTcpDatagramLifespan)
+        if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && FastDateTime.Now - _lastReceivedPacketTime > _maxTcpDatagramLifespan)
             return;
 
         if (e.Channel is IDatagramChannel)
@@ -433,7 +433,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsInIpRange(IPAddress ipAddress)
     {
         // all IPs are included if there is no filter
-        if (Util.IsNullOrEmpty(IncludeIpRanges))
+        if (VhUtil.IsNullOrEmpty(IncludeIpRanges))
             return true;
 
         // check tcp-loopback
@@ -620,7 +620,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostEndPoint)}...");
-            await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), TcpTimeout, cancellationToken);
+            await VhUtil.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), TcpTimeout, cancellationToken);
 
             // start TLS
             var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -689,7 +689,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Create the hello Message
         var request = new HelloRequest(Token.TokenId, clientInfo,
-            Util.EncryptClientId(clientInfo.ClientId, Token.Secret))
+            VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret))
         {
             UseUdpChannel = UseUdpChannel
         };
@@ -718,16 +718,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
 
         // PacketCaptureIpRanges
-        if (!Util.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))
             PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.Intersect(sessionResponse.PacketCaptureIncludeIpRanges).ToArray();
 
         // IncludeIpRanges
-        if (!Util.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToIpNetworks().IsAll())
+        if (!VhUtil.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToIpNetworks().IsAll())
             IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges).ToArray();
 
         // Get IncludeIpRange for clientIp
         var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress) : null;
-        if (!Util.IsNullOrEmpty(filterIpRanges))
+        if (!VhUtil.IsNullOrEmpty(filterIpRanges))
             IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges).ToArray();
 
         // Preparing tunnel
@@ -768,7 +768,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             request, cancellationToken);
 
         // find timespan
-        var lifespan = !Util.IsInfinite(_maxTcpDatagramLifespan) && IsTcpDatagramLifespanSupported
+        var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan) && IsTcpDatagramLifespanSupported
             ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds, (int)_maxTcpDatagramLifespan.TotalSeconds))
             : Timeout.InfiniteTimeSpan;
 

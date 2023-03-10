@@ -52,7 +52,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
 
     private static bool ValidateRequest(SessionRequest sessionRequest, FileAccessServer.AccessItem accessItem)
     {
-        var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, accessItem.Token.Secret);
+        var encryptClientId = VhUtil.EncryptClientId(sessionRequest.ClientInfo.ClientId, accessItem.Token.Secret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
@@ -71,7 +71,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = Util.GenerateSessionKey(),
+            SessionKey = VhUtil.GenerateSessionKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp

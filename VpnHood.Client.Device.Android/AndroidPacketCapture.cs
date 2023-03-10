@@ -236,7 +236,7 @@ namespace VpnHood.Client.Device.Android
             }
             catch (Exception ex)
             {
-                if (!Util.IsSocketClosedException(ex))
+                if (!VhUtil.IsSocketClosedException(ex))
                     VhLogger.Instance.LogError($"ReadingPacketTask: {ex}");
             }
 

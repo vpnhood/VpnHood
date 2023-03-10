@@ -256,7 +256,7 @@ public class FileAccessServer : IAccessServer
             return null;
 
         var json = await File.ReadAllTextAsync(fileName);
-        var accessItem = Util.JsonDeserialize<AccessItem>(json);
+        var accessItem = VhUtil.JsonDeserialize<AccessItem>(json);
         await ReadAccessItemUsage(accessItem);
         return accessItem;
     }

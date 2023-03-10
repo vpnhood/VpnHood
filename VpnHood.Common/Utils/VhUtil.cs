@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Common.Utils;
 
-public static class Util
+public static class VhUtil
 {
     public static bool IsConnectionRefusedException(Exception ex)
     {

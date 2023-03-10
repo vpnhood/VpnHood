@@ -185,7 +185,7 @@ public class IpNetwork
 
     public static IEnumerable<IpRange> ToIpRange(IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks.Select(x => x.ToIpRange());
+        return ipNetworks.Select(x => x.ToIpRange()).Sort();
     }
 
     public static IOrderedEnumerable<IpNetwork> FromIpRange(IEnumerable<IpRange> ipRanges)

@@ -1,3 +1,7 @@
+# v2.7.357
+### Client
+* Fix: Windows: Too long filter expression error
+
 # v2.7.356
 ### Client
 * Farture: Windows: Add "Open in Browser" item to system menu

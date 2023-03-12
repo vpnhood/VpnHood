@@ -61,7 +61,7 @@ public class VpnHoodAppUi : IDisposable
 
     private void Start()
     {
-        _url1 = new Uri($"http://{Util.GetFreeTcpEndPoint(IPAddress.Loopback, DefaultPort)}");
+        _url1 = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, DefaultPort)}");
         _server = CreateWebServer(Url1, Url2, GetSpaPath());
         try
         {
@@ -117,7 +117,7 @@ public class VpnHoodAppUi : IDisposable
     {
         // read index.html for fallback
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
-        var urlPrefixes = new string[] { url1.AbsoluteUri };
+        var urlPrefixes = new[] { url1.AbsoluteUri };
         if (url2 != null) urlPrefixes = urlPrefixes.Concat(new[] { url2.AbsoluteUri }).ToArray();
 
         // create the server

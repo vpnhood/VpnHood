@@ -30,7 +30,7 @@ public class TestEmbedIoAccessServer : IDisposable
         try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
 
         FileAccessServer = fileFileAccessServer;
-        BaseUri = new Uri($"http://{Util.GetFreeTcpEndPoint(IPAddress.Loopback)}");
+        BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
             _webServer.Start();
@@ -133,10 +133,10 @@ public class TestEmbedIoAccessServer : IDisposable
         public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
         {
             _ = serverId;
-            var usageInfo = await GetRequestDataAsync<UsageInfo>();
+            var traffic = await GetRequestDataAsync<Traffic>();
             var res = closeSession
-                ? await AccessServer.Session_Close(sessionId, usageInfo)
-                : await AccessServer.Session_AddUsage(sessionId, usageInfo);
+                ? await AccessServer.Session_Close(sessionId, traffic)
+                : await AccessServer.Session_AddUsage(sessionId, traffic);
             return res;
 
         }

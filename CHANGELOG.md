@@ -1,3 +1,10 @@
+# v2.8.360
+### Client
+* Fix: Used traffic was not displayed correctly
+
+### Server
+* Fix: Used traffic was not reported correctly
+
 # v2.7.357
 ### Client
 * Fix: Windows: Too long filter expression error

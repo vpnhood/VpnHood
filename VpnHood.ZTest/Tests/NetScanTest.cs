@@ -29,7 +29,7 @@ public class NetScanTest
         await tcpClient1.ConnectAsync(TestHelper.TEST_TcpEndPoint1);
         try
         {
-            await Util.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
+            await VhUtil.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
         }
         catch (Exception ex)
         {

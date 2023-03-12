@@ -19,7 +19,7 @@ public class AccessTokenModel
     public DateTime? LastUsedTime { get; set; }
     public DateTime CreatedTime { get; set; }
     public DateTime ModifiedTime { get; set; }
-    public bool IsDeleted { get; set; }
+    public bool IsDeleted { get; set; } = false;
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }

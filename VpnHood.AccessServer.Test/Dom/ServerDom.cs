@@ -49,8 +49,11 @@ public class ServerDom
                 SessionCount = server.ServerStatus?.SessionCount ?? 0,
                 TcpConnectionCount = server.ServerStatus?.TcpConnectionCount ?? 0,
                 ThreadCount = server.ServerStatus?.ThreadCount ?? 0,
-                TunnelReceiveSpeed = server.ServerStatus?.TunnelReceiveSpeed ?? 0,
-                TunnelSendSpeed = server.ServerStatus?.TunnelSendSpeed ?? 0,
+                TunnelSpeed = new Common.Messaging.Traffic
+                {
+                    Sent = server.ServerStatus?.TunnelReceiveSpeed ?? 0,
+                    Received = server.ServerStatus?.TunnelSendSpeed ?? 0,
+                },
                 UdpConnectionCount = server.ServerStatus?.UdpConnectionCount ?? 0,
                 UsedMemory = server is { TotalMemory: { }, ServerStatus.AvailableMemory: { } }
                     ? server.TotalMemory.Value - server.ServerStatus.AvailableMemory.Value

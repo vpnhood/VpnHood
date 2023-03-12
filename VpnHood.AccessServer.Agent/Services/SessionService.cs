@@ -10,7 +10,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;
@@ -53,7 +52,7 @@ public class SessionService
         await analyticsTracker.Track(trackData);
     }
 
-    private static async Task TrackUsage(ServerModel serverModel, AccessTokenModel accessTokenModel, DeviceModel device, UsageInfo usageInfo)
+    private static async Task TrackUsage(ServerModel serverModel, AccessTokenModel accessTokenModel, DeviceModel device, Traffic traffic)
     {
         var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
@@ -65,16 +64,16 @@ public class SessionService
             IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null
         };
 
-        var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
+        var trafficValue = traffic.Total * 2 / 1000000;
         var accessTokenName = string.IsNullOrEmpty(accessTokenModel.AccessTokenName) ? accessTokenModel.AccessTokenId.ToString() : accessTokenModel.AccessTokenName;
         var groupName = accessTokenModel.ServerFarm?.ServerFarmName ?? accessTokenModel.ServerFarmId.ToString();
         var serverName = string.IsNullOrEmpty(serverModel.ServerName) ? serverModel.ServerId.ToString() : serverModel.ServerName;
         var trackDatas = new TrackData[]
         {
-            new ("Usage", "GroupUsage", groupName, traffic),
-            new ("Usage", "AccessTokenModel", accessTokenName, traffic),
-            new ("Usage", "ServerUsage", serverName, traffic),
-            new ("Usage", "Device", device.DeviceId.ToString(), traffic)
+            new ("Usage", "GroupUsage", groupName, trafficValue),
+            new ("Usage", "AccessTokenModel", accessTokenName, trafficValue),
+            new ("Usage", "ServerUsage", serverName, trafficValue),
+            new ("Usage", "Device", device.DeviceId.ToString(), trafficValue)
         };
 
         await analyticsTracker.Track(trackDatas);
@@ -82,7 +81,7 @@ public class SessionService
 
     private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
     {
-        var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
+        var encryptClientId = VhUtil.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
@@ -220,7 +219,7 @@ public class SessionService
         var session = new SessionModel
         {
             ProjectId = device.ProjectId,
-            SessionKey = Util.GenerateSessionKey(),
+            SessionKey = VhUtil.GenerateSessionKey(),
             CreatedTime = DateTime.UtcNow,
             LastUsedTime = DateTime.UtcNow,
             AccessId = access.AccessId,
@@ -298,11 +297,14 @@ public class SessionService
         // create common accessUsage
         var accessUsage = new AccessUsage
         {
+            Traffic = new Traffic
+            {
+                Sent = access.TotalSentTraffic - access.LastCycleSentTraffic,
+                Received = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic,
+            },
             MaxClientCount = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
             ExpirationTime = accessToken.ExpirationTime,
-            SentTraffic = access.TotalSentTraffic - access.LastCycleSentTraffic,
-            ReceivedTraffic = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic,
             ActiveClientCount = 0
         };
 
@@ -316,7 +318,7 @@ public class SessionService
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
-                accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
+                accessUsage.Traffic.Total > accessUsage.MaxTraffic)
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
@@ -369,7 +371,7 @@ public class SessionService
         };
     }
 
-    public async Task<SessionResponseBase> AddUsage(ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
+    public async Task<SessionResponseBase> AddUsage(ServerModel serverModel, uint sessionId, Traffic traffic, bool closeSession)
     {
         // temp for server bug
         // LogWarning should be reported
@@ -398,18 +400,18 @@ public class SessionService
             "AddUsage to a session. SessionId: {SessionId}, " +
             "SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {Total}, " +
             "EndTime: {EndTime}.",
-            sessionId, usageInfo.SentTraffic, usageInfo.ReceivedTraffic, Util.FormatBytes(usageInfo.SentTraffic + usageInfo.ReceivedTraffic), session.EndTime);
+            sessionId, traffic.Sent, traffic.Received, VhUtil.FormatBytes(traffic.Total), session.EndTime);
 
         // add usage to access
-        access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
-        access.TotalSentTraffic += usageInfo.SentTraffic;
+        access.TotalReceivedTraffic += traffic.Received;
+        access.TotalSentTraffic += traffic.Sent;
         access.LastUsedTime = DateTime.UtcNow;
 
         // insert AccessUsageLog
         _cacheService.AddSessionUsage(new AccessUsageModel
         {
-            ReceivedTraffic = usageInfo.ReceivedTraffic,
-            SentTraffic = usageInfo.SentTraffic,
+            ReceivedTraffic = traffic.Received,
+            SentTraffic = traffic.Sent,
             TotalReceivedTraffic = access.TotalReceivedTraffic,
             TotalSentTraffic = access.TotalSentTraffic,
             DeviceId = session.DeviceId,
@@ -424,7 +426,7 @@ public class SessionService
             ServerFarmId = accessToken.ServerFarmId,
         });
 
-        _ = TrackUsage(serverModel, accessToken, session.Device!, usageInfo);
+        _ = TrackUsage(serverModel, accessToken, session.Device!, traffic);
 
         // build response
         var sessionResponse = await BuildSessionResponse(session, accessedTime);

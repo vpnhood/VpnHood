@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.Messaging;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -261,40 +262,40 @@ public class ServerTest
     [TestMethod]
     public async Task GetStatusSummary()
     {
-        var sampler = await ServerFarmDom.Create(serverCount: 0);
-        sampler.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
-        sampler.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        farm.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 
         // lost
-        var sampleServer = await sampler.AddNewServer();
+        var sampleServer = await farm.AddNewServer();
         await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 10 });
         await Task.Delay(2000);
 
         // active 2
-        sampleServer = await sampler.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
-        sampleServer = await sampler.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic{Received = 100, Sent = 50 }});
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
         // notInstalled 4
-        await sampler.AddNewServer(false);
-        await sampler.AddNewServer(false);
-        await sampler.AddNewServer(false);
-        await sampler.AddNewServer(false);
+        await farm.AddNewServer(false);
+        await farm.AddNewServer(false);
+        await farm.AddNewServer(false);
+        await farm.AddNewServer(false);
 
         // idle1
-        sampleServer = await sampler.AddNewServer();
+        sampleServer = await farm.AddNewServer();
         await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
 
         // idle2
-        sampleServer = await sampler.AddNewServer();
+        sampleServer = await farm.AddNewServer();
         await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
 
         // idle3
-        sampleServer = await sampler.AddNewServer();
+        sampleServer = await farm.AddNewServer();
         await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
 
-        var liveUsageSummary = await sampler.TestInit.ServersClient.GetStatusSummaryAsync(sampler.TestInit.ProjectId);
+        var liveUsageSummary = await farm.TestInit.ServersClient.GetStatusSummaryAsync(farm.TestInit.ProjectId);
         Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);

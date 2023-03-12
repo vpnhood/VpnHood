@@ -103,7 +103,7 @@ public class ServerFarmService
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName!.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
-            .OrderByDescending(x => x.CreatedTime);
+            .OrderByDescending(x => x.ServerFarmName);
 
         var serverFarms = await query
             .Skip(recordIndex)
@@ -135,6 +135,7 @@ public class ServerFarmService
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName!.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
+            .OrderBy(x=>x.ServerFarmName)
             .Select(x => new ServerFarmData
             {
                 ServerFarm = x.ToDto(),

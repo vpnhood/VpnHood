@@ -9,7 +9,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Server;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -257,20 +257,20 @@ public class AccessTokenTest
         var accessTokenDom1 = await farm.CreateAccessToken(true);
         var accessTokenDom2 = await farm.CreateAccessToken();
 
-        var usageInfo = new UsageInfo { ReceivedTraffic = 10000000, SentTraffic = 10000000 };
+        var traffic = new Traffic { Received = 10000000, Sent = 10000000 };
 
         // add usage by session1 of the public token
         var sessionDom1 = await accessTokenDom1.CreateSession();
-        await sessionDom1.AddUsage(usageInfo);
-        await sessionDom1.AddUsage(usageInfo);
+        await sessionDom1.AddUsage(traffic);
+        await sessionDom1.AddUsage(traffic);
 
         // add usage by session2 of the public token
         var sessionDom2 = await accessTokenDom1.CreateSession();
-        await sessionDom2.AddUsage(usageInfo);
+        await sessionDom2.AddUsage(traffic);
 
         // add usage by session of the private token
         var sessionDom3 = await accessTokenDom2.CreateSession();
-        await sessionDom3.AddUsage(usageInfo);
+        await sessionDom3.AddUsage(traffic);
         await farm.TestInit.Sync();
 
         // list
@@ -279,14 +279,14 @@ public class AccessTokenTest
             usageBeginTime: farm.TestInit.CreatedTime.AddSeconds(-1));
 
         var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId);
-        Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
-        Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
+        Assert.AreEqual(traffic.Sent * 3, publicItem.Usage?.SentTraffic);
+        Assert.AreEqual(traffic.Received * 3, publicItem.Usage?.ReceivedTraffic);
 
         // list by time
         accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
             serverFarmId: farm.ServerFarmId, usageBeginTime: DateTime.UtcNow.AddDays(-2));
         publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
-        Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
-        Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
+        Assert.AreEqual(traffic.Sent * 3, publicItem.Usage?.SentTraffic);
+        Assert.AreEqual(traffic.Received * 3, publicItem.Usage?.ReceivedTraffic);
     }
 }

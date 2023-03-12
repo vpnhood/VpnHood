@@ -65,7 +65,7 @@ public class ServerService
             CreatedTime = DateTime.UtcNow,
             ServerName = serverName,
             IsEnabled = true,
-            Secret = Util.GenerateSessionKey(),
+            Secret = VhUtil.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? Array.Empty<AccessPoint>()),
@@ -104,7 +104,7 @@ public class ServerService
             server.ServerFarm = serverFarm;
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
-        if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
+        if (updateParams.GenerateNewSecret?.Value == true) server.Secret = VhUtil.GenerateSessionKey();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
         if (updateParams.AccessPoints != null)

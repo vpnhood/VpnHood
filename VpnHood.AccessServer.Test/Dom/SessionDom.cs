@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
-using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Test.Dom;
@@ -44,17 +43,17 @@ public class SessionDom
 
     public Task<SessionResponseBase> AddUsage(long sendTraffic, long receivedTraffic)
     {
-        return AddUsage(new UsageInfo { SentTraffic = sendTraffic, ReceivedTraffic = receivedTraffic });
+        return AddUsage(new Traffic { Sent = sendTraffic, Received = receivedTraffic });
     }
 
-    public Task<SessionResponseBase> AddUsage(UsageInfo usageInfo)
+    public Task<SessionResponseBase> AddUsage(Traffic traffic)
     {
-        return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, usageInfo);
+        return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, traffic);
     }
 
     public Task<SessionResponseBase> CloseSession()
     {
-        return AgentClient.Session_Close(SessionResponseEx.SessionId, new UsageInfo());
+        return AgentClient.Session_Close(SessionResponseEx.SessionId, new Traffic());
     }
 
     public async Task Reload()

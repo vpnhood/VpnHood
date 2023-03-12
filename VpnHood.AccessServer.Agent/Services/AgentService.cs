@@ -56,10 +56,10 @@ public class AgentService
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public async Task<SessionResponseBase> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public async Task<SessionResponseBase> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, Traffic traffic)
     {
         var server = await GetServer(serverId);
-        return await _sessionService.AddUsage(server, sessionId, usageInfo, closeSession);
+        return await _sessionService.AddUsage(server, sessionId, traffic, closeSession);
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
@@ -199,6 +199,7 @@ public class AgentService
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
                 SyncInterval = _agentOptions.SessionSyncInterval,
+                SyncCacheSize = _agentOptions.SyncCacheSize
             }
         };
 
@@ -304,8 +305,8 @@ public class AgentService
             UdpConnectionCount = serverStatus.UdpConnectionCount,
             SessionCount = serverStatus.SessionCount,
             ThreadCount = serverStatus.ThreadCount,
-            TunnelReceiveSpeed = serverStatus.TunnelReceiveSpeed,
-            TunnelSendSpeed = serverStatus.TunnelSendSpeed
+            TunnelSendSpeed = serverStatus.TunnelSpeed.Sent,
+            TunnelReceiveSpeed = serverStatus.TunnelSpeed.Received
         };
         server.ServerStatus = serverStatusEx;
     }

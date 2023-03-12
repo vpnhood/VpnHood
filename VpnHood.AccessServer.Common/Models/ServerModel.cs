@@ -22,7 +22,7 @@ public class ServerModel
     public Guid? LastConfigCode { get; set; }
     public string? LastConfigError { get; set; }
     public bool AutoConfigure { get; set; }
-    public bool IsDeleted { get; set; }
+    public bool IsDeleted { get; set; } = false;
     public List<AccessPointModel> AccessPoints { get; set; } = new();
 
     public virtual ProjectModel? Project { get; set; }

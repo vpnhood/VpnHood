@@ -83,7 +83,7 @@ public class ProjectsController : SuperController<ProjectsController>
                     ServerFarm = serverFarm,
                     AccessTokenName = "Public",
                     SupportCode = 1000,
-                    Secret = Util.GenerateSessionKey(),
+                    Secret = VhUtil.GenerateSessionKey(),
                     IsPublic = true,
                     IsEnabled= true,
                 },
@@ -96,7 +96,7 @@ public class ProjectsController : SuperController<ProjectsController>
                     IsPublic = false,
                     SupportCode = 1001,
                     MaxDevice = 5,
-                    Secret = Util.GenerateSessionKey(),
+                    Secret = VhUtil.GenerateSessionKey(),
                     IsEnabled= true
                 }
             }

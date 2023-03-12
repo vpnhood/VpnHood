@@ -69,7 +69,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             Lifetime = createParams.Lifetime,
             Url = createParams.Url,
             IsPublic = createParams.IsPublic,
-            Secret = createParams.Secret ?? Util.GenerateSessionKey(),
+            Secret = createParams.Secret ?? VhUtil.GenerateSessionKey(),
             SupportCode = supportCode,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
@@ -148,7 +148,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .ToArray();
 
        
-        if (Util.IsNullOrEmpty(tokenAccessPoints))
+        if (VhUtil.IsNullOrEmpty(tokenAccessPoints))
             throw new InvalidOperationException("Could not find any public access point for the ServerFarm. Please configure a server for this AccessToken.");
 
         // create token

@@ -9,6 +9,7 @@ public class AgentOptions
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
     public TimeSpan SessionSyncInterval { get; set; } = new SessionOptions.SessionOptions().SyncIntervalValue;
     public TimeSpan SessionTemporaryTimeout { get; set; } = new SessionOptions.SessionOptions().TimeoutValue;
+    public long SyncCacheSize { get; set; } = new SessionOptions.SessionOptions().SyncCacheSizeValue;
     public TimeSpan SessionPermanentlyTimeout { get; set; } = TimeSpan.FromDays(2);
     public TimeSpan SaveCacheInterval { get; set; } = TimeSpan.FromMinutes(5);
     public string SystemAuthorizationCode { get; set; } = "";

@@ -261,8 +261,8 @@ public class AgentServerTest
         Assert.AreEqual(serverInfo.Status.SessionCount, serverStatusEx.SessionCount);
         Assert.AreEqual(serverInfo.Status.ThreadCount, serverStatusEx.ThreadCount);
         Assert.AreEqual(serverInfo.Status.CpuUsage, serverStatusEx.CpuUsage);
-        Assert.AreEqual(serverInfo.Status.TunnelSendSpeed, serverStatusEx.TunnelSendSpeed);
-        Assert.AreEqual(serverInfo.Status.TunnelReceiveSpeed, serverStatusEx.TunnelReceiveSpeed);
+        Assert.AreEqual(serverInfo.Status.TunnelSpeed.Sent, serverStatusEx.TunnelSendSpeed);
+        Assert.AreEqual(serverInfo.Status.TunnelSpeed.Received, serverStatusEx.TunnelReceiveSpeed);
         Assert.IsTrue(dateTime <= serverStatusEx.CreatedTime);
 
         //-----------

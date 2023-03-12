@@ -265,6 +265,9 @@ public abstract class VhContextBase : DbContext
             entity.Property(e => e.ServerFarmName)
                 .HasMaxLength(100);
 
+            entity.Property(e => e.IsDeleted)
+                .HasDefaultValue(false);
+
             entity.HasOne(e => e.Project)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => e.ProjectId)
@@ -332,9 +335,9 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(20);
 
             entity.HasOne(e => e.Server)
-                .WithMany()
+                .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
 

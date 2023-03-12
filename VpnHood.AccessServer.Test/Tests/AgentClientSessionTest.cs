@@ -35,8 +35,8 @@ public class AgentClientSessionTest
         var sessionDom = await accessTokenDom.CreateSession();
         var sessionResponse = await sessionDom.AddUsage(5, 10);
         await farm.TestInit.FlushCache();
-        Assert.AreEqual(5, sessionResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, sessionResponse.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, sessionResponse.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, sessionResponse.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, sessionResponse.ErrorCode);
     }
 
@@ -54,8 +54,8 @@ public class AgentClientSessionTest
         //-----------
         var sessionDom = await accessTokenDom.CreateSession();
         var sessionResponse = await sessionDom.AddUsage(5, 10);
-        Assert.AreEqual(5, sessionResponse.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, sessionResponse.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, sessionResponse.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, sessionResponse.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponse.ErrorCode);
     }
 
@@ -81,8 +81,8 @@ public class AgentClientSessionTest
         Assert.AreEqual(new DateTime(2040, 1, 1), sessionResponseEx.AccessUsage!.ExpirationTime);
         Assert.AreEqual(22, sessionResponseEx.AccessUsage.MaxClientCount);
         Assert.AreEqual(100, sessionResponseEx.AccessUsage.MaxTraffic);
-        Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
-        Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
+        Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
+        Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
@@ -235,9 +235,9 @@ public class AgentClientSessionTest
         //-----------
         var responseBase2 = await session.AddUsage(10, 5);
         Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session must be closed!");
-        Assert.AreEqual(responseBase.AccessUsage!.SentTraffic + 10, responseBase2.AccessUsage!.SentTraffic,
+        Assert.AreEqual(responseBase.AccessUsage!.Traffic.Sent + 10, responseBase2.AccessUsage!.Traffic.Sent,
             "AddUsage must work on closed a session!");
-        Assert.AreEqual(responseBase.AccessUsage!.ReceivedTraffic + 5, responseBase2.AccessUsage!.ReceivedTraffic,
+        Assert.AreEqual(responseBase.AccessUsage!.Traffic.Received + 5, responseBase2.AccessUsage!.Traffic.Received,
             "AddUsage must work on closed a session!");
 
         //-----------
@@ -319,8 +319,8 @@ public class AgentClientSessionTest
         // check: zero usage
         //--------------
         var response = await sessionDom1.AddUsage(0);
-        Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(0, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(0, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         var access = await GetAccessFromSession(sessionDom1);
@@ -333,8 +333,8 @@ public class AgentClientSessionTest
         //-----------
         response = await sessionDom1.AddUsage(5, 10);
         await farm.TestInit.FlushCache();
-        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         access = await GetAccessFromSession(sessionDom1);
@@ -345,8 +345,8 @@ public class AgentClientSessionTest
         // again
         response = await sessionDom1.AddUsage(5, 10);
         await farm.TestInit.FlushCache();
-        Assert.AreEqual(10, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(10, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         access = await GetAccessFromSession(sessionDom1);
@@ -361,8 +361,8 @@ public class AgentClientSessionTest
         response = await sessionDom2.AddUsage(5,10);
         await farm.TestInit.FlushCache();
 
-        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         access = await GetAccessFromSession(sessionDom2);
@@ -380,16 +380,16 @@ public class AgentClientSessionTest
         await cycleManager.UpdateCycle();
 
         response = await sessionDom2.AddUsage(5, 10);
-        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         //-------------
         // check: another Session_Create for same client should return same result
         //-------------
         var sessionDom3 = await accessTokenDom.CreateSession(clientId: sessionDom2.SessionRequestEx.ClientInfo.ClientId);
-        Assert.AreEqual(5, sessionDom3.SessionResponseEx.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, sessionDom3.SessionResponseEx.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, sessionDom3.SessionResponseEx.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, sessionDom3.SessionResponseEx.ErrorCode);
 
         //-------------
@@ -397,8 +397,8 @@ public class AgentClientSessionTest
         //-------------
         response = await sessionDom1.AddUsage(50, 100);
         await farm.TestInit.FlushCache();
-        Assert.AreEqual(50, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(100, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(50, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(100, response.AccessUsage?.Traffic.Received);
     }
 
     [TestMethod]
@@ -412,8 +412,8 @@ public class AgentClientSessionTest
         // check: zero usage
         //--------------
         var response = await sessionDom1.AddUsage(0);
-        Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(0, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(0, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         //-----------
@@ -421,8 +421,8 @@ public class AgentClientSessionTest
         //-----------
         response = await sessionDom1.AddUsage(5, 10);
         await farm.TestInit.FlushCache();
-        Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
 
         var accessData = await accessTokenDom.Reload();
@@ -434,8 +434,8 @@ public class AgentClientSessionTest
         //-----------
         var sessionDom2 = await accessTokenDom.CreateSession();
         var response2 = await sessionDom2.AddUsage(5, 10);
-        Assert.AreEqual(10, response2.AccessUsage?.SentTraffic);
-        Assert.AreEqual(20, response2.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(10, response2.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(20, response2.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
 
         await farm.TestInit.FlushCache();

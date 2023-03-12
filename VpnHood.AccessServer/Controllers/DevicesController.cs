@@ -134,7 +134,7 @@ public class DevicesController : SuperController<DevicesController>
             .Select(x => new
             {
                 DeviceId = x.Key,
-                TrafficUsage = x.Value,
+                Traffic = x.Value,
             })
             .ToArray();
 
@@ -152,7 +152,7 @@ public class DevicesController : SuperController<DevicesController>
                 deviceDatas.Add(new DeviceData
                 {
                     Device = device.ToDto(),
-                    Usage = usage.TrafficUsage
+                    Usage = usage.Traffic
                 });
         }
 

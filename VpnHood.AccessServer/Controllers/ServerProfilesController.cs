@@ -108,12 +108,12 @@ public class ServerProfilesController : SuperController<ServerProfilesController
         if (serverConfigJson == null)
             return null;
 
-        var serverConfig = Util.JsonDeserialize<ServerConfig>(serverConfigJson);
+        var serverConfig = VhUtil.JsonDeserialize<ServerConfig>(serverConfigJson);
 
         if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
             throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));
 
-        if (!Util.IsNullOrEmpty(serverConfig.TcpEndPoints))
+        if (!VhUtil.IsNullOrEmpty(serverConfig.TcpEndPoints))
             throw new ArgumentException($"You can not set {nameof(serverConfig.TcpEndPoints)}.", nameof(serverConfig));
 
         if (serverConfig.SessionOptions.SyncInterval!=null)

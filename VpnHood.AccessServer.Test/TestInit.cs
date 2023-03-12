@@ -270,8 +270,11 @@ public class TestInit : IDisposable, IHttpClientFactory
                 ThreadCount = rand.Next(0, 50),
                 ConfigCode = configCode,
                 CpuUsage = rand.Next(0, 100),
-                TunnelReceiveSpeed = 2000000,
-                TunnelSendSpeed = 1000000
+                TunnelSpeed = new Traffic
+                {
+                    Sent = 1000000,
+                    Received = 2000000
+                }
             }
             : new ServerStatus
             {
@@ -283,8 +286,7 @@ public class TestInit : IDisposable, IHttpClientFactory
                 ThreadCount = 5,
                 ConfigCode = configCode,
                 CpuUsage = 25,
-                TunnelReceiveSpeed = 0,
-                TunnelSendSpeed = 0
+                TunnelSpeed = new Traffic()
             };
 
         return ret;
@@ -338,7 +340,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         var sessionRequestEx = new SessionRequestEx(
             accessToken.AccessTokenId,
             clientInfo,
-            Util.EncryptClientId(clientInfo.ClientId, secret),
+            VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             hostEndPoint)
         {
             ClientIp = clientIp ?? NewIpV4().Result

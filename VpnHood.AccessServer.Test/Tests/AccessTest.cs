@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Server;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -52,23 +52,23 @@ public class AccessTest
         // Create accessToken1 public in ServerFarm1
         // ----------------
         var sampleAccessToken1 = await sample1.CreateAccessToken(true);
-        var usageInfo = new UsageInfo { ReceivedTraffic = 1000, SentTraffic = 500};
+        var traffic = new Traffic { Received = 1000, Sent = 500};
         
         // accessToken1 - sessions1
         actualAccessCount++;
         usageCount += 2;
         deviceCount++;
         var sessionDom = await sampleAccessToken1.CreateSession();
-        await sessionDom.AddUsage(usageInfo);
-        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(traffic);
+        await sessionDom.AddUsage(traffic);
 
         // accessToken1 - sessions2
         actualAccessCount++;
         usageCount += 2;
         deviceCount++;
         sessionDom = await sampleAccessToken1.CreateSession();
-        await sessionDom.AddUsage(usageInfo);
-        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(traffic);
+        await sessionDom.AddUsage(traffic);
 
         // ----------------
         // Create accessToken2 public in ServerFarm2
@@ -85,8 +85,8 @@ public class AccessTest
         sample2UsageCount += 2;
         deviceCount++;
         sessionDom = await accessToken2.CreateSession();
-        await sessionDom.AddUsage(usageInfo);
-        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(traffic);
+        await sessionDom.AddUsage(traffic);
 
         // accessToken2 - sessions2
         actualAccessCount++;
@@ -95,8 +95,8 @@ public class AccessTest
         sample2AccessCount++;
         deviceCount++;
         sessionDom = await accessToken2.CreateSession();
-        await sessionDom.AddUsage(usageInfo);
-        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(traffic);
+        await sessionDom.AddUsage(traffic);
         
         // ----------------
         // Create accessToken3 private in ServerFarm2
@@ -109,16 +109,16 @@ public class AccessTest
         usageCount += 2;
         sample2UsageCount += 2;
         sessionDom = await accessToken3.CreateSession();
-        await sessionDom.AddUsage(usageInfo);
-        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(traffic);
+        await sessionDom.AddUsage(traffic);
 
         // accessToken3 - sessions2
         // actualAccessCount++; it is private!
         usageCount += 2;
         sample2UsageCount += 2;
         sessionDom = await accessToken3.CreateSession();
-        await sessionDom.AddUsage(usageInfo);
-        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(traffic);
+        await sessionDom.AddUsage(traffic);
 
         await testInit2.FlushCache();
         var res = await testInit2.AccessesClient.ListAsync(sample1.TestInit.ProjectId);
@@ -127,13 +127,13 @@ public class AccessTest
         Assert.AreEqual(actualAccessCount, res.Count);
         Assert.AreEqual(deviceCount, res.Count(x => x.Device!=null));
         Assert.AreEqual(1, res.Count(x => x.Device==null));
-        Assert.AreEqual(usageInfo.SentTraffic * usageCount,  res.Sum(x => x.Access.CycleSentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * usageCount,  res.Sum(x => x.Access.CycleReceivedTraffic));
+        Assert.AreEqual(traffic.Sent * usageCount,  res.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(traffic.Received * usageCount,  res.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
         res = await testInit2.AccessesClient.ListAsync(testInit2.ProjectId, serverFarmId: sample2.ServerFarmId);
         Assert.AreEqual(sample2AccessCount, res.Count);
-        Assert.AreEqual(usageInfo.SentTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleSentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleReceivedTraffic));
+        Assert.AreEqual(traffic.Sent * sample2UsageCount, res.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(traffic.Received * sample2UsageCount, res.Sum(x => x.Access.CycleReceivedTraffic));
     }
 }

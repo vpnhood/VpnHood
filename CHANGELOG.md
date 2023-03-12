@@ -1,9 +1,9 @@
-# Upcoming
+# v2.8.360
 ### Client
-* Fix: Update Traffic Support
+* Fix: Used traffic was not displayed correctly
 
 ### Server
-* Fix: Update Traffic Support
+* Fix: Used traffic was not reported correctly
 
 # v2.7.357
 ### Client

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling.DatagramMessaging;
 
@@ -24,21 +25,17 @@ public class Tunnel : IDisposable
     private readonly HashSet<TcpProxyChannel> _tcpProxyChannels = new();
     private readonly Timer _speedMonitorTimer;
     private bool _disposed;
-    private long _lastReceivedByteCount;
-    private long _lastSentByteCount;
     private int _maxDatagramChannelCount;
-    private long _receivedByteCount;
-    private long _sentByteCount;
+    private Traffic _lastTraffic = new();
+    private readonly Traffic _trafficUsage = new();
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
     private readonly TimeoutDictionary<IChannel, TimeoutItem<IChannel>> _closePendingChannels = new(TimeSpan.FromSeconds(30));
-
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public event EventHandler<ChannelEventArgs>? OnChannelAdded;
     public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
-    public long SendSpeed { get; private set; }
-    public long ReceiveSpeed { get; private set; }
+    public Traffic Speed { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
 
@@ -58,26 +55,17 @@ public class Tunnel : IDisposable
         }
     }
 
-    public long ReceivedByteCount
+    public Traffic Traffic
     {
         get
         {
             lock (_channelListLock)
             {
-                return _receivedByteCount + _tcpProxyChannels.Sum(x => x.ReceivedByteCount) +
-                       DatagramChannels.Sum(x => x.ReceivedByteCount);
-            }
-        }
-    }
-
-    public long SentByteCount
-    {
-        get
-        {
-            lock (_channelListLock)
-            {
-                return _sentByteCount + _tcpProxyChannels.Sum(x => x.SentByteCount) +
-                       DatagramChannels.Sum(x => x.SentByteCount);
+                return new Traffic
+                {
+                    Sent = _trafficUsage.Sent + _tcpProxyChannels.Sum(x => x.Traffic.Sent) + DatagramChannels.Sum(x => x.Traffic.Sent),
+                    Received = _trafficUsage.Received + _tcpProxyChannels.Sum(x => x.Traffic.Received) + DatagramChannels.Sum(x => x.Traffic.Received)
+                };
             }
         }
     }
@@ -101,17 +89,14 @@ public class Tunnel : IDisposable
         if (FastDateTime.Now - _lastSpeedUpdateTime < _speedTestThreshold)
             return;
 
-        var sentByteCount = SentByteCount;
-        var receivedByteCount = ReceivedByteCount;
-        var trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
+        var traffic = Traffic;
+        var trafficChanged = _lastTraffic != traffic;
         var duration = (FastDateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
 
-        SendSpeed = (int)((sentByteCount - _lastSentByteCount) / duration);
-        ReceiveSpeed = (int)((receivedByteCount - _lastReceivedByteCount) / duration);
-
+        Speed.Sent = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
+        Speed.Received = (long)((traffic.Received - _lastTraffic.Received) / duration);
         _lastSpeedUpdateTime = FastDateTime.Now;
-        _lastSentByteCount = sentByteCount;
-        _lastReceivedByteCount = receivedByteCount;
+        _lastTraffic = traffic.Clone();
         if (trafficChanged)
             LastActivityTime = FastDateTime.Now;
     }
@@ -145,7 +130,7 @@ public class Tunnel : IDisposable
             // remove additional Datagram channels
             while (DatagramChannels.Length > MaxDatagramChannelCount)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, 
+                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "Removing an exceeded DatagramChannel. ChannelCount: {ChannelCount}", DatagramChannels.Length);
 
                 RemoveChannel(DatagramChannels[0]);
@@ -223,9 +208,8 @@ public class Tunnel : IDisposable
         else
             channel.Dispose();
 
-        // clean up tunnel
-        _sentByteCount += channel.SentByteCount;
-        _receivedByteCount += channel.ReceivedByteCount;
+        // clean up channel
+        _trafficUsage.Add(channel.Traffic);
         channel.OnFinished -= Channel_OnFinished;
 
         // notify channel has been removed
@@ -273,7 +257,7 @@ public class Tunnel : IDisposable
     {
         var dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
-        
+
         // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
         // ReSharper disable once InconsistentlySynchronizedField
         while (_packetQueue.Count > _maxQueueLength)
@@ -419,8 +403,8 @@ public class Tunnel : IDisposable
             _packetQueue.Clear();
 
         _speedMonitorTimer.Dispose();
-        SendSpeed = 0;
-        ReceiveSpeed = 0;
+        Speed.Sent = 0;
+        Speed.Received = 0;
 
         // release worker threads
         _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10); //make sure to release all semaphores

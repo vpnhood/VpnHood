@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Configurations;
 
 namespace VpnHood.Test.Tests;
 

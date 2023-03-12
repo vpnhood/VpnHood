@@ -40,7 +40,7 @@ public class ServerTest
 
         // check usage when usage should be 0
         var sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0);
+        Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received == 0);
 
         // lets do transfer
         await TestHelper.Test_HttpsAsync();
@@ -48,13 +48,13 @@ public class ServerTest
         // check usage should still not be 0 after interval
         await Task.Delay(1000);
         sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic > 0);
+        Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received > 0);
     }
 
     [TestMethod]
     public async Task Reconfigure()
     {
-        var serverEndPoint = Util.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint } };
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         var serverConfig = fileAccessServer.ServerConfig;

@@ -83,7 +83,7 @@ internal class TcpProxyHost : IDisposable
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var tcpClient = await Util.RunTask(tcpListener.AcceptTcpClientAsync(), default, cancellationToken);
+                var tcpClient = await VhUtil.RunTask(tcpListener.AcceptTcpClientAsync(), default, cancellationToken);
                 _ = ProcessClient(tcpClient, cancellationToken);
             }
         }
@@ -246,7 +246,7 @@ internal class TcpProxyHost : IDisposable
                 Client.SessionId,
                 Client.SessionKey,
                 new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                Util.GenerateSessionKey(),
+                VhUtil.GenerateSessionKey(),
                 natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
             tcpProxyClientStream = await Client.GetTlsConnectionToServer(GeneralEventId.TcpProxyChannel, cancellationToken);

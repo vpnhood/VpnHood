@@ -20,8 +20,8 @@ public class Token : ICloneable
 {
     public Token(byte[] secret, byte[] certificateHash, string hostName)
     {
-        if (Util.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
-        if (Util.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
+        if (VhUtil.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
+        if (VhUtil.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
         // after 2.2.276, hostName must exists; //remark for compatibility
         // if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
@@ -69,7 +69,7 @@ public class Token : ICloneable
 
     public object Clone()
     {
-        return Util.JsonDeserialize<Token>(JsonSerializer.Serialize(this));
+        return VhUtil.JsonDeserialize<Token>(JsonSerializer.Serialize(this));
     }
 
     public string ToAccessKey()
@@ -97,7 +97,7 @@ public class Token : ICloneable
             {
                 VhLogger.Instance.LogInformation($"Resolving IP from host name: {VhLogger.FormatDns(HostName)}...");
                 var hostEntities = await Dns.GetHostEntryAsync(HostName);
-                if (!Util.IsNullOrEmpty(hostEntities.AddressList))
+                if (!VhUtil.IsNullOrEmpty(hostEntities.AddressList))
                 {
                     return hostEntities.AddressList
                         .Select(x => new IPEndPoint(x, HostPort))
@@ -110,7 +110,7 @@ public class Token : ICloneable
             }
         }
 
-        if (!Util.IsNullOrEmpty(HostEndPoints))
+        if (!VhUtil.IsNullOrEmpty(HostEndPoints))
             return HostEndPoints;
 
         throw new Exception($"Could not resolve {nameof(HostEndPoints)} from token!");
@@ -119,7 +119,7 @@ public class Token : ICloneable
     public async Task<IPEndPoint[]> ResolveHostEndPointsAsync()
     {
         var endPoints = await ResolveHostEndPointsInternalAsync();
-        if (Util.IsNullOrEmpty(endPoints))
+        if (VhUtil.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint from AccessToken!");
 
         var ipV4EndPoints = endPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
@@ -134,7 +134,7 @@ public class Token : ICloneable
     public async Task<IPEndPoint> ResolveHostEndPointAsync()
     {
         var endPoints = await ResolveHostEndPointsAsync();
-        if (Util.IsNullOrEmpty(endPoints))
+        if (VhUtil.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint!");
 
         var rand = new Random();

@@ -64,14 +64,14 @@ public class TestAccessServer : IAccessServer
         return _httpAccessServer.Session_Create(sessionRequestEx);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, Traffic traffic)
     {
-        return _httpAccessServer.Session_AddUsage(sessionId, usageInfo);
+        return _httpAccessServer.Session_AddUsage(sessionId, traffic);
     }
 
-    public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_Close(uint sessionId, Traffic traffic)
     {
-        return _httpAccessServer.Session_Close(sessionId, usageInfo);
+        return _httpAccessServer.Session_Close(sessionId, traffic);
     }
 
     public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)

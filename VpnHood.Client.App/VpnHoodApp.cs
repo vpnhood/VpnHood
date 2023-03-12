@@ -14,6 +14,7 @@ using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
@@ -128,10 +129,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         HasDisconnectedByUser = _hasDisconnectedByUser,
         HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
         SessionStatus = LastSessionStatus,
-        ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
-        ReceivedTraffic = Client?.ReceivedByteCount ?? 0,
-        SendSpeed = Client?.SendSpeed ?? 0,
-        SentTraffic = Client?.SentByteCount ?? 0,
+        Speed = Client?.Speed ?? new Traffic(),
+        AccountTraffic = Client?.AccountTraffic ?? new Traffic(),
+        SessionTraffic = Client?.SessionTraffic ?? new Traffic(),
         ClientIpGroup = _lastClientIpGroup,
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = VersionStatus,
@@ -501,7 +501,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // check for any success
             if (Client != null)
             {
-                _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
+                _hasAnyDataArrived = Client.SessionTraffic.Received > 1000;
                 if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _lastException = new Exception("No data has arrived!");
             }

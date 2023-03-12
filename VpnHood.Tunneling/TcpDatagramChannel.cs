@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling.DatagramMessaging;
 
@@ -26,8 +27,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
     public JobSection? JobSection => null;
     public bool IsClosePending { get; private set; }
     public bool Connected { get; private set; }
-    public long SentByteCount { get; private set; }
-    public long ReceivedByteCount { get; private set; }
+    public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public TcpDatagramChannel(TcpClientStream tcpClientStream)
@@ -84,7 +84,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
 
             await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
             LastActivityTime = FastDateTime.Now;
-            SentByteCount += bufferIndex;
+            Traffic.Sent += bufferIndex;
         }
         finally
         {
@@ -107,7 +107,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
                     break;
 
                 LastActivityTime = FastDateTime.Now;
-                ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
+                Traffic.Received += ipPackets.Sum(x => x.TotalPacketLength);
 
                 // check datagram message
                 List<IPPacket>? processedPackets = null;

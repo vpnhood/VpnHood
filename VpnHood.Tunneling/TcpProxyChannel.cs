@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
@@ -25,8 +26,7 @@ public class TcpProxyChannel : IChannel, IJob
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public bool IsClosePending => false;
     public bool Connected { get; private set; }
-    public long SentByteCount { get; private set; }
-    public long ReceivedByteCount { get; private set; }
+    public Traffic Traffic { get; } = new ();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
@@ -174,9 +174,9 @@ public class TcpProxyChannel : IChannel, IJob
 
             // calculate transferred bytes
             if (!isSendingOut)
-                ReceivedByteCount += bytesRead;
+                Traffic.Received += bytesRead;
             else
-                SentByteCount += bytesRead;
+                Traffic.Sent += bytesRead;
 
             // set LastActivityTime as some data delegated
             LastActivityTime = FastDateTime.Now;

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Configurations;
@@ -298,8 +299,11 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
                 AvailableMemory = systemInfo.AvailableMemory,
                 CpuUsage = systemInfo.CpuUsage,
                 UsedMemory = Process.GetCurrentProcess().WorkingSet64,
-                TunnelSendSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.SendSpeed),
-                TunnelReceiveSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed),
+                TunnelSpeed = new Traffic
+                {
+                    Sent = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Sent),
+                    Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received),
+                },
                 ConfigCode = _lastConfigCode
             };
             return serverStatus;

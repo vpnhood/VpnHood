@@ -260,7 +260,7 @@ internal static class TestHelper
     {
         var options = new FileAccessServerOptions
         {
-            TcpEndPoints = new[] { Util.GetFreeTcpEndPoint(IPAddress.Loopback) },
+            TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,
@@ -279,12 +279,12 @@ internal static class TestHelper
 
     public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, bool autoStart = true, TimeSpan? configureInterval = null)
     {
-        return CreateServer(accessServer, null, autoStart);
+        return CreateServer(accessServer, null, autoStart, configureInterval);
     }
 
     public static VpnHoodServer CreateServer(FileAccessServerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
     {
-        return CreateServer(null, options, autoStart);
+        return CreateServer(null, options, autoStart, configureInterval);
     }
 
     private static VpnHoodServer CreateServer(IAccessServer? accessServer, FileAccessServerOptions? fileAccessServerOptions, bool autoStart,
@@ -426,7 +426,7 @@ internal static class TestHelper
         return new SessionRequestEx(token.TokenId,
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
-            encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
+            encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
     }
 
     public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
@@ -513,5 +513,6 @@ internal static class TestHelper
         });
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
+        JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
     }
 }

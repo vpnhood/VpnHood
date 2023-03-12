@@ -12,8 +12,8 @@ public interface IAccessServer : IDisposable
     bool IsMaintenanceMode { get; }
     Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx);
     Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp);
-    Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo);
-    Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo);
+    Task<SessionResponseBase> Session_AddUsage(uint sessionId, Traffic traffic);
+    Task<SessionResponseBase> Session_Close(uint sessionId, Traffic traffic);
     Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus);
     Task<ServerConfig> Server_Configure(ServerInfo serverInfo);
     Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint);

@@ -1,3 +1,10 @@
+# Upcoming
+### Client
+* Fix: Update Traffic Support
+
+### Server
+* Fix: Update Traffic Support
+
 # v2.7.357
 ### Client
 * Fix: Windows: Too long filter expression error

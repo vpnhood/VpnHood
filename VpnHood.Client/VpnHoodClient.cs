@@ -47,6 +47,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
+    private bool _disposed;
     private readonly bool _autoDisposePacketCapture;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly CancellationToken _cancellationToken;
@@ -56,7 +57,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly IPacketCapture _packetCapture;
     private readonly SendingPackets _sendingPacket = new();
     private readonly TcpProxyHost _tcpProxyHost;
-    private bool _disposed;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
@@ -68,6 +68,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private bool _udpChannelAdded;
     private DateTime _lastReceivedPacketTime = DateTime.MinValue;
+    private Traffic _helloTraffic = new ();
     private int ProtocolVersion { get; }
     private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
 
@@ -88,10 +89,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
     public bool ExcludeLocalNetwork { get; }
-    public long ReceiveSpeed => Tunnel.ReceiveSpeed;
-    public long ReceivedByteCount => Tunnel.ReceivedByteCount;
-    public long SendSpeed => Tunnel.SendSpeed;
-    public long SentByteCount => Tunnel.SentByteCount;
+    public Traffic Speed => Tunnel.Speed;
+    public Traffic SessionTraffic => Tunnel.Traffic;
+    public Traffic AccountTraffic => _helloTraffic + SessionTraffic;
     public bool UseUdpChannel { get; set; }
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
@@ -154,8 +154,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 #endif
     }
 
-    public byte[] SessionKey => _sessionKey ??
-                                throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized!");
+    public byte[] SessionKey => _sessionKey
+                                ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized!");
 
     public ClientState State
     {
@@ -712,6 +712,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // get session id
         SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
         _sessionKey = sessionResponse.SessionKey;
+        _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
         SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
         PublicAddress = sessionResponse.ClientPublicAddress;
         IsIpV6Supported = sessionResponse.IsIpV6Supported;
@@ -883,7 +884,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 SessionStatus.ErrorMessage = sessionException.SessionResponseBase.ErrorMessage;
                 SessionStatus.SuppressedBy = sessionException.SessionResponseBase.SuppressedBy;
                 if (sessionException.SessionResponseBase.AccessUsage != null) //update AccessUsage if exists
-                    SessionStatus.AccessUsage = sessionException.SessionResponseBase.AccessUsage;
+                {
+                    SessionStatus.AccessUsage = sessionException.SessionResponseBase.AccessUsage; 
+                    SessionStatus.AccessUsage.Traffic = _helloTraffic; // let calculate it on client
+                }
             }
             else
             {

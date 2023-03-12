@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Server;
+﻿using VpnHood.Common.Messaging;
+
+namespace VpnHood.Server;
 
 public class ServerStatus
 {
@@ -9,7 +11,6 @@ public class ServerStatus
     public int? CpuUsage { get; set; }
     public long UsedMemory { get; set; }
     public int ThreadCount { get; set; }
-    public long TunnelSendSpeed { get; set; }
-    public long TunnelReceiveSpeed { get; set; }
+    public Traffic TunnelSpeed { get; set; } = new();
     public string? ConfigCode { get; set; }
 }

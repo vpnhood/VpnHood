@@ -119,7 +119,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
-                accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
+                accessUsage.Traffic.Total > accessUsage.MaxTraffic)
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 

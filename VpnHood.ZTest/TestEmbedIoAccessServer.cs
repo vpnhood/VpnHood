@@ -133,10 +133,10 @@ public class TestEmbedIoAccessServer : IDisposable
         public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
         {
             _ = serverId;
-            var usageInfo = await GetRequestDataAsync<UsageInfo>();
+            var traffic = await GetRequestDataAsync<Traffic>();
             var res = closeSession
-                ? await AccessServer.Session_Close(sessionId, usageInfo)
-                : await AccessServer.Session_AddUsage(sessionId, usageInfo);
+                ? await AccessServer.Session_Close(sessionId, traffic)
+                : await AccessServer.Session_AddUsage(sessionId, traffic);
             return res;
 
         }

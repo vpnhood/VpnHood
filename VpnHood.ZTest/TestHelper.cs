@@ -279,12 +279,12 @@ internal static class TestHelper
 
     public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, bool autoStart = true, TimeSpan? configureInterval = null)
     {
-        return CreateServer(accessServer, null, autoStart);
+        return CreateServer(accessServer, null, autoStart, configureInterval);
     }
 
     public static VpnHoodServer CreateServer(FileAccessServerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
     {
-        return CreateServer(null, options, autoStart);
+        return CreateServer(null, options, autoStart, configureInterval);
     }
 
     private static VpnHoodServer CreateServer(IAccessServer? accessServer, FileAccessServerOptions? fileAccessServerOptions, bool autoStart,
@@ -513,5 +513,6 @@ internal static class TestHelper
         });
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
+        JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
     }
 }

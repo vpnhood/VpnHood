@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
@@ -27,7 +28,14 @@ public class UdpChannel : IDatagramChannel
     private IPEndPoint? _lastRemoteEp;
 
     public bool IsClosePending => false;
-    
+    public byte[] Key { get; }
+    public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
+    public bool Connected { get; private set; }
+    public Traffic Traffic { get; } = new();
+    public DateTime LastActivityTime { get; private set; }
+    public event EventHandler<ChannelEventArgs>? OnFinished;
+    public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+
     public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");
@@ -47,16 +55,6 @@ public class UdpChannel : IDatagramChannel
             udpClient.DontFragment = false; // Never call this for IPv6, it will throw exception for any value
 
     }
-
-    public byte[] Key { get; }
-    public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
-
-    public event EventHandler<ChannelEventArgs>? OnFinished;
-    public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
-    public bool Connected { get; private set; }
-    public long SentByteCount { get; private set; }
-    public long ReceivedByteCount { get; private set; }
-    public DateTime LastActivityTime { get; private set; }
 
     public Task Start()
     {
@@ -143,7 +141,7 @@ public class UdpChannel : IDatagramChannel
                 while (bufferIndex < buffer.Length)
                 {
                     var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
-                    ReceivedByteCount += ipPacket.TotalPacketLength;
+                    Traffic.Received += ipPacket.TotalPacketLength;
                     ipPackets.Add(ipPacket);
                 }
             }
@@ -193,7 +191,7 @@ public class UdpChannel : IDatagramChannel
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                     $"{VhLogger.FormatType(this)} is sending {bufferCount} bytes...");
 
-            var cryptoPos = _cryptorPosBase + SentByteCount;
+            var cryptoPos = _cryptorPosBase + Traffic.Sent;
             _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
             if (_isClient)
             {
@@ -211,7 +209,7 @@ public class UdpChannel : IDatagramChannel
                 throw new Exception(
                     $"{VhLogger.FormatType(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
 
-            SentByteCount += ret;
+            Traffic.Sent += ret;
             LastActivityTime = FastDateTime.Now;
         }
         catch (Exception ex)

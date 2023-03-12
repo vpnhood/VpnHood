@@ -29,7 +29,7 @@ public class WinApp : IDisposable
     private bool _disposed;
     private bool _showWindowAfterStart;
     private string AppLocalDataPath { get; }
-    public Uri LocalHostUrl = new($"http://myvpnhood");
+    public Uri LocalHostUrl = new("http://myvpnhood");
 
     public WinApp()
     {
@@ -94,6 +94,7 @@ public class WinApp : IDisposable
         }
         catch
         {
+            // ignored
         }
 
         // configuring Windows Firewall
@@ -242,7 +243,7 @@ public class WinApp : IDisposable
 
     public void OpenMainWindow()
     {
-        if (_webViewWindow != null && _webViewWindow.IsInitCompleted)
+        if (_webViewWindow is { IsInitCompleted: true })
             _webViewWindow.Show();
         else
             OpenMainWindowInBrowser();
@@ -321,7 +322,7 @@ public class WinApp : IDisposable
         var menu = (ContextMenuStrip)sender!;
         menu.Items["connect"].Enabled = VhApp.IsIdle;
         menu.Items["disconnect"].Enabled = !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
-        menu.Items["open"].Visible = _webViewWindow != null && _webViewWindow.IsInitCompleted;
+        menu.Items["open"].Visible = _webViewWindow is { IsInitCompleted: true };
         menu.Items["openInBrowser"].Visible = true;
     }
 
@@ -400,11 +401,12 @@ public class WinApp : IDisposable
     private void RegisterLocalDomain()
     {
         var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
-        var hosts = File.ReadLines(hostsFilePath);
+        var hosts = File.ReadLines(hostsFilePath).ToList();
         var hostItem = $"{LocalHostIpAddress} {LocalHostUrl.Host}";
+        
         if (!hosts.Contains(hostItem))
         {
-            hosts = hosts.Concat(new[] { hostItem });
+            hosts.Add(hostItem);
             File.WriteAllLines(hostsFilePath, hosts.ToArray());
         }
     }

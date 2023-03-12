@@ -5,7 +5,6 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Messaging;
-using VpnHood.Server;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
@@ -117,42 +116,42 @@ public class FileAccessServerTest
         // ************
         // *** TEST ***: add sent and receive bytes
         var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, 
-            new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            new Traffic { Sent = 20, Received = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(20, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(20, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
 
         response = accessServer1.Session_AddUsage(sessionResponse.SessionId, 
-            new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            new Traffic { Sent = 20, Received = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
 
         response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
             sessionRequestEx1.ClientIp).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
 
         // close session
         response = accessServer1.Session_Close(sessionResponse.SessionId, 
-            new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            new Traffic {Sent = 20, Received = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
-        Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
 
         // check is session closed
         response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
             sessionRequestEx1.ClientIp).Result;
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode);
-        Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
 
         // check restore
         var accessServer2 = TestHelper.CreateFileAccessServer(storagePath : storagePath);
         response = accessServer2.Session_Create(sessionRequestEx1).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
-        Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
-        Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
+        Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
+        Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
     }
 }

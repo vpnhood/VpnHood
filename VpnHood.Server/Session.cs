@@ -17,7 +17,6 @@ using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
-using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Server;
@@ -45,9 +44,9 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance, "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
     private readonly EventReporter _filterReporter = new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
     private bool _isSyncing;
-    private long _syncReceivedTraffic;
-    private long _syncSentTraffic;
+    private readonly Traffic _syncTraffic = new ();
     private int _tcpConnectWaitCount;
+    private readonly JobSection _syncJobSection;
 
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
@@ -56,7 +55,7 @@ public class Session : IAsyncDisposable, IJob
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
-    public JobSection JobSection { get; }
+    public JobSection JobSection { get; } = new();
     public HelloRequest? HelloRequest { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.TcpProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
@@ -97,12 +96,11 @@ public class Session : IAsyncDisposable, IJob
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
+        _syncJobSection = new JobSection(options.SyncIntervalValue);
         HelloRequest = helloRequest;
         SessionResponse = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        JobSection = new JobSection(options.SyncIntervalValue);
-
         var tunnelOptions = new TunnelOptions
         {
             MaxDatagramChannelCount = options.MaxDatagramChannelCountValue
@@ -120,7 +118,8 @@ public class Session : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
-        return Sync(true, false);
+        using var jobLock =  _syncJobSection.Enter();
+        return Sync(jobLock.IsEntered, false);
     }
 
     public bool UseUdpChannel
@@ -193,34 +192,32 @@ public class Session : IAsyncDisposable, IJob
         using var scope = VhLogger.Instance.BeginScope(
             $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}, TokenId: {VhLogger.FormatId(HelloRequest?.TokenId)}");
 
-        UsageInfo usageParam;
+        Traffic traffic;
         lock (_syncLock)
         {
             if (_isSyncing)
                 return;
 
-            usageParam = new UsageInfo
+            traffic = new Traffic
             {
-                SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
-                ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
+                Sent = Tunnel.Traffic.Received - _syncTraffic.Sent, // Intentionally Reversed: sending to tunnel means receiving form client,
+                Received = Tunnel.Traffic.Sent - _syncTraffic.Received // Intentionally Reversed: receiving from tunnel means sending for client
             };
 
-            var usedTraffic = usageParam.ReceivedTraffic + usageParam.SentTraffic;
-            var shouldSync = closeSession || (force && usedTraffic > 0) || usedTraffic >= _syncCacheSize;
+            var shouldSync = closeSession || (force && traffic.Total > 0) || traffic.Total >= _syncCacheSize;
             if (!shouldSync)
                 return;
 
             // reset usage and sync time; no matter it is successful or not to prevent frequent call
-            _syncSentTraffic += usageParam.SentTraffic;
-            _syncReceivedTraffic += usageParam.ReceivedTraffic;
+            _syncTraffic.Add(traffic);
             _isSyncing = true;
         }
 
         try
         {
             SessionResponse = closeSession
-                ? await _accessServer.Session_Close(SessionId, usageParam)
-                : await _accessServer.Session_AddUsage(SessionId, usageParam);
+                ? await _accessServer.Session_Close(SessionId, traffic)
+                : await _accessServer.Session_AddUsage(SessionId, traffic);
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)

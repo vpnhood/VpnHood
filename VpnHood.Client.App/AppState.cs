@@ -1,4 +1,5 @@
 ﻿using System;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client.App;
 
@@ -15,10 +16,9 @@ public class AppState
     public bool HasDisconnectedByUser { get; internal set; }
     public bool HasProblemDetected { get; internal set; }
     public SessionStatus? SessionStatus { get; internal set; }
-    public long SendSpeed { get; internal set; }
-    public long SentTraffic { get; internal set; }
-    public long ReceiveSpeed { get; internal set; }
-    public long ReceivedTraffic { get; internal set; }
+    public Traffic Speed { get; internal set; } = new ();
+    public Traffic SessionTraffic { get; internal set; } = new ();
+    public Traffic AccountTraffic { get; internal set; } = new ();
     public IpGroup? ClientIpGroup { get; internal set; }
     public bool IsWaitingForAd { get; internal set; }
     public VersionStatus VersionStatus { get; internal set; }

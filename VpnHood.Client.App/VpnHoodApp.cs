@@ -14,6 +14,7 @@ using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
@@ -128,10 +129,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         HasDisconnectedByUser = _hasDisconnectedByUser,
         HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
         SessionStatus = LastSessionStatus,
-        ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
-        ReceivedTraffic = Client?.ReceivedByteCount ?? 0,
-        SendSpeed = Client?.SendSpeed ?? 0,
-        SentTraffic = Client?.SentByteCount ?? 0,
+        Speed = Client?.Speed ?? new Traffic(),
+        AccountTraffic = Client?.AccountTraffic ?? new Traffic(),
+        SessionTraffic = Client?.SessionTraffic ?? new Traffic(),
         ClientIpGroup = _lastClientIpGroup,
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = VersionStatus,
@@ -389,9 +389,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
-        if (!Util.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
             packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
-        if (!Util.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
+        if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
             packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
 
         // create clientOptions
@@ -446,7 +446,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
     {
-        if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipGroupIds))
+        if (filterMode == FilterMode.All || VhUtil.IsNullOrEmpty(ipGroupIds))
             return null;
 
         if (filterMode == FilterMode.Include)
@@ -501,7 +501,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // check for any success
             if (Client != null)
             {
-                _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
+                _hasAnyDataArrived = Client.SessionTraffic.Received > 1000;
                 if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _lastException = new Exception("No data has arrived!");
             }
@@ -591,7 +591,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
             using var httpClient = new HttpClient();
             var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl); 
-            LatestPublishInfo = Util.JsonDeserialize<PublishInfo>(publishInfoJson);
+            LatestPublishInfo = VhUtil.JsonDeserialize<PublishInfo>(publishInfoJson);
 
             // Check version
             if (LatestPublishInfo.Version == null)

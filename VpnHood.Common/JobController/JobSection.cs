@@ -8,12 +8,13 @@ public class JobSection
     private readonly object _lockObject = new();
     private bool _runnerEntered;
     private bool _normalEntered;
-
+    
     private bool ShouldEnter => Elapsed > Interval && !_normalEntered;
     private bool ShouldRunnerEnter => Elapsed > Interval && !_normalEntered && !_runnerEntered;
 
+    public static TimeSpan DefaultInterval { get; set; }  = TimeSpan.FromSeconds(30);
     public TimeSpan Elapsed => FastDateTime.Now - LastDoneTime;
-    public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan Interval { get; set; } = DefaultInterval;
     public DateTime LastDoneTime { get; private set; } = FastDateTime.Now;
 
     public JobSection()

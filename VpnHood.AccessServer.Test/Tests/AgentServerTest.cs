@@ -269,13 +269,13 @@ public class AgentServerTest
         // check: Check ServerStatus log is inserted
         //-----------
         var serverStatus = TestInit.NewServerStatus(null, randomStatus: true);
-        await serverDom.UpdateStatus(serverStatus);
+        await serverDom.SendStatus(serverStatus);
 
         dateTime = DateTime.UtcNow;
         await Task.Delay(500);
-        await serverDom.UpdateStatus(serverStatus);
+        await serverDom.SendStatus(serverStatus);
         await farm.TestInit.Sync();
-        await serverDom.UpdateStatus(serverStatus); // last status will not be synced
+        await serverDom.SendStatus(serverStatus); // last status will not be synced
         await farm.TestInit.Sync();
 
         await serverDom.Reload();
@@ -383,7 +383,7 @@ public class AgentServerTest
         await farm1.DefaultServer.Client.UpdateAsync(farm1.ProjectId, farm1.DefaultServer.ServerId,
             new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } });
 
-        var serverCommand = await farm1.DefaultServer.UpdateStatus(new ServerStatus { ConfigCode = oldCode });
+        var serverCommand = await farm1.DefaultServer.SendStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
             "Updating ServerFarmId should lead to a new ConfigCode");
     }
@@ -527,7 +527,7 @@ public class AgentServerTest
         await sampler.TestInit.AgentCacheClient.InvalidateProject(sampler.ProjectId);
 
         // update status again
-        await server.UpdateStatus(server.ServerInfo.Status);
+        await server.SendStatus(server.ServerInfo.Status);
         var servers = await sampler.TestInit.AgentCacheClient.GetServers(sampler.ProjectId);
         Assert.IsTrue(servers.Any(x => x.ServerId == server.ServerId));
     }
@@ -574,16 +574,16 @@ public class AgentServerTest
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();
 
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 1 });
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 2 });
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 3 });
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 4, AvailableMemory = 100, CpuUsage = 2 });
+        await serverDom1.SendStatus(new ServerStatus { SessionCount = 1 });
+        await serverDom1.SendStatus(new ServerStatus { SessionCount = 2 });
+        await serverDom1.SendStatus(new ServerStatus { SessionCount = 3 });
+        await serverDom1.SendStatus(new ServerStatus { SessionCount = 4, AvailableMemory = 100, CpuUsage = 2 });
         await testInit.FlushCache();
 
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 9 });
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 10 });
-        await serverDom2.UpdateStatus(new ServerStatus { SessionCount = 19 });
-        await serverDom2.UpdateStatus(new ServerStatus { SessionCount = 20 });
+        await serverDom1.SendStatus(new ServerStatus { SessionCount = 9 });
+        await serverDom1.SendStatus(new ServerStatus { SessionCount = 10 });
+        await serverDom2.SendStatus(new ServerStatus { SessionCount = 19 });
+        await serverDom2.SendStatus(new ServerStatus { SessionCount = 20 });
 
         var serverData1 = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom1.ServerId);
         Assert.AreEqual(serverData1.Server.ServerStatus?.SessionCount, 10);

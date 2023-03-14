@@ -1,0 +1,11 @@
+﻿using System;
+
+namespace VpnHood.AccessServer.Dtos.ServerProfileDtos;
+
+public class ServerProfile
+{
+    public required Guid ServerProfileId { get; init; }
+    public required string ServerProfileName { get; init; }
+    public required bool IsDefault { get; init; }
+    public string? ServerConfig { get; init; }
+}

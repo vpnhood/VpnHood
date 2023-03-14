@@ -7,6 +7,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using GrayMint.Common.Exceptions;
 using VpnHood.Common;
+using VpnHood.Server.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -69,10 +70,12 @@ public class ServerFarmTest
         //-----------
         // check: update 
         //-----------
+        var serverProfile2 = await ServerProfileDom.Create(testInit);
         var certificateClient = testInit.CertificatesClient;
         var certificate2 = await certificateClient.CreateAsync(farm1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
         var updateParam = new ServerFarmUpdateParams
         {
+            ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
             CertificateId = new PatchOfGuid { Value = certificate2.CertificateId },
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" }
         };
@@ -81,6 +84,7 @@ public class ServerFarmTest
         await farm1.Reload();
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
         Assert.AreEqual(updateParam.CertificateId.Value, farm1.ServerFarm.CertificateId);
+        Assert.AreEqual(updateParam.ServerProfileId.Value, farm1.ServerFarm.ServerProfileId);
 
         //-----------
         // check: AlreadyExists exception
@@ -186,5 +190,23 @@ public class ServerFarmTest
         {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
+    }
+
+    [TestMethod]
+    public async Task Reconfigure_all_servers_on_update_server_profile()
+    {
+        var farm = await ServerFarmDom.Create();
+        var serverDom1 = await farm.AddNewServer();
+        var serverDom2 = await farm.AddNewServer();
+        var serverProfileDom = await ServerProfileDom.Create(farm.TestInit);
+
+        await farm.Update(new ServerFarmUpdateParams
+        {
+            ServerProfileId = new PatchOfGuid { Value = serverProfileDom.ServerProfileId }
+        });
+
+        // check serverConfig
+        Assert.AreNotEqual(serverDom1.ServerStatus.ConfigCode, (await serverDom1.SendStatus()).ConfigCode);
+        Assert.AreNotEqual(serverDom2.ServerStatus.ConfigCode, (await serverDom2.SendStatus()).ConfigCode);
     }
 }

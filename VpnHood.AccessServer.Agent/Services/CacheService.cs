@@ -46,6 +46,7 @@ public class CacheService
             .Include(serverStatus => serverStatus.Server)
             .Include(serverStatus => serverStatus.Server!.Project)
             .Include(serverStatus => serverStatus.Server!.AccessPoints)
+            .Include(serverStatus => serverStatus.Server!.ServerFarm)
             .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
             .ToArrayAsync();
 
@@ -122,6 +123,7 @@ public class CacheService
             return server;
 
         server = await _vhContext.Servers
+            .Include(x => x.ServerFarm)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
             .AsNoTracking()
             .SingleAsync(x => x.ServerId == serverId && !x.IsDeleted);
@@ -222,11 +224,16 @@ public class CacheService
             server.Project = project;
     }
 
-    public async Task InvalidateProjectServers(Guid projectId)
+    public async Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
-        foreach (var server in Mem.Servers.Values.Where(server => server.ProjectId == projectId))
+        var servers = Mem.Servers.Values.Where(server =>
+                server.ProjectId == projectId &&
+                (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
+                (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId));
+
+        foreach (var server in servers)
         {
-            await Task.Delay(100); // don't put pressure on db
+            await Task.Delay(50); // don't put pressure on db
             await InvalidateServer(server.ServerId);
         }
     }

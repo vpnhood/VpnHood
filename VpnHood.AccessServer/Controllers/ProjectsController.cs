@@ -58,12 +58,21 @@ public class ProjectsController : SuperController<ProjectsController>
         if (userProjectOwnerCount >= user.MaxProjectCount)
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 
-        // Groups
+        // ServerProfile
+        var serverProfile = new ServerProfileModel
+        {
+            ServerProfileId = Guid.NewGuid(),
+            ServerProfileName = "(Default)",
+            IsDefault = true,
+        };
+
+        // Farm
         var serverFarm = new ServerFarmModel
         {
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
-            Certificate = CertificatesController.CreateInternal(projectId.Value, null)
+            Certificate = CertificatesController.CreateInternal(projectId.Value, null),
+            ServerProfile = serverProfile
         };
 
         // create project
@@ -71,6 +80,10 @@ public class ProjectsController : SuperController<ProjectsController>
         {
             ProjectId = projectId.Value,
             SubscriptionType = SubscriptionType.Free,
+            ServerProfiles = new HashSet<ServerProfileModel>
+            {
+                serverProfile,
+            },
             ServerFarms = new HashSet<ServerFarmModel>
             {
                 serverFarm,

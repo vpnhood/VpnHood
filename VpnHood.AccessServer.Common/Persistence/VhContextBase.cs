@@ -148,7 +148,7 @@ public abstract class VhContextBase : DbContext
             entity.HasKey(e => e.ServerId);
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerName })
-                .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL and {nameof(ServerModel.IsDeleted)} = 0")
+                .HasFilter($"{nameof(ServerModel.IsDeleted)} = 0")
                 .IsUnique();
 
             entity.Property(e => e.Description)
@@ -259,7 +259,7 @@ public abstract class VhContextBase : DbContext
             entity.HasKey(e => e.ServerFarmId);
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerFarmName })
-                .HasFilter($"{nameof(ServerFarmModel.ServerFarmName)} IS NOT NULL AND {nameof(ServerFarmModel.IsDeleted)} = 0")
+                .HasFilter($"{nameof(ServerFarmModel.IsDeleted)} = 0")
                 .IsUnique();
 
             entity.Property(e => e.ServerFarmName)
@@ -354,6 +354,22 @@ public abstract class VhContextBase : DbContext
         modelBuilder.Entity<ServerProfileModel>(entity =>
         {
             entity.HasKey(x => x.ServerProfileId);
+
+            entity.HasIndex(e => new { e.ProjectId, e.ServerProfileName })
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.ProjectId, e.IsDefault })
+                .HasFilter($"{nameof(ServerProfileModel.IsDefault)} = 1")
+                .IsUnique();
+
+            entity.Property(x => x.ServerProfileName)
+                .HasMaxLength(200);
+
+            entity.Property(x => x.IsDefault)
+                .HasDefaultValue(false);
+
+            entity.Property(x => x.IsDeleted)
+                .HasDefaultValue(false);
         });
     }
 }

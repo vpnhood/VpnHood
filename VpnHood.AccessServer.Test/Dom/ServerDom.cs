@@ -110,7 +110,7 @@ public class ServerDom
     {
         ServerConfig = await AgentClient.Server_Configure(ServerInfo);
         if (updateStatus)
-            await UpdateStatus(ServerInfo.Status);
+            await SendStatus(ServerInfo.Status);
     }
 
     public async Task<ServerCommand> SendStatus(bool overwriteConfigCode = true)
@@ -120,7 +120,7 @@ public class ServerDom
         return await AgentClient.Server_UpdateStatus(ServerInfo.Status);
     }
 
-    public async Task<ServerCommand> UpdateStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
+    public async Task<ServerCommand> SendStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
     {
         if (overwriteConfigCode) serverStatus.ConfigCode = ServerConfig.ConfigCode;
         return await AgentClient.Server_UpdateStatus(serverStatus);

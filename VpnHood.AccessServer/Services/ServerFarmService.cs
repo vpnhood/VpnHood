@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerFarmDtos;
@@ -14,11 +15,14 @@ namespace VpnHood.AccessServer.Services;
 public class ServerFarmService
 {
     private readonly VhContext _vhContext;
+    private readonly ServerService _serverService;
 
     public ServerFarmService(
-        VhContext vhContext)
+        VhContext vhContext,
+        ServerService serverService)
     {
         _vhContext = vhContext;
+        _serverService = serverService;
     }
     public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
@@ -51,11 +55,17 @@ public class ServerFarmService
             createParams.ServerFarmName = AccessUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
 
+        // Set ServerProfileId
+        var serverProfile = await _vhContext.ServerProfiles
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => (createParams.ServerProfileId == null && x.IsDefault) || x.ServerProfileId == createParams.ServerProfileId);
+
         var id = Guid.NewGuid();
         var ret = new ServerFarmModel
         {
             ProjectId = projectId,
             ServerFarmId = id,
+            ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
             CertificateId = certificate.CertificateId,
             CreatedTime = DateTime.UtcNow
@@ -69,6 +79,7 @@ public class ServerFarmService
     public async Task<ServerFarm> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         var serverFarm = await _vhContext.ServerFarms
+            .Include(x => x.ServerProfile)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerFarmId == serverFarmId);
 
@@ -84,19 +95,34 @@ public class ServerFarmService
         if (certificate != null)
             serverFarm.CertificateId = certificate.CertificateId;
 
+        // Set ServerProfileId
+        var isServerProfileChanged = updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId;
+        if (isServerProfileChanged)
+        {
+            var serverProfile = await _vhContext.ServerProfiles
+                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+                .SingleAsync(x => x.ServerProfileId == updateParams.ServerProfileId!);
+
+            serverFarm.ServerProfileId = serverProfile.ServerProfileId;
+        }
+
         // update
         _vhContext.ServerFarms.Update(serverFarm);
         await _vhContext.SaveChangesAsync();
 
+        // update cache after save
+        if (isServerProfileChanged)
+            await _serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
+
         return serverFarm.ToDto();
     }
-
 
     public async Task<ServerFarmData[]> List(Guid projectId, string? search = null,
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = _vhContext.ServerFarms
+            .Include(x => x.ServerProfile)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
@@ -127,15 +153,16 @@ public class ServerFarmService
     {
         var now = DateTime.UtcNow;
         var query = _vhContext.ServerFarms
+            .Include(x => x.ServerProfile)
             .Include(x => x.Servers)
             .Include(x => x.AccessTokens)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
-                x.ServerFarmName!.Contains(search) ||
+                x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
-            .OrderBy(x=>x.ServerFarmName)
+            .OrderBy(x => x.ServerFarmName)
             .Select(x => new ServerFarmData
             {
                 ServerFarm = x.ToDto(),
@@ -145,10 +172,10 @@ public class ServerFarmService
                     InactiveTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime < now.AddDays(-7)),
                     UnusedTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.FirstUsedTime == null),
                     TotalTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted),
-                    ServerCount = x.Servers!.Count(server=>!server.IsDeleted)
+                    ServerCount = x.Servers!.Count(server => !server.IsDeleted)
                 }
             });
-   
+
         // get farms
         var serverFarms = await query
             .Skip(recordIndex)
@@ -162,16 +189,16 @@ public class ServerFarmService
     public async Task Delete(Guid projectId, Guid serverFarmId)
     {
         var serverFarm = await _vhContext.ServerFarms
-            .Include(x => x.Servers)
+            .Include(x => x.Servers!.Where(y => !y.IsDeleted))
             .Include(x => x.AccessTokens)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == serverFarmId);
 
-        if (serverFarm.Servers!.Any(x => !x.IsDeleted))
+        if (serverFarm.Servers!.Any())
             throw new InvalidOperationException("A farm with a server can not be deleted.");
 
         serverFarm.IsDeleted = true;
-        foreach(var accessToken in serverFarm.AccessTokens!)
+        foreach (var accessToken in serverFarm.AccessTokens!)
             accessToken.IsDeleted = true;
 
         await _vhContext.SaveChangesAsync();

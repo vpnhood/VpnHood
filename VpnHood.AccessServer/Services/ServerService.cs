@@ -13,6 +13,7 @@ using System.Net;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Dtos.ServerDtos;
+using VpnHood.AccessServer.ServerUtils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -58,7 +59,7 @@ public class ServerService
             serverName = AccessUtil.FindUniqueName(serverName, names);
         }
 
-        var serverModel = new ServerModel
+        var server = new ServerModel
         {
             ProjectId = projectId,
             ServerId = Guid.NewGuid(),
@@ -73,13 +74,11 @@ public class ServerService
             AutoConfigure = createParams.AccessPoints == null,
         };
 
-        await _vhContext.Servers.AddAsync(serverModel);
+        await _vhContext.Servers.AddAsync(server);
         await _vhContext.SaveChangesAsync();
 
-        var server = serverModel.ToDto(
-            serverFarm.ServerFarmName,
-            null, _appOptions.LostServerThreshold);
-        return server;
+        var serverDto = server.ToDto(null, _appOptions.LostServerThreshold);
+        return serverDto;
 
     }
 
@@ -90,6 +89,7 @@ public class ServerService
 
         // validate
         var server = await _vhContext.Servers
+            .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerId == serverId);
 
@@ -122,7 +122,6 @@ public class ServerService
         await _agentCacheClient.InvalidateServer(server.ServerId);
 
         var serverDto = server.ToDto(
-            server.ServerFarm?.ServerFarmName,
             serverCache?.ServerStatus,
             _appOptions.LostServerThreshold);
 
@@ -169,7 +168,6 @@ public class ServerService
             .Select(serverModel => new ServerData
             {
                 Server = serverModel.ToDto(
-                    serverModel.ServerFarm?.ServerFarmName,
                     serverModel.ServerStatus?.ToDto(),
                     _appOptions.LostServerThreshold)
             })
@@ -244,5 +242,75 @@ public class ServerService
             throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         return accessPoints.Select(x => x.ToModel()).ToList();
+    }
+
+    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
+    {
+        // no lock
+        await using var trans = await _vhContext.WithNoLockTransaction();
+
+        /*
+        var query = VhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
+            .GroupJoin(VhContext.ServerStatuses,
+                server => new { key1 = server.ServerId, key2 = true },
+                serverStatus => new { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast },
+                (server, serverStatus) => new { server, serverStatus })
+            .SelectMany(
+                joinResult => joinResult.serverStatus.DefaultIfEmpty(),
+                (x, y) => new { Server = x.server, ServerStatus = y })
+            .Select(s => new { s.Server, s.ServerStatus });
+
+        // update model ServerStatusEx
+        var serverModels = await query.ToArrayAsync();
+        var servers = serverModels
+            .Select(x => x.Server.ToDto(x.ServerStatus?.ToDto(), _appOptions.LostServerThreshold))
+            .ToArray();
+        */
+
+        var serverModels = await _vhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
+            .ToArrayAsync();
+
+        // update model ServerStatusEx
+        var servers = serverModels
+            .Select(server => server.ToDto(server.ServerStatus?.ToDto(), _appOptions.LostServerThreshold))
+            .ToArray();
+
+        // update status from cache
+        var cachedServers = await _agentCacheClient.GetServers(projectId);
+        ServerUtil.UpdateByCache(servers, cachedServers);
+
+        // create usage summary
+        var usageSummary = new ServersStatusSummary
+        {
+            TotalServerCount = servers.Length,
+            NotInstalledServerCount = servers.Count(x => x.ServerStatus is null),
+            ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
+            IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
+            LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
+            SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
+            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
+            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
+        };
+
+        return usageSummary;
+    }
+
+    public async Task ReconfigServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    {
+        var servers = await _vhContext.Servers.Where(server =>
+            server.ProjectId == projectId &&
+            (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
+            (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId))
+            .ToArrayAsync();
+
+        foreach (var server in servers)
+            server.ConfigCode = Guid.NewGuid();
+
+        await _vhContext.SaveChangesAsync();
+        await _agentCacheClient.InvalidateProjectServers(projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
     }
 }

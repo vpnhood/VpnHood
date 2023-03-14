@@ -268,14 +268,14 @@ public class ServerTest
 
         // lost
         var sampleServer = await farm.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 10 });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 10 });
         await Task.Delay(2000);
 
         // active 2
         sampleServer = await farm.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic{Received = 100, Sent = 50 }});
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic{Received = 100, Sent = 50 }});
         sampleServer = await farm.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
         // notInstalled 4
         await farm.AddNewServer(false);
@@ -285,15 +285,15 @@ public class ServerTest
 
         // idle1
         sampleServer = await farm.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
 
         // idle2
         sampleServer = await farm.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
 
         // idle3
         sampleServer = await farm.AddNewServer();
-        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
 
         var liveUsageSummary = await farm.TestInit.ServersClient.GetStatusSummaryAsync(farm.TestInit.ProjectId);
         Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
@@ -355,13 +355,13 @@ public class ServerTest
         //-----------
         // check: update 
         //-----------
-        var oldConfig = (await serverDom.UpdateStatus(serverDom.ServerInfo.Status)).ConfigCode;
+        var oldConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
         var accessPoint3 = await testInit.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint3 } }
         });
-        var newConfig = (await serverDom.UpdateStatus(serverDom.ServerInfo.Status)).ConfigCode;
+        var newConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
         Assert.AreNotEqual(oldConfig, newConfig);
 
         await serverDom.Reload();

@@ -5,6 +5,7 @@ namespace VpnHood.AccessServer.Dtos.ServerFarmDtos;
 
 public class ServerFarmUpdateParams
 {
-    public Patch<string?>? ServerFarmName { get; set; }
+    public Patch<string>? ServerFarmName { get; set; }
     public Patch<Guid>? CertificateId { get; set; }
+    public Patch<Guid>? ServerProfileId { get; set; }
 }

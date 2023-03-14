@@ -2,17 +2,12 @@
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System;
-using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using System.Linq;
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
+using VpnHood.AccessServer.Dtos.ServerProfileDtos;
+using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -20,112 +15,52 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-profiles")]
 public class ServerProfilesController : SuperController<ServerProfilesController>
 {
+    private readonly ServerProfileService _serverProfileService;
+
     public ServerProfilesController(
         ILogger<ServerProfilesController> logger,
         VhContext vhContext,
+        ServerProfileService serverProfileService,
         MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
+        _serverProfileService = serverProfileService;
     }
 
     [HttpPost]
     public async Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectWrite);
-        createParams ??= new ServerProfileCreateParams();
-        var serverConfig = ServerConfig_FromJson(createParams.ServerConfig);
-
-        var serverProfileModel = new ServerProfileModel
-        {
-            ServerProfileId = Guid.NewGuid(),
-            ProjectId = projectId,
-            ServerConfig = ServerConfig_ToJson(serverConfig)
-        };
-
-        await VhContext.ServerProfiles.AddAsync(serverProfileModel);
-        await VhContext.SaveChangesAsync();
-        return serverProfileModel.ToDto();
+        return await _serverProfileService.Create(projectId, createParams);
     }
 
     [HttpGet("{serverProfileId:guid}")]
-    public async Task<ServerProfile> Get(Guid projectId, Guid serverProfileId)
+    public async Task<ServerProfileData> Get(Guid projectId, Guid serverProfileId)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        var dtos = await _serverProfileService.ListWithSummary(projectId, serverProfileId: serverProfileId);
 
-        var model = await VhContext.ServerProfiles
-            .Where(x => x.ProjectId == projectId)
-            .SingleAsync(x => x.ServerProfileId == serverProfileId);
-        return model.ToDto();
+        return dtos.Single();
     }
 
     [HttpPatch("{serverProfileId:guid}")]
     public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectWrite);
-
-        var model = await VhContext.ServerProfiles
-            .Where(x => x.ProjectId == projectId)
-            .SingleAsync(x => x.ServerProfileId == serverProfileId);
-
-        if (updateParams.ServerConfig != null)
-        {
-            var serveConfig = ServerConfig_FromJson(updateParams.ServerConfig.Value);
-            model.ServerConfig = ServerConfig_ToJson(serveConfig);
-        }
-
-        // todo: reconfig all servers
-
-        await VhContext.SaveChangesAsync();
-        return model.ToDto();
+        return await _serverProfileService.Update(projectId, serverProfileId, updateParams);
     }
-
 
     [HttpDelete("{serverProfileId:guid}")]
     public async Task Delete(Guid projectId, Guid serverProfileId)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectWrite);
-
-        var model = await VhContext.ServerProfiles
-            .Where(x => x.ProjectId == projectId)
-            .SingleAsync(x => x.ServerProfileId == serverProfileId);
-
-        VhContext.Remove(model);
-        await VhContext.SaveChangesAsync();
+        await _serverProfileService.Delete(projectId, serverProfileId);
     }
 
-    private static string? ServerConfig_ToJson(ServerConfig? serverConfig)
+    [HttpGet]
+    public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 101)
     {
-        var res = serverConfig != null ? JsonSerializer.Serialize(serverConfig) : null;
-        
-        if (res?.Length > 0xFFFF)
-            throw new Exception("ServerConfig is too big");
-
-        return res;
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        return await _serverProfileService.ListWithSummary(projectId, search, recordIndex: recordIndex, recordCount: recordCount);
     }
-
-    private static ServerConfig? ServerConfig_FromJson(string? serverConfigJson)
-    {
-        if (serverConfigJson == null)
-            return null;
-
-        var serverConfig = VhUtil.JsonDeserialize<ServerConfig>(serverConfigJson);
-
-        if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
-            throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));
-
-        if (!VhUtil.IsNullOrEmpty(serverConfig.TcpEndPoints))
-            throw new ArgumentException($"You can not set {nameof(serverConfig.TcpEndPoints)}.", nameof(serverConfig));
-
-        if (serverConfig.SessionOptions.SyncInterval!=null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)}.", nameof(serverConfig));
-
-        if (serverConfig.SessionOptions.SyncCacheSize < 100 * 1000000)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)} less than 100 MB");
-
-        if (serverConfig.UpdateStatusInterval != null && serverConfig.UpdateStatusInterval < TimeSpan.FromSeconds(60))
-            throw new ArgumentException($"You can not set {nameof(serverConfig.UpdateStatusInterval)} less than 60 seconds.", nameof(serverConfig));
-
-        return serverConfig;
-    }
-
 }

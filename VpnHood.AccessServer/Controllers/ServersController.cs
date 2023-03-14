@@ -15,6 +15,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
+using VpnHood.Server;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -58,7 +59,7 @@ public class ServersController : SuperController<ServersController>
         await VerifyUserPermission(projectId, Permissions.ServerWrite);
         return await _serverService.Update(projectId, serverId, updateParams);
     }
-    
+
     [HttpGet("{serverId:guid}")]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
@@ -226,45 +227,7 @@ public class ServersController : SuperController<ServersController>
     public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-
-        // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
-
-        var query =
-            from server in VhContext.Servers
-            join serverStatus in VhContext.ServerStatuses on
-                new { key1 = server.ServerId, key2 = true } equals new
-                { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
-            from serverStatus in g0.DefaultIfEmpty()
-            where server.ProjectId == projectId && !server.IsDeleted
-            where (serverFarmId == null || server.ServerFarmId == serverFarmId)
-            select server.ToDto(
-                null,
-                serverStatus != null ? serverStatus.ToDto() : null,
-                _appOptions.LostServerThreshold);
-
-        // update model ServerStatusEx
-        var servers = await query
-            .ToArrayAsync();
-
-        // update status from cache
-        var cachedServers = await _agentCacheClient.GetServers(projectId);
-        ServerUtil.UpdateByCache(servers, cachedServers);
-
-        // create usage summary
-        var usageSummary = new ServersStatusSummary
-        {
-            TotalServerCount = servers.Length,
-            NotInstalledServerCount = servers.Count(x => x.ServerStatus is null),
-            ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
-            IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
-            LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
-            SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
-            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
-            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
-        };
-
-        return usageSummary;
+        return await _serverService.GetStatusSummary(projectId, serverFarmId);
     }
 
     [HttpGet("status-history")]

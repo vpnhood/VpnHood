@@ -12,7 +12,9 @@ public static class ServerFarmConverter
             ServerFarmName = model.ServerFarmName,
             ServerFarmId = model.ServerFarmId,
             CertificateId = model.CertificateId,
-            CreatedTime = model.CreatedTime
+            CreatedTime = model.CreatedTime,
+            ServerProfileId = model.ServerProfileId,
+            ServerProfileName = model.ServerProfile?.ServerProfileName
         };
 
         return dto;

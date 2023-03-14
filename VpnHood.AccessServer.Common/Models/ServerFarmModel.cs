@@ -3,10 +3,10 @@
 public class ServerFarmModel
 {
     public Guid ServerFarmId { get; set; }
-    public string? ServerFarmName { get; set; }
+    public string ServerFarmName { get; set; } = default!;
     public Guid ProjectId { get; set; }
     public Guid CertificateId { get; set; }
-    public Guid? ServerProfileId { get; set; }
+    public Guid ServerProfileId { get; set; }
     public DateTime CreatedTime { get; set; }
     public bool IsDeleted { get; set; } = false;
 

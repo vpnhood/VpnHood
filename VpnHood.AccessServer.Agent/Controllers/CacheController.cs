@@ -29,7 +29,6 @@ public class CacheController : ControllerBase
             .Values
             .Where(x => x.ProjectId == projectId)
             .Select(x => x.ToDto(
-                x.ServerFarm?.ServerFarmName,
                 x.ServerStatus?.ToDto(),
                 _agentOptions.LostServerThreshold))
             .ToArray();
@@ -44,9 +43,9 @@ public class CacheController : ControllerBase
     }
 
     [HttpPost("projects/{projectId:guid}/invalidate-servers")]
-    public async Task InvalidateProjectServers(Guid projectId)
+    public async Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
-        await _cacheService.InvalidateProject(projectId);
+        await _cacheService.InvalidateProjectServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
     }
 
     [HttpGet("servers/{serverId:guid}")]
@@ -55,7 +54,6 @@ public class CacheController : ControllerBase
         var serverModel = await _cacheService.GetServer(serverId);
 
         var server = serverModel.ToDto(
-            serverModel.ServerFarm?.ServerFarmName,
             serverModel.ServerStatus?.ToDto(),
             _agentOptions.LostServerThreshold);
 

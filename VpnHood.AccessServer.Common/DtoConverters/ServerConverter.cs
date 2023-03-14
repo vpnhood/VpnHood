@@ -7,14 +7,13 @@ namespace VpnHood.AccessServer.DtoConverters;
 public static class ServerConverter
 {
     public static Dtos.Server ToDto(this ServerModel model, 
-        string? serverFarmName,
         ServerStatusEx? serverStatus,
         TimeSpan lostServerThreshold)
     {
         return new Dtos.Server
         {
             ServerFarmId = model.ServerFarmId,
-            ServerFarmName = serverFarmName,
+            ServerFarmName = model.ServerFarm?.ServerFarmName,
             ConfigureTime = model.ConfigureTime,
             CreatedTime = model.CreatedTime,
             Description = model.Description,

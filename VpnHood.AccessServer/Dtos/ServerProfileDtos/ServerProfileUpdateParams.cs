@@ -1,8 +1,9 @@
 ﻿using GrayMint.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos;
+namespace VpnHood.AccessServer.Dtos.ServerProfileDtos;
 
 public class ServerProfileUpdateParams
 {
+    public Patch<string>? ServerProfileName { get; set; }
     public Patch<string?>? ServerConfig { get; set; }
 }

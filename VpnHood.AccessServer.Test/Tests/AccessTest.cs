@@ -13,7 +13,6 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
-
     }
 
     [TestMethod]

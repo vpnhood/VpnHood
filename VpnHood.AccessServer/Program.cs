@@ -94,6 +94,7 @@ public class Program
         builder.Services.AddScoped<ServerService>();
         builder.Services.AddScoped<ServerFarmService>();
         builder.Services.AddScoped<SubscriptionService>();
+        builder.Services.AddScoped<ServerProfileService>();
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         // NLog: Setup NLog for Dependency injection

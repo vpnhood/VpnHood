@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
@@ -113,7 +114,7 @@ public class AgentService
 
             // update cache
             server.LastConfigError = null;
-            server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
+            server.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode) ? Guid.Parse(serverStatus.ConfigCode) : null;
             await _cacheService.UpdateServer(server);
 
             // update db
@@ -131,7 +132,6 @@ public class AgentService
     public async Task<ServerConfig> ConfigureServer(Guid serverId, ServerInfo serverInfo)
     {
         var server = await GetServer(serverId);
-        var project = server.Project ?? throw new Exception("Server project has not been loaded.");
         var saveServer = string.IsNullOrEmpty(serverInfo.LastError) || serverInfo.LastError != server.LastConfigError;
         _logger.Log(saveServer ? LogLevel.Information : LogLevel.Trace, AccessEventId.Server,
             "Configuring a Server. ServerId: {ServerId}, Version: {Version}",
@@ -142,7 +142,6 @@ public class AgentService
         await CheckServerVersion(server);
 
         // update cache
-        server.Version = serverInfo.Version.ToString();
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         server.OsInfo = serverInfo.OsInfo;
         server.MachineName = serverInfo.MachineName;
@@ -174,40 +173,71 @@ public class AgentService
             await _vhContext.SaveChangesAsync();
         }
 
+        var serverConfig = GetServerConfig(server);
+        return serverConfig;
+    }
+
+    private ServerConfig GetServerConfig(ServerModel server)
+    {
         var ipEndPoints = server.AccessPoints
             .Where(accessPoint => accessPoint.IsListen)
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
             .ToArray();
 
-        var trackClientIp = project.TrackClientIp;
-        var trackClientRequest = project.TrackClientRequest;
-
-        var ret = new ServerConfig
+        // defaults
+        var serverConfig = new ServerConfig
         {
-            TcpEndPoints = ipEndPoints,
-            ConfigCode = server.ConfigCode.ToString(),
-            UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             TrackingOptions = new TrackingOptions
             {
-                TrackClientIp = trackClientIp,
-                TrackLocalPort = trackClientRequest is TrackClientRequest.LocalPort or TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
-                TrackDestinationPort = trackClientRequest is TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
-                TrackDestinationIp = trackClientRequest is TrackClientRequest.LocalPortAndDstPortAndDstIp,
+                TrackTcp = true,
+                TrackUdp = true,
+                TrackIcmp = true,
+                TrackClientIp = true,
+                TrackLocalPort = true,
+                TrackDestinationPort = true,
+                TrackDestinationIp = true
             },
             SessionOptions = new Server.Configurations.SessionOptions
             {
-                Timeout = _agentOptions.SessionTemporaryTimeout,
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
-                SyncInterval = _agentOptions.SessionSyncInterval,
-                SyncCacheSize = _agentOptions.SyncCacheSize
             }
         };
 
-        // old version does not support null values
-        if (serverInfo.Version < new Version(2,7,355))
-            ret.ApplyDefaults();
+        // merge with profile
+        var serverProfileConfigJson = server.ServerFarm?.ServerProfile?.ServerConfig;
+        if (!string.IsNullOrEmpty(serverProfileConfigJson))
+        {
+            try
+            {
+                var serverProfileConfig = VhUtil.JsonDeserialize<ServerConfig>(serverProfileConfigJson);
+                serverConfig.Merge(serverProfileConfig);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(AccessEventId.Server, ex, "Could not deserialize ServerProfile's ServerConfig.");
+            }
+        }
 
-        return ret;
+        // enforced items
+        serverConfig.Merge(new ServerConfig
+        {
+            TcpEndPoints = ipEndPoints,
+            UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
+            SessionOptions = new Server.Configurations.SessionOptions
+            {
+                Timeout = _agentOptions.SessionTemporaryTimeout,
+                SyncInterval = _agentOptions.SessionSyncInterval,
+                SyncCacheSize = _agentOptions.SyncCacheSize
+            }
+        });
+        serverConfig.ConfigCode = server.ConfigCode.ToString(); // merge does not apply this
+
+        // old version does not support null values
+        if (Version.Parse(server.Version!) < new Version(2, 7, 355))
+            serverConfig.ApplyDefaults();
+
+        return serverConfig;
+
     }
 
     private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid serverId, Guid farmId, ServerInfo serverInfo)

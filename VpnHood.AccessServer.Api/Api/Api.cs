@@ -6655,10 +6655,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public string? ProjectName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("gaTrackId")]
+        [System.Text.Json.Serialization.JsonPropertyName("googleAnalyticsTrackId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? GaTrackId { get; set; } = default!;
+        public string? GoogleAnalyticsTrackId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("subscriptionType")]
 
@@ -6666,16 +6666,6 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public SubscriptionType SubscriptionType { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trackClientIp")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public bool? TrackClientIp { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trackClientRequest")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public TrackClientRequest? TrackClientRequest { get; set; } = default!;
 
     }
 
@@ -6688,20 +6678,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Runtime.Serialization.EnumMember(Value = @"Unlimited")]
         Unlimited = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum TrackClientRequest
-    {
-
-        Nothing = 0,
-
-        LocalPort = 1,
-
-        LocalPortAndDstPort = 2,
-
-        LocalPortAndDstPortAndDstIp = 3,
 
     }
 
@@ -6719,31 +6695,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfString? GoogleAnalyticsTrackId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("trackClientIp")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfBoolean? TrackClientIp { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("maxTcpCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfInteger? MaxTcpCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("trackClientRequest")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfTrackClientRequest? TrackClientRequest { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PatchOfTrackClientRequest
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("value")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public TrackClientRequest Value { get; set; } = default!;
 
     }
 

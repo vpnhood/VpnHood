@@ -47,6 +47,7 @@ public class CacheService
             .Include(serverStatus => serverStatus.Server!.Project)
             .Include(serverStatus => serverStatus.Server!.AccessPoints)
             .Include(serverStatus => serverStatus.Server!.ServerFarm)
+            .Include(serverStatus => serverStatus.Server!.ServerFarm!.ServerProfile)
             .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
             .ToArrayAsync();
 
@@ -124,6 +125,7 @@ public class CacheService
 
         server = await _vhContext.Servers
             .Include(x => x.ServerFarm)
+            .Include(x => x.ServerFarm!.ServerProfile)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
             .AsNoTracking()
             .SingleAsync(x => x.ServerId == serverId && !x.IsDeleted);

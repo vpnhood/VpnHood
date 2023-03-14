@@ -134,7 +134,7 @@ public class ServerProfileTest
         var serverDom4 = await farm2.AddNewServer();
 
         // update ServerProfile
-        var config = new ServerConfig { UpdateStatusInterval = TimeSpan.FromSeconds(151) };
+        var config = new ServerConfig { SessionOptions = new SessionOptions {TcpBufferSize = 0x2000} };
         await serverProfileDom.Update(new ServerProfileUpdateParams
         {
             ServerConfig = new PatchOfString {Value = JsonSerializer.Serialize(config) }
@@ -145,6 +145,12 @@ public class ServerProfileTest
         Assert.AreNotEqual(serverDom2.ServerStatus.ConfigCode, (await serverDom2.SendStatus()).ConfigCode);
         Assert.AreNotEqual(serverDom3.ServerStatus.ConfigCode, (await serverDom3.SendStatus()).ConfigCode);
         Assert.AreNotEqual(serverDom4.ServerStatus.ConfigCode, (await serverDom4.SendStatus()).ConfigCode);
+
+        // reconfig
+        await serverDom1.Configure();
+        Assert.AreEqual(config.SessionOptions.TcpBufferSize, serverDom1.ServerConfig.SessionOptions.TcpBufferSize);
+        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackTcp, "TrackTcp must be set by default");
+        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackLocalPort, "TrackTcp must be set by default");
     }
 
 }

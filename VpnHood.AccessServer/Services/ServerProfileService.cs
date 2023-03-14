@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerProfileDtos;
 using VpnHood.AccessServer.Models;
@@ -19,7 +18,7 @@ public class ServerProfileService
     private readonly ServerService _serverService;
 
     public ServerProfileService(
-        VhContext vhContext, 
+        VhContext vhContext,
         ServerService serverService)
     {
         _vhContext = vhContext;
@@ -60,7 +59,7 @@ public class ServerProfileService
     public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
     {
         var model = await _vhContext.ServerProfiles
-            .Include(x=>x.ServerFarms)
+            .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerProfileId == serverProfileId);
 
@@ -161,11 +160,20 @@ public class ServerProfileService
         if (serverConfig.SessionOptions.SyncInterval != null)
             throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)}.", nameof(serverConfig));
 
-        if (serverConfig.SessionOptions.SyncCacheSize < 100 * 1000000)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncInterval)} less than 100 MB");
+        if (serverConfig.SessionOptions.SyncCacheSize != null)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.SyncCacheSize)}.", nameof(serverConfig));
 
-        if (serverConfig.UpdateStatusInterval != null && serverConfig.UpdateStatusInterval < TimeSpan.FromSeconds(60))
-            throw new ArgumentException($"You can not set {nameof(serverConfig.UpdateStatusInterval)} less than 60 seconds.", nameof(serverConfig));
+        if (serverConfig.SessionOptions.Timeout != null)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.SessionOptions.Timeout)}.", nameof(serverConfig));
+
+        if (serverConfig.UpdateStatusInterval != null)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.UpdateStatusInterval)}.", nameof(serverConfig));
+
+        if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
+            throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));
+
+        if (serverConfig.SessionOptions.TcpBufferSize < 0x1000)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)} smaller than {0x1000}.", nameof(serverConfig));
 
         return serverConfig;
     }

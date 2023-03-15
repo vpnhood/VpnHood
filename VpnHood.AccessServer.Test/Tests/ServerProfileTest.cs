@@ -149,8 +149,8 @@ public class ServerProfileTest
         // reconfig
         await serverDom1.Configure();
         Assert.AreEqual(config.SessionOptions.TcpBufferSize, serverDom1.ServerConfig.SessionOptions.TcpBufferSize);
-        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackTcp, "TrackTcp must be set by default");
-        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackLocalPort, "TrackTcp must be set by default");
+        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackTcp, "TrackTcp must be set by default.");
+        Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackLocalPort, "TrackTcp must be set by default.");
     }
 
 }

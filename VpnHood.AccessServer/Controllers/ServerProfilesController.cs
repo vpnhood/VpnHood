@@ -58,9 +58,10 @@ public class ServerProfilesController : SuperController<ServerProfilesController
     }
 
     [HttpGet]
-    public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 101)
+    public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false, 
+        int recordIndex = 0, int recordCount = 101)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        return await _serverProfileService.ListWithSummary(projectId, search, recordIndex: recordIndex, recordCount: recordCount);
+        return await _serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, recordIndex: recordIndex, recordCount: recordCount);
     }
 }

@@ -103,8 +103,11 @@ public class ServerProfileService
     }
 
     public async Task<ServerProfileData[]> ListWithSummary(Guid projectId, string? search = null,
+        bool includeSummary = false,
         Guid? serverProfileId = null, int recordIndex = 0, int recordCount = int.MaxValue)
     {
+        _ = includeSummary; //not used yet
+
         var query = _vhContext.ServerProfiles
             .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)

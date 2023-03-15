@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerFarmDtos;
@@ -127,7 +126,7 @@ public class ServerFarmService
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
-                x.ServerFarmName!.Contains(search) ||
+                x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
             .OrderByDescending(x => x.ServerFarmName);
 

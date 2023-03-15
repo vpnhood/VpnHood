@@ -61,6 +61,15 @@ namespace VpnHood.AccessServer {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to (Default Server Profile).
+        /// </summary>
+        public static string DefaultServerProfile {
+            get {
+                return ResourceManager.GetString("DefaultServerProfile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Server Farm ##.
         /// </summary>
         public static string NewServerFarmTemplate {

@@ -62,7 +62,7 @@ public class ProjectsController : SuperController<ProjectsController>
         var serverProfile = new ServerProfileModel
         {
             ServerProfileId = Guid.NewGuid(),
-            ServerProfileName = "(Default)",
+            ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
         };
 

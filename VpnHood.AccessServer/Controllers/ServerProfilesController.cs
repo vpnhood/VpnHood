@@ -35,11 +35,10 @@ public class ServerProfilesController : SuperController<ServerProfilesController
     }
 
     [HttpGet("{serverProfileId:guid}")]
-    public async Task<ServerProfileData> Get(Guid projectId, Guid serverProfileId)
+    public async Task<ServerProfileData> Get(Guid projectId, Guid serverProfileId, bool includeSummary = false)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        var dtos = await _serverProfileService.ListWithSummary(projectId, serverProfileId: serverProfileId);
-
+        var dtos = await _serverProfileService.ListWithSummary(projectId, serverProfileId: serverProfileId, includeSummary: includeSummary);
         return dtos.Single();
     }
 
@@ -58,10 +57,11 @@ public class ServerProfilesController : SuperController<ServerProfilesController
     }
 
     [HttpGet]
-    public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false, 
+    public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 101)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        return await _serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, recordIndex: recordIndex, recordCount: recordCount);
+        return await _serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, 
+            recordIndex: recordIndex, recordCount: recordCount);
     }
 }

@@ -79,7 +79,7 @@ public class ServerNetFilterConfigTest
     public async Task PacketCapture_Include_Exclude_LocalNetwork()
     {
         var serverOptions = TestHelper.CreateFileAccessServerOptions();
-        serverOptions.NetFilterOptions.ExcludeLocalNetwork = true;
+        serverOptions.NetFilterOptions.IncludeLocalNetwork = false;
         serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("000.0.0.000 - 230.0.0.220") };
         serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100 - 230.0.0.250") };
 

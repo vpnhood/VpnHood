@@ -64,8 +64,7 @@ public class IpNetworkTest
         ipNetwork = IpNetwork.AllV6;
         Assert.AreEqual(0, ipNetwork.Invert().ToArray().Length);
 
-        CollectionAssert.AreEqual(new[] { IpNetwork.AllV4, IpNetwork.AllV6 },
-            Array.Empty<IpNetwork>().Invert().ToArray());
+        CollectionAssert.AreEqual(IpNetwork.All, Array.Empty<IpNetwork>().Invert().ToArray());
     }
 
     [TestMethod]

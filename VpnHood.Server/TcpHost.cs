@@ -27,13 +27,14 @@ internal class TcpHost : IAsyncDisposable
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
-    private bool _isIpV6Supported;
     private Task? _startTask;
     private bool _disposed;
 
+    public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public bool IsStarted { get; private set; }
+    public IPEndPoint[] TcpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
 
     public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
@@ -41,7 +42,7 @@ internal class TcpHost : IAsyncDisposable
         _sessionManager = sessionManager;
     }
 
-    public void Start(IPEndPoint[] tcpEndPoints, bool isIpV6Supported)
+    public void Start(IPEndPoint[] tcpEndPoints)
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
@@ -50,7 +51,6 @@ internal class TcpHost : IAsyncDisposable
         _cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _cancellationTokenSource.Token;
         IsStarted = true;
-        _isIpV6Supported = isIpV6Supported;
 
         try
         {
@@ -59,7 +59,7 @@ internal class TcpHost : IAsyncDisposable
             {
                 foreach (var tcpEndPoint in tcpEndPoints)
                 {
-                    VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(tcpEndPoint)}");
+                    VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpEndPoint));
                     cancellationToken.ThrowIfCancellationRequested();
                     var tcpListener = new TcpListener(tcpEndPoint);
                     tcpListener.Start();
@@ -67,6 +67,8 @@ internal class TcpHost : IAsyncDisposable
                     tasks.Add(ListenTask(tcpListener, cancellationToken));
                 }
             }
+
+            TcpEndPoints = tcpEndPoints;
             _startTask = Task.WhenAll(tasks);
         }
         catch
@@ -337,7 +339,6 @@ internal class TcpHost : IAsyncDisposable
             AccessUsage = sessionResponse.AccessUsage,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
-            IsIpV6Supported = _isIpV6Supported,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
             ErrorCode = SessionErrorCode.Ok

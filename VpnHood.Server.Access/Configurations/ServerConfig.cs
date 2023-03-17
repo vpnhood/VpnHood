@@ -22,7 +22,6 @@ public class ServerConfig
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan? UpdateStatusInterval { get; set; }
     public bool? LogAnonymizer { get; set; }
-    public bool? AllowIpV6 { get; set; }
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
@@ -31,7 +30,6 @@ public class ServerConfig
     [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
-    [JsonIgnore] public bool AllowIpV6Value => AllowIpV6 ?? true;
 
     public void Merge(ServerConfig obj)
     {
@@ -41,7 +39,6 @@ public class ServerConfig
         if (obj.TcpEndPoints != null) TcpEndPoints = obj.TcpEndPoints;
         if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
         if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;
-        if (obj.AllowIpV6 != null) AllowIpV6 = obj.AllowIpV6;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
     }
@@ -54,6 +51,5 @@ public class ServerConfig
         TcpEndPoints = TcpEndPointsValue;
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
-        AllowIpV6 = AllowIpV6Value;
     }
 }

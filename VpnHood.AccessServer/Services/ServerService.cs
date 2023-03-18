@@ -77,7 +77,7 @@ public class ServerService
         await _vhContext.Servers.AddAsync(server);
         await _vhContext.SaveChangesAsync();
 
-        var serverDto = server.ToDto(null, _appOptions.LostServerThreshold);
+        var serverDto = server.ToDto(_appOptions.LostServerThreshold);
         return serverDto;
 
     }
@@ -118,14 +118,9 @@ public class ServerService
             server.ConfigCode = Guid.NewGuid();
 
         await _vhContext.SaveChangesAsync();
-        var serverCache = await _agentCacheClient.GetServer(server.ServerId);
         await _agentCacheClient.InvalidateServer(server.ServerId);
-
-        var serverDto = server.ToDto(
-            serverCache?.ServerStatus,
-            _appOptions.LostServerThreshold);
-
-        return serverDto;
+        var serverCache = await _agentCacheClient.GetServer(server.ServerId);
+        return serverCache ?? server.ToDto(_appOptions.LostServerThreshold);
     }
 
     public async Task<ServerData[]> List(Guid projectId,
@@ -167,9 +162,7 @@ public class ServerService
         var serverDatas = servers
             .Select(serverModel => new ServerData
             {
-                Server = serverModel.ToDto(
-                    serverModel.ServerStatus?.ToDto(),
-                    _appOptions.LostServerThreshold)
+                Server = serverModel.ToDto(_appOptions.LostServerThreshold)
             })
             .ToArray();
 
@@ -276,7 +269,7 @@ public class ServerService
 
         // update model ServerStatusEx
         var servers = serverModels
-            .Select(server => server.ToDto(server.ServerStatus?.ToDto(), _appOptions.LostServerThreshold))
+            .Select(server => server.ToDto( _appOptions.LostServerThreshold))
             .ToArray();
 
         // update status from cache

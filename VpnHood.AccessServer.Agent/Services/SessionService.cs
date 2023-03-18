@@ -256,7 +256,7 @@ public class SessionService
         await _cacheService.AddSession(session);
         _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.SessionId);
 
-        _ = TrackSession(server, device, accessToken.ServerFarm!.ServerFarmName ?? "Group-" + accessToken.ServerFarmId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(server, device, accessToken.ServerFarm!.ServerFarmName, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }

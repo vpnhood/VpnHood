@@ -7,15 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Dtos.ServerDtos;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
-using VpnHood.Server;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Controllers;

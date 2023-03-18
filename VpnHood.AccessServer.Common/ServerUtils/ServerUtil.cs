@@ -11,7 +11,8 @@ public static class ServerUtil
     public static ServerState GetServerState(ServerModel serverModel, TimeSpan lostServerThreshold)
     {
         if (serverModel.ConfigureTime == null) return ServerState.NotInstalled;
-        if (serverModel.ServerStatus == null || serverModel.ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold) return ServerState.Lost;
+        if (serverModel.ServerStatus == null || serverModel.ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold) 
+            return ServerState.Lost;
         if (serverModel.ConfigCode != serverModel.LastConfigCode) return ServerState.Configuring;
         if (!serverModel.IsEnabled) return ServerState.Disabled;
         if (serverModel.ServerStatus.SessionCount == 0) return ServerState.Idle;

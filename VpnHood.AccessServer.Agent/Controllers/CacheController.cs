@@ -28,9 +28,7 @@ public class CacheController : ControllerBase
         var servers = (await _cacheService.GetServers())
             .Values
             .Where(x => x.ProjectId == projectId)
-            .Select(x => x.ToDto(
-                x.ServerStatus?.ToDto(),
-                _agentOptions.LostServerThreshold))
+            .Select(x => x.ToDto(_agentOptions.LostServerThreshold))
             .ToArray();
 
         return servers;
@@ -52,11 +50,7 @@ public class CacheController : ControllerBase
     public async Task<Dtos.Server?> GetServer(Guid serverId)
     {
         var serverModel = await _cacheService.GetServer(serverId);
-
-        var server = serverModel.ToDto(
-            serverModel.ServerStatus?.ToDto(),
-            _agentOptions.LostServerThreshold);
-
+        var server = serverModel.ToDto(_agentOptions.LostServerThreshold);
         return server;
     }
 

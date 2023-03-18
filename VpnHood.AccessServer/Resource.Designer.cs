@@ -61,7 +61,7 @@ namespace VpnHood.AccessServer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to (Default Server Profile).
+        ///   Looks up a localized string similar to (Default).
         /// </summary>
         public static string DefaultServerProfile {
             get {

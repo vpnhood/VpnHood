@@ -139,12 +139,13 @@ public class ServerProfileService
 
     private static string? ServerConfig_ToJson(ServerConfig? serverConfig)
     {
-        var res = serverConfig != null ? JsonSerializer.Serialize(serverConfig) : null;
-
-        if (res?.Length > 0xFFFF)
+        if (serverConfig == null) return null;
+        var serverConfigJson = JsonSerializer.Serialize(serverConfig);
+        
+        if (serverConfigJson.Length > 0xFFFF)
             throw new Exception("ServerConfig is too big");
 
-        return res;
+        return JsonSerializer.Serialize(new ServerConfig()) == serverConfigJson ? null : serverConfigJson;
     }
 
     private static ServerConfig? ServerConfig_FromJson(string? serverConfigJson)

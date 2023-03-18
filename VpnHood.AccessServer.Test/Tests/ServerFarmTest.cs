@@ -7,7 +7,6 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using GrayMint.Common.Exceptions;
 using VpnHood.Common;
-using VpnHood.Server.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

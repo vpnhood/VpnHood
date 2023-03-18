@@ -97,7 +97,7 @@ public class AccessTest
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
         // connect and download
-        await using var client1 = TestHelper.CreateClient(accessToken);
+        await using var client1 = TestHelper.CreateClient(accessToken, throwConnectException: false);
 
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {

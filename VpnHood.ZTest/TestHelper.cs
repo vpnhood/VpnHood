@@ -308,7 +308,7 @@ internal static class TestHelper
             AutoDisposeAccessServer = autoDisposeAccessServer,
             StoragePath = WorkingPath,
             NetFilter = NetFilter,
-            PublicIpDiscovery = false, //it slows down our tests
+            PublicIpDiscovery = true, //it slows down our tests
         };
 
         // Create server
@@ -337,7 +337,8 @@ internal static class TestHelper
         TestDeviceOptions? deviceOptions = default,
         Guid? clientId = default,
         bool autoConnect = true,
-        ClientOptions? options = default)
+        ClientOptions? options = default,
+        bool throwConnectException = true)
     {
         packetCapture ??= CreatePacketCapture(deviceOptions);
         clientId ??= Guid.NewGuid();
@@ -354,8 +355,16 @@ internal static class TestHelper
             options);
 
         // test starting the client
-        if (autoConnect)
-            client.Connect().Wait();
+        try
+        {
+            if (autoConnect)
+                Task.Run(() => client.Connect(), CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch (Exception)
+        {
+            if (throwConnectException)
+                throw;
+        }
 
         return client;
     }

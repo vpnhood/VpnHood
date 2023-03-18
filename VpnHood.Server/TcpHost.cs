@@ -341,6 +341,7 @@ internal class TcpHost : IAsyncDisposable
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
             PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
+            IsIpV6Supported = IsIpV6Supported,
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);

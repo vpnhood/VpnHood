@@ -173,6 +173,11 @@ public class IpNetwork
         return FromIpRange(IpRange.Intersect(ToIpRange(ipNetworks1), ToIpRange(ipNetworks2)));
     }
 
+    public static IOrderedEnumerable<IpNetwork> Union(IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
+    {
+        return FromIpRange(IpRange.Union(ToIpRange(ipNetworks1), ToIpRange(ipNetworks2)));
+    }
+
     public static IOrderedEnumerable<IpNetwork> Exclude(IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
     {
         return FromIpRange(IpRange.Exclude(ToIpRange(ipNetworks), ToIpRange(excludeIpNetworks)));

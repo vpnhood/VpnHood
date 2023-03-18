@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -166,7 +168,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
-            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions, isIpV6Supported);
+            var allServerIps = serverInfo.PublicIpAddresses
+                .Concat(serverInfo.PrivateIpAddresses)
+                .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
+            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
             // starting the listeners
@@ -197,13 +202,18 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         }
     }
 
-    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions, bool isIpV6Supported)
+    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions, 
+        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported)
     {
         // assign to workers
         tcpHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
         tcpHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
         tcpHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
         netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
+
+        // exclude listening ip
+        if (!netFilterOptions.IncludeLocalNetworkValue)
+            netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x)));
     }
 
     private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)

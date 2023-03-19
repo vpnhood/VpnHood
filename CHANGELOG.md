@@ -1,3 +1,9 @@
+# v2.8.361
+### Server
+* Feature: Enable hot reconfig for VpnHood Server TCP listener to avoid unnecessary restarts on unchanged endpoints
+* Update: Replace AllowIpV6 to BlockIpV6
+* Update: Improve server security 
+
 # v2.8.360
 ### Client
 * Fix: Used traffic was not displayed correctly

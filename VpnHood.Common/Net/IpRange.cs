@@ -175,6 +175,11 @@ public class IpRange
         return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
     }
 
+    public static IOrderedEnumerable<IpRange> Union(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
+    {
+        return Sort(ipRanges1.Concat(ipRanges2));
+    }
+
     public static IOrderedEnumerable<IpRange> Exclude(IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
         return Intersect(ipRanges, Invert(excludeIpRanges));

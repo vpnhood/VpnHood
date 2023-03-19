@@ -715,8 +715,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
         SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
         PublicAddress = sessionResponse.ClientPublicAddress;
-        IsIpV6Supported = sessionResponse.IsIpV6Supported;
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
+        IsIpV6Supported = sessionResponse.IsIpV6Supported;
 
         // PacketCaptureIpRanges
         if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))

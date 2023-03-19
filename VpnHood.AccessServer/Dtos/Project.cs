@@ -4,8 +4,9 @@ namespace VpnHood.AccessServer.Dtos;
 
 public class Project
 {
-    public Guid ProjectId { get; set; }
-    public string? ProjectName { get; set; }
-    public string? GoogleAnalyticsTrackId { get; set; }
-    public SubscriptionType SubscriptionType { get; set; }
+    public required Guid ProjectId { get; set; }
+    public required string? ProjectName { get; set; }
+    public required DateTime CreatedTime { get; init; }
+    public required SubscriptionType SubscriptionType { get; set; }
+    public required string? GoogleAnalyticsTrackId { get; set; }
 }

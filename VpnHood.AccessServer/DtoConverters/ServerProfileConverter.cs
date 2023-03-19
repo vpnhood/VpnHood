@@ -12,7 +12,8 @@ public static class ServerProfileConverter
             ServerProfileId = model.ServerProfileId,
             ServerProfileName = model.ServerProfileName,
             IsDefault = model.IsDefault,
-            ServerConfig = model.ServerConfig
+            ServerConfig = model.ServerConfig,
+            CreatedTime = model.CreatedTime
         };
     }
 }

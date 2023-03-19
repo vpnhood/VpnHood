@@ -12,7 +12,8 @@ public static class ProjectConverter
             ProjectId = model.ProjectId,
             ProjectName = model.ProjectName,
             GoogleAnalyticsTrackId = model.GaTrackId,
-            SubscriptionType = model.SubscriptionType
+            SubscriptionType = model.SubscriptionType,
+            CreatedTime = model.CreatedTime
         };
         return project;
     }

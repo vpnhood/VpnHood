@@ -64,6 +64,7 @@ public class ProjectsController : SuperController<ProjectsController>
             ServerProfileId = Guid.NewGuid(),
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
+            IsDeleted = false,
         };
 
         // Farm
@@ -72,7 +73,9 @@ public class ProjectsController : SuperController<ProjectsController>
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
             Certificate = CertificatesController.CreateInternal(projectId.Value, null),
-            ServerProfile = serverProfile
+            ServerProfile = serverProfile,
+            CreatedTime = DateTime.UtcNow,
+            
         };
 
         // create project
@@ -99,6 +102,8 @@ public class ProjectsController : SuperController<ProjectsController>
                     Secret = VhUtil.GenerateSessionKey(),
                     IsPublic = true,
                     IsEnabled= true,
+                    IsDeleted = false,
+                    CreatedTime= DateTime.UtcNow
                 },
 
                 new()
@@ -110,7 +115,9 @@ public class ProjectsController : SuperController<ProjectsController>
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = VhUtil.GenerateSessionKey(),
-                    IsEnabled= true
+                    IsEnabled= true,
+                    IsDeleted = false,
+                    CreatedTime= DateTime.UtcNow
                 }
             }
         };

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -213,7 +212,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)
-            netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x)));
+            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x))).ToArray();
     }
 
     private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)

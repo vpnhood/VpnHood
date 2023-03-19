@@ -190,18 +190,18 @@ public class ServerTest
         var oldServerConfig = new ServerConfig();
         var newServerConfig = new ServerConfig
         {
-            AllowIpV6 = true,
             LogAnonymizer = true,
             MaxCompletionPortThreads = 10,
             MinCompletionPortThreads = 11,
             UpdateStatusInterval = TimeSpan.FromHours(11),
             NetFilterOptions = new NetFilterOptions
             {
+                BlockIpV6 = true,
                 ExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.2") },
                 IncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.3") },
                 PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.4") },
                 PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.5") },
-                ExcludeLocalNetwork = false,
+                IncludeLocalNetwork = false,
             },
             TcpEndPoints = new[] { IPEndPoint.Parse("2.2.2.2:4433") },
             TrackingOptions = new TrackingOptions

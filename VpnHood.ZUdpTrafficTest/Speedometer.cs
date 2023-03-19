@@ -50,8 +50,8 @@ public class Speedometer : IJob
             var curTransferSize = _transferSize - _lastTransferSize;
             var curSucceededCount = _succeededCount - _lastSucceededCount;
             Console.WriteLine(_name + ": " +
-                              $"Transfer: {Util.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds)}, " +
-                              $"Success: {curSucceededCount}, TotalSucceeded: {_succeededCount}, TotalFailed: {_failedCount}, TotalBytes: {Util.FormatBytes(_transferSize)}");
+                              $"Transfer: {VhUtil.FormatBits(1000 * curTransferSize / _stopwatch.ElapsedMilliseconds)}, " +
+                              $"Success: {curSucceededCount}, TotalSucceeded: {_succeededCount}, TotalFailed: {_failedCount}, TotalBytes: {VhUtil.FormatBytes(_transferSize)}");
 
             _lastTransferSize = _transferSize;
             _lastSucceededCount = _succeededCount;

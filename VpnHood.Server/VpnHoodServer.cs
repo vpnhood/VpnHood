@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -111,12 +112,12 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             throw new Exception("Server has already started!");
 
         // Report current OS Version
-        VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
+        VhLogger.Instance.LogInformation("Module: {Module}", GetType().Assembly.GetName().FullName);
         VhLogger.Instance.LogInformation("OS: {OS}", SystemInfoProvider.GetSystemInfo());
 
         // Report TcpBuffers
         var tcpClient = new TcpClient();
-        VhLogger.Instance.LogInformation("DefaultTcpKernelSentBufferSize: {DefaultTcpKernelSentBufferSize}, \"DefaultTcpKernelReceiveBufferSize: {DefaultTcpKernelReceiveBufferSize}",
+        VhLogger.Instance.LogInformation("DefaultTcpKernelSentBufferSize: {DefaultTcpKernelSentBufferSize}, DefaultTcpKernelReceiveBufferSize: {DefaultTcpKernelReceiveBufferSize}",
             tcpClient.SendBufferSize, tcpClient.ReceiveBufferSize);
 
         // Configure
@@ -166,14 +167,24 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
-            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions);
+            var allServerIps = serverInfo.PublicIpAddresses
+                .Concat(serverInfo.PrivateIpAddresses)
+                .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
+            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
             // starting the listeners
-            var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
-            VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatType(_tcpHost)}...");
-            if (_tcpHost.IsStarted) await _tcpHost.Stop();
-            _tcpHost.Start(serverConfig.TcpEndPointsValue, isIpV6Supported && serverConfig.AllowIpV6Value);
+            if (_tcpHost.IsStarted && !_tcpHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue))
+            {
+                VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_tcpHost)}...");
+                await _tcpHost.Stop();
+            }
+
+            if (!_tcpHost.IsStarted)
+            {
+                VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(_tcpHost)}...");
+                _tcpHost.Start(serverConfig.TcpEndPointsValue);
+            }
 
             // set config status
             State = ServerState.Ready;
@@ -190,35 +201,18 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         }
     }
 
-    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions)
+    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions, 
+        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported)
     {
-        // ReSharper disable PossibleMultipleEnumeration
-
-        // net filters
-        var includeIpRanges = IpNetwork.All.ToIpRanges();
-        if (!VhUtil.IsNullOrEmpty(netFilterOptions.IncludeIpRanges))
-            includeIpRanges = includeIpRanges.Intersect(netFilterOptions.IncludeIpRanges);
-
-        if (!VhUtil.IsNullOrEmpty(netFilterOptions.ExcludeIpRanges))
-            includeIpRanges = includeIpRanges.Exclude(netFilterOptions.ExcludeIpRanges);
-
-        // packet capture
-        var packetCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
-        if (netFilterOptions.ExcludeLocalNetworkValue)
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
-
-        if (!VhUtil.IsNullOrEmpty(netFilterOptions.PacketCaptureIncludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Intersect(netFilterOptions.PacketCaptureIncludeIpRanges);
-
-        if (!VhUtil.IsNullOrEmpty(netFilterOptions.PacketCaptureExcludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(netFilterOptions.PacketCaptureExcludeIpRanges);
-
         // assign to workers
-        netFilter.BlockedIpRanges = includeIpRanges.Intersect(packetCaptureIncludeIpRanges).Invert().ToArray();
-        tcpHost.NetFilterIncludeIpRanges = includeIpRanges.ToIpNetworks().IsAll() ? null : includeIpRanges.ToArray();
-        tcpHost.NetFilterPacketCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.ToIpNetworks().IsAll() ? null : packetCaptureIncludeIpRanges.ToArray();
+        tcpHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
+        tcpHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
+        tcpHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
+        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
 
-        // ReSharper restore PossibleMultipleEnumeration
+        // exclude listening ip
+        if (!netFilterOptions.IncludeLocalNetworkValue)
+            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x))).ToArray();
     }
 
     private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)

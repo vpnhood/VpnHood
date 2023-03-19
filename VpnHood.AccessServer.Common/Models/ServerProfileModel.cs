@@ -8,6 +8,7 @@ public class ServerProfileModel
     public string? ServerConfig { get; set; }
     public bool IsDefault { get; set; }
     public bool IsDeleted { get; set; }
+    public DateTime CreatedTime { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ICollection<ServerFarmModel>? ServerFarms { get; set; }

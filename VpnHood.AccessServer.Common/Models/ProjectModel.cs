@@ -8,6 +8,7 @@ public class ProjectModel
     public string? ProjectName { get; set; }
     public string? GaTrackId { get; set; }
     public SubscriptionType SubscriptionType { get; set; }
+    public DateTime CreatedTime { get; set; }
 
     public virtual ICollection<ServerModel>? Servers { get; set; }
     public virtual ICollection<ServerProfileModel>? ServerProfiles { get; set; }

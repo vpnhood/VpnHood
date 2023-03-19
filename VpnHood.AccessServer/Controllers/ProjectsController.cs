@@ -65,6 +65,7 @@ public class ProjectsController : SuperController<ProjectsController>
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
             IsDeleted = false,
+            CreatedTime = DateTime.UtcNow
         };
 
         // Farm
@@ -74,7 +75,7 @@ public class ProjectsController : SuperController<ProjectsController>
             ServerFarmName = "Server Farm 1",
             Certificate = CertificatesController.CreateInternal(projectId.Value, null),
             ServerProfile = serverProfile,
-            CreatedTime = DateTime.UtcNow,
+            CreatedTime = DateTime.UtcNow
             
         };
 
@@ -83,6 +84,7 @@ public class ProjectsController : SuperController<ProjectsController>
         {
             ProjectId = projectId.Value,
             SubscriptionType = SubscriptionType.Free,
+            CreatedTime = DateTime.UtcNow,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
                 serverProfile,

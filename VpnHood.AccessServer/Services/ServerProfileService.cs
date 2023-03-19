@@ -48,7 +48,8 @@ public class ServerProfileService
             ServerProfileName = createParams.ServerProfileName,
             ProjectId = projectId,
             ServerConfig = ServerConfig_ToJson(serverConfig),
-            IsDefault = false
+            IsDefault = false,
+            CreatedTime = DateTime.UtcNow
         };
 
         await _vhContext.ServerProfiles.AddAsync(serverProfile);

@@ -23,8 +23,7 @@ public class ServerProfileDom
         var serverProfile = await testInit.ServerProfilesClient.CreateAsync(testInit.ProjectId, createParams);
         return new ServerProfileDom(testInit, serverProfile);
     }
-
-
+    
     public async Task<ServerProfile> Update(ServerProfileUpdateParams updateParams)
     {
         var serverProfile = await Client.UpdateAsync(TestInit.ProjectId, ServerProfileId, updateParams);
@@ -34,7 +33,7 @@ public class ServerProfileDom
 
     public async Task<ServerProfileData> Reload()
     {
-        var data = await Client.GetAsync(TestInit.ProjectId, ServerProfileId);
+        var data = await Client.GetAsync(TestInit.ProjectId, ServerProfileId, includeSummary: true);
         ServerProfile = data.ServerProfile;
         return data;
     }

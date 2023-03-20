@@ -110,7 +110,6 @@ public class ServerProfileService
         _ = includeSummary; //not used yet
 
         var query = _vhContext.ServerProfiles
-            .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverProfileId == null || x.ServerProfileId == serverProfileId)
             .Where(x =>
@@ -122,10 +121,6 @@ public class ServerProfileService
             .Select(x => new ServerProfileData
             {
                 ServerProfile = x.ToDto(),
-                Summary = new ServerProfileSummary
-                {
-                    ServerFarmCount = x.ServerFarms!.Count(serverFarm => !serverFarm.IsDeleted)
-                }
             });
 
         // get farms
@@ -135,6 +130,29 @@ public class ServerProfileService
             .AsNoTracking()
             .ToArrayAsync();
 
+        if (includeSummary )
+        {
+            var summariesQuery =
+                from serverFarm in _vhContext.ServerFarms
+                    .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+                    .Where(x => serverProfileId == null || x.ServerProfileId == serverProfileId)
+                join server in _vhContext.Servers on serverFarm.ServerFarmId equals server.ServerFarmId into grouping
+                from server in grouping.DefaultIfEmpty()
+                select new { serverFarm.ServerProfileId, serverFarm.ServerFarmId, ServerId = (Guid?)server.ServerId };
+                
+
+            // update summaries
+            var summaries = await summariesQuery.ToArrayAsync();
+            foreach (var serverProfileData in serverProfileDatas)
+            {
+                serverProfileData.Summary = new ServerProfileSummary
+                {
+                    ServerCount = summaries.Count(x => x.ServerId != null),
+                    ServerFarmCount = summaries.DistinctBy(x => x.ServerFarmId).Count(),
+                };
+            }
+        }
+
         return serverProfileDatas.ToArray();
     }
 
@@ -142,7 +160,7 @@ public class ServerProfileService
     {
         if (serverConfig == null) return null;
         var serverConfigJson = JsonSerializer.Serialize(serverConfig);
-        
+
         if (serverConfigJson.Length > 0xFFFF)
             throw new Exception("ServerConfig is too big");
 

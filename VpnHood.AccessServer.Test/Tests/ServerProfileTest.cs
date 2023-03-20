@@ -122,7 +122,7 @@ public class ServerProfileTest
         {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
-        var serverDom1 =  await farm1.AddNewServer();
+        var serverDom1 = await farm1.AddNewServer();
         var serverDom2 = await farm1.AddNewServer();
 
         // farm2
@@ -130,14 +130,14 @@ public class ServerProfileTest
         {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
-        var serverDom3= await farm2.AddNewServer();
+        var serverDom3 = await farm2.AddNewServer();
         var serverDom4 = await farm2.AddNewServer();
 
         // update ServerProfile
-        var config = new ServerConfig { SessionOptions = new SessionOptions {TcpBufferSize = 0x2000} };
+        var config = new ServerConfig { SessionOptions = new SessionOptions { TcpBufferSize = 0x2000 } };
         await serverProfileDom.Update(new ServerProfileUpdateParams
         {
-            ServerConfig = new PatchOfString {Value = JsonSerializer.Serialize(config) }
+            ServerConfig = new PatchOfString { Value = JsonSerializer.Serialize(config) }
         });
 
         // check serverConfig
@@ -153,4 +153,32 @@ public class ServerProfileTest
         Assert.AreEqual(true, serverDom1.ServerConfig.TrackingOptions.TrackLocalPort, "TrackTcp must be set by default.");
     }
 
+    [TestMethod]
+    public async Task Get_with_summaries()
+    {
+        var testInit = await TestInit.Create();
+        var serverProfileDom1 = await ServerProfileDom.Create(testInit);
+
+        // farm1
+        var farm1 = await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        {
+            ServerProfileId = serverProfileDom1.ServerProfileId,
+        }, serverCount: 0);
+        await farm1.AddNewServer();
+        await farm1.AddNewServer();
+        await farm1.AddNewServer();
+
+        // farm2
+        var farm2 = await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        {
+            ServerProfileId = serverProfileDom1.ServerProfileId,
+        }, serverCount: 0);
+
+        Console.WriteLine(serverProfileDom1.ServerProfileId);
+        var data = await serverProfileDom1.Reload();
+        Assert.AreEqual(2, data.Summary?.ServerFarmCount);
+        Assert.AreEqual(3, data.Summary?.ServerCount);
+        
+
+    }
 }

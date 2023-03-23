@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,7 @@ public class CertificatesController : ControllerBase
     public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {
         // check user quota
-        using var singleRequest = SingleRequest.Start($"CreateCertificate_{projectId}");
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
         if (_vhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
             throw new QuotaException(nameof(_vhContext.Certificates), QuotaConstants.CertificateCount);
 

@@ -7,7 +7,7 @@ using GrayMint.Common.AspNetCore.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.Persistence;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Agent.Services;
 using NLog.Web;
 using NLog;

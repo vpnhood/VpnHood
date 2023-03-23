@@ -4,14 +4,14 @@ using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Dtos.AccessTokenDoms;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
@@ -21,38 +21,36 @@ using VpnHood.Common.Utils;
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-tokens")]
-public class AccessTokensController : SuperController<AccessTokensController>
+[Authorize]
+public class AccessTokensController : ControllerBase
 {
     private readonly UsageReportService _usageReportService;
     private readonly SubscriptionService _subscriptionService;
+    private readonly VhContext _vhContext;
 
     public AccessTokensController(
-        ILogger<AccessTokensController> logger, 
-        VhContext vhContext,
         UsageReportService usageReportService, 
-        MultilevelAuthService multilevelAuthService, 
-        SubscriptionService subscriptionService)
-        : base(logger, vhContext, multilevelAuthService)
+        SubscriptionService subscriptionService, 
+        VhContext vhContext)
     {
         _usageReportService = usageReportService;
         _subscriptionService = subscriptionService;
+        _vhContext = vhContext;
     }
 
     [HttpPost]
+    [AuthorizePermission(Permission.AccessTokenWrite)]
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
-        // find default serveEndPoint 
-        await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
-
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateAccessTokens");
         await _subscriptionService.AuthorizeCreateAccessToken(projectId);
 
-        var serverFarm = await VhContext.ServerFarms
+        var serverFarm = await _vhContext.ServerFarms
             .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == createParams.ServerFarmId);
 
         // create support id
-        var supportCode = await VhContext.AccessTokens
+        var supportCode = await _vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId)
             .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
         supportCode++;
@@ -76,26 +74,25 @@ public class AccessTokensController : SuperController<AccessTokensController>
             IsEnabled = true
         };
 
-        await VhContext.AccessTokens.AddAsync(accessToken);
-        await VhContext.SaveChangesAsync();
+        await _vhContext.AccessTokens.AddAsync(accessToken);
+        await _vhContext.SaveChangesAsync();
 
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
     [HttpPatch("{accessTokenId:guid}")]
+    [AuthorizePermission(Permission.AccessTokenWrite)]
     public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
     {
-        await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
-
         // validate accessTokenModel.ServerFarmId
         var serverFarm = (updateParams.ServerFarmId != null)
-            ? await VhContext.ServerFarms.SingleAsync(x =>
+            ? await _vhContext.ServerFarms.SingleAsync(x =>
                 x.ProjectId == projectId &&
                 x.ServerFarmId == updateParams.ServerFarmId)
             : null;
 
         // update
-        var accessToken = await VhContext.AccessTokens
+        var accessToken = await _vhContext.AccessTokens
             .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.AccessTokenId == accessTokenId);
@@ -112,21 +109,19 @@ public class AccessTokensController : SuperController<AccessTokensController>
             accessToken.ServerFarm = serverFarm;
         }
 
-        if (VhContext.ChangeTracker.HasChanges())
+        if (_vhContext.ChangeTracker.HasChanges())
             accessToken.ModifiedTime = DateTime.UtcNow;
-        await VhContext.SaveChangesAsync();
+        await _vhContext.SaveChangesAsync();
 
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
+    [AuthorizePermission(Permission.AccessTokenReadAccessKey)]
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
-        // get accessTokenModel with default accessPoint
-        await VerifyUserPermission(projectId, Permissions.AccessTokenReadAccessKey);
-
-        var accessToken = await VhContext
+        var accessToken = await _vhContext
             .AccessTokens
             .Include(x => x.ServerFarm)
             .Include(x => x.ServerFarm!.Certificate)
@@ -137,7 +132,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
         var x509Certificate = new X509Certificate2(certificate.RawData);
 
         // find all public accessPoints 
-        var farmServers = await VhContext.Servers
+        var farmServers = await _vhContext.Servers
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
             .Where(server => server.ServerFarmId == accessToken.ServerFarmId )
             .ToArrayAsync();
@@ -169,6 +164,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
     }
 
     [HttpGet("{accessTokenId:guid}")]
+    [AuthorizePermission(Permission.ProjectRead)]
     public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
@@ -177,26 +173,25 @@ public class AccessTokensController : SuperController<AccessTokensController>
     }
 
     [HttpGet]
+    [AuthorizePermission(Permission.ProjectRead)]
     public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
-
+        await _subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
         // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
+        await using var trans = await _vhContext.WithNoLockTransaction();
 
         if (!Guid.TryParse(search, out var searchGuid)) searchGuid = Guid.Empty;
         if (!int.TryParse(search, out var searchInt)) searchInt = -1;
 
         // find access tokens
         var query =
-            from accessToken in VhContext.AccessTokens
-            join serverFarm in VhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
-            join access in VhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
+            from accessToken in _vhContext.AccessTokens
+            join serverFarm in _vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
+            join access in _vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
@@ -239,15 +234,14 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
 
     [HttpDelete("{accessTokenId:guid}")]
+    [AuthorizePermission(Permission.AccessTokenWrite)]
     public async Task Delete(Guid projectId, Guid accessTokenId)
     {
-        await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
-
-        var accessToken = await VhContext.AccessTokens
+        var accessToken = await _vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ProjectId == projectId && !x.IsDeleted && x.AccessTokenId == accessTokenId);
 
         accessToken.IsDeleted = true;
-        await VhContext.SaveChangesAsync();
+        await _vhContext.SaveChangesAsync();
     }
 }

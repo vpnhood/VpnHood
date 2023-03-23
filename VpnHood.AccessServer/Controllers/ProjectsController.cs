@@ -1,200 +1,60 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/v{version:apiVersion}/projects")]
-public class ProjectsController : SuperController<ProjectsController>
+[Authorize]
+public class ProjectsController : ControllerBase
 {
-    private readonly AgentCacheClient _agentCacheClient;
-    private readonly MultilevelAuthService _multilevelAuthService;
-    private readonly UsageReportService _usageReportService;
+    private readonly ProjectService _projectService;
 
-    public ProjectsController(ILogger<ProjectsController> logger,
-        VhContext vhContext,
-        AgentCacheClient agentCacheClient,
-        MultilevelAuthService multilevelAuthService,
-        UsageReportService usageReportService)
-        : base(logger, vhContext, multilevelAuthService)
+    public ProjectsController(
+        ProjectService projectService)
     {
-        _agentCacheClient = agentCacheClient;
-        _multilevelAuthService = multilevelAuthService;
-        _usageReportService = usageReportService;
+        _projectService = projectService;
     }
 
     [HttpPost]
-    public async Task<Project> Create(Guid? projectId = null)
+    [AuthorizePermission(Permission.ProjectCreate)]
+    public Task<Project> Create()
     {
-        projectId ??= Guid.NewGuid();
-
-        var curUserId = await GetCurrentUserId(VhContext);
-        await VerifyUserPermission(curUserId, Permissions.ProjectCreate);
-
-        // Check user quota
-        using var singleRequest = SingleRequest.Start($"CreateProject_{curUserId}");
-
-        // get user's maxProjects quota
-        var user = await VhContext.Users.SingleAsync(x => x.UserId == curUserId);
-
-        // find all user's project with owner role
-        var userRoles = await
-            _multilevelAuthService.GetUserRolesByPermissionGroup(user.UserId, PermissionGroups.ProjectOwner.PermissionGroupId);
-        var userProjectOwnerCount = userRoles.Length;
-        if (userProjectOwnerCount >= user.MaxProjectCount)
-            throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
-
-        // ServerProfile
-        var serverProfile = new ServerProfileModel
-        {
-            ServerProfileId = Guid.NewGuid(),
-            ServerProfileName = Resource.DefaultServerProfile,
-            IsDefault = true,
-            IsDeleted = false,
-            CreatedTime = DateTime.UtcNow
-        };
-
-        // Farm
-        var serverFarm = new ServerFarmModel
-        {
-            ServerFarmId = Guid.NewGuid(),
-            ServerFarmName = "Server Farm 1",
-            Certificate = CertificatesController.CreateInternal(projectId.Value, null),
-            ServerProfile = serverProfile,
-            CreatedTime = DateTime.UtcNow
-            
-        };
-
-        // create project
-        var project = new ProjectModel
-        {
-            ProjectId = projectId.Value,
-            SubscriptionType = SubscriptionType.Free,
-            CreatedTime = DateTime.UtcNow,
-            ServerProfiles = new HashSet<ServerProfileModel>
-            {
-                serverProfile,
-            },
-            ServerFarms = new HashSet<ServerFarmModel>
-            {
-                serverFarm,
-            },
-            AccessTokens = new HashSet<AccessTokenModel>
-            {
-                new()
-                {
-                    AccessTokenId = Guid.NewGuid(),
-                    ServerFarm = serverFarm,
-                    AccessTokenName = "Public",
-                    SupportCode = 1000,
-                    Secret = VhUtil.GenerateSessionKey(),
-                    IsPublic = true,
-                    IsEnabled= true,
-                    IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow
-                },
-
-                new()
-                {
-                    AccessTokenId = Guid.NewGuid(),
-                    ServerFarm = serverFarm,
-                    AccessTokenName = "Private 1",
-                    IsPublic = false,
-                    SupportCode = 1001,
-                    MaxDevice = 5,
-                    Secret = VhUtil.GenerateSessionKey(),
-                    IsEnabled= true,
-                    IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow
-                }
-            }
-        };
-
-        await VhContext.Projects.AddAsync(project);
-
-        // Grant permissions
-        var secureObject = await _multilevelAuthService.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
-
-        // Create roles
-        var ownersRole = await _multilevelAuthService.Role_Create(projectId.Value, Resource.ProjectOwners, curUserId);
-        var viewersRole = await _multilevelAuthService.Role_Create(projectId.Value, Resource.ProjectViewers, curUserId);
-
-        // SecureObject
-        await _multilevelAuthService.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
-        await _multilevelAuthService.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
-
-        // add current user as the admin
-        await _multilevelAuthService.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
-
-        await VhContext.SaveChangesAsync();
-        return project.ToDto();
+        var userId = UserService.GetUserId(User);
+        return _projectService.Create(userId);
     }
 
     [HttpGet("{projectId:guid}")]
-    public async Task<Project> Get(Guid projectId)
+    [AuthorizePermission(Permission.ProjectRead)]
+    public Task<Project> Get(Guid projectId)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
-
-        var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
-        return project.ToDto();
+        return _projectService.Get(projectId);
     }
 
     [HttpPatch("{projectId:guid}")]
-    public async Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
+    [AuthorizePermission(Permission.ProjectWrite)]
+    public Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectWrite);
-        var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
-
-        if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
-        if (updateParams.GoogleAnalyticsTrackId != null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
-        await VhContext.SaveChangesAsync();
-        await _agentCacheClient.InvalidateProject(projectId);
-
-        return project.ToDto();
+        return _projectService.Update(projectId, updateParams);
     }
 
     [HttpGet]
-    public async Task<Project[]> List()
+    [AuthorizePermission(Permission.ProjectList)]
+    public Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)
     {
-        var curUserId = await GetCurrentUserId(VhContext);
-        await VerifyUserPermission(curUserId, Permissions.ProjectList);
-
-        // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
-
-        var roles = await _multilevelAuthService.GetUserRoles(curUserId);
-        var projectIds = roles.Select(x => x.SecureObjectId).Distinct();
-        var projects = await VhContext.Projects
-            .Where(x => projectIds.Contains(x.ProjectId))
-            .ToArrayAsync();
-
-        return projects.Select(project => project.ToDto()).ToArray();
+        return _projectService.List(search, recordIndex, recordCount);
     }
 
     [HttpGet("usage")]
-    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
+    [AuthorizePermission(Permission.ProjectRead)]
+    public  Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)
     {
-        if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
-
-        var usage = await _usageReportService.GetUsage(projectId, usageBeginTime.Value, usageEndTime,
-            serverFarmId: serverFarmId, serverId: serverId);
-        return usage;
+        return _projectService.GetUsage(projectId, usageBeginTime, usageEndTime, serverFarmId, serverId);
     }
 }

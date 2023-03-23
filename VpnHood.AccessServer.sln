@@ -24,6 +24,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\nuget.yml = .github\workflows\nuget.yml
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Common.AspNetCore.SimpleUserManagement", "..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleUserManagement\GrayMint.Common.AspNetCore.SimpleUserManagement.csproj", "{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GrayMint", "GrayMint", "{93345E67-2111-4452-A829-7CBDF764AAC6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Common.AspNetCore.SimpleRoleAuthorization", "..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleRoleAuthorization\GrayMint.Common.AspNetCore.SimpleRoleAuthorization.csproj", "{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -62,9 +68,24 @@ Global
 		{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{93ABFC18-A9ED-45EA-A405-796E2AA5667E} = {93345E67-2111-4452-A829-7CBDF764AAC6}
+		{D9963D4F-38C1-4F60-B0DD-80FBB0BE06DB} = {93345E67-2111-4452-A829-7CBDF764AAC6}
+		{9429EC97-F7CA-4D9A-9605-E5377F7565CB} = {93345E67-2111-4452-A829-7CBDF764AAC6}
+		{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC} = {93345E67-2111-4452-A829-7CBDF764AAC6}
+		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {99282B07-6E52-4418-9326-3F0E566C74EE}

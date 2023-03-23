@@ -27,13 +27,13 @@ public class AuthorizationTest
 
         var maxPermissionId = 100;
         var newPermission = new Permission(maxPermissionId + 1, Guid.NewGuid().ToString());
-        var permissions = Permissions.All.Concat(new[] { newPermission }).ToArray();
+        var permissions = Permission.All.Concat(new[] { newPermission }).ToArray();
 
         var newPermissionGroup1 = new PermissionGroup(Guid.NewGuid(), Guid.NewGuid().ToString())
         {
             Permissions = new List<Permission> { newPermission }
         };
-        var permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup1 }).ToArray();
+        var permissionGroups = Roles.All.Concat(new[] { newPermissionGroup1 }).ToArray();
         await authRepo.Init(secureObjectTypes, permissions, permissionGroups);
 
         await using (var scope2 = testInit.WebApp.Services.CreateAsyncScope())
@@ -102,7 +102,7 @@ public class AuthorizationTest
         {
             Permissions = new List<Permission> { newPermission }
         };
-        permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup2 }).ToArray();
+        permissionGroups = Roles.All.Concat(new[] { newPermissionGroup2 }).ToArray();
         await authRepo.Init(secureObjectTypes, permissions, permissionGroups);
         await using (var scope2 = testInit.WebApp.Services.CreateAsyncScope())
         await using (var authContext2 = scope2.ServiceProvider.GetRequiredService<MultilevelAuthContext>())
@@ -126,12 +126,12 @@ public class AuthorizationTest
         //-----------
         var guest1 = Guid.NewGuid();
 
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permission.ProjectRead));
         await authRepo.SecureObject_AddUserPermission(secureObject, guest1,
-            PermissionGroups.ProjectViewer, MultilevelAuthService.SystemUserId);
-        PermissionGroups.ProjectViewer.PermissionGroupName = Guid.NewGuid().ToString();
-        await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.ProjectRead));
+            Roles.ProjectReader, MultilevelAuthService.SystemUserId);
+        Roles.ProjectReader.PermissionGroupName = Guid.NewGuid().ToString();
+        await authRepo.Init(SecureObjectTypes.All, Permission.All, Roles.All);
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permission.ProjectRead));
 
         //-----------
         // check: used SecureObjectType should not be deleted
@@ -171,28 +171,28 @@ public class AuthorizationTest
         //-----------
         // check: inheritance: add role1 to L3 and it shouldn't access to L1
         //-----------
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permissions.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permission.ProjectRead));
 
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permission.ProjectRead));
 
 
-        await authRepo.SecureObject_AddRolePermission(secureObjectL3, role1, PermissionGroups.ProjectViewer, MultilevelAuthService.SystemUserId);
-        await authRepo.SecureObject_AddRolePermission(secureObjectL1, role2, PermissionGroups.ProjectViewer, MultilevelAuthService.SystemUserId);
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.ProjectRead));
-        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.ProjectRead));
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.ProjectRead));
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permissions.ProjectRead));
+        await authRepo.SecureObject_AddRolePermission(secureObjectL3, role1, Roles.ProjectReader, MultilevelAuthService.SystemUserId);
+        await authRepo.SecureObject_AddRolePermission(secureObjectL1, role2, Roles.ProjectReader, MultilevelAuthService.SystemUserId);
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permission.ProjectRead));
+        Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permission.ProjectRead));
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permission.ProjectRead));
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permission.ProjectRead));
 
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permissions.ProjectRead));
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permissions.ProjectRead));
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permissions.ProjectRead));
-        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.ProjectRead));
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permission.ProjectRead));
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permission.ProjectRead));
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permission.ProjectRead));
+        Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permission.ProjectRead));
     }
 
 }

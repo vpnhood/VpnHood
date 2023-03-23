@@ -57,7 +57,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Identity.Web" Version="2.5.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
     <PackageReference Include="NLog" Version="5.1.2" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.2" />
@@ -65,12 +64,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleUserManagement\GrayMint.Common.AspNetCore.SimpleUserManagement.csproj" />
     <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore\GrayMint.Common.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.EntityFrameworkCore\GrayMint.Common.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="GrayMint.Common.AspNetCore.SimpleRoleAuthorization">
+      <HintPath>..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleRoleAuthorization\bin\Debug\net7.0\GrayMint.Common.AspNetCore.SimpleRoleAuthorization.dll</HintPath>
+    </Reference>
     <Reference Include="VpnHood.Common">
       <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
     </Reference>

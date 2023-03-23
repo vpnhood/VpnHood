@@ -2,14 +2,14 @@
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Server;
@@ -17,26 +17,27 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/certificates")]
-public class CertificatesController : SuperController<CertificatesController>
+[Authorize]
+public class CertificatesController : ControllerBase
 {
-    public CertificatesController(ILogger<CertificatesController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
-        : base(logger, vhContext, multilevelAuthService)
+    private readonly VhContext _vhContext;
+    public CertificatesController(VhContext vhContext)
     {
+        _vhContext = vhContext;
     }
 
     [HttpPost]
+    [AuthorizePermission(Permission.CertificateWrite)]
     public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {
-        await VerifyUserPermission( projectId, Permissions.CertificateWrite);
-
         // check user quota
-        using var singleRequest = SingleRequest.Start($"CreateCertificate_{CurrentUserId}");
-        if (VhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
-            throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
+        using var singleRequest = SingleRequest.Start($"CreateCertificate_{projectId}");
+        if (_vhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
+            throw new QuotaException(nameof(_vhContext.Certificates), QuotaConstants.CertificateCount);
 
         var certificateModel = CreateInternal(projectId, createParams);
-        VhContext.Certificates.Add(certificateModel);
-        await VhContext.SaveChangesAsync();
+        _vhContext.Certificates.Add(certificateModel);
+        await _vhContext.SaveChangesAsync();
         
         return certificateModel.ToDto(true);
     }
@@ -73,31 +74,28 @@ public class CertificatesController : SuperController<CertificatesController>
 
 
     [HttpGet("{certificateId:guid}")]
+    [AuthorizePermission(Permission.CertificateRead)]
     public async Task<Certificate> Get(Guid projectId, Guid certificateId)
     {
-        await VerifyUserPermission( projectId, Permissions.CertificateRead);
-
-        var certificateModel = await VhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
+        var certificateModel = await _vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
         return certificateModel.ToDto();
     }
 
     [HttpDelete("{certificateId:guid}")]
+    [AuthorizePermission(Permission.CertificateWrite)]
     public async Task Delete(Guid projectId, Guid certificateId)
     {
-        await VerifyUserPermission( projectId, Permissions.CertificateWrite);
-
-        var certificate = await VhContext.Certificates
+        var certificate = await _vhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
-        VhContext.Certificates.Remove(certificate);
-        await VhContext.SaveChangesAsync();
+        _vhContext.Certificates.Remove(certificate);
+        await _vhContext.SaveChangesAsync();
     }
 
     [HttpPatch("{certificateId:guid}")]
+    [AuthorizePermission(Permission.CertificateWrite)]
     public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
-        await VerifyUserPermission( projectId, Permissions.CertificateWrite);
-
-        var certificateModel = await VhContext.Certificates
+        var certificateModel = await _vhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
         if (updateParams.RawData != null)
@@ -107,16 +105,15 @@ public class CertificatesController : SuperController<CertificatesController>
             certificateModel.RawData = x509Certificate2.Export(X509ContentType.Pfx);
         }
 
-        await VhContext.SaveChangesAsync();
+        await _vhContext.SaveChangesAsync();
         return certificateModel.ToDto();
     }
 
     [HttpGet]
+    [AuthorizePermission(Permission.CertificateRead)]
     public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
-        await VerifyUserPermission( projectId, Permissions.CertificateRead);
-
-        var query = VhContext.Certificates.Where(x => x.ProjectId == projectId);
+        var query = _vhContext.Certificates.Where(x => x.ProjectId == projectId);
         var res = await query
             .Skip(recordIndex)
             .Take(recordCount)

@@ -1,66 +1,62 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using System.Linq;
 using VpnHood.AccessServer.Dtos.ServerProfileDtos;
 using VpnHood.AccessServer.Services;
+using Microsoft.AspNetCore.Authorization;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 
 namespace VpnHood.AccessServer.Controllers;
 
 
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-profiles")]
-public class ServerProfilesController : SuperController<ServerProfilesController>
+[Authorize]
+public class ServerProfilesController 
 {
     private readonly ServerProfileService _serverProfileService;
 
     public ServerProfilesController(
-        ILogger<ServerProfilesController> logger,
-        VhContext vhContext,
-        ServerProfileService serverProfileService,
-        MultilevelAuthService multilevelAuthService)
-        : base(logger, vhContext, multilevelAuthService)
+        ServerProfileService serverProfileService)
     {
         _serverProfileService = serverProfileService;
     }
 
     [HttpPost]
+    [AuthorizePermission(Permission.ProjectWrite)]
     public async Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectWrite);
         return await _serverProfileService.Create(projectId, createParams);
     }
 
     [HttpGet("{serverProfileId:guid}")]
+    [AuthorizePermission(Permission.ProjectRead)]
     public async Task<ServerProfileData> Get(Guid projectId, Guid serverProfileId, bool includeSummary = false)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
         var dtos = await _serverProfileService.ListWithSummary(projectId, serverProfileId: serverProfileId, includeSummary: includeSummary);
         return dtos.Single();
     }
 
     [HttpPatch("{serverProfileId:guid}")]
+    [AuthorizePermission(Permission.ProjectWrite)]
     public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectWrite);
         return await _serverProfileService.Update(projectId, serverProfileId, updateParams);
     }
 
     [HttpDelete("{serverProfileId:guid}")]
+    [AuthorizePermission(Permission.ProjectWrite)]
     public async Task Delete(Guid projectId, Guid serverProfileId)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectWrite);
         await _serverProfileService.Delete(projectId, serverProfileId);
     }
 
     [HttpGet]
+    [AuthorizePermission(Permission.ProjectRead)]
     public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 101)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
         return await _serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, 
             recordIndex: recordIndex, recordCount: recordCount);
     }

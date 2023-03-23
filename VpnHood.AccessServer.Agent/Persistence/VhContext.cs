@@ -5,7 +5,7 @@ using VpnHood.AccessServer.Persistence;
 namespace VpnHood.AccessServer.Agent.Persistence;
 
 // ReSharper disable once PartialTypeWithSinglePart
-public partial class VhContext : VhContextBase
+public partial class VhContext : AccessServer.Persistence.VhContext
 {
 
     public VhContext(DbContextOptions<VhContext> options)

@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
+using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +27,6 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using UserModel = VpnHood.AccessServer.Models.UserModel;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -203,7 +204,31 @@ public class TestInit : IDisposable, IHttpClientFactory
     {
         await vhContext.Users.AddAsync(user);
         var secureObject = await multilevelAuthService.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-        await multilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
+        await multilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, Roles.UserBasic, user.UserId);
+    }
+
+    public async Task<User> CreateUserAndAddToRole(string email, string roleName, string appId = "*")
+    {
+        // create roles
+        var roleProvider = Scope.ServiceProvider.GetRequiredService<SimpleRoleProvider>();
+        var role = await roleProvider.FindByName(roleName) ??
+                   await roleProvider.Create(new RoleCreateRequest(roleName));
+
+        // create user
+        var userProvider = Scope.ServiceProvider.GetRequiredService<SimpleUserProvider>();
+        var user = await userProvider.FindByEmail(email) ??
+                   await userProvider.Create(new UserCreateRequest(email)
+                   {
+                       FirstName = Guid.NewGuid().ToString(),
+                       LastName = Guid.NewGuid().ToString(),
+                       Description = Guid.NewGuid().ToString()
+                   });
+
+        var userRoles = await roleProvider.GetUserRolesByUser(user.UserId);
+        if (userRoles.SingleOrDefault(x => x.Role.RoleId == role.RoleId && x.AppId == appId) == null)
+            await roleProvider.AddUser(role.RoleId, user.UserId, appId);
+
+        return user;
     }
 
     public async Task Init(bool useSharedProject = false, bool createServers = false)
@@ -214,6 +239,17 @@ public class TestInit : IDisposable, IHttpClientFactory
         QuotaConstants.AccessTokenCount = 0xFFFFFF;
         QuotaConstants.AccessPointCount = 0xFFFFFF;
         QuotaConstants.ServerFarmCount = 0xFFFFFF;
+
+        // create new user
+        var appCreatorUser = await CreateUserAndAddToRole(NewEmail(), RoleId.AppCreator);
+        AppCreatorAuthorization = await CreateAuthorizationHeader(appCreatorUser.Email);
+        AppCreatorHttpClient.DefaultRequestHeaders.Authorization = AppCreatorAuthorization;
+
+        // create new user
+        var appSysAdminUser = await CreateUserAndAddToRole(NewEmail(), RoleId.SystemAdmin);
+        AppSysAdminAuthorization = await CreateAuthorizationHeader(appSysAdminUser.Email);
+        AppSysAdminHttpClient.DefaultRequestHeaders.Authorization = AppSysAdminAuthorization;
+
 
         await using var scope = WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
@@ -239,7 +275,7 @@ public class TestInit : IDisposable, IHttpClientFactory
 
                 // add new owner to shared project
                 var ownerRole = (await multilevelAuthRepo.SecureObject_GetRolePermissionGroups(project.ProjectId))
-                    .Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
+                    .Single(x => x.PermissionGroupId == Roles.ProjectOwner.PermissionGroupId);
                 await multilevelAuthRepo.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, MultilevelAuthService.SystemUserId);
             }
             catch

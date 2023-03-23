@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -11,12 +10,18 @@ namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/v{version:apiVersion}/health")]
 [AllowAnonymous]
-public class HealthController : SuperController<HealthController>
+public class HealthController : ControllerBase
 {
     private readonly AgentCacheClient _agentCacheClient;
-    public HealthController(ILogger<HealthController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService, AgentCacheClient agentCacheClient) 
-        : base(logger, vhContext, multilevelAuthService)
+    private readonly ILogger<HealthController> _logger;
+    private readonly VhContext _vhContext;
+    public HealthController(
+        ILogger<HealthController> logger, 
+        VhContext vhContext, 
+        AgentCacheClient agentCacheClient)
     {
+        _logger = logger;
+        _vhContext = vhContext;
         _agentCacheClient = agentCacheClient;
     }
 

@@ -5,7 +5,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Persistence;
 
-public abstract class VhContextBase : DbContext
+public class VhContext : DbContext
 {
     public const int MaxDescriptionLength = 1000;
 
@@ -23,7 +23,7 @@ public abstract class VhContextBase : DbContext
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
 
-    protected VhContextBase(DbContextOptions options)
+    public VhContext(DbContextOptions options)
         : base(options)
     {
     }

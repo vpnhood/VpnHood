@@ -74,8 +74,8 @@ public class ProjectTest
         //-----------
         var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
         var rolePermissions = await authRepo.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
-        var adminRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
-        var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectViewer.PermissionGroupId);
+        var adminRole = rolePermissions.Single(x => x.PermissionGroupId == Roles.ProjectOwner.PermissionGroupId);
+        var guestRole = rolePermissions.Single(x => x.PermissionGroupId == Roles.ProjectReader.PermissionGroupId);
 
         Assert.AreEqual(Resource.ProjectOwners, adminRole.Role?.RoleName);
         Assert.AreEqual(Resource.ProjectViewers, guestRole.Role?.RoleName);

@@ -1,41 +1,40 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/accesses")]
-public class AccessesController : SuperController<AccessesController>
+public class AccessesController  : ControllerBase
 {
-    public AccessesController(ILogger<AccessesController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
-        : base(logger, vhContext, multilevelAuthService)
+    private readonly VhContext _vhContext;
+    public AccessesController(VhContext vhContext)
     {
+        _vhContext = vhContext;
     }
 
     [HttpGet("{accessId:guid}")]
+    [AuthorizePermission(Permission.ProjectRead)]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
         var res = await List(projectId, accessId: accessId);
         return res.Single();
     }
 
     [HttpGet]
+    [AuthorizePermission(Permission.ProjectRead)]
     public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
         DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
-
-        var query = VhContext.Accesses
+        var query = _vhContext.Accesses
             .Include(x => x.Device)
             .Include(x => x.AccessToken)
             .ThenInclude(x => x!.ServerFarm)

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -14,16 +13,15 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.MultiLevelAuthorization;
-using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using NLog;
 using NLog.Web;
 using GrayMint.Common.Utils;
 using GrayMint.Common.AspNetCore.Auth.CognitoAuthentication;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using GrayMint.Common.AspNetCore.SimpleUserManagement;
+using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer;
 
@@ -33,48 +31,29 @@ public class Program
     {
         // nLog
         LogManager.Setup();
-
         var builder = WebApplication.CreateBuilder(args);
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
+        var useCognito = !builder.Environment.IsDevelopment();
 
         // add authentication
-        var isTest = Environment.GetEnvironmentVariable("IsTest") == true.ToString();
         var authenticationBuilder = builder.Services
             .AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
 
-        if (!isTest)
-        {
+        if (useCognito)
             authenticationBuilder.AddCognitoAuthentication(builder.Configuration.GetSection("Auth"));
-            //authenticationBuilder.AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"));
-        }
 
-        // set default Authorization Policy
-        builder.Services
-            .AddAuthorization(options =>
-            {
-                var policyBuilder = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme);
+        // Add authentications
+        builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions{AppIdParamName="projectId", Roles = Roles.All});
+        builder.Services.AddGrayMintSimpleUserProvider(options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
-                if (!isTest)
-                    policyBuilder.AddAuthenticationSchemes(CognitoAuthenticationDefaults.AuthenticationScheme);
-                    //policyBuilder.AddAuthenticationSchemes("AzureB2C");
-
-                options.DefaultPolicy = policyBuilder.Build();
-            });
-
-        builder.Services.AddMultilevelAuthorization();
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 
         builder.Services.AddDbContext<VhReportContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
-
-        builder.Services.AddDbContextPool<MultilevelAuthContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 
         builder.Services.AddHostedService<TimedHostedService>();
         builder.Services.AddSingleton<SyncService>();
@@ -95,7 +74,7 @@ public class Program
         builder.Services.AddScoped<ServerFarmService>();
         builder.Services.AddScoped<SubscriptionService>();
         builder.Services.AddScoped<ServerProfileService>();
-        builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
+        builder.Services.AddScoped<UserService>();
 
         // NLog: Setup NLog for Dependency injection
         builder.Logging.ClearProviders();
@@ -109,20 +88,14 @@ public class Program
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
         await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
         await GrayMintApp.CheckDatabaseCommand<VhReportContext>(webApp, args);
-        await webApp.UseMultilevelAuthorization();
         webApp.ScheduleGrayMintSqlMaintenance<VhContext>(TimeSpan.FromDays(2));
         webApp.ScheduleGrayMintSqlMaintenance<VhReportContext>(TimeSpan.FromDays(2));
+        await webApp.UseGrayMintSimpleUserProvider();
 
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, new[] { nameof(AppOptions.AgentSystemAuthorization) }));
-
-        using (var scope = webApp.Services.CreateScope())
-        {
-            var authRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
-            await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
-        }
 
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();

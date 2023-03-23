@@ -1,19 +1,21 @@
-﻿using System.Threading.Tasks;
-using System;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Dtos;
-using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.Common.Utils;
-using System.Net;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Dtos.ServerDtos;
 using VpnHood.AccessServer.ServerUtils;
+using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -23,17 +25,20 @@ public class ServerService
     private readonly AppOptions _appOptions;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly SubscriptionService _subscriptionService;
+    private readonly AgentSystemClient _agentSystemClient;
 
     public ServerService(
         VhContext vhContext,
         IOptions<AppOptions> appOptions,
         AgentCacheClient agentCacheClient,
-        SubscriptionService subscriptionService)
+        SubscriptionService subscriptionService, 
+        AgentSystemClient agentSystemClient)
     {
         _vhContext = vhContext;
         _appOptions = appOptions.Value;
         _agentCacheClient = agentCacheClient;
         _subscriptionService = subscriptionService;
+        _agentSystemClient = agentSystemClient;
     }
 
     public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams createParams)
@@ -269,7 +274,7 @@ public class ServerService
 
         // update model ServerStatusEx
         var servers = serverModels
-            .Select(server => server.ToDto( _appOptions.LostServerThreshold))
+            .Select(server => server.ToDto(_appOptions.LostServerThreshold))
             .ToArray();
 
         // update status from cache
@@ -306,4 +311,132 @@ public class ServerService
         await _vhContext.SaveChangesAsync();
         await _agentCacheClient.InvalidateProjectServers(projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
     }
+
+    public async Task Delete(Guid projectId, Guid serverId)
+    {
+        var server = await _vhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .SingleAsync(server => server.ServerId == serverId);
+
+        server.IsDeleted = true;
+        await _vhContext.SaveChangesAsync();
+    }
+
+    public async Task Reconfigure(Guid projectId, Guid serverId)
+    {
+        var server = await _vhContext.Servers
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.ServerId == serverId);
+
+        server.ConfigCode = Guid.NewGuid();
+        await _vhContext.SaveChangesAsync();
+        await _agentCacheClient.InvalidateServer(server.ServerId);
+    }
+
+    private static async Task<string> ExecuteSshCommand(Renci.SshNet.SshClient sshClient, string command, string? password, TimeSpan timeout)
+    {
+        command += ";echo 'CommandExecuted''!'";
+        if (!string.IsNullOrEmpty(password)) command += $"\r{password}\r";
+        await using var shellStream = sshClient.CreateShellStream("ShellStreamCommand", 0, 0, 0, 0, 2048);
+        shellStream.WriteLine(command);
+        await shellStream.FlushAsync();
+        var res = shellStream.Expect("CommandExecuted!", timeout);
+        return res;
+    }
+
+    public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
+    {
+
+        var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new Renci.SshNet.PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
+
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        await InstallBySsh(appSettings, connectionInfo, installParams.Password);
+    }
+
+    public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
+    {
+        await using var keyStream = new MemoryStream(installParams.UserKey);
+        using var privateKey = new Renci.SshNet.PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
+        SShNet.Hack.RsaSha256Util.ConvertToKeyWithSha256Signature(privateKey); //todo: remove after SShNet get fixed
+
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new Renci.SshNet.PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        await InstallBySsh(appSettings, connectionInfo, null);
+    }
+    private async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? userPassword)
+    {
+        using var sshClient = new Renci.SshNet.SshClient(connectionInfo);
+        sshClient.Connect();
+
+        var linuxCommand = GetInstallScriptForLinux(appSettings, false);
+
+        var res = await ExecuteSshCommand(sshClient, linuxCommand, userPassword, TimeSpan.FromMinutes(5));
+        res = res.Replace($"\n{userPassword}", "\n********");
+
+        var check = sshClient.RunCommand("dir /opt/VpnHoodServer");
+        var checkResult = check.Execute();
+        if (checkResult.IndexOf("publish.json", StringComparison.Ordinal) == -1)
+        {
+            var ex = new Exception("Installation failed! Check detail for more information.");
+            ex.Data.Add("log", res);
+            throw ex;
+        }
+    }
+
+    public async Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
+    {
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        var ret = new ServerInstallManual(appSettings)
+        {
+            LinuxCommand = GetInstallScriptForLinux(appSettings, true),
+            WindowsCommand = GetInstallScriptForWindows(appSettings, true)
+        };
+
+        return ret;
+    }
+
+    private async Task<ServerInstallAppSettings> GetInstallAppSettings(Guid projectId, Guid serverId)
+    {
+        // make sure server belongs to project
+        var server = await _vhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .SingleAsync(server => server.ServerId == serverId);
+
+        // create jwt
+        var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
+        var appSettings = new ServerInstallAppSettings(new HttpAccessServerOptions(_appOptions.AgentUrl, authorization), server.Secret);
+        return appSettings;
+    }
+
+    private static string GetInstallScriptForLinux(ServerInstallAppSettings installAppSettings, bool manual)
+    {
+        var autoCommand = manual ? "" : "-q -autostart ";
+
+        var script =
+            "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux-x64.sh) " +
+            autoCommand +
+            $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
+            $"-restBaseUrl '{installAppSettings.HttpAccessServer.BaseUrl}' " +
+            $"-restAuthorization '{installAppSettings.HttpAccessServer.Authorization}'\"";
+
+        return script;
+    }
+
+    private static string GetInstallScriptForWindows(ServerInstallAppSettings installAppSettings, bool manual)
+    {
+        var autoCommand = manual ? "" : "-q -autostart ";
+
+        var script =
+            "[Net.ServicePointManager]::SecurityProtocol = \"Tls,Tls11,Tls12\";" +
+            "& ([ScriptBlock]::Create((Invoke-WebRequest(\"https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-win-x64.ps1\")))) " +
+            autoCommand +
+            $"-secret \"{Convert.ToBase64String(installAppSettings.Secret)}\" " +
+            $"-restBaseUrl \"{installAppSettings.HttpAccessServer.BaseUrl}\" " +
+            $"-restAuthorization \"{installAppSettings.HttpAccessServer.Authorization}\"";
+
+        return script;
+    }
+
 }

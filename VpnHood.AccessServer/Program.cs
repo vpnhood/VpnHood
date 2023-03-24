@@ -33,21 +33,24 @@ public class Program
         LogManager.Setup();
         var builder = WebApplication.CreateBuilder(args);
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
+        var authConfiguration = builder.Configuration.GetSection("Auth");
+
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
-        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
-        var useCognito = !builder.Environment.IsDevelopment();
+        builder.AddGrayMintCommonServices(
+            new GrayMintCommonOptions { AppName = "VpnHood Access Server" }, 
+            new RegisterServicesOptions());
 
         // add authentication
         var authenticationBuilder = builder.Services
             .AddAuthentication()
-            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
+            .AddBotAuthentication(authConfiguration.Get<BotAuthenticationOptions>(), builder.Environment.IsProduction());
 
-        if (useCognito)
-            authenticationBuilder.AddCognitoAuthentication(builder.Configuration.GetSection("Auth"));
+        if (!builder.Environment.IsDevelopment())
+            authenticationBuilder.AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
 
         // Add authentications
         builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions{AppIdParamName="projectId", Roles = Roles.All});
-        builder.Services.AddGrayMintSimpleUserProvider(options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+        builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);

@@ -23,10 +23,14 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
-        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions { AddSwaggerVersioning = false });
+        builder.AddGrayMintCommonServices(
+            new GrayMintCommonOptions { AppName = "VpnHood Agent Server" },
+            new RegisterServicesOptions { AddSwaggerVersioning = false });
+
         builder.Services
              .AddAuthentication()
-             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
+             .AddBotAuthentication(builder.Configuration.GetSection("Auth").Get<BotAuthenticationOptions>(),
+                 builder.Environment.IsProduction());
 
         builder.Services
             .AddDbContextPool<VhContext>(options =>

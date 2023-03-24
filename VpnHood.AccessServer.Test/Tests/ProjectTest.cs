@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
-using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 
@@ -20,8 +17,8 @@ public class ProjectTest
     {
         var testInit = await TestInit.Create();
         var projectsClient = testInit.ProjectsClient;
-        var projectId = Guid.NewGuid();
-        var project1A = await projectsClient.CreateAsync(projectId);
+        var project1A = await projectsClient.CreateAsync();
+        var projectId = project1A.ProjectId;
         Assert.AreEqual(projectId, project1A.ProjectId);
 
         //-----------
@@ -70,20 +67,9 @@ public class ProjectTest
         Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
 
         //-----------
-        // Check: Admin, Guest permission groups
-        //-----------
-        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
-        var rolePermissions = await authRepo.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
-        var adminRole = rolePermissions.Single(x => x.PermissionGroupId == Roles.ProjectOwner.PermissionGroupId);
-        var guestRole = rolePermissions.Single(x => x.PermissionGroupId == Roles.ProjectReader.PermissionGroupId);
-
-        Assert.AreEqual(Resource.ProjectOwners, adminRole.Role?.RoleName);
-        Assert.AreEqual(Resource.ProjectViewers, guestRole.Role?.RoleName);
-
-        //-----------
         // Check: All project
         //-----------
-        var userProjects = await projectsClient.ListAsync();
+        var userProjects = await testInit.UserClient.GetProjectsAsync();
         Assert.IsTrue(userProjects.Any(x => x.ProjectId == projectId));
     }
 
@@ -107,17 +93,14 @@ public class ProjectTest
     [TestMethod]
     public async Task MaxUserProjects()
     {
+        // create first project
         var testInit = await TestInit.Create();
-        await testInit.SetHttpUser(testInit.UserSystemAdmin1.Email!);
-        var userClient = new UserClient(testInit.Http);
-        var user1 = await userClient.GetAsync(testInit.User1.UserId);
-        await userClient.UpdateAsync(user1.UserId, new UserUpdateParams { MaxProjects = new PatchOfInteger { Value = 2 } });
 
-        await testInit.SetHttpUser(testInit.User1.Email!);
-        await testInit.ProjectsClient.CreateAsync();
+        // create next project the using same user
         await testInit.ProjectsClient.CreateAsync();
         try
         {
+            QuotaConstants.ProjectCount = 2;
             await testInit.ProjectsClient.CreateAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
@@ -125,6 +108,12 @@ public class ProjectTest
         {
             Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
+    }
+
+    [TestMethod]
+    public Task Roles_Created()
+    {
+        throw new NotImplementedException();
     }
 
     [TestMethod]

@@ -11,8 +11,9 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/roles")]
+[ApiController]
 [Authorize]
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/roles")]
 public class RolesController
 {
     private readonly SimpleRoleProvider _simpleRoleProvider;
@@ -26,7 +27,7 @@ public class RolesController
     }
 
     [HttpPost("{roleId:guid}/users/email:{email}")]
-    [AuthorizePermission(Permission.RoleWrite)]
+    [AuthorizePermission(Permissions.RoleWrite)]
     public async Task AddUserByEmail(Guid projectId, Guid roleId, string email)
     {
         // create user if not found
@@ -36,7 +37,7 @@ public class RolesController
     }
 
     [HttpPost("{roleId:guid}/users")]
-    [AuthorizePermission(Permission.RoleRead)]
+    [AuthorizePermission(Permissions.RoleRead)]
     public async Task<User[]> GetUsers(Guid projectId, Guid roleId)
     {
         var userRoles = await _simpleRoleProvider.GetUserRoles(roleId: roleId, appId: projectId.ToString());
@@ -44,7 +45,7 @@ public class RolesController
     }
 
     [HttpDelete("{roleId:guid}/users/userId")]
-    [AuthorizePermission(Permission.RoleWrite)]
+    [AuthorizePermission(Permissions.RoleWrite)]
     public async Task RemoveUser(Guid projectId, Guid roleId, Guid userId)
     {
         var userRoles = await _simpleRoleProvider.GetUserRoles(roleId: roleId, userId: userId, appId: projectId.ToString());

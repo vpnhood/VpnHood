@@ -17,6 +17,7 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers;
 
+[ApiController]
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/certificates")]
 [Authorize]
 public class CertificatesController : ControllerBase
@@ -28,7 +29,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permission.CertificateWrite)]
+    [AuthorizePermission(Permissions.CertificateWrite)]
     public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {
         // check user quota
@@ -75,7 +76,7 @@ public class CertificatesController : ControllerBase
 
 
     [HttpGet("{certificateId:guid}")]
-    [AuthorizePermission(Permission.CertificateRead)]
+    [AuthorizePermission(Permissions.CertificateRead)]
     public async Task<Certificate> Get(Guid projectId, Guid certificateId)
     {
         var certificateModel = await _vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
@@ -83,7 +84,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpDelete("{certificateId:guid}")]
-    [AuthorizePermission(Permission.CertificateWrite)]
+    [AuthorizePermission(Permissions.CertificateWrite)]
     public async Task Delete(Guid projectId, Guid certificateId)
     {
         var certificate = await _vhContext.Certificates
@@ -93,7 +94,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpPatch("{certificateId:guid}")]
-    [AuthorizePermission(Permission.CertificateWrite)]
+    [AuthorizePermission(Permissions.CertificateWrite)]
     public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
         var certificateModel = await _vhContext.Certificates
@@ -111,7 +112,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permission.CertificateRead)]
+    [AuthorizePermission(Permissions.CertificateRead)]
     public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
         var query = _vhContext.Certificates.Where(x => x.ProjectId == projectId);

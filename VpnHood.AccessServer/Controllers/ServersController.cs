@@ -10,8 +10,9 @@ using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/servers")]
+[ApiController]
 [Authorize]
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/servers")]
 public class ServersController : ControllerBase
 {
     private readonly UsageReportService _usageReportService;
@@ -29,21 +30,21 @@ public class ServersController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permission.ServerWrite)]
+    [AuthorizePermission(Permissions.ServerWrite)]
     public Task<Dtos.Server> Create(Guid projectId, ServerCreateParams createParams)
     {
         return _serverService.Create(projectId, createParams);
     }
 
     [HttpPatch("{serverId:guid}")]
-    [AuthorizePermission(Permission.ServerWrite)]
+    [AuthorizePermission(Permissions.ServerWrite)]
     public Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         return _serverService.Update(projectId, serverId, updateParams);
     }
 
     [HttpGet("{serverId:guid}")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
         var list = await _serverService.List(projectId, serverId);
@@ -51,14 +52,14 @@ public class ServersController : ControllerBase
     }
 
     [HttpDelete("{serverId:guid}")]
-    [AuthorizePermission(Permission.ServerWrite)]
+    [AuthorizePermission(Permissions.ServerWrite)]
     public Task Delete(Guid projectId, Guid serverId)
     {
         return _serverService.Delete(projectId, serverId);
     }
 
     [HttpGet]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public Task<ServerData[]> List(Guid projectId, Guid? serverId = null, Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = 1000)
     {
@@ -66,42 +67,42 @@ public class ServersController : ControllerBase
     }
 
     [HttpPost("{serverId:guid}/reconfigure")]
-    [AuthorizePermission(Permission.ServerInstall)]
+    [AuthorizePermission(Permissions.ServerInstall)]
     public Task Reconfigure(Guid projectId, Guid serverId)
     {
         return _serverService.Reconfigure(projectId, serverId);
     }
     
     [HttpPost("{serverId:guid}/install-by-ssh-user-password")]
-    [AuthorizePermission(Permission.ServerInstall)]
+    [AuthorizePermission(Permissions.ServerInstall)]
     public Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
         return _serverService.InstallBySshUserPassword(projectId, serverId, installParams);
     }
 
     [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
-    [AuthorizePermission(Permission.ServerInstall)]
+    [AuthorizePermission(Permissions.ServerInstall)]
     public Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
         return _serverService.InstallBySshUserKey(projectId, serverId, installParams);
     }
     
     [HttpGet("{serverId:guid}/install/manual")]
-    [AuthorizePermission(Permission.ServerInstall)]
+    [AuthorizePermission(Permissions.ServerInstall)]
     public Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
     {
         return _serverService.GetInstallManual(projectId, serverId);
     }
 
     [HttpGet("status-summary")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
     {
         return _serverService.GetStatusSummary(projectId, serverFarmId);
     }
 
     [HttpGet("status-history")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<ServerStatusHistory[]> GetStatusHistory(Guid projectId,
         DateTime? usageBeginTime, DateTime? usageEndTime = null, Guid? serverId = null)
     {

@@ -25,7 +25,7 @@ public class SubscriptionService
     }
 
     public SubscriptionService(
-        VhContext vhContext, 
+        VhContext vhContext,
         SimpleRoleProvider simpleRoleProvider,
         SimpleUserProvider simpleUserProvider)
     {
@@ -34,18 +34,18 @@ public class SubscriptionService
         _simpleUserProvider = simpleUserProvider;
     }
 
-    public async Task AuthorizeCreateProject(string email)
+    public async Task AuthorizeCreateProject(Guid userId)
     {
-        var user = await _simpleUserProvider.GetByEmail(email);
+        var user = await _simpleUserProvider.Get(userId); // make sure the user is registered
         var userRoles = await _simpleRoleProvider.GetUserRoles(userId: user.UserId);
-        if (userRoles.Count(x => x.Role.RoleName == Roles.ProjectOwner.RoleName) > 2)
-            throw new QuotaException(nameof(_vhContext.Projects), QuotaConstants.ProjectCount, 
+        if (userRoles.Count(x => x.Role.RoleName == Roles.ProjectOwner.RoleName) >= QuotaConstants.ProjectCount)
+            throw new QuotaException(nameof(_vhContext.Projects), QuotaConstants.ProjectCount,
                 $"You can not be owner of more than {QuotaConstants.ProjectCount} projects.");
     }
 
     public async Task AuthorizeCreateServer(Guid projectId)
     {
-        if (await IsFreePlan(projectId) && 
+        if (await IsFreePlan(projectId) &&
             _vhContext.Servers.Count(server => server.ProjectId == projectId && !server.IsDeleted) >= QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
     }

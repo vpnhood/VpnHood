@@ -2,8 +2,9 @@
   "profiles": {
     "VpnHood.AccessServer": {
       "commandName": "Project",
+      "launchBrowser": false,
       "commandLineArgs": "/recreatedb2",
-      "launchUrl": "zz",
+      "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

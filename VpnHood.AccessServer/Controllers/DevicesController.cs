@@ -14,6 +14,7 @@ using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
+[ApiController]
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/devices")]
 [Authorize]
 public class DevicesController : ControllerBase
@@ -33,7 +34,7 @@ public class DevicesController : ControllerBase
     }
 
     [HttpGet("{deviceId:guid}")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         // find the device
@@ -53,7 +54,7 @@ public class DevicesController : ControllerBase
     }
 
     [HttpGet("clientId:{clientId:guid}")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
     {
         var deviceModel = await _vhContext.Devices
@@ -63,7 +64,7 @@ public class DevicesController : ControllerBase
     }
 
     [HttpPatch("{deviceId:guid}")]
-    [AuthorizePermission(Permission.ProjectWrite)]
+    [AuthorizePermission(Permissions.ProjectWrite)]
     public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
     {
         var deviceModel = await _vhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
@@ -76,7 +77,7 @@ public class DevicesController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<DeviceData[]> List(Guid projectId,
         Guid? deviceId = null, DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 100)
@@ -117,7 +118,7 @@ public class DevicesController : ControllerBase
     }
 
     [HttpGet("usages")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<DeviceData[]> ListUsages(Guid projectId,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,

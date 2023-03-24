@@ -2,11 +2,14 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
+using GrayMint.Common.Exceptions;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
+using User = GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -28,8 +31,15 @@ public class UserService
 
     public static Guid GetUserId(ClaimsPrincipal userPrincipal)
     {
-        var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
-        return Guid.Parse(userId);
+        var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new NotExistsException("User has not been registered.");
+        if (!Guid.TryParse(userId, out var ret))
+            throw new NotExistsException("User has not been registered.");
+        return ret;
+    }
+
+    public Task<User> GetUser(Guid userId)
+    {
+        return _simpleUserProvider.Get(userId);
     }
 
     public async Task<Project[]> GetProjects(Guid userId)

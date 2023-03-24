@@ -7,6 +7,7 @@ using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
+[ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/system")]
 public class SystemController : ControllerBase
@@ -21,7 +22,7 @@ public class SystemController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permission.Sync)]
+    [AuthorizePermission(Permissions.Sync)]
     public async Task Sync()
     {
         await _syncService.Sync();

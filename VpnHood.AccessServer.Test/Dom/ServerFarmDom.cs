@@ -26,7 +26,7 @@ public class ServerFarmDom
 
     public static async Task<ServerFarmDom> Create(TestInit? testInit = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
     {
-        testInit ??= await TestInit.Create(createServers: false);
+        testInit ??= await TestInit.Create();
         createParams ??= new ServerFarmCreateParams
         {
             ServerFarmName = Guid.NewGuid().ToString()

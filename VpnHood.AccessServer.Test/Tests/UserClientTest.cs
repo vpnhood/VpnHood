@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.Common.Client;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -18,16 +20,16 @@ public class UserClientTest
         // ------------
         // Check: New user should not exist if not he hasn't registered yet
         // ------------
-        await testInit.SetHttpUser(userEmail, new Claim[]{new ("test_usage", "test")});
+        await testInit.SetHttpUser(userEmail, new Claim[]{new ("test_authenticated", "1")});
         var userClient = new UserClient(testInit.Http);
         try
         {
             await userClient.GetCurrentUserAsync();
             Assert.Fail("User should not exist!");
         }
-        catch (Exception ex) when (ex is not AssertFailedException)
+        catch (ApiException ex)
         {
-            // ignored
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
 
         // ------------
@@ -38,6 +40,7 @@ public class UserClientTest
         Assert.AreEqual(userEmail, user.Email);
 
         // Get Project Get
-        await testInit.ProjectsClient.ListAsync();
+        var projects = await userClient.GetProjectsAsync();
+        Assert.AreEqual(0, projects.Count);
     }
 }

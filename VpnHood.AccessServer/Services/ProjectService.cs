@@ -40,8 +40,8 @@ public class ProjectService
     public async Task<Project> Create(Guid ownerUserId)
     {
         // Check user quota
-        using var singleRequest = AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
-        await _subscriptionService.AuthorizeCreateProject(ownerUserId.ToString());
+        using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
+        await _subscriptionService.AuthorizeCreateProject(ownerUserId);
         var projectId = Guid.NewGuid();
 
         // ServerProfile

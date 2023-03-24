@@ -8,8 +8,9 @@ using VpnHood.AccessServer.Persistence;
 namespace VpnHood.AccessServer.Controllers;
 // ReSharper disable NotAccessedField.Local
 
-[Route("/api/v{version:apiVersion}/health")]
+[ApiController]
 [AllowAnonymous]
+[Route("/api/v{version:apiVersion}/health")]
 public class HealthController : ControllerBase
 {
     private readonly AgentCacheClient _agentCacheClient;

@@ -55,8 +55,6 @@ public class Program
         builder.Services.AddDbContext<VhReportContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
 
-        builder.Services.AddHostedService<TimedHostedService>();
-        builder.Services.AddSingleton<SyncService>();
         builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
         {
             if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
@@ -66,16 +64,21 @@ public class Program
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentSystemAuthorization);
         });
+
+        builder.Services.AddHostedService<TimedHostedService>();
+        builder.Services.AddSingleton<SyncService>();
+
+        builder.Services.AddScoped<ProjectService>();
+        builder.Services.AddScoped<ServerFarmService>();
+        builder.Services.AddScoped<ServerProfileService>();
+        builder.Services.AddScoped<ServerService>();
+        builder.Services.AddScoped<SubscriptionService>();
         builder.Services.AddScoped<UsageCycleService>();
+        builder.Services.AddScoped<UsageReportService>();
+        builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();
-        builder.Services.AddScoped<UsageReportService>();
-        builder.Services.AddScoped<ServerService>();
-        builder.Services.AddScoped<ServerFarmService>();
-        builder.Services.AddScoped<SubscriptionService>();
-        builder.Services.AddScoped<ServerProfileService>();
-        builder.Services.AddScoped<UserService>();
-
+        
         // NLog: Setup NLog for Dependency injection
         builder.Logging.ClearProviders();
         builder.Host.UseNLog();

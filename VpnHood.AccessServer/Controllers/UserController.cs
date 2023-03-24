@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
@@ -9,8 +10,9 @@ using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/v{version:apiVersion}/users")]
+[ApiController]
 [Authorize]
+[Route("/api/v{version:apiVersion}/users")]
 public class UserController : ControllerBase
 {
     private readonly UserService _userService;
@@ -20,6 +22,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("current/register")]
+    [Authorize]
     public Task RegisterCurrentUser()
     {
         var email =
@@ -32,7 +35,15 @@ public class UserController : ControllerBase
             User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Surname)?.Value);
     }
 
-    [HttpPost("current/projects")]
+    [HttpGet("current")]
+    [Authorize]
+    public Task<User> GetCurrentUser()
+    {
+        return _userService.GetUser(UserService.GetUserId(User));
+    }
+
+    [HttpGet("current/projects")]
+    [Authorize]
     public Task<Project[]> GetProjects()
     {
         return _userService.GetProjects(UserService.GetUserId(User));

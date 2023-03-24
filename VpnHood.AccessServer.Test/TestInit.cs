@@ -18,7 +18,6 @@ using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -27,11 +26,17 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
+using User = VpnHood.AccessServer.Api.User;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using System.Text.Json;
+using VpnHood.AccessServer.Test.Helper;
+using GrayMint.Common.Utils;
+using static System.Net.WebRequestMethods;
 
 namespace VpnHood.AccessServer.Test;
 
 [TestClass]
-public class TestInit : IDisposable, IHttpClientFactory
+public class TestInit : IHttpClientFactory, IDisposable
 {
     public WebApplicationFactory<Program> WebApp { get; }
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
@@ -56,12 +61,14 @@ public class TestInit : IDisposable, IHttpClientFactory
     public DevicesClient DevicesClient => new(Http);
     public SystemClient SystemClient => new(Http);
     public ServerProfilesClient ServerProfilesClient => new(Http);
+    public UserClient UserClient => new(Http);
 
-    public UserModel UserSystemAdmin1 { get; } = NewUser("Administrator1");
-    public UserModel UserProjectOwner1 { get; } = NewUser("Project Owner 1");
-    public UserModel User1 { get; } = NewUser("User1");
-    public UserModel User2 { get; } = NewUser("User2");
-    public Guid ProjectId { get; private set; }
+    public User UserSystemAdmin1 { get; private set; } = default!;
+    public User UserProjectOwner1 { get; private set; } = default!;
+    public User UserProjectAdmin { get; private set; } = default!;
+    public User UserProjectReader { get; private set; } = default!;
+    public Project Project { get; private set; } = default!;
+    public Guid ProjectId => Project.ProjectId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
@@ -94,20 +101,6 @@ public class TestInit : IDisposable, IHttpClientFactory
     public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
     public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
 
-    public static UserModel NewUser(string name)
-    {
-        var userId = Guid.NewGuid();
-        return new UserModel
-        {
-            UserId = userId,
-            AuthUserId = userId.ToString(),
-            Email = $"{userId}@vpnhood.com",
-            UserName = $"{name}_{userId}",
-            MaxProjectCount = QuotaConstants.ProjectCount,
-            AuthCode = Guid.NewGuid().ToString(),
-            CreatedTime = DateTime.UtcNow
-        };
-    }
 
     public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
         bool isListen = true, int udpPrt = 0)
@@ -123,11 +116,6 @@ public class TestInit : IDisposable, IHttpClientFactory
         };
     }
 
-    [AssemblyInitialize]
-    public static void AssemblyInitialize(TestContext _)
-    {
-    }
-
     private TestInit(Dictionary<string, string?> appSettings, string environment)
     {
         Environment.SetEnvironmentVariable("IsTest", true.ToString());
@@ -137,6 +125,11 @@ public class TestInit : IDisposable, IHttpClientFactory
         Scope = WebApp.Services.CreateScope();
         AgentScope = AgentApp.Services.CreateScope();
         Http = WebApp.CreateClient();
+    }
+
+    public Task SetHttpUser(User user, Claim[]? claims = null)
+    {
+        return SetHttpUser(user.Email, claims);
     }
 
     public async Task SetHttpUser(string email, Claim[]? claims = null)
@@ -151,34 +144,12 @@ public class TestInit : IDisposable, IHttpClientFactory
         Http.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
     }
 
-    public static async Task<TestInit> Create(bool useSharedProject = false, Dictionary<string, string?>? appSettings = null, string environment = "Development",
-        bool createServers = true)
+    public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null, string environment = "Development")
     {
         appSettings ??= new Dictionary<string, string?>();
         var ret = new TestInit(appSettings, environment);
-        await ret.Init(useSharedProject, createServers);
+        await ret.Init();
         return ret;
-    }
-
-    public HttpClient CreateClient(string name)
-    {
-        if (name == AppOptions.AgentHttpClientName)
-        {
-            var scope = AgentApp.Services.CreateScope();
-            var authenticationTokenBuilder = scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
-            var claimIdentity = new ClaimsIdentity();
-            claimIdentity.AddClaim(new Claim("usage_type", "system"));
-            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
-            claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
-            var authorization = authenticationTokenBuilder.CreateAuthenticationHeader(claimIdentity).Result;
-
-            var httpClient = AgentApp.CreateClient();
-            httpClient.BaseAddress = AppOptions.AgentUrl;
-            httpClient.DefaultRequestHeaders.Authorization = authorization;
-            return httpClient;
-        }
-
-        return WebApp.CreateClient();
     }
 
     public WebApplicationFactory<T> CreateWebApp<T>(Dictionary<string, string?> appSettings, string environment) where T : class
@@ -194,26 +165,62 @@ public class TestInit : IDisposable, IHttpClientFactory
 
                 builder.ConfigureServices(services =>
                 {
+                    services.AddScoped<IBotAuthenticationProvider, TestBotAuthenticationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                 });
             });
         return webApp;
     }
 
-    private static async Task AddUser(VhContext vhContext, MultilevelAuthService multilevelAuthService, UserModel user)
+    [AssemblyInitialize]
+    public static void AssemblyInitialize(TestContext _)
     {
-        await vhContext.Users.AddAsync(user);
-        var secureObject = await multilevelAuthService.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-        await multilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, Roles.UserBasic, user.UserId);
     }
 
-    public async Task<User> CreateUserAndAddToRole(string email, string roleName, string appId = "*")
+    public static string NewEmail()
     {
-        // create roles
-        var roleProvider = Scope.ServiceProvider.GetRequiredService<SimpleRoleProvider>();
-        var role = await roleProvider.FindByName(roleName) ??
-                   await roleProvider.Create(new RoleCreateRequest(roleName));
+        return $"{Guid.NewGuid()}@local";
+    }
 
+    public async Task Init()
+    {
+        QuotaConstants.ProjectCount = 0xFFFFFF;
+        QuotaConstants.ServerCount = 0xFFFFFF;
+        QuotaConstants.CertificateCount = 0xFFFFFF;
+        QuotaConstants.AccessTokenCount = 0xFFFFFF;
+        QuotaConstants.AccessPointCount = 0xFFFFFF;
+        QuotaConstants.ServerFarmCount = 0xFFFFFF;
+
+        // create new user
+        UserSystemAdmin1 = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);
+        UserProjectOwner1 = await CreateUser(NewEmail());
+
+
+        // create default project
+        await SetHttpUser(UserProjectOwner1);
+        Project = await ProjectsClient.CreateAsync();
+        UserProjectAdmin = await CreateUserAndAddToRole(NewEmail(), Roles.ProjectAdmin, Project.ProjectId.ToString());
+        UserProjectReader = await CreateUserAndAddToRole(NewEmail(), Roles.ProjectReader, Project.ProjectId.ToString());
+    }
+
+    public async Task<User> CreateUserAndAddToRole(string email, SimpleRole simpleRole, string appId = "*")
+    {
+        // create user
+        var user = await CreateUser(email);
+
+        // create role if not exists
+        var roleProvider = Scope.ServiceProvider.GetRequiredService<SimpleRoleProvider>();
+        var role = await roleProvider.Get(simpleRole.RoleId);
+
+        // add to role if it is not already added
+        var userRoles = await roleProvider.GetUserRoles(userId: user.UserId);
+        if (userRoles.SingleOrDefault(x => x.Role.RoleId == role.RoleId && x.AppId == appId) == null)
+            await roleProvider.AddUser(role.RoleId, user.UserId, appId);
+        return user;
+    }
+
+    public async Task<User> CreateUser(string email)
+    {
         // create user
         var userProvider = Scope.ServiceProvider.GetRequiredService<SimpleUserProvider>();
         var user = await userProvider.FindByEmail(email) ??
@@ -224,73 +231,10 @@ public class TestInit : IDisposable, IHttpClientFactory
                        Description = Guid.NewGuid().ToString()
                    });
 
-        var userRoles = await roleProvider.GetUserRolesByUser(user.UserId);
-        if (userRoles.SingleOrDefault(x => x.Role.RoleId == role.RoleId && x.AppId == appId) == null)
-            await roleProvider.AddUser(role.RoleId, user.UserId, appId);
-
-        return user;
+        var apiUser = GmUtil.JsonClone<User>(user, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return apiUser;
     }
 
-    public async Task Init(bool useSharedProject = false, bool createServers = false)
-    {
-        QuotaConstants.ProjectCount = 0xFFFFFF;
-        QuotaConstants.ServerCount = 0xFFFFFF;
-        QuotaConstants.CertificateCount = 0xFFFFFF;
-        QuotaConstants.AccessTokenCount = 0xFFFFFF;
-        QuotaConstants.AccessPointCount = 0xFFFFFF;
-        QuotaConstants.ServerFarmCount = 0xFFFFFF;
-
-        // create new user
-        var appCreatorUser = await CreateUserAndAddToRole(NewEmail(), RoleId.AppCreator);
-        AppCreatorAuthorization = await CreateAuthorizationHeader(appCreatorUser.Email);
-        AppCreatorHttpClient.DefaultRequestHeaders.Authorization = AppCreatorAuthorization;
-
-        // create new user
-        var appSysAdminUser = await CreateUserAndAddToRole(NewEmail(), RoleId.SystemAdmin);
-        AppSysAdminAuthorization = await CreateAuthorizationHeader(appSysAdminUser.Email);
-        AppSysAdminHttpClient.DefaultRequestHeaders.Authorization = AppSysAdminAuthorization;
-
-
-        await using var scope = WebApp.Services.CreateAsyncScope();
-        var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var multilevelAuthRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
-
-        await AddUser(vhContext, multilevelAuthRepo, UserSystemAdmin1);
-        await AddUser(vhContext, multilevelAuthRepo, UserProjectOwner1);
-        await AddUser(vhContext, multilevelAuthRepo, User1);
-        await AddUser(vhContext, multilevelAuthRepo, User2);
-        await vhContext.SaveChangesAsync();
-        await SetHttpUser(UserSystemAdmin1.Email!);
-
-        await multilevelAuthRepo.Role_AddUser(MultilevelAuthService.SystemAdminRoleId, UserSystemAdmin1.UserId, MultilevelAuthService.SystemUserId);
-
-        // create default project
-        Project? project;
-        if (useSharedProject)
-        {
-            var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
-            try
-            {
-                project = await ProjectsClient.GetAsync(sharedProjectId);
-
-                // add new owner to shared project
-                var ownerRole = (await multilevelAuthRepo.SecureObject_GetRolePermissionGroups(project.ProjectId))
-                    .Single(x => x.PermissionGroupId == Roles.ProjectOwner.PermissionGroupId);
-                await multilevelAuthRepo.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, MultilevelAuthService.SystemUserId);
-            }
-            catch
-            {
-                project = await ProjectsClient.CreateAsync(sharedProjectId);
-            }
-        }
-        else
-        {
-            project = await ProjectsClient.CreateAsync();
-        }
-
-        // create Project1
-        ProjectId = project.ProjectId;
-    }
 
     public static ServerStatus NewServerStatus(string? configCode, bool randomStatus = false)
     {
@@ -402,12 +346,38 @@ public class TestInit : IDisposable, IHttpClientFactory
     {
         if (flushCache)
             await FlushCache();
+
+        var oldAuthorization = Http.DefaultRequestHeaders.Authorization;
+        await SetHttpUser(UserSystemAdmin1);
         await SystemClient.SyncAsync();
+        Http.DefaultRequestHeaders.Authorization = oldAuthorization;
     }
 
     public async Task FlushCache()
     {
         await AgentCacheClient.Flush();
+    }
+
+    public HttpClient CreateClient(string name)
+    {
+        // this for simulating Agent HTTP
+        if (name == AppOptions.AgentHttpClientName)
+        {
+            var scope = AgentApp.Services.CreateScope();
+            var authenticationTokenBuilder = scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
+            var claimIdentity = new ClaimsIdentity();
+            claimIdentity.AddClaim(new Claim("usage_type", "system"));
+            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
+            claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
+            var authorization = authenticationTokenBuilder.CreateAuthenticationHeader(claimIdentity).Result;
+
+            var httpClient = AgentApp.CreateClient();
+            httpClient.BaseAddress = AppOptions.AgentUrl;
+            httpClient.DefaultRequestHeaders.Authorization = authorization;
+            return httpClient;
+        }
+
+        return WebApp.CreateClient();
     }
 
     public void Dispose()

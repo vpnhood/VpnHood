@@ -20,8 +20,9 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-tokens")]
+[ApiController]
 [Authorize]
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-tokens")]
 public class AccessTokensController : ControllerBase
 {
     private readonly UsageReportService _usageReportService;
@@ -39,7 +40,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permission.AccessTokenWrite)]
+    [AuthorizePermission(Permissions.AccessTokenWrite)]
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
         // check user quota
@@ -81,7 +82,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpPatch("{accessTokenId:guid}")]
-    [AuthorizePermission(Permission.AccessTokenWrite)]
+    [AuthorizePermission(Permissions.AccessTokenWrite)]
     public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
     {
         // validate accessTokenModel.ServerFarmId
@@ -117,7 +118,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
-    [AuthorizePermission(Permission.AccessTokenReadAccessKey)]
+    [AuthorizePermission(Permissions.AccessTokenReadAccessKey)]
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
@@ -164,7 +165,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpGet("{accessTokenId:guid}")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
@@ -173,7 +174,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
@@ -234,7 +235,7 @@ public class AccessTokensController : ControllerBase
 
 
     [HttpDelete("{accessTokenId:guid}")]
-    [AuthorizePermission(Permission.AccessTokenWrite)]
+    [AuthorizePermission(Permissions.AccessTokenWrite)]
     public async Task Delete(Guid projectId, Guid accessTokenId)
     {
         var accessToken = await _vhContext.AccessTokens

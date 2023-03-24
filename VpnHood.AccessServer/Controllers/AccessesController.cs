@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
@@ -11,8 +12,10 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
 
+[ApiController]
+[Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/accesses")]
-public class AccessesController  : ControllerBase
+public class AccessesController : ControllerBase
 {
     private readonly VhContext _vhContext;
     public AccessesController(VhContext vhContext)
@@ -21,7 +24,7 @@ public class AccessesController  : ControllerBase
     }
 
     [HttpGet("{accessId:guid}")]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
         var res = await List(projectId, accessId: accessId);
@@ -29,7 +32,7 @@ public class AccessesController  : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permission.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
         DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
@@ -54,8 +57,8 @@ public class AccessesController  : ControllerBase
         var res = await query.ToArrayAsync();
         var ret = res
             .Select(accessModel => new AccessData(
-                accessModel.ToDto(), 
-                accessModel.AccessToken!.ToDto(accessModel.AccessToken!.ServerFarm?.ServerFarmName), 
+                accessModel.ToDto(),
+                accessModel.AccessToken!.ToDto(accessModel.AccessToken!.ServerFarm?.ServerFarmName),
                 accessModel.Device?.ToDto()))
             .ToArray();
         return ret;

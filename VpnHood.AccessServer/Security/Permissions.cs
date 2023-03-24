@@ -1,7 +1,7 @@
 ﻿
 namespace VpnHood.AccessServer.Security;
 
-public static class Permission
+public static class Permissions
 {
     public const string ProjectCreate = nameof(ProjectCreate);
     public const string ProjectRead = nameof(ProjectRead);

@@ -52,7 +52,7 @@ public class ProjectsController : ControllerBase
     }
 
     [HttpGet("usage")]
-    //[AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizePermission(Permissions.ProjectRead)]
     public  Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)
     {

@@ -16,7 +16,6 @@ public static class Permissions
     public const string UserWrite  = nameof(UserWrite);
     public const string ServerWrite  = nameof(ServerWrite);
     public const string ServerInstall  = nameof(ServerInstall);
-    public const string AccessPointWrite  = nameof(AccessPointWrite);
     public const string ServerFarmWrite  = nameof(ServerFarmWrite);
     public const string IpLockWrite  = nameof(IpLockWrite);
     public const string Sync = nameof(Sync);

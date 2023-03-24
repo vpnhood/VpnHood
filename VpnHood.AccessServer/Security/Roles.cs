@@ -32,7 +32,8 @@ public static class Roles
             Permissions.UserWrite,
             Permissions.ServerWrite,
             Permissions.ServerInstall,
-            Permissions.AccessPointWrite,
+            Permissions.RoleRead,
+            Permissions.RoleWrite,
             Permissions.ServerFarmWrite,
             Permissions.IpLockWrite,
         }

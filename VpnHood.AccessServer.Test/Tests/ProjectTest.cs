@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
+using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 
@@ -111,9 +112,12 @@ public class ProjectTest
     }
 
     [TestMethod]
-    public Task Roles_Created()
+    public async Task Roles_Created()
     {
-        throw new NotImplementedException();
+        var testInit = await TestInit.Create();
+        var users = await testInit.RolesClient.GetUsersAsync(testInit.ProjectId, Roles.ProjectOwner.RoleId);
+        Assert.AreEqual(testInit.UserProjectOwner1.UserId, users.FirstOrDefault()?.UserId);
+        Assert.AreEqual(1, users.Count);
     }
 
     [TestMethod]

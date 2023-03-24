@@ -31,7 +31,6 @@ using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using System.Text.Json;
 using VpnHood.AccessServer.Test.Helper;
 using GrayMint.Common.Utils;
-using static System.Net.WebRequestMethods;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -62,6 +61,7 @@ public class TestInit : IHttpClientFactory, IDisposable
     public SystemClient SystemClient => new(Http);
     public ServerProfilesClient ServerProfilesClient => new(Http);
     public UserClient UserClient => new(Http);
+    public RolesClient RolesClient => new(Http);
 
     public User UserSystemAdmin1 { get; private set; } = default!;
     public User UserProjectOwner1 { get; private set; } = default!;
@@ -302,7 +302,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         return serverInfo;
     }
 
-    public SessionRequestEx CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null)
+    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null)
     {
         var rand = new Random();
 
@@ -313,7 +313,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             UserAgent = "agent"
         };
 
-        var accessKey = AccessTokensClient.GetAccessKeyAsync(accessToken.ProjectId, accessToken.AccessTokenId).Result;
+        var accessKey = await AccessTokensClient.GetAccessKeyAsync(accessToken.ProjectId, accessToken.AccessTokenId);
         var vhToken = Token.FromAccessKey(accessKey);
 
         var secret = vhToken.Secret;

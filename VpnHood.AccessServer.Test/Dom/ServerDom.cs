@@ -128,7 +128,7 @@ public class ServerDom
 
     public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null, bool assertError = true)
     {
-        var sessionRequestEx = TestInit.CreateSessionRequestEx(
+        var sessionRequestEx = await TestInit.CreateSessionRequestEx(
             accessToken,
             ServerConfig.TcpEndPointsValue.First(),
             clientId,

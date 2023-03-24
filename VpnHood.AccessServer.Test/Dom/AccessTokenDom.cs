@@ -44,7 +44,7 @@ public class AccessTokenDom
         clientIp ??= serverEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6
             ? await TestInit.NewIpV6() : await TestInit.NewIpV4();
 
-        var sessionRequestEx = TestInit.CreateSessionRequestEx(
+        var sessionRequestEx = await TestInit.CreateSessionRequestEx(
             AccessToken,
             serverEndPoint,
             clientId,

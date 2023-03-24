@@ -13,6 +13,7 @@ using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using System.Net;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -107,7 +108,7 @@ public class AgentClientSessionTest
 
     private async Task<Models.AccessModel> GetAccessFromSession(SessionDom sessionDom)
     {
-        await using var scope =  sessionDom.TestInit.WebApp.Services.CreateAsyncScope();
+        await using var scope = sessionDom.TestInit.WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var session = await vhContext.Sessions
             .Include(x => x.Access)
@@ -178,12 +179,10 @@ public class AgentClientSessionTest
         var serverDom12 = await farm1.AddNewServer();
         var accessTokenDom11 = await farm1.CreateAccessToken(true);
 
-        var farm2 = await ServerFarmDom.Create();
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
         var serverDom21 = await farm2.AddNewServer();
         var serverDom22 = await farm2.AddNewServer();
         var accessTokenDom21 = await farm2.CreateAccessToken(true);
-
-
 
         //-----------
         // check: access should grant to public token by any server
@@ -200,18 +199,9 @@ public class AgentClientSessionTest
         session = await serverDom22.CreateSession(accessTokenDom21.AccessToken);
         Assert.AreEqual(SessionErrorCode.Ok, session.SessionResponseEx.ErrorCode);
 
-        //-----------
-        // check: access should not grant by another farm token
-        //-----------
-        try
-        {
-            await serverDom21.CreateSession(accessTokenDom11.AccessToken);
-            Assert.Fail("NotExistsException was Expected");
-        }
-        catch (ApiException e)
-        {
-            Assert.AreEqual(nameof(NotExistsException), e.ExceptionTypeName);
-        }
+        session = await serverDom21.CreateSession(accessTokenDom11.AccessToken, assertError: false);
+        Assert.AreEqual(SessionErrorCode.AccessError, session.SessionResponseEx.ErrorCode,
+            "access should not grant by another farm token");
     }
 
     [TestMethod]
@@ -358,7 +348,7 @@ public class AgentClientSessionTest
         // check: add usage for client 2
         //-----------
         var sessionDom2 = await accessTokenDom.CreateSession();
-        response = await sessionDom2.AddUsage(5,10);
+        response = await sessionDom2.AddUsage(5, 10);
         await farm.TestInit.FlushCache();
 
         Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);

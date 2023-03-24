@@ -44,18 +44,18 @@ public class ProjectsController : ControllerBase
         return _projectService.Update(projectId, updateParams);
     }
 
+    [HttpPatch("{projectId:guid}/usage")]
+    [AuthorizePermission(Permissions.ProjectRead)]
+    public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
+        Guid? serverFarmId = null, Guid? serverId = null)
+    {
+        return _projectService.GetUsage(projectId, usageBeginTime, usageEndTime, serverFarmId, serverId);
+    }
+
     [HttpGet]
     [AuthorizePermission(Permissions.ProjectList)]
     public Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)
     {
         return _projectService.List(search, recordIndex, recordCount);
-    }
-
-    [HttpGet("usage")]
-    [AuthorizePermission(Permissions.ProjectRead)]
-    public  Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
-        Guid? serverFarmId = null, Guid? serverId = null)
-    {
-        return _projectService.GetUsage(projectId, usageBeginTime, usageEndTime, serverFarmId, serverId);
     }
 }

@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.UserDtos;
 using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;

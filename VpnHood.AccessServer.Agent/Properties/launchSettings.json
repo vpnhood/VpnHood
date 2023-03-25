@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "VpnHood.AccessServer.Agent": {
+    "Windows.Development": {
       "commandName": "Project",
       "launchBrowser": true,
       "launchUrl": "swagger",
@@ -10,13 +10,13 @@
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7011;http://localhost:5011"
     },
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": true,
-      "launchUrl": "swagger",
+    "Windows.Stage": {
+      "commandName": "Project",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
+        "ASPNETCORE_ENVIRONMENT": "Stage"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "https://localhost:7011;http://localhost:5011"
     },
     "WSL": {
       "commandName": "WSL2",

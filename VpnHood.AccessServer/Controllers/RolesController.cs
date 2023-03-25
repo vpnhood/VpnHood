@@ -19,7 +19,7 @@ public class RolesController
     private readonly SimpleRoleProvider _simpleRoleProvider;
     private readonly SimpleUserProvider _simpleUserProvider;
     public RolesController(
-        SimpleRoleProvider simpleRoleProvider, 
+        SimpleRoleProvider simpleRoleProvider,
         SimpleUserProvider simpleUserProvider)
     {
         _simpleRoleProvider = simpleRoleProvider;
@@ -32,13 +32,13 @@ public class RolesController
     {
         // create user if not found
         var user = await _simpleUserProvider.FindByEmail(email);
-        user ??= await _simpleUserProvider.Create(new UserCreateRequest(email));
+        user ??= await _simpleUserProvider.Create(new UserCreateRequest { Email = email });
         await _simpleRoleProvider.AddUser(roleId, user.UserId, projectId.ToString());
     }
 
     [HttpPost("{roleId:guid}/users")]
     [AuthorizePermission(Permissions.RoleRead)]
-    public async Task<User[]> GetUsers(Guid projectId, Guid roleId)
+    public async Task<User<string>[]> GetUsers(Guid projectId, Guid roleId)
     {
         var userRoles = await _simpleRoleProvider.GetUserRoles(roleId: roleId, appId: projectId.ToString());
         return userRoles.Select(x => x.User).ToArray();

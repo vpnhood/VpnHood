@@ -3280,7 +3280,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<User>> GetUsersAsync(System.Guid projectId, System.Guid roleId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UserOfString>> GetUsersAsync(System.Guid projectId, System.Guid roleId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3326,7 +3326,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<User>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<UserOfString>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6783,7 +6783,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class User
+    public partial class UserOfString
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("userId")]
@@ -6828,6 +6828,16 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public string? AuthCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isBot")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool IsBot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("exData")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? ExData { get; set; } = default!;
 
     }
 
@@ -7575,6 +7585,55 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int ServerCount { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.18.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class User
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("userId")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid UserId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("firstName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? FirstName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lastName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? LastName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTime CreatedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessedTime")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public System.DateTime? AccessedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isBot")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool IsBot { get; set; } = default!;
 
     }
 

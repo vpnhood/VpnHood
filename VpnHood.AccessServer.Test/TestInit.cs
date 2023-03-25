@@ -224,8 +224,9 @@ public class TestInit : IHttpClientFactory, IDisposable
         // create user
         var userProvider = Scope.ServiceProvider.GetRequiredService<SimpleUserProvider>();
         var user = await userProvider.FindByEmail(email) ??
-                   await userProvider.Create(new UserCreateRequest(email)
+                   await userProvider.Create(new UserCreateRequest
                    {
+                       Email = email,
                        FirstName = Guid.NewGuid().ToString(),
                        LastName = Guid.NewGuid().ToString(),
                        Description = Guid.NewGuid().ToString()

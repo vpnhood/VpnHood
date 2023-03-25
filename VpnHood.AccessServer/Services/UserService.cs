@@ -2,14 +2,13 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
 using GrayMint.Common.Exceptions;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.UserDtos;
 using VpnHood.AccessServer.Persistence;
-using User = GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -37,15 +36,16 @@ public class UserService
         return ret;
     }
 
-    public Task<User> GetUser(Guid userId)
+    public async Task<User> GetUser(Guid userId)
     {
-        return _simpleUserProvider.Get(userId);
+        var user = await _simpleUserProvider.Get<UserExData>(userId);
+        return user.ToDto();
     }
 
     public async Task<Project[]> GetProjects(Guid userId)
     {
         var userRoles = await _simpleRoleProvider.GetUserRoles(userId: userId);
-        var projectIds = userRoles.Where(x => x.AppId != "*").Select(x => Guid.Parse(x.AppId!));
+        var projectIds = userRoles.Where(x => x.AppId != "*").Select(x => Guid.Parse(x.AppId));
         var projects = _vhContext.Projects
             .Where(x => projectIds.Contains(x.ProjectId))
             .ToArray();
@@ -56,8 +56,9 @@ public class UserService
 
     public async Task Register(string email, string? firstName, string? lastName)
     {
-        await _simpleUserProvider.Create(new UserCreateRequest(email)
+        await _simpleUserProvider.Create(new UserCreateRequest
         {
+            Email = email,
             FirstName = firstName,
             LastName = lastName,
             Description = null

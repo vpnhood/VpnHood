@@ -44,8 +44,9 @@ public class Program
         var authenticationBuilder = builder.Services
             .AddAuthentication()
             .AddBotAuthentication(authConfiguration.Get<BotAuthenticationOptions>(), builder.Environment.IsProduction());
-
-        if (!builder.Environment.IsDevelopment())
+        
+        //todo
+        //if (!builder.Environment.IsDevelopment())
             authenticationBuilder.AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
 
         // Add authentications

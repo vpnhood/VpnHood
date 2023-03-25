@@ -8,6 +8,7 @@ using GrayMint.Common.Exceptions;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Dtos.UserDtos;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Services;
@@ -32,8 +33,15 @@ public class UserService
     {
         var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new NotExistsException("User has not been registered.");
         if (!Guid.TryParse(userId, out var ret))
-            throw new NotExistsException("User has not been registered.");
+            throw new UnregisteredUser("User has not been registered.");
         return ret;
+    }
+
+    public async Task CheckRegistered(ClaimsPrincipal claimsPrincipal)
+    {
+        var simpleUser = await _simpleUserProvider.FindSimpleUser(claimsPrincipal);
+        if (simpleUser==null)
+            throw new UnregisteredUser("User has not been registered.");
     }
 
     public async Task<User> GetUser(Guid userId)

@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.Auth.CognitoAuthentication;
+using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
@@ -11,7 +13,6 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize]
 [Route("/api/v{version:apiVersion}/users")]
 public class UserController : ControllerBase
 {
@@ -21,8 +22,8 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
-    [HttpPost("current/register")]
     [Authorize]
+    [HttpPost("current/register")]
     public Task RegisterCurrentUser()
     {
         var email =
@@ -35,17 +36,19 @@ public class UserController : ControllerBase
             User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Surname)?.Value);
     }
 
-    [HttpGet("current")]
     [Authorize]
-    public Task<User> GetCurrentUser()
+    [HttpGet("current")]
+    public async Task<User> GetCurrentUser()
     {
-        return _userService.GetUser(UserService.GetUserId(User));
+        await _userService.CheckRegistered(User);
+        return await _userService.GetUser(UserService.GetUserId(User));
     }
 
-    [HttpGet("current/projects")]
     [Authorize]
-    public Task<Project[]> GetProjects()
+    [HttpGet("current/projects")]
+    public async Task<Project[]> GetProjects()
     {
-        return _userService.GetProjects(UserService.GetUserId(User));
+        await _userService.CheckRegistered(User);
+        return await _userService.GetProjects(UserService.GetUserId(User));
     }
 }

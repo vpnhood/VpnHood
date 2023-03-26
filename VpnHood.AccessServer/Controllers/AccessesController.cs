@@ -65,7 +65,7 @@ public class AccessesController : ControllerBase
         var listResult = new ListResult<AccessData>
         {
             Results = results,
-            TotalCount = results.Length < recordCount ? results.Length : await baseQuery.LongCountAsync()
+            TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()
         };
 
         return listResult;

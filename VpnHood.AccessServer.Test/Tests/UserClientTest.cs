@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using GrayMint.Common.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common.Client;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -29,7 +29,7 @@ public class UserClientTest
         }
         catch (ApiException ex)
         {
-            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
+            Assert.AreEqual(nameof(UnregisteredUser), ex.ExceptionTypeName);
         }
 
         // ------------

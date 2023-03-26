@@ -26,7 +26,7 @@ public class AccessTest
         await farm.TestInit.FlushCache();
 
         var accessDatas = await farm.TestInit.AccessesClient.ListAsync(farm.TestInit.ProjectId, accessTokenDom.AccessTokenId);
-        var accessData = accessDatas.Single(x => x.Access.AccessTokenId == accessTokenDom.AccessTokenId);
+        var accessData = accessDatas.Results.Single(x => x.Access.AccessTokenId == accessTokenDom.AccessTokenId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
 
@@ -122,17 +122,17 @@ public class AccessTest
         await testInit2.FlushCache();
         var res = await testInit2.AccessesClient.ListAsync(sample1.TestInit.ProjectId);
 
-        Assert.IsTrue(res.All(x => x.Access.LastUsedTime >= sample1.CreatedTime.AddSeconds(-1)));
-        Assert.AreEqual(actualAccessCount, res.Count);
-        Assert.AreEqual(deviceCount, res.Count(x => x.Device!=null));
-        Assert.AreEqual(1, res.Count(x => x.Device==null));
-        Assert.AreEqual(traffic.Sent * usageCount,  res.Sum(x => x.Access.CycleSentTraffic));
-        Assert.AreEqual(traffic.Received * usageCount,  res.Sum(x => x.Access.CycleReceivedTraffic));
+        Assert.IsTrue(res.Results.All(x => x.Access.LastUsedTime >= sample1.CreatedTime.AddSeconds(-1)));
+        Assert.AreEqual(actualAccessCount, res.Results.Count);
+        Assert.AreEqual(deviceCount, res.Results.Count(x => x.Device!=null));
+        Assert.AreEqual(1, res.Results.Count(x => x.Device==null));
+        Assert.AreEqual(traffic.Sent * usageCount,  res.Results.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(traffic.Received * usageCount,  res.Results.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
         res = await testInit2.AccessesClient.ListAsync(testInit2.ProjectId, serverFarmId: sample2.ServerFarmId);
-        Assert.AreEqual(sample2AccessCount, res.Count);
-        Assert.AreEqual(traffic.Sent * sample2UsageCount, res.Sum(x => x.Access.CycleSentTraffic));
-        Assert.AreEqual(traffic.Received * sample2UsageCount, res.Sum(x => x.Access.CycleReceivedTraffic));
+        Assert.AreEqual(sample2AccessCount, res.Results.Count);
+        Assert.AreEqual(traffic.Sent * sample2UsageCount, res.Results.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(traffic.Received * sample2UsageCount, res.Results.Sum(x => x.Access.CycleReceivedTraffic));
     }
 }

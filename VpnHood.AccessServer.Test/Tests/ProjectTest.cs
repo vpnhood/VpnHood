@@ -64,8 +64,8 @@ public class ProjectTest
         // Check: a public and private token is created
         //-----------
         var accessTokens = await testInit.AccessTokensClient.ListAsync(projectId);
-        Assert.IsTrue(accessTokens.Any(x => x.AccessToken.IsPublic));
-        Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
+        Assert.IsTrue(accessTokens.Results.Any(x => x.AccessToken.IsPublic));
+        Assert.IsTrue(accessTokens.Results.Any(x => !x.AccessToken.IsPublic));
 
         //-----------
         // Check: All project

@@ -34,6 +34,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
         var authConfiguration = builder.Configuration.GetSection("Auth");
+        var isTest = Environment.GetEnvironmentVariable("IsTest") == true.ToString();
 
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
         builder.AddGrayMintCommonServices(
@@ -45,8 +46,7 @@ public class Program
             .AddAuthentication()
             .AddBotAuthentication(authConfiguration.Get<BotAuthenticationOptions>(), builder.Environment.IsProduction());
         
-        //todo
-        //if (!builder.Environment.IsDevelopment())
+        if (!isTest)
             authenticationBuilder.AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
 
         // Add authentications

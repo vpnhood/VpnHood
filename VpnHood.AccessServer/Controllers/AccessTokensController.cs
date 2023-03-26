@@ -170,12 +170,12 @@ public class AccessTokensController : ControllerBase
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
             usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
-        return items.Single();
+        return items.Results.Single();
     }
 
     [HttpGet]
     [AuthorizePermission(Permissions.ProjectRead)]
-    public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
+    public async Task<ListResult<AccessTokenData>> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
@@ -189,7 +189,7 @@ public class AccessTokensController : ControllerBase
         if (!int.TryParse(search, out var searchInt)) searchInt = -1;
 
         // find access tokens
-        var query =
+        var baseQuery =
             from accessToken in _vhContext.AccessTokens
             join serverFarm in _vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
             join access in _vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
@@ -213,12 +213,13 @@ public class AccessTokensController : ControllerBase
                 }
             };
 
-        query = query
+        var query = baseQuery
             .AsNoTracking()
             .Skip(recordIndex)
             .Take(recordCount);
 
         var results = await query.ToArrayAsync();
+        
         // fill usage if requested
         if (usageBeginTime != null)
         {
@@ -230,7 +231,13 @@ public class AccessTokensController : ControllerBase
                     result.accessTokenData.Usage = usage;
         }
 
-        return results.Select(x => x.accessTokenData).ToArray();
+        var listResult = new ListResult<AccessTokenData>
+        {
+            Results = results.Select(x => x.accessTokenData),
+            TotalCount = results.Length < recordCount ? results.Length : await baseQuery.LongCountAsync()
+        };
+
+        return listResult;
     }
 
 

@@ -169,12 +169,11 @@ public class ServerProfileTest
         await farm1.AddNewServer();
 
         // farm2
-        var farm2 = await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
         {
             ServerProfileId = serverProfileDom1.ServerProfileId,
         }, serverCount: 0);
 
-        Console.WriteLine(serverProfileDom1.ServerProfileId);
         var data = await serverProfileDom1.Reload();
         Assert.AreEqual(2, data.Summary?.ServerFarmCount);
         Assert.AreEqual(3, data.Summary?.ServerCount);

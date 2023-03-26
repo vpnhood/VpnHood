@@ -28,16 +28,16 @@ public class AccessesController : ControllerBase
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
         var res = await List(projectId, accessId: accessId);
-        return res.Single();
+        return res.Results.Single();
     }
 
     [HttpGet]
     [AuthorizePermission(Permissions.ProjectRead)]
-    public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
+    public async Task<ListResult<AccessData>> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
         DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
-        var query = _vhContext.Accesses
+        var baseQuery = _vhContext.Accesses
             .Include(x => x.Device)
             .Include(x => x.AccessToken)
             .ThenInclude(x => x!.ServerFarm)
@@ -49,19 +49,26 @@ public class AccessesController : ControllerBase
                 (access.CreatedTime >= beginTime || beginTime == null) &&
                 (access.CreatedTime <= endTime || endTime == null));
 
-        query = query
+        var query = baseQuery
             .OrderByDescending(x => x.TotalTraffic)
             .Skip(recordIndex)
             .Take(recordCount);
 
         var res = await query.ToArrayAsync();
-        var ret = res
+        var results = res
             .Select(accessModel => new AccessData(
                 accessModel.ToDto(),
                 accessModel.AccessToken!.ToDto(accessModel.AccessToken!.ServerFarm?.ServerFarmName),
                 accessModel.Device?.ToDto()))
             .ToArray();
-        return ret;
+
+        var listResult = new ListResult<AccessData>
+        {
+            Results = results,
+            TotalCount = results.Length < recordCount ? results.Length : await baseQuery.LongCountAsync()
+        };
+
+        return listResult;
     }
 
 }

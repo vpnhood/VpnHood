@@ -14,7 +14,7 @@ using VpnHood.Common.Utils;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Dtos.ServerDtos;
-using VpnHood.AccessServer.ServerUtils;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Services;
@@ -61,7 +61,7 @@ public class ServerService
                 .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .Select(x => x.ServerName)
                 .ToArrayAsync();
-            serverName = AccessUtil.FindUniqueName(serverName, names);
+            serverName = AccessServerUtil.FindUniqueName(serverName, names);
         }
 
         var server = new ServerModel

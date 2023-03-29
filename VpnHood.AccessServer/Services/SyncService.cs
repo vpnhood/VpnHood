@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Report.Services;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -14,12 +12,16 @@ public class SyncService
 {
     public int BatchCount { get; set; } = 1000;
     private readonly ILogger<SyncService> _logger;
-    private readonly IServiceProvider _serviceProvider;
-    public SyncService(ILogger<SyncService> logger,
-        IServiceProvider serviceProvider)
+    private readonly ReportWriterService _reportWriterService;
+    private readonly VhContext _vhContext;
+    public SyncService(
+        ILogger<SyncService> logger,
+        ReportWriterService reportWriterService,
+        VhContext vhContext)
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _reportWriterService = reportWriterService;
+        _vhContext = vhContext;
     }
 
     public async Task Sync()
@@ -34,62 +36,31 @@ public class SyncService
         while (true)
         {
             // fetch new items
-            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
-            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
-            vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-
             _logger.LogTrace(AccessEventId.Archive, "Loading old AccessUsages from agent database...");
-            var items = await vhContext
+            var items = await _vhContext
                 .AccessUsages
                 .OrderBy(x => x.AccessUsageId)
                 .Take(BatchCount)
                 .ToArrayAsync();
 
-            try
-            {
-                if (items.Length > 0)
-                {
-                    _logger.LogInformation(AccessEventId.Archive, $"Copy old AccessUsages to report database. Count: {items.Length}");
-                    await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
-                    await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
-                    vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+            if (!items.Any())
+                return;
 
-                    await vhReportContext.AccessUsages.AddRangeAsync(items);
-                    await vhReportContext.SaveChangesAsync();
-                }
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
-            {
-                // remove duplicates
-                _logger.LogInformation(AccessEventId.Archive, "Managing duplicate AccessUsages...");
-                await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
-                await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
-                vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-
-                var ids = items.Select(x => x.AccessUsageId);
-                var duplicates = await vhReportContext.AccessUsages.Where(x => ids.Contains(x.AccessUsageId)).ToArrayAsync();
-                var items2 = items.Where(x => duplicates.All(y => x.AccessUsageId != y.AccessUsageId)).ToArray();
-                if (items2.Any())
-                {
-                    await vhReportContext.AccessUsages.AddRangeAsync(items2);
-                    await vhReportContext.SaveChangesAsync();
-                }
-            }
+            // add to report
+            await _reportWriterService.Write(items);
 
             // remove synced items
-            if (items.Length > 0)
-            {
-                _logger.LogInformation(AccessEventId.Archive, $"Removing old synced items from agent database. Count: {items.Length}");
-                var ids = string.Join(",", items.Select(x => x.AccessUsageId));
-                var sql = @$"
-                    DELETE FROM {nameof(vhContext.AccessUsages)} 
-                    WHERE {nameof(AccessUsageModel.AccessUsageId)} in ({ids})
-                    ";
-                await vhContext.Database.ExecuteSqlRawAsync(sql);
-            }
+            _logger.LogInformation(AccessEventId.Archive, $"Removing old synced AccessUsages from agent database. Count: {items.Length}");
+            var ids = items.Select(x => x.AccessUsageId);
+            await _vhContext.AccessUsages
+                .Where(x => ids.Contains(x.AccessUsageId))
+                .ExecuteDeleteAsync();
 
+            // next
+            _vhContext.ChangeTracker.Clear();
             if (items.Length < BatchCount)
                 break;
+
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }
@@ -99,61 +70,28 @@ public class SyncService
         while (true)
         {
             // fetch new items
-            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
-            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
-            vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-
             _logger.LogTrace(AccessEventId.Archive, "Loading old ServerStatuses from agent database...");
-            var items = await vhContext
+            var items = await _vhContext
                 .ServerStatuses
                 .Where(x => !x.IsLast)
                 .OrderBy(x => x.ServerStatusId)
                 .Take(BatchCount)
                 .ToArrayAsync();
 
-            try
-            {
-                if (items.Length > 0)
-                {
-                    _logger.LogInformation(AccessEventId.Archive, $"Copy old ServerStatuses to report database. Count: {items.Length}");
-                    await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
-                    await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
-                    vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+            if (!items.Any())
+                return;
 
-                    await vhReportContext.ServerStatuses.AddRangeAsync(items);
-                    await vhReportContext.SaveChangesAsync();
-                }
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
-            {
-                // remove duplicates
-                _logger.LogInformation(AccessEventId.Archive, "Managing duplicate ServerStatuses...");
-                await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
-                await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
-                vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-
-                var ids = items.Select(x => x.ServerStatusId);
-                var duplicates = await vhReportContext.ServerStatuses.Where(x => ids.Contains(x.ServerStatusId)).ToArrayAsync();
-                var items2 = items.Where(x => duplicates.All(y => x.ServerStatusId != y.ServerStatusId)).ToArray();
-                if (items2.Any())
-                {
-                    await vhReportContext.ServerStatuses.AddRangeAsync(items2);
-                    await vhReportContext.SaveChangesAsync();
-                }
-            }
+            // add to report
+            await _reportWriterService.Write(items);
 
             // remove synced items
-            if (items.Length > 0)
-            {
-                _logger.LogInformation(AccessEventId.Archive, $"Removing old synced items from agent database. Count: {items.Length}");
-                var ids = string.Join(",", items.Select(x => x.ServerStatusId));
-                var sql = @$"
-                    DELETE FROM {nameof(vhContext.ServerStatuses)} 
-                    WHERE {nameof(ServerStatusModel.ServerStatusId)} in ({ids})
-                    ";
-                await vhContext.Database.ExecuteSqlRawAsync(sql);
-            }
+            _logger.LogInformation(AccessEventId.Archive, $"Removing old synced ServerStatuses from agent database. Count: {items.Length}");
+            var ids = items.Select(x => x.ServerStatusId);
+            await _vhContext.ServerStatuses
+                .Where(x => ids.Contains(x.ServerStatusId))
+                .ExecuteDeleteAsync();
 
+            _vhContext.ChangeTracker.Clear();
             if (items.Length < BatchCount)
                 break;
             await Task.Delay(TimeSpan.FromSeconds(5));
@@ -165,65 +103,30 @@ public class SyncService
         while (true)
         {
             // fetch new items
-            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
-            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
-            vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-
             _logger.LogTrace(AccessEventId.Archive, "Loading old Sessions from agent database...");
-            var items = await vhContext
+            var items = await _vhContext
                 .Sessions.Where(x => x.IsArchived)
                 .OrderBy(x => x.SessionId)
                 .Take(BatchCount)
                 .ToArrayAsync();
 
-            try
-            {
-                if (items.Length > 0)
-                {
-                    _logger.LogInformation(AccessEventId.Archive, $"Copy old Sessions to report database. Count: {items.Length}");
-                    await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
-                    await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
-                    vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+            if (!items.Any())
+                return;
 
-                    await vhReportContext.Sessions.AddRangeAsync(items);
-                    await vhReportContext.SaveChangesAsync();
-                }
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
-            {
-                // remove duplicates
-                _logger.LogInformation(AccessEventId.Archive, "Managing duplicate Sessions...");
-                await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
-                await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
-                vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+            // add to report
+            await _reportWriterService.Write(items);
 
-                var ids = items.Select(x => x.SessionId);
-                var duplicates = await vhReportContext.Sessions.Where(x => ids.Contains(x.SessionId)).ToArrayAsync();
-                var items2 = items.Where(x => duplicates.All(y => x.SessionId != y.SessionId)).ToArray();
-                if (items2.Any())
-                {
-                    await vhReportContext.Sessions.AddRangeAsync(items2);
-                    await vhReportContext.SaveChangesAsync();
-                }
-            }
-
-            // remove synced items
-            if (items.Length > 0)
-            {
-                _logger.LogInformation(AccessEventId.Archive, $"Removing old synced {nameof(VhContext.Sessions)} from agent database. Count: {items.Length}");
-                var ids = string.Join(",", items.Select(x => x.SessionId));
-                var sql = @$"
-                    DELETE FROM {nameof(vhContext.Sessions)} 
-                    WHERE {nameof(SessionModel.SessionId)} in ({ids})
-                    ";
-                await vhContext.Database.ExecuteSqlRawAsync(sql);
-            }
-
+            _logger.LogInformation(AccessEventId.Archive, $"Removing old synced Sessions from agent database. Count: {items.Length}");
+            var ids = items.Select(x => x.SessionId);
+            await _vhContext.Sessions
+                .Where(x => ids.Contains(x.SessionId))
+                .ExecuteDeleteAsync();
+            
+            _vhContext.ChangeTracker.Clear();
             if (items.Length < BatchCount)
                 break;
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
     }
-
 
 }

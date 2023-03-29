@@ -1,34 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Dtos.ServerDtos;
-using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Report.Dtos;
+using VpnHood.AccessServer.Report.Persistence;
+using VpnHood.AccessServer.Utils;
 
-namespace VpnHood.AccessServer.Services;
+namespace VpnHood.AccessServer.Report.Services;
 
 public class UsageReportService
 {
     private const int SmallCacheLength = 50;
     private readonly VhReportContext _vhReportContext;
     private readonly IMemoryCache _memoryCache;
-    private readonly AppOptions _appOptions;
+    private readonly ReportServiceOptions _options;
 
     public UsageReportService(
         VhReportContext vhReportContext,
-        IMemoryCache memoryCache,
-        IOptions<AppOptions> appOptions)
+        IMemoryCache memoryCache, 
+        IOptions<ReportServiceOptions> options)
     {
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;
-        _appOptions = appOptions.Value;
+        _options = options.Value;
     }
 
-    public async Task<Usage> GetUsage(Guid projectId, DateTime usageBeginTime, DateTime? usageEndTime = null,
+    public async Task<Usage> GetUsage(Guid projectId, 
+        DateTime usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null, Guid? deviceId = null)
     {
         // check cache
@@ -73,7 +71,7 @@ public class UsageReportService
         return res;
     }
 
-    public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid projectId,
+    public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid projectId, 
         DateTime usageBeginTime, DateTime? usageEndTime = null, Guid? serverId = null)
     {
         usageEndTime ??= DateTime.UtcNow;
@@ -88,11 +86,9 @@ public class UsageReportService
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        var serverUpdateStatusInterval = _appOptions.ServerUpdateStatusInterval * 2;
-        usageEndTime = usageEndTime.Value.Subtract(serverUpdateStatusInterval);
-        var step1 = serverUpdateStatusInterval.TotalMinutes;
+        usageEndTime = usageEndTime.Value.Subtract(_options.ServerUpdateStatusInterval * 2);
+        var step1 = _options.ServerUpdateStatusInterval.TotalMinutes;
         var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageBeginTime).TotalMinutes / 12 / step1);
-
         var baseTime = usageBeginTime;
 
         // per server in status interval
@@ -104,7 +100,8 @@ public class UsageReportService
                 x.CreatedTime <= usageEndTime)
             .GroupBy(serverStatus => new
             {
-                Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
+                //Minutes = (long)(VhReportContext.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
+                Minutes = (long)(EF.Functions.DateDiffSecond(baseTime, serverStatus.CreatedTime) / step1),
                 serverStatus.ServerId
             })
             .Select(g => new

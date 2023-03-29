@@ -51,7 +51,7 @@ public class ServerFarmService
                 .Select(x => x.ServerFarmName)
                 .ToArrayAsync();
 
-            createParams.ServerFarmName = AccessUtil.FindUniqueName(createParams.ServerFarmName, names);
+            createParams.ServerFarmName = AccessServerUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
 
         // Set ServerProfileId

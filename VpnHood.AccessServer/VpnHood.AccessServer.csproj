@@ -34,11 +34,13 @@
     <UpdatePackageVersion>False</UpdatePackageVersion>
     <AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
     <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
-    <NoWarn>1701;1702;CS1591</NoWarn>
+    <NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
+    <WarningLevel>9999</WarningLevel>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;CS1591</NoWarn>
+    <NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
+    <WarningLevel>9999</WarningLevel>
   </PropertyGroup>
 
   <ItemGroup>
@@ -68,6 +70,8 @@
     <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore\GrayMint.Common.AspNetCore.csproj" />
     <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.EntityFrameworkCore\GrayMint.Common.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
+    <ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
+    <ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
   </ItemGroup>
 
   <ItemGroup>

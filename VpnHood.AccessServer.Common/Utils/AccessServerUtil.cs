@@ -1,10 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Utils;
 
-public static class AccessServerUtil
+public static class AccessUtil
 {
     public static string ValidateIpEndPoint(string ipEndPoint)
     {
@@ -15,6 +13,7 @@ public static class AccessServerUtil
     {
         return IPAddress.Parse(ipAddress).ToString();
     }
+
     public static string FindUniqueName(string template, string?[] names)
     {
         for (var i = 2; ; i++)

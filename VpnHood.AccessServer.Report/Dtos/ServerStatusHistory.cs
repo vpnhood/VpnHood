@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.AccessServer.Dtos.ServerDtos;
+﻿namespace VpnHood.AccessServer.Report.Dtos;
 
 public class ServerStatusHistory
 {

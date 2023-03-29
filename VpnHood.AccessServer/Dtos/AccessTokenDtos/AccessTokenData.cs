@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos.AccessTokenDoms;
+﻿namespace VpnHood.AccessServer.Dtos.AccessTokenDtos;
 
 public class AccessTokenData
 {

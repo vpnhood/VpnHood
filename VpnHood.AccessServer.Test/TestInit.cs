@@ -31,6 +31,7 @@ using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using System.Text.Json;
 using VpnHood.AccessServer.Test.Helper;
 using GrayMint.Common.Utils;
+using VpnHood.AccessServer.Report.Persistence;
 
 namespace VpnHood.AccessServer.Test;
 

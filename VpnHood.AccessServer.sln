@@ -30,6 +30,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GrayMint", "GrayMint", "{93
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Common.AspNetCore.SimpleRoleAuthorization", "..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleRoleAuthorization\GrayMint.Common.AspNetCore.SimpleRoleAuthorization.csproj", "{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AccessServer.Report", "VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj", "{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DA70AC51-F97F-47CF-B732-3C76D1A27C32}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Persistence", "VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj", "{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,11 +82,20 @@ Global
 		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{81B08731-02D3-47C1-B3F0-B60B98EBA580} = {DA70AC51-F97F-47CF-B732-3C76D1A27C32}
 		{93ABFC18-A9ED-45EA-A405-796E2AA5667E} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 		{D9963D4F-38C1-4F60-B0DD-80FBB0BE06DB} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 		{9429EC97-F7CA-4D9A-9605-E5377F7565CB} = {93345E67-2111-4452-A829-7CBDF764AAC6}

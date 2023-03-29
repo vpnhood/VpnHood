@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;

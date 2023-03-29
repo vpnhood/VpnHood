@@ -1,5 +1,5 @@
 ﻿using System;
-using VpnHood.AccessServer.Dtos.AccessTokenDoms;
+using VpnHood.AccessServer.Dtos.AccessTokenDtos;
 
 namespace VpnHood.AccessServer.Dtos;
 

@@ -2,8 +2,7 @@
   "profiles": {
     "Windows.Development": {
       "commandName": "Project",
-      "launchBrowser": false,
-      "commandLineArgs": "/recreatedb2",
+      "commandLineArgs": "/recreatedb",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
@@ -11,7 +10,6 @@
     },
     "Windows.Stage": {
       "commandName": "Project",
-      "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Stage"
       },

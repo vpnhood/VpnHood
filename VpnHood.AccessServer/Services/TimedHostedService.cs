@@ -12,7 +12,6 @@ namespace VpnHood.AccessServer.Services;
 public class TimedHostedService : IHostedService, IJob
 {
     private readonly ILogger<TimedHostedService> _logger;
-    private readonly SyncService _syncService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly JobRunner _jobRunner;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -21,12 +20,10 @@ public class TimedHostedService : IHostedService, IJob
     public TimedHostedService(
         ILogger<TimedHostedService> logger,
         IOptions<AppOptions> appOptions,
-        SyncService syncService,
         IServiceScopeFactory serviceScopeFactory
         )
     {
         _logger = logger;
-        _syncService = syncService;
         _serviceScopeFactory = serviceScopeFactory;
         var interval = appOptions.Value.AutoMaintenanceInterval ?? TimeSpan.MaxValue;
         JobSection = new JobSection(interval);
@@ -50,14 +47,14 @@ public class TimedHostedService : IHostedService, IJob
     public async Task RunJob()
     {
         _logger.LogInformation("Updating usage cycle...");
-        await using (var scope = _serviceScopeFactory.CreateAsyncScope())
-        {
-            var usageCycleService = scope.ServiceProvider.GetRequiredService<UsageCycleService>();
-            await usageCycleService.UpdateCycle();
-        }
+        await using var scope = _serviceScopeFactory.CreateAsyncScope();
+         
+        var usageCycleService = scope.ServiceProvider.GetRequiredService<UsageCycleService>();
+        await usageCycleService.UpdateCycle();
 
         _logger.LogInformation("Start syncing...");
-        await _syncService.Sync();
+        var syncService = scope.ServiceProvider.GetRequiredService<SyncService>();
+        await syncService.Sync();
 
         _logger.LogInformation("Maintenance job has been finished.");
     }

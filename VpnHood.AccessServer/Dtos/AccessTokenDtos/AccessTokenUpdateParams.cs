@@ -1,7 +1,7 @@
 ﻿using System;
 using GrayMint.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos.AccessTokenDoms;
+namespace VpnHood.AccessServer.Dtos.AccessTokenDtos;
 
 public class AccessTokenUpdateParams
 {

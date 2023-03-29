@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.ServerUtils;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;

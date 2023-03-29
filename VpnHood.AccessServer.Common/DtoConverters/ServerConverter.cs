@@ -1,5 +1,5 @@
 ﻿using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.ServerUtils;
+using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 

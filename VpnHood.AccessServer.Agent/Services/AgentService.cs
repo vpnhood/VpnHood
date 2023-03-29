@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.ServerUtils;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;

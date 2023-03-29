@@ -55,7 +55,7 @@ public class Program
         var webApp = builder.Build();
         webApp.UseGrayMintCommonServices(new UseServicesOptions { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
-        await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
+        await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp.Services, args);
 
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();

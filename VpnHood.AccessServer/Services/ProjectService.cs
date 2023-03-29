@@ -12,6 +12,7 @@ using VpnHood.AccessServer.Persistence;
 using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Report.Services;
 
 namespace VpnHood.AccessServer.Services;
 

@@ -13,10 +13,8 @@ using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using System.Net;
 
 namespace VpnHood.AccessServer.Test.Tests;
-
 
 [TestClass]
 public class AgentClientSessionTest

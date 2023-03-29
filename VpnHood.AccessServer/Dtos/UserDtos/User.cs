@@ -1,5 +1,4 @@
-﻿using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
-using System;
+﻿using System;
 
 namespace VpnHood.AccessServer.Dtos.UserDtos
 {

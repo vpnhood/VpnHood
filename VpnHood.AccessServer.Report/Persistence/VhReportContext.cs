@@ -1,26 +1,24 @@
-﻿#nullable disable
-using System;
-using System.Data;
-using System.Threading.Tasks;
+﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Models;
 
-namespace VpnHood.AccessServer.Persistence;
+namespace VpnHood.AccessServer.Report.Persistence;
 
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext
 {
-    public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; }
-    public virtual DbSet<AccessUsageModel> AccessUsages { get; set; }
-    public virtual DbSet<SessionModel> Sessions { get; set; }
+    public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
+    public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
+    public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
 
     public VhReportContext(DbContextOptions<VhReportContext> options)
         : base(options)
     {
     }
 
-    public async Task<IDbContextTransaction> WithNoLockTransaction()
+    public async Task<IDbContextTransaction?> WithNoLockTransaction()
     {
         Database.SetCommandTimeout(600);
         return Database.CurrentTransaction == null
@@ -37,6 +35,12 @@ public partial class VhReportContext : DbContext
             .HaveMaxLength(4000);
     }
 
+    //[DbFunction("Date_Diff_Minute", IsBuiltIn = true)]
+    public static int DateDiffMinute(DateTime start, DateTime end)
+    {
+        throw new Exception("Should not be called!");
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -46,6 +50,12 @@ public partial class VhReportContext : DbContext
         modelBuilder.Entity<ServerStatusModel>(entity =>
         {
             entity.HasKey(e => e.ServerStatusId);
+
+            modelBuilder.HasDbFunction(() => DateDiffMinute(default, default))
+                .IsBuiltIn()
+                .HasTranslation(parameters =>
+                    new SqlFunctionExpression("TIMESTAMPDIFF", parameters.Prepend(new SqlFragmentExpression("MINUTE")),
+                        true, new[] { false, true, true }, typeof(int), null));
 
             entity
                 .ToTable(nameof(ServerStatuses))

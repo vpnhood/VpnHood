@@ -39,7 +39,7 @@ public class ServerProfileService
                 .Select(x => x.ServerProfileName)
                 .ToArrayAsync();
 
-            createParams.ServerProfileName = AccessUtil.FindUniqueName(createParams.ServerProfileName, names);
+            createParams.ServerProfileName = AccessServerUtil.FindUniqueName(createParams.ServerProfileName, names);
         }
 
         var serverProfile = new ServerProfileModel

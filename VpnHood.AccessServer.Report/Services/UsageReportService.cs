@@ -118,7 +118,7 @@ public class UsageReportService
             {
                 //Minutes = (long)(VhReportContext.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
                 //Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
-                Minutes = (baseTime - serverStatus.CreatedTime).TotalMinutes / step1,
+                Minutes = (long)(baseTime - serverStatus.CreatedTime).TotalMinutes / step1,
                 serverStatus.ServerId
             })
             .Select(g => new

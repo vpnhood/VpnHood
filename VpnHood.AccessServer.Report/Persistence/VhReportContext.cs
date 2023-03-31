@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Report.Persistence;
+//using static Microsoft.EntityFrameworkCore.NpgsqlIndexBuilderExtensions;
 
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext
@@ -35,7 +36,6 @@ public partial class VhReportContext : DbContext
             .HaveMaxLength(4000);
     }
 
-    //[DbFunction("Date_Diff_Minute", IsBuiltIn = true)]
     public static int DateDiffMinute(DateTime start, DateTime end)
     {
         throw new Exception("Should not be called!");
@@ -45,7 +45,7 @@ public partial class VhReportContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
+        //modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
 
         modelBuilder.Entity<ServerStatusModel>(entity =>
         {
@@ -54,7 +54,7 @@ public partial class VhReportContext : DbContext
             modelBuilder.HasDbFunction(() => DateDiffMinute(default, default))
                 .IsBuiltIn()
                 .HasTranslation(parameters =>
-                    new SqlFunctionExpression("TIMESTAMPDIFF", parameters.Prepend(new SqlFragmentExpression("MINUTE")),
+                    new SqlFunctionExpression("EXTRACT", parameters.Prepend(new SqlFragmentExpression("MINUTE FROM")),
                         true, new[] { false, true, true }, typeof(int), null));
 
             entity
@@ -141,6 +141,7 @@ public partial class VhReportContext : DbContext
             entity.Ignore(e => e.Device);
             entity.Ignore(e => e.Access);
             entity.Ignore(e => e.IsArchived);
+            entity.Ignore(e => e.SessionKey);
         });
 
         // ReSharper disable once InvocationIsSkipped

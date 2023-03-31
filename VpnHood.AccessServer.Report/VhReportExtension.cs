@@ -11,7 +11,7 @@ public static class VhReportExtension
 {
     public static IServiceCollection AddVhReportServices(this IServiceCollection services, ReportServiceOptions reportServiceOptions)
     {
-        services.AddDbContext<VhReportContext>(options => options.UseSqlServer(reportServiceOptions.ConnectionString));
+        services.AddDbContext<VhReportContext>(options => options.UseNpgsql(reportServiceOptions.ConnectionString));
         services.AddScoped<UsageReportService>();
         services.AddScoped<ReportWriterService>();
         services.AddSingleton(Options.Create(reportServiceOptions));

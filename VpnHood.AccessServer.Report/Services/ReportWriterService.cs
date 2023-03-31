@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Report.Persistence;
 
@@ -20,6 +21,13 @@ public class ReportWriterService
         _vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
     }
 
+    private static bool IsDuplicateKeyException(Exception ex)
+    {
+        return ex.InnerException is 
+                SqlException { Number: 2627 } or 
+                PostgresException{ SqlState: "23505"  };
+    }
+
     public async Task Write(ServerStatusModel[] items)
     {
         try
@@ -27,14 +35,20 @@ public class ReportWriterService
             if (items.Length == 0)
                 return;
 
+            foreach (var item in items)
+                item.CreatedTime = DateTime.SpecifyKind(item.CreatedTime, DateTimeKind.Utc);
+
             _logger.LogInformation(AccessEventId.Archive, $"Copy old ServerStatuses to report database. Count: {items.Length}");
+            _vhReportContext.ChangeTracker.Clear();
             await _vhReportContext.ServerStatuses.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
             _logger.LogInformation(AccessEventId.Archive, "Managing duplicate ServerStatuses...");
+            _vhReportContext.ChangeTracker.Clear();
+
             var ids = items.Select(x => x.ServerStatusId);
             var duplicates = await _vhReportContext.ServerStatuses.Where(x => ids.Contains(x.ServerStatusId)).ToArrayAsync();
             var items2 = items.Where(x => duplicates.All(y => x.ServerStatusId != y.ServerStatusId)).ToArray();
@@ -53,14 +67,23 @@ public class ReportWriterService
             if (items.Length == 0)
                 return;
 
+            foreach (var item in items)
+            {
+                item.CreatedTime = DateTime.SpecifyKind(item.CreatedTime, DateTimeKind.Utc);
+                item.LastUsedTime = DateTime.SpecifyKind(item.LastUsedTime, DateTimeKind.Utc);
+                item.EndTime = item.EndTime!=null ? DateTime.SpecifyKind(item.EndTime.Value, DateTimeKind.Utc) : null;
+            }
+
             _logger.LogInformation(AccessEventId.Archive, $"Copy old Sessions to report database. Count: {items.Length}");
+            _vhReportContext.ChangeTracker.Clear();
             await _vhReportContext.Sessions.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
             _logger.LogInformation(AccessEventId.Archive, "Managing duplicate Sessions...");
+            _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.SessionId);
             var duplicates = await _vhReportContext.Sessions.Where(x => ids.Contains(x.SessionId)).ToArrayAsync();
@@ -80,14 +103,19 @@ public class ReportWriterService
             if (items.Length == 0)
                 return;
 
+            foreach (var item in items)
+                item.CreatedTime = DateTime.SpecifyKind(item.CreatedTime, DateTimeKind.Utc);
+
             _logger.LogInformation(AccessEventId.Archive, $"Copy old AccessUsages to report database. Count: {items.Length}");
+            _vhReportContext.ChangeTracker.Clear();
             await _vhReportContext.AccessUsages.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
             _logger.LogInformation(AccessEventId.Archive, "Managing duplicate AccessUsages...");
+            _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.AccessUsageId);
             var duplicates = await _vhReportContext.AccessUsages.Where(x => ids.Contains(x.AccessUsageId)).ToArrayAsync();

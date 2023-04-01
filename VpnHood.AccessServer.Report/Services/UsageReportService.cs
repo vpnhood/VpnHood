@@ -101,8 +101,8 @@ public class UsageReportService
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        usageEndTime = usageEndTime.Value.Subtract(_options.ServerUpdateStatusInterval * 2);
-        var step1 = _options.ServerUpdateStatusInterval.TotalMinutes;
+        usageEndTime = usageEndTime.Value.Subtract(_options.ServerUpdateStatusInterval * 2).Subtract(TimeSpan.FromMinutes(5));
+        var step1 = Math.Max(5, _options.ServerUpdateStatusInterval.TotalMinutes);
         var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageBeginTime).TotalMinutes / 12 / step1);
         var baseTime = usageBeginTime;
 
@@ -118,7 +118,7 @@ public class UsageReportService
             {
                 //Minutes = (long)(VhReportContext.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
                 //Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
-                Minutes = (long)(baseTime - serverStatus.CreatedTime).TotalMinutes / step1,
+                Minutes = (long)(serverStatus.CreatedTime - baseTime).TotalMinutes / step1,
                 serverStatus.ServerId
             })
             .Select(g => new

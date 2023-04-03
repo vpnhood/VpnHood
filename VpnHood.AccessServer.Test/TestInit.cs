@@ -64,10 +64,8 @@ public class TestInit : IHttpClientFactory, IDisposable
     public UserClient UserClient => new(Http);
     public TeamClient TeamClient => new(Http);
 
-    public User UserSystemAdmin1 { get; private set; } = default!;
-    public User UserProjectOwner1 { get; private set; } = default!;
-    public User UserProjectAdmin { get; private set; } = default!;
-    public User UserProjectReader { get; private set; } = default!;
+    public User UserSystemAdmin { get; private set; } = default!;
+    public User UserProjectOwner { get; private set; } = default!;
     public Project Project { get; private set; } = default!;
     public Guid ProjectId => Project.ProjectId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -194,15 +192,13 @@ public class TestInit : IHttpClientFactory, IDisposable
         QuotaConstants.TeamUserCount = 0xFFFFFF;
 
         // create new user
-        UserSystemAdmin1 = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);
-        UserProjectOwner1 = await CreateUser(NewEmail());
+        UserSystemAdmin = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);
+        UserProjectOwner = await CreateUser(NewEmail());
 
 
         // create default project
-        await SetHttpUser(UserProjectOwner1);
+        await SetHttpUser(UserProjectOwner);
         Project = await ProjectsClient.CreateAsync();
-        UserProjectAdmin = await CreateUserAndAddToRole(NewEmail(), Roles.ProjectAdmin, Project.ProjectId.ToString());
-        UserProjectReader = await CreateUserAndAddToRole(NewEmail(), Roles.ProjectReader, Project.ProjectId.ToString());
     }
 
     public async Task<User> CreateUserAndAddToRole(string email, SimpleRole simpleRole, string appId = "*")
@@ -351,7 +347,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             await FlushCache();
 
         var oldAuthorization = Http.DefaultRequestHeaders.Authorization;
-        await SetHttpUser(UserSystemAdmin1);
+        await SetHttpUser(UserSystemAdmin);
         await SystemClient.SyncAsync();
         Http.DefaultRequestHeaders.Authorization = oldAuthorization;
     }

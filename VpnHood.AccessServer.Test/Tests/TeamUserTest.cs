@@ -125,7 +125,7 @@ public class TeamUserTest
         // ---------------
         try
         {
-            await testInit.TeamClient.UpdateUserAsync(testInit.ProjectId, testInit.UserProjectOwner1.UserId, new TeamUpdateUserParam
+            await testInit.TeamClient.UpdateUserAsync(testInit.ProjectId, testInit.UserProjectOwner.UserId, new TeamUpdateUserParam
             {
                 RoleId = new PatchOfGuid { Value = Roles.ProjectAdmin.RoleId }
             });
@@ -141,7 +141,7 @@ public class TeamUserTest
         // ---------------
         try
         {
-            await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, testInit.UserProjectOwner1.UserId);
+            await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, testInit.UserProjectOwner.UserId);
             Assert.Fail("InvalidOperationException ws expected.");
         }
         catch (ApiException ex)
@@ -199,7 +199,7 @@ public class TeamUserTest
         // ---------------
         try
         {
-            await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, testInit.UserProjectOwner1.UserId);
+            await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, testInit.UserProjectOwner.UserId);
             Assert.Fail($"{nameof(UnauthorizedAccessException)} ws expected.");
         }
         catch (ApiException ex)
@@ -221,5 +221,11 @@ public class TeamUserTest
         });
 
         await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, userRole.User.UserId);
+    }
+
+    [TestMethod]
+    public async Task AddApiKey()
+    {
+
     }
 }

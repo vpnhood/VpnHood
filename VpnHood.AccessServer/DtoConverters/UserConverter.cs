@@ -1,10 +1,15 @@
-﻿using VpnHood.AccessServer.Dtos.UserDtos;
+﻿using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using System;
+using System.Linq;
+using VpnHood.AccessServer.Dtos.UserDtos;
+using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
 public static class UserConverter
 {
-    public static User ToDto(this GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User<UserExData> model)
+    public static User ToDto(
+        this GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User<UserExData> model)
     {
         var dto = new User
         {
@@ -15,7 +20,7 @@ public static class UserConverter
             LastName = model.LastName,
             IsBot = model.IsBot,
             CreatedTime = model.CreatedTime,
-            Description = model.Description,
+            Description = model.Description
         };
         return dto;
     }

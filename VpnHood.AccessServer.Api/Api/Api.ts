@@ -1791,188 +1791,6 @@ export class ProjectsClient {
     }
 }
 
-export class RolesClient {
-    private instance: AxiosInstance;
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, instance?: AxiosInstance) {
-
-        this.instance = instance ? instance : axios.create();
-
-        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
-
-    }
-
-    addUserByEmail(projectId: string, roleId: string, email: string | null , cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/roles/{roleId}/users/email:{email}";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (roleId === undefined || roleId === null)
-            throw new Error("The parameter 'roleId' must be defined.");
-        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
-        if (email === undefined || email === null)
-            throw new Error("The parameter 'email' must be defined.");
-        url_ = url_.replace("{email}", encodeURIComponent("" + email));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "POST",
-            url: url_,
-            headers: {
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processAddUserByEmail(_response);
-        });
-    }
-
-    protected processAddUserByEmail(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (let k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    getUsers(projectId: string, roleId: string , cancelToken?: CancelToken | undefined): Promise<UserOfString[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/roles/{roleId}/users";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (roleId === undefined || roleId === null)
-            throw new Error("The parameter 'roleId' must be defined.");
-        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "POST",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processGetUsers(_response);
-        });
-    }
-
-    protected processGetUsers(response: AxiosResponse): Promise<UserOfString[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (let k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(UserOfString.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<UserOfString[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<UserOfString[]>(null as any);
-    }
-
-    removeUser(projectId: string, roleId: string, userId: string | undefined , cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/roles/{roleId}/users/userId?";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (roleId === undefined || roleId === null)
-            throw new Error("The parameter 'roleId' must be defined.");
-        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
-        if (userId === null)
-            throw new Error("The parameter 'userId' cannot be null.");
-        else if (userId !== undefined)
-            url_ += "userId=" + encodeURIComponent("" + userId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "DELETE",
-            url: url_,
-            headers: {
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processRemoveUser(_response);
-        });
-    }
-
-    protected processRemoveUser(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (let k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
-    }
-}
-
 export class ServerFarmsClient {
     private instance: AxiosInstance;
     private baseUrl: string;
@@ -3275,6 +3093,354 @@ export class SystemClient {
     }
 }
 
+export class TeamClient {
+    private instance: AxiosInstance;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance ? instance : axios.create();
+
+        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
+
+    }
+
+    addUser(projectId: string, addParam: TeamAddUserParam , cancelToken?: CancelToken | undefined): Promise<UserRole> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/team/users";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(addParam);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processAddUser(_response);
+        });
+    }
+
+    protected processAddUser(response: AxiosResponse): Promise<UserRole> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = UserRole.fromJS(resultData200);
+            return Promise.resolve<UserRole>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserRole>(null as any);
+    }
+
+    listUsers(projectId: string , cancelToken?: CancelToken | undefined): Promise<UserRole[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/team/users";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processListUsers(_response);
+        });
+    }
+
+    protected processListUsers(response: AxiosResponse): Promise<UserRole[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(UserRole.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<UserRole[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserRole[]>(null as any);
+    }
+
+    getUser(projectId: string, userId: string , cancelToken?: CancelToken | undefined): Promise<UserRole> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/team/users/{userId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetUser(_response);
+        });
+    }
+
+    protected processGetUser(response: AxiosResponse): Promise<UserRole> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = UserRole.fromJS(resultData200);
+            return Promise.resolve<UserRole>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserRole>(null as any);
+    }
+
+    updateUser(projectId: string, userId: string, updateParam: TeamUpdateUserParam , cancelToken?: CancelToken | undefined): Promise<UserRole> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/team/users/{userId}";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(updateParam);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "POST",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateUser(_response);
+        });
+    }
+
+    protected processUpdateUser(response: AxiosResponse): Promise<UserRole> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = UserRole.fromJS(resultData200);
+            return Promise.resolve<UserRole>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<UserRole>(null as any);
+    }
+
+    removeUser(projectId: string, userId: string | undefined , cancelToken?: CancelToken | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/team/users/userId?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (userId === null)
+            throw new Error("The parameter 'userId' cannot be null.");
+        else if (userId !== undefined)
+            url_ += "userId=" + encodeURIComponent("" + userId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRemoveUser(_response);
+        });
+    }
+
+    protected processRemoveUser(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    listRoles(projectId: string , cancelToken?: CancelToken | undefined): Promise<Role[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/team/roles";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processListRoles(_response);
+        });
+    }
+
+    protected processListRoles(response: AxiosResponse): Promise<Role[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(Role.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<Role[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<Role[]>(null as any);
+    }
+}
+
 export class UserClient {
     private instance: AxiosInstance;
     private baseUrl: string;
@@ -3742,7 +3908,7 @@ export interface IDevice {
 
 export class ListResultOfAccessData implements IListResultOfAccessData {
     totalCount?: number | undefined;
-    results!: AccessData[];
+    items!: AccessData[];
 
     constructor(data?: IListResultOfAccessData) {
         if (data) {
@@ -3752,17 +3918,17 @@ export class ListResultOfAccessData implements IListResultOfAccessData {
             }
         }
         if (!data) {
-            this.results = [];
+            this.items = [];
         }
     }
 
     init(_data?: any) {
         if (_data) {
             this.totalCount = _data["totalCount"];
-            if (Array.isArray(_data["results"])) {
-                this.results = [] as any;
-                for (let item of _data["results"])
-                    this.results!.push(AccessData.fromJS(item));
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AccessData.fromJS(item));
             }
         }
     }
@@ -3777,10 +3943,10 @@ export class ListResultOfAccessData implements IListResultOfAccessData {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["totalCount"] = this.totalCount;
-        if (Array.isArray(this.results)) {
-            data["results"] = [];
-            for (let item of this.results)
-                data["results"].push(item.toJSON());
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item.toJSON());
         }
         return data;
     }
@@ -3788,7 +3954,7 @@ export class ListResultOfAccessData implements IListResultOfAccessData {
 
 export interface IListResultOfAccessData {
     totalCount?: number | undefined;
-    results: AccessData[];
+    items: AccessData[];
 }
 
 export class AccessTokenCreateParams implements IAccessTokenCreateParams {
@@ -4252,7 +4418,7 @@ export interface IUsage {
 
 export class ListResultOfAccessTokenData implements IListResultOfAccessTokenData {
     totalCount?: number | undefined;
-    results!: AccessTokenData[];
+    items!: AccessTokenData[];
 
     constructor(data?: IListResultOfAccessTokenData) {
         if (data) {
@@ -4262,17 +4428,17 @@ export class ListResultOfAccessTokenData implements IListResultOfAccessTokenData
             }
         }
         if (!data) {
-            this.results = [];
+            this.items = [];
         }
     }
 
     init(_data?: any) {
         if (_data) {
             this.totalCount = _data["totalCount"];
-            if (Array.isArray(_data["results"])) {
-                this.results = [] as any;
-                for (let item of _data["results"])
-                    this.results!.push(AccessTokenData.fromJS(item));
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AccessTokenData.fromJS(item));
             }
         }
     }
@@ -4287,10 +4453,10 @@ export class ListResultOfAccessTokenData implements IListResultOfAccessTokenData
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["totalCount"] = this.totalCount;
-        if (Array.isArray(this.results)) {
-            data["results"] = [];
-            for (let item of this.results)
-                data["results"].push(item.toJSON());
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item.toJSON());
         }
         return data;
     }
@@ -4298,7 +4464,7 @@ export class ListResultOfAccessTokenData implements IListResultOfAccessTokenData
 
 export interface IListResultOfAccessTokenData {
     totalCount?: number | undefined;
-    results: AccessTokenData[];
+    items: AccessTokenData[];
 }
 
 export class Certificate implements ICertificate {
@@ -4823,78 +4989,6 @@ export interface IProjectUpdateParams {
     projectName?: PatchOfString | undefined;
     googleAnalyticsTrackId?: PatchOfString | undefined;
     maxTcpCount?: PatchOfInteger | undefined;
-}
-
-export class UserOfString implements IUserOfString {
-    userId!: string;
-    email!: string;
-    firstName?: string | undefined;
-    lastName?: string | undefined;
-    description?: string | undefined;
-    createdTime!: Date;
-    accessedTime?: Date | undefined;
-    authCode?: string | undefined;
-    isBot!: boolean;
-    exData?: string | undefined;
-
-    constructor(data?: IUserOfString) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.userId = _data["userId"];
-            this.email = _data["email"];
-            this.firstName = _data["firstName"];
-            this.lastName = _data["lastName"];
-            this.description = _data["description"];
-            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>undefined;
-            this.accessedTime = _data["accessedTime"] ? new Date(_data["accessedTime"].toString()) : <any>undefined;
-            this.authCode = _data["authCode"];
-            this.isBot = _data["isBot"];
-            this.exData = _data["exData"];
-        }
-    }
-
-    static fromJS(data: any): UserOfString {
-        data = typeof data === 'object' ? data : {};
-        let result = new UserOfString();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["userId"] = this.userId;
-        data["email"] = this.email;
-        data["firstName"] = this.firstName;
-        data["lastName"] = this.lastName;
-        data["description"] = this.description;
-        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>undefined;
-        data["accessedTime"] = this.accessedTime ? this.accessedTime.toISOString() : <any>undefined;
-        data["authCode"] = this.authCode;
-        data["isBot"] = this.isBot;
-        data["exData"] = this.exData;
-        return data;
-    }
-}
-
-export interface IUserOfString {
-    userId: string;
-    email: string;
-    firstName?: string | undefined;
-    lastName?: string | undefined;
-    description?: string | undefined;
-    createdTime: Date;
-    accessedTime?: Date | undefined;
-    authCode?: string | undefined;
-    isBot: boolean;
-    exData?: string | undefined;
 }
 
 export class ServerFarm implements IServerFarm {
@@ -6145,6 +6239,54 @@ export interface IServerStatusHistory {
     serverCount: number;
 }
 
+export class UserRole implements IUserRole {
+    user!: User;
+    role!: Role;
+    appId!: string;
+
+    constructor(data?: IUserRole) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.user = new User();
+            this.role = new Role();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.user = _data["user"] ? User.fromJS(_data["user"]) : new User();
+            this.role = _data["role"] ? Role.fromJS(_data["role"]) : new Role();
+            this.appId = _data["appId"];
+        }
+    }
+
+    static fromJS(data: any): UserRole {
+        data = typeof data === 'object' ? data : {};
+        let result = new UserRole();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["user"] = this.user ? this.user.toJSON() : <any>undefined;
+        data["role"] = this.role ? this.role.toJSON() : <any>undefined;
+        data["appId"] = this.appId;
+        return data;
+    }
+}
+
+export interface IUserRole {
+    user: User;
+    role: Role;
+    appId: string;
+}
+
 export class User implements IUser {
     userId!: string;
     email!: string;
@@ -6207,6 +6349,126 @@ export interface IUser {
     createdTime: Date;
     accessedTime?: Date | undefined;
     isBot: boolean;
+}
+
+export class Role implements IRole {
+    roleId!: string;
+    roleName!: string;
+    description?: string | undefined;
+
+    constructor(data?: IRole) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.roleId = _data["roleId"];
+            this.roleName = _data["roleName"];
+            this.description = _data["description"];
+        }
+    }
+
+    static fromJS(data: any): Role {
+        data = typeof data === 'object' ? data : {};
+        let result = new Role();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["roleId"] = this.roleId;
+        data["roleName"] = this.roleName;
+        data["description"] = this.description;
+        return data;
+    }
+}
+
+export interface IRole {
+    roleId: string;
+    roleName: string;
+    description?: string | undefined;
+}
+
+export class TeamAddUserParam implements ITeamAddUserParam {
+    email!: string;
+    roleId!: string;
+
+    constructor(data?: ITeamAddUserParam) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.email = _data["email"];
+            this.roleId = _data["roleId"];
+        }
+    }
+
+    static fromJS(data: any): TeamAddUserParam {
+        data = typeof data === 'object' ? data : {};
+        let result = new TeamAddUserParam();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["email"] = this.email;
+        data["roleId"] = this.roleId;
+        return data;
+    }
+}
+
+export interface ITeamAddUserParam {
+    email: string;
+    roleId: string;
+}
+
+export class TeamUpdateUserParam implements ITeamUpdateUserParam {
+    roleId?: PatchOfGuid | undefined;
+
+    constructor(data?: ITeamUpdateUserParam) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.roleId = _data["roleId"] ? PatchOfGuid.fromJS(_data["roleId"]) : <any>undefined;
+        }
+    }
+
+    static fromJS(data: any): TeamUpdateUserParam {
+        data = typeof data === 'object' ? data : {};
+        let result = new TeamUpdateUserParam();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["roleId"] = this.roleId ? this.roleId.toJSON() : <any>undefined;
+        return data;
+    }
+}
+
+export interface ITeamUpdateUserParam {
+    roleId?: PatchOfGuid | undefined;
 }
 
 export class ApiException extends Error {

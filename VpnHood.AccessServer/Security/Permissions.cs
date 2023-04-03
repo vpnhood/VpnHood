@@ -19,7 +19,7 @@ public static class Permissions
     public const string ServerFarmWrite  = nameof(ServerFarmWrite);
     public const string IpLockWrite  = nameof(IpLockWrite);
     public const string Sync = nameof(Sync);
-    public const string RoleRead = nameof(RoleRead);
-    public const string RoleWrite = nameof(RoleWrite);
-
+    public const string TeamRead = nameof(TeamRead);
+    public const string TeamWrite = nameof(TeamWrite);
+    public const string TeamWriteOwner = nameof(TeamWriteOwner);
 }

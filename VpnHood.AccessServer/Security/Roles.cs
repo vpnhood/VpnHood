@@ -32,8 +32,8 @@ public static class Roles
             Permissions.UserWrite,
             Permissions.ServerWrite,
             Permissions.ServerInstall,
-            Permissions.RoleRead,
-            Permissions.RoleWrite,
+            Permissions.TeamRead,
+            Permissions.TeamWrite,
             Permissions.ServerFarmWrite,
             Permissions.IpLockWrite,
         }
@@ -42,7 +42,10 @@ public static class Roles
     public static SimpleRole ProjectOwner { get; } = new(
         nameof(ProjectOwner),
         Guid.Parse("{B7E69E64-F722-42F5-95E7-5E8364B9FF58}"),
-        ProjectAdmin.Permissions
+        new[]
+        {
+            Permissions.TeamWriteOwner
+        }.Concat(ProjectAdmin.Permissions)
     );
 
     public static SimpleRole SystemAdmin { get; } = new(
@@ -61,5 +64,17 @@ public static class Roles
         ProjectOwner,
         ProjectAdmin,
         ProjectReader
+    };
+
+    public static SimpleRole[] ProjectRoles { get; } =
+    {
+        ProjectOwner,
+        ProjectAdmin,
+        ProjectReader
+    };
+
+    public static SimpleRole[] SystemRoles { get; } =
+    {
+        SystemAdmin,
     };
 }

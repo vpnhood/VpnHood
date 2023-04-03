@@ -171,7 +171,7 @@ public class AccessTokensController : ControllerBase
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
             usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
-        return items.Results.Single();
+        return items.Items.Single();
     }
 
     [HttpGet]
@@ -234,7 +234,7 @@ public class AccessTokensController : ControllerBase
 
         var listResult = new ListResult<AccessTokenData>
         {
-            Results = results.Select(x => x.accessTokenData),
+            Items = results.Select(x => x.accessTokenData),
             TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()
         };
 

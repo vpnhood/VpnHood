@@ -64,8 +64,8 @@ public class ProjectTest
         // Check: a public and private token is created
         //-----------
         var accessTokens = await testInit.AccessTokensClient.ListAsync(projectId);
-        Assert.IsTrue(accessTokens.Results.Any(x => x.AccessToken.IsPublic));
-        Assert.IsTrue(accessTokens.Results.Any(x => !x.AccessToken.IsPublic));
+        Assert.IsTrue(accessTokens.Items.Any(x => x.AccessToken.IsPublic));
+        Assert.IsTrue(accessTokens.Items.Any(x => !x.AccessToken.IsPublic));
 
         //-----------
         // Check: All project
@@ -112,12 +112,15 @@ public class ProjectTest
     }
 
     [TestMethod]
-    public async Task Roles_Created()
+    public async Task Owner_is_created()
     {
         var testInit = await TestInit.Create();
-        var users = await testInit.RolesClient.GetUsersAsync(testInit.ProjectId, Roles.ProjectOwner.RoleId);
-        Assert.AreEqual(testInit.UserProjectOwner1.UserId, users.FirstOrDefault()?.UserId);
-        Assert.AreEqual(1, users.Count);
+        var userRoles = await testInit.TeamClient.ListUsersAsync(testInit.ProjectId);
+        Assert.AreEqual(1, userRoles.Count);
+
+        var userRole = userRoles.First();
+        Assert.AreEqual(testInit.UserProjectOwner1.UserId, userRole.User.UserId);
+        Assert.AreEqual(Roles.ProjectOwner.RoleId, userRole.Role.RoleId);
     }
 
     [TestMethod]

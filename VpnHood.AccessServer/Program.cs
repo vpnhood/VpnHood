@@ -52,7 +52,7 @@ public class Program
             authenticationBuilder.AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
 
         // Add authentications
-        builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions{AppIdParamName="projectId", Roles = Roles.All});
+        builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions{ResourceParamName="projectId", Roles = Roles.All});
         builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
         builder.Services.AddDbContextPool<VhContext>(options =>

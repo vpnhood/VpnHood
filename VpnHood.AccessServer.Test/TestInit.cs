@@ -62,7 +62,7 @@ public class TestInit : IHttpClientFactory, IDisposable
     public SystemClient SystemClient => new(Http);
     public ServerProfilesClient ServerProfilesClient => new(Http);
     public UserClient UserClient => new(Http);
-    public RolesClient RolesClient => new(Http);
+    public TeamClient TeamClient => new(Http);
 
     public User UserSystemAdmin1 { get; private set; } = default!;
     public User UserProjectOwner1 { get; private set; } = default!;
@@ -191,6 +191,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         QuotaConstants.AccessTokenCount = 0xFFFFFF;
         QuotaConstants.AccessPointCount = 0xFFFFFF;
         QuotaConstants.ServerFarmCount = 0xFFFFFF;
+        QuotaConstants.TeamUserCount = 0xFFFFFF;
 
         // create new user
         UserSystemAdmin1 = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);

@@ -28,7 +28,7 @@ public class AccessesController : ControllerBase
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
         var res = await List(projectId, accessId: accessId);
-        return res.Results.Single();
+        return res.Items.Single();
     }
 
     [HttpGet]
@@ -64,7 +64,7 @@ public class AccessesController : ControllerBase
 
         var listResult = new ListResult<AccessData>
         {
-            Results = results,
+            Items = results,
             TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()
         };
 

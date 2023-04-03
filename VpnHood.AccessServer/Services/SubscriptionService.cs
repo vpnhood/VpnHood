@@ -76,4 +76,11 @@ public class SubscriptionService
         if (requestTimeSpan > maxTimeSpan)
             throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours, "The usage query period is not supported by your plan.");
     }
+
+    public async Task VerifyAddUser(Guid projectId)
+    {
+        var userRoles = await _simpleRoleProvider.GetUserRoles(appId: projectId.ToString());
+        if (await IsFreePlan(projectId) && userRoles.Length > QuotaConstants.TeamUserCount)
+            throw new QuotaException("TeamUserCount", QuotaConstants.TeamUserCount);
+    }
 }

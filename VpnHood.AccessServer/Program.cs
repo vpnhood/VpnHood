@@ -75,6 +75,7 @@ public class Program
         builder.Services.AddScoped<ServerProfileService>();
         builder.Services.AddScoped<ServerService>();
         builder.Services.AddScoped<SubscriptionService>();
+        builder.Services.AddScoped<TeamService>();
         builder.Services.AddScoped<UsageCycleService>();
         builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<AgentCacheClient>();

@@ -1,8 +1,4 @@
-﻿using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
-using System;
-using System.Linq;
-using VpnHood.AccessServer.Dtos.UserDtos;
-using VpnHood.AccessServer.Security;
+﻿using VpnHood.AccessServer.Dtos.UserDtos;
 
 namespace VpnHood.AccessServer.DtoConverters;
 

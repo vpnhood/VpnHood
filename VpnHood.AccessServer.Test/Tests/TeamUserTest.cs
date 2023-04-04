@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
@@ -13,6 +14,129 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class TeamUserTest
 {
+    [TestMethod]
+    public async Task Bot_can_not_be_owner()
+    {
+        using var testInit = await TestInit.Create();
+
+        // --------
+        // Check: Bot can't be an owner
+        // --------
+        try
+        {
+            await testInit.TeamClient.CreateBotAsync(testInit.ProjectId, new TeamAddBotParam
+            {
+                Name = Guid.NewGuid().ToString(),
+                RoleId = Roles.ProjectOwner.RoleId
+            });
+            Assert.Fail("InvalidOperationException was expected.");
+        }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
+        }
+    }
+
+    [TestMethod]
+    public async Task Bot_create()
+    {
+        using var testInit = await TestInit.Create();
+
+        var result = await testInit.TeamClient.CreateBotAsync(testInit.ProjectId, new TeamAddBotParam
+        {
+            Name = Guid.NewGuid().ToString(),
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+
+        testInit.Http.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(result.Authorization);
+        await testInit.TeamClient.AddUserAsync(testInit.ProjectId, new TeamAddUserParam
+        {
+            Email = $"{Guid.NewGuid()}@gmail.com",
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+    }
+
+    [TestMethod]
+    public async Task Bot_can_not_be_added()
+    {
+        using var testInit1 = await TestInit.Create();
+        var result1 = await testInit1.TeamClient.CreateBotAsync(testInit1.ProjectId, new TeamAddBotParam
+        {
+            Name = Guid.NewGuid().ToString(),
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+
+        using var testInit2 = await TestInit.Create();
+
+        try
+        {
+            await testInit2.TeamClient.AddUserAsync(testInit2.ProjectId, new TeamAddUserParam
+            {
+                Email = result1.UserRole.User.Email,
+                RoleId = Roles.ProjectAdmin.RoleId
+            });
+            Assert.Fail("InvalidOperationException was expected.");
+        }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
+        }
+
+    }
+
+    [TestMethod]
+    public async Task Authorization_reset_for_bot()
+    {
+        using var testInit = await TestInit.Create();
+        var result = await testInit.TeamClient.CreateBotAsync(testInit.ProjectId, new TeamAddBotParam
+        {
+            Name = Guid.NewGuid().ToString(),
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+
+        // add new user by bot
+        testInit.Http.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(result.Authorization);
+        await testInit.TeamClient.AddUserAsync(testInit.ProjectId, new TeamAddUserParam
+        {
+            Email = $"{Guid.NewGuid()}@gmail.com",
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+
+        // reset bot authorization
+        result = await testInit.TeamClient.ResetBotAuthorizationAsync(testInit.ProjectId, result.UserRole.User.UserId);
+        testInit.Http.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(result.Authorization);
+        await testInit.TeamClient.AddUserAsync(testInit.ProjectId, new TeamAddUserParam
+        {
+            Email = $"{Guid.NewGuid()}@gmail.com",
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+    }
+
+
+    [TestMethod]
+    public async Task Authorization_can_not_be_reset_for_user()
+    {
+        using var testInit = await TestInit.Create();
+
+        var userRole = await testInit.TeamClient.AddUserAsync(testInit.ProjectId, new TeamAddUserParam
+        {
+            Email = $"{Guid.NewGuid()}@gmail.com",
+            RoleId = Roles.ProjectAdmin.RoleId
+        });
+
+        try
+        {
+            await testInit.TeamClient.ResetBotAuthorizationAsync(testInit.ProjectId, userRole.User.UserId);
+            Assert.Fail("InvalidOperationException was expected.");
+        }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
+        }
+
+    }
+
+
     [TestMethod]
     public async Task Crud()
     {
@@ -51,7 +175,7 @@ public class TeamUserTest
         try
         {
             await testInit.TeamClient.GetUserAsync(testInit.ProjectId, userRole.User.UserId);
-            Assert.Fail("NotExistsException ws expected.");
+            Assert.Fail("NotExistsException was expected.");
         }
         catch (ApiException ex)
         {
@@ -76,7 +200,7 @@ public class TeamUserTest
         try
         {
             await testInit.TeamClient.AddUserAsync(testInit.ProjectId, addUserParam);
-            Assert.Fail("AlreadyExistsException ws expected.");
+            Assert.Fail("AlreadyExistsException was expected.");
         }
         catch (ApiException ex)
         {
@@ -129,7 +253,7 @@ public class TeamUserTest
             {
                 RoleId = new PatchOfGuid { Value = Roles.ProjectAdmin.RoleId }
             });
-            Assert.Fail("InvalidOperationException ws expected.");
+            Assert.Fail("InvalidOperationException was expected.");
         }
         catch (ApiException ex)
         {
@@ -142,7 +266,7 @@ public class TeamUserTest
         try
         {
             await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, testInit.UserProjectOwner.UserId);
-            Assert.Fail("InvalidOperationException ws expected.");
+            Assert.Fail("InvalidOperationException was expected.");
         }
         catch (ApiException ex)
         {
@@ -171,7 +295,7 @@ public class TeamUserTest
                 Email = $"{Guid.NewGuid()}@gmail.com",
                 RoleId = Roles.ProjectOwner.RoleId
             });
-            Assert.Fail($"{nameof(UnauthorizedAccessException)} ws expected.");
+            Assert.Fail($"{nameof(UnauthorizedAccessException)} was expected.");
         }
         catch (ApiException ex)
         {
@@ -187,7 +311,7 @@ public class TeamUserTest
             {
                 RoleId = new PatchOfGuid { Value = Roles.ProjectOwner.RoleId }
             });
-            Assert.Fail($"{nameof(UnauthorizedAccessException)} ws expected.");
+            Assert.Fail($"{nameof(UnauthorizedAccessException)} was expected.");
         }
         catch (ApiException ex)
         {
@@ -200,7 +324,7 @@ public class TeamUserTest
         try
         {
             await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, testInit.UserProjectOwner.UserId);
-            Assert.Fail($"{nameof(UnauthorizedAccessException)} ws expected.");
+            Assert.Fail($"{nameof(UnauthorizedAccessException)} was expected.");
         }
         catch (ApiException ex)
         {
@@ -223,9 +347,4 @@ public class TeamUserTest
         await testInit.TeamClient.RemoveUserAsync(testInit.ProjectId, userRole.User.UserId);
     }
 
-    [TestMethod]
-    public async Task AddApiKey()
-    {
-
-    }
 }

@@ -40,19 +40,19 @@ public class Program
 
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
         builder.AddGrayMintCommonServices(
-            new GrayMintCommonOptions { AppName = "VpnHood Access Server" }, 
+            new GrayMintCommonOptions { AppName = "VpnHood Access Server" },
             new RegisterServicesOptions());
 
         // add authentication
         var authenticationBuilder = builder.Services
             .AddAuthentication()
             .AddBotAuthentication(authConfiguration.Get<BotAuthenticationOptions>(), builder.Environment.IsProduction());
-        
+
         if (!isTest)
             authenticationBuilder.AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
 
         // Add authentications
-        builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions{ResourceParamName="projectId", Roles = Roles.All});
+        builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions { ResourceParamName = "projectId", Roles = Roles.All });
         builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
         builder.Services.AddDbContextPool<VhContext>(options =>

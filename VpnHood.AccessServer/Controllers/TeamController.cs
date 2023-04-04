@@ -29,6 +29,20 @@ public class TeamController : ControllerBase
         _simpleRoleAuthService = simpleRoleAuthService;
     }
 
+    [HttpPost("bots")]
+    [AuthorizePermission(Permissions.TeamWrite)]
+    public async Task<BotAuthorizationResult> CreateBot(Guid projectId, TeamAddBotParam addParam)
+    {
+        await ValidateWriteAccessToRole(projectId, addParam.RoleId);
+        return await _teamService.CreateBot(projectId, addParam);
+    }
+
+    [HttpPost("bots/reset-authorization")]
+    [AuthorizePermission(Permissions.TeamWrite)]
+    public async Task<BotAuthorizationResult> ResetBotAuthorization(Guid projectId, Guid userId)
+    {
+        return await _teamService.ResetBotAuthorization(projectId, userId);
+    }
 
     [HttpPost("users")]
     [AuthorizePermission(Permissions.TeamWrite)]
@@ -44,7 +58,6 @@ public class TeamController : ControllerBase
     {
         return _teamService.GetUser(projectId, userId);
     }
-
 
     [HttpPost("users/{userId:guid}")]
     [AuthorizePermission(Permissions.TeamWrite)]
@@ -105,3 +118,4 @@ public class TeamController : ControllerBase
         }
     }
 }
+

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.Dtos.ServerDtos;
+namespace VpnHood.AccessServer.Dtos;
 
 public class ServerCreateParams
 {

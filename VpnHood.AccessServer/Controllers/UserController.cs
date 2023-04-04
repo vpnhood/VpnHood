@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Dtos.UserDtos;
 using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;

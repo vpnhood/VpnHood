@@ -1,6 +1,6 @@
 ﻿using VpnHood.Server.Providers.HttpAccessServerProvider;
 
-namespace VpnHood.AccessServer.Dtos.ServerDtos;
+namespace VpnHood.AccessServer.Dtos;
 
 public class ServerInstallAppSettings
 {

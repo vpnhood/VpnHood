@@ -1,8 +1,7 @@
 ﻿using System;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos.ServerDtos;
-
+namespace VpnHood.AccessServer.Dtos;
 public class ServerUpdateParams
 {
     public Patch<string>? ServerName { get; set; }

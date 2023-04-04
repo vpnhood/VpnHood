@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Messaging;
+using AccessToken = VpnHood.AccessServer.Api.AccessToken;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
@@ -61,7 +62,7 @@ public class SessionDom
         SessionResponseEx = await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
     }
 
-    public async Task<Dtos.Session> GetSessionFromCache()
+    public async Task<Session> GetSessionFromCache()
     {
         return await TestInit.AgentCacheClient.GetSession(SessionId);
     }

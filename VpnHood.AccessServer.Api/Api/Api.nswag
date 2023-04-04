@@ -137,7 +137,7 @@
       "inlineNamedAny": false,
       "generateDtoTypes": true,
       "generateOptionalPropertiesAsNullable": false,
-      "generateNullableReferenceTypes": true,
+      "generateNullableReferenceTypes": false,
       "templateDirectory": null,
       "typeNameGeneratorType": null,
       "propertyNameGeneratorType": null,

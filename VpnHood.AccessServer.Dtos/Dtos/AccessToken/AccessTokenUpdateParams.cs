@@ -1,8 +1,7 @@
 ﻿using System;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.AccessServer.Dtos.AccessTokenDtos;
-
+namespace VpnHood.AccessServer.Dtos;
 public class AccessTokenUpdateParams
 {
     public Patch<string>? AccessTokenName { get; set; }

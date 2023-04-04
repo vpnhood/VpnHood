@@ -1,8 +1,7 @@
 ﻿using System;
 
 namespace VpnHood.AccessServer.Dtos;
-
-public class Server
+public class VpnServer
 {
     public required Guid ServerId { get; init; }
     public required string ServerName { get; init; }

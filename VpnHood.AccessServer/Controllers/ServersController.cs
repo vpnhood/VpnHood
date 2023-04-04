@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos.ServerDtos;
-using VpnHood.AccessServer.Report.Dtos;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
+using ServerStatusHistory = VpnHood.AccessServer.Report.Dtos.ServerStatusHistory;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -33,14 +33,14 @@ public class ServersController : ControllerBase
 
     [HttpPost]
     [AuthorizePermission(Permissions.ServerWrite)]
-    public Task<Dtos.Server> Create(Guid projectId, ServerCreateParams createParams)
+    public Task<VpnServer> Create(Guid projectId, ServerCreateParams createParams)
     {
         return _serverService.Create(projectId, createParams);
     }
 
     [HttpPatch("{serverId:guid}")]
     [AuthorizePermission(Permissions.ServerWrite)]
-    public Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
+    public Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         return _serverService.Update(projectId, serverId, updateParams);
     }

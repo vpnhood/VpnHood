@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common.Utils;
@@ -12,6 +11,7 @@ using VpnHood.AccessServer.Persistence;
 using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Report.Services;
 
 namespace VpnHood.AccessServer.Services;

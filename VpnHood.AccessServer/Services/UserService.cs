@@ -7,7 +7,6 @@ using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
 using GrayMint.Common.Exceptions;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Dtos.UserDtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
 

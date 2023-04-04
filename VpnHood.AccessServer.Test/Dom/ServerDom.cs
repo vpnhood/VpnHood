@@ -13,14 +13,14 @@ public class ServerDom
     public TestInit TestInit { get; }
     public ServersClient Client => TestInit.ServersClient;
     public AgentClient AgentClient { get; }
-    public Api.Server Server { get; private set; }
+    public VpnServer Server { get; private set; }
     public List<SessionDom> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; set; }
     public ServerStatus ServerStatus => ServerInfo.Status;
     public Server.Configurations.ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
-    public ServerDom(TestInit testInit, Api.Server server, ServerInfo serverInfo)
+    public ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInfo)
     {
         TestInit = testInit;
         Server = server;
@@ -34,7 +34,7 @@ public class ServerDom
         return Attach(testInit, serverData.Server);
     }
 
-    public static ServerDom Attach(TestInit testInit, Api.Server server)
+    public static ServerDom Attach(TestInit testInit, VpnServer server)
     {
         var serverInfo = new ServerInfo(
             version: server.Version != null ? Version.Parse(server.Version) : new Version(),

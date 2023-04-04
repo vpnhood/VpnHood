@@ -112,8 +112,8 @@ public class AccessTokenTest
         //-----------
         var updateParams = new AccessTokenUpdateParams
         {
-            AccessTokenName = new PatchOfString { Value = $"new_name_{Guid.NewGuid()}" },
-            ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId },
+            AccessTokenName = new PatchOfString {Value = $"new_name_{Guid.NewGuid()}"},
+            ServerFarmId = new PatchOfGuid {Value = farm2.ServerFarmId },
             ExpirationTime = new PatchOfNullableDateTime { Value = DateTime.UtcNow.AddDays(4) },
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },

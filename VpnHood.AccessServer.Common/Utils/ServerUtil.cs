@@ -24,7 +24,7 @@ public static class ServerUtil
         return serverState is ServerState.Idle or ServerState.Active;
     }
 
-    public static void UpdateByCache(Dtos.Server[] servers, Dtos.Server[] cachedServers)
+    public static void UpdateByCache(VpnServer[] servers, VpnServer[] cachedServers)
     {
         foreach (var server in servers)
         {

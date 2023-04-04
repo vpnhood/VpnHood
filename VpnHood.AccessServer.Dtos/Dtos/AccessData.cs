@@ -1,5 +1,4 @@
 ﻿using System;
-using VpnHood.AccessServer.Dtos.AccessTokenDtos;
 
 namespace VpnHood.AccessServer.Dtos;
 

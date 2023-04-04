@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos.ServerDtos;
+﻿namespace VpnHood.AccessServer.Dtos;
 
 public class ServerInstallBySshUserPasswordParams
 {

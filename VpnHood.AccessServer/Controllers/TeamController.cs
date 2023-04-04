@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using Role = VpnHood.AccessServer.Dtos.UserDtos.Role;
-using UserRole = VpnHood.AccessServer.Dtos.UserDtos.UserRole;
+using Role = VpnHood.AccessServer.Dtos.Role;
+using UserRole = VpnHood.AccessServer.Dtos.UserRole;
 
 namespace VpnHood.AccessServer.Controllers;
 

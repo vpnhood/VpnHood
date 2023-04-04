@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos.ServerFarmDtos;
+﻿using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;

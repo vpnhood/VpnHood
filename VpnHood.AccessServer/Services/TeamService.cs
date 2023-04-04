@@ -3,13 +3,13 @@ using System;
 using System.Linq;
 using VpnHood.AccessServer.Security;
 using GrayMint.Common.Exceptions;
-using VpnHood.AccessServer.Dtos;
 using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
 using VpnHood.AccessServer.DtoConverters;
-using Role = VpnHood.AccessServer.Dtos.UserDtos.Role;
-using UserRole = VpnHood.AccessServer.Dtos.UserDtos.UserRole;
+using Role = VpnHood.AccessServer.Dtos.Role;
+using UserRole = VpnHood.AccessServer.Dtos.UserRole;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using VpnHood.AccessServer.Dtos;
 
 namespace VpnHood.AccessServer.Services;
 

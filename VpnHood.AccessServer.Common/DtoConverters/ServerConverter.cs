@@ -1,13 +1,14 @@
-﻿using VpnHood.AccessServer.Models;
+﻿using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerConverter
 {
-    public static Dtos.Server ToDto(this ServerModel model, TimeSpan lostServerThreshold)
+    public static VpnServer ToDto(this ServerModel model, TimeSpan lostServerThreshold)
     {
-        return new Dtos.Server
+        return new VpnServer
         {
             ServerFarmId = model.ServerFarmId,
             ServerFarmName = model.ServerFarm?.ServerFarmName,

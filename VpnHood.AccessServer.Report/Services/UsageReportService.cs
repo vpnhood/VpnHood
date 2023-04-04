@@ -2,9 +2,9 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Report.Dtos;
 using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Utils;
+using ServerStatusHistory = VpnHood.AccessServer.Report.Dtos.ServerStatusHistory;
 
 namespace VpnHood.AccessServer.Report.Services;
 

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Dtos.UserDtos;
+﻿namespace VpnHood.AccessServer.Dtos;
 
 public class UserRole
 {

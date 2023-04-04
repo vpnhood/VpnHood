@@ -1,6 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos.UserDtos;
-
-namespace VpnHood.AccessServer.Dtos;
+﻿namespace VpnHood.AccessServer.Dtos;
 
 public class BotAuthorizationResult
 {

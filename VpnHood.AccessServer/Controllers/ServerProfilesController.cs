@@ -3,10 +3,10 @@ using System.Threading.Tasks;
 using System;
 using VpnHood.AccessServer.Security;
 using System.Linq;
-using VpnHood.AccessServer.Dtos.ServerProfileDtos;
 using VpnHood.AccessServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using VpnHood.AccessServer.Dtos;
 
 namespace VpnHood.AccessServer.Controllers;
 

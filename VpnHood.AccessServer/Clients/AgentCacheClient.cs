@@ -31,14 +31,14 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", parameters, null);
     }
 
-    public Task<Dtos.Server[]> GetServers(Guid projectId)
+    public Task<VpnServer[]> GetServers(Guid projectId)
     {
-        return HttpGetAsync<Dtos.Server[]>($"/api/cache/projects/{projectId}/servers");
+        return HttpGetAsync<VpnServer[]>($"/api/cache/projects/{projectId}/servers");
     }
 
-    public Task<Dtos.Server?> GetServer(Guid serverId)
+    public Task<VpnServer?> GetServer(Guid serverId)
     {
-        return HttpGetAsync<Dtos.Server?>($"/api/cache/servers/{serverId}");
+        return HttpGetAsync<VpnServer?>($"/api/cache/servers/{serverId}");
     }
 
     public Task InvalidateServer(Guid serverId)

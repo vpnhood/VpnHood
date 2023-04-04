@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos.ServerFarmDtos;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.Dtos.ServerProfileDtos;
+namespace VpnHood.AccessServer.Dtos;
 
 public class ServerProfile
 {

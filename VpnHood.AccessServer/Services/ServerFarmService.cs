@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos.ServerFarmDtos;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;

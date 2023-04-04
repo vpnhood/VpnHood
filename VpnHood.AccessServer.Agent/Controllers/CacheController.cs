@@ -23,7 +23,7 @@ public class CacheController : ControllerBase
     }
 
     [HttpGet("projects/{projectId:guid}/servers")]
-    public async Task<Dtos.Server[]> GetServers(Guid projectId)
+    public async Task<VpnServer[]> GetServers(Guid projectId)
     {
         var servers = (await _cacheService.GetServers())
             .Values
@@ -47,7 +47,7 @@ public class CacheController : ControllerBase
     }
 
     [HttpGet("servers/{serverId:guid}")]
-    public async Task<Dtos.Server?> GetServer(Guid serverId)
+    public async Task<VpnServer?> GetServer(Guid serverId)
     {
         var serverModel = await _cacheService.GetServer(serverId);
         var server = serverModel.ToDto(_agentOptions.LostServerThreshold);

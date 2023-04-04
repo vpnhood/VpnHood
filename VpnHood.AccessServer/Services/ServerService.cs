@@ -5,15 +5,14 @@ using System.Net;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Dtos;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.DtoConverters;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.Common.Utils;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Dtos.ServerDtos;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
@@ -41,7 +40,7 @@ public class ServerService
         _agentSystemClient = agentSystemClient;
     }
 
-    public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams createParams)
+    public async Task<VpnServer> Create(Guid projectId, ServerCreateParams createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"CreateServer_{projectId}");
@@ -87,7 +86,7 @@ public class ServerService
 
     }
 
-    public async Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
+    public async Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         if (updateParams.AutoConfigure?.Value == true && updateParams.AccessPoints != null)
             throw new ArgumentException($"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set", nameof(updateParams));

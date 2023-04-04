@@ -22,4 +22,8 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>VpnHood.AccessServer</RootNamespace>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="VpnHood.Common" Version="2.8.361" />
+    <PackageReference Include="VpnHood.Server.Access" Version="2.8.361" />
+  </ItemGroup>
+
+</Project>

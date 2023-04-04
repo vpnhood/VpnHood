@@ -1,4 +1,4 @@
-﻿using GrayMint.Common.Utils;
+﻿using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Dtos.ServerProfileDtos;
 

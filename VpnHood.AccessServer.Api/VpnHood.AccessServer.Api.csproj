@@ -8,7 +8,7 @@
     <Description>VpnHood AccessServer API.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>true</IsPackable>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>11</LangVersion>
     <PackageProjectUrl>https://github.com/VpnHood</PackageProjectUrl>
     <PackageIcon>VpnHood.AccessServer.png</PackageIcon>
     <PackageTags>vpn proxy </PackageTags>

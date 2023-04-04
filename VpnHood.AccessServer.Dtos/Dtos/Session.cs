@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Models;
+﻿using System;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Dtos;
@@ -20,26 +20,4 @@ public class Session
     public SessionSuppressType SuppressedTo { get; set; }
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
-
-    public static Session FromModel(SessionModel model)
-    {
-        return new Session
-        {
-            AccessId = model.AccessId,
-            ClientVersion = model.ClientVersion,
-            Country = model.Country,
-            CreatedTime = model.CreatedTime,
-            LastUsedTime = model.LastUsedTime,
-            DeviceId = model.DeviceId,
-            DeviceIp = model.DeviceIp,
-            EndTime = model.EndTime,
-            ErrorCode = model.ErrorCode,
-            ErrorMessage = model.ErrorMessage,
-            ServerId = model.ServerId,
-            SessionId = model.SessionId,
-            SessionKey = model.SessionKey,
-            SuppressedBy = model.SuppressedBy,
-            SuppressedTo = model.SuppressedTo
-        };
-    }
 }

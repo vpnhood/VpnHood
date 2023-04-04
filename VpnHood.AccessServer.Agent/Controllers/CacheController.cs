@@ -63,8 +63,8 @@ public class CacheController : ControllerBase
     [HttpGet("sessions/{sessionId:long}")]
     public async Task<Session> GetSession(long sessionId)
     {
-        var sessionModel = await _cacheService.GetSession(null, sessionId);
-        return Session.FromModel(sessionModel);
+        var session = await _cacheService.GetSession(null, sessionId);
+        return session.ToDto();
     }
 
     [HttpPost("sessions/invalidate")]

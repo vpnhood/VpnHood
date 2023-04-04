@@ -1,6 +1,4 @@
-﻿using System;
-
-// ReSharper disable once CheckNamespace
+﻿// ReSharper disable once CheckNamespace
 namespace System.Runtime.CompilerServices
 {
     public static class IsExternalInit
@@ -15,6 +13,7 @@ namespace System.Runtime.CompilerServices
     {
         public CompilerFeatureRequiredAttribute(string name)
         {
+            _ = name;
         }
     }
 }

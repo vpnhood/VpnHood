@@ -4,6 +4,8 @@
 // </auto-generated>
 //----------------------
 
+#nullable enable
+
 #pragma warning disable 108 // Disable "CS0108 '{derivedDto}.ToJson()' hides inherited member '{dtoBase}.ToJson()'. Use the new keyword if hiding was intended."
 #pragma warning disable 114 // Disable "CS0114 '{derivedDto}.RaisePropertyChanged(String)' hides inherited member 'dtoBase.RaisePropertyChanged(String)'. To make the current member override that implementation, add the override keyword. Otherwise add the new keyword."
 #pragma warning disable 472 // Disable "CS0472 The result of the expression is always 'false' since a value of type 'Int32' is never equal to 'null' of type 'Int32?'
@@ -236,7 +238,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -245,7 +247,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -260,7 +262,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -271,7 +273,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -423,7 +425,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ListResultOfAccessTokenData> ListAsync(System.Guid projectId, string search = null, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ListResultOfAccessTokenData> ListAsync(System.Guid projectId, string? search = null, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -845,7 +847,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -854,7 +856,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -869,7 +871,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -880,7 +882,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -955,7 +957,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Certificate> CreateAsync(System.Guid projectId, CertificateCreateParams createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Certificate> CreateAsync(System.Guid projectId, CertificateCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1348,7 +1350,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -1357,7 +1359,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -1372,7 +1374,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -1383,7 +1385,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -1899,7 +1901,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -1908,7 +1910,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -1923,7 +1925,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -1934,7 +1936,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -2009,7 +2011,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<string> GetAsync(string check, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<string> GetAsync(string? check, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/health/{check}");
@@ -2093,7 +2095,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -2102,7 +2104,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -2117,7 +2119,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -2128,7 +2130,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -2359,7 +2361,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<IpLock> UpdateAsync(System.Guid projectId, string ip, IpLockUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<IpLock> UpdateAsync(System.Guid projectId, string? ip, IpLockUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2437,7 +2439,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, string ip, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, string? ip, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2502,7 +2504,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<IpLock> GetAsync(System.Guid projectId, string ip, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<IpLock> GetAsync(System.Guid projectId, string? ip, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2590,7 +2592,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -2599,7 +2601,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -2614,7 +2616,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -2625,7 +2627,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -2767,7 +2769,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Project>> ListAsync(string search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Project>> ListAsync(string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/projects?");
@@ -3098,7 +3100,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -3107,7 +3109,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -3122,7 +3124,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -3133,7 +3135,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -3208,7 +3210,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ServerFarm> CreateAsync(System.Guid projectId, ServerFarmCreateParams createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerFarm> CreateAsync(System.Guid projectId, ServerFarmCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3282,7 +3284,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerFarmData>> ListAsync(System.Guid projectId, string search = null, bool? includeSummary = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerFarmData>> ListAsync(System.Guid projectId, string? search = null, bool? includeSummary = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3614,7 +3616,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -3623,7 +3625,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -3638,7 +3640,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -3649,7 +3651,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -3724,7 +3726,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ServerProfile> CreateAsync(System.Guid projectId, ServerProfileCreateParams createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerProfile> CreateAsync(System.Guid projectId, ServerProfileCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3798,7 +3800,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerProfileData>> ListAsync(System.Guid projectId, string search = null, bool? includeSummary = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerProfileData>> ListAsync(System.Guid projectId, string? search = null, bool? includeSummary = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -4130,7 +4132,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -4139,7 +4141,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -4154,7 +4156,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -4165,7 +4167,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -5095,7 +5097,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -5104,7 +5106,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -5119,7 +5121,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -5130,7 +5132,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -5283,7 +5285,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -5292,7 +5294,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -5307,7 +5309,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -5318,7 +5320,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -6004,7 +6006,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -6013,7 +6015,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -6028,7 +6030,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -6039,7 +6041,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -6324,7 +6326,7 @@ namespace VpnHood.AccessServer.Api
         {
             if (response == null || response.Content == null)
             {
-                return new ObjectResponseResult<T>(default(T), string.Empty);
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
             }
 
             if (ReadResponseAsString)
@@ -6333,7 +6335,7 @@ namespace VpnHood.AccessServer.Api
                 try
                 {
                     var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                    return new ObjectResponseResult<T>(typedBody, responseText);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
                 }
                 catch (System.Text.Json.JsonException exception)
                 {
@@ -6348,7 +6350,7 @@ namespace VpnHood.AccessServer.Api
                     using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-                        return new ObjectResponseResult<T>(typedBody, string.Empty);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
                     }
                 }
                 catch (System.Text.Json.JsonException exception)
@@ -6359,7 +6361,7 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        private string ConvertToString(object value, System.Globalization.CultureInfo cultureInfo)
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
         {
             if (value == null)
             {
@@ -6424,7 +6426,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("device")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public Device Device { get; set; }
+        public Device? Device { get; set; } = default!;
 
     }
 
@@ -6436,70 +6438,70 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessId { get; set; }
+        public System.Guid AccessId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessTokenId { get; set; }
+        public System.Guid AccessTokenId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("endTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? EndTime { get; set; }
+        public System.DateTime? EndTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lockedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? LockedTime { get; set; }
+        public System.DateTime? LockedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime LastUsedTime { get; set; }
+        public System.DateTime LastUsedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Description { get; set; }
+        public string? Description { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cycleSentTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long CycleSentTraffic { get; set; }
+        public long CycleSentTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cycleReceivedTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long CycleReceivedTraffic { get; set; }
+        public long CycleReceivedTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cycleTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long CycleTraffic { get; set; }
+        public long CycleTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalSentTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TotalSentTraffic { get; set; }
+        public long TotalSentTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalReceivedTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TotalReceivedTraffic { get; set; }
+        public long TotalReceivedTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TotalTraffic { get; set; }
+        public long TotalTraffic { get; set; } = default!;
 
     }
 
@@ -6511,91 +6513,91 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ProjectId { get; set; }
+        public System.Guid ProjectId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessTokenId { get; set; }
+        public System.Guid AccessTokenId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string AccessTokenName { get; set; }
+        public string? AccessTokenName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("supportCode")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int SupportCode { get; set; }
+        public int SupportCode { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerFarmId { get; set; }
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerFarmName { get; set; }
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long MaxTraffic { get; set; }
+        public long MaxTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int Lifetime { get; set; }
+        public int Lifetime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int MaxDevice { get; set; }
+        public int MaxDevice { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("firstUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? FirstUsedTime { get; set; }
+        public System.DateTime? FirstUsedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? LastUsedTime { get; set; }
+        public System.DateTime? LastUsedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("url")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Url { get; set; }
+        public string? Url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsPublic { get; set; }
+        public bool IsPublic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsEnabled { get; set; }
+        public bool IsEnabled { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? ExpirationTime { get; set; }
+        public System.DateTime? ExpirationTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("modifiedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime ModifiedTime { get; set; }
+        public System.DateTime ModifiedTime { get; set; } = default!;
 
     }
 
@@ -6607,56 +6609,56 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid DeviceId { get; set; }
+        public System.Guid DeviceId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("clientId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ClientId { get; set; }
+        public System.Guid ClientId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("clientVersion")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ClientVersion { get; set; }
+        public string? ClientVersion { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("ipAddress")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string IpAddress { get; set; }
+        public string? IpAddress { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("country")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Country { get; set; }
+        public string? Country { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userAgent")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string UserAgent { get; set; }
+        public string? UserAgent { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("modifiedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime ModifiedTime { get; set; }
+        public System.DateTime ModifiedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lockedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? LockedTime { get; set; }
+        public System.DateTime? LockedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("osName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string OsName { get; set; }
+        public string OsName { get; set; } = default!;
 
     }
 
@@ -6667,7 +6669,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("totalCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public long? TotalCount { get; set; }
+        public long? TotalCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("items")]
 
@@ -6684,53 +6686,53 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.Guid? AccessTokenId { get; set; }
+        public System.Guid? AccessTokenId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerFarmId { get; set; }
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string AccessTokenName { get; set; }
+        public string? AccessTokenName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("secret")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public byte[] Secret { get; set; }
+        public byte[]? Secret { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long MaxTraffic { get; set; }
+        public long MaxTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int Lifetime { get; set; }
+        public int Lifetime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int MaxDevice { get; set; }
+        public int MaxDevice { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? ExpirationTime { get; set; }
+        public System.DateTime? ExpirationTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("url")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Url { get; set; }
+        public string? Url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsPublic { get; set; }
+        public bool IsPublic { get; set; } = default!;
 
     }
 
@@ -6741,42 +6743,42 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString AccessTokenName { get; set; }
+        public PatchOfString? AccessTokenName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid ServerFarmId { get; set; }
+        public PatchOfGuid? ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfNullableDateTime ExpirationTime { get; set; }
+        public PatchOfNullableDateTime? ExpirationTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfInteger Lifetime { get; set; }
+        public PatchOfInteger? Lifetime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfInteger MaxDevice { get; set; }
+        public PatchOfInteger? MaxDevice { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfLong MaxTraffic { get; set; }
+        public PatchOfLong? MaxTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("url")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString Url { get; set; }
+        public PatchOfString? Url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfBoolean IsEnabled { get; set; }
+        public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
     }
 
@@ -6788,7 +6790,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Value { get; set; }
+        public string Value { get; set; } = default!;
 
     }
 
@@ -6800,7 +6802,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid Value { get; set; }
+        public System.Guid Value { get; set; } = default!;
 
     }
 
@@ -6811,7 +6813,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("value")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? Value { get; set; }
+        public System.DateTime? Value { get; set; } = default!;
 
     }
 
@@ -6822,7 +6824,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("value")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int Value { get; set; }
+        public int Value { get; set; } = default!;
 
     }
 
@@ -6833,7 +6835,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("value")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long Value { get; set; }
+        public long Value { get; set; } = default!;
 
     }
 
@@ -6844,7 +6846,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("value")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool Value { get; set; }
+        public bool Value { get; set; } = default!;
 
     }
 
@@ -6861,12 +6863,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("usage")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public Usage Usage { get; set; }
+        public Usage? Usage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("access")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public Access Access { get; set; }
+        public Access? Access { get; set; } = default!;
 
     }
 
@@ -6877,37 +6879,37 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("sentTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long SentTraffic { get; set; }
+        public long SentTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("receivedTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long ReceivedTraffic { get; set; }
+        public long ReceivedTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("deviceCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? DeviceCount { get; set; }
+        public int? DeviceCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? ServerCount { get; set; }
+        public int? ServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? SessionCount { get; set; }
+        public int? SessionCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessTokenCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? AccessTokenCount { get; set; }
+        public int? AccessTokenCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("countryCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? CountryCount { get; set; }
+        public int? CountryCount { get; set; } = default!;
 
     }
 
@@ -6918,7 +6920,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("totalCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public long? TotalCount { get; set; }
+        public long? TotalCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("items")]
 
@@ -6936,30 +6938,30 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid CertificateId { get; set; }
+        public System.Guid CertificateId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("commonName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string CommonName { get; set; }
+        public string CommonName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime ExpirationTime { get; set; }
+        public System.DateTime ExpirationTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rawData")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public byte[] RawData { get; set; }
+        public byte[]? RawData { get; set; } = default!;
 
     }
 
@@ -6970,17 +6972,17 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("subjectName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string SubjectName { get; set; }
+        public string? SubjectName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rawData")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public byte[] RawData { get; set; }
+        public byte[]? RawData { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("password")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Password { get; set; }
+        public string? Password { get; set; } = default!;
 
     }
 
@@ -6991,12 +6993,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("rawData")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfByteOf RawData { get; set; }
+        public PatchOfByteOf? RawData { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("password")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString Password { get; set; }
+        public PatchOfString? Password { get; set; } = default!;
 
     }
 
@@ -7008,7 +7010,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] Value { get; set; }
+        public byte[] Value { get; set; } = default!;
 
     }
 
@@ -7025,7 +7027,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("usage")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public TrafficUsage Usage { get; set; }
+        public TrafficUsage? Usage { get; set; } = default!;
 
     }
 
@@ -7036,18 +7038,18 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("sentTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long SentTraffic { get; set; }
+        public long SentTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("receivedTraffic")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long ReceivedTraffic { get; set; }
+        public long ReceivedTraffic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime LastUsedTime { get; set; }
+        public System.DateTime LastUsedTime { get; set; } = default!;
 
     }
 
@@ -7058,7 +7060,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isLocked")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfBoolean IsLocked { get; set; }
+        public PatchOfBoolean? IsLocked { get; set; } = default!;
 
     }
 
@@ -7070,17 +7072,17 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string IpAddress { get; set; }
+        public string IpAddress { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lockedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? LockedTime { get; set; }
+        public System.DateTime? LockedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Description { get; set; }
+        public string? Description { get; set; } = default!;
 
     }
 
@@ -7092,17 +7094,17 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string IpAddress { get; set; }
+        public string IpAddress { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isLocked")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsLocked { get; set; }
+        public bool IsLocked { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Description { get; set; }
+        public string? Description { get; set; } = default!;
 
     }
 
@@ -7113,12 +7115,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isLocked")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfBoolean IsLocked { get; set; }
+        public PatchOfBoolean? IsLocked { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString Description { get; set; }
+        public PatchOfString? Description { get; set; } = default!;
 
     }
 
@@ -7130,30 +7132,30 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ProjectId { get; set; }
+        public System.Guid ProjectId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("projectName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ProjectName { get; set; }
+        public string? ProjectName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("subscriptionType")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public SubscriptionType SubscriptionType { get; set; }
+        public SubscriptionType SubscriptionType { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("googleAnalyticsTrackId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string GoogleAnalyticsTrackId { get; set; }
+        public string? GoogleAnalyticsTrackId { get; set; } = default!;
 
     }
 
@@ -7176,17 +7178,17 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("projectName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString ProjectName { get; set; }
+        public PatchOfString? ProjectName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("googleAnalyticsTrackId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString GoogleAnalyticsTrackId { get; set; }
+        public PatchOfString? GoogleAnalyticsTrackId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTcpCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfInteger MaxTcpCount { get; set; }
+        public PatchOfInteger? MaxTcpCount { get; set; } = default!;
 
     }
 
@@ -7198,36 +7200,36 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerFarmId { get; set; }
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ServerFarmName { get; set; }
+        public string ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerProfileId { get; set; }
+        public System.Guid ServerProfileId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerProfileName { get; set; }
+        public string? ServerProfileName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid CertificateId { get; set; }
+        public System.Guid CertificateId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
     }
 
@@ -7238,17 +7240,17 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerFarmName { get; set; }
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.Guid? ServerProfileId { get; set; }
+        public System.Guid? ServerProfileId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.Guid? CertificateId { get; set; }
+        public System.Guid? CertificateId { get; set; } = default!;
 
     }
 
@@ -7259,17 +7261,17 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString ServerFarmName { get; set; }
+        public PatchOfString? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid CertificateId { get; set; }
+        public PatchOfGuid? CertificateId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid ServerProfileId { get; set; }
+        public PatchOfGuid? ServerProfileId { get; set; } = default!;
 
     }
 
@@ -7286,7 +7288,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public ServerFarmSummary Summary { get; set; }
+        public ServerFarmSummary? Summary { get; set; } = default!;
 
     }
 
@@ -7297,27 +7299,27 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("totalTokenCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int TotalTokenCount { get; set; }
+        public int TotalTokenCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("activeTokenCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ActiveTokenCount { get; set; }
+        public int ActiveTokenCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("inactiveTokenCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int InactiveTokenCount { get; set; }
+        public int InactiveTokenCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("unusedTokenCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int UnusedTokenCount { get; set; }
+        public int UnusedTokenCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ServerCount { get; set; }
+        public int ServerCount { get; set; } = default!;
 
     }
 
@@ -7329,29 +7331,29 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerProfileId { get; set; }
+        public System.Guid ServerProfileId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ServerProfileName { get; set; }
+        public string ServerProfileName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isDefault")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsDefault { get; set; }
+        public bool IsDefault { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverConfig")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerConfig { get; set; }
+        public string? ServerConfig { get; set; } = default!;
 
     }
 
@@ -7362,12 +7364,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerProfileName { get; set; }
+        public string? ServerProfileName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverConfig")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerConfig { get; set; }
+        public string? ServerConfig { get; set; } = default!;
 
     }
 
@@ -7384,7 +7386,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public ServerProfileSummary Summary { get; set; }
+        public ServerProfileSummary? Summary { get; set; } = default!;
 
     }
 
@@ -7395,12 +7397,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ServerCount { get; set; }
+        public int ServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ServerFarmCount { get; set; }
+        public int ServerFarmCount { get; set; } = default!;
 
     }
 
@@ -7411,12 +7413,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString ServerProfileName { get; set; }
+        public PatchOfString? ServerProfileName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverConfig")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString ServerConfig { get; set; }
+        public PatchOfString? ServerConfig { get; set; } = default!;
 
     }
 
@@ -7428,97 +7430,97 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerId { get; set; }
+        public System.Guid ServerId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ServerName { get; set; }
+        public string ServerName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerFarmId { get; set; }
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerFarmName { get; set; }
+        public string? ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("version")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Version { get; set; }
+        public string? Version { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("environmentVersion")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string EnvironmentVersion { get; set; }
+        public string? EnvironmentVersion { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("osInfo")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string OsInfo { get; set; }
+        public string? OsInfo { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("machineName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string MachineName { get; set; }
+        public string? MachineName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("totalMemory")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public long? TotalMemory { get; set; }
+        public long? TotalMemory { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("logicalCoreCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? LogicalCoreCount { get; set; }
+        public int? LogicalCoreCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("configureTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? ConfigureTime { get; set; }
+        public System.DateTime? ConfigureTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("autoConfigure")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool AutoConfigure { get; set; }
+        public bool AutoConfigure { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsEnabled { get; set; }
+        public bool IsEnabled { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Description { get; set; }
+        public string? Description { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lastConfigError")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string LastConfigError { get; set; }
+        public string? LastConfigError { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverState")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public ServerState ServerState { get; set; }
+        public ServerState ServerState { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverStatus")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public ServerStatusEx ServerStatus { get; set; }
+        public ServerStatusEx? ServerStatus { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
 
@@ -7559,48 +7561,48 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int SessionCount { get; set; }
+        public int SessionCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tcpConnectionCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int TcpConnectionCount { get; set; }
+        public int TcpConnectionCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("udpConnectionCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int UdpConnectionCount { get; set; }
+        public int UdpConnectionCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public long? AvailableMemory { get; set; }
+        public long? AvailableMemory { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public int? CpuUsage { get; set; }
+        public int? CpuUsage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("threadCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ThreadCount { get; set; }
+        public int ThreadCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tunnelSendSpeed")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TunnelSendSpeed { get; set; }
+        public long TunnelSendSpeed { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tunnelReceiveSpeed")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TunnelReceiveSpeed { get; set; }
+        public long TunnelReceiveSpeed { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
     }
 
@@ -7612,29 +7614,29 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string IpAddress { get; set; }
+        public string IpAddress { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPointMode")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public AccessPointMode AccessPointMode { get; set; }
+        public AccessPointMode AccessPointMode { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isListen")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsListen { get; set; }
+        public bool IsListen { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tcpPort")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int TcpPort { get; set; }
+        public int TcpPort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("udpPort")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int UdpPort { get; set; }
+        public int UdpPort { get; set; } = default!;
 
     }
 
@@ -7660,18 +7662,18 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string ServerName { get; set; }
+        public string? ServerName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ServerFarmId { get; set; }
+        public System.Guid ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.Collections.Generic.ICollection<AccessPoint> AccessPoints { get; set; }
+        public System.Collections.Generic.ICollection<AccessPoint>? AccessPoints { get; set; } = default!;
 
     }
 
@@ -7682,27 +7684,27 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString ServerName { get; set; }
+        public PatchOfString? ServerName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid ServerFarmId { get; set; }
+        public PatchOfGuid? ServerFarmId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("generateNewSecret")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfBoolean GenerateNewSecret { get; set; }
+        public PatchOfBoolean? GenerateNewSecret { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("autoConfigure")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfBoolean AutoConfigure { get; set; }
+        public PatchOfBoolean? AutoConfigure { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfAccessPointOf AccessPoints { get; set; }
+        public PatchOfAccessPointOf? AccessPoints { get; set; } = default!;
 
     }
 
@@ -7738,24 +7740,24 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string HostName { get; set; }
+        public string HostName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("hostPort")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int HostPort { get; set; }
+        public int HostPort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserName { get; set; }
+        public string UserName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("password")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Password { get; set; }
+        public string Password { get; set; } = default!;
 
     }
 
@@ -7767,29 +7769,29 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string HostName { get; set; }
+        public string HostName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("hostPort")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int HostPort { get; set; }
+        public int HostPort { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserName { get; set; }
+        public string UserName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userKey")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] UserKey { get; set; }
+        public byte[] UserKey { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userKeyPassphrase")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string UserKeyPassphrase { get; set; }
+        public string? UserKeyPassphrase { get; set; } = default!;
 
     }
 
@@ -7801,7 +7803,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string AppSettingsJson { get; set; }
+        public string AppSettingsJson { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("appSettings")]
 
@@ -7813,13 +7815,13 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string LinuxCommand { get; set; }
+        public string LinuxCommand { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("windowsCommand")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string WindowsCommand { get; set; }
+        public string WindowsCommand { get; set; } = default!;
 
     }
 
@@ -7837,7 +7839,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] Secret { get; set; }
+        public byte[] Secret { get; set; } = default!;
 
     }
 
@@ -7849,13 +7851,13 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Uri BaseUrl { get; set; }
+        public System.Uri BaseUrl { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("authorization")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Authorization { get; set; }
+        public string Authorization { get; set; } = default!;
 
     }
 
@@ -7866,47 +7868,47 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("totalServerCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int TotalServerCount { get; set; }
+        public int TotalServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("activeServerCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ActiveServerCount { get; set; }
+        public int ActiveServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("idleServerCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int IdleServerCount { get; set; }
+        public int IdleServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lostServerCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int LostServerCount { get; set; }
+        public int LostServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("notInstalledServerCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int NotInstalledServerCount { get; set; }
+        public int NotInstalledServerCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int SessionCount { get; set; }
+        public int SessionCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tunnelSendSpeed")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TunnelSendSpeed { get; set; }
+        public long TunnelSendSpeed { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tunnelReceiveSpeed")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TunnelReceiveSpeed { get; set; }
+        public long TunnelReceiveSpeed { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("usingBandwidth")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long UsingBandwidth { get; set; }
+        public long UsingBandwidth { get; set; } = default!;
 
     }
 
@@ -7918,22 +7920,22 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime Time { get; set; }
+        public System.DateTime Time { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int SessionCount { get; set; }
+        public int SessionCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("tunnelTransferSpeed")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TunnelTransferSpeed { get; set; }
+        public long TunnelTransferSpeed { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int ServerCount { get; set; }
+        public int ServerCount { get; set; } = default!;
 
     }
 
@@ -7951,7 +7953,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Authorization { get; set; }
+        public string Authorization { get; set; } = default!;
 
     }
 
@@ -7975,7 +7977,7 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string AppId { get; set; }
+        public string AppId { get; set; } = default!;
 
     }
 
@@ -7987,44 +7989,44 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid UserId { get; set; }
+        public System.Guid UserId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("email")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Email { get; set; }
+        public string Email { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("firstName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lastName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string LastName { get; set; }
+        public string? LastName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Description { get; set; }
+        public string? Description { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; }
+        public System.DateTime CreatedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? AccessedTime { get; set; }
+        public System.DateTime? AccessedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isBot")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsBot { get; set; }
+        public bool IsBot { get; set; } = default!;
 
     }
 
@@ -8036,18 +8038,18 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid RoleId { get; set; }
+        public System.Guid RoleId { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("roleName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string RoleName { get; set; }
+        public string RoleName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string Description { get; set; }
+        public string? Description { get; set; } = default!;
 
     }
 
@@ -8059,13 +8061,13 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Name { get; set; }
+        public string Name { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("roleId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid RoleId { get; set; }
+        public System.Guid RoleId { get; set; } = default!;
 
     }
 
@@ -8077,13 +8079,13 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Email { get; set; }
+        public string Email { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("roleId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid RoleId { get; set; }
+        public System.Guid RoleId { get; set; } = default!;
 
     }
 
@@ -8094,7 +8096,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("roleId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid RoleId { get; set; }
+        public PatchOfGuid? RoleId { get; set; } = default!;
 
     }
 

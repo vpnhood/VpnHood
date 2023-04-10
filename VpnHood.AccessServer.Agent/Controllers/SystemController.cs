@@ -9,7 +9,7 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/system")]
-[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme, Roles = "System")]
+[Authorize(AgentPolicy.SystemPolicy)]
 public class SystemController : ControllerBase
 {
     private readonly BotAuthenticationTokenBuilder _botAuthenticationTokenBuilder;

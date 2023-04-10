@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Services;
@@ -12,7 +11,7 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/agent")]
-[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme)]
+[Authorize(AgentPolicy.VpnServerPolicy)]
 public class AgentController : ControllerBase
 {
     private readonly AgentService _agentService;

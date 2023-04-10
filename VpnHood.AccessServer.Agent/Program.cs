@@ -15,12 +15,6 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace VpnHood.AccessServer.Agent;
 
-class AgentPolicy
-{
-    public const string SystemPolicy = nameof(SystemPolicy);
-    public const string VpnServerPolicy = nameof(VpnServerPolicy);
-}
-
 public class Program
 {
     public static async Task Main(string[] args)
@@ -34,22 +28,25 @@ public class Program
             new GrayMintCommonOptions { AppName = "VpnHood Agent Server" },
             new RegisterServicesOptions { AddSwaggerVersioning = false });
 
+        //Authentication
         builder.Services
              .AddAuthentication()
              .AddBotAuthentication(builder.Configuration.GetSection("Auth").Get<BotAuthenticationOptions>(),
                  builder.Environment.IsProduction());
 
+        // Authorization Policies
         builder.Services.AddAuthorization(options =>
         {
             var policy = new AuthorizationPolicyBuilder()
                 .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme)
+                .RequireRole("System")
                 .RequireAuthenticatedUser()
                 .Build();
             options.AddPolicy(AgentPolicy.SystemPolicy, policy);
+            options.DefaultPolicy = policy;
 
             policy = new AuthorizationPolicyBuilder()
                 .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme)
-                .RequireRole("System")
                 .RequireAuthenticatedUser()
                 .Build();
             options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);

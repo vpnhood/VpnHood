@@ -1,5 +1,4 @@
-﻿using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
@@ -10,7 +9,7 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/cache")]
-[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme, Roles = "System")]
+[Authorize(AgentPolicy.SystemPolicy)]
 public class CacheController : ControllerBase
 {
     private readonly CacheService _cacheService;

@@ -24,6 +24,7 @@ using VpnHood.AccessServer.Security;
 using NLog;
 using NLog.Web;
 using VpnHood.AccessServer.Report.Services;
+using GrayMint.Common.AspNetCore.SimpleUserControllers;
 
 namespace VpnHood.AccessServer;
 
@@ -54,6 +55,7 @@ public class Program
         // Add authentications
         builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions { ResourceParamName = "projectId", Roles = Roles.All });
         builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+        builder.Services.AddGrayMintSimpleUserController(new SimpleUserControllerOptions { AllowUserSelfRegister = true, IsTestEnvironment = isTest });
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
@@ -75,9 +77,7 @@ public class Program
         builder.Services.AddScoped<ServerProfileService>();
         builder.Services.AddScoped<ServerService>();
         builder.Services.AddScoped<SubscriptionService>();
-        builder.Services.AddScoped<TeamService>();
         builder.Services.AddScoped<UsageCycleService>();
-        builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();
 

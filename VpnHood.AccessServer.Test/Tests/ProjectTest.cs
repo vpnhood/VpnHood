@@ -70,7 +70,7 @@ public class ProjectTest
         //-----------
         // Check: All project
         //-----------
-        var userProjects = await testInit.UserClient.GetProjectsAsync();
+        var userProjects = await testInit.TeamClient.ListCurrentUserResourcesAsync();
         Assert.IsTrue(userProjects.Any(x => x.ProjectId == projectId));
     }
 

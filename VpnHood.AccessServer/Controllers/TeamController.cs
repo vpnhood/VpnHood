@@ -1,121 +1,54 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
-using GrayMint.Common.Exceptions;
+using GrayMint.Common.AspNetCore.SimpleUserControllers.Controllers;
+using GrayMint.Common.AspNetCore.SimpleUserControllers.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using Role = VpnHood.AccessServer.Dtos.Role;
 using UserRole = VpnHood.AccessServer.Dtos.UserRole;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/team")]
-public class TeamController : ControllerBase
+[ApiController]
+public class TeamController : TeamControllerBase<Project, Guid, User, UserRole, Role>
 {
-    private readonly TeamService _teamService;
-    private readonly SimpleRoleAuthService _simpleRoleAuthService;
+    private readonly ProjectService _projectService;
 
-    public TeamController(
-        TeamService teamService, 
-        SimpleRoleAuthService simpleRoleAuthService)
+    public TeamController(RoleService roleService, ProjectService projectService) : base(roleService)
     {
-        _teamService = teamService;
-        _simpleRoleAuthService = simpleRoleAuthService;
+        _projectService = projectService;
     }
 
-    [HttpPost("bots")]
-    [AuthorizePermission(Permissions.TeamWrite)]
-    public async Task<BotAuthorizationResult> CreateBot(Guid projectId, TeamAddBotParam addParam)
+    protected override User ToDto(GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User user)
     {
-        await ValidateWriteAccessToRole(projectId, addParam.RoleId);
-        return await _teamService.CreateBot(projectId, addParam);
+        return user.ToDto();
     }
 
-    [HttpPost("bots/reset-authorization")]
-    [AuthorizePermission(Permissions.TeamWrite)]
-    public async Task<BotAuthorizationResult> ResetBotAuthorization(Guid projectId, Guid userId)
+    protected override Role ToDto(GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.Role role)
     {
-        return await _teamService.ResetBotAuthorization(projectId, userId);
+        return role.ToDto();
     }
 
-    [HttpPost("users")]
-    [AuthorizePermission(Permissions.TeamWrite)]
-    public async Task<UserRole> AddUser(Guid projectId, TeamAddUserParam addParam)
+    protected override UserRole ToDto(GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.UserRole userRole)
     {
-        await ValidateWriteAccessToRole(projectId, addParam.RoleId);
-        return  await _teamService.AddUser(projectId, addParam);
+        return userRole.ToDto();
     }
 
-    [HttpGet("users/{userId:guid}")]
-    [AuthorizePermission(Permissions.TeamRead)]
-    public Task<UserRole> GetUser(Guid projectId, Guid userId)
+    protected override string ToResourceId(Guid appId)
     {
-        return _teamService.GetUser(projectId, userId);
+        return appId == Guid.Empty ? "*" : appId.ToString();
     }
 
-    [HttpPost("users/{userId:guid}")]
-    [AuthorizePermission(Permissions.TeamWrite)]
-    public async Task<UserRole> UpdateUser(Guid projectId, Guid userId, TeamUpdateUserParam updateParam)
+    protected override Task<IEnumerable<Project>> GetResources(IEnumerable<string> resourceIds)
     {
-        var userRole = await GetUser(projectId, userId);
-        if (updateParam.RoleId != null)
-        {
-            await ValidateWriteAccessToRole(projectId, updateParam.RoleId);
-            await ValidateWriteAccessToRole(projectId, userRole.Role.RoleId);
-
-            // can not change its own owner role
-            if (userRole.Role.RoleId == Roles.ProjectOwner.RoleId && userId == UserService.GetUserId(User))
-                throw new InvalidOperationException("You are an owner and can not remove yourself. Ask other owners or delete the project.");
-        }
-
-        return await _teamService.UpdateUser(projectId, userId, updateParam);
-    }
-
-
-    [HttpDelete("users/userId")]
-    [AuthorizePermission(Permissions.TeamWrite)]
-    public async Task RemoveUser(Guid projectId, Guid userId)
-    {
-        var userRole = await GetUser(projectId, userId);
-        await ValidateWriteAccessToRole(projectId, userRole.Role.RoleId);
-
-        if (userRole.Role.RoleId == Roles.ProjectOwner.RoleId && userId == UserService.GetUserId(User))
-            throw new InvalidOperationException("An owner can not remove himself. Ask other owners or delete the project.");
-
-        await _teamService.RemoveUser(projectId, userId);
-    }
-
-    [HttpGet("users")]
-    [AuthorizePermission(Permissions.TeamRead)]
-    public Task<UserRole[]> ListUsers(Guid projectId)
-    {
-        return _teamService.ListUsers(projectId);
-    }
-
-    [HttpGet("roles")]
-    [AuthorizePermission(Permissions.TeamRead)]
-    public Task<Role[]> ListRoles(Guid projectId)
-    {
-        return _teamService.ListRoles(projectId);
-    }
-
-    private async Task ValidateWriteAccessToRole(Guid projectId, Guid roleId)
-    {
-        if (Roles.ProjectRoles.All(x => x.RoleId != roleId))
-            throw new NotExistsException("The roleId is not a Project Role.");
-
-        if (roleId == Roles.ProjectOwner.RoleId)
-        {
-            var authorizeResult = await _simpleRoleAuthService.AuthorizePermissionAsync(User, projectId.ToString(), Permissions.TeamWriteOwner);
-            if (!authorizeResult.Succeeded)
-                throw new UnauthorizedAccessException();
-        }
+        var projectIds = resourceIds.Except(new[] { "*" }).Select(Guid.Parse);
+        return _projectService.List(projectIds);
     }
 }
 

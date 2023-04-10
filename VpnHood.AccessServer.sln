@@ -38,6 +38,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Persis
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AccessServer.Dtos", "VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj", "{19956BE8-C2BA-4099-853A-97316671DCE1}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Common.AspNetCore.SimpleUserControllers", "..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleUserControllers\GrayMint.Common.AspNetCore.SimpleUserControllers.csproj", "{7AE802E6-FC36-4509-8C7A-70B62B711722}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +98,10 @@ Global
 		{19956BE8-C2BA-4099-853A-97316671DCE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19956BE8-C2BA-4099-853A-97316671DCE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19956BE8-C2BA-4099-853A-97316671DCE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AE802E6-FC36-4509-8C7A-70B62B711722}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AE802E6-FC36-4509-8C7A-70B62B711722}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AE802E6-FC36-4509-8C7A-70B62B711722}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AE802E6-FC36-4509-8C7A-70B62B711722}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -107,6 +113,7 @@ Global
 		{9429EC97-F7CA-4D9A-9605-E5377F7565CB} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 		{16E3DF0C-D1CC-4D0A-AF18-5CC64F5385EC} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 		{81740BE1-ECD8-4F32-8FDA-7DFDB327816E} = {93345E67-2111-4452-A829-7CBDF764AAC6}
+		{7AE802E6-FC36-4509-8C7A-70B62B711722} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {99282B07-6E52-4418-9326-3F0E566C74EE}

@@ -11,8 +11,15 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Agent.Services;
 using NLog.Web;
 using NLog;
+using Microsoft.AspNetCore.Authorization;
 
 namespace VpnHood.AccessServer.Agent;
+
+class AgentPolicy
+{
+    public const string SystemPolicy = nameof(SystemPolicy);
+    public const string VpnServerPolicy = nameof(VpnServerPolicy);
+}
 
 public class Program
 {
@@ -31,6 +38,22 @@ public class Program
              .AddAuthentication()
              .AddBotAuthentication(builder.Configuration.GetSection("Auth").Get<BotAuthenticationOptions>(),
                  builder.Environment.IsProduction());
+
+        builder.Services.AddAuthorization(options =>
+        {
+            var policy = new AuthorizationPolicyBuilder()
+                .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser()
+                .Build();
+            options.AddPolicy(AgentPolicy.SystemPolicy, policy);
+
+            policy = new AuthorizationPolicyBuilder()
+                .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme)
+                .RequireRole("System")
+                .RequireAuthenticatedUser()
+                .Build();
+            options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);
+        });
 
         builder.Services
             .AddDbContextPool<VhContext>(options =>

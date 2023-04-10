@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using GrayMint.Common.AspNetCore.SimpleUserControllers.Exceptions;
+using GrayMint.Common.AspNetCore.SimpleUserControllers.Services;
+using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 
@@ -15,19 +19,24 @@ namespace VpnHood.AccessServer.Controllers;
 public class ProjectsController : ControllerBase
 {
     private readonly ProjectService _projectService;
+    private readonly SimpleUserProvider _simpleUserProvider;
 
     public ProjectsController(
-        ProjectService projectService)
+        ProjectService projectService, 
+        SimpleUserProvider simpleUserProvider)
     {
         _projectService = projectService;
+        _simpleUserProvider = simpleUserProvider;
     }
 
     [HttpPost]
     [Authorize] //all authenticated user can create projects
-    public Task<Project> Create()
+    public async Task<Project> Create()
     {
-        var userId = UserService.GetUserId(User);
-        return _projectService.Create(userId);
+        var user = await _simpleUserProvider.FindSimpleUser(User);
+        if (user == null) throw new UnregisteredUser();
+
+        return await _projectService.Create(Guid.Parse(user.UserId));
     }
 
     [HttpGet("{projectId:guid}")]

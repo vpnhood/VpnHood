@@ -25,10 +25,10 @@ public class ProjectService
     private readonly SimpleRoleProvider _simpleRoleProvider;
 
     public ProjectService(
-        VhContext vhContext, 
-        SubscriptionService subscriptionService, 
-        AgentCacheClient agentCacheClient, 
-        UsageReportService usageReportService, 
+        VhContext vhContext,
+        SubscriptionService subscriptionService,
+        AgentCacheClient agentCacheClient,
+        UsageReportService usageReportService,
         SimpleRoleProvider simpleRoleProvider)
     {
         _subscriptionService = subscriptionService;
@@ -153,6 +153,17 @@ public class ProjectService
             .ToArrayAsync();
 
         return projects.Select(project => project.ToDto()).ToArray();
+    }
+
+    public async Task<IEnumerable<Project>> List(IEnumerable<Guid> projectIds)
+    {
+        await using var trans = await _vhContext.WithNoLockTransaction();
+        var projects = await _vhContext.Projects
+            .Where(x => projectIds.Contains(x.ProjectId))
+            .OrderByDescending(x => x.ProjectName)
+            .ToArrayAsync();
+
+        return projects.Select(project => project.ToDto());
     }
 
     public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,

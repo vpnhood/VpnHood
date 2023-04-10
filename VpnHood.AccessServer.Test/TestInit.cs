@@ -32,6 +32,7 @@ using System.Text.Json;
 using VpnHood.AccessServer.Test.Helper;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Report.Persistence;
+using System.Net.Http.Headers;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -46,24 +47,24 @@ public class TestInit : IHttpClientFactory, IDisposable
     public VhContext VhContext => Scope.ServiceProvider.GetRequiredService<VhContext>();
     public VhReportContext VhReportContext => Scope.ServiceProvider.GetRequiredService<VhReportContext>();
     public CacheService CacheService => AgentScope.ServiceProvider.GetRequiredService<CacheService>();
-    public HttpClient Http { get; }
+    public HttpClient HttpClient { get; }
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public AgentSystemClient AgentSystemClient => Scope.ServiceProvider.GetRequiredService<AgentSystemClient>();
-    public ServerFarmsClient ServerFarmsClient => new(Http);
-    public ServersClient ServersClient => new(Http);
-    public CertificatesClient CertificatesClient => new(Http);
-    public AccessTokensClient AccessTokensClient => new(Http);
-    public ProjectsClient ProjectsClient => new(Http);
-    public IpLocksClient IpLocksClient => new(Http);
-    public AccessesClient AccessesClient => new(Http);
-    public DevicesClient DevicesClient => new(Http);
-    public SystemClient SystemClient => new(Http);
-    public ServerProfilesClient ServerProfilesClient => new(Http);
-    public UserClient UserClient => new(Http);
-    public TeamClient TeamClient => new(Http);
+    public ServerFarmsClient ServerFarmsClient => new(HttpClient);
+    public ServersClient ServersClient => new(HttpClient);
+    public CertificatesClient CertificatesClient => new(HttpClient);
+    public AccessTokensClient AccessTokensClient => new(HttpClient);
+    public ProjectsClient ProjectsClient => new(HttpClient);
+    public IpLocksClient IpLocksClient => new(HttpClient);
+    public AccessesClient AccessesClient => new(HttpClient);
+    public DevicesClient DevicesClient => new(HttpClient);
+    public SystemClient SystemClient => new(HttpClient);
+    public ServerProfilesClient ServerProfilesClient => new(HttpClient);
+    public TeamClient TeamClient => new(HttpClient);
 
+    public ApiKeyResult SystemAdminApiKey { get; private set; } = default!;
     public User UserSystemAdmin { get; private set; } = default!;
     public User UserProjectOwner { get; private set; } = default!;
     public Project Project { get; private set; } = default!;
@@ -71,6 +72,37 @@ public class TestInit : IHttpClientFactory, IDisposable
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
+
+    private TestInit(Dictionary<string, string?> appSettings, string environment)
+    {
+        Environment.SetEnvironmentVariable("IsTest", true.ToString());
+        WebApp = CreateWebApp<Program>(appSettings, environment);
+        AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
+        AgentOptions.AllowRedirect = false;
+        Scope = WebApp.Services.CreateScope();
+        AgentScope = AgentApp.Services.CreateScope();
+        HttpClient = WebApp.CreateClient();
+    }
+
+    public async Task Init()
+    {
+        QuotaConstants.ProjectCount = 0xFFFFFF;
+        QuotaConstants.ServerCount = 0xFFFFFF;
+        QuotaConstants.CertificateCount = 0xFFFFFF;
+        QuotaConstants.AccessTokenCount = 0xFFFFFF;
+        QuotaConstants.AccessPointCount = 0xFFFFFF;
+        QuotaConstants.ServerFarmCount = 0xFFFFFF;
+        QuotaConstants.TeamUserCount = 0xFFFFFF;
+
+        // create new user
+        UserSystemAdmin = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);
+        UserProjectOwner = await CreateUser(NewEmail());
+
+
+        // create default project
+        await SetHttpUser(UserProjectOwner);
+        Project = await ProjectsClient.CreateAsync();
+    }
 
     public Task<IPAddress> NewIpV4()
     {
@@ -115,16 +147,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         };
     }
 
-    private TestInit(Dictionary<string, string?> appSettings, string environment)
-    {
-        Environment.SetEnvironmentVariable("IsTest", true.ToString());
-        WebApp = CreateWebApp<Program>(appSettings, environment);
-        AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
-        AgentOptions.AllowRedirect = false;
-        Scope = WebApp.Services.CreateScope();
-        AgentScope = AgentApp.Services.CreateScope();
-        Http = WebApp.CreateClient();
-    }
+
 
     public Task SetHttpUser(User user, Claim[]? claims = null)
     {
@@ -140,7 +163,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             claimsIdentity.AddClaims(claims);
 
         var authenticationTokenBuilder = Scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
-        Http.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
+        HttpClient.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
     }
 
     public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null, string environment = "Development")
@@ -171,35 +194,31 @@ public class TestInit : IHttpClientFactory, IDisposable
         return webApp;
     }
 
-    [AssemblyInitialize]
-    public static void AssemblyInitialize(TestContext _)
+    public async Task<ApiKeyResult> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
     {
+        var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
+        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
+
+        var resourceId = simpleRole.IsSystem ? Guid.Empty : Project.ProjectId;
+        var apiKey = await TeamClient.CreateBotAsync(resourceId, new TeamAddBotParam { Name = Guid.NewGuid().ToString(), RoleId = simpleRole.RoleId });
+
+        HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
+            ? AuthenticationHeaderValue.Parse(apiKey.Authorization) : oldAuthorization;
+
+        return apiKey;
     }
+
+    public void SetApiKey(ApiKeyResult apiKey)
+    {
+        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(apiKey.Authorization);
+    }
+
 
     public static string NewEmail()
     {
         return $"{Guid.NewGuid()}@local";
     }
 
-    public async Task Init()
-    {
-        QuotaConstants.ProjectCount = 0xFFFFFF;
-        QuotaConstants.ServerCount = 0xFFFFFF;
-        QuotaConstants.CertificateCount = 0xFFFFFF;
-        QuotaConstants.AccessTokenCount = 0xFFFFFF;
-        QuotaConstants.AccessPointCount = 0xFFFFFF;
-        QuotaConstants.ServerFarmCount = 0xFFFFFF;
-        QuotaConstants.TeamUserCount = 0xFFFFFF;
-
-        // create new user
-        UserSystemAdmin = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);
-        UserProjectOwner = await CreateUser(NewEmail());
-
-
-        // create default project
-        await SetHttpUser(UserProjectOwner);
-        Project = await ProjectsClient.CreateAsync();
-    }
 
     public async Task<User> CreateUserAndAddToRole(string email, SimpleRole simpleRole, string appId = "*")
     {
@@ -346,10 +365,10 @@ public class TestInit : IHttpClientFactory, IDisposable
         if (flushCache)
             await FlushCache();
 
-        var oldAuthorization = Http.DefaultRequestHeaders.Authorization;
+        var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
         await SetHttpUser(UserSystemAdmin);
         await SystemClient.SyncAsync();
-        Http.DefaultRequestHeaders.Authorization = oldAuthorization;
+        HttpClient.DefaultRequestHeaders.Authorization = oldAuthorization;
     }
 
     public async Task FlushCache()
@@ -362,12 +381,12 @@ public class TestInit : IHttpClientFactory, IDisposable
         // this for simulating Agent HTTP
         if (name == AppOptions.AgentHttpClientName)
         {
-            var scope = AgentApp.Services.CreateScope();
-            var authenticationTokenBuilder = scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
             var claimIdentity = new ClaimsIdentity();
             claimIdentity.AddClaim(new Claim("usage_type", "system"));
             claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
             claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
+            var scope = AgentApp.Services.CreateScope();
+            var authenticationTokenBuilder = scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
             var authorization = authenticationTokenBuilder.CreateAuthenticationHeader(claimIdentity).Result;
 
             var httpClient = AgentApp.CreateClient();
@@ -379,9 +398,14 @@ public class TestInit : IHttpClientFactory, IDisposable
         return WebApp.CreateClient();
     }
 
+    [AssemblyInitialize]
+    public static void AssemblyInitialize(TestContext _)
+    {
+    }
+
     public void Dispose()
     {
         Scope.Dispose();
-        Http.Dispose();
+        HttpClient.Dispose();
     }
 }

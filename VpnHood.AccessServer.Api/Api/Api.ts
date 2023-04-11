@@ -2353,7 +2353,7 @@ export class TeamClient {
         this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    createSystemApiKey(): Promise<ApiKeyResult> {
+    createSystemApiKey(): Promise<UserApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/users/system/api-key";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -2369,14 +2369,14 @@ export class TeamClient {
         });
     }
 
-    protected processCreateSystemApiKey(response: Response): Promise<ApiKeyResult> {
+    protected processCreateSystemApiKey(response: Response): Promise<UserApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ApiKeyResult.fromJS(resultData200);
+            result200 = UserApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2384,7 +2384,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ApiKeyResult>(null as any);
+        return Promise.resolve<UserApiKey>(null as any);
     }
 
     registerCurrentUser(): Promise<User> {
@@ -2455,7 +2455,7 @@ export class TeamClient {
         return Promise.resolve<User>(null as any);
     }
 
-    resetCurrentUserApiKey(): Promise<ApiKeyResult> {
+    resetCurrentUserApiKey(): Promise<UserApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/users/current/reset-api-key";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -2471,14 +2471,14 @@ export class TeamClient {
         });
     }
 
-    protected processResetCurrentUserApiKey(response: Response): Promise<ApiKeyResult> {
+    protected processResetCurrentUserApiKey(response: Response): Promise<UserApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ApiKeyResult.fromJS(resultData200);
+            result200 = UserApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2486,7 +2486,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ApiKeyResult>(null as any);
+        return Promise.resolve<UserApiKey>(null as any);
     }
 
     listCurrentUserResources(): Promise<Project[]> {
@@ -2574,11 +2574,25 @@ export class TeamClient {
         return Promise.resolve<Role[]>(null as any);
     }
 
-    listUsers(resourceId: string): Promise<UserRole[]> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users";
+    listUsers(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, startIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users?";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
         url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
+        if (roleId !== undefined && roleId !== null)
+            url_ += "roleId=" + encodeURIComponent("" + roleId) + "&";
+        if (userId !== undefined && userId !== null)
+            url_ += "userId=" + encodeURIComponent("" + userId) + "&";
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (isBot !== undefined && isBot !== null)
+            url_ += "isBot=" + encodeURIComponent("" + isBot) + "&";
+        if (startIndex === null)
+            throw new Error("The parameter 'startIndex' cannot be null.");
+        else if (startIndex !== undefined)
+            url_ += "startIndex=" + encodeURIComponent("" + startIndex) + "&";
+        if (recordCount !== undefined && recordCount !== null)
+            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -2593,21 +2607,14 @@ export class TeamClient {
         });
     }
 
-    protected processListUsers(response: Response): Promise<UserRole[]> {
+    protected processListUsers(response: Response): Promise<ListResultOfUserRole> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(UserRole.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
+            result200 = ListResultOfUserRole.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2615,7 +2622,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<UserRole[]>(null as any);
+        return Promise.resolve<ListResultOfUserRole>(null as any);
     }
 
     addUser(resourceId: string, addParam: TeamAddUserParam): Promise<UserRole> {
@@ -2659,7 +2666,7 @@ export class TeamClient {
         return Promise.resolve<UserRole>(null as any);
     }
 
-    createBot(resourceId: string, addParam: TeamAddBotParam): Promise<ApiKeyResult> {
+    addNewBot(resourceId: string, addParam: TeamAddBotParam): Promise<UserApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/bots";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2678,18 +2685,18 @@ export class TeamClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCreateBot(_response);
+            return this.processAddNewBot(_response);
         });
     }
 
-    protected processCreateBot(response: Response): Promise<ApiKeyResult> {
+    protected processAddNewBot(response: Response): Promise<UserApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ApiKeyResult.fromJS(resultData200);
+            result200 = UserApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2697,10 +2704,10 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ApiKeyResult>(null as any);
+        return Promise.resolve<UserApiKey>(null as any);
     }
 
-    resetBotApiKey(resourceId: string, userId: string): Promise<ApiKeyResult> {
+    resetBotApiKey(resourceId: string, userId: string): Promise<UserApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/bots/{userId}/reset-api-key";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2722,14 +2729,14 @@ export class TeamClient {
         });
     }
 
-    protected processResetBotApiKey(response: Response): Promise<ApiKeyResult> {
+    protected processResetBotApiKey(response: Response): Promise<UserApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ApiKeyResult.fromJS(resultData200);
+            result200 = UserApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2737,7 +2744,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ApiKeyResult>(null as any);
+        return Promise.resolve<UserApiKey>(null as any);
     }
 
     getUser(resourceId: string, userId: string): Promise<UserRole> {
@@ -5498,11 +5505,11 @@ export interface IServerStatusHistory {
     serverCount: number;
 }
 
-export class ApiKeyResult implements IApiKeyResult {
+export class UserApiKey implements IUserApiKey {
     userId!: string;
     authorization!: string;
 
-    constructor(data?: IApiKeyResult) {
+    constructor(data?: IUserApiKey) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5518,9 +5525,9 @@ export class ApiKeyResult implements IApiKeyResult {
         }
     }
 
-    static fromJS(data: any): ApiKeyResult {
+    static fromJS(data: any): UserApiKey {
         data = typeof data === 'object' ? data : {};
-        let result = new ApiKeyResult();
+        let result = new UserApiKey();
         result.init(data);
         return result;
     }
@@ -5533,7 +5540,7 @@ export class ApiKeyResult implements IApiKeyResult {
     }
 }
 
-export interface IApiKeyResult {
+export interface IUserApiKey {
     userId: string;
     authorization: string;
 }
@@ -5644,6 +5651,57 @@ export interface IRole {
     roleId: string;
     roleName: string;
     description?: string | undefined;
+}
+
+export class ListResultOfUserRole implements IListResultOfUserRole {
+    totalCount?: number | undefined;
+    items!: UserRole[];
+
+    constructor(data?: IListResultOfUserRole) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.totalCount = _data["totalCount"];
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(UserRole.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): ListResultOfUserRole {
+        data = typeof data === 'object' ? data : {};
+        let result = new ListResultOfUserRole();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["totalCount"] = this.totalCount;
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IListResultOfUserRole {
+    totalCount?: number | undefined;
+    items: UserRole[];
 }
 
 export class UserRole implements IUserRole {

@@ -37,8 +37,8 @@ public class SubscriptionService
     public async Task AuthorizeCreateProject(Guid userId)
     {
         var user = await _simpleUserProvider.Get(userId); // make sure the user is registered
-        var userRoles = await _simpleRoleProvider.GetUserRoles(userId: user.UserId);
-        if (userRoles.Count(x => x.Role.RoleName == Roles.ProjectOwner.RoleName) >= QuotaConstants.ProjectCount)
+        var userRoles = await _simpleRoleProvider.ListUserRoles(userId: user.UserId);
+        if (userRoles.Items.Count(x => x.Role.RoleName == Roles.ProjectOwner.RoleName) >= QuotaConstants.ProjectCount)
             throw new QuotaException(nameof(_vhContext.Projects), QuotaConstants.ProjectCount,
                 $"You can not be owner of more than {QuotaConstants.ProjectCount} projects.");
     }
@@ -79,8 +79,8 @@ public class SubscriptionService
 
     public async Task VerifyAddUser(Guid projectId)
     {
-        var userRoles = await _simpleRoleProvider.GetUserRoles(resourceId: projectId.ToString());
-        if (await IsFreePlan(projectId) && userRoles.Length > QuotaConstants.TeamUserCount)
+        var userRoles = await _simpleRoleProvider.ListUserRoles(resourceId: projectId.ToString());
+        if (await IsFreePlan(projectId) && userRoles.Items.Count() > QuotaConstants.TeamUserCount)
             throw new QuotaException("TeamUserCount", QuotaConstants.TeamUserCount);
     }
 }

@@ -5798,7 +5798,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ListResultOfUserRole> ListUsersAsync(System.Guid resourceId, System.Guid? roleId = null, System.Guid? userId = null, string? search = null, bool? isBot = null, int? startIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ListResultOfUserRole> ListUsersAsync(System.Guid resourceId, System.Guid? roleId = null, System.Guid? userId = null, string? search = null, bool? isBot = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
                 throw new System.ArgumentNullException("resourceId");
@@ -5822,9 +5822,9 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("isBot") + "=").Append(System.Uri.EscapeDataString(ConvertToString(isBot, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (startIndex != null)
+            if (recordIndex != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("startIndex") + "=").Append(System.Uri.EscapeDataString(ConvertToString(startIndex, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("recordIndex") + "=").Append(System.Uri.EscapeDataString(ConvertToString(recordIndex, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (recordCount != null)
             {

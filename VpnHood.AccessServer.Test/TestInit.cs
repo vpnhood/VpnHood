@@ -58,8 +58,8 @@ public class TestInit : IHttpClientFactory, IDisposable
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
 
-    public ApiKeyResult SystemAdminApiKey { get; private set; } = default!;
-    public ApiKeyResult ProjectOwnerApiKey { get; private set; } = default!;
+    public UserApiKey SystemAdminApiKey { get; private set; } = default!;
+    public UserApiKey ProjectOwnerApiKey { get; private set; } = default!;
     public Project Project { get; private set; } = default!;
     public Guid ProjectId => Project.ProjectId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -169,13 +169,13 @@ public class TestInit : IHttpClientFactory, IDisposable
         return webApp;
     }
 
-    public async Task<ApiKeyResult> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
+    public async Task<UserApiKey> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
     {
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
         HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
 
         var resourceId = simpleRole.IsSystem ? Guid.Empty : Project.ProjectId;
-        var apiKey = await TeamClient.CreateBotAsync(resourceId, new TeamAddBotParam { Name = Guid.NewGuid().ToString(), RoleId = simpleRole.RoleId });
+        var apiKey = await TeamClient.AddNewBotAsync(resourceId, new TeamAddBotParam { Name = Guid.NewGuid().ToString(), RoleId = simpleRole.RoleId });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
             ? AuthenticationHeaderValue.Parse(apiKey.Authorization) : oldAuthorization;

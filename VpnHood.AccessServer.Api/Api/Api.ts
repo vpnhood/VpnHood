@@ -2574,7 +2574,7 @@ export class TeamClient {
         return Promise.resolve<Role[]>(null as any);
     }
 
-    listUsers(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, startIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
+    listUsers(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users?";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2587,10 +2587,10 @@ export class TeamClient {
             url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (isBot !== undefined && isBot !== null)
             url_ += "isBot=" + encodeURIComponent("" + isBot) + "&";
-        if (startIndex === null)
-            throw new Error("The parameter 'startIndex' cannot be null.");
-        else if (startIndex !== undefined)
-            url_ += "startIndex=" + encodeURIComponent("" + startIndex) + "&";
+        if (recordIndex === null)
+            throw new Error("The parameter 'recordIndex' cannot be null.");
+        else if (recordIndex !== undefined)
+            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
         if (recordCount !== undefined && recordCount !== null)
             url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
         url_ = url_.replace(/[?&]$/, "");

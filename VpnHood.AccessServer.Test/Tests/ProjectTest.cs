@@ -116,9 +116,9 @@ public class ProjectTest
     {
         var testInit = await TestInit.Create();
         var userRoles = await testInit.TeamClient.ListUsersAsync(testInit.ProjectId);
-        Assert.AreEqual(1, userRoles.Count);
+        Assert.AreEqual(1, userRoles.TotalCount);
 
-        var userRole = userRoles.First();
+        var userRole = userRoles.Items.First();
         Assert.AreEqual(testInit.ProjectOwnerApiKey.UserId, userRole.User.UserId);
         Assert.AreEqual(Roles.ProjectOwner.RoleId, userRole.Role.RoleId);
     }

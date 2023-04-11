@@ -116,7 +116,7 @@ public class ProjectService
 
         // make current user the owner
         var role = await _simpleRoleProvider.GetByName(Roles.ProjectOwner.RoleName);
-        await _simpleRoleProvider.AddUser(role.RoleId, ownerUserId, project.ProjectId.ToString());
+        await _simpleRoleProvider.AddUser(project.ProjectId.ToString(), role.RoleId, ownerUserId);
         return project.ToDto();
     }
 

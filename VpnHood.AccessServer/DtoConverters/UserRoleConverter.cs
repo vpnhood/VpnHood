@@ -9,7 +9,7 @@ public static class UserRoleConverter
     {
         var dto = new UserRole
         {
-            ResourceId = model.AppId == "*" ? Guid.Empty :Guid.Parse(model.AppId),
+            ResourceId = model.ResourceId == "*" ? Guid.Empty :Guid.Parse(model.ResourceId),
             Role = model.Role.ToDto(),
             User = model.User.ToDto()
         };

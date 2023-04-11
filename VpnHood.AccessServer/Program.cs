@@ -55,7 +55,7 @@ public class Program
         // Add authentications
         builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions { ResourceParamName = "projectId", Roles = Roles.All });
         builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
-        builder.Services.AddGrayMintSimpleUserController(new SimpleUserControllerOptions { AllowUserSelfRegister = true, IsTestEnvironment = isTest });
+        builder.Services.AddGrayMintSimpleUserController(builder.Configuration.GetSection("TeamController").Get<SimpleUserControllerOptions>());
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);

@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos;
-using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,11 +23,8 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using User = VpnHood.AccessServer.Api.User;
 using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
-using System.Text.Json;
 using VpnHood.AccessServer.Test.Helper;
-using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Report.Persistence;
 using System.Net.Http.Headers;
 
@@ -65,8 +59,7 @@ public class TestInit : IHttpClientFactory, IDisposable
     public TeamClient TeamClient => new(HttpClient);
 
     public ApiKeyResult SystemAdminApiKey { get; private set; } = default!;
-    public User UserSystemAdmin { get; private set; } = default!;
-    public User UserProjectOwner { get; private set; } = default!;
+    public ApiKeyResult ProjectOwnerApiKey { get; private set; } = default!;
     public Project Project { get; private set; } = default!;
     public Guid ProjectId => Project.ProjectId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -95,13 +88,13 @@ public class TestInit : IHttpClientFactory, IDisposable
         QuotaConstants.TeamUserCount = 0xFFFFFF;
 
         // create new user
-        UserSystemAdmin = await CreateUserAndAddToRole(NewEmail(), Roles.SystemAdmin);
-        UserProjectOwner = await CreateUser(NewEmail());
-
+        SystemAdminApiKey = await TeamClient.CreateSystemApiKeyAsync();
+        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
 
         // create default project
-        await SetHttpUser(UserProjectOwner);
         Project = await ProjectsClient.CreateAsync();
+        ProjectOwnerApiKey =  await AddNewUser(Roles.ProjectOwner);
+        await TeamClient.RemoveUserAsync(Project.ProjectId, SystemAdminApiKey.UserId);
     }
 
     public Task<IPAddress> NewIpV4()
@@ -147,26 +140,8 @@ public class TestInit : IHttpClientFactory, IDisposable
         };
     }
 
-
-
-    public Task SetHttpUser(User user, Claim[]? claims = null)
-    {
-        return SetHttpUser(user.Email, claims);
-    }
-
-    public async Task SetHttpUser(string email, Claim[]? claims = null)
-    {
-        var claimsIdentity = new ClaimsIdentity();
-        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, email));
-        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, email));
-        if (claims != null)
-            claimsIdentity.AddClaims(claims);
-
-        var authenticationTokenBuilder = Scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
-        HttpClient.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
-    }
-
-    public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null, string environment = "Development")
+    public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null, 
+        string environment = "Development")
     {
         appSettings ??= new Dictionary<string, string?>();
         var ret = new TestInit(appSettings, environment);
@@ -208,51 +183,10 @@ public class TestInit : IHttpClientFactory, IDisposable
         return apiKey;
     }
 
-    public void SetApiKey(ApiKeyResult apiKey)
-    {
-        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(apiKey.Authorization);
-    }
-
-
     public static string NewEmail()
     {
         return $"{Guid.NewGuid()}@local";
     }
-
-
-    public async Task<User> CreateUserAndAddToRole(string email, SimpleRole simpleRole, string appId = "*")
-    {
-        // create user
-        var user = await CreateUser(email);
-
-        // create role if not exists
-        var roleProvider = Scope.ServiceProvider.GetRequiredService<SimpleRoleProvider>();
-        var role = await roleProvider.Get(simpleRole.RoleId);
-
-        // add to role if it is not already added
-        var userRoles = await roleProvider.GetUserRoles(userId: user.UserId);
-        if (userRoles.SingleOrDefault(x => x.Role.RoleId == role.RoleId && x.AppId == appId) == null)
-            await roleProvider.AddUser(role.RoleId, user.UserId, appId);
-        return user;
-    }
-
-    public async Task<User> CreateUser(string email)
-    {
-        // create user
-        var userProvider = Scope.ServiceProvider.GetRequiredService<SimpleUserProvider>();
-        var user = await userProvider.FindByEmail(email) ??
-                   await userProvider.Create(new UserCreateRequest
-                   {
-                       Email = email,
-                       FirstName = Guid.NewGuid().ToString(),
-                       LastName = Guid.NewGuid().ToString(),
-                       Description = Guid.NewGuid().ToString()
-                   });
-
-        var apiUser = GmUtil.JsonClone<User>(user, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        return apiUser;
-    }
-
 
     public static ServerStatus NewServerStatus(string? configCode, bool randomStatus = false)
     {
@@ -366,7 +300,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             await FlushCache();
 
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
-        await SetHttpUser(UserSystemAdmin);
+        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
         await SystemClient.SyncAsync();
         HttpClient.DefaultRequestHeaders.Authorization = oldAuthorization;
     }

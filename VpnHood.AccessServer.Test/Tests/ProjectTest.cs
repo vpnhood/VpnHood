@@ -119,7 +119,7 @@ public class ProjectTest
         Assert.AreEqual(1, userRoles.Count);
 
         var userRole = userRoles.First();
-        Assert.AreEqual(testInit.UserProjectOwner.UserId, userRole.User.UserId);
+        Assert.AreEqual(testInit.ProjectOwnerApiKey.UserId, userRole.User.UserId);
         Assert.AreEqual(Roles.ProjectOwner.RoleId, userRole.Role.RoleId);
     }
 

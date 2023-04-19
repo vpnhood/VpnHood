@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleUserControllers.Controllers;
-using GrayMint.Common.AspNetCore.SimpleUserControllers.Services;
+using GrayMint.Authorization.RoleManagement.TeamControllers.Controllers;
+using GrayMint.Authorization.RoleManagement.TeamControllers.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.DtoConverters;
@@ -20,35 +20,37 @@ public class TeamController : TeamControllerBase<Project, Guid, User, UserRole, 
 {
     private readonly ProjectService _projectService;
 
-    public TeamController(RoleService roleService, ProjectService projectService) : base(roleService)
+    public TeamController(
+        TeamService roleService, 
+        ProjectService projectService) 
+        : base(roleService)
     {
         _projectService = projectService;
     }
 
-    protected override User ToDto(GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User user)
+    protected override Guid RootResourceId => Guid.Empty;
+
+
+    protected override User ToDto(GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.User user)
     {
         return user.ToDto();
     }
 
-    protected override Role ToDto(GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.Role role)
+    protected override Role ToDto(GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.Role role)
     {
         return role.ToDto();
     }
 
-    protected override UserRole ToDto(GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.UserRole userRole)
+    protected override UserRole ToDto(GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.UserRole userRole)
     {
         return userRole.ToDto();
     }
 
-    protected override string ToResourceId(Guid appId)
-    {
-        return appId == Guid.Empty ? "*" : appId.ToString();
-    }
-
     protected override Task<IEnumerable<Project>> GetResources(IEnumerable<string> resourceIds)
     {
-        var projectIds = resourceIds.Except(new[] { "*" }).Select(Guid.Parse);
+        var projectIds = resourceIds.Select(Guid.Parse);
         return _projectService.List(projectIds);
     }
+
 }
 

@@ -1,5 +1,4 @@
-﻿using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
@@ -12,15 +11,16 @@ public class HealthController : ControllerBase
 {
     private readonly VhContext _vhContext;
     private readonly CacheService _cacheService;
-    private readonly IBotAuthenticationProvider _botAuthenticationProvider;
     private readonly ILogger<SystemController> _logger;
 
-    public HealthController(VhContext vhContext, CacheService cacheService, ILogger<SystemController> logger, IBotAuthenticationProvider botAuthenticationProvider)
+    public HealthController(
+        VhContext vhContext, 
+        CacheService cacheService, 
+        ILogger<SystemController> logger)
     {
         _vhContext = vhContext;
         _cacheService = cacheService;
         _logger = logger;
-        _botAuthenticationProvider = botAuthenticationProvider;
     }
 
     [HttpGet("Foo")]

@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class UserConverter
 {
-    public static User ToDto(this GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.User model)
+    public static User ToDto(this GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.User model)
     {
         var dto = new User
         {

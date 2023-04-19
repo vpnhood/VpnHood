@@ -4,7 +4,7 @@ using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

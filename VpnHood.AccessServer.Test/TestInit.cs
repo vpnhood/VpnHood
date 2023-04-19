@@ -1,21 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
@@ -23,10 +16,18 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
-using VpnHood.AccessServer.Test.Helper;
 using VpnHood.AccessServer.Report.Persistence;
 using System.Net.Http.Headers;
+using GrayMint.Authorization.Abstractions;
+using GrayMint.Authorization.Authentications.BotAuthentication;
+using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Test.Helper;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -93,8 +94,8 @@ public class TestInit : IHttpClientFactory, IDisposable
 
         // create default project
         Project = await ProjectsClient.CreateAsync();
-        ProjectOwnerApiKey =  await AddNewUser(Roles.ProjectOwner);
-        await TeamClient.RemoveUserAsync(Project.ProjectId, SystemAdminApiKey.UserId);
+        ProjectOwnerApiKey = await AddNewUser(Roles.ProjectOwner);
+        await TeamClient.RemoveUserAsync(Project.ProjectId, Roles.ProjectOwner.RoleId, SystemAdminApiKey.UserId);
     }
 
     public Task<IPAddress> NewIpV4()
@@ -140,7 +141,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         };
     }
 
-    public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null, 
+    public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null,
         string environment = "Development")
     {
         appSettings ??= new Dictionary<string, string?>();
@@ -162,7 +163,7 @@ public class TestInit : IHttpClientFactory, IDisposable
 
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IBotAuthenticationProvider, TestBotAuthenticationProvider>();
+                    services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
                 });
             });
@@ -174,8 +175,8 @@ public class TestInit : IHttpClientFactory, IDisposable
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
         HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
 
-        var resourceId = simpleRole.IsSystem ? Guid.Empty : Project.ProjectId;
-        var apiKey = await TeamClient.AddNewBotAsync(resourceId, new TeamAddBotParam { Name = Guid.NewGuid().ToString(), RoleId = simpleRole.RoleId });
+        var resourceId = simpleRole.IsRoot ? Guid.Empty : Project.ProjectId;
+        var apiKey = await TeamClient.AddNewBotAsync(resourceId, simpleRole.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
             ? AuthenticationHeaderValue.Parse(apiKey.Authorization) : oldAuthorization;
@@ -317,6 +318,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         {
             var claimIdentity = new ClaimsIdentity();
             claimIdentity.AddClaim(new Claim("usage_type", "system"));
+            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "test@local"));
             claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
             claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
             var scope = AgentApp.Services.CreateScope();

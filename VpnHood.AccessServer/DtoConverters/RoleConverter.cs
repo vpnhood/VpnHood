@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class RoleConverter
 {
-    public static Role ToDto(this GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.Role model)
+    public static Role ToDto(this GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.Role model)
     {
         var dto = new Role
         {

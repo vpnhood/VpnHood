@@ -5,13 +5,13 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class UserRoleConverter
 {
-    public static UserRole ToDto(this GrayMint.Common.AspNetCore.SimpleUserManagement.Dtos.UserRole model)
+    public static UserRole ToDto(this GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.UserRole model)
     {
         var dto = new UserRole
         {
-            ResourceId = model.ResourceId == "*" ? Guid.Empty :Guid.Parse(model.ResourceId),
+            ResourceId = model.ResourceId == "*" ? Guid.Empty : Guid.Parse(model.ResourceId),
             Role = model.Role.ToDto(),
-            User = model.User.ToDto()
+            User = model.User?.ToDto()
         };
         return dto;
     }

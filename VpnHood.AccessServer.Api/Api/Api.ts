@@ -2530,6 +2530,43 @@ export class TeamClient {
         return Promise.resolve<Project[]>(null as any);
     }
 
+    resetBotApiKey(userId: string): Promise<UserApiKey> {
+        let url_ = this.baseUrl + "/api/v1/team/users/{userId}/reset-api-key";
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processResetBotApiKey(_response);
+        });
+    }
+
+    protected processResetBotApiKey(response: Response): Promise<UserApiKey> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = UserApiKey.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<UserApiKey>(null as any);
+    }
+
     listRoles(resourceId: string): Promise<Role[]> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles";
         if (resourceId === undefined || resourceId === null)
@@ -2574,7 +2611,7 @@ export class TeamClient {
         return Promise.resolve<Role[]>(null as any);
     }
 
-    listUsers(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
+    listUserRoles(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users?";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2603,11 +2640,11 @@ export class TeamClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processListUsers(_response);
+            return this.processListUserRoles(_response);
         });
     }
 
-    protected processListUsers(response: Response): Promise<ListResultOfUserRole> {
+    protected processListUserRoles(response: Response): Promise<ListResultOfUserRole> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -2625,52 +2662,14 @@ export class TeamClient {
         return Promise.resolve<ListResultOfUserRole>(null as any);
     }
 
-    addUser(resourceId: string, addParam: TeamAddUserParam): Promise<UserRole> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users";
+    addNewBot(resourceId: string, roleId: string, addParam: TeamAddBotParam): Promise<UserApiKey> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/bots";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
         url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(addParam);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAddUser(_response);
-        });
-    }
-
-    protected processAddUser(response: Response): Promise<UserRole> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserRole.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserRole>(null as any);
-    }
-
-    addNewBot(resourceId: string, addParam: TeamAddBotParam): Promise<UserApiKey> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/bots";
-        if (resourceId === undefined || resourceId === null)
-            throw new Error("The parameter 'resourceId' must be defined.");
-        url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
+        if (roleId === undefined || roleId === null)
+            throw new Error("The parameter 'roleId' must be defined.");
+        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(addParam);
@@ -2707,97 +2706,20 @@ export class TeamClient {
         return Promise.resolve<UserApiKey>(null as any);
     }
 
-    resetBotApiKey(resourceId: string, userId: string): Promise<UserApiKey> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/bots/{userId}/reset-api-key";
+    addUserByEmail(resourceId: string, roleId: string, email: string | null, addParam: TeamAddEmailParam | undefined): Promise<UserRole> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/email:{email}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
         url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
-        if (userId === undefined || userId === null)
-            throw new Error("The parameter 'userId' must be defined.");
-        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        if (roleId === undefined || roleId === null)
+            throw new Error("The parameter 'roleId' must be defined.");
+        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
+        if (email === undefined || email === null)
+            throw new Error("The parameter 'email' must be defined.");
+        url_ = url_.replace("{email}", encodeURIComponent("" + email));
         url_ = url_.replace(/[?&]$/, "");
 
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processResetBotApiKey(_response);
-        });
-    }
-
-    protected processResetBotApiKey(response: Response): Promise<UserApiKey> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserApiKey>(null as any);
-    }
-
-    getUser(resourceId: string, userId: string): Promise<UserRole> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users/{userId}";
-        if (resourceId === undefined || resourceId === null)
-            throw new Error("The parameter 'resourceId' must be defined.");
-        url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
-        if (userId === undefined || userId === null)
-            throw new Error("The parameter 'userId' must be defined.");
-        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetUser(_response);
-        });
-    }
-
-    protected processGetUser(response: Response): Promise<UserRole> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserRole.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserRole>(null as any);
-    }
-
-    updateUser(resourceId: string, userId: string, updateParam: TeamUpdateUserParam): Promise<UserRole> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users/{userId}";
-        if (resourceId === undefined || resourceId === null)
-            throw new Error("The parameter 'resourceId' must be defined.");
-        url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
-        if (userId === undefined || userId === null)
-            throw new Error("The parameter 'userId' must be defined.");
-        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(updateParam);
+        const content_ = JSON.stringify(addParam);
 
         let options_: RequestInit = {
             body: content_,
@@ -2809,11 +2731,11 @@ export class TeamClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdateUser(_response);
+            return this.processAddUserByEmail(_response);
         });
     }
 
-    protected processUpdateUser(response: Response): Promise<UserRole> {
+    protected processAddUserByEmail(response: Response): Promise<UserRole> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -2831,11 +2753,57 @@ export class TeamClient {
         return Promise.resolve<UserRole>(null as any);
     }
 
-    removeUser(resourceId: string, userId: string): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users/{userId}";
+    addUser(resourceId: string, roleId: string, userId: string): Promise<UserRole> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/{userId}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
         url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
+        if (roleId === undefined || roleId === null)
+            throw new Error("The parameter 'roleId' must be defined.");
+        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processAddUser(_response);
+        });
+    }
+
+    protected processAddUser(response: Response): Promise<UserRole> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = UserRole.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<UserRole>(null as any);
+    }
+
+    removeUser(resourceId: string, roleId: string, userId: string): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/{userId}";
+        if (resourceId === undefined || resourceId === null)
+            throw new Error("The parameter 'resourceId' must be defined.");
+        url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));
+        if (roleId === undefined || roleId === null)
+            throw new Error("The parameter 'roleId' must be defined.");
+        url_ = url_.replace("{roleId}", encodeURIComponent("" + roleId));
         if (userId === undefined || userId === null)
             throw new Error("The parameter 'userId' must be defined.");
         url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
@@ -5705,7 +5673,7 @@ export interface IListResultOfUserRole {
 }
 
 export class UserRole implements IUserRole {
-    user!: User;
+    user?: User | undefined;
     role!: Role;
     resourceId!: string;
 
@@ -5717,14 +5685,13 @@ export class UserRole implements IUserRole {
             }
         }
         if (!data) {
-            this.user = new User();
             this.role = new Role();
         }
     }
 
     init(_data?: any) {
         if (_data) {
-            this.user = _data["user"] ? User.fromJS(_data["user"]) : new User();
+            this.user = _data["user"] ? User.fromJS(_data["user"]) : <any>undefined;
             this.role = _data["role"] ? Role.fromJS(_data["role"]) : new Role();
             this.resourceId = _data["resourceId"];
         }
@@ -5747,14 +5714,13 @@ export class UserRole implements IUserRole {
 }
 
 export interface IUserRole {
-    user: User;
+    user?: User | undefined;
     role: Role;
     resourceId: string;
 }
 
 export class TeamAddBotParam implements ITeamAddBotParam {
     name!: string;
-    roleId!: string;
 
     constructor(data?: ITeamAddBotParam) {
         if (data) {
@@ -5768,7 +5734,6 @@ export class TeamAddBotParam implements ITeamAddBotParam {
     init(_data?: any) {
         if (_data) {
             this.name = _data["name"];
-            this.roleId = _data["roleId"];
         }
     }
 
@@ -5782,21 +5747,17 @@ export class TeamAddBotParam implements ITeamAddBotParam {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["name"] = this.name;
-        data["roleId"] = this.roleId;
         return data;
     }
 }
 
 export interface ITeamAddBotParam {
     name: string;
-    roleId: string;
 }
 
-export class TeamAddUserParam implements ITeamAddUserParam {
-    email!: string;
-    roleId!: string;
+export class TeamAddEmailParam implements ITeamAddEmailParam {
 
-    constructor(data?: ITeamAddUserParam) {
+    constructor(data?: ITeamAddEmailParam) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5806,102 +5767,22 @@ export class TeamAddUserParam implements ITeamAddUserParam {
     }
 
     init(_data?: any) {
-        if (_data) {
-            this.email = _data["email"];
-            this.roleId = _data["roleId"];
-        }
     }
 
-    static fromJS(data: any): TeamAddUserParam {
+    static fromJS(data: any): TeamAddEmailParam {
         data = typeof data === 'object' ? data : {};
-        let result = new TeamAddUserParam();
+        let result = new TeamAddEmailParam();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["email"] = this.email;
-        data["roleId"] = this.roleId;
         return data;
     }
 }
 
-export interface ITeamAddUserParam {
-    email: string;
-    roleId: string;
-}
-
-export class TeamUpdateUserParam implements ITeamUpdateUserParam {
-    roleId?: PatchOfGuid2 | undefined;
-
-    constructor(data?: ITeamUpdateUserParam) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.roleId = _data["roleId"] ? PatchOfGuid2.fromJS(_data["roleId"]) : <any>undefined;
-        }
-    }
-
-    static fromJS(data: any): TeamUpdateUserParam {
-        data = typeof data === 'object' ? data : {};
-        let result = new TeamUpdateUserParam();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["roleId"] = this.roleId ? this.roleId.toJSON() : <any>undefined;
-        return data;
-    }
-}
-
-export interface ITeamUpdateUserParam {
-    roleId?: PatchOfGuid2 | undefined;
-}
-
-export class PatchOfGuid2 implements IPatchOfGuid2 {
-    value!: string;
-
-    constructor(data?: IPatchOfGuid2) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"];
-        }
-    }
-
-    static fromJS(data: any): PatchOfGuid2 {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfGuid2();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value;
-        return data;
-    }
-}
-
-export interface IPatchOfGuid2 {
-    value: string;
+export interface ITeamAddEmailParam {
 }
 
 export class ApiException extends Error {

@@ -115,11 +115,11 @@ public class ProjectTest
     public async Task Owner_is_created()
     {
         var testInit = await TestInit.Create();
-        var userRoles = await testInit.TeamClient.ListUsersAsync(testInit.ProjectId);
+        var userRoles = await testInit.TeamClient.ListUserRolesAsync(testInit.ProjectId);
         Assert.AreEqual(1, userRoles.TotalCount);
 
         var userRole = userRoles.Items.First();
-        Assert.AreEqual(testInit.ProjectOwnerApiKey.UserId, userRole.User.UserId);
+        Assert.AreEqual(testInit.ProjectOwnerApiKey.UserId, userRole.User?.UserId);
         Assert.AreEqual(Roles.ProjectOwner.RoleId, userRole.Role.RoleId);
     }
 

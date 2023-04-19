@@ -1,8 +1,7 @@
-﻿using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
-using GrayMint.Common.AspNetCore.SimpleUserControllers.Security;
-using System;
+﻿using System;
 using System.Linq;
-using System.Reflection;
+using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
+using GrayMint.Authorization.RoleManagement.TeamControllers.Security;
 
 namespace VpnHood.AccessServer.Security;
 
@@ -12,7 +11,7 @@ public static class Roles
     {
         RoleName = nameof(ProjectReader),
         RoleId = Guid.Parse("{D7808522-5207-45A2-9924-BAA396398100}"),
-        IsSystem = false,
+        IsRoot = false,
         Permissions = new[]
         {
             nameof(Permissions.ProjectRead)
@@ -23,7 +22,7 @@ public static class Roles
     {
         RoleName = nameof(ProjectAdmin),
         RoleId = Guid.Parse("{B16607B0-0580-4AE1-A295-85304FDD0F82}"),
-        IsSystem = false,
+        IsRoot = false,
         Permissions = new[]
         {
             Permissions.ProjectCreate,
@@ -49,7 +48,7 @@ public static class Roles
     {
         RoleName = nameof(ProjectOwner),
         RoleId = Guid.Parse("{B7E69E64-F722-42F5-95E7-5E8364B9FF58}"),
-        IsSystem = false,
+        IsRoot = false,
         Permissions = new[]
         {
             RolePermissions.RoleWriteOwner,
@@ -60,24 +59,12 @@ public static class Roles
     {
         RoleName = nameof(SystemAdmin),
         RoleId = Guid.Parse("{A1516270-D4D5-4888-820B-1C558006916F}"),
-        IsSystem = true,
+        IsRoot = true,
         Permissions = new[]
         {
             Permissions.ProjectList,
             Permissions.Sync
         }.Concat(ProjectOwner.Permissions).ToArray()
     };
-
-    public static SimpleRole[] All
-    {
-        get
-        {
-            var properties = typeof(Roles)
-                .GetProperties(BindingFlags.Public | BindingFlags.Static)
-                .Where(x => x.PropertyType == typeof(SimpleRole));
-
-            var roles = properties.Select(propertyInfo => (SimpleRole)propertyInfo.GetValue(null)!);
-            return roles.ToArray();
-        }
-    }
+   
 }

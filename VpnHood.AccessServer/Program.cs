@@ -2,8 +2,12 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
+using GrayMint.Authorization.Authentications.BotAuthentication;
+using GrayMint.Authorization.Authentications.CognitoAuthentication;
+using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
+using GrayMint.Authorization.RoleManagement.SimpleRoleProviders;
+using GrayMint.Authorization.UserManagement.SimpleUserProviders;
 using GrayMint.Common.AspNetCore;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -16,15 +20,13 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Services;
 using GrayMint.Common.Utils;
-using GrayMint.Common.AspNetCore.Auth.CognitoAuthentication;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
-using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Security;
 using NLog;
 using NLog.Web;
 using VpnHood.AccessServer.Report.Services;
-using GrayMint.Common.AspNetCore.SimpleUserControllers;
+using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
+using GrayMint.Authorization.RoleManagement.TeamControllers;
 
 namespace VpnHood.AccessServer;
 
@@ -45,17 +47,19 @@ public class Program
             new RegisterServicesOptions());
 
         // add authentication
-        var authenticationBuilder = builder.Services
+        builder.Services
             .AddAuthentication()
-            .AddBotAuthentication(authConfiguration.Get<BotAuthenticationOptions>(), builder.Environment.IsProduction());
-
-        if (!isTest)
-            authenticationBuilder.AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
+            .AddBotAuthentication(authConfiguration.Get<BotAuthenticationOptions>(), builder.Environment.IsProduction())
+            .AddCognitoAuthentication(authConfiguration.Get<CognitoAuthenticationOptions>());
 
         // Add authentications
-        builder.Services.AddGrayMintSimpleRoleAuthorization(new SimpleRoleAuthOptions { ResourceParamName = "projectId", Roles = Roles.All });
-        builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
-        builder.Services.AddGrayMintSimpleUserController(builder.Configuration.GetSection("TeamController").Get<SimpleUserControllerOptions>());
+        var authenticationSchemes = isTest 
+            ? new[] { BotAuthenticationDefaults.AuthenticationScheme }
+            : new[] { BotAuthenticationDefaults.AuthenticationScheme, CognitoAuthenticationDefaults.AuthenticationScheme };
+        builder.Services.AddGrayMintRoleAuthorization(new RoleAuthorizationOptions { ResourceParamName = "projectId", AuthenticationSchemes = authenticationSchemes });
+        builder.Services.AddGrayMintSimpleRoleProvider(new SimpleRoleProviderOptions { Roles = SimpleRole.GetAll(typeof(Roles)) }, options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+        builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserProviderOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+        builder.Services.AddGrayMintTeamController(builder.Configuration.GetSection("TeamController").Get<TeamControllerOptions>());
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
@@ -98,9 +102,9 @@ public class Program
         var webApp = builder.Build();
         webApp.UseGrayMintCommonServices(new UseServicesOptions() { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
-        await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp.Services, args);
-        webApp.ScheduleGrayMintSqlMaintenance<VhContext>(TimeSpan.FromDays(2));
-        await webApp.UseGrayMintSimpleUserProvider();
+        await webApp.Services.UseGrayMintDatabaseCommand<VhContext>(args);
+        await webApp.Services.UseGrayMintSimpleUserProvider();
+        await webApp.Services.UseGrayMintSimpleRoleProvider();
         await webApp.Services.UseVhReportServices(args);
 
         // Log Configs

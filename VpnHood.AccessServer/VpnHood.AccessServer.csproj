@@ -55,7 +55,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.4">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -66,8 +66,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleUserControllers\GrayMint.Common.AspNetCore.SimpleUserControllers.csproj" />
-    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleUserManagement\GrayMint.Common.AspNetCore.SimpleUserManagement.csproj" />
     <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore\GrayMint.Common.AspNetCore.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
@@ -75,8 +73,29 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="GrayMint.Common.AspNetCore.SimpleRoleAuthorization">
-      <HintPath>..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore.SimpleRoleAuthorization\bin\Debug\net7.0\GrayMint.Common.AspNetCore.SimpleRoleAuthorization.dll</HintPath>
+    <Reference Include="GrayMint.Authorization.Abstractions">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.Authentications">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\bin\Debug\net7.0\GrayMint.Authorization.Authentications.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.RoleManagement.Abstractions">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.RoleManagement.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.RoleManagement.RoleAuthorizations">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.RoleAuthorizations\bin\Debug\net7.0\GrayMint.Authorization.RoleManagement.RoleAuthorizations.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.RoleManagement.SimpleRoleProviders">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.SimpleRoleProviders\bin\Debug\net7.0\GrayMint.Authorization.RoleManagement.SimpleRoleProviders.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.RoleManagement.TeamControllers">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.TeamControllers\bin\Debug\net7.0\GrayMint.Authorization.RoleManagement.TeamControllers.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.UserManagement.Abstractions">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.UserManagement.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.UserManagement.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.UserManagement.SimpleUserProviders">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.UserManagement.SimpleUserProviders\bin\Debug\net7.0\GrayMint.Authorization.UserManagement.SimpleUserProviders.dll</HintPath>
     </Reference>
     <Reference Include="VpnHood.Common">
       <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>

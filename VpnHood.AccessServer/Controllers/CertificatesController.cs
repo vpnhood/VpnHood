@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

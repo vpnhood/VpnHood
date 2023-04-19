@@ -18,8 +18,8 @@ public static class VhReportExtension
         return services;
     }
 
-    public static async Task UseVhReportServices(this IServiceProvider serviceProvider, string[] args)
+    public static async Task UseVhReportServices(this IServiceProvider services, string[] args)
     {
-        await GrayMintApp.CheckDatabaseCommand<VhReportContext>(serviceProvider, args);
+        await services.UseGrayMintDatabaseCommand<VhReportContext>(args);
     }
 }

@@ -1,9 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
+using GrayMint.Authorization.Authentications;
+using GrayMint.Authorization.Authentications.BotAuthentication;
 using GrayMint.Common.AspNetCore;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using GrayMint.Common.AspNetCore.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
@@ -12,6 +12,7 @@ using VpnHood.AccessServer.Agent.Services;
 using NLog.Web;
 using NLog;
 using Microsoft.AspNetCore.Authorization;
+using GrayMint.Authorization.Abstractions;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -62,7 +63,7 @@ public class Program
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<AgentService>();
-        builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
+        builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
         builder.Services.AddHostedService<TimedHostedService>();
 
         // NLog: Setup NLog for Dependency injection
@@ -75,7 +76,7 @@ public class Program
         var webApp = builder.Build();
         webApp.UseGrayMintCommonServices(new UseServicesOptions { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
-        await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp.Services, args);
+        await webApp.Services.UseGrayMintDatabaseCommand<VhContext>(args);
 
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();

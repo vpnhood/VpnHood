@@ -2,13 +2,13 @@
 using System.Threading.Tasks;
 using System;
 using System.Linq;
+using GrayMint.Authorization.RoleManagement.Abstractions;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common.Utils;
 using VpnHood.AccessServer.Persistence;
-using GrayMint.Common.AspNetCore.SimpleUserManagement;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Dtos;
@@ -22,20 +22,20 @@ public class ProjectService
     private readonly AgentCacheClient _agentCacheClient;
     private readonly UsageReportService _usageReportService;
     private readonly SubscriptionService _subscriptionService;
-    private readonly SimpleRoleProvider _simpleRoleProvider;
+    private readonly IRoleProvider _roleProvider;
 
     public ProjectService(
         VhContext vhContext,
         SubscriptionService subscriptionService,
         AgentCacheClient agentCacheClient,
         UsageReportService usageReportService,
-        SimpleRoleProvider simpleRoleProvider)
+        IRoleProvider roleProvider)
     {
         _subscriptionService = subscriptionService;
         _vhContext = vhContext;
         _agentCacheClient = agentCacheClient;
         _usageReportService = usageReportService;
-        _simpleRoleProvider = simpleRoleProvider;
+        _roleProvider = roleProvider;
     }
 
     public async Task<Project> Create(Guid ownerUserId)
@@ -115,8 +115,7 @@ public class ProjectService
         await _vhContext.SaveChangesAsync();
 
         // make current user the owner
-        var role = await _simpleRoleProvider.GetByName(Roles.ProjectOwner.RoleName);
-        await _simpleRoleProvider.AddUser(project.ProjectId.ToString(), role.RoleId, ownerUserId);
+        await _roleProvider.AddUser(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);
         return project.ToDto();
     }
 

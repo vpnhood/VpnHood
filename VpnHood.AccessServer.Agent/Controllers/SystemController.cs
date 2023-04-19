@@ -1,6 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using GrayMint.Authorization.Authentications.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

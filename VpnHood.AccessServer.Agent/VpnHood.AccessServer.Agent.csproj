@@ -18,6 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="GrayMint.Authorization.Abstractions">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="GrayMint.Authorization.Authentications">
+      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\bin\Debug\net7.0\GrayMint.Authorization.Authentications.dll</HintPath>
+    </Reference>
     <Reference Include="VpnHood.Common">
       <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
     </Reference>

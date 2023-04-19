@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.SimpleRoleAuthorization;
+using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;

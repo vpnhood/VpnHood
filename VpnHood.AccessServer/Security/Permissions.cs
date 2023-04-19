@@ -1,5 +1,4 @@
 ﻿
-using GrayMint.Common.AspNetCore.SimpleUserControllers.Security;
 
 namespace VpnHood.AccessServer.Security;
 

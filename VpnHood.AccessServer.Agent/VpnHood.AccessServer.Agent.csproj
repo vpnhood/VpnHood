@@ -9,11 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.133" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore\GrayMint.Common.AspNetCore.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
   </ItemGroup>
 

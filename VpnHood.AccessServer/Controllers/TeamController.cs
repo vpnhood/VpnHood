@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [Authorize]
 [ApiController]
-public class TeamController : TeamControllerBase<Project, Guid, User, UserRole, Role>
+public class TeamController : TeamControllerBase<Guid, User, UserRole, Role>
 {
     private readonly ProjectService _projectService;
 
@@ -46,10 +46,19 @@ public class TeamController : TeamControllerBase<Project, Guid, User, UserRole, 
         return userRole.ToDto();
     }
 
-    protected override Task<IEnumerable<Project>> GetResources(IEnumerable<string> resourceIds)
+
+    [Authorize]
+    [HttpGet("users/current/projects")]
+    public async Task<IEnumerable<Project>> ListCurrentUserProjects()
     {
-        var projectIds = resourceIds.Select(Guid.Parse);
-        return _projectService.List(projectIds);
+        var resourceIds = await ListCurrentUserResources();
+
+        var projectIds = resourceIds
+            .Where(x => x != RootResourceId.ToString())
+        .Select(Guid.Parse);
+
+        var ret = await _projectService.List(projectIds);
+        return ret;
     }
 
 }

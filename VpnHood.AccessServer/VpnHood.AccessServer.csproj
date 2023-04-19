@@ -55,6 +55,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.133" />
+    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.133" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -66,7 +68,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore\GrayMint.Common.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization\GrayMint.Authorization.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />

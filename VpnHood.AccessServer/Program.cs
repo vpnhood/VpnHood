@@ -8,7 +8,6 @@ using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using GrayMint.Authorization.RoleManagement.SimpleRoleProviders;
 using GrayMint.Authorization.UserManagement.SimpleUserProviders;
 using GrayMint.Common.AspNetCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -27,6 +26,7 @@ using NLog.Web;
 using VpnHood.AccessServer.Report.Services;
 using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
 using GrayMint.Authorization.RoleManagement.TeamControllers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace VpnHood.AccessServer;
 

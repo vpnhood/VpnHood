@@ -2608,7 +2608,7 @@ export class TeamClient {
         return Promise.resolve<UserApiKey>(null as any);
     }
 
-    listRoles(resourceId: string): Promise<Role[]> {
+    listRoles(resourceId: string | null): Promise<Role[]> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2652,7 +2652,7 @@ export class TeamClient {
         return Promise.resolve<Role[]>(null as any);
     }
 
-    listUserRoles(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
+    listUserRoles(resourceId: string | null, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users?";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2703,7 +2703,7 @@ export class TeamClient {
         return Promise.resolve<ListResultOfUserRole>(null as any);
     }
 
-    addNewBot(resourceId: string, roleId: string, addParam: TeamAddBotParam): Promise<UserApiKey> {
+    addNewBot(resourceId: string | null, roleId: string, addParam: TeamAddBotParam): Promise<UserApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/bots";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2747,7 +2747,7 @@ export class TeamClient {
         return Promise.resolve<UserApiKey>(null as any);
     }
 
-    addUserByEmail(resourceId: string, roleId: string, email: string | null, addParam: TeamAddEmailParam | undefined): Promise<UserRole> {
+    addUserByEmail(resourceId: string | null, roleId: string, email: string | null, addParam: TeamAddEmailParam | undefined): Promise<UserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/email:{email}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2794,7 +2794,7 @@ export class TeamClient {
         return Promise.resolve<UserRole>(null as any);
     }
 
-    addUser(resourceId: string, roleId: string, userId: string): Promise<UserRole> {
+    addUser(resourceId: string | null, roleId: string, userId: string): Promise<UserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/{userId}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2837,7 +2837,7 @@ export class TeamClient {
         return Promise.resolve<UserRole>(null as any);
     }
 
-    removeUser(resourceId: string, roleId: string, userId: string): Promise<void> {
+    removeUser(resourceId: string | null, roleId: string, userId: string): Promise<void> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/{userId}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");

@@ -5865,11 +5865,8 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Role>> ListRolesAsync(System.Guid resourceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Role>> ListRolesAsync(string? resourceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (resourceId == null)
-                throw new System.ArgumentNullException("resourceId");
-
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/team/resources/{resourceId}/roles");
             urlBuilder_.Replace("{resourceId}", System.Uri.EscapeDataString(ConvertToString(resourceId, System.Globalization.CultureInfo.InvariantCulture)));
@@ -5935,11 +5932,8 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ListResultOfUserRole> ListUserRolesAsync(System.Guid resourceId, System.Guid? roleId = null, System.Guid? userId = null, string? search = null, bool? isBot = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ListResultOfUserRole> ListUserRolesAsync(string? resourceId, System.Guid? roleId = null, System.Guid? userId = null, string? search = null, bool? isBot = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (resourceId == null)
-                throw new System.ArgumentNullException("resourceId");
-
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/team/resources/{resourceId}/users?");
             urlBuilder_.Replace("{resourceId}", System.Uri.EscapeDataString(ConvertToString(resourceId, System.Globalization.CultureInfo.InvariantCulture)));
@@ -6030,11 +6024,8 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<UserApiKey> AddNewBotAsync(System.Guid resourceId, System.Guid roleId, TeamAddBotParam addParam, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<UserApiKey> AddNewBotAsync(string? resourceId, System.Guid roleId, TeamAddBotParam addParam, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (resourceId == null)
-                throw new System.ArgumentNullException("resourceId");
-
             if (roleId == null)
                 throw new System.ArgumentNullException("roleId");
 
@@ -6111,11 +6102,8 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<UserRole> AddUserByEmailAsync(System.Guid resourceId, System.Guid roleId, string? email, TeamAddEmailParam? addParam = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<UserRole> AddUserByEmailAsync(string? resourceId, System.Guid roleId, string? email, TeamAddEmailParam? addParam = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (resourceId == null)
-                throw new System.ArgumentNullException("resourceId");
-
             if (roleId == null)
                 throw new System.ArgumentNullException("roleId");
 
@@ -6190,11 +6178,8 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<UserRole> AddUserAsync(System.Guid resourceId, System.Guid roleId, System.Guid userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<UserRole> AddUserAsync(string? resourceId, System.Guid roleId, System.Guid userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (resourceId == null)
-                throw new System.ArgumentNullException("resourceId");
-
             if (roleId == null)
                 throw new System.ArgumentNullException("roleId");
 
@@ -6269,11 +6254,8 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task RemoveUserAsync(System.Guid resourceId, System.Guid roleId, System.Guid userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task RemoveUserAsync(string? resourceId, System.Guid roleId, System.Guid userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (resourceId == null)
-                throw new System.ArgumentNullException("resourceId");
-
             if (roleId == null)
                 throw new System.ArgumentNullException("roleId");
 

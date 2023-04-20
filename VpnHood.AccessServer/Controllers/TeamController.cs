@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [Authorize]
 [ApiController]
-public class TeamController : TeamControllerBase<Guid, User, UserRole, Role>
+public class TeamController : TeamControllerBase<string, User, UserRole, Role>
 {
     private readonly ProjectService _projectService;
 
@@ -28,7 +28,7 @@ public class TeamController : TeamControllerBase<Guid, User, UserRole, Role>
         _projectService = projectService;
     }
 
-    protected override Guid RootResourceId => Guid.Empty;
+    protected override string RootResourceId => "*";
 
 
     protected override User ToDto(GrayMint.Authorization.RoleManagement.TeamControllers.Dtos.User user)

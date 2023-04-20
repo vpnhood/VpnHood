@@ -4,7 +4,8 @@ namespace VpnHood.AccessServer.Dtos;
 
 public class UserRole
 {
-    public required User? User { get; set; }
-    public required Role Role { get; set; }
-    public required Guid ResourceId { get; set; }
+    public required Guid UserId { get; init; }
+    public required User? User { get; init; }
+    public required Role Role { get; init; }
+    public required string ResourceId { get; init; }
 }

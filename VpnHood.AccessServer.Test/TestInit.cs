@@ -95,7 +95,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         // create default project
         Project = await ProjectsClient.CreateAsync();
         ProjectOwnerApiKey = await AddNewUser(Roles.ProjectOwner);
-        await TeamClient.RemoveUserAsync(Project.ProjectId, Roles.ProjectOwner.RoleId, SystemAdminApiKey.UserId);
+        await TeamClient.RemoveUserAsync(Project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, SystemAdminApiKey.UserId);
     }
 
     public Task<IPAddress> NewIpV4()
@@ -176,7 +176,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
 
         var resourceId = simpleRole.IsRoot ? Guid.Empty : Project.ProjectId;
-        var apiKey = await TeamClient.AddNewBotAsync(resourceId, simpleRole.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
+        var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), simpleRole.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
             ? AuthenticationHeaderValue.Parse(apiKey.Authorization) : oldAuthorization;

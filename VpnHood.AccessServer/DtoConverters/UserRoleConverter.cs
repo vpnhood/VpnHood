@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.AccessServer.Dtos;
+﻿using VpnHood.AccessServer.Dtos;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -9,9 +8,10 @@ public static class UserRoleConverter
     {
         var dto = new UserRole
         {
-            ResourceId = model.ResourceId == "*" ? Guid.Empty : Guid.Parse(model.ResourceId),
+            ResourceId = model.ResourceId,
             Role = model.Role.ToDto(),
-            User = model.User?.ToDto()
+            User = model.User?.ToDto(),
+            UserId = model.UserId
         };
         return dto;
     }

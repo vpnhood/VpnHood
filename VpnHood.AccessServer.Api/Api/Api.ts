@@ -5714,6 +5714,7 @@ export interface IListResultOfUserRole {
 }
 
 export class UserRole implements IUserRole {
+    userId!: string;
     user?: User | undefined;
     role!: Role;
     resourceId!: string;
@@ -5732,6 +5733,7 @@ export class UserRole implements IUserRole {
 
     init(_data?: any) {
         if (_data) {
+            this.userId = _data["userId"];
             this.user = _data["user"] ? User.fromJS(_data["user"]) : <any>undefined;
             this.role = _data["role"] ? Role.fromJS(_data["role"]) : new Role();
             this.resourceId = _data["resourceId"];
@@ -5747,6 +5749,7 @@ export class UserRole implements IUserRole {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["userId"] = this.userId;
         data["user"] = this.user ? this.user.toJSON() : <any>undefined;
         data["role"] = this.role ? this.role.toJSON() : <any>undefined;
         data["resourceId"] = this.resourceId;
@@ -5755,6 +5758,7 @@ export class UserRole implements IUserRole {
 }
 
 export interface IUserRole {
+    userId: string;
     user?: User | undefined;
     role: Role;
     resourceId: string;

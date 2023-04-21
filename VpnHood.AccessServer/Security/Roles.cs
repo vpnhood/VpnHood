@@ -18,6 +18,26 @@ public static class Roles
         }
     };
 
+    public static SimpleRole ProjectWriter { get; } = new()
+    {
+        RoleName = nameof(ProjectWriter),
+        RoleId = Guid.Parse("{1EB1F99D-1419-4C29-8303-FA5A507D8AE2}"),
+        IsRoot = false,
+        Permissions = new[]
+        {
+            Permissions.ProjectWrite,
+            Permissions.CertificateRead,
+            Permissions.CertificateWrite,
+            Permissions.CertificateExport,
+            Permissions.AccessTokenWrite,
+            Permissions.AccessTokenReadAccessKey,
+            Permissions.ServerWrite,
+            Permissions.ServerInstall,
+            Permissions.ServerFarmWrite,
+            Permissions.IpLockWrite,
+        }.Concat(ProjectReader.Permissions).ToArray()
+    };
+
     public static SimpleRole ProjectAdmin { get; } = new()
     {
         RoleName = nameof(ProjectAdmin),
@@ -25,23 +45,10 @@ public static class Roles
         IsRoot = false,
         Permissions = new[]
         {
-            Permissions.ProjectCreate,
-            Permissions.ProjectRead,
-            Permissions.ProjectWrite,
-            Permissions.CertificateRead,
-            Permissions.CertificateWrite,
-            Permissions.CertificateExport,
-            Permissions.AccessTokenWrite,
-            Permissions.AccessTokenReadAccessKey,
-            Permissions.UserRead,
-            Permissions.UserWrite,
-            Permissions.ServerWrite,
-            Permissions.ServerInstall,
-            Permissions.ServerFarmWrite,
-            Permissions.IpLockWrite,
             RolePermissions.RoleRead,
             RolePermissions.RoleWrite,
-        }
+        }.Concat(ProjectWriter.Permissions).ToArray()
+
     };
 
     public static SimpleRole ProjectOwner { get; } = new()
@@ -51,6 +58,7 @@ public static class Roles
         IsRoot = false,
         Permissions = new[]
         {
+            Permissions.ProjectCreate,
             RolePermissions.RoleWriteOwner,
         }.Concat(ProjectAdmin.Permissions).ToArray()
     };
@@ -66,5 +74,5 @@ public static class Roles
             Permissions.Sync
         }.Concat(ProjectOwner.Permissions).ToArray()
     };
-   
+
 }

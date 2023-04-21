@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
 using GrayMint.Authorization.Abstractions;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;

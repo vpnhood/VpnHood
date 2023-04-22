@@ -2653,7 +2653,7 @@ export class TeamClient {
     }
 
     listUserRoles(resourceId: string | null, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
-        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/users?";
+        let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/user-roles?";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
         url_ = url_.replace("{resourceId}", encodeURIComponent("" + resourceId));

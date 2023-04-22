@@ -5935,7 +5935,7 @@ namespace VpnHood.AccessServer.Api
         public virtual async System.Threading.Tasks.Task<ListResultOfUserRole> ListUserRolesAsync(string? resourceId, System.Guid? roleId = null, System.Guid? userId = null, string? search = null, bool? isBot = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/team/resources/{resourceId}/users?");
+            urlBuilder_.Append("api/v1/team/resources/{resourceId}/user-roles?");
             urlBuilder_.Replace("{resourceId}", System.Uri.EscapeDataString(ConvertToString(resourceId, System.Globalization.CultureInfo.InvariantCulture)));
             if (roleId != null)
             {

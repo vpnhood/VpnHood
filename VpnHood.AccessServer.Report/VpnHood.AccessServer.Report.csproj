@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.133" />
-    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.133" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.135" />
+    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.135" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.3" />
   </ItemGroup>
 

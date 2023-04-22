@@ -9,7 +9,8 @@ public static class UserConverter
         var dto = new User
         {
             UserId  = model.UserId,
-            AccessedTime = model.AccessedTime,
+            //AccessedTime should not be set for user due security reason and sharing user account among projects,
+            AccessedTime = model.IsBot ? model.AccessedTime : null, 
             Email = model.Email,
             FirstName   = model.FirstName,
             LastName = model.LastName,

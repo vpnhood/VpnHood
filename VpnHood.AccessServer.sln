@@ -28,14 +28,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Persis
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Dtos", "VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj", "{19956BE8-C2BA-4099-853A-97316671DCE1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Authorization", "..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization\GrayMint.Authorization.csproj", "{9C62101A-1B86-4E5B-9245-641B0770B8C7}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Authorization.RoleManagement.TeamControllers", "..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.TeamControllers\GrayMint.Authorization.RoleManagement.TeamControllers.csproj", "{231027A9-5D16-449D-A56E-D166AA7FD830}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Authorization.UserManagement.SimpleUserProviders", "..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.UserManagement.SimpleUserProviders\GrayMint.Authorization.UserManagement.SimpleUserProviders.csproj", "{9815C181-27C3-4BD9-A2B3-56B8FF15CBE2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Authorization.Authentications", "..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\GrayMint.Authorization.Authentications.csproj", "{2E3F422D-425D-4598-8434-8E923D16B572}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -74,32 +66,12 @@ Global
 		{19956BE8-C2BA-4099-853A-97316671DCE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19956BE8-C2BA-4099-853A-97316671DCE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19956BE8-C2BA-4099-853A-97316671DCE1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9C62101A-1B86-4E5B-9245-641B0770B8C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9C62101A-1B86-4E5B-9245-641B0770B8C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9C62101A-1B86-4E5B-9245-641B0770B8C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9C62101A-1B86-4E5B-9245-641B0770B8C7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{231027A9-5D16-449D-A56E-D166AA7FD830}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{231027A9-5D16-449D-A56E-D166AA7FD830}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{231027A9-5D16-449D-A56E-D166AA7FD830}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{231027A9-5D16-449D-A56E-D166AA7FD830}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9815C181-27C3-4BD9-A2B3-56B8FF15CBE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9815C181-27C3-4BD9-A2B3-56B8FF15CBE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9815C181-27C3-4BD9-A2B3-56B8FF15CBE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9815C181-27C3-4BD9-A2B3-56B8FF15CBE2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2E3F422D-425D-4598-8434-8E923D16B572}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2E3F422D-425D-4598-8434-8E923D16B572}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2E3F422D-425D-4598-8434-8E923D16B572}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2E3F422D-425D-4598-8434-8E923D16B572}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{81B08731-02D3-47C1-B3F0-B60B98EBA580} = {DA70AC51-F97F-47CF-B732-3C76D1A27C32}
-		{9C62101A-1B86-4E5B-9245-641B0770B8C7} = {93345E67-2111-4452-A829-7CBDF764AAC6}
-		{231027A9-5D16-449D-A56E-D166AA7FD830} = {93345E67-2111-4452-A829-7CBDF764AAC6}
-		{9815C181-27C3-4BD9-A2B3-56B8FF15CBE2} = {93345E67-2111-4452-A829-7CBDF764AAC6}
-		{2E3F422D-425D-4598-8434-8E923D16B572} = {93345E67-2111-4452-A829-7CBDF764AAC6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {99282B07-6E52-4418-9326-3F0E566C74EE}

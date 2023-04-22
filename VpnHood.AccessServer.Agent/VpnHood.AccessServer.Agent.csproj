@@ -9,7 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.133" />
+    <PackageReference Include="GrayMint.Authorization" Version="2.0.22" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.135" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
   </ItemGroup>
 
@@ -18,12 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="GrayMint.Authorization.Abstractions">
-      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="GrayMint.Authorization.Authentications">
-      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\bin\Debug\net7.0\GrayMint.Authorization.Authentications.dll</HintPath>
-    </Reference>
     <Reference Include="VpnHood.Common">
       <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
     </Reference>

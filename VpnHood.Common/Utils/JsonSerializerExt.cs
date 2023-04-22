@@ -17,7 +17,7 @@ public static class JsonSerializerExt
         PopulateTypeInfoResolver.TargetPopulateObject = destination;
         try
         {
-            object? result = JsonSerializer.Deserialize(json, returnType, options);
+            var result = JsonSerializer.Deserialize(json, returnType, options);
             Debug.Assert(ReferenceEquals(result, destination));
         }
         finally

@@ -161,6 +161,12 @@ public static class VhUtil
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
     }
 
+    public static T JsonClone<T>(object obj, JsonSerializerOptions? options = null)
+    {
+        var json = JsonSerializer.Serialize(obj, options);
+        return JsonDeserialize<T>(json, options);
+    }
+
     public static byte[] EncryptClientId(Guid clientId, byte[] key)
     {
         // Validate request by shared secret

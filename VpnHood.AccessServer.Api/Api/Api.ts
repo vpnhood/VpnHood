@@ -2572,7 +2572,7 @@ export class TeamClient {
     }
 
     resetBotApiKey(userId: string): Promise<UserApiKey> {
-        let url_ = this.baseUrl + "/api/v1/team/users/{userId}/reset-api-key";
+        let url_ = this.baseUrl + "/api/v1/team/users/{userId}/bot/reset-api-key";
         if (userId === undefined || userId === null)
             throw new Error("The parameter 'userId' must be defined.");
         url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
@@ -2606,6 +2606,47 @@ export class TeamClient {
             });
         }
         return Promise.resolve<UserApiKey>(null as any);
+    }
+
+    updateBot(userId: string, updateParam: TeamUpdateBotParam): Promise<User> {
+        let url_ = this.baseUrl + "/api/v1/team/users/{userId}/bot";
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined.");
+        url_ = url_.replace("{userId}", encodeURIComponent("" + userId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(updateParam);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processUpdateBot(_response);
+        });
+    }
+
+    protected processUpdateBot(response: Response): Promise<User> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = User.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<User>(null as any);
     }
 
     listRoles(resourceId: string | null): Promise<Role[]> {
@@ -5616,6 +5657,78 @@ export interface IUser {
     createdTime: Date;
     accessedTime?: Date | undefined;
     isBot: boolean;
+}
+
+export class TeamUpdateBotParam implements ITeamUpdateBotParam {
+    name?: PatchOfString2 | undefined;
+
+    constructor(data?: ITeamUpdateBotParam) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"] ? PatchOfString2.fromJS(_data["name"]) : <any>undefined;
+        }
+    }
+
+    static fromJS(data: any): TeamUpdateBotParam {
+        data = typeof data === 'object' ? data : {};
+        let result = new TeamUpdateBotParam();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name ? this.name.toJSON() : <any>undefined;
+        return data;
+    }
+}
+
+export interface ITeamUpdateBotParam {
+    name?: PatchOfString2 | undefined;
+}
+
+export class PatchOfString2 implements IPatchOfString2 {
+    value!: string;
+
+    constructor(data?: IPatchOfString2) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"];
+        }
+    }
+
+    static fromJS(data: any): PatchOfString2 {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfString2();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value;
+        return data;
+    }
+}
+
+export interface IPatchOfString2 {
+    value: string;
 }
 
 export class Role implements IRole {

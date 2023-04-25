@@ -150,7 +150,6 @@ public class ServerFarmService
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var now = DateTime.UtcNow;
         var query = _vhContext.ServerFarms
             .Include(x => x.ServerProfile)
             .Include(x => x.Servers)
@@ -161,28 +160,44 @@ public class ServerFarmService
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
-            .OrderBy(x => x.ServerFarmName)
-            .Select(x => new ServerFarmData
+            .Select(x => new
             {
-                ServerFarm = x.ToDto(),
-                Summary = new ServerFarmSummary
+                ServerFarm = new ServerFarm
                 {
-                    ActiveTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime >= now.AddDays(-7)),
-                    InactiveTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime < now.AddDays(-7)),
-                    UnusedTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted && accessToken.FirstUsedTime == null),
-                    TotalTokenCount = x.AccessTokens!.Count(accessToken => !accessToken.IsDeleted),
-                    ServerCount = x.Servers!.Count(server => !server.IsDeleted)
-                }
+                    ServerFarmId = x.ServerFarmId,
+                    CertificateId = x.CertificateId,
+                    CreatedTime = x.CreatedTime,
+                    ServerFarmName = x.ServerFarmName,
+                    ServerProfileId = x.ServerProfileId,
+                    ServerProfileName = x.ServerProfile!.ServerProfileName
+                },
+                ServerCount = x.Servers!.Count(y => !y.IsDeleted),
+                AccessTokens = x.AccessTokens!.Select(y => new { y.IsDeleted, y.FirstUsedTime, y.LastUsedTime }).ToArray()
             });
 
         // get farms
-        var serverFarms = await query
+        var results = await query
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking()
             .ToArrayAsync();
 
-        return serverFarms.ToArray();
+        // create result
+        var now = DateTime.UtcNow;
+        var ret = results.Select(x => new ServerFarmData
+        {
+            ServerFarm = x.ServerFarm,
+            Summary = new ServerFarmSummary
+            {
+                ActiveTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime >= now.AddDays(-7)),
+                InactiveTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime < now.AddDays(-7)),
+                UnusedTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.FirstUsedTime == null),
+                TotalTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted),
+                ServerCount = x.ServerCount
+            }
+        });
+
+        return ret.ToArray();
     }
 
     public async Task Delete(Guid projectId, Guid serverFarmId)

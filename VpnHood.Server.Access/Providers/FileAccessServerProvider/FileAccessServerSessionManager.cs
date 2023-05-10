@@ -16,7 +16,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private uint _lastSessionId;
 
-    public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
+    public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
 
     public FileAccessServerSessionManager()
     {
@@ -45,7 +45,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
             Sessions.TryRemove(item.Key, out _);
     }
 
-    public Guid? TokenIdFromSessionId(uint sessionId)
+    public Guid? TokenIdFromSessionId(ulong sessionId)
     {
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
@@ -90,7 +90,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
+    public SessionResponseEx GetSession(ulong sessionId, FileAccessServer.AccessItem accessItem,
         IPEndPoint? hostEndPoint)
     {
         // check existence
@@ -176,7 +176,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         };
     }
 
-    public void CloseSession(uint sessionId)
+    public void CloseSession(ulong sessionId)
     {
         if (Sessions.TryGetValue(sessionId, out var session))
         {

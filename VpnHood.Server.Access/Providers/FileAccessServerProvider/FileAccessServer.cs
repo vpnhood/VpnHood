@@ -80,7 +80,7 @@ public class FileAccessServer : IAccessServer
         return SessionManager.CreateSession(sessionRequestEx, accessItem);
     }
 
-    public async Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         _ = hostEndPoint;
         _ = clientIp;
@@ -107,17 +107,17 @@ public class FileAccessServer : IAccessServer
         return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, Traffic traffic)
+    public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, false);
     }
 
-    public Task<SessionResponseBase> Session_Close(uint sessionId, Traffic traffic)
+    public Task<SessionResponseBase> Session_Close(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, true);
     }
 
-    private async Task<SessionResponseBase> Session_AddUsage(uint sessionId, Traffic traffic, bool closeSession)
+    private async Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
     {
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);

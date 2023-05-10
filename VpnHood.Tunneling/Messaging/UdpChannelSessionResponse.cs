@@ -1,8 +1,10 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Text.Json.Serialization;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Messaging;
 
+// todo: deprecated version >= 2.9.362
 public class UdpChannelSessionResponse : SessionResponseBase
 {
     [JsonConstructor]

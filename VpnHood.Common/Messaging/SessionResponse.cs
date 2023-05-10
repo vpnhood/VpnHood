@@ -20,7 +20,7 @@ public class SessionResponse : SessionResponseBase
         SuppressedTo = obj.SuppressedTo;
     }
 
-    public uint SessionId { get; set; }
+    public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; } = Array.Empty<byte>();
     public DateTime? CreatedTime { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }

@@ -7,7 +7,7 @@ namespace VpnHood.Tunneling.Messaging;
 public class TcpProxyChannelRequest : RequestBase
 {
     [JsonConstructor]
-    public TcpProxyChannelRequest(uint sessionId, byte[] sessionKey, IPEndPoint destinationEndPoint,
+    public TcpProxyChannelRequest(ulong sessionId, byte[] sessionKey, IPEndPoint destinationEndPoint,
         byte[] cipherKey, long cipherLength)
         : base(sessionId, sessionKey)
     {

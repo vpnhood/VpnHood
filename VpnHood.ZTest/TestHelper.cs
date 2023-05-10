@@ -178,6 +178,12 @@ internal static class TestHelper
         Assert.AreEqual(buffer.Length, sentBytes);
 
         var res = await udpClient.ReceiveAsync(new CancellationTokenSource(timeout).Token);
+        for (var i = 0; i < buffer.Length; i++) //todo remove
+        {
+            if (buffer[i] != res.Buffer[i])
+                break;
+        }
+
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
@@ -261,6 +267,7 @@ internal static class TestHelper
         var options = new FileAccessServerOptions
         {
             TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) },
+            UdpEndPoints = new[] { new IPEndPoint(IPAddress.Loopback, 0) },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

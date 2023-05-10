@@ -1,9 +1,8 @@
 # Upcoming
 ### Client & Server
-* Feature: Use shared UDP port
-* Feature: Improve protocol anonymity and anti finger print for UDP
-* Update: Improve Perfomance and battery usage
-* Fix: Security fix
+Feature: Use shared UDP port
+Feature: Improve protocol anonymity and anti-fingerprinting for UDP
+Update: Improve security, performance and battery usage
 
 # v2.8.361
 ### Server

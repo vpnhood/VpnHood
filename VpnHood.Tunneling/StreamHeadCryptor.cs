@@ -49,7 +49,7 @@ public class StreamHeadCryptor : Stream
         {
             if (key.Length != salt.Length)
                 throw new Exception($"{nameof(key)} length and {nameof(salt)} length is not same!");
-            encKey = (byte[]) key.Clone();
+            encKey = (byte[])key.Clone();
             for (var i = 0; i < encKey.Length; i++)
                 encKey[i] ^= salt[i];
         }
@@ -72,14 +72,14 @@ public class StreamHeadCryptor : Stream
         throw new NotSupportedException();
     }
 
-    private void PrepareReadBuffer(byte[] buffer, int offset, int count, int readCount)
+    private void PrepareReadBuffer(byte[] buffer, int offset, int count)
     {
         //todo
         var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
         if (cipherCount > 0)
         {
-            _bufferCryptor.Cipher(buffer, offset, (int) cipherCount, _readCount);
-            _readCount += readCount;
+            _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
+            _readCount += count;
         }
     }
 
@@ -88,24 +88,24 @@ public class StreamHeadCryptor : Stream
         var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
         if (cipherCount > 0)
         {
-            _bufferCryptor.Cipher(buffer, offset, (int) cipherCount, _writeCount);
+            _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
             _writeCount += cipherCount;
         }
     }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        var ret = _stream.Read(buffer, offset, count);
-        PrepareReadBuffer(buffer, offset, count, ret);
-        return ret;
+        var readCount = _stream.Read(buffer, offset, count);
+        PrepareReadBuffer(buffer, offset, readCount);
+        return readCount;
     }
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
         CancellationToken cancellationToken)
     {
-        var ret = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
-        PrepareReadBuffer(buffer, offset, count, ret);
-        return ret;
+        var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
+        PrepareReadBuffer(buffer, offset, readCount);
+        return readCount;
     }
 
     public override void Write(byte[] buffer, int offset, int count)

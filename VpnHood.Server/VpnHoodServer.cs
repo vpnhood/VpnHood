@@ -23,7 +23,7 @@ namespace VpnHood.Server;
 public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 {
     private readonly bool _autoDisposeAccessServer;
-    private readonly TcpHost _tcpHost;
+    private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
     private string? _lastConfigError;
@@ -31,6 +31,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
     private readonly bool _publicIpDiscovery;
     private readonly ServerConfig? _config;
     private readonly TimeSpan _configureInterval;
+    private readonly string _storagePath;
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
     public JobSection JobSection { get; }
@@ -48,9 +49,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         _configureInterval = options.ConfigureInterval;
         _autoDisposeAccessServer = options.AutoDisposeAccessServer;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
+        _storagePath = options.StoragePath;
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer));
+        _serverHost = new ServerHost(SessionManager, new SslCertificateManager(AccessServer));
 
         JobRunner.Default.Add(this);
     }
@@ -163,6 +165,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var serverConfig = await ReadConfig(serverInfo);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
+            SessionManager.ServerKey = serverConfig.ServerKey != null ? Convert.FromBase64String(serverConfig.ServerKey) : SessionManager.ServerKey;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
@@ -170,20 +173,20 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
-            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
+            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
             // starting the listeners
-            if (_tcpHost.IsStarted && !_tcpHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue))
+            if (_serverHost.IsStarted && !_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue))
             {
-                VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_tcpHost)}...");
-                await _tcpHost.Stop();
+                VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_serverHost)}...");
+                await _serverHost.Stop();
             }
 
-            if (!_tcpHost.IsStarted)
+            if (!_serverHost.IsStarted)
             {
-                VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(_tcpHost)}...");
-                _tcpHost.Start(serverConfig.TcpEndPointsValue);
+                VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(_serverHost)}...");
+                _serverHost.Start(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
             }
 
             // set config status
@@ -197,17 +200,17 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             State = ServerState.Waiting;
             _lastConfigError = ex.Message;
             VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {JobSection.Interval.TotalSeconds} seconds.");
-            await _tcpHost.Stop();
+            await _serverHost.Stop();
         }
     }
 
-    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions, 
+    private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
         IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported)
     {
         // assign to workers
-        tcpHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
-        tcpHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
-        tcpHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
+        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
+        serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
         netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
 
         // exclude listening ip
@@ -312,7 +315,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var res = await AccessServer.Server_UpdateStatus(Status);
 
             // reconfigure
-            if (res.ConfigCode != _lastConfigCode || !_tcpHost.IsStarted)
+            if (res.ConfigCode != _lastConfigCode || !_serverHost.IsStarted)
             {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 await Configure();
@@ -340,7 +343,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         // wait for configuration
         await _configureTask;
         await _sendStatusTask;
-        await _tcpHost.DisposeAsync();
+        await _serverHost.DisposeAsync();
         await SessionManager.DisposeAsync();
 
         if (_autoDisposeAccessServer)

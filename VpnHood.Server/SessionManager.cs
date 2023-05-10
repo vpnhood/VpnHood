@@ -29,9 +29,11 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     public INetFilter NetFilter { get; }
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
-    public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
+    public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
+    public byte[] ServerKey { get; set; } = VhUtil.GenerateSessionKey();
+
     public SessionManager(IAccessServer accessServer, 
         INetFilter netFilter, 
         SocketFactory socketFactory, 
@@ -155,7 +157,6 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
             await session.DisposeAsync();
             throw;
         }
-
     }
 
     internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair)
@@ -204,7 +205,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         }
     }
 
-    public Session? GetSessionById(uint sessionId)
+    public Session? GetSessionById(ulong sessionId)
     {
         Sessions.TryGetValue(sessionId, out var session);
         return session;
@@ -214,7 +215,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     ///     Close session in this server and AccessServer
     /// </summary>
     /// <param name="sessionId"></param>
-    public async Task CloseSession(uint sessionId)
+    public async Task CloseSession(ulong sessionId)
     {
         // find in session
         if (Sessions.TryGetValue(sessionId, out var session))

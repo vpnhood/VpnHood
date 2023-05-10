@@ -13,4 +13,5 @@ public class HelloRequest : SessionRequest
     }
 
     public bool UseUdpChannel { get; set; }
+    public bool UseUdpChannel2 { get; set; }
 }

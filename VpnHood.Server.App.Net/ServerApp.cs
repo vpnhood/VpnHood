@@ -137,6 +137,20 @@ public class ServerApp : IDisposable
         return serverId;
     }
 
+    public static byte[] GetServerKey(string storagePath)
+    {
+        var serverKeyFile = Path.Combine(storagePath, "server-key");
+        var serverKey = new byte[16];
+        if (File.Exists(serverKeyFile) &&
+            Convert.TryFromBase64String(File.ReadAllText(serverKeyFile), serverKey, out var bytesWritten)
+            && bytesWritten == 16)
+            return serverKey;
+
+        serverKey = VhUtil.GenerateSessionKey();
+        File.WriteAllText(serverKeyFile, Convert.ToBase64String(serverKey));
+        return serverKey;
+    }
+
     public IAccessServer AccessServer { get; }
     public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
 

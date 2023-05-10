@@ -1,3 +1,10 @@
+# Upcoming
+### Client & Server
+* Feature: Use shared UDP port
+* Feature: Improve protocol anonymity and anti finger print for UDP
+* Update: Improve Perfomance
+* Fix: Security fix
+
 # v2.8.361
 ### Server
 * Feature: Enable hot reconfig for VpnHood Server TCP listener to avoid unnecessary restarts on unchanged endpoints

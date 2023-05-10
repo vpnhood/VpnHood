@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -19,14 +20,15 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-internal class TcpHost : IAsyncDisposable
+internal class ServerHost : IAsyncDisposable
 {
-    private const int ServerProtocolVersion = 2;
+    private const int ServerProtocolVersion = 3;
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
+    private readonly List<UdpChannelTransmitter> _udpChannelClients = new();
     private Task? _startTask;
     private bool _disposed;
 
@@ -35,17 +37,18 @@ internal class TcpHost : IAsyncDisposable
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public bool IsStarted { get; private set; }
     public IPEndPoint[] TcpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
+    public IPEndPoint[] UdpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
 
-    public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
+    public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
         _sessionManager = sessionManager;
     }
 
-    public void Start(IPEndPoint[] tcpEndPoints)
+    public void Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
-        if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
+        if (IsStarted) throw new Exception($"{nameof(ServerHost)} is already Started!");
         if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
         _cancellationTokenSource = new CancellationTokenSource();
@@ -54,6 +57,26 @@ internal class TcpHost : IAsyncDisposable
 
         try
         {
+            //start UDPs
+            lock (_udpChannelClients)
+            {
+                foreach (var udpEndPoint in udpEndPoints)
+                {
+                    if (udpEndPoint.Port != 0)
+                        VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpEndPoint));
+
+                    var udpClient = new UdpClient(udpEndPoint);
+                    var udpChannelTransmitter = new ServerUdpChannelTransmitter(udpClient, _sessionManager);
+                    _udpChannelClients.Add(udpChannelTransmitter);
+
+                    if (udpEndPoint.Port == 0)
+                        VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
+                }
+
+                UdpEndPoints = _udpChannelClients.Select(x => x.LocalEndPoint).ToArray();
+            }
+
+            //start TCPs
             var tasks = new List<Task>();
             lock (_tcpListeners)
             {
@@ -67,7 +90,6 @@ internal class TcpHost : IAsyncDisposable
                     tasks.Add(ListenTask(tcpListener, cancellationToken));
                 }
             }
-
             TcpEndPoints = tcpEndPoints;
             _startTask = Task.WhenAll(tasks);
         }
@@ -80,10 +102,19 @@ internal class TcpHost : IAsyncDisposable
 
     public async Task Stop()
     {
-        VhLogger.Instance.LogTrace($"Stopping {nameof(TcpHost)}...");
+        VhLogger.Instance.LogTrace($"Stopping {nameof(ServerHost)}...");
         _cancellationTokenSource?.Cancel();
         _sslCertificateManager.ClearCache();
 
+        // UDPs
+        lock (_udpChannelClients)
+        {
+            foreach (var udpChannelClient in _udpChannelClients)
+                udpChannelClient.Dispose();
+            _udpChannelClients.Clear();
+        }
+
+        // TCPs
         lock (_tcpListeners)
         {
             foreach (var tcpListener in _tcpListeners)
@@ -125,10 +156,10 @@ internal class TcpHost : IAsyncDisposable
             catch (Exception ex)
             {
                 errorCounter++;
-                VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "TcpHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
+                VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "ServerHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
                 if (errorCounter > maxErrorCount)
                 {
-                    VhLogger.Instance.LogError("Too many unexpected errors in AcceptTcpClient. Stopping the TcpHost...");
+                    VhLogger.Instance.LogError("Too many unexpected errors in AcceptTcpClient. Stopping the ServerHost...");
                     _ = Stop();
                 }
             }
@@ -232,7 +263,7 @@ internal class TcpHost : IAsyncDisposable
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
-                VhLogger.Instance.LogInformation(ex, "TcpHost could not process this request.");
+                VhLogger.Instance.LogInformation(ex, "ServerHost could not process this request.");
         }
         finally
         {
@@ -327,12 +358,20 @@ internal class TcpHost : IAsyncDisposable
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
+        // find udp port through udp listeners for this address 
+        var udpPort2 = request.UseUdpChannel2
+            ? UdpEndPoints.FirstOrDefault(x => x.Address.AddressFamily == ipEndPointPair.LocalEndPoint.AddressFamily &&
+                (Equals(x.Address, ipEndPointPair.LocalEndPoint.Address) || x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))?.Port
+            : null;
+
         var helloResponse = new HelloSessionResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
-            UdpKey = session.UdpChannel?.Key,
-            UdpPort = session.UdpChannel?.LocalPort ?? 0,
+            ServerKey = _sessionManager.ServerKey,
+            UdpKey = udpPort2 != null ? sessionResponse.SessionKey : session.UdpChannel?.Key,
+            UdpPort = udpPort2 ?? (session.UdpChannel?.LocalPort ?? 0),
+            IsUdpChannel2 = udpPort2 != null,
             ServerVersion = _sessionManager.ServerVersion,
             ServerProtocolVersion = ServerProtocolVersion,
             SuppressedTo = sessionResponse.SuppressedTo,

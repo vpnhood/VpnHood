@@ -74,10 +74,11 @@ public class StreamHeadCryptor : Stream
 
     private void PrepareReadBuffer(byte[] buffer, int offset, int count, int readCount)
     {
+        //todo
         var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
         if (cipherCount > 0)
         {
-            _bufferCryptor.Cipher(buffer, offset, (int) cipherCount, _readCount);
+            _bufferCryptor.CipherOld(buffer, offset, (int) cipherCount, _readCount);
             _readCount += readCount;
         }
     }
@@ -87,7 +88,7 @@ public class StreamHeadCryptor : Stream
         var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
         if (cipherCount > 0)
         {
-            _bufferCryptor.Cipher(buffer, offset, (int) cipherCount, _writeCount);
+            _bufferCryptor.CipherOld(buffer, offset, (int) cipherCount, _writeCount);
             _writeCount += cipherCount;
         }
     }

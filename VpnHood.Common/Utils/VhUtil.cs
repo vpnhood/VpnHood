@@ -147,10 +147,10 @@ public static class VhUtil
             yield return sb.ToString();
     }
 
-    public static byte[] GenerateSessionKey()
+    public static byte[] GenerateKey(int keySizeInBit)
     {
         using var aes = Aes.Create();
-        aes.KeySize = 128;
+        aes.KeySize = keySizeInBit;
         aes.GenerateKey();
         return aes.Key;
     }

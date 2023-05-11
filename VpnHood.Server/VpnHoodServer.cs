@@ -31,7 +31,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
     private readonly bool _publicIpDiscovery;
     private readonly ServerConfig? _config;
     private readonly TimeSpan _configureInterval;
-    private readonly string _storagePath;
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
     public JobSection JobSection { get; }
@@ -49,7 +48,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         _configureInterval = options.ConfigureInterval;
         _autoDisposeAccessServer = options.AutoDisposeAccessServer;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
-        _storagePath = options.StoragePath;
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
         _serverHost = new ServerHost(SessionManager, new SslCertificateManager(AccessServer));

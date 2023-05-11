@@ -9,7 +9,7 @@ internal class Program
     {
         try
         {
-            using ServerApp serverApp = new();
+            using var serverApp = new ServerApp();
             await serverApp.Start(args);
         }
         catch (Exception ex)

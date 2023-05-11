@@ -1,4 +1,4 @@
-# Upcoming
+# v2.9.362
 ### Client & Server
 Feature: Use shared UDP port
 Feature: Improve protocol anonymity and anti-fingerprinting for UDP

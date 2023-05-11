@@ -68,6 +68,7 @@ public class ServerTest
         serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
+        serverConfig.ServerKey = Convert.ToBase64String(VhUtil.GenerateKey(128));
         using var testAccessServer = new TestAccessServer(fileAccessServer);
 
         var dateTime = DateTime.Now;
@@ -80,6 +81,7 @@ public class ServerTest
             await Task.Delay(100);
 
         Assert.AreEqual(fileAccessServer.ServerConfig.ConfigCode, testAccessServer.LastServerStatus!.ConfigCode);
+        Assert.AreEqual(serverConfig.ServerKey, Convert.ToBase64String(server.SessionManager.ServerKey));
         Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
@@ -204,6 +206,7 @@ public class ServerTest
                 IncludeLocalNetwork = false,
             },
             TcpEndPoints = new[] { IPEndPoint.Parse("2.2.2.2:4433") },
+            UdpEndPoints = new[] { IPEndPoint.Parse("3.3.3.3:5533") },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

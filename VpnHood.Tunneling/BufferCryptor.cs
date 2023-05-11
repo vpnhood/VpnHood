@@ -23,7 +23,7 @@ public class BufferCryptor : IDisposable
         _cryptor.Dispose();
     }
 
-    //todo remove
+    // todo: deprecated version >= 2.9.362
     public void CipherOld(byte[] buffer, int offset, int count, long cryptoPos)
     {
         //find block number

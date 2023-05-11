@@ -71,10 +71,11 @@ public class FileAccessServerSessionManager : IDisposable, IJob
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = VhUtil.GenerateSessionKey(),
+            SessionKey = VhUtil.GenerateKey(128),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
-            ClientIp = sessionRequestEx.ClientIp
+            ClientIp = sessionRequestEx.ClientIp,
+            AdditionalData = sessionRequestEx.ExtraData
         };
 
         //create response
@@ -102,6 +103,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
 
         // create response
         var ret = BuildSessionResponse(session, accessItem);
+        ret.ExtraData = session.AdditionalData;
         return ret;
     }
 
@@ -202,6 +204,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         public string? ErrorMessage { get; internal set; }
         public IPEndPoint HostEndPoint { get; internal set; } = null!;
         public IPAddress? ClientIp { get; internal set; }
+        public string? AdditionalData { get; internal set; }
 
         public void Kill()
         {

@@ -952,8 +952,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
-    private bool _useUdpChannel;
-
     public async ValueTask DisposeAsync()
     {
         // wait for dispose completion

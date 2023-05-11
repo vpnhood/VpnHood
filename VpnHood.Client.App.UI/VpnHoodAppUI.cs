@@ -121,6 +121,10 @@ public class VpnHoodAppUi : IDisposable
         if (url2 != null) urlPrefixes = urlPrefixes.Concat(new[] { url2.AbsoluteUri }).ToArray();
 
         // create the server
+        var a = new WebServerOptions
+        {
+            
+        };
         var server = new WebServer(o => o
                 .WithUrlPrefixes(urlPrefixes)
                 .WithMode(HttpListenerMode.EmbedIO))

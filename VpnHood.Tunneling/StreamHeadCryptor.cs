@@ -74,7 +74,6 @@ public class StreamHeadCryptor : Stream
 
     private void PrepareReadBuffer(byte[] buffer, int offset, int count)
     {
-        //todo
         var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
         if (cipherCount > 0)
         {

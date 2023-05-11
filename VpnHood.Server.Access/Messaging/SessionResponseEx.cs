@@ -9,4 +9,7 @@ public class SessionResponseEx : SessionResponse
     public SessionResponseEx(SessionErrorCode errorCode) : base(errorCode)
     {
     }
+
+    [JsonIgnore(Condition =JsonIgnoreCondition.WhenWritingNull)]
+    public string? ExtraData { get; set; }
 }

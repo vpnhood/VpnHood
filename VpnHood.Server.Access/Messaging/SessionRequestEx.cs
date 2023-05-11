@@ -26,4 +26,6 @@ public class SessionRequestEx : SessionRequest
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? ClientIp { get; set; }
+
+    public string? ExtraData { get; set; }
 }

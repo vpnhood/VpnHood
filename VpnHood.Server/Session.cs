@@ -145,6 +145,7 @@ public class Session : IAsyncDisposable, IJob
 
                 // Create the only one UdpChannel
                 //todo: we couldn't recover udp port in previous version if HelloRequest null. let assume new version
+                //deprecated version >= 2.9.362 
                 if (HelloRequest == null || HelloRequest.UseUdpChannel2)
                 {
                     UdpChannel2 = new UdpChannel2(SessionId, SessionKey, true);

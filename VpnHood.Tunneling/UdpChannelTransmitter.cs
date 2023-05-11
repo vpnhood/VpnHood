@@ -48,7 +48,6 @@ public abstract class UdpChannelTransmitter : IDisposable
             // the data is not important but it remove the signature of our packet by obfuscating the packet head. Also, the counter of session 
             // never repeats so ECB generate a new key each time. It is just for the head obfuscation and the reset of data will encrypt
             // by session key and that counter
-            await Console.Out.WriteLineAsync($"SendIV: {BitConverter.ToInt64(_sendIv)}"); //todo
             Array.Clear(_sendHeadKeyBuffer, 0, _sendHeadKeyBuffer.Length);
             _serverCryptor.Cipher(_sendHeadKeyBuffer, 0, _sendHeadKeyBuffer.Length, BitConverter.ToInt64(_sendIv));
             for (var i = 0; i < _sendHeadKeyBuffer.Length; i++)
@@ -97,7 +96,6 @@ public abstract class UdpChannelTransmitter : IDisposable
                 // build header key
                 var bufferIndex = 0;
                 var iv = BitConverter.ToInt64(buffer, 0);
-                await Console.Out.WriteLineAsync($"ReadIV: {iv}"); //todo remove
                 Array.Clear(headKeyBuffer, 0, headKeyBuffer.Length);
                 _serverCryptor.Cipher(headKeyBuffer, 0, headKeyBuffer.Length, iv);
                 bufferIndex += 8;

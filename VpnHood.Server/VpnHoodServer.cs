@@ -163,7 +163,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var serverConfig = await ReadConfig(serverInfo);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            SessionManager.ServerKey = serverConfig.ServerKey != null ? Convert.FromBase64String(serverConfig.ServerKey) : SessionManager.ServerKey;
+            SessionManager.ServerKey = serverConfig.ServerKey ?? SessionManager.ServerKey;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);

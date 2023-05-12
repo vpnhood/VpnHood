@@ -65,13 +65,13 @@ public class FileAccessServerSessionManager : IDisposable, IJob
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
-        Session session = new()
+        var session = new Session()
         {
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = VhUtil.GenerateKey(128),
+            SessionKey = VhUtil.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,

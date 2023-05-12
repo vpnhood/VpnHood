@@ -146,7 +146,7 @@ public class ServerApp : IDisposable
             && bytesWritten == 16)
             return serverKey;
 
-        serverKey = VhUtil.GenerateKey(128);
+        serverKey = VhUtil.GenerateKey();
         File.WriteAllText(serverKeyFile, Convert.ToBase64String(serverKey));
         return serverKey;
     }

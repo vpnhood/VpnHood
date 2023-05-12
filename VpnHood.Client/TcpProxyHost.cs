@@ -246,7 +246,7 @@ internal class TcpProxyHost : IDisposable
                 Client.SessionId,
                 Client.SessionKey,
                 new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                VhUtil.GenerateKey(128),
+                VhUtil.GenerateKey(),
                 natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
             tcpProxyClientStream = await Client.GetTlsConnectionToServer(GeneralEventId.TcpProxyChannel, cancellationToken);

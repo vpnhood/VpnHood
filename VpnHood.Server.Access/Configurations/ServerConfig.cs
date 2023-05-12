@@ -26,7 +26,7 @@ public class ServerConfig
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan? UpdateStatusInterval { get; set; }
     public bool? LogAnonymizer { get; set; }
-    public string? ServerKey { get; set; } 
+    public byte[]? ServerKey { get; set; } 
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
@@ -36,7 +36,7 @@ public class ServerConfig
     [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 0), new(IPAddress.IPv6Any, 0) };
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
-    [JsonIgnore] public string? ServerKeyValue => ServerKey;
+    [JsonIgnore] public byte[]? ServerKeyValue => ServerKey;
 
     public void Merge(ServerConfig obj)
     {

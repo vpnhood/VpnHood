@@ -32,7 +32,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
-    public byte[] ServerKey { get; set; } = VhUtil.GenerateKey(128);
+    public byte[] ServerKey { get; set; } = VhUtil.GenerateKey();
 
     public SessionManager(IAccessServer accessServer, 
         INetFilter netFilter, 

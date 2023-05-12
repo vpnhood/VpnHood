@@ -198,6 +198,9 @@ public class ServerProfileService
         if (serverConfig.SessionOptions.TcpBufferSize < 0x1000)
             throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)} smaller than {0x1000}.", nameof(serverConfig));
 
+        if (serverConfig.ServerSecret != null)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.", nameof(serverConfig));
+
         return serverConfig;
     }
 }

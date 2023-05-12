@@ -4313,6 +4313,7 @@ export class ServerFarm implements IServerFarm {
     serverProfileId!: string;
     serverProfileName?: string | undefined;
     certificateId!: string;
+    secret!: string;
     createdTime!: Date;
 
     constructor(data?: IServerFarm) {
@@ -4331,6 +4332,7 @@ export class ServerFarm implements IServerFarm {
             this.serverProfileId = _data["serverProfileId"];
             this.serverProfileName = _data["serverProfileName"];
             this.certificateId = _data["certificateId"];
+            this.secret = _data["secret"];
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>undefined;
         }
     }
@@ -4349,6 +4351,7 @@ export class ServerFarm implements IServerFarm {
         data["serverProfileId"] = this.serverProfileId;
         data["serverProfileName"] = this.serverProfileName;
         data["certificateId"] = this.certificateId;
+        data["secret"] = this.secret;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>undefined;
         return data;
     }
@@ -4360,6 +4363,7 @@ export interface IServerFarm {
     serverProfileId: string;
     serverProfileName?: string | undefined;
     certificateId: string;
+    secret: string;
     createdTime: Date;
 }
 
@@ -5375,7 +5379,7 @@ export class ServerInstallAppSettings implements IServerInstallAppSettings {
     init(_data?: any) {
         if (_data) {
             this.httpAccessServer = _data["httpAccessServer"] ? HttpAccessServerOptions.fromJS(_data["httpAccessServer"]) : new HttpAccessServerOptions();
-            this.secret = _data["secret"];
+            this.secret = _data["Secret"];
         }
     }
 
@@ -5389,7 +5393,7 @@ export class ServerInstallAppSettings implements IServerInstallAppSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["httpAccessServer"] = this.httpAccessServer ? this.httpAccessServer.toJSON() : <any>undefined;
-        data["secret"] = this.secret;
+        data["Secret"] = this.secret;
         return data;
     }
 }

@@ -172,8 +172,9 @@ public class VhContext : DbContext
             entity.Property(e => e.LastConfigError)
                 .HasMaxLength(2000);
 
-            entity.Property(e => e.Secret)
-                .HasMaxLength(32);
+            entity.Property(e => e.ManagementSecret)
+                .HasMaxLength(16)
+                .IsFixedLength();
 
             entity.Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
@@ -268,6 +269,10 @@ public class VhContext : DbContext
             entity.Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
+            entity.Property(e => e.Secret)
+                .HasMaxLength(16)
+                .IsFixedLength();
+
             entity.HasOne(e => e.Project)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => e.ProjectId)
@@ -333,6 +338,13 @@ public class VhContext : DbContext
 
             entity.Property(e => e.ClientVersion)
                 .HasMaxLength(20);
+
+            entity.Property(e => e.SessionKey)
+                .HasMaxLength(16)
+                .IsFixedLength();
+
+            entity.Property(e => e.ExtraData)
+                .HasMaxLength(100);
 
             entity.HasOne(e => e.Server)
                 .WithMany(d => d.Sessions)

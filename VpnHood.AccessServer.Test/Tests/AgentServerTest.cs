@@ -11,6 +11,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Server;
+using System.Text.Json;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -185,6 +186,9 @@ public class AgentServerTest
         serverInfo.PublicIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
         await serverDom.Configure(false);
         await serverDom.Reload();
+
+        // check configuration
+        CollectionAssert.AreEqual(farm.ServerFarm.Secret, serverDom.ServerConfig.ServerSecret);
 
         var server = serverDom.Server;
         var serverStatusEx = serverDom.Server.ServerStatus;

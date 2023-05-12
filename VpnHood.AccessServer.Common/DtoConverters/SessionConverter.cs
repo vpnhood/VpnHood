@@ -19,10 +19,11 @@ public static class SessionConverter
             ErrorCode = model.ErrorCode,
             ErrorMessage = model.ErrorMessage,
             ServerId = model.ServerId,
-            SessionId = model.SessionId,
+            SessionId = (uint)model.SessionId,
             SessionKey = model.SessionKey,
             SuppressedBy = model.SuppressedBy,
-            SuppressedTo = model.SuppressedTo
+            SuppressedTo = model.SuppressedTo,
+            ExtraData = model.ExtraData
         };
     }
 

@@ -68,7 +68,7 @@ public class AccessTokensController : ControllerBase
             Lifetime = createParams.Lifetime,
             Url = createParams.Url,
             IsPublic = createParams.IsPublic,
-            Secret = createParams.Secret ?? VhUtil.GenerateSessionKey(),
+            Secret = createParams.Secret ?? VhUtil.GenerateKey(),
             SupportCode = supportCode,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,

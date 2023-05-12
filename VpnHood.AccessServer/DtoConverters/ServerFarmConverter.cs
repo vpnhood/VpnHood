@@ -14,7 +14,8 @@ public static class ServerFarmConverter
             CertificateId = model.CertificateId,
             CreatedTime = model.CreatedTime,
             ServerProfileId = model.ServerProfileId,
-            ServerProfileName = model.ServerProfile?.ServerProfileName
+            ServerProfileName = model.ServerProfile?.ServerProfileName,
+            Secret = model.Secret
         };
 
         return dto;

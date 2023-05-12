@@ -8,6 +8,7 @@ public class ServerFarmModel
     public Guid CertificateId { get; set; }
     public Guid ServerProfileId { get; set; }
     public DateTime CreatedTime { get; set; }
+    public byte[] Secret { get; set; } = default!;
     public bool IsDeleted { get; set; } = false;
 
     public virtual ServerProfileModel? ServerProfile { get; set; }

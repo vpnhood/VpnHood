@@ -8,10 +8,10 @@ public class SessionModel
     public Guid ProjectId { get; set; }
     public Guid AccessId { get; set; }
     public Guid DeviceId { get; set; }
-    public string ClientVersion { get; set; } = null!;
+    public string ClientVersion { get; set; } = default!;
     public string? DeviceIp { get; set; }
     public string? Country { get; set; }
-    public byte[] SessionKey { get; set; } = null!;
+    public byte[] SessionKey { get; set; } = default!;
     public Guid ServerId { get; set; }
     public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
     public DateTime LastUsedTime { get; set; } = DateTime.UtcNow;
@@ -21,6 +21,7 @@ public class SessionModel
     public SessionErrorCode ErrorCode { get; set; }
     public bool IsArchived { get; set; }
     public string? ErrorMessage { get; set; }
+    public string? ExtraData { get; set; }
 
     public virtual ServerModel? Server { get; set; }
     public virtual DeviceModel? Device { get; set; }

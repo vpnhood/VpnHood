@@ -52,7 +52,7 @@ public class ProjectService
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
             IsDeleted = false,
-            CreatedTime = DateTime.UtcNow
+            CreatedTime = DateTime.UtcNow,
         };
 
         // Farm
@@ -62,8 +62,8 @@ public class ProjectService
             ServerFarmName = "Server Farm 1",
             Certificate = CertificatesController.CreateInternal(projectId, null),
             ServerProfile = serverProfile,
+            Secret = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow
-
         };
 
         // create project
@@ -88,7 +88,7 @@ public class ProjectService
                     ServerFarm = serverFarm,
                     AccessTokenName = "Public",
                     SupportCode = 1000,
-                    Secret = VhUtil.GenerateSessionKey(),
+                    Secret = VhUtil.GenerateKey(),
                     IsPublic = true,
                     IsEnabled= true,
                     IsDeleted = false,
@@ -103,7 +103,7 @@ public class ProjectService
                     IsPublic = false,
                     SupportCode = 1001,
                     MaxDevice = 5,
-                    Secret = VhUtil.GenerateSessionKey(),
+                    Secret = VhUtil.GenerateKey(),
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow

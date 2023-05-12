@@ -15,7 +15,7 @@ public class SessionDom
     public AccessToken AccessToken { get; }
     public SessionRequestEx SessionRequestEx { get; }
     public SessionResponseEx SessionResponseEx { get; private set; }
-    public long SessionId => SessionResponseEx.SessionId;
+    public long SessionId => (long)SessionResponseEx.SessionId;
 
     private SessionDom(TestInit testInit, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
     {

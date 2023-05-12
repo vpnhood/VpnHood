@@ -59,6 +59,7 @@ public class ServerFarmTest
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
         Assert.AreEqual(2, accessFarmData.Summary!.UnusedTokenCount);
         Assert.AreEqual(0, accessFarmData.Summary!.InactiveTokenCount);
+        Assert.AreEqual(16, accessFarmData.ServerFarm.Secret?.Length);
 
         var accessTokenDom = await farm1.CreateAccessToken(true);
         var accessKey = await accessTokenDom.GetAccessKey();

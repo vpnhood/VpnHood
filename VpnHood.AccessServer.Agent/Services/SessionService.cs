@@ -219,7 +219,7 @@ public class SessionService
         var session = new SessionModel
         {
             ProjectId = device.ProjectId,
-            SessionKey = VhUtil.GenerateSessionKey(),
+            SessionKey = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             LastUsedTime = DateTime.UtcNow,
             AccessId = access.AccessId,

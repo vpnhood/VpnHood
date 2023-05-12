@@ -8,7 +8,7 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using ServerStatusHistory = VpnHood.AccessServer.Report.Dtos.ServerStatusHistory;
+using ServerStatusHistory = VpnHood.AccessServer.Dtos.ServerStatusHistory;
 
 namespace VpnHood.AccessServer.Controllers;
 

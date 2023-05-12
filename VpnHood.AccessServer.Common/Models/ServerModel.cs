@@ -16,7 +16,7 @@ public class ServerModel
     public bool IsEnabled { get; set; }
     public string? Description { get; set; }
     public Guid AuthorizationCode { get; set; }
-    public byte[] Secret { get; set; } = default!;
+    public byte[] ManagementSecret { get; set; } = default!;
     public Guid ServerFarmId { get; set; }
     public Guid ConfigCode { get; set; }
     public Guid? LastConfigCode { get; set; }

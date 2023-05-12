@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -67,7 +68,8 @@ public class ServerFarmService
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
             CertificateId = certificate.CertificateId,
-            CreatedTime = DateTime.UtcNow
+            CreatedTime = DateTime.UtcNow,
+            Secret = VhUtil.GenerateKey()
         };
 
         await _vhContext.ServerFarms.AddAsync(ret);
@@ -169,7 +171,8 @@ public class ServerFarmService
                     CreatedTime = x.CreatedTime,
                     ServerFarmName = x.ServerFarmName,
                     ServerProfileId = x.ServerProfileId,
-                    ServerProfileName = x.ServerProfile!.ServerProfileName
+                    ServerProfileName = x.ServerProfile!.ServerProfileName,
+                    Secret = x.Secret,
                 },
                 ServerCount = x.Servers!.Count(y => !y.IsDeleted),
                 AccessTokens = x.AccessTokens!.Select(y => new { y.IsDeleted, y.FirstUsedTime, y.LastUsedTime }).ToArray()

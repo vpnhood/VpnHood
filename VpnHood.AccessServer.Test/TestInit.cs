@@ -255,7 +255,8 @@ public class TestInit : IHttpClientFactory, IDisposable
         return serverInfo;
     }
 
-    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null)
+    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
+        , string? extraData = null)
     {
         var rand = new Random();
 
@@ -276,7 +277,8 @@ public class TestInit : IHttpClientFactory, IDisposable
             VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             hostEndPoint)
         {
-            ClientIp = clientIp ?? NewIpV4().Result
+            ClientIp = clientIp ?? NewIpV4().Result,
+            ExtraData = extraData ?? Guid.NewGuid().ToString()
         };
 
         return sessionRequestEx;

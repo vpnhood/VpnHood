@@ -7316,6 +7316,12 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid CertificateId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] Secret { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
@@ -7926,7 +7932,7 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public HttpAccessServerOptions HttpAccessServer { get; set; } = new HttpAccessServerOptions();
 
-        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.Text.Json.Serialization.JsonPropertyName("Secret")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]

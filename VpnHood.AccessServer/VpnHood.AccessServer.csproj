@@ -55,7 +55,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Authorization" Version="2.0.24" />
+    <PackageReference Include="GrayMint.Authorization" Version="2.0.26" />
     <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.135" />
     <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.135" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.5">
@@ -63,7 +63,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
-    <PackageReference Include="NLog" Version="5.1.3" />
+    <PackageReference Include="NLog" Version="5.1.4" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
     <PackageReference Include="SSH.NET" Version="2020.0.2" />
   </ItemGroup>

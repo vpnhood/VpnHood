@@ -179,6 +179,8 @@ public class AgentService
 
     private ServerConfig GetServerConfig(ServerModel server)
     {
+        if (server.ServerFarm == null) throw new Exception("ServerFarm has not been fetched.");
+
         var ipEndPoints = server.AccessPoints
             .Where(accessPoint => accessPoint.IsListen)
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
@@ -200,7 +202,8 @@ public class AgentService
             SessionOptions = new Server.Configurations.SessionOptions
             {
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
-            }
+            },
+            ServerSecret = server.ServerFarm.Secret 
         };
 
         // merge with profile
@@ -237,7 +240,6 @@ public class AgentService
             serverConfig.ApplyDefaults();
 
         return serverConfig;
-
     }
 
     private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid serverId, Guid farmId, ServerInfo serverInfo)

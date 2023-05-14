@@ -368,7 +368,7 @@ internal class ServerHost : IAsyncDisposable
         {
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
-            ServerKey = _sessionManager.ServerKey,
+            ServerSecret = _sessionManager.ServerSecret,
             UdpKey = udpPort2 != null ? sessionResponse.SessionKey : session.UdpChannel?.Key,
             UdpPort = udpPort2 ?? (session.UdpChannel?.LocalPort ?? 0),
             IsUdpChannel2 = udpPort2 != null,

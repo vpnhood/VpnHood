@@ -363,7 +363,7 @@ public class Session : IAsyncDisposable, IJob
             isRequestedEpException = false;
 
             // send response
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, this.SessionResponse, cancellationToken);
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, SessionResponse, cancellationToken);
 
             // Dispose ssl stream and replace it with a Head-Cryptor
             await tcpClientStream.Stream.DisposeAsync();

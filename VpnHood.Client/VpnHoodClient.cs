@@ -74,7 +74,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private byte[]? _sessionKey;
     private byte[]? _serverKey;
     private byte[]? _udpKey;
-    private int _serverUdpPort;
     private ClientState _state = ClientState.None;
 
     internal Nat Nat { get; }
@@ -101,7 +100,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
-    public IPEndPoint? HostEndPoint { get; private set; }
+    public IPEndPoint? HostTcpEndPoint { get; private set; }
+    public IPEndPoint? HostUdpEndPoint { get; private set; }
+
     public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
@@ -221,7 +222,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // Init hostEndPoint
-            HostEndPoint = await Token.ResolveHostEndPointAsync();
+            HostTcpEndPoint = await Token.ResolveHostEndPointAsync();
 
             // Establish first connection and create a session
             await ConnectInternal(_cancellationToken);
@@ -233,7 +234,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Preparing device;
             if (!_packetCapture.Started) //make sure it is not a shared packet capture
             {
-                ConfigPacketFilter(HostEndPoint);
+                ConfigPacketFilter(HostTcpEndPoint);
                 _packetCapture.StartCapture();
             }
 
@@ -588,17 +589,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void AddUdpChannel(int udpPort, byte[] udpKey)
     {
-        if (HostEndPoint == null)
-            throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
+        if (HostTcpEndPoint == null)
+            throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
 
         if (udpPort == 0) throw new ArgumentException(nameof(udpPort));
         if (udpKey == null || udpKey.Length == 0) throw new ArgumentNullException(nameof(udpKey));
 
-        var udpEndPoint = new IPEndPoint(HostEndPoint.Address, udpPort);
+        var udpEndPoint = new IPEndPoint(HostTcpEndPoint.Address, udpPort);
         VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
             "Creating a UdpChannel... ServerEp: {ServerEp}", VhLogger.Format(udpEndPoint));
 
-        var udpClient = SocketFactory.CreateUdpClient(HostEndPoint.AddressFamily);
+        var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
         if (_packetCapture.CanProtectSocket)
             _packetCapture.ProtectSocket(udpClient.Client);
         udpClient.Connect(udpEndPoint);
@@ -619,19 +620,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void AddUdpChannel2()
     {
-        if (HostEndPoint == null) throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
-        if (VhUtil.IsNullOrEmpty(_serverKey)) throw new Exception("ServerKey has not been set.");
+        if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
+        if (VhUtil.IsNullOrEmpty(_serverKey)) throw new Exception("ServerSecret has not been set.");
         if (VhUtil.IsNullOrEmpty(_udpKey)) throw new Exception("Server UdpKey has not been set.");
-        if (_serverUdpPort == 0) throw new Exception("Server UdpPort has not been set.");
+        if (HostUdpEndPoint == null)
+        {
+            UseUdpChannel = false;
+            throw new Exception("Server does not serve any UDP endpoint.");
+        }
 
-        var udpClient = SocketFactory.CreateUdpClient(HostEndPoint.AddressFamily);
+        var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
         if (_packetCapture.CanProtectSocket)
             _packetCapture.ProtectSocket(udpClient.Client);
 
-        var udpEndPoint = new IPEndPoint(HostEndPoint.Address, _serverUdpPort);
-        udpClient.Connect(udpEndPoint);
+        udpClient.Connect(HostUdpEndPoint);
         var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
-        _udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, udpEndPoint, _serverKey);
+        _udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
 
 
         try
@@ -650,9 +654,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     internal async Task<TcpClientStream> GetTlsConnectionToServer(EventId eventId, CancellationToken cancellationToken)
     {
-        if (HostEndPoint == null)
-            throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
-        var tcpClient = SocketFactory.CreateTcpClient(HostEndPoint.AddressFamily);
+        if (HostTcpEndPoint == null)
+            throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
+        var tcpClient = SocketFactory.CreateTcpClient(HostTcpEndPoint.AddressFamily);
 
         try
         {
@@ -661,8 +665,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
             // Client.SessionTimeout does not affect in ConnectAsync
-            VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostEndPoint)}...");
-            await VhUtil.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), TcpTimeout, cancellationToken);
+            VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostTcpEndPoint)}...");
+            await VhUtil.RunTask(tcpClient.ConnectAsync(HostTcpEndPoint.Address, HostTcpEndPoint.Port), TcpTimeout, cancellationToken);
 
             // start TLS
             var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -747,7 +751,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (RedirectHostException ex) when (!redirecting)
         {
-            HostEndPoint = ex.RedirectHostEndPoint;
+            HostTcpEndPoint = ex.RedirectHostEndPoint;
             await ConnectInternal(cancellationToken, true);
             return;
         }
@@ -755,11 +759,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // get session id
         SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
         _sessionKey = sessionResponse.SessionKey;
-        _serverKey = sessionResponse.ServerKey;
+        _serverKey = sessionResponse.ServerSecret;
         _udpKey = sessionResponse.UdpKey;
-        _serverUdpPort = sessionResponse.UdpPort;
         _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
         SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
+        HostUdpEndPoint = sessionResponse.UdpPort != 0 ? new IPEndPoint(HostTcpEndPoint!.Address, sessionResponse.UdpPort) : null;
         PublicAddress = sessionResponse.ClientPublicAddress;
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
         IsIpV6Supported = sessionResponse.IsIpV6Supported;

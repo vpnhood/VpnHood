@@ -136,19 +136,22 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             // get server info
             VhLogger.Instance.LogInformation("Configuring by the Access Server...");
             var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
-            var serverInfo = new ServerInfo(
-                environmentVersion: Environment.Version,
-                version: GetType().Assembly.GetName().Version,
-                privateIpAddresses: await IPAddressUtil.GetPrivateIpAddresses(),
-                publicIpAddresses: _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
-                status: Status
-            )
+            var freeUdpPortV4 = GetFreeUdpPort(AddressFamily.InterNetwork, null);
+            var freeUdpPortV6 = GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
+            var serverInfo = new ServerInfo
             {
+                EnvironmentVersion = Environment.Version,
+                Version = GetType().Assembly.GetName().Version,
+                PrivateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses(),
+                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
+                Status = Status,
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
+                FreeUdpPortV4 = freeUdpPortV4,
+                FreeUdpPortV6 = freeUdpPortV6,
                 LastError = _lastConfigError
             };
 
@@ -163,7 +166,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var serverConfig = await ReadConfig(serverInfo);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            SessionManager.ServerKey = serverConfig.ServerKey ?? SessionManager.ServerKey;
+            SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
@@ -323,6 +326,22 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         {
             VhLogger.Instance.LogError(ex, "Could not send server status.");
         }
+    }
+
+    private static int GetFreeUdpPort(AddressFamily addressFamily, int? start)
+    {
+        start ??= new Random().Next(1024, 9000);
+        for (var port = start.Value; port < start + 1000; start++)
+        {
+            try
+            {
+                using var udpClient = new UdpClient(port, addressFamily);
+                return port;
+            }
+            catch { /* ignore */ }
+        }
+
+        return 0;
     }
 
     public void Dispose()

@@ -104,7 +104,6 @@ public class FileAccessServerTest
             "access has not been retrieved");
     }
 
-
     [TestMethod]
     public void AddUsage()
     {

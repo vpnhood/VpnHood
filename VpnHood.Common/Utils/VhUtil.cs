@@ -40,12 +40,22 @@ public static class VhUtil
         }
         catch when (defaultPort != 0)
         {
-            // try any port
-            var listener = new TcpListener(ipAddress, 0);
-            listener.Start();
-            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
+            return GetFreeTcpEndPoint(ipAddress);
+        }
+    }
+
+    public static IPEndPoint GetFreeUdpEndPoint(IPAddress ipAddress, int defaultPort = 0)
+    {
+        try
+        {
+            // check recommended port
+            using var udpClient = new UdpClient(new IPEndPoint(ipAddress, defaultPort));
+            var port = ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
             return new IPEndPoint(ipAddress, port);
+        }
+        catch when (defaultPort != 0)
+        {
+            return GetFreeUdpEndPoint(ipAddress);
         }
     }
 

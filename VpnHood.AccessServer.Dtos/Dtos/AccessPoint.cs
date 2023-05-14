@@ -11,5 +11,5 @@ public class AccessPoint
     public required AccessPointMode AccessPointMode { get; init; }
     public required bool IsListen { get; init; }
     public required int TcpPort { get; init; }
-    public required int UdpPort { get; init; }
+    public int? UdpPort { get; init; }
 }

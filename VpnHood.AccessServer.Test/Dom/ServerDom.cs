@@ -36,12 +36,18 @@ public class ServerDom
 
     public static ServerDom Attach(TestInit testInit, VpnServer server)
     {
-        var serverInfo = new ServerInfo(
-            version: server.Version != null ? Version.Parse(server.Version) : new Version(),
-            environmentVersion: server.EnvironmentVersion != null ? Version.Parse(server.EnvironmentVersion) : new Version(),
-            privateIpAddresses: Array.Empty<IPAddress>(),
-            publicIpAddresses: Array.Empty<IPAddress>(),
-            status: new ServerStatus
+        var serverInfo = new ServerInfo
+        {
+            Version = server.Version != null ? Version.Parse(server.Version) : new Version(),
+            EnvironmentVersion = server.EnvironmentVersion != null ? Version.Parse(server.EnvironmentVersion) : new Version(),
+            PrivateIpAddresses = Array.Empty<IPAddress>(),
+            PublicIpAddresses = Array.Empty<IPAddress>(),
+            MachineName = server.MachineName,
+            LogicalCoreCount = server.LogicalCoreCount ?? 0,
+            LastError = server.LastConfigError,
+            OsInfo = server.OsInfo,
+            TotalMemory = server.TotalMemory,
+            Status = new ServerStatus
             {
                 AvailableMemory = server.ServerStatus?.AvailableMemory ?? 0,
                 ConfigCode = Guid.Empty.ToString(),
@@ -58,13 +64,7 @@ public class ServerDom
                 UsedMemory = server is { TotalMemory: { }, ServerStatus.AvailableMemory: { } }
                     ? server.TotalMemory.Value - server.ServerStatus.AvailableMemory.Value
                     : 0
-            })
-        {
-            MachineName = server.MachineName,
-            LogicalCoreCount = server.LogicalCoreCount ?? 0,
-            LastError = server.LastConfigError,
-            OsInfo = server.OsInfo,
-            TotalMemory = server.TotalMemory
+            }
         };
 
         var serverDom = new ServerDom(testInit, server, serverInfo);

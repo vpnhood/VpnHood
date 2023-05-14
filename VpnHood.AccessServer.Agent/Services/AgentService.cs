@@ -181,10 +181,16 @@ public class AgentService
     {
         if (server.ServerFarm == null) throw new Exception("ServerFarm has not been fetched.");
 
-        var ipEndPoints = server.AccessPoints
+        var tcpEndPoints = server.AccessPoints
             .Where(accessPoint => accessPoint.IsListen)
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
             .ToArray();
+
+        var udpEndPoints = server.AccessPoints
+            .Where(accessPoint => accessPoint is { IsListen: true, UdpPort: not null })
+            .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.UdpPort!.Value))
+            .ToArray();
+
 
         // defaults
         var serverConfig = new ServerConfig
@@ -203,7 +209,7 @@ public class AgentService
             {
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
             },
-            ServerSecret = server.ServerFarm.Secret 
+            ServerSecret = server.ServerFarm.Secret
         };
 
         // merge with profile
@@ -224,7 +230,8 @@ public class AgentService
         // enforced items
         serverConfig.Merge(new ServerConfig
         {
-            TcpEndPoints = ipEndPoints,
+            TcpEndPoints = tcpEndPoints,
+            UdpEndPoints = udpEndPoints,
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             SessionOptions = new Server.Configurations.SessionOptions
             {
@@ -240,6 +247,24 @@ public class AgentService
             serverConfig.ApplyDefaults();
 
         return serverConfig;
+    }
+
+    private static int GetBestUdpPort(IReadOnlyCollection<AccessPointModel> oldAccessPoints, 
+        IPAddress ipAddress, int udpPortV4, int udpPortV6)
+    {
+        // find previous value
+        var res = oldAccessPoints.FirstOrDefault(x => x.IpAddress.Equals(ipAddress))?.UdpPort;
+        if (res != null && res!=0)
+            return res.Value;
+
+        // find from other previous ip of same family
+        res = oldAccessPoints.FirstOrDefault(x => x.IpAddress.AddressFamily.Equals(ipAddress.AddressFamily))?.UdpPort;
+        if (res != null && res != 0)
+            return res.Value;
+
+        // use preferred value
+        var preferredValue = ipAddress.AddressFamily == AddressFamily.InterNetworkV6 ? udpPortV6 : udpPortV4;
+        return preferredValue;
     }
 
     private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid serverId, Guid farmId, ServerInfo serverInfo)
@@ -265,7 +290,7 @@ public class AgentService
                 IsListen = true,
                 IpAddress = ipAddress,
                 TcpPort = 443,
-                UdpPort = 0
+                UdpPort = GetBestUdpPort(oldAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
             })
             .ToList();
 
@@ -280,7 +305,7 @@ public class AgentService
                 IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
                 IpAddress = ipAddress,
                 TcpPort = 443,
-                UdpPort = 0
+                UdpPort = GetBestUdpPort(oldAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
             }));
 
         // has other server in the farm offer any PublicInToken

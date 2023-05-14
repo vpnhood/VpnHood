@@ -11,7 +11,6 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Server;
-using System.Text.Json;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -50,7 +49,7 @@ public class AgentServerTest
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken,
             "shared publicIp and privateIp must be see as publicIp");
         Assert.AreEqual(443, accessPoint.TcpPort);
-        Assert.AreEqual(0, accessPoint.UdpPort);
+        Assert.IsTrue(accessPoint.UdpPort > 0);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -59,7 +58,7 @@ public class AgentServerTest
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
         Assert.AreEqual(443, accessPoint.TcpPort);
-        Assert.AreEqual(0, accessPoint.UdpPort);
+        Assert.IsTrue(accessPoint.UdpPort > 0);
         Assert.IsTrue(accessPoint.IsListen);
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -68,7 +67,7 @@ public class AgentServerTest
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
         Assert.AreEqual(443, accessPoint.TcpPort);
-        Assert.AreEqual(0, accessPoint.UdpPort);
+        Assert.IsTrue(accessPoint.UdpPort > 0);
         Assert.IsTrue(accessPoint.IsListen);
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -77,7 +76,7 @@ public class AgentServerTest
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
-        Assert.AreEqual(0, accessPoint.UdpPort);
+        Assert.IsTrue(accessPoint.UdpPort > 0);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
         Assert.IsTrue(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -86,7 +85,7 @@ public class AgentServerTest
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
-        Assert.AreEqual(0, accessPoint.UdpPort);
+        Assert.IsTrue(accessPoint.UdpPort > 0);
         Assert.IsFalse(accessPoint.IsListen);
         Assert.IsFalse(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -95,7 +94,7 @@ public class AgentServerTest
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
-        Assert.AreEqual(0, accessPoint.UdpPort);
+        Assert.IsTrue(accessPoint.UdpPort > 0);
         Assert.IsFalse(accessPoint.IsListen);
         Assert.IsFalse(serverConfig.TcpEndPointsValue.Any(x => x.ToString() == accessEndPoint.ToString()));
 
@@ -119,7 +118,7 @@ public class AgentServerTest
         Assert.AreEqual(2, publicInTokenAccessPoints2.Length);
         CollectionAssert.AreNotEqual(publicInTokenAccessPoints1, publicInTokenAccessPoints2);
         var accessPoints = serverDom.Server.AccessPoints.ToArray();
-        
+
         Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
             accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
             "public access point should have on IPv4");
@@ -137,7 +136,7 @@ public class AgentServerTest
         serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
         serverDom.ServerInfo.PublicIpAddresses = new[]
         {
-            await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6(), 
+            await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
             IPAddress.Parse(publicInTokenAccessPoints2[1].IpAddress)
         };
@@ -150,7 +149,7 @@ public class AgentServerTest
         Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
             accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetwork).IpAddress,
             "public access point should have on IPv4");
-        
+
         Assert.AreEqual(publicInTokenAccessPoints2.Single(x => IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
             accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken && IPAddress.Parse(x.IpAddress).AddressFamily == AddressFamily.InterNetworkV6).IpAddress,
             "public access point should have on IPv6");
@@ -170,6 +169,54 @@ public class AgentServerTest
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(serverDom);
         Assert.IsNotNull(publicInTokenAccessPoint);
     }
+
+    [TestMethod]
+    public async Task Configure_manual_UDP_return_nothing_when_port_is_null()
+    {
+        // create serverInfo
+        var farm = await ServerFarmDom.Create();
+        await farm.DefaultServer.Update(new ServerUpdateParams
+        {
+            AutoConfigure = new PatchOfBoolean { Value = false },
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestInit.NewAccessPoint(udpPort: null) } }
+        });
+
+        // Configure
+        await farm.DefaultServer.Configure();
+        await farm.DefaultServer.Reload();
+        Assert.AreEqual(0, farm.DefaultServer.ServerConfig.UdpEndPoints?.Length);
+    }
+
+    [TestMethod]
+    public async Task Configure_UDP_for_first_time_only()
+    {
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var serverDom = await farm.AddNewServer(false);
+
+        // create serverInfo and configure
+        var publicIp = await farm.TestInit.NewIpV6();
+        var serverInfo = await farm.TestInit.NewServerInfo(randomStatus: true);
+        var freeUdpPortV4 = serverInfo.FreeUdpPortV4;
+        var freeUdpPortV6 = serverInfo.FreeUdpPortV6;
+        serverDom.ServerInfo = serverInfo;
+        serverInfo.PrivateIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
+        serverInfo.PublicIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
+        await serverDom.Configure();
+        await serverDom.Reload();
+        Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetwork && x.Port == freeUdpPortV4));
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6 && x.Port == freeUdpPortV6));
+
+        // create new serverInfo and configure
+        serverInfo.FreeUdpPortV4 = new Random().Next(20000, 30000);
+        serverInfo.FreeUdpPortV6 = new Random().Next(20000, 30000);
+        await serverDom.Configure();
+        await serverDom.Reload();
+        Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetwork && x.Port == freeUdpPortV4));
+        Assert.IsTrue(serverDom.ServerConfig.UdpEndPoints.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6 && x.Port == freeUdpPortV6));
+    }
+
 
     [TestMethod]
     public async Task Configure()
@@ -384,9 +431,9 @@ public class AgentServerTest
         // create sessions
         for (var i = 0; i < 10; i++)
         {
-            var addressFamily = i == 9  ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
+            var addressFamily = i == 9 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
             var sessionDom = await accessTokenDom.CreateSession(addressFamily: addressFamily, autoRedirect: true);
-            
+
             // find the server that create the session
             var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
             serverDom.ServerInfo.Status.SessionCount++;

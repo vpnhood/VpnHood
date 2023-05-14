@@ -128,12 +128,12 @@ public class TestInit : IHttpClientFactory, IDisposable
 
 
     public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
-        bool isListen = true, int udpPrt = 0)
+        bool isListen = true, int? udpPort = 0)
     {
         ipEndPoint ??= await NewEndPoint();
         return new AccessPoint
         {
-            UdpPort = udpPrt,
+            UdpPort = udpPort,
             IpAddress = ipEndPoint.Address.ToString(),
             TcpPort = ipEndPoint.Port,
             AccessPointMode = AccessPointMode.PublicInToken,
@@ -229,27 +229,29 @@ public class TestInit : IHttpClientFactory, IDisposable
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
-        var serverInfo = new ServerInfo(
-            version: Version.Parse($"999.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
-            environmentVersion: Environment.Version,
-            privateIpAddresses: new[]
+        var serverInfo = new ServerInfo
+        {
+            Version = Version.Parse($"999.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
+            EnvironmentVersion = Environment.Version,
+            PrivateIpAddresses = new[]
             {
                 IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
                 IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
                 publicIp,
             },
-            publicIpAddresses: new[]
+            PublicIpAddresses = new[]
             {
                 await NewIpV4(),
                 await NewIpV6(),
                 publicIp,
             },
-            status: NewServerStatus(null, randomStatus))
-        {
+            Status = NewServerStatus(null, randomStatus),
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",
             LogicalCoreCount = 2,
             TotalMemory = 20000000,
+            FreeUdpPortV4 = new Random().Next(2000, 9000),
+            FreeUdpPortV6 = new Random().Next(2000, 9000)
         };
 
         return serverInfo;

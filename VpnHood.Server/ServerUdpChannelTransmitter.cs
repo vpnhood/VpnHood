@@ -10,7 +10,7 @@ public class ServerUdpChannelTransmitter : UdpChannelTransmitter
     private readonly SessionManager _sessionManager;
 
     public ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager sessionManager) 
-        : base(udpClient, sessionManager.ServerKey)
+        : base(udpClient, sessionManager.ServerSecret)
     {
         _sessionManager = sessionManager;
     }

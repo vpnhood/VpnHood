@@ -26,7 +26,7 @@ public class ServerConfig
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan? UpdateStatusInterval { get; set; }
     public bool? LogAnonymizer { get; set; }
-    public byte[]? ServerKey { get; set; } 
+    public byte[]? ServerSecret { get; set; } 
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
@@ -36,7 +36,7 @@ public class ServerConfig
     [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 0), new(IPAddress.IPv6Any, 0) };
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
-    [JsonIgnore] public byte[]? ServerKeyValue => ServerKey;
+    [JsonIgnore] public byte[]? ServerKeyValue => ServerSecret;
 
     public void Merge(ServerConfig obj)
     {
@@ -47,7 +47,7 @@ public class ServerConfig
         if (obj.UdpEndPoints != null) UdpEndPoints = obj.UdpEndPoints;
         if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
         if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;
-        if (obj.ServerKey != null) ServerKey = obj.ServerKey;
+        if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
     }
@@ -61,6 +61,6 @@ public class ServerConfig
         UdpEndPoints = UdpEndPointsValue;
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
-        ServerKey = ServerKeyValue;
+        ServerSecret = ServerKeyValue;
     }
 }

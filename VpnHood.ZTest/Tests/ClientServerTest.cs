@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using EmbedIO;
@@ -52,7 +53,7 @@ public class ClientServerTest
         using var client = TestHelper.CreateClient(token1);
         TestHelper.Test_Https();
 
-        Assert.AreEqual(serverEndPoint2, client.HostEndPoint);
+        Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
     }
 
     [TestMethod]
@@ -154,6 +155,23 @@ public class ClientServerTest
         Assert.IsTrue(client.UseUdpChannel);
     }
 
+    [TestMethod]
+    public async Task UdpChannel_custom_udp_port()
+    {
+        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
+        fileAccessServerOptions.UdpEndPoints = fileAccessServerOptions.UdpEndPoints!
+            .Select(x => VhUtil.GetFreeUdpEndPoint(x.Address)).ToArray();
+
+        // Create Server
+        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await TestTunnel(server, client);
+        Assert.IsTrue(fileAccessServerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
+    }
+
     private static async Task TestTunnel(VpnHoodServer server, VpnHoodClient client)
     {
         Assert.AreEqual(ServerState.Ready, server.State);
@@ -195,7 +213,7 @@ public class ClientServerTest
             "Not enough data has been sent through the client!");
         Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 2000,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Received> oldServerReceivedByteCount + 100,
+        Assert.IsTrue(serverSession.Tunnel.Traffic.Received > oldServerReceivedByteCount + 100,
             "Not enough data has been sent through the client!");
 
         // ************

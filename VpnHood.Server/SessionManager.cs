@@ -84,28 +84,28 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
 
     }
 
-    public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
+    public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
-        var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
+        var sessionResponseEx = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
         {
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
         });
 
         // Access Error should not pass to the client in create session
-        if (sessionResponse.ErrorCode is SessionErrorCode.AccessError)
-            throw new ServerUnauthorizedAccessException(sessionResponse.ErrorMessage ?? "Access Error.", ipEndPointPair, helloRequest);
+        if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)
+            throw new ServerUnauthorizedAccessException(sessionResponseEx.ErrorMessage ?? "Access Error.", ipEndPointPair, helloRequest);
 
-        if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, helloRequest);
+        if (sessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponseEx, helloRequest);
 
         // create the session and add it to list
-        var session = await CreateSessionInternal(sessionResponse, ipEndPointPair, helloRequest);
+        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest);
 
         _ = _tracker?.TrackEvent("Usage", "SessionCreated");
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-        return sessionResponse;
+        return sessionResponseEx;
     }
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)

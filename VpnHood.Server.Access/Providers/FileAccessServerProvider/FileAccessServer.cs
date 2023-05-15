@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -62,6 +63,16 @@ public class FileAccessServer : IAccessServer
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
+
+        // update UdpEndPoints if they are not configured 
+        var udpEndPoints = ServerConfig.UdpEndPointsValue.ToArray();
+        foreach (var udpEndPoint in udpEndPoints.Where(x => x.Port == 0))
+        {
+            udpEndPoint.Port = udpEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+                ? serverInfo.FreeUdpPortV6 : serverInfo.FreeUdpPortV4;
+        }
+        ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
+
         return Task.FromResult(ServerConfig);
     }
 
@@ -77,7 +88,16 @@ public class FileAccessServer : IAccessServer
         if (accessItem == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
-        return SessionManager.CreateSession(sessionRequestEx, accessItem);
+        var ret = SessionManager.CreateSession(sessionRequestEx, accessItem);
+
+        // set endpoints
+        ret.TcpEndPoints = new[] { sessionRequestEx.HostEndPoint };
+        ret.UdpEndPoints = ServerConfig.UdpEndPointsValue
+            .Where(x => x.AddressFamily == sessionRequestEx.HostEndPoint.AddressFamily)
+            .Select(x => new IPEndPoint(sessionRequestEx.HostEndPoint.Address, x.Port))
+            .ToArray();
+
+        return ret;
     }
 
     public async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)

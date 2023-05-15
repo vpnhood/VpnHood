@@ -29,7 +29,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return Task.CompletedTask;
     }
 
-    public JobSection JobSection { get; } = new ();
+    public JobSection JobSection { get; } = new();
 
     private void CleanupSessions()
     {

@@ -102,6 +102,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint { get; private set; }
     public IPEndPoint? HostUdpEndPoint { get; private set; }
+    public IPEndPoint[]? HostTcpEndPoints { get; private set; }
+    public IPEndPoint[]? HostUdpEndPoints { get; private set; }
 
     public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
 
@@ -768,6 +770,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
         IsIpV6Supported = sessionResponse.IsIpV6Supported;
         _isUdpChannel2 = sessionResponse.IsUdpChannel2;
+
+         // set endpoints
+        HostTcpEndPoints =  sessionResponse.TcpEndPoints;
+        HostUdpEndPoints = sessionResponse.UdpEndPoints;
+        if (HostUdpEndPoints.Any()) HostUdpEndPoint = HostUdpEndPoints.First();
 
         // PacketCaptureIpRanges
         if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))

@@ -39,7 +39,7 @@ public class ServerFarmTest
                         IpAddress = publicIp1.ToString(),
                         TcpPort = 443,
                         IsListen = true,
-                        UdpPort = 0,
+                        UdpPort = 443,
                     },
                     new AccessPoint
                     {
@@ -47,7 +47,7 @@ public class ServerFarmTest
                         IpAddress = publicIp2.ToString(),
                         TcpPort = 443,
                         IsListen = true,
-                        UdpPort = 0,
+                        UdpPort = 443,
                     }
                 }
             }

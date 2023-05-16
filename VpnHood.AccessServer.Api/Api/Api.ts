@@ -5406,7 +5406,7 @@ export interface IServerInstallManual {
 
 export class ServerInstallAppSettings implements IServerInstallAppSettings {
     httpAccessServer!: HttpAccessServerOptions;
-    secret!: string;
+    managementSecret!: string;
 
     constructor(data?: IServerInstallAppSettings) {
         if (data) {
@@ -5423,7 +5423,7 @@ export class ServerInstallAppSettings implements IServerInstallAppSettings {
     init(_data?: any) {
         if (_data) {
             this.httpAccessServer = _data["httpAccessServer"] ? HttpAccessServerOptions.fromJS(_data["httpAccessServer"]) : new HttpAccessServerOptions();
-            this.secret = _data["Secret"];
+            this.managementSecret = _data["managementSecret"];
         }
     }
 
@@ -5437,14 +5437,14 @@ export class ServerInstallAppSettings implements IServerInstallAppSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["httpAccessServer"] = this.httpAccessServer ? this.httpAccessServer.toJSON() : <any>undefined;
-        data["Secret"] = this.secret;
+        data["managementSecret"] = this.managementSecret;
         return data;
     }
 }
 
 export interface IServerInstallAppSettings {
     httpAccessServer: HttpAccessServerOptions;
-    secret: string;
+    managementSecret: string;
 }
 
 export class HttpAccessServerOptions implements IHttpAccessServerOptions {

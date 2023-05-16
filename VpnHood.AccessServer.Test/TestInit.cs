@@ -128,12 +128,12 @@ public class TestInit : IHttpClientFactory, IDisposable
 
 
     public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
-        bool isListen = true, int udpPort = 0)
+        bool isListen = true, int? udpPort = null)
     {
         ipEndPoint ??= await NewEndPoint();
         return new AccessPoint
         {
-            UdpPort = udpPort,
+            UdpPort = udpPort ?? ipEndPoint.Port,
             IpAddress = ipEndPoint.Address.ToString(),
             TcpPort = ipEndPoint.Port,
             AccessPointMode = AccessPointMode.PublicInToken,

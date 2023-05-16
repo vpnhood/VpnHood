@@ -8036,11 +8036,11 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public HttpAccessServerOptions HttpAccessServer { get; set; } = new HttpAccessServerOptions();
 
-        [System.Text.Json.Serialization.JsonPropertyName("Secret")]
+        [System.Text.Json.Serialization.JsonPropertyName("managementSecret")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] Secret { get; set; } = default!;
+        public byte[] ManagementSecret { get; set; } = default!;
 
     }
 

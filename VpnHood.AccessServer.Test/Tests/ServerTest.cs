@@ -84,7 +84,7 @@ public class ServerTest
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
         var install1C = await serverDom.Client.GetInstallManualAsync(testInit.ProjectId, serverDom.ServerId);
-        CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+        CollectionAssert.AreEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
 
@@ -94,7 +94,7 @@ public class ServerTest
         serverUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
         await serverDom.Update(serverUpdateParam);
         install1C = await serverDom.Client.GetInstallManualAsync(testInit.ProjectId, serverDom.Server.ServerId);
-        CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+        CollectionAssert.AreNotEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
 
         //-----------
         // check: Update (serverFarmId)
@@ -151,7 +151,7 @@ public class ServerTest
 
         var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        Assert.AreEqual(Convert.ToBase64String(install.AppSettings.Secret), Convert.ToBase64String(actualAppSettings.Secret));
+        Assert.AreEqual(Convert.ToBase64String(install.AppSettings.ManagementSecret), Convert.ToBase64String(actualAppSettings.ManagementSecret));
         Assert.AreEqual(install.AppSettings.HttpAccessServer.BaseUrl, actualAppSettings.HttpAccessServer.BaseUrl);
         Assert.IsTrue(install.LinuxCommand.Contains("x64.sh"));
         Assert.IsTrue(install.WindowsCommand.Contains("x64.ps1"));

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using VpnHood.AccessServer.Persistence;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
@@ -192,6 +193,12 @@ public class ServerService
         if (accessPoints.Length > QuotaConstants.AccessPointCount)
             throw new QuotaException(nameof(QuotaConstants.AccessPointCount), QuotaConstants.AccessPointCount);
 
+        // validate public ips
+        var anyIpAddress4Public = accessPoints.SingleOrDefault(x =>
+            x.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken &&
+            (x.IpAddress.Equals(IPAddress.Any) || x.IpAddress.Equals(IPAddress.IPv6Any)))?.IpAddress;
+        if (anyIpAddress4Public != null) throw new InvalidOperationException($"Can not use {anyIpAddress4Public} as public a address.");
+
         // validate TcpEndPoints
         _ = accessPoints.Select(x => new IPEndPoint(x.IpAddress, x.TcpPort));
         if (accessPoints.Any(x => x.TcpPort == 0)) throw new InvalidOperationException("Invalid TcpEndPoint. Port can not be zero.");
@@ -204,19 +211,23 @@ public class ServerService
             .FirstOrDefault();
 
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate TCP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
+            throw new InvalidOperationException($"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
         //find duplicate tcp on any ipv4
         var anyPorts = accessPoints.Where(x => x.IsListen && x.IpAddress.Equals(IPAddress.Any)).Select(x => x.TcpPort);
-        duplicate = accessPoints.FirstOrDefault(x => x.IsListen && !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.TcpPort));
+        duplicate = accessPoints.FirstOrDefault(x =>
+            x is { IsListen: true, IpAddress.AddressFamily: AddressFamily.InterNetwork } &&
+            !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.TcpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate TCP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
+            throw new InvalidOperationException($"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
         //find duplicate tcp on any ipv6
         anyPorts = accessPoints.Where(x => x.IsListen && x.IpAddress.Equals(IPAddress.IPv6Any)).Select(x => x.TcpPort);
-        duplicate = accessPoints.FirstOrDefault(x => x.IsListen && !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.TcpPort));
+        duplicate = accessPoints.FirstOrDefault(x =>
+            x is { IsListen: true, IpAddress.AddressFamily: AddressFamily.InterNetworkV6 } &&
+            !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.TcpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate TCP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
+            throw new InvalidOperationException($"Duplicate TCP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
         // validate UdpEndPoints
         _ = accessPoints.Where(x => x.UdpPort != -1).Select(x => new IPEndPoint(x.IpAddress, x.UdpPort));
@@ -231,23 +242,26 @@ public class ServerService
             .FirstOrDefault();
 
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
+            throw new InvalidOperationException($"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         //find duplicate udp on any ipv4
         anyPorts = accessPoints.Where(x =>
-            x is { IsListen: true, UdpPort: > 0 } && x.IpAddress.Equals(IPAddress.Any)).Select(x => x.UdpPort);
+            x is { IsListen: true, UdpPort: > 0 } &&
+            x.IpAddress.Equals(IPAddress.Any)).Select(x => x.UdpPort);
         duplicate = accessPoints.FirstOrDefault(x =>
-            x is { IsListen: true, UdpPort: > 0 } && !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.UdpPort));
+            x is { IsListen: true, UdpPort: > 0, IpAddress.AddressFamily: AddressFamily.InterNetwork } &&
+            !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.UdpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
+            throw new InvalidOperationException($"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         //find duplicate udp on any ipv6
         anyPorts = accessPoints.Where(x =>
             x is { IsListen: true, UdpPort: > 0 } && x.IpAddress.Equals(IPAddress.IPv6Any)).Select(x => x.UdpPort);
         duplicate = accessPoints.FirstOrDefault(x =>
-            x is { IsListen: true, UdpPort: > 0 } && !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.UdpPort));
+            x is { IsListen: true, UdpPort: > 0, IpAddress.AddressFamily: AddressFamily.InterNetworkV6 } &&
+            !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.UdpPort));
         if (duplicate != null)
-            throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
+            throw new InvalidOperationException($"Duplicate UDP listener on a single IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         return accessPoints.Select(x => x.ToModel()).ToList();
     }
@@ -416,7 +430,11 @@ public class ServerService
 
         // create jwt
         var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
-        var appSettings = new ServerInstallAppSettings(new HttpAccessServerOptions(_appOptions.AgentUrl, authorization), server.ManagementSecret);
+        var appSettings = new ServerInstallAppSettings
+        {
+            HttpAccessServer = new HttpAccessServerOptions(_appOptions.AgentUrl, authorization),
+            ManagementSecret = server.ManagementSecret
+        };
         return appSettings;
     }
 

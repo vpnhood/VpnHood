@@ -769,7 +769,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         PublicAddress = sessionResponse.ClientPublicAddress;
         ServerVersion = Version.Parse(sessionResponse.ServerVersion);
         IsIpV6Supported = sessionResponse.IsIpV6Supported;
-        _isUdpChannel2 = sessionResponse.IsUdpChannel2;
+        _isUdpChannel2 = sessionResponse.UdpEndPoints.Any();
 
          // set endpoints
         HostTcpEndPoints =  sessionResponse.TcpEndPoints;
@@ -802,7 +802,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
         // add the udp channel
-        if (!sessionResponse.IsUdpChannel2 && UseUdpChannel && sessionResponse.UdpPort != 0 && sessionResponse.UdpKey != null)
+        if (!_isUdpChannel2 && UseUdpChannel && sessionResponse.UdpPort != 0 && sessionResponse.UdpKey != null)
             AddUdpChannel(sessionResponse.UdpPort, sessionResponse.UdpKey);
 
         _ = ManageDatagramChannels(cancellationToken);

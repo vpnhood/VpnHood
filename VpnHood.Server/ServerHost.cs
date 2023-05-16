@@ -358,12 +358,6 @@ internal class ServerHost : IAsyncDisposable
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
-        // find udp port through udp listeners for this address 
-        var udpPort2 = request.UseUdpChannel2
-            ? UdpEndPoints.FirstOrDefault(x => x.Address.AddressFamily == ipEndPointPair.LocalEndPoint.AddressFamily &&
-                (Equals(x.Address, ipEndPointPair.LocalEndPoint.Address) || x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))?.Port
-            : null;
-
         var helloResponse = new HelloSessionResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
@@ -371,9 +365,8 @@ internal class ServerHost : IAsyncDisposable
             ServerSecret = _sessionManager.ServerSecret,
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
-            UdpKey = udpPort2 != null ? sessionResponse.SessionKey : session.UdpChannel?.Key,
-            UdpPort = udpPort2 ?? (session.UdpChannel?.LocalPort ?? 0),
-            IsUdpChannel2 = udpPort2 != null,
+            UdpKey = request.UseUdpChannel2 ? sessionResponse.SessionKey : session.UdpChannel?.Key,
+            UdpPort = session.UdpChannel?.LocalPort ?? 0,
             ServerVersion = _sessionManager.ServerVersion,
             ServerProtocolVersion = ServerProtocolVersion,
             SuppressedTo = sessionResponse.SuppressedTo,

@@ -187,10 +187,9 @@ public class AgentService
             .ToArray();
 
         var udpEndPoints = server.AccessPoints
-            .Where(accessPoint => accessPoint is { IsListen: true, UdpPort: not null })
-            .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.UdpPort!.Value))
+            .Where(accessPoint => accessPoint is { IsListen: true, UdpPort: > 0 })
+            .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.UdpPort))
             .ToArray();
-
 
         // defaults
         var serverConfig = new ServerConfig

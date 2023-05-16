@@ -171,14 +171,14 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task Configure_manual_UDP_return_nothing_when_port_is_null()
+    public async Task Configure_manual_UDP_return_nothing_when_port_is_minues_one()
     {
         // create serverInfo
         var farm = await ServerFarmDom.Create();
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
             AutoConfigure = new PatchOfBoolean { Value = false },
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestInit.NewAccessPoint(udpPort: null) } }
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestInit.NewAccessPoint(udpPort: -1) } }
         });
 
         // Configure

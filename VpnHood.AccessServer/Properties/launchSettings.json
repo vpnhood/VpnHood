@@ -10,13 +10,6 @@
       },
       "applicationUrl": "https://localhost:54001"
     },
-    "Windows.Stage": {
-      "commandName": "Project",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Stage"
-      },
-      "applicationUrl": "https://localhost:54001"
-    },
     "Docker": {
       "commandName": "Docker",
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/zz",

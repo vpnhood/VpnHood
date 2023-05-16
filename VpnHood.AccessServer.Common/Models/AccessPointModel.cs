@@ -13,7 +13,7 @@ public class AccessPointModel : IStructuralEquatable, IEquatable<AccessPointMode
     public required AccessPointMode AccessPointMode { get; init; }
     public required bool IsListen { get; init; }
     public required int TcpPort { get; init; }
-    public required int? UdpPort { get; init; }
+    public required int UdpPort { get; init; }
 
     [JsonIgnore]
     public bool IsPublic => AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public;

@@ -192,6 +192,10 @@ public class ServerService
         if (accessPoints.Length > QuotaConstants.AccessPointCount)
             throw new QuotaException(nameof(QuotaConstants.AccessPointCount), QuotaConstants.AccessPointCount);
 
+        // validate TcpEndPoints
+        _ = accessPoints.Select(x => new IPEndPoint(x.IpAddress, x.TcpPort));
+        if (accessPoints.Any(x => x.TcpPort == 0)) throw new InvalidOperationException("Invalid TcpEndPoint. Port can not be zero.");
+
         //find duplicate tcp
         var duplicate = accessPoints
             .GroupBy(x => $"{x.IpAddress}:{x.TcpPort}-{x.IsListen}")
@@ -214,6 +218,10 @@ public class ServerService
         if (duplicate != null)
             throw new InvalidOperationException($"Duplicate TCP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.TcpPort}");
 
+        // validate UdpEndPoints
+        _ = accessPoints.Where(x => x.UdpPort != -1).Select(x => new IPEndPoint(x.IpAddress, x.UdpPort));
+        if (accessPoints.Any(x => x.UdpPort == 0)) throw new InvalidOperationException("Invalid UdpEndPoint. Port can not be zero.");
+
         //find duplicate udp
         duplicate = accessPoints
             .Where(x => x.UdpPort > 0)
@@ -226,18 +234,18 @@ public class ServerService
             throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         //find duplicate udp on any ipv4
-        anyPorts = accessPoints.Where(x => 
-            x is { IsListen: true, UdpPort: > 0 } && x.IpAddress.Equals(IPAddress.Any)).Select(x => x.UdpPort!.Value);
-        duplicate = accessPoints.FirstOrDefault(x => 
-            x is { IsListen: true, UdpPort: > 0 } && !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.UdpPort!.Value));
+        anyPorts = accessPoints.Where(x =>
+            x is { IsListen: true, UdpPort: > 0 } && x.IpAddress.Equals(IPAddress.Any)).Select(x => x.UdpPort);
+        duplicate = accessPoints.FirstOrDefault(x =>
+            x is { IsListen: true, UdpPort: > 0 } && !x.IpAddress.Equals(IPAddress.Any) && anyPorts.Contains(x.UdpPort));
         if (duplicate != null)
             throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 
         //find duplicate udp on any ipv6
-        anyPorts = accessPoints.Where(x => 
-            x is { IsListen: true, UdpPort: > 0 } && x.IpAddress.Equals(IPAddress.IPv6Any)).Select(x => x.UdpPort!.Value);
-        duplicate = accessPoints.FirstOrDefault(x => 
-            x is { IsListen: true, UdpPort: > 0 } && !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.UdpPort!.Value));
+        anyPorts = accessPoints.Where(x =>
+            x is { IsListen: true, UdpPort: > 0 } && x.IpAddress.Equals(IPAddress.IPv6Any)).Select(x => x.UdpPort);
+        duplicate = accessPoints.FirstOrDefault(x =>
+            x is { IsListen: true, UdpPort: > 0 } && !x.IpAddress.Equals(IPAddress.IPv6Any) && anyPorts.Contains(x.UdpPort));
         if (duplicate != null)
             throw new InvalidOperationException($"Duplicate UDP listener on same IP is not possible. {duplicate.IpAddress}:{duplicate.UdpPort}");
 

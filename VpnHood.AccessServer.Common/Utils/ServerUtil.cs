@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.Utils;
 
 public static class ServerUtil
 {
-    public static readonly Version MinServerVersion = Version.Parse("2.4.301");
+    public static readonly Version MinServerVersion = Version.Parse("2.9.370");
 
     public static ServerState GetServerState(ServerModel serverModel, TimeSpan lostServerThreshold)
     {

@@ -1,3 +1,7 @@
+# Upcoming
+### Server
+* Fix Restart listener on servers by UdpEndPoints changes
+
 # v2.9.369
 ### Client & Server
 * Feature: Use shared UDP port 

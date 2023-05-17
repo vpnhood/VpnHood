@@ -261,6 +261,7 @@ internal static class TestHelper
         var options = new FileAccessServerOptions
         {
             TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) },
+            UdpEndPoints = new[] { new IPEndPoint(IPAddress.Loopback, 0) },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

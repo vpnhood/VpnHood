@@ -16,7 +16,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private uint _lastSessionId;
 
-    public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
+    public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
 
     public FileAccessServerSessionManager()
     {
@@ -29,7 +29,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return Task.CompletedTask;
     }
 
-    public JobSection JobSection { get; } = new ();
+    public JobSection JobSection { get; } = new();
 
     private void CleanupSessions()
     {
@@ -45,7 +45,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
             Sessions.TryRemove(item.Key, out _);
     }
 
-    public Guid? TokenIdFromSessionId(uint sessionId)
+    public Guid? TokenIdFromSessionId(ulong sessionId)
     {
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
@@ -65,16 +65,17 @@ public class FileAccessServerSessionManager : IDisposable, IJob
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
-        Session session = new()
+        var session = new Session()
         {
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
             LastUsedTime = FastDateTime.Now,
-            SessionKey = VhUtil.GenerateSessionKey(),
+            SessionKey = VhUtil.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
-            ClientIp = sessionRequestEx.ClientIp
+            ClientIp = sessionRequestEx.ClientIp,
+            AdditionalData = sessionRequestEx.ExtraData
         };
 
         //create response
@@ -90,7 +91,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
+    public SessionResponseEx GetSession(ulong sessionId, FileAccessServer.AccessItem accessItem,
         IPEndPoint? hostEndPoint)
     {
         // check existence
@@ -102,6 +103,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
 
         // create response
         var ret = BuildSessionResponse(session, accessItem);
+        ret.ExtraData = session.AdditionalData;
         return ret;
     }
 
@@ -176,7 +178,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         };
     }
 
-    public void CloseSession(uint sessionId)
+    public void CloseSession(ulong sessionId)
     {
         if (Sessions.TryGetValue(sessionId, out var session))
         {
@@ -202,6 +204,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         public string? ErrorMessage { get; internal set; }
         public IPEndPoint HostEndPoint { get; internal set; } = null!;
         public IPAddress? ClientIp { get; internal set; }
+        public string? AdditionalData { get; internal set; }
 
         public void Kill()
         {

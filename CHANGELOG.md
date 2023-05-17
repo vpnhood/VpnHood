@@ -1,9 +1,17 @@
+# v2.9.370
+### Server
+* Fix Restart listener on servers by UdpEndPoints changes
+
 # v2.9.369
 ### Client & Server
 * Feature: Use shared UDP port 
 * Feature: Improve protocol anonymity and anti-fingerprinting for UDP 
+* Feature: Add Server Secret in addition to session secret
 * Update: Improve security, performance, and battery usage
 * Update: Remove excessive error logs on disconnecting
+* Update: 64-bit session Id
+* Update: Client Protocol Version 3
+* Update: Server Protocol Version 3
 
 # v2.8.361
 ### Server

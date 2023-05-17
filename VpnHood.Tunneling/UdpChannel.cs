@@ -13,6 +13,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
+// todo: deprecated version >= 2.9.362
 public class UdpChannel : IDatagramChannel
 {
     private readonly byte[] _buffer = new byte[0xFFFF];
@@ -36,7 +37,7 @@ public class UdpChannel : IDatagramChannel
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
 
-    public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
+    public UdpChannel(bool isClient, UdpClient udpClient, ulong sessionId, byte[] key)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");
 
@@ -44,7 +45,7 @@ public class UdpChannel : IDatagramChannel
         _isClient = isClient;
         _cryptorPosBase = isClient ? 0 : long.MaxValue / 2;
         _bufferCryptor = new BufferCryptor(key);
-        _sessionId = sessionId;
+        _sessionId = (uint)sessionId; // legacy
         _udpClient = udpClient;
         _bufferHeaderLength = _isClient
             ? 4 + 8 // client->server: sessionId + sentBytes (IV)
@@ -117,7 +118,7 @@ public class UdpChannel : IDatagramChannel
                 {
                     var cryptoPos = BitConverter.ToInt64(buffer, bufferIndex);
                     bufferIndex += 8;
-                    _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
+                    _bufferCryptor.CipherOld(buffer, bufferIndex, buffer.Length, cryptoPos);
                 }
                 else
                 {
@@ -128,7 +129,7 @@ public class UdpChannel : IDatagramChannel
 
                     var cryptoPos = BitConverter.ToInt64(buffer, bufferIndex);
                     bufferIndex += 8;
-                    _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
+                    _bufferCryptor.CipherOld(buffer, bufferIndex, buffer.Length, cryptoPos);
                 }
 
                 // verify sessionId after cipher
@@ -192,7 +193,7 @@ public class UdpChannel : IDatagramChannel
                     $"{VhLogger.FormatType(this)} is sending {bufferCount} bytes...");
 
             var cryptoPos = _cryptorPosBase + Traffic.Sent;
-            _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
+            _bufferCryptor.CipherOld(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
             if (_isClient)
             {
                 BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);

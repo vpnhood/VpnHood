@@ -40,12 +40,22 @@ public static class VhUtil
         }
         catch when (defaultPort != 0)
         {
-            // try any port
-            var listener = new TcpListener(ipAddress, 0);
-            listener.Start();
-            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
+            return GetFreeTcpEndPoint(ipAddress);
+        }
+    }
+
+    public static IPEndPoint GetFreeUdpEndPoint(IPAddress ipAddress, int defaultPort = 0)
+    {
+        try
+        {
+            // check recommended port
+            using var udpClient = new UdpClient(new IPEndPoint(ipAddress, defaultPort));
+            var port = ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
             return new IPEndPoint(ipAddress, port);
+        }
+        catch when (defaultPort != 0)
+        {
+            return GetFreeUdpEndPoint(ipAddress);
         }
     }
 
@@ -147,10 +157,15 @@ public static class VhUtil
             yield return sb.ToString();
     }
 
-    public static byte[] GenerateSessionKey()
+    public static byte[] GenerateKey()
+    {
+        return GenerateKey(128);
+    }
+
+    public static byte[] GenerateKey(int keySizeInBit)
     {
         using var aes = Aes.Create();
-        aes.KeySize = 128;
+        aes.KeySize = keySizeInBit;
         aes.GenerateKey();
         return aes.Key;
     }
@@ -159,6 +174,12 @@ public static class VhUtil
     {
         return JsonSerializer.Deserialize<T>(json, options) ??
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+    }
+
+    public static T JsonClone<T>(object obj, JsonSerializerOptions? options = null)
+    {
+        var json = JsonSerializer.Serialize(obj, options);
+        return JsonDeserialize<T>(json, options);
     }
 
     public static byte[] EncryptClientId(Guid clientId, byte[] key)

@@ -44,15 +44,16 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance, "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
     private readonly EventReporter _filterReporter = new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
     private bool _isSyncing;
-    private readonly Traffic _syncTraffic = new ();
+    private readonly Traffic _syncTraffic = new();
     private int _tcpConnectWaitCount;
     private readonly JobSection _syncJobSection;
 
     public Tunnel Tunnel { get; }
-    public uint SessionId { get; }
+    public ulong SessionId { get; }
     public byte[] SessionKey { get; }
     public SessionResponseBase SessionResponse { get; private set; }
-    public UdpChannel? UdpChannel { get; private set; }
+    public UdpChannel? UdpChannel { get; private set; } // todo: deprecated version >= 2.9.362
+    public UdpChannel2? UdpChannel2 { get; private set; }
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; } = new();
@@ -118,14 +119,14 @@ public class Session : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
-        using var jobLock =  _syncJobSection.Enter();
+        using var jobLock = _syncJobSection.Enter();
         return Sync(jobLock.IsEntered, false);
     }
 
     public bool UseUdpChannel
     {
         // ReSharper disable once MergeIntoPattern
-        get => Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel;
+        get => Tunnel.DatagramChannels.Length == 1 && (Tunnel.DatagramChannels[0] is UdpChannel || Tunnel.DatagramChannels[0] is UdpChannel2);
         set
         {
             if (value == UseUdpChannel)
@@ -134,7 +135,7 @@ public class Session : IAsyncDisposable, IJob
             if (value)
             {
                 // remove tcpDatagram channels
-                foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel))
+                foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel && x != UdpChannel2))
                     Tunnel.RemoveChannel(item);
 
                 // create UdpKey
@@ -143,14 +144,25 @@ public class Session : IAsyncDisposable, IJob
                 aes.GenerateKey();
 
                 // Create the only one UdpChannel
-                UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_localEndPoint.AddressFamily), SessionId, aes.Key);
-                try { Tunnel.AddChannel(UdpChannel); }
-                catch { UdpChannel.Dispose(); throw; }
+                //todo: we couldn't recover udp port in previous version if HelloRequest null. let assume new version
+                //deprecated version >= 2.9.362 
+                if (HelloRequest == null || HelloRequest.UseUdpChannel2)
+                {
+                    UdpChannel2 = new UdpChannel2(SessionId, SessionKey, true);
+                    try { Tunnel.AddChannel(UdpChannel2); }
+                    catch { UdpChannel2.Dispose(); throw; }
+                }
+                else
+                {
+                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_localEndPoint.AddressFamily), SessionId, aes.Key);
+                    try { Tunnel.AddChannel(UdpChannel); }
+                    catch { UdpChannel.Dispose(); throw; }
+                }
             }
             else
             {
                 // remove udp channels
-                foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel))
+                foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel || x == UdpChannel2))
                     Tunnel.RemoveChannel(item);
                 UdpChannel = null;
             }
@@ -351,7 +363,7 @@ public class Session : IAsyncDisposable, IJob
             isRequestedEpException = false;
 
             // send response
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, this.SessionResponse, cancellationToken);
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, SessionResponse, cancellationToken);
 
             // Dispose ssl stream and replace it with a Head-Cryptor
             await tcpClientStream.Stream.DisposeAsync();
@@ -500,5 +512,4 @@ public class Session : IAsyncDisposable, IJob
             _session.VerifyNetScan(protocolType, remoteEndPoint);
         }
     }
-
 }

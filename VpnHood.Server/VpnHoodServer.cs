@@ -23,7 +23,7 @@ namespace VpnHood.Server;
 public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 {
     private readonly bool _autoDisposeAccessServer;
-    private readonly TcpHost _tcpHost;
+    private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
     private string? _lastConfigError;
@@ -50,7 +50,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer));
+        _serverHost = new ServerHost(SessionManager, new SslCertificateManager(AccessServer));
 
         JobRunner.Default.Add(this);
     }
@@ -136,19 +136,22 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             // get server info
             VhLogger.Instance.LogInformation("Configuring by the Access Server...");
             var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
-            var serverInfo = new ServerInfo(
-                environmentVersion: Environment.Version,
-                version: GetType().Assembly.GetName().Version,
-                privateIpAddresses: await IPAddressUtil.GetPrivateIpAddresses(),
-                publicIpAddresses: _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
-                status: Status
-            )
+            var freeUdpPortV4 = GetFreeUdpPort(AddressFamily.InterNetwork, null);
+            var freeUdpPortV6 = GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
+            var serverInfo = new ServerInfo
             {
+                EnvironmentVersion = Environment.Version,
+                Version = GetType().Assembly.GetName().Version,
+                PrivateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses(),
+                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
+                Status = Status,
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
+                FreeUdpPortV4 = freeUdpPortV4,
+                FreeUdpPortV6 = freeUdpPortV6,
                 LastError = _lastConfigError
             };
 
@@ -163,6 +166,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var serverConfig = await ReadConfig(serverInfo);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
+            SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
@@ -170,20 +174,20 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
-            ConfigNetFilter(SessionManager.NetFilter, _tcpHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
+            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
             // starting the listeners
-            if (_tcpHost.IsStarted && !_tcpHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue))
+            if (_serverHost.IsStarted && !_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue))
             {
-                VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_tcpHost)}...");
-                await _tcpHost.Stop();
+                VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_serverHost)}...");
+                await _serverHost.Stop();
             }
 
-            if (!_tcpHost.IsStarted)
+            if (!_serverHost.IsStarted)
             {
-                VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(_tcpHost)}...");
-                _tcpHost.Start(serverConfig.TcpEndPointsValue);
+                VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(_serverHost)}...");
+                _serverHost.Start(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
             }
 
             // set config status
@@ -197,17 +201,17 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             State = ServerState.Waiting;
             _lastConfigError = ex.Message;
             VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {JobSection.Interval.TotalSeconds} seconds.");
-            await _tcpHost.Stop();
+            await _serverHost.Stop();
         }
     }
 
-    private static void ConfigNetFilter(INetFilter netFilter, TcpHost tcpHost, NetFilterOptions netFilterOptions, 
+    private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
         IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported)
     {
         // assign to workers
-        tcpHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
-        tcpHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
-        tcpHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
+        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
+        serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
         netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
 
         // exclude listening ip
@@ -312,7 +316,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             var res = await AccessServer.Server_UpdateStatus(Status);
 
             // reconfigure
-            if (res.ConfigCode != _lastConfigCode || !_tcpHost.IsStarted)
+            if (res.ConfigCode != _lastConfigCode || !_serverHost.IsStarted)
             {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 await Configure();
@@ -322,6 +326,22 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         {
             VhLogger.Instance.LogError(ex, "Could not send server status.");
         }
+    }
+
+    private static int GetFreeUdpPort(AddressFamily addressFamily, int? start)
+    {
+        start ??= new Random().Next(1024, 9000);
+        for (var port = start.Value; port < start + 1000; start++)
+        {
+            try
+            {
+                using var udpClient = new UdpClient(port, addressFamily);
+                return port;
+            }
+            catch { /* ignore */ }
+        }
+
+        return 0;
     }
 
     public void Dispose()
@@ -340,7 +360,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         // wait for configuration
         await _configureTask;
         await _sendStatusTask;
-        await _tcpHost.DisposeAsync();
+        await _serverHost.DisposeAsync();
         await SessionManager.DisposeAsync();
 
         if (_autoDisposeAccessServer)

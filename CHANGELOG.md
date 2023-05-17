@@ -1,8 +1,9 @@
-# v2.9.362
+# v2.9.369
 ### Client & Server
-Feature: Use shared UDP port
-Feature: Improve protocol anonymity and anti-fingerprinting for UDP
-Update: Improve security, performance and battery usage
+* Feature: Use shared UDP port 
+* Feature: Improve protocol anonymity and anti-fingerprinting for UDP 
+* Update: Improve security, performance, and battery usage
+* Update: Remove excessive error logs on disconnecting
 
 # v2.8.361
 ### Server

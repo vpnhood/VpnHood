@@ -207,13 +207,13 @@ public class SessionService
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another serverModel if everything was ok
-        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
-        if (bestEndPoint == null)
+        var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
+        if (bestTcpEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
 
-        // redirect if current server does not server the best EndPoint
-        if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestEndPoint)))
-            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
+        // redirect if current server does not serve the best TcpEndPoint
+        if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestTcpEndPoint)))
+            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestTcpEndPoint };
 
         // create session
         var session = new SessionModel
@@ -244,6 +244,11 @@ public class SessionService
         // update AccessToken
         accessToken.FirstUsedTime ??= session.CreatedTime;
         accessToken.LastUsedTime = session.CreatedTime;
+        ret.TcpEndPoints = new[] { bestTcpEndPoint };
+        ret.UdpEndPoints = server.AccessPoints
+            .Where(x => x is { IsPublic: true, UdpPort: > 0 })
+            .Select(x => new IPEndPoint(x.IpAddress, x.UdpPort))
+            .ToArray();
 
         // Add session
         session.Access = null;
@@ -464,8 +469,8 @@ public class SessionService
             .Where(server =>
                 server.ProjectId == currentServer.ProjectId &&
                 server.ServerFarmId == currentServer.ServerFarmId &&
-                server.AccessPoints.Any(accessPoint => 
-                    accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily==currentEndPoint.AddressFamily) &&
+                server.AccessPoints.Any(accessPoint =>
+                    accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
                 IsServerReady(server))
             .ToArray();
 
@@ -476,7 +481,7 @@ public class SessionService
         if (bestServer != null)
         {
             _memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
-            var serverEndPoint = bestServer.AccessPoints.First(accessPoint => 
+            var serverEndPoint = bestServer.AccessPoints.First(accessPoint =>
                 accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily);
             var ret = new IPEndPoint(serverEndPoint.IpAddress, serverEndPoint.TcpPort);
             return ret;

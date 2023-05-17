@@ -126,9 +126,12 @@ public class TcpProxyChannel : IChannel, IJob
         catch (Exception ex)
         {
             // Dispose if any side throw an exception
-            var message = isSendingOut ? "to" : "from";
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, $"TcpProxyChannel: Error in copying {message} tunnel.");
-            Dispose();
+            if (!_disposed)
+            {
+                var message = isSendingOut ? "to" : "from";
+                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, $"TcpProxyChannel: Error in copying {message} tunnel.");
+                Dispose();
+            }
         }
     }
 

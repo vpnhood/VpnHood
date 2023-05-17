@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Providers.FileAccessServerProvider;
@@ -32,7 +33,7 @@ public class FileAccessServerTest
     }
 
     [TestMethod]
-    public void Crud()
+    public async Task Crud()
     {
         var hostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:8000") };
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
@@ -42,6 +43,7 @@ public class FileAccessServerTest
         //add two tokens
         var accessItem1 = accessServer1.AccessItem_Create(hostEndPoints);
         var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
+        sessionRequestEx1.ExtraData = "1234";
 
         var accessItem2 = accessServer1.AccessItem_Create(hostEndPoints);
         var sessionRequestEx2 = TestHelper.CreateSessionRequestEx(accessItem2.Token);
@@ -59,8 +61,13 @@ public class FileAccessServerTest
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
-        Assert.AreEqual(SessionErrorCode.Ok, accessServer1.Session_Create(sessionRequestEx1).Result.ErrorCode,
-            "access has not been retrieved");
+        var sessionResponseEx1 = await accessServer1.Session_Create(sessionRequestEx1);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode, "access has not been retrieved");
+
+        // ************
+        // *** TEST: Get AdditionalDat
+        var sessionResponse = await accessServer1.Session_Get(sessionResponseEx1.SessionId, sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp);
+        Assert.AreEqual(sessionRequestEx1.ExtraData, sessionResponse.ExtraData);
 
         // ************
         // *** TEST ***: Removing token
@@ -96,7 +103,6 @@ public class FileAccessServerTest
         Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result.ErrorCode,
             "access has not been retrieved");
     }
-
 
     [TestMethod]
     public void AddUsage()

@@ -52,7 +52,7 @@ public class TestAccessServer : IAccessServer
         return _httpAccessServer.Server_Configure(serverInfo);
     }
 
-    public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         lock (_lockeObject)
             SessionGetCounter++;
@@ -64,12 +64,12 @@ public class TestAccessServer : IAccessServer
         return _httpAccessServer.Session_Create(sessionRequestEx);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, Traffic traffic)
+    public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
     {
         return _httpAccessServer.Session_AddUsage(sessionId, traffic);
     }
 
-    public Task<SessionResponseBase> Session_Close(uint sessionId, Traffic traffic)
+    public Task<SessionResponseBase> Session_Close(ulong sessionId, Traffic traffic)
     {
         return _httpAccessServer.Session_Close(sessionId, traffic);
     }

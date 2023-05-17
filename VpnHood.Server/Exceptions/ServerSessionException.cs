@@ -13,7 +13,7 @@ public class ServerSessionException : SessionException, ISelfLog
 {
     public IPEndPoint RemoteEndPoint { get; }
     public Guid? TokenId { get; }
-    public uint? SessionId { get; set; }
+    public ulong? SessionId { get; set; }
     public Session? Session { get; }
     public Guid? ClientId { get; }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
@@ -24,6 +25,20 @@ public class ServerTest
     }
 
     [TestMethod]
+    public async Task Configure()
+    {
+        using var fileAccessServer = TestHelper.CreateFileAccessServer();
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
+
+        Assert.IsNotNull(testAccessServer.LastServerInfo);
+        Assert.IsTrue(testAccessServer.LastServerInfo.FreeUdpPortV4 > 0);
+        Assert.IsTrue(
+            testAccessServer.LastServerInfo.PrivateIpAddresses.All(x=>x.AddressFamily!= System.Net.Sockets.AddressFamily.InterNetworkV6) || 
+            testAccessServer.LastServerInfo?.FreeUdpPortV6 > 0);
+    }
+
+    [TestMethod]
     public async Task Auto_sync_sessions_by_interval()
     {
         // Create Server
@@ -39,7 +54,7 @@ public class ServerTest
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
 
         // check usage when usage should be 0
-        var sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
+        var sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
         Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received == 0);
 
         // lets do transfer
@@ -47,7 +62,7 @@ public class ServerTest
 
         // check usage should still not be 0 after interval
         await Task.Delay(1000);
-        sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
+        sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
         Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received > 0);
     }
 
@@ -68,6 +83,7 @@ public class ServerTest
         serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
+        serverConfig.ServerSecret = VhUtil.GenerateKey();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
 
         var dateTime = DateTime.Now;
@@ -80,6 +96,7 @@ public class ServerTest
             await Task.Delay(100);
 
         Assert.AreEqual(fileAccessServer.ServerConfig.ConfigCode, testAccessServer.LastServerStatus!.ConfigCode);
+        CollectionAssert.AreEqual(serverConfig.ServerSecret, server.SessionManager.ServerSecret);
         Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
@@ -204,6 +221,7 @@ public class ServerTest
                 IncludeLocalNetwork = false,
             },
             TcpEndPoints = new[] { IPEndPoint.Parse("2.2.2.2:4433") },
+            UdpEndPoints = new[] { IPEndPoint.Parse("3.3.3.3:5533") },
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

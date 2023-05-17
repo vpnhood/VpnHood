@@ -4,12 +4,12 @@ namespace VpnHood.Tunneling.Messaging;
 
 public class RequestBase
 {
-    public RequestBase(uint sessionId, byte[] sessionKey)
+    public RequestBase(ulong sessionId, byte[] sessionKey)
     {
         SessionId = sessionId;
         SessionKey = sessionKey ?? throw new ArgumentNullException(nameof(sessionKey));
     }
 
-    public uint SessionId { get; set; }
+    public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; }
 }

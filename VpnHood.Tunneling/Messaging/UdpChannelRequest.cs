@@ -2,7 +2,7 @@
 
 public class UdpChannelRequest : RequestBase
 {
-    public UdpChannelRequest(uint sessionId, byte[] sessionKey)
+    public UdpChannelRequest(ulong sessionId, byte[] sessionKey)
         : base(sessionId, sessionKey)
     {
     }

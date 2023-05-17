@@ -10,7 +10,7 @@ public class ServerUnauthorizedAccessException : UnauthorizedAccessException
 {
     public IPEndPointPair IpEndPointPair { get; }
     public Guid? TokenId { get; }
-    public uint? SessionId { get; }
+    public ulong? SessionId { get; }
     public Guid? ClientId { get; }
 
     public ServerUnauthorizedAccessException(string message, IPEndPointPair ipEndPointPair, HelloRequest helloRequest)
@@ -21,7 +21,7 @@ public class ServerUnauthorizedAccessException : UnauthorizedAccessException
         ClientId = helloRequest.ClientInfo.ClientId;
     }
 
-    public ServerUnauthorizedAccessException(string message, IPEndPointPair ipEndPointPair, uint sessionId)
+    public ServerUnauthorizedAccessException(string message, IPEndPointPair ipEndPointPair, ulong sessionId)
         : base(message)
     {
         IpEndPointPair = ipEndPointPair;

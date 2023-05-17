@@ -771,10 +771,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IsIpV6Supported = sessionResponse.IsIpV6Supported;
         _isUdpChannel2 = sessionResponse.UdpEndPoints.Any();
 
-         // set endpoints
-        HostTcpEndPoints =  sessionResponse.TcpEndPoints;
+        // set endpoints
+        HostTcpEndPoints = sessionResponse.TcpEndPoints;
         HostUdpEndPoints = sessionResponse.UdpEndPoints;
-        if (HostUdpEndPoints.Any()) HostUdpEndPoint = HostUdpEndPoints.First();
+        if (HostUdpEndPoints.Any())
+            HostUdpEndPoint = HostUdpEndPoints.FirstOrDefault(x => x.AddressFamily == HostTcpEndPoint?.AddressFamily);
 
         // PacketCaptureIpRanges
         if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))

@@ -178,7 +178,9 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
             // starting the listeners
-            if (_serverHost.IsStarted && !_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue))
+            if (_serverHost.IsStarted && 
+                (!_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue) || 
+                 !_serverHost.UdpEndPoints.SequenceEqual(serverConfig.UdpEndPointsValue)))
             {
                 VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_serverHost)}...");
                 await _serverHost.Stop();

@@ -67,6 +67,28 @@ public class ServerTest
     }
 
     [TestMethod]
+    public async Task Reconfigure_Listeners()
+    {
+        using var fileAccessServer = TestHelper.CreateFileAccessServer();
+        fileAccessServer.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
+        
+        // change tcp end points
+        fileAccessServer.ServerConfig.TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) };
+        fileAccessServer.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(fileAccessServer.ServerConfig.ConfigCode, () => testAccessServer.LastServerStatus!.ConfigCode);
+        Assert.AreNotEqual(VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, fileAccessServer.ServerConfig.TcpEndPoints[0].Port), fileAccessServer.ServerConfig.TcpEndPoints[0]);
+
+
+        // change udp end points
+        fileAccessServer.ServerConfig.UdpEndPoints = new[] { VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback) };
+        fileAccessServer.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(fileAccessServer.ServerConfig.ConfigCode, () => testAccessServer.LastServerStatus!.ConfigCode);
+        Assert.AreNotEqual(VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, fileAccessServer.ServerConfig.UdpEndPoints[0].Port), fileAccessServer.ServerConfig.UdpEndPoints[0]);
+    }
+
+    [TestMethod]
     public async Task Reconfigure()
     {
         var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
@@ -92,10 +114,8 @@ public class ServerTest
 
         dateTime = DateTime.Now;
         fileAccessServer.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        for (var i = 0; i < 30 && fileAccessServer.ServerConfig.ConfigCode != testAccessServer.LastServerStatus!.ConfigCode; i++)
-            await Task.Delay(100);
-
-        Assert.AreEqual(fileAccessServer.ServerConfig.ConfigCode, testAccessServer.LastServerStatus!.ConfigCode);
+        await VhTestUtil.AssertEqualsWait(fileAccessServer.ServerConfig.ConfigCode, ()=> testAccessServer.LastServerStatus!.ConfigCode);
+        
         CollectionAssert.AreEqual(serverConfig.ServerSecret, server.SessionManager.ServerSecret);
         Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
@@ -109,6 +129,7 @@ public class ServerTest
         Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
+
     }
 
     [TestMethod]

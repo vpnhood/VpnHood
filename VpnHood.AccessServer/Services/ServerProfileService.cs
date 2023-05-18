@@ -115,7 +115,7 @@ public class ServerProfileService
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.ServerProfileName.Contains(search) ||
-                x.ServerProfileId.ToString().StartsWith(search))
+                x.ServerProfileId.ToString() == search)
             .OrderByDescending(x => x.IsDefault)
             .ThenBy(x => x.ServerProfileName)
             .Select(x => new ServerProfileData

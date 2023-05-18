@@ -439,11 +439,13 @@ export class CertificatesClient {
         return Promise.resolve<Certificate>(null as any);
     }
 
-    list(projectId: string, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
+    list(projectId: string, search: string | null | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)

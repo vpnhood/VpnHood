@@ -70,7 +70,7 @@ public class CertificateService : ControllerBase
 
     public async Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
     {
-        var list = await List(projectId, certificateId, includeSummary: includeSummary);
+        var list = await List(projectId, certificateId: certificateId, includeSummary: includeSummary);
         return list.Single();
     }
 
@@ -98,13 +98,17 @@ public class CertificateService : ControllerBase
         return certificateModel.ToDto();
     }
 
-    public async Task<IEnumerable<CertificateData>> List(Guid projectId, Guid? certificateId = null,
+    public async Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null, Guid? certificateId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
         var query = _vhContext.Certificates
             .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId)
-            .Where(x => certificateId == null || x.CertificateId == certificateId);
+            .Where(x => certificateId == null || x.CertificateId == certificateId)
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.CommonName.Contains(search) ||
+                x.CertificateId.ToString() == search);
 
         var res = await query
             .OrderBy(x => x.CommonName)

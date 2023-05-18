@@ -51,8 +51,9 @@ public class CertificatesController : ControllerBase
 
     [HttpGet]
     [AuthorizePermission(Permissions.CertificateRead)]
-    public Task<IEnumerable<CertificateData>> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+    public Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null, 
+        int recordIndex = 0, int recordCount = 300)
     {
-        return _certificateService.List(projectId, null, recordIndex: recordIndex, recordCount: recordCount);
+        return _certificateService.List(projectId, search, recordIndex: recordIndex, recordCount: recordCount);
     }
 }

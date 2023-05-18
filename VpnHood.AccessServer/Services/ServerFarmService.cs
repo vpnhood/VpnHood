@@ -38,7 +38,7 @@ public class ServerFarmService
         }
         else
         {
-            certificate = CertificatesController.CreateInternal(projectId, null);
+            certificate = CertificateService.CreateInternal(projectId, null);
             _vhContext.Certificates.Add(certificate);
         }
 
@@ -162,6 +162,7 @@ public class ServerFarmService
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
+            .OrderBy(x=>x.ServerFarmName)
             .Select(x => new
             {
                 ServerFarm = new ServerFarm

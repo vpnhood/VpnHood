@@ -81,6 +81,7 @@ public class Program
         builder.Services.AddScoped<ServerProfileService>();
         builder.Services.AddScoped<ServerService>();
         builder.Services.AddScoped<SubscriptionService>();
+        builder.Services.AddScoped<CertificateService>();
         builder.Services.AddScoped<UsageCycleService>();
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();

@@ -283,7 +283,12 @@ public class VhContext : DbContext
                 .HasForeignKey(e => new { e.ProjectId, e.ServerProfileId })
                 .HasPrincipalKey(e => new { e.ProjectId, e.ServerProfileId })
                 .OnDelete(DeleteBehavior.NoAction);
-
+            
+            entity.HasOne(e => e.Certificate)
+                .WithMany(d => d.ServerFarms)
+                .HasForeignKey(e => new { e.ProjectId, e.CertificateId })
+                .HasPrincipalKey(e => new { e.ProjectId, e.CertificateId })
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<AccessModel>(entity =>

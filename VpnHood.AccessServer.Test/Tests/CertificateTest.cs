@@ -35,8 +35,8 @@ public class CertificateTest
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));
 
         // get
-        certificate = await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId);
-        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificate.CommonName);
+        var certificateData = await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId);
+        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificateData.Certificate.CommonName);
 
         //-----------
         // Create Certificate using subject name
@@ -54,7 +54,7 @@ public class CertificateTest
             Password = new PatchOfString { Value = password }
         });
 
-        certificate = await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId);
+        certificate = (await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId)).Certificate;
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificate.CommonName);
 
         //-----------
@@ -75,6 +75,6 @@ public class CertificateTest
         //-----------
         var certificates = await certificateClient.ListAsync(testInit.ProjectId);
         Assert.IsTrue(certificates.Count > 0);
-        Assert.IsFalse(certificates.Any(x => x.RawData != null));
+        Assert.IsFalse(certificates.Any(x => x.Certificate.RawData != null));
     }
 }

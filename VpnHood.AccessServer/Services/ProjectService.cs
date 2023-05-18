@@ -60,7 +60,7 @@ public class ProjectService
         {
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
-            Certificate = CertificatesController.CreateInternal(projectId, null),
+            Certificate = CertificateService.CreateInternal(projectId, null),
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow

@@ -439,7 +439,7 @@ export class CertificatesClient {
         return Promise.resolve<Certificate>(null as any);
     }
 
-    list(projectId: string, recordIndex: number | undefined, recordCount: number | undefined): Promise<Certificate[]> {
+    list(projectId: string, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -466,7 +466,7 @@ export class CertificatesClient {
         });
     }
 
-    protected processList(response: Response): Promise<Certificate[]> {
+    protected processList(response: Response): Promise<CertificateData[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -476,7 +476,7 @@ export class CertificatesClient {
             if (Array.isArray(resultData200)) {
                 result200 = [] as any;
                 for (let item of resultData200)
-                    result200!.push(Certificate.fromJS(item));
+                    result200!.push(CertificateData.fromJS(item));
             }
             else {
                 result200 = <any>null;
@@ -488,10 +488,10 @@ export class CertificatesClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<Certificate[]>(null as any);
+        return Promise.resolve<CertificateData[]>(null as any);
     }
 
-    get(projectId: string, certificateId: string): Promise<Certificate> {
+    get(projectId: string, certificateId: string): Promise<CertificateData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/{certificateId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -513,14 +513,14 @@ export class CertificatesClient {
         });
     }
 
-    protected processGet(response: Response): Promise<Certificate> {
+    protected processGet(response: Response): Promise<CertificateData> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = Certificate.fromJS(resultData200);
+            result200 = CertificateData.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -528,7 +528,7 @@ export class CertificatesClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<Certificate>(null as any);
+        return Promise.resolve<CertificateData>(null as any);
     }
 
     delete(projectId: string, certificateId: string): Promise<void> {
@@ -3921,6 +3921,85 @@ export interface ICertificateCreateParams {
     subjectName?: string | undefined;
     rawData?: string | undefined;
     password?: string | undefined;
+}
+
+export class CertificateData implements ICertificateData {
+    certificate!: Certificate;
+    summary?: CertificateSummary | undefined;
+
+    constructor(data?: ICertificateData) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.certificate = new Certificate();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.certificate = _data["certificate"] ? Certificate.fromJS(_data["certificate"]) : new Certificate();
+            this.summary = _data["summary"] ? CertificateSummary.fromJS(_data["summary"]) : <any>undefined;
+        }
+    }
+
+    static fromJS(data: any): CertificateData {
+        data = typeof data === 'object' ? data : {};
+        let result = new CertificateData();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["certificate"] = this.certificate ? this.certificate.toJSON() : <any>undefined;
+        data["summary"] = this.summary ? this.summary.toJSON() : <any>undefined;
+        return data;
+    }
+}
+
+export interface ICertificateData {
+    certificate: Certificate;
+    summary?: CertificateSummary | undefined;
+}
+
+export class CertificateSummary implements ICertificateSummary {
+    serverFarmCount!: number;
+
+    constructor(data?: ICertificateSummary) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.serverFarmCount = _data["serverFarmCount"];
+        }
+    }
+
+    static fromJS(data: any): CertificateSummary {
+        data = typeof data === 'object' ? data : {};
+        let result = new CertificateSummary();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["serverFarmCount"] = this.serverFarmCount;
+        return data;
+    }
+}
+
+export interface ICertificateSummary {
+    serverFarmCount: number;
 }
 
 export class CertificateUpdateParams implements ICertificateUpdateParams {

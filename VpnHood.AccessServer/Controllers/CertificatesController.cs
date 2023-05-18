@@ -53,6 +53,6 @@ public class CertificatesController : ControllerBase
     [AuthorizePermission(Permissions.CertificateRead)]
     public Task<IEnumerable<CertificateData>> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
-        return _certificateService.List(projectId, null, recordIndex, recordCount);
+        return _certificateService.List(projectId, null, recordIndex: recordIndex, recordCount: recordCount);
     }
 }

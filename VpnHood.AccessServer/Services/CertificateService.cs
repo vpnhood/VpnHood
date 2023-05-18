@@ -68,9 +68,9 @@ public class CertificateService : ControllerBase
     }
 
 
-    public async Task<CertificateData> Get(Guid projectId, Guid certificateId)
+    public async Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
     {
-        var list = await List(projectId, certificateId);
+        var list = await List(projectId, certificateId, includeSummary: includeSummary);
         return list.Single();
     }
 
@@ -99,7 +99,7 @@ public class CertificateService : ControllerBase
     }
 
     public async Task<IEnumerable<CertificateData>> List(Guid projectId, Guid? certificateId = null,
-        int recordIndex = 0, int recordCount = 300)
+        bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
         var query = _vhContext.Certificates
             .Include(x => x.ServerFarms)
@@ -119,10 +119,10 @@ public class CertificateService : ControllerBase
                     CreatedTime = x.CreatedTime,
                     ExpirationTime = x.ExpirationTime
                 },
-                Summary = new CertificateSummary
+                Summary = includeSummary ? new CertificateSummary
                 {
                     ServerFarmCount = x.ServerFarms!.Count()
-                }
+                } : null
             })
             .ToArrayAsync();
 

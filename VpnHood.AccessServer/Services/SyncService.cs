@@ -85,7 +85,7 @@ public class SyncService
             await _reportWriterService.Write(items);
 
             // remove synced items
-            _logger.LogInformation(AccessEventId.Archive, $"Removing old synced ServerStatuses from agent database. Count: {items.Length}");
+            _logger.LogInformation(AccessEventId.Archive, "Removing old synced ServerStatuses from agent database. Count: {Count}", items.Length);
             var ids = items.Select(x => x.ServerStatusId);
             await _vhContext.ServerStatuses
                 .Where(x => ids.Contains(x.ServerStatusId))

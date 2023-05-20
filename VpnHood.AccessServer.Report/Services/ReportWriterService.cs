@@ -46,7 +46,7 @@ public class ReportWriterService
         catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
-            _logger.LogInformation(AccessEventId.Archive, "Managing duplicate ServerStatuses...");
+            _logger.LogWarning(AccessEventId.Archive, "Managing duplicate ServerStatuses...");
             _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.ServerStatusId);
@@ -54,7 +54,7 @@ public class ReportWriterService
             var items2 = items.Where(x => duplicates.All(y => x.ServerStatusId != y.ServerStatusId)).ToArray();
             if (items2.Any())
             {
-                await _vhReportContext.ServerStatuses.AddRangeAsync(items);
+                await _vhReportContext.ServerStatuses.AddRangeAsync(items2);
                 await _vhReportContext.SaveChangesAsync();
             }
         }

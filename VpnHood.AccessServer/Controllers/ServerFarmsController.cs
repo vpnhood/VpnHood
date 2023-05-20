@@ -33,7 +33,7 @@ public class ServerFarmsController : ControllerBase
 
     [HttpPatch("{serverFarmId:guid}")]
     [AuthorizePermission(Permissions.ServerFarmWrite)]
-    public Task<ServerFarm> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
+    public Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         return _serverFarmService.Update(projectId, serverFarmId, updateParams);
     }

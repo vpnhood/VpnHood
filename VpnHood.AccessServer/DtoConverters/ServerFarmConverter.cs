@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerFarmConverter
 {
-    public static ServerFarm ToDto(this ServerFarmModel model)
+    public static ServerFarm ToDto(this ServerFarmModel model, string serverProfileName)
     {
         var dto = new ServerFarm
         {
@@ -14,7 +14,7 @@ public static class ServerFarmConverter
             CertificateId = model.CertificateId,
             CreatedTime = model.CreatedTime,
             ServerProfileId = model.ServerProfileId,
-            ServerProfileName = model.ServerProfile?.ServerProfileName,
+            ServerProfileName = serverProfileName,
             Secret = model.Secret
         };
 

@@ -3392,7 +3392,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ServerFarm> UpdateAsync(System.Guid projectId, System.Guid serverFarmId, ServerFarmUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerFarmData> UpdateAsync(System.Guid projectId, System.Guid serverFarmId, ServerFarmUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3444,7 +3444,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ServerFarm>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ServerFarmData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -7470,8 +7470,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileName")]
 
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? ServerProfileName { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ServerProfileName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
@@ -7515,27 +7516,6 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.19.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServerFarmUpdateParams
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString? ServerFarmName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid? CertificateId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfGuid? ServerProfileId { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.19.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ServerFarmData
     {
 
@@ -7544,6 +7524,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required]
         public ServerFarm ServerFarm { get; set; } = new ServerFarm();
+
+        [System.Text.Json.Serialization.JsonPropertyName("certificate")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required]
+        public Certificate Certificate { get; set; } = new Certificate();
 
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
 
@@ -7580,6 +7566,27 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int ServerCount { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.19.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerFarmUpdateParams
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfString? ServerFarmName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfGuid? CertificateId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfGuid? ServerProfileId { get; set; } = default!;
 
     }
 

@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
@@ -74,10 +74,10 @@ public class ServerFarmService
 
         await _vhContext.ServerFarms.AddAsync(ret);
         await _vhContext.SaveChangesAsync();
-        return ret.ToDto();
+        return ret.ToDto(serverProfile.ServerProfileName);
     }
 
-    public async Task<ServerFarm> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
+    public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         var serverFarm = await _vhContext.ServerFarms
             .Include(x => x.ServerProfile)
@@ -115,7 +115,8 @@ public class ServerFarmService
         if (isServerProfileChanged)
             await _serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
 
-        return serverFarm.ToDto();
+        var ret = (await List(projectId, serverFarmId: serverFarmId)).Single();
+        return ret;
     }
 
     public async Task<ServerFarmData[]> List(Guid projectId, string? search = null,
@@ -123,25 +124,35 @@ public class ServerFarmService
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = _vhContext.ServerFarms
-            .Include(x => x.ServerProfile)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
-            .OrderByDescending(x => x.ServerFarmName);
-
-        var serverFarms = await query
+            .Select(x => new
+            {
+                ServerFarm = x,
+                x.ServerProfile!.ServerProfileName,
+                Certificate = new CertificateModel
+                {
+                    CertificateId = x.CertificateId,
+                    CommonName = x.Certificate!.CommonName,
+                    CreatedTime = x.Certificate.CreatedTime,
+                    ExpirationTime = x.Certificate.ExpirationTime
+                }
+            })
+            .OrderByDescending(x => x.ServerFarm.ServerFarmName)
             .Skip(recordIndex)
             .Take(recordCount)
-            .AsNoTracking()
-            .ToArrayAsync();
+            .AsNoTracking();
 
+        var serverFarms = await query.ToArrayAsync();
         var dtos = serverFarms
-            .Select(serverFarm => new ServerFarmData
+            .Select(x => new ServerFarmData
             {
-                ServerFarm = serverFarm.ToDto(),
+                ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
+                Certificate = x.Certificate.ToDto()
             });
 
         return dtos.ToArray();
@@ -153,27 +164,22 @@ public class ServerFarmService
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = _vhContext.ServerFarms
-            .Include(x => x.ServerProfile)
-            .Include(x => x.Servers)
-            .Include(x => x.AccessTokens)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.ServerFarmName.Contains(search) ||
                 x.ServerFarmId.ToString().StartsWith(search))
-            .OrderBy(x=>x.ServerFarmName)
             .Select(x => new
             {
-                ServerFarm = new ServerFarm
+                ServerFarm = x,
+                x.ServerProfile!.ServerProfileName,
+                Certificate = new CertificateModel
                 {
-                    ServerFarmId = x.ServerFarmId,
                     CertificateId = x.CertificateId,
-                    CreatedTime = x.CreatedTime,
-                    ServerFarmName = x.ServerFarmName,
-                    ServerProfileId = x.ServerProfileId,
-                    ServerProfileName = x.ServerProfile!.ServerProfileName,
-                    Secret = x.Secret,
+                    CommonName = x.Certificate!.CommonName,
+                    CreatedTime = x.Certificate.CreatedTime,
+                    ExpirationTime = x.Certificate.ExpirationTime
                 },
                 ServerCount = x.Servers!.Count(y => !y.IsDeleted),
                 AccessTokens = x.AccessTokens!.Select(y => new { y.IsDeleted, y.FirstUsedTime, y.LastUsedTime }).ToArray()
@@ -181,6 +187,7 @@ public class ServerFarmService
 
         // get farms
         var results = await query
+            .OrderBy(x => x.ServerFarm.ServerFarmName)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking()
@@ -190,7 +197,8 @@ public class ServerFarmService
         var now = DateTime.UtcNow;
         var ret = results.Select(x => new ServerFarmData
         {
-            ServerFarm = x.ServerFarm,
+            ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
+            Certificate = x.Certificate.ToDto(),
             Summary = new ServerFarmSummary
             {
                 ActiveTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime >= now.AddDays(-7)),

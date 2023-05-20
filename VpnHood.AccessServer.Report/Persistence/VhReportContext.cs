@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Report.Persistence;
-//using static Microsoft.EntityFrameworkCore.NpgsqlIndexBuilderExtensions;
 
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext

@@ -98,12 +98,12 @@ public class CertificateService : ControllerBase
         return certificateModel.ToDto();
     }
 
-    public async Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null, 
+    public async Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null,
         Guid? certificateId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
         var query = _vhContext.Certificates
-            .Include(x => x.ServerFarms!.Take(5))
+            .Include(x => x.ServerFarms!.OrderBy(y => y.ServerFarmName).Take(5))
             .Where(x => x.ProjectId == projectId)
             .Where(x => certificateId == null || x.CertificateId == certificateId)
             .Where(x =>
@@ -122,10 +122,11 @@ public class CertificateService : ControllerBase
                     CertificateId = x.CertificateId,
                     CommonName = x.CommonName,
                     CreatedTime = x.CreatedTime,
-                    ExpirationTime = x.ExpirationTime
+                    ExpirationTime = x.ExpirationTime,
+                    RawData = null,
                 },
-                ServerFarms = includeSummary 
-                    ? x.ServerFarms!.Select(y => IdName.Create(y.ServerFarmId, y.ServerFarmName)) 
+                ServerFarms = includeSummary
+                    ? x.ServerFarms!.Select(y => IdName.Create(y.ServerFarmId, y.ServerFarmName))
                     : null
             })
             .ToArrayAsync();

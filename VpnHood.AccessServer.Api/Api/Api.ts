@@ -1476,7 +1476,7 @@ export class ServerFarmsClient {
         return Promise.resolve<ServerFarmData[]>(null as any);
     }
 
-    update(projectId: string, serverFarmId: string, updateParams: ServerFarmUpdateParams): Promise<ServerFarm> {
+    update(projectId: string, serverFarmId: string, updateParams: ServerFarmUpdateParams): Promise<ServerFarmData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms/{serverFarmId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1502,14 +1502,14 @@ export class ServerFarmsClient {
         });
     }
 
-    protected processUpdate(response: Response): Promise<ServerFarm> {
+    protected processUpdate(response: Response): Promise<ServerFarmData> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ServerFarm.fromJS(resultData200);
+            result200 = ServerFarmData.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -1517,7 +1517,7 @@ export class ServerFarmsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ServerFarm>(null as any);
+        return Promise.resolve<ServerFarmData>(null as any);
     }
 
     get(projectId: string, serverFarmId: string, includeSummary: boolean | undefined): Promise<ServerFarmData> {
@@ -4492,7 +4492,7 @@ export class ServerFarm implements IServerFarm {
     serverFarmId!: string;
     serverFarmName!: string;
     serverProfileId!: string;
-    serverProfileName?: string | undefined;
+    serverProfileName!: string;
     certificateId!: string;
     secret!: string;
     createdTime!: Date;
@@ -4542,7 +4542,7 @@ export interface IServerFarm {
     serverFarmId: string;
     serverFarmName: string;
     serverProfileId: string;
-    serverProfileName?: string | undefined;
+    serverProfileName: string;
     certificateId: string;
     secret: string;
     createdTime: Date;
@@ -4592,52 +4592,9 @@ export interface IServerFarmCreateParams {
     certificateId?: string | undefined;
 }
 
-export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
-    serverFarmName?: PatchOfString | undefined;
-    certificateId?: PatchOfGuid | undefined;
-    serverProfileId?: PatchOfGuid | undefined;
-
-    constructor(data?: IServerFarmUpdateParams) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.serverFarmName = _data["serverFarmName"] ? PatchOfString.fromJS(_data["serverFarmName"]) : <any>undefined;
-            this.certificateId = _data["certificateId"] ? PatchOfGuid.fromJS(_data["certificateId"]) : <any>undefined;
-            this.serverProfileId = _data["serverProfileId"] ? PatchOfGuid.fromJS(_data["serverProfileId"]) : <any>undefined;
-        }
-    }
-
-    static fromJS(data: any): ServerFarmUpdateParams {
-        data = typeof data === 'object' ? data : {};
-        let result = new ServerFarmUpdateParams();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["serverFarmName"] = this.serverFarmName ? this.serverFarmName.toJSON() : <any>undefined;
-        data["certificateId"] = this.certificateId ? this.certificateId.toJSON() : <any>undefined;
-        data["serverProfileId"] = this.serverProfileId ? this.serverProfileId.toJSON() : <any>undefined;
-        return data;
-    }
-}
-
-export interface IServerFarmUpdateParams {
-    serverFarmName?: PatchOfString | undefined;
-    certificateId?: PatchOfGuid | undefined;
-    serverProfileId?: PatchOfGuid | undefined;
-}
-
 export class ServerFarmData implements IServerFarmData {
     serverFarm!: ServerFarm;
+    certificate!: Certificate;
     summary?: ServerFarmSummary | undefined;
 
     constructor(data?: IServerFarmData) {
@@ -4649,12 +4606,14 @@ export class ServerFarmData implements IServerFarmData {
         }
         if (!data) {
             this.serverFarm = new ServerFarm();
+            this.certificate = new Certificate();
         }
     }
 
     init(_data?: any) {
         if (_data) {
             this.serverFarm = _data["serverFarm"] ? ServerFarm.fromJS(_data["serverFarm"]) : new ServerFarm();
+            this.certificate = _data["certificate"] ? Certificate.fromJS(_data["certificate"]) : new Certificate();
             this.summary = _data["summary"] ? ServerFarmSummary.fromJS(_data["summary"]) : <any>undefined;
         }
     }
@@ -4669,6 +4628,7 @@ export class ServerFarmData implements IServerFarmData {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["serverFarm"] = this.serverFarm ? this.serverFarm.toJSON() : <any>undefined;
+        data["certificate"] = this.certificate ? this.certificate.toJSON() : <any>undefined;
         data["summary"] = this.summary ? this.summary.toJSON() : <any>undefined;
         return data;
     }
@@ -4676,6 +4636,7 @@ export class ServerFarmData implements IServerFarmData {
 
 export interface IServerFarmData {
     serverFarm: ServerFarm;
+    certificate: Certificate;
     summary?: ServerFarmSummary | undefined;
 }
 
@@ -4729,6 +4690,50 @@ export interface IServerFarmSummary {
     inactiveTokenCount: number;
     unusedTokenCount: number;
     serverCount: number;
+}
+
+export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
+    serverFarmName?: PatchOfString | undefined;
+    certificateId?: PatchOfGuid | undefined;
+    serverProfileId?: PatchOfGuid | undefined;
+
+    constructor(data?: IServerFarmUpdateParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.serverFarmName = _data["serverFarmName"] ? PatchOfString.fromJS(_data["serverFarmName"]) : <any>undefined;
+            this.certificateId = _data["certificateId"] ? PatchOfGuid.fromJS(_data["certificateId"]) : <any>undefined;
+            this.serverProfileId = _data["serverProfileId"] ? PatchOfGuid.fromJS(_data["serverProfileId"]) : <any>undefined;
+        }
+    }
+
+    static fromJS(data: any): ServerFarmUpdateParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerFarmUpdateParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["serverFarmName"] = this.serverFarmName ? this.serverFarmName.toJSON() : <any>undefined;
+        data["certificateId"] = this.certificateId ? this.certificateId.toJSON() : <any>undefined;
+        data["serverProfileId"] = this.serverProfileId ? this.serverProfileId.toJSON() : <any>undefined;
+        return data;
+    }
+}
+
+export interface IServerFarmUpdateParams {
+    serverFarmName?: PatchOfString | undefined;
+    certificateId?: PatchOfGuid | undefined;
+    serverProfileId?: PatchOfGuid | undefined;
 }
 
 export class ServerProfile implements IServerProfile {

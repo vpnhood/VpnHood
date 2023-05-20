@@ -59,7 +59,7 @@ public class ServerFarmTest
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
         Assert.AreEqual(2, accessFarmData.Summary!.UnusedTokenCount);
         Assert.AreEqual(0, accessFarmData.Summary!.InactiveTokenCount);
-        Assert.AreEqual(16, accessFarmData.ServerFarm.Secret?.Length);
+        Assert.AreEqual(16, accessFarmData.ServerFarm.Secret.Length);
 
         var accessTokenDom = await farm1.CreateAccessToken(true);
         var accessKey = await accessTokenDom.GetAccessKey();
@@ -142,6 +142,23 @@ public class ServerFarmTest
     }
 
     [TestMethod]
+    public async Task List()
+    {
+        var farm1 = await ServerFarmDom.Create(serverCount: 1);
+        var farm2 = await ServerFarmDom.Create(farm1.TestInit, serverCount: 1);
+        await farm1.DefaultServer.CreateSession((await farm1.CreateAccessToken()).AccessToken);
+        await farm2.DefaultServer.CreateSession((await farm2.CreateAccessToken()).AccessToken);
+
+        var farms = await farm1.TestInit.ServerFarmsClient.ListAsync(farm1.TestInit.ProjectId, includeSummary: false);
+        Assert.AreEqual(3, farms.Count);
+        Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
+        Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
+        Assert.IsNotNull(farms.First().Certificate);
+        Assert.IsNull(farms.First().Certificate.RawData);
+    }
+
+
+    [TestMethod]
     public async Task List_with_summary()
     {
         var farm1 = await ServerFarmDom.Create(serverCount: 1);
@@ -153,6 +170,8 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
+        Assert.IsNotNull(farms.First().Certificate);
+        Assert.IsNull(farms.First().Certificate.RawData);
     }
 
     [TestMethod]

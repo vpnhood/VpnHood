@@ -49,10 +49,11 @@ public class ServerFarmDom
         return serverFarm;
     }
 
-    public async Task<ServerFarm> Update(ServerFarmUpdateParams updateParams)
+    public async Task<ServerFarmData> Update(ServerFarmUpdateParams updateParams)
     {
-        ServerFarm = await Client.UpdateAsync(ProjectId, ServerFarmId, updateParams);
-        return ServerFarm;
+        var serverFarmData = await Client.UpdateAsync(ProjectId, ServerFarmId, updateParams);
+        ServerFarm = serverFarmData.ServerFarm;
+        return serverFarmData;
     }
 
     public async Task<ServerFarmData> Reload()

@@ -439,13 +439,17 @@ export class CertificatesClient {
         return Promise.resolve<Certificate>(null as any);
     }
 
-    list(projectId: string, search: string | null | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
+    list(projectId: string, search: string | null | undefined, includeSummary: boolean | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (search !== undefined && search !== null)
             url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (includeSummary === null)
+            throw new Error("The parameter 'includeSummary' cannot be null.");
+        else if (includeSummary !== undefined)
+            url_ += "includeSummary=" + encodeURIComponent("" + includeSummary) + "&";
         if (recordIndex === null)
             throw new Error("The parameter 'recordIndex' cannot be null.");
         else if (recordIndex !== undefined)
@@ -3927,6 +3931,7 @@ export interface ICertificateCreateParams {
 
 export class CertificateData implements ICertificateData {
     certificate!: Certificate;
+    serverFarms?: IdNameOfGuid[] | undefined;
     summary?: CertificateSummary | undefined;
 
     constructor(data?: ICertificateData) {
@@ -3944,6 +3949,11 @@ export class CertificateData implements ICertificateData {
     init(_data?: any) {
         if (_data) {
             this.certificate = _data["certificate"] ? Certificate.fromJS(_data["certificate"]) : new Certificate();
+            if (Array.isArray(_data["serverFarms"])) {
+                this.serverFarms = [] as any;
+                for (let item of _data["serverFarms"])
+                    this.serverFarms!.push(IdNameOfGuid.fromJS(item));
+            }
             this.summary = _data["summary"] ? CertificateSummary.fromJS(_data["summary"]) : <any>undefined;
         }
     }
@@ -3958,6 +3968,11 @@ export class CertificateData implements ICertificateData {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["certificate"] = this.certificate ? this.certificate.toJSON() : <any>undefined;
+        if (Array.isArray(this.serverFarms)) {
+            data["serverFarms"] = [];
+            for (let item of this.serverFarms)
+                data["serverFarms"].push(item.toJSON());
+        }
         data["summary"] = this.summary ? this.summary.toJSON() : <any>undefined;
         return data;
     }
@@ -3965,7 +3980,48 @@ export class CertificateData implements ICertificateData {
 
 export interface ICertificateData {
     certificate: Certificate;
+    serverFarms?: IdNameOfGuid[] | undefined;
     summary?: CertificateSummary | undefined;
+}
+
+export class IdNameOfGuid implements IIdNameOfGuid {
+    id!: string;
+    name!: string;
+
+    constructor(data?: IIdNameOfGuid) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+        }
+    }
+
+    static fromJS(data: any): IdNameOfGuid {
+        data = typeof data === 'object' ? data : {};
+        let result = new IdNameOfGuid();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        return data;
+    }
+}
+
+export interface IIdNameOfGuid {
+    id: string;
+    name: string;
 }
 
 export class CertificateSummary implements ICertificateSummary {

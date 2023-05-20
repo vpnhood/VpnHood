@@ -30,9 +30,9 @@ public class CertificatesController : ControllerBase
 
     [HttpGet("{certificateId:guid}")]
     [AuthorizePermission(Permissions.CertificateRead)]
-    public Task<CertificateData> Get(Guid projectId, Guid certificateId)
+    public Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary)
     {
-        return _certificateService.Get(projectId, certificateId);
+        return _certificateService.Get(projectId, certificateId, includeSummary);
     }
 
     [HttpDelete("{certificateId:guid}")]

@@ -74,10 +74,13 @@ public class IpLocksController : ControllerBase
 
     [HttpGet]
     [AuthorizePermission(Permissions.ProjectRead)]
-    public async Task<IpLock[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+    public async Task<IpLock[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 300)
     {
         var ret = await _vhContext.IpLocks
             .Where(x => x.ProjectId == projectId)
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.IpAddress.Contains(search))
             .Select(x=>x.ToDto())
             .Skip(recordIndex)
             .Take(recordCount)

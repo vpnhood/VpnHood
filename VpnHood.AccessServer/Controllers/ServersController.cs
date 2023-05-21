@@ -49,7 +49,7 @@ public class ServersController : ControllerBase
     [AuthorizePermission(Permissions.ProjectRead)]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
-        var list = await _serverService.List(projectId, serverId);
+        var list = await _serverService.List(projectId, serverId: serverId);
         return list.Single();
     }
 
@@ -62,10 +62,10 @@ public class ServersController : ControllerBase
 
     [HttpGet]
     [AuthorizePermission(Permissions.ProjectRead)]
-    public Task<ServerData[]> List(Guid projectId, Guid? serverId = null, Guid? serverFarmId = null,
+    public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null, Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = 1000)
     {
-        return _serverService.List(projectId, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
+        return _serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
     }
 
     [HttpPost("{serverId:guid}/reconfigure")]

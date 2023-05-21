@@ -129,6 +129,7 @@ public class ServerService
     }
 
     public async Task<ServerData[]> List(Guid projectId,
+        string? search = null,
         Guid? serverId = null,
         Guid? serverFarmId = null,
         int recordIndex = 0,
@@ -141,7 +142,12 @@ public class ServerService
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
             .Include(server => server.ServerFarm)
             .Where(server => serverId == null || server.ServerId == serverId)
-            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId);
+            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.ServerName.Contains(search) ||
+                x.ServerId.ToString() == search ||
+                x.ServerFarmId.ToString() == search);
 
         var servers = await query
             .AsNoTracking()

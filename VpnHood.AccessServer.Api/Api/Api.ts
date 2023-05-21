@@ -497,14 +497,18 @@ export class CertificatesClient {
         return Promise.resolve<CertificateData[]>(null as any);
     }
 
-    get(projectId: string, certificateId: string): Promise<CertificateData> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/{certificateId}";
+    get(projectId: string, certificateId: string, includeSummary: boolean | undefined): Promise<CertificateData> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/{certificateId}?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
         if (certificateId === undefined || certificateId === null)
             throw new Error("The parameter 'certificateId' must be defined.");
         url_ = url_.replace("{certificateId}", encodeURIComponent("" + certificateId));
+        if (includeSummary === null)
+            throw new Error("The parameter 'includeSummary' cannot be null.");
+        else if (includeSummary !== undefined)
+            url_ += "includeSummary=" + encodeURIComponent("" + includeSummary) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -1886,11 +1890,13 @@ export class ServersClient {
         return Promise.resolve<VpnServer>(null as any);
     }
 
-    list(projectId: string, serverId: string | null | undefined, serverFarmId: string | null | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<ServerData[]> {
+    list(projectId: string, search: string | null | undefined, serverId: string | null | undefined, serverFarmId: string | null | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<ServerData[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (serverId !== undefined && serverId !== null)
             url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
         if (serverFarmId !== undefined && serverFarmId !== null)

@@ -127,9 +127,9 @@ public class ServerFarmService
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
-                string.IsNullOrEmpty(search) ||
+                string.IsNullOrEmpty(search) || 
                 x.ServerFarmName.Contains(search) ||
-                x.ServerFarmId.ToString().StartsWith(search))
+                x.ServerFarmId.ToString() == search )
             .Select(x => new
             {
                 ServerFarm = x,

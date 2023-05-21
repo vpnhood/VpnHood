@@ -103,7 +103,7 @@ public class CertificateService : ControllerBase
         bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
         var query = _vhContext.Certificates
-            .Include(x => x.ServerFarms!.OrderBy(y => y.ServerFarmName).Take(5))
+            .Include(x => x.ServerFarms!.Where(y => !y.IsDeleted).OrderBy(y => y.ServerFarmName).Take(5))
             .Where(x => x.ProjectId == projectId)
             .Where(x => certificateId == null || x.CertificateId == certificateId)
             .Where(x =>

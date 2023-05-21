@@ -1119,7 +1119,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CertificateData> GetAsync(System.Guid projectId, System.Guid certificateId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<CertificateData> GetAsync(System.Guid projectId, System.Guid certificateId, bool? includeSummary = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1128,9 +1128,14 @@ namespace VpnHood.AccessServer.Api
                 throw new System.ArgumentNullException("certificateId");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/projects/{projectId}/certificates/{certificateId}");
+            urlBuilder_.Append("api/v1/projects/{projectId}/certificates/{certificateId}?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             urlBuilder_.Replace("{certificateId}", System.Uri.EscapeDataString(ConvertToString(certificateId, System.Globalization.CultureInfo.InvariantCulture)));
+            if (includeSummary != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("includeSummary") + "=").Append(System.Uri.EscapeDataString(ConvertToString(includeSummary, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            urlBuilder_.Length--;
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4340,7 +4345,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerData>> ListAsync(System.Guid projectId, System.Guid? serverId = null, System.Guid? serverFarmId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerData>> ListAsync(System.Guid projectId, string? search = null, System.Guid? serverId = null, System.Guid? serverFarmId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -4348,6 +4353,10 @@ namespace VpnHood.AccessServer.Api
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/v1/projects/{projectId}/servers?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
+            if (search != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("search") + "=").Append(System.Uri.EscapeDataString(ConvertToString(search, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
             if (serverId != null)
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("serverId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");

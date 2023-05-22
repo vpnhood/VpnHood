@@ -16,14 +16,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 // ReSharper disable UnusedMember.Global
 namespace VpnHood.Common.Client;
 
-public class ApiClientBase
+public class ApiClientBase : ApiClientCommon
 {
     private class HttpNoResult
     {
 
     }
 
-    protected struct HttpResult<T>
+    protected readonly struct HttpResult<T>
     {
         public HttpResult(HttpResponseMessage responseMessage, T responseObject, string responseText)
         {
@@ -38,7 +38,7 @@ public class ApiClientBase
     }
 
     protected JsonSerializerOptions JsonSerializerSettings => Settings.Value;
-    protected HttpClient HttpClient;
+    protected HttpClient? HttpClient;
     protected readonly Lazy<JsonSerializerOptions> Settings;
     public ILogger Logger { get; set; } = NullLogger.Instance;
     public EventId LoggerEventId { get; set; } = new();
@@ -49,19 +49,10 @@ public class ApiClientBase
         Settings = new Lazy<JsonSerializerOptions>(CreateSerializerSettings);
     }
 
-    public Uri? DefaultBaseAddress { get; set; }
-    public AuthenticationHeaderValue? DefaultAuthorization { get; set; }
-
-    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, CancellationToken ct)
+    protected ApiClientBase()
     {
-        return Task.CompletedTask;
+        Settings = new Lazy<JsonSerializerOptions>(CreateSerializerSettings);
     }
-
-    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
-    {
-        return Task.CompletedTask;
-    }
-
 
     protected virtual JsonSerializerOptions CreateSerializerSettings()
     {
@@ -229,17 +220,9 @@ public class ApiClientBase
             urlBuilder.Length--;
         }
 
-        var client = HttpClient;
-        var url = urlBuilder.ToString();
-        request.RequestUri = new Uri(url, UriKind.RelativeOrAbsolute);
-        request.Headers.Authorization ??= DefaultAuthorization;
+        var client = HttpClient ?? throw new Exception("HttpClient has not been set.");
+        await PrepareRequestAsync(client, request, urlBuilder, cancellationToken).ConfigureAwait(false);
 
-        // build url
-        await PrepareRequestAsync(client, request, url, cancellationToken).ConfigureAwait(false);
-
-        // add DefaultBaseAddress if exists and request uri is relative
-        if (DefaultBaseAddress != null && !request.RequestUri.IsAbsoluteUri)
-            request.RequestUri = new Uri(DefaultBaseAddress, request.RequestUri);
 
         using var response = await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);

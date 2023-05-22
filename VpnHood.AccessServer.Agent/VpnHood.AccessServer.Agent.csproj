@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="GrayMint.Authorization" Version="2.0.30" />
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.138" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.140" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
   </ItemGroup>
 

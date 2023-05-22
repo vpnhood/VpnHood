@@ -21,7 +21,7 @@ public class CertificatesController : ControllerBase
         _certificateService = certificateService;
     }
 
-    [HttpPost]
+    [HttpPost("self-signed")]
     [AuthorizePermission(Permissions.CertificateWrite)]
     public Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {

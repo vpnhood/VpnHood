@@ -7,7 +7,9 @@ public class CertificateModel
     public string CommonName { get; set; } = default!;
     public byte[] RawData { get; set; } = null!;
     public DateTime ExpirationTime { get; set; }
+    public string? ThumbPrint { get; set; }
     public DateTime CreatedTime { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ICollection<ServerFarmModel>? ServerFarms { get; set; }

@@ -56,8 +56,8 @@
 
   <ItemGroup>
     <PackageReference Include="GrayMint.Authorization" Version="2.0.30" />
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.138" />
-    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.138" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.140" />
+    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.140" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

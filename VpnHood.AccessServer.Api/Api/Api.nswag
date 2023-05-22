@@ -62,7 +62,7 @@
   },
   "codeGenerators": {
     "openApiToCSharpClient": {
-      "clientBaseClass": null,
+      "clientBaseClass": "VpnHood.Common.Client.ApiClientCommon",
       "configurationClass": null,
       "generateClientClasses": true,
       "generateClientInterfaces": false,
@@ -79,7 +79,7 @@
       "useBaseUrl": false,
       "generateBaseUrlProperty": true,
       "generateSyncMethods": false,
-      "generatePrepareRequestAndProcessResponseAsAsyncMethods": false,
+      "generatePrepareRequestAndProcessResponseAsAsyncMethods": true,
       "exposeJsonSerializerSettings": false,
       "clientClassAccessModifier": "public",
       "typeAccessModifier": "public",

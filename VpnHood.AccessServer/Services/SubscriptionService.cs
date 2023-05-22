@@ -58,6 +58,14 @@ public class SubscriptionService
             throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
     }
 
+    public async Task AuthorizeAddCertificate(Guid projectId)
+    {
+        if (await IsFreePlan(projectId) &&
+            _vhContext.Certificates.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.CertificateCount)
+            throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
+    }
+
+
     private async Task<bool> IsFreePlan(Guid projectId)
     {
         var project = await _vhContext.Projects.SingleAsync(project => project.ProjectId == projectId);

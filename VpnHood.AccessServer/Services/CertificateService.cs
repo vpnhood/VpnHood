@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using GrayMint.Common.Utils;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.Server;
@@ -18,41 +17,74 @@ namespace VpnHood.AccessServer.Services;
 public class CertificateService : ControllerBase
 {
     private readonly VhContext _vhContext;
-    public CertificateService(VhContext vhContext)
+    private readonly SubscriptionService _subscriptionService;
+
+    public CertificateService(VhContext vhContext, SubscriptionService subscriptionService)
     {
         _vhContext = vhContext;
+        _subscriptionService = subscriptionService;
     }
 
-    public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
+    public async Task<Certificate> CreateSelfSinged(Guid projectId, Guid? certificateId, CertificateSelfSignedParams? createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        if (_vhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
-            throw new QuotaException(nameof(_vhContext.Certificates), QuotaConstants.CertificateCount);
+        if (certificateId != null)
+            await _subscriptionService.AuthorizeAddCertificate(projectId);
 
-        var certificateModel = CreateInternal(projectId, createParams);
-        _vhContext.Certificates.Add(certificateModel);
-        await _vhContext.SaveChangesAsync();
-
+        createParams ??= new CertificateSelfSignedParams();
+        var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName);
+        var certificateModel = AddOrUpdate(projectId, certificateId, x509Certificate2);
         return certificateModel.ToDto(true);
     }
 
-    internal static CertificateModel CreateInternal(Guid projectId, CertificateCreateParams? createParams)
+    public async Task<Certificate> ImportSelfSinged(Guid projectId, Guid? certificateId, CertificateImportParams importParams)
     {
-        createParams ??= new CertificateCreateParams();
-        if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.RawData?.Length > 0)
-            throw new InvalidOperationException(
-                $"Could not set both {createParams.SubjectName} and {createParams.RawData} together!");
+        // check user quota
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
+        if (certificateId != null)
+            await _subscriptionService.AuthorizeAddCertificate(projectId);
 
+        var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
+        var certificateModel = AddOrUpdate(projectId, certificateId, x509Certificate2);
+        return certificateModel.ToDto(true);
+    }
+
+    private static CertificateModel AddOrUpdate(Guid projectId, Guid? certificateId, X509Certificate2 x509Certificate2)
+    {
         // create cert
-        var certificateRawBuffer = createParams.RawData?.Length > 0
+        var certificateRawBuffer = x509Certificate2.RawData?.Length > 0
             ? createParams.RawData
-            : CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx);
+            : CertificateUtil.CreateSelfSigned(createParams.CommonName).Export(X509ContentType.Pfx);
 
         // add cert into 
         var x509Certificate2 = new X509Certificate2(certificateRawBuffer, createParams.Password,
             X509KeyStorageFlags.Exportable);
         certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
+
+        var certificateModel = new CertificateModel()
+        {
+            CertificateId = Guid.NewGuid(),
+            ProjectId = projectId,
+            RawData = certificateRawBuffer,
+            Thumbprint = x509Certificate2.Thumbprint,
+            CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
+            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
+            CreatedTime = DateTime.UtcNow
+        };
+
+        return certificateModel;
+    }
+
+
+    internal static CertificateModel CreateInternal(Guid projectId, CertificateSelfSignedParams? createParams)
+    {
+        createParams ??= new CertificateSelfSignedParams();
+        if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.RawData?.Length > 0)
+            throw new InvalidOperationException(
+                $"Could not set both {createParams.SubjectName} and {createParams.RawData} together!");
+
+
 
         var certificateModel = new CertificateModel()
         {
@@ -76,16 +108,26 @@ public class CertificateService : ControllerBase
 
     public async Task Delete(Guid projectId, Guid certificateId)
     {
+        var serverFarmCount = await _vhContext.ServerFarms
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.CertificateId == certificateId)
+            .CountAsync();
+
+        if (serverFarmCount > 0)
+            throw new InvalidOperationException($"The certificate is in use by {serverFarmCount} server farms.");
+
         var certificate = await _vhContext.Certificates
-            .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
-        _vhContext.Certificates.Remove(certificate);
+            .Where(x => x.ProjectId == projectId && x.CertificateId == certificateId && !x.IsDeleted)
+            .SingleAsync();
+
+        certificate.IsDeleted = true;
         await _vhContext.SaveChangesAsync();
     }
 
     public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
         var certificateModel = await _vhContext.Certificates
-            .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
+            .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId && !x.IsDeleted);
 
         if (updateParams.RawData != null)
         {
@@ -104,7 +146,7 @@ public class CertificateService : ControllerBase
     {
         var query = _vhContext.Certificates
             .Include(x => x.ServerFarms!.Where(y => !y.IsDeleted).OrderBy(y => y.ServerFarmName).Take(5))
-            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => certificateId == null || x.CertificateId == certificateId)
             .Where(x =>
                 string.IsNullOrEmpty(search) ||

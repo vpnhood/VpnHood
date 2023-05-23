@@ -76,6 +76,9 @@ public class VhContext : DbContext
         {
             entity.HasKey(e => e.CertificateId);
 
+            entity.Property(e => e.IsVerified)
+                .HasDefaultValue(false);
+
             entity.Property(e => e.CommonName)
                 .HasMaxLength(200);
         });

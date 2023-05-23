@@ -11,6 +11,7 @@ public class CertificateModel
     public string? Thumbprint { get; set; } //todo must not null
     public DateTime CreatedTime { get; set; }
     public bool IsDeleted { get; set; }
+    public bool IsVerified { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ICollection<ServerFarmModel>? ServerFarms { get; set; }

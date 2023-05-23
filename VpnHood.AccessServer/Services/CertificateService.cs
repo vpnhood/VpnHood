@@ -13,7 +13,7 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Services;
 
-public class CertificateService 
+public class CertificateService
 {
     private readonly VhContext _vhContext;
     private readonly SubscriptionService _subscriptionService;
@@ -91,6 +91,7 @@ public class CertificateService
         certificate.CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
         certificate.IssueTime = x509Certificate2.NotBefore.ToUniversalTime();
         certificate.ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime();
+        certificate.IsVerified = x509Certificate2.Verify();
         certificate.CreatedTime = DateTime.UtcNow;
         return certificate;
     }
@@ -106,17 +107,18 @@ public class CertificateService
             Thumbprint = x509Certificate2.Thumbprint,
             CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
             IssueTime = x509Certificate2.NotBefore.ToUniversalTime(),
-            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime()
+            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
+            IsVerified = x509Certificate2.Verify()
         };
 
         if (certificate.CommonName.Contains('*'))
             throw new NotSupportedException("Wildcard certificates are currently not supported.");
 
         await _vhContext.Certificates.AddAsync(certificate);
-        
+
         return certificate;
     }
-    
+
     public async Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
     {
         var list = await List(projectId, certificateId: certificateId, includeSummary: includeSummary);

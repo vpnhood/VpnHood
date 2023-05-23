@@ -168,6 +168,8 @@ public class CertificateService
                     CommonName = x.CommonName,
                     CreatedTime = x.CreatedTime,
                     ExpirationTime = x.ExpirationTime,
+                    IssueTime = x.IssueTime,
+                    IsVerified = x.IsVerified,
                     RawData = null,
                 },
                 ServerFarms = includeSummary

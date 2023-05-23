@@ -3929,8 +3929,10 @@ export interface IListResultOfAccessTokenData {
 export class Certificate implements ICertificate {
     certificateId!: string;
     commonName!: string;
+    issueTime?: Date | undefined;
     expirationTime!: Date;
     createdTime!: Date;
+    isVerified!: boolean;
     rawData?: string | undefined;
 
     constructor(data?: ICertificate) {
@@ -3946,8 +3948,10 @@ export class Certificate implements ICertificate {
         if (_data) {
             this.certificateId = _data["certificateId"];
             this.commonName = _data["commonName"];
+            this.issueTime = _data["issueTime"] ? new Date(_data["issueTime"].toString()) : <any>undefined;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>undefined;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>undefined;
+            this.isVerified = _data["isVerified"];
             this.rawData = _data["rawData"];
         }
     }
@@ -3963,8 +3967,10 @@ export class Certificate implements ICertificate {
         data = typeof data === 'object' ? data : {};
         data["certificateId"] = this.certificateId;
         data["commonName"] = this.commonName;
+        data["issueTime"] = this.issueTime ? this.issueTime.toISOString() : <any>undefined;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>undefined;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>undefined;
+        data["isVerified"] = this.isVerified;
         data["rawData"] = this.rawData;
         return data;
     }
@@ -3973,8 +3979,10 @@ export class Certificate implements ICertificate {
 export interface ICertificate {
     certificateId: string;
     commonName: string;
+    issueTime?: Date | undefined;
     expirationTime: Date;
     createdTime: Date;
+    isVerified: boolean;
     rawData?: string | undefined;
 }
 

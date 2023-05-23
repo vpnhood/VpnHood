@@ -7269,6 +7269,11 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string CommonName { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("issueTime")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public System.DateTime? IssueTime { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
@@ -7280,6 +7285,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isVerified")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool IsVerified { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("rawData")]
 

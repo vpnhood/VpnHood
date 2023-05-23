@@ -12,7 +12,9 @@ public static class CertificateConverter
             CreatedTime = model.CreatedTime,
             CertificateId = model.CertificateId,
             CommonName = model.CommonName,
+            IssueTime = model.IssueTime,
             ExpirationTime = model.ExpirationTime,
+            IsVerified = model.IsVerified,
             RawData = withRawData ? model.RawData : null
         };
         return certificate;

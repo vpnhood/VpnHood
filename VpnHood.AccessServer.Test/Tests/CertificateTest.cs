@@ -22,7 +22,7 @@ public class CertificateTest
         //-----------
         // Create Certificate using RawData
         //-----------
-        var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com");
+        var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com,O=Foo");
         const string? password = "123";
 
         var certificate = await certificateClient.CreateByImportAsync(testInit.ProjectId, new CertificateImportParams
@@ -44,7 +44,9 @@ public class CertificateTest
         certificate = await certificateClient.CreateBySelfSignedAsync(testInit.ProjectId,
             new CertificateSelfSignedParams { SubjectName = $"CN={certificate.CommonName}" });
         Assert.IsNotNull(certificate.CommonName);
+        Assert.IsFalse(certificate.IsVerified);
         Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow);
+        Assert.IsTrue(certificate.IssueTime > DateTime.UtcNow.AddDays(-1));
 
         //-----------
         // Update a certificate

@@ -3933,6 +3933,7 @@ export class Certificate implements ICertificate {
     expirationTime!: Date;
     createdTime!: Date;
     isVerified!: boolean;
+    thumbprint?: string | undefined;
     rawData?: string | undefined;
 
     constructor(data?: ICertificate) {
@@ -3952,6 +3953,7 @@ export class Certificate implements ICertificate {
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>undefined;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>undefined;
             this.isVerified = _data["isVerified"];
+            this.thumbprint = _data["thumbprint"];
             this.rawData = _data["rawData"];
         }
     }
@@ -3971,6 +3973,7 @@ export class Certificate implements ICertificate {
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>undefined;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>undefined;
         data["isVerified"] = this.isVerified;
+        data["thumbprint"] = this.thumbprint;
         data["rawData"] = this.rawData;
         return data;
     }
@@ -3983,6 +3986,7 @@ export interface ICertificate {
     expirationTime: Date;
     createdTime: Date;
     isVerified: boolean;
+    thumbprint?: string | undefined;
     rawData?: string | undefined;
 }
 

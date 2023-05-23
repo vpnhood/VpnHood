@@ -170,6 +170,7 @@ public class CertificateService
                     ExpirationTime = x.ExpirationTime,
                     IssueTime = x.IssueTime,
                     IsVerified = x.IsVerified,
+                    Thumbprint = x.Thumbprint,
                     RawData = null,
                 },
                 ServerFarms = includeSummary

@@ -15,6 +15,7 @@ public static class CertificateConverter
             IssueTime = model.IssueTime,
             ExpirationTime = model.ExpirationTime,
             IsVerified = model.IsVerified,
+            Thumbprint = model.Thumbprint,
             RawData = withRawData ? model.RawData : null
         };
         return certificate;

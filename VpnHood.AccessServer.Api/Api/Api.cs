@@ -7291,6 +7291,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public bool IsVerified { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("thumbprint")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? Thumbprint { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("rawData")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   

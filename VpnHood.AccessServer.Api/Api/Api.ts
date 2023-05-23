@@ -3992,6 +3992,7 @@ export interface ICertificate {
 
 export class CertificateSelfSignedParams implements ICertificateSelfSignedParams {
     subjectName?: string | undefined;
+    expirationTime?: Date | undefined;
 
     constructor(data?: ICertificateSelfSignedParams) {
         if (data) {
@@ -4005,6 +4006,7 @@ export class CertificateSelfSignedParams implements ICertificateSelfSignedParams
     init(_data?: any) {
         if (_data) {
             this.subjectName = _data["subjectName"];
+            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>undefined;
         }
     }
 
@@ -4018,12 +4020,14 @@ export class CertificateSelfSignedParams implements ICertificateSelfSignedParams
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["subjectName"] = this.subjectName;
+        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>undefined;
         return data;
     }
 }
 
 export interface ICertificateSelfSignedParams {
     subjectName?: string | undefined;
+    expirationTime?: Date | undefined;
 }
 
 export class CertificateImportParams implements ICertificateImportParams {

@@ -41,11 +41,12 @@ public class CertificateTest
         //-----------
         // Create Certificate using subject name
         //-----------
+        var expirationTime = DateTime.UtcNow.AddDays(7);
         certificate = await certificateClient.CreateBySelfSignedAsync(testInit.ProjectId,
-            new CertificateSelfSignedParams { SubjectName = $"CN={certificate.CommonName}" });
+            new CertificateSelfSignedParams { SubjectName = $"CN={certificate.CommonName}", ExpirationTime = expirationTime });
         Assert.IsFalse(string.IsNullOrEmpty(certificate.Thumbprint));
         Assert.IsFalse(certificate.IsVerified);
-        Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow);
+        Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow.AddDays(6) && certificate.ExpirationTime < DateTime.UtcNow.AddDays(8));
         Assert.IsTrue(certificate.IssueTime > DateTime.UtcNow.AddDays(-1));
 
         //-----------

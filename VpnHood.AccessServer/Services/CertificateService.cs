@@ -37,7 +37,7 @@ public class CertificateService
         await _subscriptionService.AuthorizeAddCertificate(projectId);
 
         createParams ??= new CertificateSelfSignedParams();
-        var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName);
+        var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName, createParams.ExpirationTime);
         var certificateModel = await Add(projectId, x509Certificate2);
         await _vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
@@ -46,7 +46,7 @@ public class CertificateService
     public async Task<Certificate> ReplaceBySelfSinged(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams)
     {
         createParams ??= new CertificateSelfSignedParams();
-        var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName);
+        var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName, createParams.ExpirationTime);
         var certificateModel = await Update(projectId, certificateId, x509Certificate2);
         await _vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);

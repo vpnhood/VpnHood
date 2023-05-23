@@ -398,8 +398,8 @@ export class CertificatesClient {
         this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    create(projectId: string, createParams: CertificateCreateParams | undefined): Promise<Certificate> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates";
+    createBySelfSigned(projectId: string, createParams: CertificateSelfSignedParams | undefined): Promise<Certificate> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/self-signed";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
@@ -417,11 +417,11 @@ export class CertificatesClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCreate(_response);
+            return this.processCreateBySelfSigned(_response);
         });
     }
 
-    protected processCreate(response: Response): Promise<Certificate> {
+    protected processCreateBySelfSigned(response: Response): Promise<Certificate> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -439,54 +439,40 @@ export class CertificatesClient {
         return Promise.resolve<Certificate>(null as any);
     }
 
-    list(projectId: string, search: string | null | undefined, includeSummary: boolean | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates?";
+    replaceBySelfSigned(projectId: string, certificateId: string, createParams: CertificateSelfSignedParams | undefined): Promise<Certificate> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/{certificateId}/self-signed";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (search !== undefined && search !== null)
-            url_ += "search=" + encodeURIComponent("" + search) + "&";
-        if (includeSummary === null)
-            throw new Error("The parameter 'includeSummary' cannot be null.");
-        else if (includeSummary !== undefined)
-            url_ += "includeSummary=" + encodeURIComponent("" + includeSummary) + "&";
-        if (recordIndex === null)
-            throw new Error("The parameter 'recordIndex' cannot be null.");
-        else if (recordIndex !== undefined)
-            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
-        if (recordCount === null)
-            throw new Error("The parameter 'recordCount' cannot be null.");
-        else if (recordCount !== undefined)
-            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
+        if (certificateId === undefined || certificateId === null)
+            throw new Error("The parameter 'certificateId' must be defined.");
+        url_ = url_.replace("{certificateId}", encodeURIComponent("" + certificateId));
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(createParams);
+
         let options_: RequestInit = {
-            method: "GET",
+            body: content_,
+            method: "PUT",
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processList(_response);
+            return this.processReplaceBySelfSigned(_response);
         });
     }
 
-    protected processList(response: Response): Promise<CertificateData[]> {
+    protected processReplaceBySelfSigned(response: Response): Promise<Certificate> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CertificateData.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
+            result200 = Certificate.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -494,7 +480,92 @@ export class CertificatesClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<CertificateData[]>(null as any);
+        return Promise.resolve<Certificate>(null as any);
+    }
+
+    createByImport(projectId: string, importParams: CertificateImportParams): Promise<Certificate> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/import";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(importParams);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCreateByImport(_response);
+        });
+    }
+
+    protected processCreateByImport(response: Response): Promise<Certificate> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = Certificate.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<Certificate>(null as any);
+    }
+
+    replaceByImport(projectId: string, certificateId: string, importParams: CertificateImportParams): Promise<Certificate> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/{certificateId}/import";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (certificateId === undefined || certificateId === null)
+            throw new Error("The parameter 'certificateId' must be defined.");
+        url_ = url_.replace("{certificateId}", encodeURIComponent("" + certificateId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(importParams);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReplaceByImport(_response);
+        });
+    }
+
+    protected processReplaceByImport(response: Response): Promise<Certificate> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = Certificate.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<Certificate>(null as any);
     }
 
     get(projectId: string, certificateId: string, includeSummary: boolean | undefined): Promise<CertificateData> {
@@ -577,40 +648,54 @@ export class CertificatesClient {
         return Promise.resolve<void>(null as any);
     }
 
-    update(projectId: string, certificateId: string, updateParams: CertificateUpdateParams): Promise<Certificate> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/{certificateId}";
+    list(projectId: string, search: string | null | undefined, includeSummary: boolean | undefined, recordIndex: number | undefined, recordCount: number | undefined): Promise<CertificateData[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (certificateId === undefined || certificateId === null)
-            throw new Error("The parameter 'certificateId' must be defined.");
-        url_ = url_.replace("{certificateId}", encodeURIComponent("" + certificateId));
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
+        if (includeSummary === null)
+            throw new Error("The parameter 'includeSummary' cannot be null.");
+        else if (includeSummary !== undefined)
+            url_ += "includeSummary=" + encodeURIComponent("" + includeSummary) + "&";
+        if (recordIndex === null)
+            throw new Error("The parameter 'recordIndex' cannot be null.");
+        else if (recordIndex !== undefined)
+            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
+        if (recordCount === null)
+            throw new Error("The parameter 'recordCount' cannot be null.");
+        else if (recordCount !== undefined)
+            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(updateParams);
-
         let options_: RequestInit = {
-            body: content_,
-            method: "PATCH",
+            method: "GET",
             headers: {
-                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdate(_response);
+            return this.processList(_response);
         });
     }
 
-    protected processUpdate(response: Response): Promise<Certificate> {
+    protected processList(response: Response): Promise<CertificateData[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = Certificate.fromJS(resultData200);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CertificateData.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -618,7 +703,7 @@ export class CertificatesClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<Certificate>(null as any);
+        return Promise.resolve<CertificateData[]>(null as any);
     }
 }
 
@@ -3893,12 +3978,10 @@ export interface ICertificate {
     rawData?: string | undefined;
 }
 
-export class CertificateCreateParams implements ICertificateCreateParams {
+export class CertificateSelfSignedParams implements ICertificateSelfSignedParams {
     subjectName?: string | undefined;
-    rawData?: string | undefined;
-    password?: string | undefined;
 
-    constructor(data?: ICertificateCreateParams) {
+    constructor(data?: ICertificateSelfSignedParams) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -3910,14 +3993,12 @@ export class CertificateCreateParams implements ICertificateCreateParams {
     init(_data?: any) {
         if (_data) {
             this.subjectName = _data["subjectName"];
-            this.rawData = _data["rawData"];
-            this.password = _data["password"];
         }
     }
 
-    static fromJS(data: any): CertificateCreateParams {
+    static fromJS(data: any): CertificateSelfSignedParams {
         data = typeof data === 'object' ? data : {};
-        let result = new CertificateCreateParams();
+        let result = new CertificateSelfSignedParams();
         result.init(data);
         return result;
     }
@@ -3925,15 +4006,51 @@ export class CertificateCreateParams implements ICertificateCreateParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["subjectName"] = this.subjectName;
+        return data;
+    }
+}
+
+export interface ICertificateSelfSignedParams {
+    subjectName?: string | undefined;
+}
+
+export class CertificateImportParams implements ICertificateImportParams {
+    rawData!: string;
+    password?: string | undefined;
+
+    constructor(data?: ICertificateImportParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.rawData = _data["rawData"];
+            this.password = _data["password"];
+        }
+    }
+
+    static fromJS(data: any): CertificateImportParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new CertificateImportParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
         data["rawData"] = this.rawData;
         data["password"] = this.password;
         return data;
     }
 }
 
-export interface ICertificateCreateParams {
-    subjectName?: string | undefined;
-    rawData?: string | undefined;
+export interface ICertificateImportParams {
+    rawData: string;
     password?: string | undefined;
 }
 
@@ -4066,82 +4183,6 @@ export class CertificateSummary implements ICertificateSummary {
 
 export interface ICertificateSummary {
     serverFarmCount: number;
-}
-
-export class CertificateUpdateParams implements ICertificateUpdateParams {
-    rawData?: PatchOfByteOf | undefined;
-    password?: PatchOfString | undefined;
-
-    constructor(data?: ICertificateUpdateParams) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.rawData = _data["rawData"] ? PatchOfByteOf.fromJS(_data["rawData"]) : <any>undefined;
-            this.password = _data["password"] ? PatchOfString.fromJS(_data["password"]) : <any>undefined;
-        }
-    }
-
-    static fromJS(data: any): CertificateUpdateParams {
-        data = typeof data === 'object' ? data : {};
-        let result = new CertificateUpdateParams();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["rawData"] = this.rawData ? this.rawData.toJSON() : <any>undefined;
-        data["password"] = this.password ? this.password.toJSON() : <any>undefined;
-        return data;
-    }
-}
-
-export interface ICertificateUpdateParams {
-    rawData?: PatchOfByteOf | undefined;
-    password?: PatchOfString | undefined;
-}
-
-export class PatchOfByteOf implements IPatchOfByteOf {
-    value!: string;
-
-    constructor(data?: IPatchOfByteOf) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"];
-        }
-    }
-
-    static fromJS(data: any): PatchOfByteOf {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfByteOf();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value;
-        return data;
-    }
-}
-
-export interface IPatchOfByteOf {
-    value: string;
 }
 
 export class DeviceData implements IDeviceData {

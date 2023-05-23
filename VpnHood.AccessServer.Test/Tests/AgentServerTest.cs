@@ -532,14 +532,14 @@ public class AgentServerTest
     {
         var testInit = await TestInit.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var certificate1 = await testInit.CertificatesClient.CreateAsync(testInit.ProjectId, new CertificateCreateParams { SubjectName = $"CN={dnsName1}" });
+        var certificate1 = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName1}" });
         var farm1 = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate1.CertificateId
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var certificate2 = await testInit.CertificatesClient.CreateAsync(testInit.ProjectId, new CertificateCreateParams { SubjectName = $"CN={dnsName2}" });
+        var certificate2 = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName2}" });
         var farm2 = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate2.CertificateId

@@ -22,6 +22,7 @@ public class ProjectService
     private readonly AgentCacheClient _agentCacheClient;
     private readonly UsageReportService _usageReportService;
     private readonly SubscriptionService _subscriptionService;
+    private readonly CertificateService _certificateService;
     private readonly IRoleProvider _roleProvider;
 
     public ProjectService(
@@ -29,13 +30,15 @@ public class ProjectService
         SubscriptionService subscriptionService,
         AgentCacheClient agentCacheClient,
         UsageReportService usageReportService,
-        IRoleProvider roleProvider)
+        IRoleProvider roleProvider, 
+        CertificateService certificateService)
     {
         _subscriptionService = subscriptionService;
         _vhContext = vhContext;
         _agentCacheClient = agentCacheClient;
         _usageReportService = usageReportService;
         _roleProvider = roleProvider;
+        _certificateService = certificateService;
     }
 
     public async Task<Project> Create(Guid ownerUserId)
@@ -60,7 +63,7 @@ public class ProjectService
         {
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
-            Certificate = CertificateService.CreateInternal(projectId, null),
+            Certificate = await _certificateService.CreateSelfSingedInternal(projectId),
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow

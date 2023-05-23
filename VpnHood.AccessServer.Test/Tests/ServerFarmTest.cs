@@ -72,7 +72,7 @@ public class ServerFarmTest
         //-----------
         var serverProfile2 = await ServerProfileDom.Create(testInit);
         var certificateClient = testInit.CertificatesClient;
-        var certificate2 = await certificateClient.CreateAsync(farm1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
+        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId, new CertificateSelfSignedParams { SubjectName = "CN=fff.com" });
         var updateParam = new ServerFarmUpdateParams
         {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },

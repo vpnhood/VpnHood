@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -14,7 +13,7 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Services;
 
-public class CertificateService : ControllerBase
+public class CertificateService 
 {
     private readonly VhContext _vhContext;
     private readonly SubscriptionService _subscriptionService;
@@ -25,81 +24,99 @@ public class CertificateService : ControllerBase
         _subscriptionService = subscriptionService;
     }
 
-    public async Task<Certificate> CreateSelfSinged(Guid projectId, Guid? certificateId, CertificateSelfSignedParams? createParams)
+    internal async Task<CertificateModel> CreateSelfSingedInternal(Guid projectId)
+    {
+        var x509Certificate2 = CertificateUtil.CreateSelfSigned(subjectName: null);
+        return await Add(projectId, x509Certificate2);
+    }
+
+    public async Task<Certificate> CreateSelfSinged(Guid projectId, CertificateSelfSignedParams? createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        if (certificateId != null)
-            await _subscriptionService.AuthorizeAddCertificate(projectId);
+        await _subscriptionService.AuthorizeAddCertificate(projectId);
 
         createParams ??= new CertificateSelfSignedParams();
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName);
-        var certificateModel = AddOrUpdate(projectId, certificateId, x509Certificate2);
+        var certificateModel = await Add(projectId, x509Certificate2);
+        await _vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
     }
 
-    public async Task<Certificate> ImportSelfSinged(Guid projectId, Guid? certificateId, CertificateImportParams importParams)
+    public async Task<Certificate> ReplaceBySelfSinged(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams)
+    {
+        createParams ??= new CertificateSelfSignedParams();
+        var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName);
+        var certificateModel = await Update(projectId, certificateId, x509Certificate2);
+        await _vhContext.SaveChangesAsync();
+        return certificateModel.ToDto(true);
+    }
+
+    public async Task<Certificate> CreateByImport(Guid projectId, CertificateImportParams importParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        if (certificateId != null)
-            await _subscriptionService.AuthorizeAddCertificate(projectId);
+        await _subscriptionService.AuthorizeAddCertificate(projectId);
 
         var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
-        var certificateModel = AddOrUpdate(projectId, certificateId, x509Certificate2);
+        var certificateModel = await Add(projectId, x509Certificate2);
+        await _vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
     }
 
-    private static CertificateModel AddOrUpdate(Guid projectId, Guid? certificateId, X509Certificate2 x509Certificate2)
+    public async Task<Certificate> ReplaceByImport(Guid projectId, Guid certificateId, CertificateImportParams importParams)
     {
-        // create cert
-        var certificateRawBuffer = x509Certificate2.RawData?.Length > 0
-            ? createParams.RawData
-            : CertificateUtil.CreateSelfSigned(createParams.CommonName).Export(X509ContentType.Pfx);
+        var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
+        var certificateModel = await Update(projectId, certificateId, x509Certificate2);
+        await _vhContext.SaveChangesAsync();
+        return certificateModel.ToDto(true);
+    }
 
-        // add cert into 
-        var x509Certificate2 = new X509Certificate2(certificateRawBuffer, createParams.Password,
-            X509KeyStorageFlags.Exportable);
-        certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
+    private async Task<CertificateModel> Update(Guid projectId, Guid certificateId, X509Certificate2 x509Certificate2)
+    {
+        var certificate = await _vhContext
+            .Certificates
+            .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
-        var certificateModel = new CertificateModel()
+        // read old common name
+        var oldX509Certificate = new X509Certificate2(certificate.RawData);
+        var oldCommonName = oldX509Certificate.GetNameInfo(X509NameType.DnsName, false);
+        var commonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
+        if (commonName != oldCommonName)
+            throw new InvalidOperationException(
+                $"The Common Name (CN) must match the existing value in order to perform an update. OldName: {oldCommonName}, NewName:{commonName}");
+
+        certificate.RawData = x509Certificate2.Export(X509ContentType.Pfx);
+        certificate.Thumbprint = x509Certificate2.Thumbprint;
+        certificate.CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
+        certificate.IssueTime = x509Certificate2.NotBefore.ToUniversalTime();
+        certificate.ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime();
+        certificate.CreatedTime = DateTime.UtcNow;
+        return certificate;
+    }
+
+    private async Task<CertificateModel> Add(Guid projectId, X509Certificate2 x509Certificate2)
+    {
+        var certificate = new CertificateModel
         {
             CertificateId = Guid.NewGuid(),
             ProjectId = projectId,
-            RawData = certificateRawBuffer,
+            CreatedTime = DateTime.UtcNow,
+            RawData = x509Certificate2.Export(X509ContentType.Pfx),
             Thumbprint = x509Certificate2.Thumbprint,
             CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
-            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
-            CreatedTime = DateTime.UtcNow
+            IssueTime = x509Certificate2.NotBefore.ToUniversalTime(),
+            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime()
         };
 
-        return certificateModel;
+        if (certificate.CommonName.Contains('*'))
+            throw new NotSupportedException("Wildcard certificates are currently not supported.");
+
+        await _vhContext.Certificates.AddAsync(certificate);
+        
+        return certificate;
     }
-
-
-    internal static CertificateModel CreateInternal(Guid projectId, CertificateSelfSignedParams? createParams)
-    {
-        createParams ??= new CertificateSelfSignedParams();
-        if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.RawData?.Length > 0)
-            throw new InvalidOperationException(
-                $"Could not set both {createParams.SubjectName} and {createParams.RawData} together!");
-
-
-
-        var certificateModel = new CertificateModel()
-        {
-            CertificateId = Guid.NewGuid(),
-            ProjectId = projectId,
-            RawData = certificateRawBuffer,
-            CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
-            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
-            CreatedTime = DateTime.UtcNow
-        };
-
-        return certificateModel;
-    }
-
-
+    
     public async Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
     {
         var list = await List(projectId, certificateId: certificateId, includeSummary: includeSummary);
@@ -122,22 +139,6 @@ public class CertificateService : ControllerBase
 
         certificate.IsDeleted = true;
         await _vhContext.SaveChangesAsync();
-    }
-
-    public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
-    {
-        var certificateModel = await _vhContext.Certificates
-            .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId && !x.IsDeleted);
-
-        if (updateParams.RawData != null)
-        {
-            X509Certificate2 x509Certificate2 = new(updateParams.RawData, updateParams.Password?.Value, X509KeyStorageFlags.Exportable);
-            certificateModel.CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
-            certificateModel.RawData = x509Certificate2.Export(X509ContentType.Pfx);
-        }
-
-        await _vhContext.SaveChangesAsync();
-        return certificateModel.ToDto();
     }
 
     public async Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null,

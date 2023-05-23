@@ -23,9 +23,34 @@ public class CertificatesController : ControllerBase
 
     [HttpPost("self-signed")]
     [AuthorizePermission(Permissions.CertificateWrite)]
-    public Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
+    public async Task<Certificate> CreateBySelfSigned(Guid projectId, CertificateSelfSignedParams? createParams)
     {
-        return _certificateService.Create(projectId, createParams);
+        var ret = await _certificateService.CreateSelfSinged(projectId, createParams);
+        return ret;
+    }
+
+    [HttpPut("{certificateId:guid}/self-signed")]
+    [AuthorizePermission(Permissions.CertificateWrite)]
+    public async Task<Certificate> ReplaceBySelfSigned(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams)
+    {
+        var ret = await _certificateService.ReplaceBySelfSinged(projectId, certificateId, createParams);
+        return ret;
+    }
+
+    [HttpPost("import")]
+    [AuthorizePermission(Permissions.CertificateWrite)]
+    public async Task<Certificate> CreateByImport(Guid projectId, CertificateImportParams importParams)
+    {
+        var ret = await _certificateService.CreateByImport(projectId, importParams);
+        return ret;
+    }
+
+    [HttpPost("{certificateId:guid}/import")]
+    [AuthorizePermission(Permissions.CertificateWrite)]
+    public async Task<Certificate> ReplaceByImport(Guid projectId, Guid certificateId, CertificateImportParams importParams)
+    {
+        var ret = await _certificateService.ReplaceByImport(projectId, certificateId, importParams);
+        return ret;
     }
 
     [HttpGet("{certificateId:guid}")]
@@ -42,19 +67,12 @@ public class CertificatesController : ControllerBase
         return _certificateService.Delete(projectId, certificateId);
     }
 
-    [HttpPatch("{certificateId:guid}")]
-    [AuthorizePermission(Permissions.CertificateWrite)]
-    public Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
-    {
-        return _certificateService.Update(projectId, certificateId, updateParams);
-    }
-
     [HttpGet]
     [AuthorizePermission(Permissions.CertificateRead)]
     public Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 300)
     {
-        return _certificateService.List(projectId, search, includeSummary: includeSummary, 
+        return _certificateService.List(projectId, search, includeSummary: includeSummary,
             recordIndex: recordIndex, recordCount: recordCount);
     }
 }

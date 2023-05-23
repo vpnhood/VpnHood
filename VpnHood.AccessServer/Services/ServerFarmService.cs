@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -16,13 +15,16 @@ public class ServerFarmService
 {
     private readonly VhContext _vhContext;
     private readonly ServerService _serverService;
+    private readonly CertificateService _certificateService;
 
     public ServerFarmService(
         VhContext vhContext,
-        ServerService serverService)
+        ServerService serverService,
+        CertificateService certificateService)
     {
         _vhContext = vhContext;
         _serverService = serverService;
+        _certificateService = certificateService;
     }
     public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
@@ -30,17 +32,6 @@ public class ServerFarmService
         if (_vhContext.ServerFarms.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerFarmCount)
             throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
 
-        // create a certificate if it is not given
-        CertificateModel certificate;
-        if (createParams.CertificateId != null)
-        {
-            certificate = await _vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == createParams.CertificateId);
-        }
-        else
-        {
-            certificate = CertificateService.CreateInternal(projectId, null);
-            _vhContext.Certificates.Add(certificate);
-        }
 
         // create default name
         createParams.ServerFarmName = createParams.ServerFarmName?.Trim();
@@ -60,11 +51,15 @@ public class ServerFarmService
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => (createParams.ServerProfileId == null && x.IsDefault) || x.ServerProfileId == createParams.ServerProfileId);
 
-        var id = Guid.NewGuid();
+        // create a certificate if it is not given
+        var certificate = createParams.CertificateId != null
+            ? (await _certificateService.Get(projectId, createParams.CertificateId.Value)).Certificate
+            : (await _certificateService.CreateSelfSingedInternal(projectId)).ToDto();
+
         var ret = new ServerFarmModel
         {
             ProjectId = projectId,
-            ServerFarmId = id,
+            ServerFarmId = Guid.NewGuid(),
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
             CertificateId = certificate.CertificateId,
@@ -127,9 +122,9 @@ public class ServerFarmService
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
-                string.IsNullOrEmpty(search) || 
+                string.IsNullOrEmpty(search) ||
                 x.ServerFarmName.Contains(search) ||
-                x.ServerFarmId.ToString() == search )
+                x.ServerFarmId.ToString() == search)
             .Select(x => new
             {
                 ServerFarm = x,
@@ -157,7 +152,6 @@ public class ServerFarmService
 
         return dtos.ToArray();
     }
-
 
     public async Task<ServerFarmData[]> ListWithSummary(Guid projectId, string? search = null,
         Guid? serverFarmId = null,

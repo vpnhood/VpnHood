@@ -240,6 +240,22 @@ public class AccessTokensController : ControllerBase
         return listResult;
     }
 
+    [HttpDelete]
+    [AuthorizePermission(Permissions.AccessTokenWrite)]
+    public async Task DeleteMany(Guid projectId, Guid[] accessTokenIds)
+    {
+        var accessTokens = await _vhContext.AccessTokens
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => accessTokenIds.Contains(x.AccessTokenId))
+            .ToListAsync();
+
+        foreach (var accessToken in accessTokens)
+            accessToken.IsDeleted = true;
+
+        await _vhContext.SaveChangesAsync();
+    }
+
+
 
     [HttpDelete("{accessTokenId:guid}")]
     [AuthorizePermission(Permissions.AccessTokenWrite)]
@@ -247,7 +263,7 @@ public class AccessTokensController : ControllerBase
     {
         var accessToken = await _vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.ProjectId == projectId && !x.IsDeleted && x.AccessTokenId == accessTokenId);
+            .SingleAsync(x => x.AccessTokenId == accessTokenId);
 
         accessToken.IsDeleted = true;
         await _vhContext.SaveChangesAsync();

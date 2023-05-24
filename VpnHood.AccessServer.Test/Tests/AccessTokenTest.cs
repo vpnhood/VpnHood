@@ -112,8 +112,8 @@ public class AccessTokenTest
         //-----------
         var updateParams = new AccessTokenUpdateParams
         {
-            AccessTokenName = new PatchOfString {Value = $"new_name_{Guid.NewGuid()}"},
-            ServerFarmId = new PatchOfGuid {Value = farm2.ServerFarmId },
+            AccessTokenName = new PatchOfString { Value = $"new_name_{Guid.NewGuid()}" },
+            ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId },
             ExpirationTime = new PatchOfNullableDateTime { Value = DateTime.UtcNow.AddDays(4) },
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },
@@ -288,5 +288,25 @@ public class AccessTokenTest
         publicItem = accessTokens.Items.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(traffic.Sent * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(traffic.Received * 3, publicItem.Usage?.ReceivedTraffic);
+    }
+
+    [TestMethod]
+    public async Task Delete_Many()
+    {
+        var farm = await ServerFarmDom.Create();
+        var tokens1 = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
+
+        var accessTokenDom1 = await farm.CreateAccessToken();
+        var accessTokenDom2 = await farm.CreateAccessToken();
+        var accessTokenDom3 = await farm.CreateAccessToken();
+
+        await farm.TestInit.AccessTokensClient.DeleteManyAsync(farm.ProjectId,
+            new[] { accessTokenDom1.AccessTokenId, accessTokenDom2.AccessTokenId });
+
+        var tokens2 = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
+        Assert.AreEqual(tokens1.Items.Count + 1, tokens2.Items.Count);
+        Assert.IsFalse(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId));
+        Assert.IsFalse(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom2.AccessTokenId));
+        Assert.IsTrue(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom3.AccessTokenId));
     }
 }

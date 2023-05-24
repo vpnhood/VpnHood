@@ -222,6 +222,43 @@ export class AccessTokensClient {
         return Promise.resolve<ListResultOfAccessTokenData>(null as any);
     }
 
+    deleteMany(projectId: string, accessTokenIds: string[]): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/access-tokens";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(accessTokenIds);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDeleteMany(_response);
+        });
+    }
+
+    protected processDeleteMany(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     update(projectId: string, accessTokenId: string, updateParams: AccessTokenUpdateParams): Promise<AccessToken> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/access-tokens/{accessTokenId}";
         if (projectId === undefined || projectId === null)

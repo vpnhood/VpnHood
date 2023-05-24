@@ -81,6 +81,10 @@ public class VhContext : DbContext
 
             entity.Property(e => e.CommonName)
                 .HasMaxLength(200);
+
+            entity.Property(e => e.Thumbprint)
+                .HasMaxLength(200);
+
         });
 
         modelBuilder.Entity<AccessTokenModel>(entity =>

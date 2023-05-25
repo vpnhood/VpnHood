@@ -12,6 +12,7 @@ public static class ServerFarmConverter
             ServerFarmName = model.ServerFarmName,
             ServerFarmId = model.ServerFarmId,
             CertificateId = model.CertificateId,
+            UseHostName = model.UseHostName,
             CreatedTime = model.CreatedTime,
             ServerProfileId = model.ServerProfileId,
             ServerProfileName = serverProfileName,

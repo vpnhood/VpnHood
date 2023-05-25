@@ -8,6 +8,7 @@ public class ServerFarm
     public required string ServerFarmName { get; init; }
     public required Guid ServerProfileId { get; init; }
     public required string ServerProfileName { get; init; }
+    public required bool UseHostName { get; init; }
     public required Guid CertificateId { get; init; }
     public required byte[] Secret { get; init; }
     public required DateTime CreatedTime { get; init; }

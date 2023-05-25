@@ -63,6 +63,7 @@ public class ProjectService
         {
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
+            UseHostName = false,
             Certificate = await _certificateService.CreateSelfSingedInternal(projectId),
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),

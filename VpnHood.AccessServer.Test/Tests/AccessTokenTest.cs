@@ -189,6 +189,52 @@ public class AccessTokenTest
         }
     }
 
+    [TestMethod]
+    public async Task GetAccessKey_ForIp()
+    {
+        var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        {
+            UseHostName = false,
+            ServerFarmName = Guid.NewGuid().ToString()
+        });
+
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsFalse(token.IsValidHostName);
+        Assert.IsTrue(token.HostEndPoints!.Any());
+
+
+        await farm.Update(new ServerFarmUpdateParams { UseHostName = new PatchOfBoolean { Value = true } });
+        token = await accessToken.GetToken();
+        Assert.IsTrue(token.IsValidHostName);
+        Assert.IsTrue(token.HostEndPoints!.Any());
+    }
+
+    [TestMethod]
+    public async Task GetAccessKey_ForDomain()
+    {
+        var testInit = await TestInit.Create();
+        var certificate = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId);
+
+        var farm = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
+        {
+            CertificateId = certificate.CertificateId,
+            UseHostName = true,
+            ServerFarmName = Guid.NewGuid().ToString()
+        });
+
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsTrue(token.IsValidHostName);
+        Assert.IsTrue(token.HostEndPoints!.Any());
+
+
+        await farm.Update(new ServerFarmUpdateParams { UseHostName = new PatchOfBoolean { Value = false } });
+        token = await accessToken.GetToken();
+        Assert.IsFalse(token.IsValidHostName);
+        Assert.IsTrue(token.HostEndPoints!.Any());
+    }
+
 
     [TestMethod]
     public async Task Quota()

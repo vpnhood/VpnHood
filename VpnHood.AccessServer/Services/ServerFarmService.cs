@@ -32,6 +32,8 @@ public class ServerFarmService
         if (_vhContext.ServerFarms.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerFarmCount)
             throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
 
+        if (createParams.CertificateId == null && createParams.UseHostName)
+            throw new InvalidOperationException($"To set {nameof(createParams.UseHostName)} you must set {nameof(createParams.CertificateId)}.");
 
         // create default name
         createParams.ServerFarmName = createParams.ServerFarmName?.Trim();
@@ -64,6 +66,7 @@ public class ServerFarmService
             ServerFarmName = createParams.ServerFarmName,
             CertificateId = certificate.CertificateId,
             CreatedTime = DateTime.UtcNow,
+            UseHostName = createParams.UseHostName,
             Secret = VhUtil.GenerateKey()
         };
 
@@ -90,6 +93,9 @@ public class ServerFarmService
 
         if (certificate != null)
             serverFarm.CertificateId = certificate.CertificateId;
+
+        if (updateParams.UseHostName != null)
+            serverFarm.UseHostName = updateParams.UseHostName;
 
         // Set ServerProfileId
         var isServerProfileChanged = updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId;

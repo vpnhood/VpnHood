@@ -7664,6 +7664,11 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string ServerProfileName { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool UseHostName { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
@@ -7702,6 +7707,11 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public System.Guid? CertificateId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool UseHostName { get; set; } = default!;
 
     }
 
@@ -7777,6 +7787,11 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfGuid? ServerProfileId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfBoolean? UseHostName { get; set; } = default!;
 
     }
 

@@ -30,8 +30,8 @@ public class AccessTokensController : ControllerBase
     private readonly VhContext _vhContext;
 
     public AccessTokensController(
-        UsageReportService usageReportService, 
-        SubscriptionService subscriptionService, 
+        UsageReportService usageReportService,
+        SubscriptionService subscriptionService,
         VhContext vhContext)
     {
         _usageReportService = usageReportService;
@@ -135,7 +135,7 @@ public class AccessTokensController : ControllerBase
         // find all public accessPoints 
         var farmServers = await _vhContext.Servers
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Where(server => server.ServerFarmId == accessToken.ServerFarmId )
+            .Where(server => server.ServerFarmId == accessToken.ServerFarmId)
             .ToArrayAsync();
 
         var tokenAccessPoints = farmServers
@@ -143,9 +143,21 @@ public class AccessTokensController : ControllerBase
             .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
             .ToArray();
 
-       
+
         if (VhUtil.IsNullOrEmpty(tokenAccessPoints))
             throw new InvalidOperationException("Could not find any public access point for the ServerFarm. Please configure a server for this AccessToken.");
+
+        // find all token tcp port
+        var hostPort = 0;
+        if (accessToken.ServerFarm.UseHostName)
+        {
+            var hostPorts = tokenAccessPoints.DistinctBy(x => x.TcpPort).ToArray();
+            if (hostPorts.Length > 1)
+                throw new Exception(
+                    $"More than one TCP port has been found in PublicInTokens. It is ambiguous as to which port should be used for the hostname. " +
+                    $"EndPoints: {string.Join(',', hostPorts.Select(x => x.ToString()))}");
+            hostPort = hostPorts.Single().TcpPort;
+        }
 
         // create token
         var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
@@ -155,8 +167,8 @@ public class AccessTokensController : ControllerBase
             Name = accessToken.AccessTokenName,
             SupportId = accessToken.SupportCode,
             HostEndPoints = tokenAccessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
-            HostPort = 0, //valid hostname is not supported yet
-            IsValidHostName = false,
+            HostPort = hostPort,
+            IsValidHostName = accessToken.ServerFarm.UseHostName,
             IsPublic = accessToken.IsPublic,
             Url = accessToken.Url
         };
@@ -219,7 +231,7 @@ public class AccessTokensController : ControllerBase
             .Take(recordCount);
 
         var results = await query.ToArrayAsync();
-        
+
         // fill usage if requested
         if (usageBeginTime != null)
         {

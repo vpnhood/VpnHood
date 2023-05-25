@@ -273,6 +273,9 @@ public class VhContext : DbContext
             entity.Property(e => e.ServerFarmName)
                 .HasMaxLength(100);
 
+            entity.Property(e => e.UseHostName)
+                .HasDefaultValue(false);
+
             entity.Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 

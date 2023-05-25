@@ -4595,6 +4595,7 @@ export class ServerFarm implements IServerFarm {
     serverFarmName!: string;
     serverProfileId!: string;
     serverProfileName!: string;
+    useHostName!: boolean;
     certificateId!: string;
     secret!: string;
     createdTime!: Date;
@@ -4614,6 +4615,7 @@ export class ServerFarm implements IServerFarm {
             this.serverFarmName = _data["serverFarmName"];
             this.serverProfileId = _data["serverProfileId"];
             this.serverProfileName = _data["serverProfileName"];
+            this.useHostName = _data["useHostName"];
             this.certificateId = _data["certificateId"];
             this.secret = _data["secret"];
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>undefined;
@@ -4633,6 +4635,7 @@ export class ServerFarm implements IServerFarm {
         data["serverFarmName"] = this.serverFarmName;
         data["serverProfileId"] = this.serverProfileId;
         data["serverProfileName"] = this.serverProfileName;
+        data["useHostName"] = this.useHostName;
         data["certificateId"] = this.certificateId;
         data["secret"] = this.secret;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>undefined;
@@ -4645,6 +4648,7 @@ export interface IServerFarm {
     serverFarmName: string;
     serverProfileId: string;
     serverProfileName: string;
+    useHostName: boolean;
     certificateId: string;
     secret: string;
     createdTime: Date;
@@ -4654,6 +4658,7 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
     serverFarmName?: string | undefined;
     serverProfileId?: string | undefined;
     certificateId?: string | undefined;
+    useHostName!: boolean;
 
     constructor(data?: IServerFarmCreateParams) {
         if (data) {
@@ -4669,6 +4674,7 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
             this.serverFarmName = _data["serverFarmName"];
             this.serverProfileId = _data["serverProfileId"];
             this.certificateId = _data["certificateId"];
+            this.useHostName = _data["useHostName"];
         }
     }
 
@@ -4684,6 +4690,7 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         data["serverFarmName"] = this.serverFarmName;
         data["serverProfileId"] = this.serverProfileId;
         data["certificateId"] = this.certificateId;
+        data["useHostName"] = this.useHostName;
         return data;
     }
 }
@@ -4692,6 +4699,7 @@ export interface IServerFarmCreateParams {
     serverFarmName?: string | undefined;
     serverProfileId?: string | undefined;
     certificateId?: string | undefined;
+    useHostName: boolean;
 }
 
 export class ServerFarmData implements IServerFarmData {
@@ -4798,6 +4806,7 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
     serverFarmName?: PatchOfString | undefined;
     certificateId?: PatchOfGuid | undefined;
     serverProfileId?: PatchOfGuid | undefined;
+    useHostName?: PatchOfBoolean | undefined;
 
     constructor(data?: IServerFarmUpdateParams) {
         if (data) {
@@ -4813,6 +4822,7 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
             this.serverFarmName = _data["serverFarmName"] ? PatchOfString.fromJS(_data["serverFarmName"]) : <any>undefined;
             this.certificateId = _data["certificateId"] ? PatchOfGuid.fromJS(_data["certificateId"]) : <any>undefined;
             this.serverProfileId = _data["serverProfileId"] ? PatchOfGuid.fromJS(_data["serverProfileId"]) : <any>undefined;
+            this.useHostName = _data["useHostName"] ? PatchOfBoolean.fromJS(_data["useHostName"]) : <any>undefined;
         }
     }
 
@@ -4828,6 +4838,7 @@ export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
         data["serverFarmName"] = this.serverFarmName ? this.serverFarmName.toJSON() : <any>undefined;
         data["certificateId"] = this.certificateId ? this.certificateId.toJSON() : <any>undefined;
         data["serverProfileId"] = this.serverProfileId ? this.serverProfileId.toJSON() : <any>undefined;
+        data["useHostName"] = this.useHostName ? this.useHostName.toJSON() : <any>undefined;
         return data;
     }
 }
@@ -4836,6 +4847,7 @@ export interface IServerFarmUpdateParams {
     serverFarmName?: PatchOfString | undefined;
     certificateId?: PatchOfGuid | undefined;
     serverProfileId?: PatchOfGuid | undefined;
+    useHostName?: PatchOfBoolean | undefined;
 }
 
 export class ServerProfile implements IServerProfile {

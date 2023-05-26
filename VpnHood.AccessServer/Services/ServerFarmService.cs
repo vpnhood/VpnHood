@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
@@ -149,14 +151,49 @@ public class ServerFarmService
             .AsNoTracking();
 
         var serverFarms = await query.ToArrayAsync();
+        var accessPoints = await GetPublicInTokenAccessPoints(serverFarms.Select(x => x.ServerFarm.ServerFarmId));
         var dtos = serverFarms
             .Select(x => new ServerFarmData
             {
                 ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
-                Certificate = x.Certificate.ToDto()
+                Certificate = x.Certificate.ToDto(),
+                AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId)
             });
 
         return dtos.ToArray();
+    }
+
+    public async Task<ServerFarmAccessPoint[]> GetPublicInTokenAccessPoints(IEnumerable<Guid> farmIds)
+    {
+        var query = _vhContext.Servers
+            .Where(x => farmIds.Contains(x.ServerFarmId))
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.ServerFarmId,
+                x.ServerId,
+                x.ServerName,
+                x.AccessPoints
+            });
+
+        var servers = await query
+            .AsNoTracking()
+            .ToArrayAsync();
+
+        var items = new List<ServerFarmAccessPoint>();
+
+        foreach (var server in servers)
+            items.AddRange(server.AccessPoints
+                .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
+                .Select(accessPoint => new ServerFarmAccessPoint
+                {
+                    ServerFarmId = server.ServerFarmId,
+                    ServerId = server.ServerId,
+                    ServerName = server.ServerName,
+                    TcpEndPoint = new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)
+                }));
+
+        return items.ToArray();
     }
 
     public async Task<ServerFarmData[]> ListWithSummary(Guid projectId, string? search = null,
@@ -194,11 +231,13 @@ public class ServerFarmService
             .ToArrayAsync();
 
         // create result
+        var accessPoints = await GetPublicInTokenAccessPoints(results.Select(x => x.ServerFarm.ServerFarmId));
         var now = DateTime.UtcNow;
         var ret = results.Select(x => new ServerFarmData
         {
             ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
             Certificate = x.Certificate.ToDto(),
+            AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
             Summary = new ServerFarmSummary
             {
                 ActiveTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime >= now.AddDays(-7)),

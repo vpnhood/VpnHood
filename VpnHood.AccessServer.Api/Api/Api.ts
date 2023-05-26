@@ -4705,6 +4705,7 @@ export interface IServerFarmCreateParams {
 export class ServerFarmData implements IServerFarmData {
     serverFarm!: ServerFarm;
     certificate!: Certificate;
+    accessPoints!: ServerFarmAccessPoint[];
     summary?: ServerFarmSummary | undefined;
 
     constructor(data?: IServerFarmData) {
@@ -4717,6 +4718,7 @@ export class ServerFarmData implements IServerFarmData {
         if (!data) {
             this.serverFarm = new ServerFarm();
             this.certificate = new Certificate();
+            this.accessPoints = [];
         }
     }
 
@@ -4724,6 +4726,11 @@ export class ServerFarmData implements IServerFarmData {
         if (_data) {
             this.serverFarm = _data["serverFarm"] ? ServerFarm.fromJS(_data["serverFarm"]) : new ServerFarm();
             this.certificate = _data["certificate"] ? Certificate.fromJS(_data["certificate"]) : new Certificate();
+            if (Array.isArray(_data["accessPoints"])) {
+                this.accessPoints = [] as any;
+                for (let item of _data["accessPoints"])
+                    this.accessPoints!.push(ServerFarmAccessPoint.fromJS(item));
+            }
             this.summary = _data["summary"] ? ServerFarmSummary.fromJS(_data["summary"]) : <any>undefined;
         }
     }
@@ -4739,6 +4746,11 @@ export class ServerFarmData implements IServerFarmData {
         data = typeof data === 'object' ? data : {};
         data["serverFarm"] = this.serverFarm ? this.serverFarm.toJSON() : <any>undefined;
         data["certificate"] = this.certificate ? this.certificate.toJSON() : <any>undefined;
+        if (Array.isArray(this.accessPoints)) {
+            data["accessPoints"] = [];
+            for (let item of this.accessPoints)
+                data["accessPoints"].push(item.toJSON());
+        }
         data["summary"] = this.summary ? this.summary.toJSON() : <any>undefined;
         return data;
     }
@@ -4747,7 +4759,56 @@ export class ServerFarmData implements IServerFarmData {
 export interface IServerFarmData {
     serverFarm: ServerFarm;
     certificate: Certificate;
+    accessPoints: ServerFarmAccessPoint[];
     summary?: ServerFarmSummary | undefined;
+}
+
+export class ServerFarmAccessPoint implements IServerFarmAccessPoint {
+    serverFarmId!: string;
+    serverId!: string;
+    serverName!: string;
+    tcpEndPoint!: string;
+
+    constructor(data?: IServerFarmAccessPoint) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.serverFarmId = _data["serverFarmId"];
+            this.serverId = _data["serverId"];
+            this.serverName = _data["serverName"];
+            this.tcpEndPoint = _data["tcpEndPoint"];
+        }
+    }
+
+    static fromJS(data: any): ServerFarmAccessPoint {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerFarmAccessPoint();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["serverFarmId"] = this.serverFarmId;
+        data["serverId"] = this.serverId;
+        data["serverName"] = this.serverName;
+        data["tcpEndPoint"] = this.tcpEndPoint;
+        return data;
+    }
+}
+
+export interface IServerFarmAccessPoint {
+    serverFarmId: string;
+    serverId: string;
+    serverName: string;
+    tcpEndPoint: string;
 }
 
 export class ServerFarmSummary implements IServerFarmSummary {

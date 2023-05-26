@@ -7731,10 +7731,46 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public Certificate Certificate { get; set; } = new Certificate();
 
+        [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ServerFarmAccessPoint> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<ServerFarmAccessPoint>();
+
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public ServerFarmSummary? Summary { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.19.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerFarmAccessPoint
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid ServerFarmId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverId")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid ServerId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ServerName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tcpEndPoint")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string TcpEndPoint { get; set; } = default!;
 
     }
 

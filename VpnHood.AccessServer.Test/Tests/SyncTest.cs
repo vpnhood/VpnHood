@@ -1,9 +1,13 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.AccessServer.Test.Helper;
 using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -140,4 +144,6 @@ public class SyncTest
         Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");
         Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId), "Should not remove open sessions");
     }
+
 }
+

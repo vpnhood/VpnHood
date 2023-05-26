@@ -23,8 +23,12 @@ public class VhContext : DbContext
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
 
+    protected VhContext()
+    {
+    }
+
     public VhContext(DbContextOptions options)
-        : base(options)
+            : base(options)
     {
     }
 
@@ -293,7 +297,7 @@ public class VhContext : DbContext
                 .HasForeignKey(e => new { e.ProjectId, e.ServerProfileId })
                 .HasPrincipalKey(e => new { e.ProjectId, e.ServerProfileId })
                 .OnDelete(DeleteBehavior.NoAction);
-            
+
             entity.HasOne(e => e.Certificate)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => new { e.ProjectId, e.CertificateId })

@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Tests;
@@ -23,7 +27,7 @@ public class TunnelTest
 
         public Task OnPacketReceived(IPPacket packet)
         {
-            lock(this)
+            lock (this)
                 ReceivedCount++;
             return Task.CompletedTask;
         }
@@ -105,7 +109,7 @@ public class TunnelTest
         serverUdpChannel.Start();
 
         var serverReceivedPackets = Array.Empty<IPPacket>();
-        serverUdpChannel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
+        serverUdpChannel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
         {
             serverReceivedPackets = e.IpPackets.ToArray();
             _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -121,7 +125,7 @@ public class TunnelTest
         clientUdpChannel.Start();
 
         var clientReceivedPackets = Array.Empty<IPPacket>();
-        clientUdpChannel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
+        clientUdpChannel.OnPacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e)
         {
             clientReceivedPackets = e.IpPackets.ToArray();
             waitHandle.Set();
@@ -159,7 +163,7 @@ public class TunnelTest
 
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
-        serverTunnel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
+        serverTunnel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
         {
             serverReceivedPackets = e.IpPackets.ToArray();
             _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -175,7 +179,7 @@ public class TunnelTest
 
         var clientTunnel = new Tunnel();
         clientTunnel.AddChannel(clientUdpChannel);
-        clientTunnel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
+        clientTunnel.OnPacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e)
         {
             clientReceivedPackets = e.IpPackets.ToArray();
             waitHandle.Set();
@@ -188,6 +192,29 @@ public class TunnelTest
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
     }
 
+    [TestMethod]
+    public async Task HttpChunkStream()
+    {
+        var chunks = new List<string>
+        {
+            "HelloHelloHelloHelloHelloHelloHelloHello\r\n",
+            "Apple1234,\r\nApple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234,Apple1234",
+            "Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009,Book009",
+            "550Clock\n\r,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock"
+        };
 
+        var stream = new MemoryStream();
+        var chunkStream = new HttpChunkStream(stream);
+        foreach (var chunk in chunks)
+            await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
+        Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
+        await chunkStream.DisposeAsync();
 
+        stream.Position = 0;
+        chunkStream = new HttpChunkStream(stream);
+        var sr = new StreamReader(chunkStream);
+        var res = await sr.ReadToEndAsync();
+        Assert.AreEqual(string.Join("", chunks), res);
+        Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
+    }
 }

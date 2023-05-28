@@ -6,6 +6,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
@@ -279,7 +281,7 @@ internal class ServerHost : IAsyncDisposable
     {
         // read version
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
-        var buffer = new byte[2];
+        var buffer = new byte[1];
         var res = await tcpClientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
         if (res != buffer.Length)
             throw new Exception("Connection closed before receiving any request!");
@@ -287,10 +289,17 @@ internal class ServerHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version != 1)
+        {
+            // try http header
             throw new NotSupportedException("The request version is not supported!");
+        }
 
         // read request code
-        var requestCode = (RequestCode)buffer[1];
+        res = await tcpClientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+        if (res != buffer.Length)
+            throw new Exception("Connection closed before receiving any request!");
+
+        var requestCode = (RequestCode)buffer[0];
         switch (requestCode)
         {
             case RequestCode.Hello:
@@ -316,6 +325,19 @@ internal class ServerHost : IAsyncDisposable
             default:
                 throw new NotSupportedException($"Unknown requestCode. requestCode: {requestCode}");
         }
+    }
+
+    private async Task ProcessHttpRequest(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
+    {
+        var httpHeaders = await HttpHeaderReader.ReadHeadersAsync(tcpClientStream.Stream, cancellationToken: cancellationToken);
+
+        // parse authorization and extract encryptedData
+        if (!httpHeaders.TryGetValue("authorization", out var authorization))
+            throw new Exception("Could not find authorization HTTP header.");
+
+        if (!httpHeaders.TryGetValue("ETag", out var saltHeader))
+            throw new Exception("Could not find salt from HTTP header.");
+
     }
 
     private async Task ProcessHello(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
@@ -439,7 +461,7 @@ internal class ServerHost : IAsyncDisposable
         // find session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
-        await session.ProcessTcpChannelRequest(tcpClientStream, request, cancellationToken);
+        await session.ProcessTcpProxyRequest(tcpClientStream, request, cancellationToken);
     }
 
     public async ValueTask DisposeAsync()

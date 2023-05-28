@@ -326,7 +326,7 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    public async Task ProcessTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request,
+    public async Task ProcessTcpProxyRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request,
         CancellationToken cancellationToken)
     {
         var isRequestedEpException = false;

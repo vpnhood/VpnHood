@@ -9,7 +9,7 @@ namespace VpnHood.Tunneling.Channels;
 
 public static class HttpHeaderReader
 {
-    public static async Task<Dictionary<string, string>> ReadHeadersAsync(Stream stream, int maxLength = 0xFFFF, 
+    public static async Task<Dictionary<string, string>> ReadHeadersAsync(Stream stream, int maxLength = 0xFFFF,
         CancellationToken cancellationToken = default)
     {
         // read header
@@ -23,21 +23,20 @@ public static class HttpHeaderReader
                 throw new Exception("HTTP Stream closed unexpectedly!");
 
             if (readBuffer[0] == '\r' || readBuffer[0] == '\n')
-            {
                 lfCounter++;
-                continue;
-            }
+            else
+                lfCounter = 0;
 
-            lfCounter++;
             await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken);
 
             if (memStream.Length > maxLength)
                 throw new Exception("HTTP header is too big.");
         }
 
+        memStream.Position = 0;
         var reader = new StreamReader(memStream, Encoding.UTF8);
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        
+
         // Read the header lines until an empty line is encountered
         while (true)
         {

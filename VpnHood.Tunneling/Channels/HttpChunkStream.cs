@@ -165,7 +165,7 @@ public class HttpChunkStream : Stream
                 await _sourceStream.WriteAsync("0\r\n\r\n"u8.ToArray());
                 await FlushAsync();
             }
-            
+
             if (!_keepOpen)
                 await _sourceStream.DisposeAsync();
 

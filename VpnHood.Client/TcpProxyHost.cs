@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Client.ConnectorServices;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -204,7 +205,8 @@ internal class TcpProxyHost : IDisposable
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
-        TcpClientStream? tcpProxyClientStream = null;
+        ConnectorRequestResult<SessionResponseBase>? connectorRequest = null;
+        TcpProxyChannel? channel = null;
 
         try
         {
@@ -216,10 +218,9 @@ internal class TcpProxyHost : IDisposable
             var ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
                 ? IPVersion.IPv4
                 : IPVersion.IPv6;
-            var natItem = (NatItemEx?)Client.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
-            if (natItem == null)
-                throw new Exception(
-                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
+
+            var natItem = (NatItemEx?)Client.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port)
+                          ?? throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope(
@@ -249,15 +250,13 @@ internal class TcpProxyHost : IDisposable
                 VhUtil.GenerateKey(),
                 natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
-            tcpProxyClientStream = await Client.GetTlsConnectionToServer(GeneralEventId.TcpProxyChannel, cancellationToken);
+            // read the response
+            connectorRequest = await Client.SendRequest<SessionResponseBase>(RequestCode.TcpProxyChannel, request, cancellationToken);
+            var tcpProxyClientStream = connectorRequest.TcpClientStream;
             tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
             tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
             tcpProxyClientStream.TcpClient.SendTimeout = orgTcpClient.SendTimeout;
             Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
-
-            // read the response
-            await Client.SendRequest<SessionResponseBase>(tcpProxyClientStream.Stream,
-                RequestCode.TcpProxyChannel, request, cancellationToken);
 
             // create a TcpProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
@@ -269,13 +268,13 @@ internal class TcpProxyHost : IDisposable
             tcpProxyClientStream.Stream = StreamHeadCryptor.Create(tcpProxyClientStream.TcpClient.GetStream(),
                 request.CipherKey, null, request.CipherLength);
 
-            var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream, TunnelUtil.TcpTimeout);
-            try { Client.Tunnel.AddChannel(channel); }
-            catch { channel.Dispose(); throw; }
+            channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream, TunnelUtil.TcpTimeout);
+            Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)
         {
-            tcpProxyClientStream?.Dispose();
+            channel?.Dispose();
+            connectorRequest?.Dispose();
             orgTcpClient.Dispose();
             VhLogger.Instance.LogError(GeneralEventId.TcpProxyChannel, $"{ex.Message}");
         }

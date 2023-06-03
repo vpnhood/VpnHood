@@ -34,6 +34,11 @@ public class HttpChunkStream : Stream
         throw new NotSupportedException("Use ReadAsync.");
     }
 
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        throw new NotSupportedException("Use Write.");
+    }
+
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         var totalBytesRead = 0;
@@ -95,21 +100,6 @@ public class HttpChunkStream : Stream
         // Write the chunk footer
         await _writeBuffer.WriteAsync(_newLineBytes, cancellationToken);
         await FlushAsync(cancellationToken);
-        WroteChunkCount++;
-    }
-
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-        // Write the chunk header
-        var headerBytes = Encoding.ASCII.GetBytes(count.ToString("X") + "\r\n");
-        _writeBuffer.Write(headerBytes, 0, headerBytes.Length);
-
-        // Write the chunk data
-        _writeBuffer.Write(buffer, offset, count);
-
-        // Write the chunk footer
-        _writeBuffer.Write(_newLineBytes);
-        Flush();
         WroteChunkCount++;
     }
 

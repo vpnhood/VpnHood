@@ -11,7 +11,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
 // todo: deprecated version >= 2.9.362
 public class UdpChannel : IDatagramChannel
@@ -60,7 +60,7 @@ public class UdpChannel : IDatagramChannel
     public Task Start()
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(TcpDatagramChannel));
+            throw new ObjectDisposedException(nameof(StreamDatagramChannel));
 
         if (Connected)
             throw new Exception("Start has already been called!");
@@ -72,7 +72,7 @@ public class UdpChannel : IDatagramChannel
     public async Task SendPacketAsync(IPPacket[] ipPackets)
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(TcpDatagramChannel));
+            throw new ObjectDisposedException(nameof(StreamDatagramChannel));
 
         // Tunnel optimizes the packets in regard of MTU without fragmentation 
         // so here we are not worry about optimizing it and can use fragmentation because the sum of 

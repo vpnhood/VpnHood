@@ -7,6 +7,8 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Test.Tests;
@@ -41,7 +43,7 @@ public class TcpDatagramChannelTest
         // create server channel
         var serverTcpClient = await listenerTask;
         var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream());
-        using var serverChannel = new TcpDatagramChannel(serverStream);
+        using var serverChannel = new StreamDatagramChannel(serverStream);
         using var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IPPacket? lastServerReceivedPacket = null;
@@ -52,7 +54,7 @@ public class TcpDatagramChannelTest
 
         // create client channel
         var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream());
-        using var clientChannel = new TcpDatagramChannel(clientStream, TimeSpan.FromMilliseconds(1000));
+        using var clientChannel = new StreamDatagramChannel(clientStream, TimeSpan.FromMilliseconds(1000));
         using var clientTunnel = new Tunnel(new TunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 

@@ -18,6 +18,8 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
@@ -180,13 +182,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync();
     }
 
-    internal async Task AddPassthruTcpStream(TcpClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
+    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
         CancellationToken cancellationToken)
     {
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
-        tcpClient.ReceiveBufferSize = orgTcpClientStream.TcpClient.ReceiveBufferSize;
-        tcpClient.SendBufferSize = orgTcpClientStream.TcpClient.SendBufferSize;
-        tcpClient.SendTimeout = orgTcpClientStream.TcpClient.SendTimeout;
+        tcpClient.ReceiveBufferSize = orgTcpClientStream.ReceiveBufferSize;
+        tcpClient.SendBufferSize = orgTcpClientStream.SendBufferSize;
         SocketFactory.SetKeepAlive(tcpClient.Client, true);
 
         // connect to host
@@ -194,7 +195,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
         // create add add channel
-        var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()), TunnelUtil.TcpTimeout);
+        var bypassChannel = new StreamProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()), TunnelUtil.TcpTimeout);
         try { _proxyManager.AddChannel(bypassChannel); }
         catch { bypassChannel.Dispose(); throw; }
     }
@@ -750,12 +751,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task<TcpDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)
+    private async Task<StreamDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
         var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
         var requestResult = await SendRequest<SessionResponseBase>(RequestCode.TcpDatagramChannel, request, cancellationToken);
-        TcpDatagramChannel? channel = null;
+        StreamDatagramChannel? channel = null;
         try
         {
             // find timespan
@@ -764,7 +765,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 : Timeout.InfiniteTimeSpan;
 
             // add the new channel
-            channel = new TcpDatagramChannel(requestResult.TcpClientStream, lifespan);
+            channel = new StreamDatagramChannel(requestResult.TcpClientStream, lifespan);
             Tunnel.AddChannel(channel);
             return channel;
         }

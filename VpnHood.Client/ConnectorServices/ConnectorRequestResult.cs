@@ -1,6 +1,6 @@
 ﻿using System;
 using VpnHood.Common.Messaging;
-using VpnHood.Tunneling;
+using VpnHood.Tunneling.ClientStreams;
 
 namespace VpnHood.Client.ConnectorServices;
 

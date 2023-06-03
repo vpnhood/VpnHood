@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -8,15 +7,16 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.ClientStreams;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
-public class TcpProxyChannel : IChannel, IJob
+public class StreamProxyChannel : IChannel, IJob
 {
     private readonly int _orgStreamBufferSize;
-    private readonly TcpClientStream _orgTcpClientStream;
+    private readonly IClientStream _orgTcpClientStream;
     private readonly int _tunnelStreamBufferSize;
-    private readonly TcpClientStream _tunnelTcpClientStream;
+    private readonly IClientStream _tunnelTcpClientStream;
     private const int BufferSizeDefault = 0x1000 * 4; //16k
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 0x1000;
@@ -26,32 +26,32 @@ public class TcpProxyChannel : IChannel, IJob
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public bool IsClosePending => false;
     public bool Connected { get; private set; }
-    public Traffic Traffic { get; } = new ();
+    public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
-    public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
+    public StreamProxyChannel(IClientStream orgClientStream, IClientStream tunnelClientStream,
         TimeSpan tcpTimeout, int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)
     {
-        _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
-        _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
-        
+        _orgTcpClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
+        _tunnelTcpClientStream = tunnelClientStream ?? throw new ArgumentNullException(nameof(tunnelClientStream));
+
         // validate buffer sizes
         if (orgStreamBufferSize is 0 or null) orgStreamBufferSize = BufferSizeDefault;
         if (tunnelStreamBufferSize is 0 or null) tunnelStreamBufferSize = BufferSizeDefault;
 
         _orgStreamBufferSize = orgStreamBufferSize is >= BufferSizeMin and <= BufferSizeMax
             ? orgStreamBufferSize.Value
-            : throw new ArgumentOutOfRangeException(nameof(orgStreamBufferSize), orgStreamBufferSize, 
+            : throw new ArgumentOutOfRangeException(nameof(orgStreamBufferSize), orgStreamBufferSize,
                 $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}.");
 
         _tunnelStreamBufferSize = tunnelStreamBufferSize is >= BufferSizeMin and <= BufferSizeMax
             ? tunnelStreamBufferSize.Value
-            : throw new ArgumentOutOfRangeException(nameof(tunnelStreamBufferSize), tunnelStreamBufferSize, 
+            : throw new ArgumentOutOfRangeException(nameof(tunnelStreamBufferSize), tunnelStreamBufferSize,
                 $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}");
 
         // We don't know about client or server delay, so lets pessimistic
-        orgTcpClientStream.TcpClient.NoDelay = true;
-        tunnelTcpClientStream.TcpClient.NoDelay = true;
+        orgClientStream.NoDelay = true;
+        tunnelClientStream.NoDelay = true;
 
         JobSection = new JobSection(tcpTimeout);
         JobRunner.Default.Add(this);
@@ -73,31 +73,18 @@ public class TcpProxyChannel : IChannel, IJob
         }
     }
 
-    private static bool IsConnectionValid(Socket socket)
-    {
-        try
-        {
-            return !socket.Poll(0, SelectMode.SelectError);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
     public Task RunJob()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
-        CheckTcpStates();
+        CheckClientIsAlive();
         return Task.CompletedTask;
     }
 
-    private void CheckTcpStates()
+    private void CheckClientIsAlive()
     {
-        if (IsConnectionValid(_orgTcpClientStream.TcpClient.Client) &&
-            IsConnectionValid(_tunnelTcpClientStream.TcpClient.Client))
+        if (_orgTcpClientStream.CheckIsAlive() && _tunnelTcpClientStream.CheckIsAlive())
             return;
 
         VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,

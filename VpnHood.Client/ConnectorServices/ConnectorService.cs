@@ -15,6 +15,7 @@ using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
 using VpnHood.Tunneling.Messaging;
 using System.IO;
+using VpnHood.Tunneling.ClientStreams;
 
 namespace VpnHood.Client.ConnectorServices;
 

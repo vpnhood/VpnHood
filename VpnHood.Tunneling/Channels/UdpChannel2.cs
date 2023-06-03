@@ -10,7 +10,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
 public class UdpChannel2 : IDatagramChannel
 {
@@ -96,7 +96,7 @@ public class UdpChannel2 : IDatagramChannel
         _lastRemoteEp = remoteEndPoint;
     }
 
-    public void OnReceiveData( long cryptorPosition, byte[] buffer, int bufferIndex)
+    public void OnReceiveData(long cryptorPosition, byte[] buffer, int bufferIndex)
     {
         _sessionCryptor.Cipher(buffer, bufferIndex, buffer.Length - bufferIndex, cryptorPosition);
 

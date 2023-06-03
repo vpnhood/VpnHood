@@ -9,6 +9,7 @@ using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Tunneling;
@@ -22,7 +23,7 @@ public class Tunnel : IDisposable
     private readonly Queue<IPPacket> _packetQueue = new();
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
-    private readonly HashSet<TcpProxyChannel> _tcpProxyChannels = new();
+    private readonly HashSet<StreamProxyChannel> _tcpProxyChannels = new();
     private readonly Timer _speedMonitorTimer;
     private bool _disposed;
     private int _maxDatagramChannelCount;
@@ -150,7 +151,7 @@ public class Tunnel : IDisposable
         _ = SendPacketTask(datagramChannel);
     }
 
-    public void AddChannel(TcpProxyChannel channel)
+    public void AddChannel(StreamProxyChannel channel)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(Tunnel));
@@ -190,7 +191,7 @@ public class Tunnel : IDisposable
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
                     VhLogger.FormatType(channel), DatagramChannels.Length, channel.Connected, channel.IsClosePending);
             }
-            else if (channel is TcpProxyChannel tcpProxyChannel)
+            else if (channel is StreamProxyChannel tcpProxyChannel)
             {
                 _tcpProxyChannels.Remove(tcpProxyChannel);
                 VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,

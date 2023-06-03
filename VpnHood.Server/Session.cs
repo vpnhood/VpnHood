@@ -15,6 +15,8 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -292,21 +294,21 @@ public class Session : IAsyncDisposable, IJob
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    private void ConfigTcpClient(TcpClient tcpClient)
+    private void ConfigClientStream(IClientStream clientStream)
     {
         if (_tcpKernelReceiveBufferSize != null)
-            tcpClient.ReceiveBufferSize = _tcpKernelReceiveBufferSize.Value;
+            clientStream.ReceiveBufferSize = _tcpKernelReceiveBufferSize.Value;
 
         if (_tcpKernelSendBufferSize != null)
-            tcpClient.ReceiveBufferSize = _tcpKernelSendBufferSize.Value;
+            clientStream.SendBufferSize = _tcpKernelSendBufferSize.Value;
     }
 
-    public async Task ProcessTcpDatagramChannelRequest(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
+    public async Task ProcessTcpDatagramChannelRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        ConfigTcpClient(tcpClientStream.TcpClient);
+        ConfigClientStream(clientStream);
 
         // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, SessionResponse, cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
         // Disable UdpChannel
         UseUdpChannel = false;
@@ -314,7 +316,7 @@ public class Session : IAsyncDisposable, IJob
         // add channel
         VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
-        var channel = new TcpDatagramChannel(tcpClientStream);
+        var channel = new StreamDatagramChannel(clientStream);
         try
         {
             Tunnel.AddChannel(channel);
@@ -326,7 +328,7 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    public async Task ProcessTcpProxyRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request,
+    public async Task ProcessTcpProxyRequest(IClientStream clientStream, TcpProxyChannelRequest request,
         CancellationToken cancellationToken)
     {
         var isRequestedEpException = false;
@@ -334,7 +336,7 @@ public class Session : IAsyncDisposable, IJob
 
         TcpClient? tcpClientHost = null;
         TcpClientStream? tcpClientStreamHost = null;
-        TcpProxyChannel? tcpProxyChannel = null;
+        StreamProxyChannel? tcpProxyChannel = null;
         try
         {
             // connect to requested site
@@ -342,7 +344,7 @@ public class Session : IAsyncDisposable, IJob
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
             // Apply limitation
-            VerifyTcpChannelRequest(tcpClientStream, request);
+            VerifyTcpChannelRequest(clientStream, request);
 
             // prepare client
             Interlocked.Increment(ref _tcpConnectWaitCount);
@@ -363,22 +365,27 @@ public class Session : IAsyncDisposable, IJob
             isRequestedEpException = false;
 
             // send response
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, SessionResponse, cancellationToken);
+            await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
             // Dispose ssl stream and replace it with a Head-Cryptor
-            await tcpClientStream.Stream.DisposeAsync();
-            tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
-                request.CipherKey, null, request.CipherLength);
+            //todo perhaps must be deprecated from 
+            if (clientStream is not HttpClientStream and && clientStream is TcpClientStream tcpClientStream )
+            {
+                await clientStream.Stream.DisposeAsync();
+                tcpClientStream.Stream = StreamHeadCryptor.Create(
+                    tcpClientStream.TcpClient.GetStream(), 
+                    request.CipherKey, null, request.CipherLength);
+            }
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
-                $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
+                $"Adding a {nameof(StreamProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
 
-            ConfigTcpClient(tcpClientStream.TcpClient);
-            ConfigTcpClient(tcpClientStreamHost.TcpClient);
-            tcpProxyChannel = new TcpProxyChannel(tcpClientStreamHost, tcpClientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
+            ConfigClientStream(clientStream);
+            ConfigClientStream(tcpClientStreamHost);
+            tcpProxyChannel = new StreamProxyChannel(tcpClientStreamHost, clientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
 
             Tunnel.AddChannel(tcpProxyChannel);
         }
@@ -389,7 +396,7 @@ public class Session : IAsyncDisposable, IJob
             tcpProxyChannel?.Dispose();
 
             if (isRequestedEpException)
-                throw new ServerSessionException(tcpClientStream.IpEndPointPair.RemoteEndPoint,
+                throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
                     this, SessionErrorCode.GeneralError, ex.Message);
 
             throw;
@@ -401,7 +408,7 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    private void VerifyTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request)
+    private void VerifyTcpChannelRequest(IClientStream clientStream, TcpProxyChannelRequest request)
     {
         // filter
         var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
@@ -409,7 +416,7 @@ public class Session : IAsyncDisposable, IJob
         {
             LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raised();
-            throw new RequestBlockedException(tcpClientStream.RemoteEndPoint, this);
+            throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this);
         }
         request.DestinationEndPoint = newEndPoint;
 
@@ -423,7 +430,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raised();
-                throw new MaxTcpChannelException(tcpClientStream.RemoteEndPoint, this);
+                throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this);
             }
 
             // Check tcp wait limit
@@ -431,7 +438,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raised();
-                throw new MaxTcpConnectWaitException(tcpClientStream.RemoteEndPoint, this);
+                throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this);
             }
         }
     }

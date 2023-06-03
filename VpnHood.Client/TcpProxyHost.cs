@@ -11,6 +11,8 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -206,7 +208,7 @@ internal class TcpProxyHost : IDisposable
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
         ConnectorRequestResult<SessionResponseBase>? connectorRequest = null;
-        TcpProxyChannel? channel = null;
+        StreamProxyChannel? channel = null;
 
         try
         {
@@ -255,7 +257,6 @@ internal class TcpProxyHost : IDisposable
             var tcpProxyClientStream = connectorRequest.TcpClientStream;
             tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
             tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
-            tcpProxyClientStream.TcpClient.SendTimeout = orgTcpClient.SendTimeout;
             Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
 
             // create a TcpProxyChannel
@@ -268,7 +269,7 @@ internal class TcpProxyHost : IDisposable
             tcpProxyClientStream.Stream = StreamHeadCryptor.Create(tcpProxyClientStream.TcpClient.GetStream(),
                 request.CipherKey, null, request.CipherLength);
 
-            channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream, TunnelUtil.TcpTimeout);
+            channel = new StreamProxyChannel(orgTcpClientStream, tcpProxyClientStream, TunnelUtil.TcpTimeout);
             Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)

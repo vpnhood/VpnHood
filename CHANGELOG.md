@@ -1,4 +1,7 @@
 # Upcoming
+### Server
+* Fix Server Kernel SendBufferSize
+* Fix ClientCount report 0 in the FileAccessServer log
 
 # v2.9.370
 ### Server
@@ -17,7 +20,7 @@
 
 # v2.8.361
 ### Server
-* Feature: Enable hot reconfig for VpnHood Server TCP listener to avoid unnecessary restarts on unchanged endpoints
+* Feature: Enable hot reconfigure for VpnHood Server TCP listener to avoid unnecessary restarts on unchanged endpoints
 * Update: Replace AllowIpV6 to BlockIpV6
 * Update: Improve server security 
 
@@ -34,11 +37,11 @@
 
 # v2.7.356
 ### Client
-* Farture: Windows: Add "Open in Browser" item to system menu
+* Feature: Windows: Add "Open in Browser" item to system menu
 * Update: windows: ""Open in browser" if WebView is not initialized properly
 
 ### Server
-* Farture: Merge Server Configuration
+* Feature: Merge Server Configuration
 * Fix: Setting TCP kernel buffer
 * Fix: Error in parsing IPNetwork as Range
 * Update: Move NetFilter event from log to track
@@ -52,8 +55,8 @@
 * Windows: Fix Auto Updater
 
 ### Server
-* Farture: Filter server local networks
-* Farture: Filter networks by IP ranges
+* Feature: Filter server local networks
+* Feature: Filter networks by IP ranges
 * Fix: Missing some NetProtector log
 * Fix: Windows: AutoUpdater
 * Security: Always block access to loopback addresses
@@ -64,7 +67,7 @@
 * Update: Improve stability when using no UDP mode
 
 ### Server
-* Feature: Improve stability by adding lifetime to TcpDatagarmChannel
+* Feature: Improve stability by adding lifetime to TcpDatagramChannel
 * Fix: IpV6 detection
 
 # v2.6.342
@@ -87,7 +90,7 @@
 
 ### Server
 * Fix: It doesn't generate log
-* Feature: Add linux-arm64 installation
+* Feature: Add Linux-arm64 installation
 
 # v2.6.336
 ### Client
@@ -205,7 +208,7 @@
 
 # v2.4.304
 ### Client
-* Fix: Triming AccessKey
+* Fix: Trimming AccessKey
 * Update: Improve detecting countries
 
 ### Server
@@ -236,7 +239,7 @@
 * Fix: Windows: WebView2 could not be installed on some devices
 
 ### Server
-* Feature: Add linux docker package
+* Feature: Add Linux docker package
 * Update: Sync all active sessions to access the server every few minutes
 * Fix: Maintenance mode detection
 * Fix: Synching sessions to access server on shut down
@@ -304,7 +307,7 @@
 * Update: Upgrade to .NET 6
 * Update: Configuration by access server
 * Feature: Close session faster by handling client bye request
-* Fix: Refact IP addresses in the log 
+* Fix: Redact IP addresses in the log 
 
 # v2.2.283
 ### Client
@@ -317,7 +320,7 @@
 * Feature: Dynamic configuration from AccessServer
 * Feature: Multi listeners for different EndPoints
 * Fix: Few bug in disposing
-* Fix: linux: systemctl restart VpnHoodServer 
+* Fix: Linux: systemctl restart VpnHoodServer 
 
 # v2.1.276
 * Feature: IPv6 Support
@@ -384,7 +387,7 @@
 * Fix: Windows: Didn't bypass Some local network traffics
 
 ### Server
-* Update: Imporve Performance and Memory usage
+* Update: Improve Performance and Memory usage
 
 # v1.2.250
 ### Client
@@ -395,7 +398,7 @@
 ### Server
 * Update: Check session id for each UdpPacket
 * Update: Reject unSupported client
-* Fix: Updater on linux
+* Fix: Updater on Linux
 * Fix: Nlog maxArchiveDays maxArchiveFiles
 
 # v1.2.249
@@ -442,7 +445,7 @@
 
 # v1.1.240
 ### Client
-* Fix: Diangnostic report "No Internet", when there is internet 
+* Fix: Diagnostic report "No Internet", when there is internet 
 * Update: Windows: Change Updater
 
 # v1.1.238
@@ -460,7 +463,7 @@
 ### Server
 * Update: Auto restart if VpnHoodServer stops unexpectedly
 * Fix: Typo error in default.pfx filename for FileAccessServer
-* Fix: linux: Stop working after server update
+* Fix: Linux: Stop working after server update
 
 # v1.1.235
 ### Client
@@ -510,7 +513,7 @@
 
 # v1.1.197
 ### Client
-* Fix: rejecting accesskey with vh://
+* Fix: rejecting AccessKey with vh://
 
 ### Server
 * New: Report Linux Distribution info
@@ -534,7 +537,7 @@
 * Feature: Windows: Add Context menu to system tray
 * Update: Add Microsoft WebView2 Edge to Windows Installer prerequisites
 * Update: Send ClientVersion to server
-* Fix: accesskey prefix
+* Fix: AccessKey prefix
 
 ### Server
 * Fix: Reading server port number from appsettings.json
@@ -550,7 +553,7 @@
 ### Server
 * Fix: Unhandled NullReferenceException on ping packets
 * Fix: Improve server memory cleanup
-* Fix: Prevent new conenction after session disposed
+* Fix: Prevent new connection after session disposed
 * Fix: Speed Monitor and connection idle state
 * Fix: Improve connection stability and lost packets
 * Feature: ICMP logging for client and server with IsDiagnoseMode
@@ -576,7 +579,7 @@
 * Fix: Checking update from the Internet
 
 ### Server
-* Update: add subdomain when creating self-signed certifiates with random CN
+* Update: add subdomain when creating self-signed certificates with random CN
 
 # v1.1.91
 * Fix: AppUpdater throw error if UpdateUrl in publish.json was empty string

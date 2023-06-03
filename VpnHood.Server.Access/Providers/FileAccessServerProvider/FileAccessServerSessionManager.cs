@@ -143,13 +143,13 @@ public class FileAccessServerSessionManager : IDisposable, IJob
                 }
             }
 
-            // suppressedTo others by MaxClientCount
             if (accessUsage.MaxClientCount != 0)
             {
+                // suppressedTo others by MaxClientCount
                 var otherSessions2 = otherSessions
-                    .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
-                                x.SessionId != session.SessionId)
+                    .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId && x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
+
                 for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
                 {
                     var otherSession = otherSessions2[i];
@@ -160,7 +160,9 @@ public class FileAccessServerSessionManager : IDisposable, IJob
                 }
             }
 
-            accessUsage.ActiveClientCount = 0;
+            accessUsage.ActiveClientCount = otherSessions
+                .GroupBy(x=>x.ClientInfo.ClientId)
+                .Count();
         }
 
         // build result

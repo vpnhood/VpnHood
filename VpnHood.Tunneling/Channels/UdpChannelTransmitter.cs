@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
@@ -92,7 +92,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 var buffer = udpResult.Buffer;
                 if (buffer.Length < HeaderLength)
                     throw new Exception("Invalid UDP packet. Could not find its header.");
-                
+
                 // build header key
                 var bufferIndex = 0;
                 var iv = BitConverter.ToInt64(buffer, 0);

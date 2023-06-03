@@ -9,19 +9,20 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.DatagramMessaging;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
-public class TcpDatagramChannel : IDatagramChannel, IJob
+public class StreamDatagramChannel : IDatagramChannel, IJob
 {
     private readonly byte[] _buffer = new byte[0xFFFF];
     private const int Mtu = 0xFFFF;
-    private readonly TcpClientStream _tcpClientStream;
+    private readonly IClientStream _clientStream;
     private bool _disposed;
     private readonly DateTime _lifeTime = DateTime.MaxValue;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
-    
+
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public JobSection? JobSection => null;
@@ -30,15 +31,15 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
-    public TcpDatagramChannel(TcpClientStream tcpClientStream)
-    : this(tcpClientStream, Timeout.InfiniteTimeSpan)
+    public StreamDatagramChannel(IClientStream clientStream)
+    : this(clientStream, Timeout.InfiniteTimeSpan)
     {
     }
 
-    public TcpDatagramChannel(TcpClientStream tcpClientStream, TimeSpan lifespan)
+    public StreamDatagramChannel(IClientStream clientStream, TimeSpan lifespan)
     {
-        _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
-        tcpClientStream.TcpClient.NoDelay = true;
+        _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
+        clientStream.NoDelay = true;
         if (!VhUtil.IsInfinite(lifespan))
         {
             _lifeTime = FastDateTime.Now + lifespan;
@@ -82,7 +83,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
                 bufferIndex += ipPacket.TotalPacketLength;
             }
 
-            await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
+            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
             LastActivityTime = FastDateTime.Now;
             Traffic.Sent += bufferIndex;
         }
@@ -94,13 +95,12 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
 
     private async Task ReadTask()
     {
-        var tcpClient = _tcpClientStream.TcpClient;
-        var stream = _tcpClientStream.Stream;
+        var stream = _clientStream.Stream;
 
         try
         {
             var streamPacketReader = new StreamPacketReader(stream);
-            while (tcpClient.Connected)
+            while (true)
             {
                 var ipPackets = await streamPacketReader.ReadAsync();
                 if (ipPackets == null || _disposed)
@@ -130,7 +130,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
         catch (Exception ex)
         {
             if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "Error in reading UDP.");
+                VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "Error in reading UDP from StreamDatagram.");
         }
         finally
         {
@@ -174,7 +174,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
 
     public Task RunJob()
     {
-        if (!IsClosePending && FastDateTime.Now > _lifeTime  )
+        if (!IsClosePending && FastDateTime.Now > _lifeTime)
             _ = SendCloseMessageAsync();
 
         return Task.CompletedTask;
@@ -185,7 +185,7 @@ public class TcpDatagramChannel : IDatagramChannel, IJob
         if (_disposed) return;
         _disposed = true;
 
-        _tcpClientStream.Dispose();
+        _clientStream.Dispose();
         Connected = false;
         OnFinished?.Invoke(this, new ChannelEventArgs(this));
     }

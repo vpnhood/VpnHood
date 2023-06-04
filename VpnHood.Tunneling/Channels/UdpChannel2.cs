@@ -82,7 +82,7 @@ public class UdpChannel2 : IDatagramChannel
         catch (Exception ex)
         {
             if (IsInvalidState(ex))
-                Dispose();
+                await DisposeAsync();
         }
         finally
         {
@@ -127,13 +127,14 @@ public class UdpChannel2 : IDatagramChannel
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
         if (_disposed)
-            return;
+            return default;
         _disposed = true;
 
         Connected = false;
         OnFinished?.Invoke(this, new ChannelEventArgs(this));
+        return default;
     }
 }

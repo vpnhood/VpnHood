@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <Authors>VpnHood</Authors>
-    <Company>VpnHood</Company>
+    <Company>OmegaHood LLC</Company>
+    <Company>OmegaHood LLC</Company>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <Copyright>2022 VpnHood</Copyright>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>

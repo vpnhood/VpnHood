@@ -6,7 +6,7 @@
     <AssemblyName>VpnHood.Client.App.UI</AssemblyName>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <Company>OmegaHood LLC</Company>
-    <Company>OmegaHood LLC</Company>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>

@@ -5,7 +5,6 @@
     <RootNamespace>VpnHood.Tunneling</RootNamespace>
     <AssemblyName>VpnHood.Tunneling</AssemblyName>
     <Company>OmegaHood LLC</Company>
-    <Company>OmegaHood LLC</Company>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>

@@ -369,7 +369,7 @@ public class Session : IAsyncDisposable, IJob
 
             // Dispose ssl stream and replace it with a Head-Cryptor
             //todo perhaps must be deprecated from >= 2.9.371
-            if (clientStream is TcpClientStream tcpClientStream && !clientStream.AllowReuse)
+            if (clientStream.Stream is not HttpChunkStream && clientStream is TcpClientStream tcpClientStream)
             {
                 await clientStream.Stream.DisposeAsync();
                 tcpClientStream.Stream = StreamHeadCryptor.Create(

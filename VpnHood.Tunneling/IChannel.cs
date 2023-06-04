@@ -4,7 +4,7 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling;
 
-public interface IChannel : IDisposable
+public interface IChannel : IAsyncDisposable
 {
     bool IsClosePending { get; }
     bool Connected { get; }

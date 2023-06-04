@@ -10,7 +10,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Collections;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -273,7 +272,8 @@ internal class ServerHost : IAsyncDisposable
         {
             if (!succeeded)
             {
-                clientStream?.Dispose();
+                if (clientStream != null)
+                    await clientStream.DisposeAsync();
                 tcpClient.Dispose();
             }
         }
@@ -291,7 +291,7 @@ internal class ServerHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version == 'P')
-            return new HttpClientStream(tcpClient, new HttpChunkStream(stream));
+            return new TcpClientStream(tcpClient, new HttpChunkStream(stream));
 
         if (version == 1)
             return new TcpClientStream(tcpClient, stream);
@@ -397,7 +397,7 @@ internal class ServerHost : IAsyncDisposable
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
-        clientStream.Dispose();
+        await clientStream.DisposeAsync();
     }
 
     private async Task ProcessUdpChannel(IClientStream clientStream, CancellationToken cancellationToken)
@@ -421,7 +421,7 @@ internal class ServerHost : IAsyncDisposable
             UdpPort = session.UdpChannel.LocalPort
         }, cancellationToken);
 
-        clientStream.Dispose();
+        await clientStream.DisposeAsync();
     }
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
@@ -435,7 +435,7 @@ internal class ServerHost : IAsyncDisposable
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
-        clientStream.Dispose();
+        await clientStream.DisposeAsync();
     }
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)

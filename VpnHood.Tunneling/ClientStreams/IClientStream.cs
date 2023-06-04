@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.ClientStreams;
@@ -12,6 +13,5 @@ public interface IClientStream : IAsyncDisposable
     public int ReceiveBufferSize { get; set; }
     public int SendBufferSize { get; set; }
     public bool CheckIsAlive();
-    public bool AllowReuse { get; set; }
-
+    public ValueTask DisposeAsync(bool allowReuse);
 }

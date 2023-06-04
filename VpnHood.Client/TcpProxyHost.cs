@@ -274,8 +274,8 @@ internal class TcpProxyHost : IDisposable
         }
         catch (Exception ex)
         {
-            channel?.Dispose();
-            connectorRequest?.Dispose();
+            if (channel!=null) await channel.DisposeAsync();
+            if (connectorRequest!=null ) await connectorRequest.DisposeAsync();
             orgTcpClient.Dispose();
             VhLogger.Instance.LogError(GeneralEventId.TcpProxyChannel, $"{ex.Message}");
         }

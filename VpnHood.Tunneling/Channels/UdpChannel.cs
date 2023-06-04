@@ -149,7 +149,7 @@ public class UdpChannel : IDatagramChannel
             catch (Exception ex)
             {
                 if (IsInvalidState(ex))
-                    Dispose();
+                    await DisposeAsync();
                 else
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
                         $"Error in receiving packets! Error: {ex.Message}");
@@ -163,7 +163,7 @@ public class UdpChannel : IDatagramChannel
             }
         }
 
-        Dispose();
+        await DisposeAsync();
     }
 
     private void FireReceivedPackets(IPPacket[] ipPackets)
@@ -218,7 +218,7 @@ public class UdpChannel : IDatagramChannel
             VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp,
                 $"{VhLogger.FormatType(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
             if (IsInvalidState(ex))
-                Dispose();
+                await DisposeAsync();
         }
     }
 
@@ -227,11 +227,11 @@ public class UdpChannel : IDatagramChannel
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
         lock (_lockCleanup)
         {
-            if (_disposed) return;
+            if (_disposed) return default;
             _disposed = true;
         }
 
@@ -243,5 +243,6 @@ public class UdpChannel : IDatagramChannel
         _udpClient.Dispose();
 
         OnFinished?.Invoke(this, new ChannelEventArgs(this));
+        return default;
     }
 }

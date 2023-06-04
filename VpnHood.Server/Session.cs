@@ -138,7 +138,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 // remove tcpDatagram channels
                 foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel && x != UdpChannel2))
-                    Tunnel.RemoveChannel(item);
+                    _ = Tunnel.RemoveChannel(item);
 
                 // create UdpKey
                 using var aes = Aes.Create();
@@ -152,20 +152,20 @@ public class Session : IAsyncDisposable, IJob
                 {
                     UdpChannel2 = new UdpChannel2(SessionId, SessionKey, true);
                     try { Tunnel.AddChannel(UdpChannel2); }
-                    catch { UdpChannel2.Dispose(); throw; }
+                    catch { UdpChannel2.DisposeAsync(); throw; }
                 }
                 else
                 {
                     UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_localEndPoint.AddressFamily), SessionId, aes.Key);
                     try { Tunnel.AddChannel(UdpChannel); }
-                    catch { UdpChannel.Dispose(); throw; }
+                    catch { UdpChannel.DisposeAsync(); throw; }
                 }
             }
             else
             {
                 // remove udp channels
                 foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel || x == UdpChannel2))
-                    Tunnel.RemoveChannel(item);
+                    _ = Tunnel.RemoveChannel(item);
                 UdpChannel = null;
             }
         }
@@ -323,7 +323,7 @@ public class Session : IAsyncDisposable, IJob
         }
         catch
         {
-            channel.Dispose();
+            await channel.DisposeAsync();
             throw;
         }
     }
@@ -368,12 +368,12 @@ public class Session : IAsyncDisposable, IJob
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
             // Dispose ssl stream and replace it with a Head-Cryptor
-            //todo perhaps must be deprecated from 
-            if (clientStream is not HttpClientStream and && clientStream is TcpClientStream tcpClientStream )
+            //todo perhaps must be deprecated from >= 2.9.371
+            if (clientStream is TcpClientStream tcpClientStream && !clientStream.AllowReuse)
             {
                 await clientStream.Stream.DisposeAsync();
                 tcpClientStream.Stream = StreamHeadCryptor.Create(
-                    tcpClientStream.TcpClient.GetStream(), 
+                    tcpClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
             }
 
@@ -392,8 +392,8 @@ public class Session : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             tcpClientHost?.Dispose();
-            tcpClientStreamHost?.Dispose();
-            tcpProxyChannel?.Dispose();
+            if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync();
+            if (tcpProxyChannel != null) await tcpProxyChannel.DisposeAsync();
 
             if (isRequestedEpException)
                 throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
@@ -468,8 +468,8 @@ public class Session : IAsyncDisposable, IJob
         IsDisposed = true;
 
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        Tunnel.Dispose();
-        _proxyManager.Dispose();
+        await Tunnel.DisposeAsync();
+        await _proxyManager.DisposeAsync();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();

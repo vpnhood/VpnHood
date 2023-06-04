@@ -4,7 +4,7 @@ using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.ClientStreams;
 
-public interface IClientStream : IDisposable
+public interface IClientStream : IAsyncDisposable
 {
     IPEndPointPair IpEndPointPair { get; }
     Stream Stream { get; }
@@ -12,4 +12,6 @@ public interface IClientStream : IDisposable
     public int ReceiveBufferSize { get; set; }
     public int SendBufferSize { get; set; }
     public bool CheckIsAlive();
+    public bool AllowReuse { get; set; }
+
 }

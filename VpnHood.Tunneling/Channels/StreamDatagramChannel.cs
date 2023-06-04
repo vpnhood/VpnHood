@@ -112,7 +112,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 // check datagram message
                 List<IPPacket>? processedPackets = null;
                 foreach (var ipPacket in ipPackets)
-                    if (ProcessMessage(ipPacket))
+                    if (await ProcessMessage(ipPacket))
                     {
                         processedPackets ??= new List<IPPacket>();
                         processedPackets.Add(ipPacket);
@@ -134,11 +134,11 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
         finally
         {
-            Dispose();
+            await DisposeAsync();
         }
     }
 
-    private bool ProcessMessage(IPPacket ipPacket)
+    private async Task<bool> ProcessMessage(IPPacket ipPacket)
     {
         if (!DatagramMessageHandler.IsDatagramMessage(ipPacket))
             return false;
@@ -151,7 +151,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
         // dispose if this channel is already sent its request and get the answer from peer
         if (IsClosePending)
-            Dispose();
+            await DisposeAsync();
         else
             _ = SendCloseMessageAsync();
 
@@ -180,12 +180,12 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         return Task.CompletedTask;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
-        _clientStream.Dispose();
+        await _clientStream.DisposeAsync();
         Connected = false;
         OnFinished?.Invoke(this, new ChannelEventArgs(this));
     }

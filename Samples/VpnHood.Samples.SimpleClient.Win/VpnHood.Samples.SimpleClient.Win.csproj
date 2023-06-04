@@ -6,7 +6,7 @@
     <Description>Simple VpnHood Client usage</Description>
     <Product>VpnHood Samples</Product>
     <Company>OmegaHood LLC</Company>
-    <Company>OmegaHood LLC</Company>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
   </PropertyGroup>
 

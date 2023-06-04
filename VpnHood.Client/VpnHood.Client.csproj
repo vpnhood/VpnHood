@@ -5,12 +5,11 @@
     <RootNamespace>VpnHood.Client</RootNamespace>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <Company>OmegaHood LLC</Company>
-    <Company>OmegaHood LLC</Company>
+    <Copyright>Â© OmegaHood LLC. All rights reserved.</Copyright>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.Client.App.</Description>
-    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
     <Version>2.9.371</Version>

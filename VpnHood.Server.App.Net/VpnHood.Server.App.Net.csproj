@@ -6,7 +6,7 @@
     <AssemblyName>VpnHoodServer</AssemblyName>
     <PackageId>VpnHood.Server.App.Net</PackageId>
     <Company>OmegaHood LLC</Company>
-    <Company>OmegaHood LLC</Company>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <Product>VpnHood.Server</Product>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>

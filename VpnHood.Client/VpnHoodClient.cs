@@ -197,7 +197,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create add add channel
         var bypassChannel = new StreamProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()), TunnelUtil.TcpTimeout);
         try { _proxyManager.AddChannel(bypassChannel); }
-        catch { bypassChannel.Dispose(); throw; }
+        catch { await bypassChannel.DisposeAsync(); throw; }
     }
 
     public async Task Connect()
@@ -536,20 +536,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                 // remove all other datagram channel
                 foreach (var channel in Tunnel.DatagramChannels)
-                    Tunnel.RemoveChannel(channel);
+                    await Tunnel.RemoveChannel(channel);
 
                 // request udpChannel
                 if (_isUdpChannel2)
                 {
-                    AddUdpChannel2();
+                    await AddUdpChannel2();
                 }
                 else
                 {
-                    using var requestResult = await SendRequest<UdpChannelSessionResponse>(RequestCode.UdpChannel,
+                    await using var requestResult = await SendRequest<UdpChannelSessionResponse>(RequestCode.UdpChannel,
                         new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
 
                     if (requestResult.Response.UdpPort != 0)
-                        AddUdpChannel(requestResult.Response.UdpPort, requestResult.Response.UdpKey);
+                        await AddUdpChannel(requestResult.Response.UdpPort, requestResult.Response.UdpKey);
                     else
                         UseUdpChannel = false;
                 }
@@ -562,7 +562,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 // remove UDP datagram channels
                 if (_udpChannelAdded)
                     foreach (var channel in Tunnel.DatagramChannels.Where(x => x is UdpChannel or UdpChannel2))
-                        Tunnel.RemoveChannel(channel);
+                        await Tunnel.RemoveChannel(channel);
                 _udpChannelTransmitter?.Dispose();
                 _udpChannelAdded = false;
 
@@ -595,7 +595,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private void AddUdpChannel(int udpPort, byte[] udpKey)
+    private async Task AddUdpChannel(int udpPort, byte[] udpKey)
     {
         if (HostTcpEndPoint == null)
             throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized.");
@@ -621,12 +621,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch
         {
-            udpChannel.Dispose();
+            await udpChannel.DisposeAsync();
             throw;
         }
     }
 
-    private void AddUdpChannel2()
+    private async Task AddUdpChannel2()
     {
         if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
         if (VhUtil.IsNullOrEmpty(_serverKey)) throw new Exception("ServerSecret has not been set.");
@@ -653,7 +653,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch
         {
-            udpChannel.Dispose();
+            await udpChannel.DisposeAsync();
             _udpChannelTransmitter.Dispose();
             throw;
         }
@@ -679,7 +679,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UseUdpChannel2 = true
             };
 
-            using var requestResult = await SendRequest<HelloSessionResponse>(RequestCode.Hello, request, cancellationToken);
+            await using var requestResult = await SendRequest<HelloSessionResponse>(RequestCode.Hello, request, cancellationToken);
             if (requestResult.Response.ServerProtocolVersion < 2)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
@@ -730,7 +730,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // add the udp channel
             if (!_isUdpChannel2 && UseUdpChannel && sessionResponse.UdpPort != 0 && sessionResponse.UdpKey != null)
-                AddUdpChannel(sessionResponse.UdpPort, sessionResponse.UdpKey);
+                await AddUdpChannel(sessionResponse.UdpPort, sessionResponse.UdpKey);
 
             _ = ManageDatagramChannels(cancellationToken);
 
@@ -771,8 +771,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch
         {
-            channel?.Dispose();
-            requestResult.Dispose();
+            if (channel!=null) await channel.DisposeAsync();
+            await requestResult.DisposeAsync();
             throw;
         }
     }
@@ -832,7 +832,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
-            tcpClientStream?.Dispose();
+            if (tcpClientStream != null) await tcpClientStream.DisposeAsync();
             throw;
         }
         catch (Exception ex)
@@ -842,7 +842,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 State = ClientState.Connecting;
 
             // dispose by session timeout or known exception
-            tcpClientStream?.Dispose();
+            if (tcpClientStream != null) await tcpClientStream.DisposeAsync();
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);
@@ -855,8 +855,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // send request
-            using var requestResult = await _connectorService.SendRequest(RequestCode.Bye, new RequestBase(SessionId, SessionKey), cancellationToken);
-
+            await using var requestResult = await _connectorService.SendRequest(RequestCode.Bye, new RequestBase(SessionId, SessionKey), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -945,7 +944,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(Tunnel)}...");
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
-        Tunnel.Dispose();
+        await Tunnel.DisposeAsync();
 
         // UdpChannelClient
         if (_udpChannelTransmitter != null)
@@ -955,7 +954,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(_proxyManager)}...");
-        _proxyManager.Dispose();
+        await _proxyManager.DisposeAsync();
 
         // dispose NAT
         VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(Nat)}...");

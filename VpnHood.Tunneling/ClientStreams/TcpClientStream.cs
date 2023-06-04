@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.ClientStreams;
@@ -23,6 +24,7 @@ public class TcpClientStream : IClientStream
     public int ReceiveBufferSize { get => TcpClient.ReceiveBufferSize; set => TcpClient.ReceiveBufferSize = value; }
     public int SendBufferSize { get => TcpClient.SendBufferSize; set => TcpClient.SendBufferSize = value; }
     public IPEndPointPair IpEndPointPair { get; }
+    public bool AllowReuse { get; set; }
 
     public bool CheckIsAlive()
     {
@@ -36,12 +38,18 @@ public class TcpClientStream : IClientStream
         }
     }
 
-    public void Dispose()
+
+    public async ValueTask DisposeAsync(bool allowReuse)
     {
         if (_disposed) return;
         _disposed = true;
 
-        Stream.Dispose();
+        await Stream.DisposeAsync();
         TcpClient.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true);
     }
 }

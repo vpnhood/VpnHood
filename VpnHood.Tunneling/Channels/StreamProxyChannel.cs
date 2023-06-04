@@ -68,21 +68,20 @@ public class StreamProxyChannel : IChannel, IJob
         }
         finally
         {
-            Dispose();
+            await DisposeAsync();
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
     }
 
-    public Task RunJob()
+    public async Task RunJob()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
-        CheckClientIsAlive();
-        return Task.CompletedTask;
+        await CheckClientIsAlive();
     }
 
-    private void CheckClientIsAlive()
+    private async Task CheckClientIsAlive()
     {
         if (_orgTcpClientStream.CheckIsAlive() && _tunnelTcpClientStream.CheckIsAlive())
             return;
@@ -90,17 +89,17 @@ public class StreamProxyChannel : IChannel, IJob
         VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
             $"Disposing a {VhLogger.FormatType(this)} due to its error state.");
 
-        Dispose();
+        await DisposeAsync();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
         Connected = false;
-        _orgTcpClientStream.Dispose();
-        _tunnelTcpClientStream.Dispose();
+        await _orgTcpClientStream.DisposeAsync();
+        await _tunnelTcpClientStream.DisposeAsync();
     }
 
     private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,
@@ -117,7 +116,7 @@ public class StreamProxyChannel : IChannel, IJob
             {
                 var message = isSendingOut ? "to" : "from";
                 VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, $"TcpProxyChannel: Error in copying {message} tunnel.");
-                Dispose();
+                await DisposeAsync();
             }
         }
     }

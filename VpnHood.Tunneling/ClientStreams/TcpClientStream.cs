@@ -9,10 +9,14 @@ namespace VpnHood.Tunneling.ClientStreams;
 
 public class TcpClientStream : IClientStream
 {
-    private bool _disposed;
+    public delegate Task ReuseCallback(IClientStream clientStream);
 
-    public TcpClientStream(TcpClient tcpClient, Stream stream)
+    private bool _disposed;
+    private readonly ReuseCallback? _reuseCallback;
+
+    public TcpClientStream(TcpClient tcpClient, Stream stream, ReuseCallback? reuseCallback = null)
     {
+        _reuseCallback = reuseCallback;
         Stream = stream ?? throw new ArgumentNullException(nameof(stream));
         TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
         IpEndPointPair = new IPEndPointPair((IPEndPoint)TcpClient.Client.LocalEndPoint, (IPEndPoint)TcpClient.Client.RemoteEndPoint);
@@ -24,7 +28,6 @@ public class TcpClientStream : IClientStream
     public int ReceiveBufferSize { get => TcpClient.ReceiveBufferSize; set => TcpClient.ReceiveBufferSize = value; }
     public int SendBufferSize { get => TcpClient.SendBufferSize; set => TcpClient.SendBufferSize = value; }
     public IPEndPointPair IpEndPointPair { get; }
-    public bool AllowReuse { get; set; }
 
     public bool CheckIsAlive()
     {
@@ -44,8 +47,15 @@ public class TcpClientStream : IClientStream
         if (_disposed) return;
         _disposed = true;
 
-        await Stream.DisposeAsync();
-        TcpClient.Dispose();
+        if (allowReuse && _reuseCallback != null)
+        {
+            _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, Stream, _reuseCallback));
+        }
+        else
+        {
+            await Stream.DisposeAsync();
+            TcpClient.Dispose();
+        }
     }
 
     public ValueTask DisposeAsync()

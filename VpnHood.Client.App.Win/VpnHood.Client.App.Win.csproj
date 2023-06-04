@@ -13,8 +13,8 @@
     <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <Authors>VpnHood</Authors>
-    <Company>VpnHood</Company>
+    <Company>OmegaHood LLC</Company>
+    <Company>OmegaHood LLC</Company>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <PackageId>VpnHood.Client.App.Win</PackageId>

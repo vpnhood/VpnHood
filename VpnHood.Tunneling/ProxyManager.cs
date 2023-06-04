@@ -11,7 +11,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling;
 
-public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
+public abstract class ProxyManager : IPacketProxyReceiver
 {
     private readonly IPAddress[] _blockList =
     {
@@ -105,7 +105,7 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
             _channels.Remove(e.Channel);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
@@ -114,10 +114,9 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
         _pingProxyPool.Dispose();
 
         // dispose channels
+        var disposeTasks = new List<Task>();
         lock (_channels)
-        {
-            foreach (var channel in _channels)
-                channel.Dispose();
-        }
+            disposeTasks.AddRange(_channels.Select(channel => channel.DisposeAsync().AsTask()));
+        await Task.WhenAll(disposeTasks);
     }
 }

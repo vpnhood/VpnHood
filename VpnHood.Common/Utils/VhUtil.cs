@@ -272,4 +272,8 @@ public static class VhUtil
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
     }
 
+    public static ValueTask DisposeAsync(IAsyncDisposable? channel)
+    {
+        return channel?.DisposeAsync() ?? default;
+    }
 }

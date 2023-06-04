@@ -14,12 +14,12 @@ using VpnHood.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Tunneling;
 
-public class Tunnel : IDisposable
+public class Tunnel : IAsyncDisposable
 {
     private readonly object _channelListLock = new();
-    private readonly int _maxQueueLength = 100;
-    private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
-    private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
+    private const int MaxQueueLength = 100;
+    private const int MtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
+    private const int MtuWithFragment = TunnelUtil.MtuWithFragmentation;
     private readonly Queue<IPPacket> _packetQueue = new();
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
@@ -134,7 +134,7 @@ public class Tunnel : IDisposable
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "Removing an exceeded DatagramChannel. ChannelCount: {ChannelCount}", DatagramChannels.Length);
 
-                RemoveChannel(DatagramChannels[0]);
+                _ = RemoveChannel(DatagramChannels[0]);
             }
         }
 
@@ -177,7 +177,7 @@ public class Tunnel : IDisposable
         _ = channel.Start();
     }
 
-    public void RemoveChannel(IChannel channel)
+    public async Task RemoveChannel(IChannel channel)
     {
         if (!IsChannelExists(channel))
             return; // channel already removed or does not exist
@@ -207,7 +207,7 @@ public class Tunnel : IDisposable
         if (channel.Connected && channel.IsClosePending)
             _closePendingChannels.TryAdd(channel, new TimeoutItem<IChannel>(channel, true));
         else
-            channel.Dispose();
+            await channel.DisposeAsync();
 
         // clean up channel
         _trafficUsage.Add(channel.Traffic);
@@ -222,7 +222,7 @@ public class Tunnel : IDisposable
         if (_disposed)
             return;
 
-        RemoveChannel((IChannel)sender);
+        _ = RemoveChannel((IChannel)sender);
     }
 
     private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -261,7 +261,7 @@ public class Tunnel : IDisposable
 
         // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
         // ReSharper disable once InconsistentlySynchronizedField
-        while (_packetQueue.Count > _maxQueueLength)
+        while (_packetQueue.Count > MaxQueueLength)
         {
             var releaseCount = DatagramChannels.Length - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
@@ -316,33 +316,33 @@ public class Tunnel : IDisposable
                         var packetSize = ipPacket.TotalPacketLength;
 
                         // drop packet if it is larger than _mtuWithFragment
-                        if (packetSize > _mtuWithFragment)
+                        if (packetSize > MtuWithFragment)
                         {
-                            VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {PacketUtil.Format(ipPacket)}");
+                            VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {MtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {PacketUtil.Format(ipPacket)}");
                             _packetQueue.TryDequeue(out ipPacket);
                             continue;
                         }
 
                         // drop packet if it is larger than _mtuNoFragment
-                        if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 })
+                        if (packetSize > MtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 })
                         {
-                            VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
+                            VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
                             _packetQueue.TryDequeue(out ipPacket);
-                            var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, (ushort)_mtuNoFragment);
+                            var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, MtuNoFragment);
                             OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] { replyPacket }, channel));
                             continue;
                         }
 
                         // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
                         // packets should be empty to decrease the chance of loosing the other packets by this packet
-                        if (packetSize > _mtuNoFragment && !packets.Any() && _packetQueue.TryDequeue(out ipPacket))
+                        if (packetSize > MtuNoFragment && !packets.Any() && _packetQueue.TryDequeue(out ipPacket))
                         {
                             packets.Add(ipPacket);
                             break;
                         }
 
                         // send other packets if this packet makes the buffer too big
-                        if (packetSize + size > _mtuNoFragment)
+                        if (packetSize + size > MtuNoFragment)
                             break;
 
                         size += packetSize;
@@ -373,7 +373,7 @@ public class Tunnel : IDisposable
         // make sure to remove the channel
         try
         {
-            RemoveChannel(channel);
+            await RemoveChannel(channel);
         }
         catch (Exception ex)
         {
@@ -385,25 +385,24 @@ public class Tunnel : IDisposable
         _packetSentEvent.Release();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
         // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
+        var removeTasks = new List<Task>();
         lock (_channelListLock)
         {
-            foreach (var channel in _tcpProxyChannels.ToArray())
-                RemoveChannel(channel);
-
-            foreach (var channel in DatagramChannels.ToArray())
-                RemoveChannel(channel);
+            removeTasks.AddRange(_tcpProxyChannels.Select(RemoveChannel));
+            removeTasks.AddRange(DatagramChannels.Select(RemoveChannel));
         }
+        await Task.WhenAll(removeTasks);
 
         lock (_packetQueue)
             _packetQueue.Clear();
 
-        _speedMonitorTimer.Dispose();
+        await _speedMonitorTimer.DisposeAsync();
         Speed.Sent = 0;
         Speed.Received = 0;
 

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -25,7 +27,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
-    public JobSection? JobSection => null;
+    public JobSection JobSection { get; } = new();
     public bool IsClosePending { get; private set; }
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
@@ -112,7 +114,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 // check datagram message
                 List<IPPacket>? processedPackets = null;
                 foreach (var ipPacket in ipPackets)
-                    if (await ProcessMessage(ipPacket))
+                    if (ProcessMessage(ipPacket))
                     {
                         processedPackets ??= new List<IPPacket>();
                         processedPackets.Add(ipPacket);
@@ -129,8 +131,10 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
         catch (Exception ex)
         {
-            if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "Error in reading UDP from StreamDatagram.");
+            if (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionAborted or SocketError.OperationAborted })
+                VhLogger.Instance.LogTrace(GeneralEventId.Udp, "StreamDatagram Connection has been aborted.");
+            else
+                VhLogger.Instance.LogTrace(GeneralEventId.Udp, ex, "Error in reading UDP from StreamDatagram.");
         }
         finally
         {
@@ -138,20 +142,21 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    private async Task<bool> ProcessMessage(IPPacket ipPacket)
+    private bool ProcessMessage(IPPacket ipPacket)
     {
         if (!DatagramMessageHandler.IsDatagramMessage(ipPacket))
             return false;
 
         var message = DatagramMessageHandler.ReadMessage(ipPacket);
-        if (message is not CloseDatagramMessage) return false;
+        if (message is not CloseDatagramMessage)
+            return false;
 
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.DatagramChannel,
             "Receiving the close message from the peer. Lifetime: {Lifetime}, CurrentClosePending: {IsClosePending}", _lifeTime, IsClosePending);
 
         // dispose if this channel is already sent its request and get the answer from peer
         if (IsClosePending)
-            await DisposeAsync();
+            _ = DisposeAsync();
         else
             _ = SendCloseMessageAsync();
 
@@ -172,12 +177,10 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         return SendPacketAsync(new[] { ipPacket });
     }
 
-    public Task RunJob()
+    public async Task RunJob()
     {
         if (!IsClosePending && FastDateTime.Now > _lifeTime)
-            _ = SendCloseMessageAsync();
-
-        return Task.CompletedTask;
+            await SendCloseMessageAsync();
     }
 
     public async ValueTask DisposeAsync()

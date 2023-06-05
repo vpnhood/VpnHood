@@ -210,7 +210,7 @@ internal class ServerHost : IAsyncDisposable
             return new TcpClientStream(tcpClient, new HttpChunkStream(stream), ReuseClientStream);
 
         if (version == 1)
-            return new TcpClientStream(tcpClient, stream, ReuseClientStream);
+            return new TcpClientStream(tcpClient, stream);
 
         throw new NotSupportedException("The request version is not supported!");
     }
@@ -307,7 +307,7 @@ internal class ServerHost : IAsyncDisposable
             else
                 VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
                     "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponseBase.ErrorCode);
-            
+
             await clientStream.DisposeAsync(false);
         }
         catch (Exception ex)

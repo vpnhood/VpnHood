@@ -7,11 +7,11 @@ namespace VpnHood.Client.ConnectorServices;
 
 internal class ConnectorRequestResult<T> : IAsyncDisposable where T : SessionResponseBase
 {
-    public required TcpClientStream TcpClientStream { get; init; }
+    public required IClientStream ClientStream { get; init; }
     public required T Response { get; init; }
 
     public async ValueTask DisposeAsync()
     {
-        await TcpClientStream.DisposeAsync();
+        await ClientStream.DisposeAsync();
     }
 }

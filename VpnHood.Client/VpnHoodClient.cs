@@ -765,7 +765,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 : Timeout.InfiniteTimeSpan;
 
             // add the new channel
-            channel = new StreamDatagramChannel(requestResult.TcpClientStream, lifespan);
+            channel = new StreamDatagramChannel(requestResult.ClientStream, lifespan);
             Tunnel.AddChannel(channel);
             return channel;
         }
@@ -780,7 +780,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(RequestCode requestCode, object request, CancellationToken cancellationToken)
         where T : SessionResponseBase
     {
-        TcpClientStream? tcpClientStream = null;
+        IClientStream? clientStream = null;
 
         try
         {
@@ -801,10 +801,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
 
             // create a connection and send the request 
-            tcpClientStream = await _connectorService.SendRequest(mem.ToArray(), cancellationToken);
+            clientStream = await _connectorService.SendRequest(mem.ToArray(), cancellationToken);
 
             // Reading the response
-            var response = await StreamUtil.ReadJsonAsync<T>(tcpClientStream.Stream, cancellationToken);
+            var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
             VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}.");
 
             // set SessionStatus
@@ -824,7 +824,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var ret = new ConnectorRequestResult<T>
             {
                 Response = response,
-                TcpClientStream = tcpClientStream
+                ClientStream = clientStream
             };
             return ret;
         }
@@ -832,7 +832,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
-            if (tcpClientStream != null) await tcpClientStream.DisposeAsync();
+            if (clientStream != null) await clientStream.DisposeAsync();
             throw;
         }
         catch (Exception ex)
@@ -842,7 +842,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 State = ClientState.Connecting;
 
             // dispose by session timeout or known exception
-            if (tcpClientStream != null) await tcpClientStream.DisposeAsync();
+            if (clientStream != null) await clientStream.DisposeAsync();
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);

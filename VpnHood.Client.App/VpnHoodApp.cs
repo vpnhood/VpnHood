@@ -69,7 +69,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public ClientProfileStore ClientProfileStore { get; }
     public IDevice Device => _clientAppProvider.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
-    public JobSection? JobSection { get; }
+    public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().TcpTimeout;
 
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)

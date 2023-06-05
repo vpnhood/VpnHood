@@ -16,30 +16,49 @@ using VpnHood.Client.Exceptions;
 using VpnHood.Tunneling.Messaging;
 using System.IO;
 using VpnHood.Tunneling.ClientStreams;
+using System.Collections.Concurrent;
+using VpnHood.Common.JobController;
+using System.Collections.Generic;
 
 namespace VpnHood.Client.ConnectorServices;
 
-internal class ConnectorService
+internal class ConnectorService : IAsyncDisposable, IJob
 {
     private readonly IPacketCapture _packetCapture;
     private readonly SocketFactory _socketFactory;
+    private readonly ConcurrentQueue<ClientStreamItem> _clientStreams = new();
+
     public TimeSpan TcpTimeout { get; set; }
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
+    public JobSection JobSection { get; }
+    public ConnectorStat Stat { get; } = new();
 
     public ConnectorService(IPacketCapture packetCapture, SocketFactory socketFactory, TimeSpan tcpTimeout)
     {
         TcpTimeout = tcpTimeout;
         _packetCapture = packetCapture;
         _socketFactory = socketFactory;
+        JobSection = new JobSection(tcpTimeout);
+        JobRunner.Default.Add(this);
     }
 
-    private async Task<TcpClientStream> GetTlsConnectionToServer(CancellationToken cancellationToken)
+    private async Task<IClientStream> GetTlsConnectionToServer(CancellationToken cancellationToken)
     {
         if (EndPointInfo == null) throw new InvalidOperationException($"{nameof(EndPointInfo)} is not initialized.");
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
         var hostName = EndPointInfo.HostName;
 
+        // check pool
+        var clientStream = GetFreeClientStream();
+        if (clientStream != null)
+        {
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "A shared ClientStream has been used.");
+            return clientStream;
+        }
+
+        // create new stream
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
+        _socketFactory.SetKeepAlive(tcpClient.Client, true);
 
         try
         {
@@ -67,7 +86,8 @@ internal class ConnectorService
                 EnabledSslProtocols = sslProtocol
             }, cancellationToken);
 
-            return new TcpClientStream(tcpClient, stream);
+            Stat.CreatedConnectionCount++;
+            return new TcpClientStream(tcpClient, stream, null);
         }
         catch (MaintenanceException)
         {
@@ -77,6 +97,28 @@ internal class ConnectorService
         {
             throw new ConnectorEstablishException(ex.Message, ex);
         }
+    }
+
+    private IClientStream? GetFreeClientStream()
+    {
+        while (_clientStreams.TryDequeue(out var queueItem))
+        {
+            if (queueItem.ClientStream.CheckIsAlive())
+            {
+                Stat.ReusedConnectionCount++;
+                return queueItem.ClientStream;
+            }
+
+            _ = queueItem.ClientStream.DisposeAsync(false);
+        }
+
+        return null;
+    }
+
+    private Task ReuseStreamClient(IClientStream clientStream)
+    {
+        _clientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
+        return Task.CompletedTask;
     }
 
     private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain,
@@ -91,7 +133,7 @@ internal class ConnectorService
                EndPointInfo?.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
     }
 
-    public async Task<TcpClientStream> SendRequest(RequestCode requestCode, RequestBase requestBase, CancellationToken cancellationToken)
+    public async Task<IClientStream> SendRequest(RequestCode requestCode, RequestBase requestBase, CancellationToken cancellationToken)
     {
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
@@ -100,7 +142,7 @@ internal class ConnectorService
         return await SendRequest(mem.ToArray(), cancellationToken);
     }
 
-    public async Task<TcpClientStream> SendRequest(byte[] request, CancellationToken cancellationToken) 
+    public async Task<IClientStream> SendRequest(byte[] request, CancellationToken cancellationToken)
     {
         // get or create free connection
         var tcpClientStream = await GetTlsConnectionToServer(cancellationToken);
@@ -110,5 +152,31 @@ internal class ConnectorService
 
         // resend request if the connection is not new
         return tcpClientStream;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        var tasks = new List<Task>();
+        while (_clientStreams.TryDequeue(out var queueItem))
+            tasks.Add(queueItem.ClientStream.DisposeAsync(false).AsTask());
+
+        await Task.WhenAll(tasks);
+    }
+
+    public async Task RunJob()
+    {
+        var now = FastDateTime.Now;
+
+        while (_clientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - TcpTimeout)
+        {
+            _clientStreams.TryDequeue(out queueItem);
+            await queueItem.ClientStream.DisposeAsync(false);
+        }
+    }
+
+    private class ClientStreamItem
+    {
+        public required IClientStream ClientStream { get; init; }
+        public DateTime EnqueueTime { get; } = FastDateTime.Now;
     }
 }

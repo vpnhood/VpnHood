@@ -254,10 +254,9 @@ internal class TcpProxyHost : IDisposable
 
             // read the response
             connectorRequest = await Client.SendRequest<SessionResponseBase>(RequestCode.TcpProxyChannel, request, cancellationToken);
-            var tcpProxyClientStream = connectorRequest.TcpClientStream;
-            tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
-            tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
-            Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
+            var proxyClientStream = connectorRequest.ClientStream;
+            proxyClientStream.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
+            proxyClientStream.SendBufferSize = orgTcpClient.SendBufferSize;
 
             // create a TcpProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
@@ -265,11 +264,16 @@ internal class TcpProxyHost : IDisposable
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream());
 
             // Dispose ssl stream and replace it with a HeadCryptor
-            await tcpProxyClientStream.Stream.DisposeAsync();
-            tcpProxyClientStream.Stream = StreamHeadCryptor.Create(tcpProxyClientStream.TcpClient.GetStream(),
-                request.CipherKey, null, request.CipherLength);
+            //todo perhaps must be deprecated from >= 2.9.371
+            if (proxyClientStream.Stream is not HttpChunkStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
+            {
+                await proxyClientStream.Stream.DisposeAsync();
+                tcpProxyClientStream.Stream = StreamHeadCryptor.Create(
+                    tcpProxyClientStream.TcpClient.GetStream(),
+                    request.CipherKey, null, request.CipherLength);
+            }
 
-            channel = new StreamProxyChannel(orgTcpClientStream, tcpProxyClientStream, TunnelUtil.TcpTimeout);
+            channel = new StreamProxyChannel(orgTcpClientStream, proxyClientStream, TunnelUtil.TcpTimeout);
             Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)

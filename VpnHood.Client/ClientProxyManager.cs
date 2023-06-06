@@ -60,5 +60,14 @@ internal class ClientProxyManager : ProxyManager
         {
             _socketFactory.SetKeepAlive(socket, enable);
         }
+
+        public void Config(ISocketFactory socketFactory, TcpClient tcpClient, bool noDelay,
+            int? receiveBufferSize, int? sendBufferSize)
+        {
+            tcpClient.NoDelay = noDelay;
+            if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
+            if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
+
+        }
     }
 }

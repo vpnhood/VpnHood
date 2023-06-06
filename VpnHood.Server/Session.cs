@@ -294,19 +294,8 @@ public class Session : IAsyncDisposable, IJob
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    private void ConfigClientStream(IClientStream clientStream)
-    {
-        if (_tcpKernelReceiveBufferSize != null)
-            clientStream.ReceiveBufferSize = _tcpKernelReceiveBufferSize.Value;
-
-        if (_tcpKernelSendBufferSize != null)
-            clientStream.SendBufferSize = _tcpKernelSendBufferSize.Value;
-    }
-
     public async Task ProcessTcpDatagramChannelRequest(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        ConfigClientStream(clientStream);
-
         // send OK reply
         await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
@@ -352,6 +341,7 @@ public class Session : IAsyncDisposable, IJob
 
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
             _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
+            VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
 
             //tracking
             LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint, request.DestinationEndPoint,
@@ -383,8 +373,6 @@ public class Session : IAsyncDisposable, IJob
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
 
-            ConfigClientStream(clientStream);
-            ConfigClientStream(tcpClientStreamHost);
             tcpProxyChannel = new StreamProxyChannel(tcpClientStreamHost, clientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
 
             Tunnel.AddChannel(tcpProxyChannel);

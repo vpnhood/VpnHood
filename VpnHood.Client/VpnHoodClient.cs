@@ -186,9 +186,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken)
     {
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
-        tcpClient.ReceiveBufferSize = orgTcpClientStream.ReceiveBufferSize;
-        tcpClient.SendBufferSize = orgTcpClientStream.SendBufferSize;
         SocketFactory.SetKeepAlive(tcpClient.Client, true);
+        VhUtil.ConfigTcpClient(tcpClient, null, null);
 
         // connect to host
         _packetCapture.ProtectSocket(tcpClient.Client);

@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -13,6 +15,7 @@ public class UtilTest
     private class TestEventReporter : EventReporter
     {
         public int ReportedCount { get; private set; }
+
         public TestEventReporter(ILogger logger, string message)
             : base(logger, message)
         {
@@ -33,7 +36,7 @@ public class UtilTest
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);
-        
+
         reportCounter.Raised(); // report
         Assert.AreEqual(1, reportCounter.TotalEventCount);
         Assert.AreEqual(1, reportCounter.ReportedCount);

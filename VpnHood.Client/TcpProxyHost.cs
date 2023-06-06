@@ -265,7 +265,7 @@ internal class TcpProxyHost : IDisposable
 
             // Dispose ssl stream and replace it with a HeadCryptor
             //todo perhaps must be deprecated from >= 2.9.371
-            if (proxyClientStream.Stream is not HttpChunkStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
+            if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
             {
                 await proxyClientStream.Stream.DisposeAsync();
                 tcpProxyClientStream.Stream = StreamHeadCryptor.Create(

@@ -7,47 +7,59 @@ namespace VpnHood.Common.Utils;
 
 public class AsyncStreamDecorator<T> : Stream where T : Stream
 {
-    protected T OriginalStream;
+    protected T SourceStream;
+    private readonly bool _keepOpen;
 
-    public AsyncStreamDecorator(T stream)
+    public AsyncStreamDecorator(T sourceStream, bool keepOpen)
     {
-        OriginalStream = stream;
+        SourceStream = sourceStream;
+        _keepOpen = keepOpen;
     }
 
-    public override bool CanRead => OriginalStream.CanRead;
-    public override bool CanSeek => OriginalStream.CanSeek;
-    public override bool CanWrite => OriginalStream.CanWrite;
-    public override long Length => OriginalStream.Length;
-    public override bool CanTimeout => OriginalStream.CanTimeout;
+    public override bool CanRead => SourceStream.CanRead;
+    public override bool CanSeek => SourceStream.CanSeek;
+    public override bool CanWrite => SourceStream.CanWrite;
+    public override long Length => SourceStream.Length;
+    public override bool CanTimeout => SourceStream.CanTimeout;
+
     public override long Position
     {
-        get => OriginalStream.Position;
-        set => OriginalStream.Position = value;
+        get => SourceStream.Position;
+        set
+        {
+            if (!CanSeek)
+                throw new NotSupportedException();
+
+            SourceStream.Position = value;
+        }
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        return OriginalStream.Seek(offset, origin);
+        if (!CanSeek)
+            throw new NotSupportedException();
+
+        return SourceStream.Seek(offset, origin);
     }
 
     public override void SetLength(long value)
     {
-        OriginalStream.SetLength(value);
+        SourceStream.SetLength(value);
     }
 
     public override Task FlushAsync(CancellationToken cancellationToken)
     {
-        return OriginalStream.FlushAsync(cancellationToken);
+        return SourceStream.FlushAsync(cancellationToken);
     }
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return OriginalStream.ReadAsync(buffer, offset, count, cancellationToken);
+        return SourceStream.ReadAsync(buffer, offset, count, cancellationToken);
     }
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return OriginalStream.WriteAsync(buffer, offset, count, cancellationToken);
+        return SourceStream.WriteAsync(buffer, offset, count, cancellationToken);
     }
 
     public sealed override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -62,20 +74,20 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
 
     public override ValueTask DisposeAsync()
     {
-        return OriginalStream.DisposeAsync();
+        return _keepOpen ? default : SourceStream.DisposeAsync();
     }
 
     // Sealed
     public sealed override int WriteTimeout
     {
-        get => OriginalStream.WriteTimeout;
-        set => OriginalStream.WriteTimeout = value;
+        get => SourceStream.WriteTimeout;
+        set => SourceStream.WriteTimeout = value;
     }
 
     public sealed override int ReadTimeout
     {
-        get => OriginalStream.ReadTimeout;
-        set => OriginalStream.ReadTimeout = value;
+        get => SourceStream.ReadTimeout;
+        set => SourceStream.ReadTimeout = value;
     }
 
     public sealed override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
@@ -151,7 +163,8 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
 
 public class AsyncStreamDecorator : AsyncStreamDecorator<Stream>
 {
-    public AsyncStreamDecorator(Stream stream) : base(stream)
+    public AsyncStreamDecorator(Stream sourceStream, bool keepOpen)
+        : base(sourceStream, keepOpen)
     {
     }
 }

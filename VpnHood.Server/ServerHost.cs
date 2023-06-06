@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -27,7 +28,7 @@ internal class ServerHost : IAsyncDisposable
 {
     private const int ServerProtocolVersion = 3;
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
-    private CancellationTokenSource _cancellationTokenSource = new ();
+    private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
@@ -145,6 +146,11 @@ internal class ServerHost : IAsyncDisposable
             try
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
+                VhUtil.ConfigTcpClient(tcpClient, 
+                    _sessionManager.SessionOptions.TcpKernelSendBufferSize, 
+                    _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
+
+                // config tcpClient
                 _ = ProcessClient(tcpClient, cancellationToken);
                 errorCounter = 0;
             }
@@ -207,7 +213,9 @@ internal class ServerHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version == 'P')
-            return new TcpClientStream(tcpClient, new HttpStream(stream, true), ReuseClientStream);
+        {
+            return new TcpClientStream(tcpClient, new HttpStream(stream, true, null), ReuseClientStream);
+        }
 
         if (version == 1)
             return new TcpClientStream(tcpClient, stream);
@@ -265,7 +273,7 @@ internal class ServerHost : IAsyncDisposable
             tcpClient.Dispose();
         }
     }
-    
+
     private async Task ReuseClientStream(IClientStream clientStream)
     {
         using var timeoutCt = new CancellationTokenSource(_requestTimeout);

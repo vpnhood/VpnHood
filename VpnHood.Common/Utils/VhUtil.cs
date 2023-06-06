@@ -276,4 +276,11 @@ public static class VhUtil
     {
         return channel?.DisposeAsync() ?? default;
     }
+
+    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize)
+    {
+        tcpClient.NoDelay = true;
+        if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
+        if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
+    }
 }

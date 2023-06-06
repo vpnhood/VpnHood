@@ -41,7 +41,6 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public StreamDatagramChannel(IClientStream clientStream, TimeSpan lifespan)
     {
         _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
-        clientStream.NoDelay = true;
         if (!VhUtil.IsInfinite(lifespan))
         {
             _lifeTime = FastDateTime.Now + lifespan;

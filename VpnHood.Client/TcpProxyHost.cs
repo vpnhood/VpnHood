@@ -214,6 +214,7 @@ internal class TcpProxyHost : IDisposable
         {
             // config tcpOrgClient
             Client.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
+            VhUtil.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
             var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
@@ -255,8 +256,6 @@ internal class TcpProxyHost : IDisposable
             // read the response
             connectorRequest = await Client.SendRequest<SessionResponseBase>(RequestCode.TcpProxyChannel, request, cancellationToken);
             var proxyClientStream = connectorRequest.ClientStream;
-            proxyClientStream.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
-            proxyClientStream.SendBufferSize = orgTcpClient.SendBufferSize;
 
             // create a TcpProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,

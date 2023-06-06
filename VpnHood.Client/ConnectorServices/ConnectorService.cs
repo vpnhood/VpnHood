@@ -59,6 +59,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         // create new stream
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
         _socketFactory.SetKeepAlive(tcpClient.Client, true);
+        VhUtil.ConfigTcpClient(tcpClient, null, null);
 
         try
         {

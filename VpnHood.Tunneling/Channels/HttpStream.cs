@@ -25,19 +25,30 @@ public class HttpStream : AsyncStreamDecorator
 
     public int ReadChunkCount { get; private set; }
     public int WroteChunkCount { get; private set; }
-    public string DomainName { get; set; } = "foo.com";
 
-    public HttpStream(Stream sourceStream, bool keepOpen)
+    public HttpStream(Stream sourceStream, bool keepOpen, string? host)
         : base(new ReadCacheStream(sourceStream, keepOpen, 512), false)
     {
         _writeBuffer = sourceStream; // don't use write buffer in this version
-        _httpHeader =
-            $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
-            $"Host: {DomainName}\r\n" +
-            "Content-Type: application/octet-stream\r\n" +
-            "Cache-Control: no-store\r\n" +
-            "Transfer-Encoding: chunked\r\n" +
-            "\r\n";
+        if (string.IsNullOrEmpty(host))
+        {
+            _httpHeader =
+                $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
+                $"Host: {host}\r\n" +
+                "Content-Type: application/octet-stream\r\n" +
+                "Cache-Control: no-store\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n";
+        }
+        else
+        {
+            _httpHeader =
+                "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/octet-stream\r\n" +
+                "Cache-Control: no-store\r\n" +
+                "Transfer-Encoding: chunked\r\n" +
+                "\r\n";
+        }
     }
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)

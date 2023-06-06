@@ -49,10 +49,6 @@ public class StreamProxyChannel : IChannel, IJob
             : throw new ArgumentOutOfRangeException(nameof(tunnelStreamBufferSize), tunnelStreamBufferSize,
                 $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}");
 
-        // We don't know about client or server delay, so lets pessimistic
-        orgClientStream.NoDelay = true;
-        tunnelClientStream.NoDelay = true;
-
         JobSection = new JobSection(tcpTimeout);
         JobRunner.Default.Add(this);
     }

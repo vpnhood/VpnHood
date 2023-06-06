@@ -27,9 +27,6 @@ public class TcpClientStream : IClientStream
 
     public TcpClient TcpClient { get; }
     public Stream Stream { get; set; }
-    public bool NoDelay { get => TcpClient.NoDelay; set => TcpClient.NoDelay = value; }
-    public int ReceiveBufferSize { get => TcpClient.ReceiveBufferSize; set => TcpClient.ReceiveBufferSize = value; }
-    public int SendBufferSize { get => TcpClient.SendBufferSize; set => TcpClient.SendBufferSize = value; }
     public IPEndPointPair IpEndPointPair { get; }
 
     public bool CheckIsAlive()
@@ -43,7 +40,6 @@ public class TcpClientStream : IClientStream
             return false;
         }
     }
-
 
     public async ValueTask DisposeAsync(bool allowReuse)
     {

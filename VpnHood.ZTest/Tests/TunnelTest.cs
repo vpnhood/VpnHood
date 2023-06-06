@@ -192,7 +192,7 @@ public class TunnelTest
     }
 
     [TestMethod]
-    public async Task HttpChunkStream()
+    public async Task HttpStream()
     {
         var chunks = new List<string>
         {
@@ -203,16 +203,34 @@ public class TunnelTest
         };
 
         var stream = new MemoryStream();
-        var chunkStream = new HttpChunkStream(stream);
+        
+        // first stream
+        var chunkStream = new HttpStream(stream, true);
+        foreach (var chunk in chunks)
+            await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
+        Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
+        await chunkStream.DisposeAsync();
+
+        // second stream
+        chunkStream = new HttpStream(stream, true);
         foreach (var chunk in chunks)
             await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
         Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
         await chunkStream.DisposeAsync();
 
         stream.Position = 0;
-        chunkStream = new HttpChunkStream(stream);
+        
+        // read first stream
+        chunkStream = new HttpStream(stream, true);
         var sr = new StreamReader(chunkStream);
         var res = await sr.ReadToEndAsync();
+        Assert.AreEqual(string.Join("", chunks), res);
+        Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
+
+        // read second stream
+        chunkStream = new HttpStream(stream, true);
+        sr = new StreamReader(chunkStream);
+        res = await sr.ReadToEndAsync();
         Assert.AreEqual(string.Join("", chunks), res);
         Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
     }

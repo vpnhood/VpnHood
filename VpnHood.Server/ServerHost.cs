@@ -207,7 +207,7 @@ internal class ServerHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version == 'P')
-            return new TcpClientStream(tcpClient, new HttpChunkStream(stream), ReuseClientStream);
+            return new TcpClientStream(tcpClient, new HttpStream(stream, true), ReuseClientStream);
 
         if (version == 1)
             return new TcpClientStream(tcpClient, stream);

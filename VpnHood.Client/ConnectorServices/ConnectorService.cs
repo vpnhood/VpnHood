@@ -49,14 +49,6 @@ internal class ConnectorService : IAsyncDisposable, IJob
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
         var hostName = EndPointInfo.HostName;
 
-        // check pool
-        var clientStream = GetFreeClientStream();
-        if (clientStream != null)
-        {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "A shared ClientStream has been reused.");
-            return clientStream;
-        }
-
         // create new stream
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
         _socketFactory.SetKeepAlive(tcpClient.Client, true);
@@ -89,8 +81,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
             }, cancellationToken);
 
             Stat.CreatedConnectionCount++;
-            clientStream = UseHttp
-                ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName)/*, ReuseStreamClient*/) //todo
+            var clientStream = UseHttp
+                ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName), ReuseStreamClient)
                 : new TcpClientStream(tcpClient, stream);
 
             return clientStream;
@@ -110,10 +102,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         while (_clientStreams.TryDequeue(out var queueItem))
         {
             if (queueItem.ClientStream.CheckIsAlive())
-            {
-                Stat.ReusedConnectionCount++;
                 return queueItem.ClientStream;
-            }
 
             _ = queueItem.ClientStream.DisposeAsync(false);
         }
@@ -150,6 +139,26 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     public async Task<IClientStream> SendRequest(byte[] request, CancellationToken cancellationToken)
     {
+        // try reuse
+        var clientStream = GetFreeClientStream();
+        if (clientStream != null)
+        {
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "A shared ClientStream has been reused.");
+            try
+            {
+                await clientStream.Stream.WriteAsync(request, cancellationToken);
+                Stat.ReusedConnectionCount++;
+                return clientStream;
+            }
+            catch (Exception ex)
+            {
+                // dispose the connection and retry with new connection
+                Stat.FailedReusedConnectionCount++;
+                _ = clientStream.DisposeAsync();
+                VhLogger.Instance.LogTrace(GeneralEventId.Tcp, ex, "Error in using the ClientStream. Try a new connection...");
+            }
+        }
+
         // get or create free connection
         var tcpClientStream = await GetTlsConnectionToServer(cancellationToken);
 

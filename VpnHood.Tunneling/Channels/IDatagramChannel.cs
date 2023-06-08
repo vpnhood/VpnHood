@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using PacketDotNet;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
 public interface IDatagramChannel : IChannel
 {

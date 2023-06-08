@@ -133,7 +133,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Token = token ?? throw new ArgumentNullException(nameof(token));
         Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
         UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
-        ProtocolVersion = 3;
+        ProtocolVersion = 4;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
@@ -205,14 +205,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
         if (State != ClientState.None)
-            throw new Exception("Connection is already in progress!");
+            throw new Exception("Connection is already in progress.");
 
         // report config
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-        VhLogger.Instance.LogInformation($"UseUdpChannel: {UseUdpChannel}, MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
+        VhLogger.Instance.LogInformation("UseUdpChannel: {UseUdpChannel}, MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
+            UseUdpChannel, workerThreads, completionPortThreads);
 
         // Replace dot in version to prevent anonymous make treat it as ip.
-        VhLogger.Instance.LogInformation($"Client Version: {Version}, ClientId: {VhLogger.FormatId(ClientId)}");
+        VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
+            Version, ProtocolVersion, VhLogger.FormatId(ClientId));
 
         // Starting
         State = ClientState.Connecting;
@@ -233,8 +235,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Establish first connection and create a session
             await ConnectInternal(_cancellationToken);
 
-            // create Tcp Proxy Host
-            VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatType(_tcpProxyHost)}...");
+            // Create Tcp Proxy Host
             _tcpProxyHost.Start();
 
             // Preparing device;
@@ -679,11 +680,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
 
             await using var requestResult = await SendRequest<HelloSessionResponse>(RequestCode.Hello, request, cancellationToken);
-            if (requestResult.Response.ServerProtocolVersion < 2)
+            if (requestResult.Response.ServerProtocolVersion < 2) // must be 3 (4 for Http)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
-            // get session id
+            _connectorService.UseHttp = requestResult.Response.ServerProtocolVersion >= 4;
             var sessionResponse = requestResult.Response;
+
+            // log response
+            VhLogger.Instance.LogInformation(GeneralEventId.Session,
+                "Hurray! Client has been connected! " +
+                $"SessionId: {VhLogger.FormatId(sessionResponse.SessionId)}, " +
+                $"ServerVersion: {sessionResponse.ServerVersion}, " +
+                $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
+                $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
+
+            // get session id
             SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
             _sessionKey = sessionResponse.SessionKey;
             _serverKey = sessionResponse.ServerSecret;
@@ -733,13 +744,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             _ = ManageDatagramChannels(cancellationToken);
 
-            // done
-            VhLogger.Instance.LogInformation(GeneralEventId.Session,
-                "Hurray! Client has connected! " +
-                $"SessionId: {VhLogger.FormatId(sessionResponse.SessionId)}, " +
-                $"ServerVersion: {sessionResponse.ServerVersion}, " +
-                $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
-
         }
         catch (RedirectHostException ex) when (!redirecting)
         {
@@ -770,7 +774,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch
         {
-            if (channel!=null) await channel.DisposeAsync();
+            if (channel != null) await channel.DisposeAsync();
             await requestResult.DisposeAsync();
             throw;
         }
@@ -793,14 +797,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
             VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}.");
 
-            // building request
-            await using var mem = new MemoryStream();
-            mem.WriteByte(1);
-            mem.WriteByte((byte)requestCode);
-            await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
-
             // create a connection and send the request 
-            clientStream = await _connectorService.SendRequest(mem.ToArray(), cancellationToken);
+            clientStream = await _connectorService.SendRequest(requestCode, request, cancellationToken);
 
             // Reading the response
             var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);

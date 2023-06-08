@@ -19,6 +19,7 @@ using VpnHood.Tunneling.ClientStreams;
 using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
 using System.Collections.Generic;
+using VpnHood.Tunneling.Channels;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -27,17 +28,17 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private readonly IPacketCapture _packetCapture;
     private readonly SocketFactory _socketFactory;
     private readonly ConcurrentQueue<ClientStreamItem> _clientStreams = new();
-
     public TimeSpan TcpTimeout { get; set; }
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; } = new();
+    public bool UseHttp { get; set; }
 
     public ConnectorService(IPacketCapture packetCapture, SocketFactory socketFactory, TimeSpan tcpTimeout)
     {
-        TcpTimeout = tcpTimeout;
         _packetCapture = packetCapture;
         _socketFactory = socketFactory;
+        TcpTimeout = tcpTimeout;
         JobSection = new JobSection(tcpTimeout);
         JobRunner.Default.Add(this);
     }
@@ -52,7 +53,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         var clientStream = GetFreeClientStream();
         if (clientStream != null)
         {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "A shared ClientStream has been used.");
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "A shared ClientStream has been reused.");
             return clientStream;
         }
 
@@ -88,7 +89,11 @@ internal class ConnectorService : IAsyncDisposable, IJob
             }, cancellationToken);
 
             Stat.CreatedConnectionCount++;
-            return new TcpClientStream(tcpClient, stream, null);
+            clientStream = UseHttp
+                ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName)/*, ReuseStreamClient*/) //todo
+                : new TcpClientStream(tcpClient, stream);
+
+            return clientStream;
         }
         catch (MaintenanceException)
         {
@@ -134,12 +139,12 @@ internal class ConnectorService : IAsyncDisposable, IJob
                EndPointInfo?.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
     }
 
-    public async Task<IClientStream> SendRequest(RequestCode requestCode, RequestBase requestBase, CancellationToken cancellationToken)
+    public async Task<IClientStream> SendRequest(RequestCode requestCode, object request, CancellationToken cancellationToken)
     {
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte((byte)requestCode);
-        await StreamUtil.WriteJsonAsync(mem, requestBase, cancellationToken);
+        await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
         return await SendRequest(mem.ToArray(), cancellationToken);
     }
 

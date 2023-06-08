@@ -1,11 +1,19 @@
 # Upcoming
+### Client
+* Feature: Client Protocol Version 4 
+* Feature: HTTP Tunnel
+* Feature: TCP connection reuse by HTTP 1.1
+
 ### Server
-* Fix Server Kernel SendBufferSize
-* Fix ClientCount report 0 in the FileAccessServer log
+* Feature: Server Protocol Version 4 
+* Feature: HTTP Tunnel
+* Feature: TCP connection reuse by HTTP 1.1
+* Fix: Server Kernel SendBufferSize
+* Fix: ClientCount report 0 in the FileAccessServer log
 
 # v2.9.370
 ### Server
-* Fix Restart listener on servers by UdpEndPoints changes
+* Fix: Restart listener on servers by UdpEndPoints changes
 
 # v2.9.369
 ### Client & Server

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
 public class ChannelEventArgs : EventArgs
 {

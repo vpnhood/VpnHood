@@ -1,15 +1,19 @@
 # Upcoming
 ### Client
 * Feature: Client Protocol Version 4 
-* Feature: HTTP Tunnel
+* Feature: HTTP Tunnel (partially)
 * Feature: TCP connection reuse by HTTP 1.1
+* Update: Improve reliablity
+* Warning: Preparting to deprecate v2.8.361 (Protocol Version 3)
 
 ### Server
 * Feature: Server Protocol Version 4 
-* Feature: HTTP Tunnel
+* Feature: HTTP Tunnel (partially)
 * Feature: TCP connection reuse by HTTP 1.1
+* Update: Improve reliablity
 * Fix: Server Kernel SendBufferSize
 * Fix: ClientCount report 0 in the FileAccessServer log
+* Warning: Preparting to deprecate v2.8.361 (Protocol Version 3)
 
 # v2.9.370
 ### Server

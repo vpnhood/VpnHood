@@ -52,7 +52,7 @@ internal class TcpProxyHost : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
         using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatType<TcpProxyHost>()}");
-        VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(this)}...");
+        VhLogger.Instance.LogInformation("Starting TcpProxyHost...");
 
         // IpV4
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
@@ -264,7 +264,7 @@ internal class TcpProxyHost : IDisposable
 
             // Dispose ssl stream and replace it with a HeadCryptor
             //todo perhaps must be deprecated from >= 2.9.371
-            if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
+            if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream) 
             {
                 await proxyClientStream.Stream.DisposeAsync();
                 tcpProxyClientStream.Stream = StreamHeadCryptor.Create(

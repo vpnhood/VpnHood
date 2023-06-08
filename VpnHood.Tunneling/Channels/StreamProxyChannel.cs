@@ -88,16 +88,6 @@ public class StreamProxyChannel : IChannel, IJob
         await DisposeAsync();
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        Connected = false;
-        await _orgTcpClientStream.DisposeAsync();
-        await _tunnelTcpClientStream.DisposeAsync();
-    }
-
     private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,
         CancellationToken cancellationToken)
     {
@@ -166,5 +156,16 @@ public class StreamProxyChannel : IChannel, IJob
             // set LastActivityTime as some data delegated
             LastActivityTime = FastDateTime.Now;
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        Connected = false;
+        await Task.WhenAll(
+            _orgTcpClientStream.DisposeAsync().AsTask(),
+            _tunnelTcpClientStream.DisposeAsync().AsTask());
     }
 }

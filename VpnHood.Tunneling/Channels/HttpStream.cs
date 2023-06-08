@@ -26,15 +26,14 @@ public class HttpStream : AsyncStreamDecorator
     public int ReadChunkCount { get; private set; }
     public int WroteChunkCount { get; private set; }
 
-    public HttpStream(Stream sourceStream, bool keepOpen, string? host)
+    public HttpStream(Stream sourceStream, string? host, bool keepOpen = false)
         : base(new ReadCacheStream(sourceStream, keepOpen, 512), false)
     {
         _writeBuffer = sourceStream; // don't use write buffer in this version
         if (string.IsNullOrEmpty(host))
         {
             _httpHeader =
-                $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
-                $"Host: {host}\r\n" +
+                "HTTP/1.1 200 OK\r\n" +
                 "Content-Type: application/octet-stream\r\n" +
                 "Cache-Control: no-store\r\n" +
                 "Transfer-Encoding: chunked\r\n" +
@@ -43,7 +42,8 @@ public class HttpStream : AsyncStreamDecorator
         else
         {
             _httpHeader =
-                "HTTP/1.1 200 OK\r\n" +
+                $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
+                $"Host: {host}\r\n" +
                 "Content-Type: application/octet-stream\r\n" +
                 "Cache-Control: no-store\r\n" +
                 "Transfer-Encoding: chunked\r\n" +
@@ -60,35 +60,26 @@ public class HttpStream : AsyncStreamDecorator
             _isHttpHeaderRead = true;
         }
 
-        // start reading chunks
-        var totalBytesRead = 0;
-        while (count > 0 && !_isFinished)
-        {
-            // If there are remaining bytes from the previous chunk, copy them to the output buffer
-            if (_remainingChunkBytes > 0)
-            {
-                var bytesToCopy = Math.Min(_remainingChunkBytes, count);
-                var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToCopy, cancellationToken);
+        // check is stream has finished
+        if (_isFinished)
+            return 0;
 
-                _remainingChunkBytes -= bytesRead;
-                count -= bytesRead;
-                offset += bytesRead;
-                totalBytesRead += bytesRead;
+        // If there are no more in the chunks read the next chunk
+        if (_remainingChunkBytes == 0)
+            _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken);
 
-                // If the output buffer is filled, return the total bytes read
-                if (count == 0)
-                    return totalBytesRead;
-            }
+        // check last chunk
+        _isFinished = _remainingChunkBytes == 0;
+        if (_isFinished)
+            return 0;
 
-            // If there are no more in the chunks read the next chunk
-            if (_remainingChunkBytes == 0)
-                _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken);
+        var bytesToRead = Math.Min(_remainingChunkBytes, count);
+        var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToRead, cancellationToken);
+        if (bytesRead == 0)
+            throw new Exception("HTTP Stream closed unexpectedly!");
 
-            // If the remaining chunk bytes is zero, it indicates the end of the stream
-            _isFinished = _remainingChunkBytes == 0;
-        }
-
-        return totalBytesRead;
+        _remainingChunkBytes -= bytesRead;
+        return bytesRead;
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -110,54 +101,39 @@ public class HttpStream : AsyncStreamDecorator
         // Write the chunk footer
         await _writeBuffer.WriteAsync(_newLineBytes, cancellationToken);
         await FlushAsync(cancellationToken);
+
         WroteChunkCount++;
-    }
-
-    public override async ValueTask DisposeAsync()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        if (WroteChunkCount > 0)
-        {
-            await SourceStream.WriteAsync("0\r\n\r\n"u8.ToArray());
-            await FlushAsync();
-        }
-
-        await base.DisposeAsync();
     }
 
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
     {
-
         // read the end of last chunk if it is not first chunk
         if (ReadChunkCount != 0)
             await ReadNextLine(cancellationToken);
 
         // read chunk
-        var bufferOffset = -1;
+        var bufferOffset = 0;
         while (!cancellationToken.IsCancellationRequested)
         {
-            // seek for \r
-            if (++bufferOffset == _chunkHeaderBuffer.Length) throw new InvalidDataException("Chunk header exceeds the maximum size.");
+            if (bufferOffset == _chunkHeaderBuffer.Length) throw new InvalidDataException("Chunk header exceeds the maximum size.");
             var bytesRead = await SourceStream.ReadAsync(_chunkHeaderBuffer, bufferOffset, 1, cancellationToken);
 
-            if (bytesRead == 0) return 0; //no more chunk
-            if (_chunkHeaderBuffer[bufferOffset] != '\r') continue;
+            if (bytesRead == 0)
+                throw new InvalidDataException("Could not read HTTP Chunk header.");
 
-            // seek for \n
-            if (++bufferOffset == _chunkHeaderBuffer.Length) throw new InvalidDataException("Chunk header exceeds the maximum size.");
-            bytesRead = await SourceStream.ReadAsync(_chunkHeaderBuffer, ++bufferOffset, 1, cancellationToken);
-            if (bytesRead == 0) throw new InvalidDataException("Invalid HTTP Chunk header.");
-            if (_chunkHeaderBuffer[bufferOffset] == '\n')
+            if (bufferOffset > 0 && _chunkHeaderBuffer[bufferOffset - 1] == '\r' && _chunkHeaderBuffer[bufferOffset] == '\n')
                 break;
+
+            bufferOffset++;
         }
 
         var chunkSizeHex = Encoding.ASCII.GetString(_chunkHeaderBuffer, 0, bufferOffset - 1);
         if (!int.TryParse(chunkSizeHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var chunkSize))
             throw new InvalidDataException("Invalid HTTP chunk size.");
 
-        if (chunkSize != 0)
+        if (chunkSize == 0)
+            await ReadNextLine(cancellationToken); //read the end of stream
+        else
             ReadChunkCount++;
 
         return chunkSize;
@@ -182,9 +158,7 @@ public class HttpStream : AsyncStreamDecorator
             if (headerLength++ > maxLength)
                 throw new Exception("HTTP header is too big.");
         }
-
     }
-
 
     // ReSharper disable once UnusedMember.Local
     private static async Task<Dictionary<string, string>> ReadHeadersAsync(Stream stream,
@@ -248,4 +222,19 @@ public class HttpStream : AsyncStreamDecorator
     {
         return _writeBuffer.FlushAsync(cancellationToken);
     }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (WroteChunkCount > 0)
+        {
+            await SourceStream.WriteAsync("0\r\n\r\n"u8.ToArray());
+            await FlushAsync();
+        }
+
+        await base.DisposeAsync();
+    }
+
 }

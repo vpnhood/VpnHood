@@ -255,9 +255,8 @@ public class FileAccessServer : IAccessServer
     public async Task AccessItem_Delete(Guid tokenId)
     {
         // remove index
-        var accessItem = await AccessItem_Read(tokenId);
-        if (accessItem == null)
-            throw new KeyNotFoundException("Could not find tokenId");
+        _ = await AccessItem_Read(tokenId) 
+            ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete files
         if (File.Exists(GetUsageFileName(tokenId)))

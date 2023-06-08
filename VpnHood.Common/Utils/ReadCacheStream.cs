@@ -31,33 +31,22 @@ public class ReadCacheStream : AsyncStreamDecorator
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        var totalCacheRead = 0;
+        return await base.ReadAsync(buffer, offset, count, cancellationToken);
+
         // read directly to user buffer if there is not buffer and it is larger than cache
-        while (true)
-        {
-            if (_cacheRemain == 0)
-            {
-                if (count >= _cache.Length)
-                    return totalCacheRead + await base.ReadAsync(buffer, offset, count, cancellationToken);
+        if (_cacheRemain == 0 && count > _cache.Length)
+            return await base.ReadAsync(buffer, offset, count, cancellationToken);
 
-                // fill cache
-                _cacheRemain = await base.ReadAsync(_cache, 0, _cache.Length, cancellationToken);
-                _cacheOffset = 0;
-                if (_cacheRemain == 0)
-                    return 0; // nothing remained
-            }
+        // fill cache
+        if (_cacheRemain == 0 && count <= _cache.Length)
+            _cacheRemain = await base.ReadAsync(_cache, 0, _cache.Length, cancellationToken);
 
-            // read from cache if there is data is in cache
-            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-            var cacheRead = Math.Min(count, _cacheRemain);
-            Buffer.BlockCopy(_cache, _cacheOffset, buffer, offset, cacheRead);
-            totalCacheRead += cacheRead;
-            _cacheOffset += cacheRead;
-            _cacheRemain -= cacheRead;
-            count -= cacheRead;
-            offset += cacheRead;
-            if (count == 0)
-                return totalCacheRead;
-        }
+        // Warning: if there is data in cache we are not allowed to fill the cache again
+        // because it may go to read blocking
+        var cacheRead = Math.Min(count, _cacheRemain);
+        Buffer.BlockCopy(_cache, _cacheOffset, buffer, offset, cacheRead);
+        _cacheOffset += cacheRead;
+        _cacheRemain -= cacheRead;
+        return cacheRead;
     }
 }

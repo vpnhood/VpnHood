@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -26,7 +25,7 @@ namespace VpnHood.Server;
 
 internal class ServerHost : IAsyncDisposable
 {
-    private const int ServerProtocolVersion = 3;
+    private const int ServerProtocolVersion = 4;
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
@@ -201,7 +200,7 @@ internal class ServerHost : IAsyncDisposable
         }
     }
 
-    private async Task<IClientStream> CreateStreamClient(TcpClient tcpClient, Stream stream, CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream stream, CancellationToken cancellationToken)
     {
         // read version
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
@@ -212,10 +211,8 @@ internal class ServerHost : IAsyncDisposable
 
         // check request version
         var version = buffer[0];
-        if (version == 'P')
-        {
-            return new TcpClientStream(tcpClient, new HttpStream(stream, true, null), ReuseClientStream);
-        }
+        if (version == 'P' || version == 'p')
+            return new TcpClientStream(tcpClient, new HttpStream(stream, null), ReuseClientStream);
 
         if (version == 1)
             return new TcpClientStream(tcpClient, stream);
@@ -239,7 +236,7 @@ internal class ServerHost : IAsyncDisposable
             var sslStream = await AuthenticateAsServerAsync(tcpClient, certificate, cancellationToken);
 
             // create client stream
-            var clientStream = await CreateStreamClient(tcpClient, sslStream, cancellationToken);
+            var clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken);
             try
             {
                 await ProcessClientStream(clientStream, cancellationToken);
@@ -342,10 +339,22 @@ internal class ServerHost : IAsyncDisposable
     {
         var buffer = new byte[1];
 
+        // to support old version we have already read the first byte, in new version we need to read it here
+        if (clientStream.Stream is HttpStream)
+        {
+            var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+            if (rest != buffer.Length)
+                throw new Exception("Connection closed before receiving any request.");
+
+            var version = buffer[0];
+            if (version!=1)
+                throw new NotSupportedException("The request version is not supported!");
+        }
+
         // read request code
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
         if (res != buffer.Length)
-            throw new Exception("Connection closed before receiving any request!");
+            throw new Exception("Connection closed before receiving any request.");
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode)
@@ -392,7 +401,7 @@ internal class ServerHost : IAsyncDisposable
         session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserver server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2)
+        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2) //todo: must be 3 (4 for Http)
             throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient,
                 "This client is outdated and not supported anymore! Please update your app.");
 

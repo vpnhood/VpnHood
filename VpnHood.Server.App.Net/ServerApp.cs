@@ -188,7 +188,7 @@ public class ServerApp : IDisposable
         cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
         cmdApp.OnExecute(() =>
         {
-            Console.WriteLine("Sending stop server request...");
+            VhLogger.Instance.LogInformation("Sending stop server request...");
             _commandListener.SendCommand("stop");
         });
     }

@@ -33,7 +33,7 @@ public class TcpClientStream : IClientStream
     {
         try
         {
-            return !TcpClient.Client.Poll(0, SelectMode.SelectError);
+            return TcpClient.Connected && !TcpClient.Client.Poll(0, SelectMode.SelectError);
         }
         catch
         {
@@ -46,7 +46,7 @@ public class TcpClientStream : IClientStream
         if (_disposed) return;
         _disposed = true;
 
-        if (allowReuse && _reuseCallback != null)
+        if (allowReuse && _reuseCallback != null && CheckIsAlive())
         {
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"A {VhLogger.FormatType(this)} has been freed.");
             _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, Stream, _reuseCallback));

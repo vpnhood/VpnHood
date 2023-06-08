@@ -188,7 +188,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 
             if (!_serverHost.IsStarted)
             {
-                VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatType(_serverHost)}...");
+                VhLogger.Instance.LogInformation("Starting ServerHost...");
                 _serverHost.Start(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
             }
 

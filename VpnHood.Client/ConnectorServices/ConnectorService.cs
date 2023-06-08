@@ -80,7 +80,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 EnabledSslProtocols = sslProtocol
             }, cancellationToken);
 
-            Stat.CreatedConnectionCount++;
+            Stat.NewConnectionCount++;
             var clientStream = UseHttp
                 ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName), ReuseStreamClient)
                 : new TcpClientStream(tcpClient, stream);
@@ -147,13 +147,13 @@ internal class ConnectorService : IAsyncDisposable, IJob
             try
             {
                 await clientStream.Stream.WriteAsync(request, cancellationToken);
-                Stat.ReusedConnectionCount++;
+                Stat.ReusedConnectionSucceededCount++;
                 return clientStream;
             }
             catch (Exception ex)
             {
                 // dispose the connection and retry with new connection
-                Stat.FailedReusedConnectionCount++;
+                Stat.ReusedConnectionFailedCount++;
                 _ = clientStream.DisposeAsync();
                 VhLogger.Instance.LogTrace(GeneralEventId.Tcp, ex, "Error in using the ClientStream. Try a new connection...");
             }

@@ -31,15 +31,17 @@ public class ReadCacheStream : AsyncStreamDecorator
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        return await base.ReadAsync(buffer, offset, count, cancellationToken);
-
         // read directly to user buffer if there is not buffer and it is larger than cache
         if (_cacheRemain == 0 && count > _cache.Length)
             return await base.ReadAsync(buffer, offset, count, cancellationToken);
 
         // fill cache
         if (_cacheRemain == 0 && count <= _cache.Length)
+        {
             _cacheRemain = await base.ReadAsync(_cache, 0, _cache.Length, cancellationToken);
+            _cacheOffset = 0;
+
+        }
 
         // Warning: if there is data in cache we are not allowed to fill the cache again
         // because it may go to read blocking

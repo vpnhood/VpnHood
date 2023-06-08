@@ -26,10 +26,11 @@ public class HttpStream : AsyncStreamDecorator
     public int ReadChunkCount { get; private set; }
     public int WroteChunkCount { get; private set; }
 
-    public HttpStream(Stream sourceStream, string? host, bool keepOpen = false)
-        : base(new ReadCacheStream(sourceStream, keepOpen, 512), false)
+    public HttpStream(Stream sourceStream, string? host, bool keepSourceOpen = false)
+        : base(new ReadCacheStream(sourceStream, keepSourceOpen, 512), false)
     {
         _writeBuffer = sourceStream; // don't use write buffer in this version
+
         if (string.IsNullOrEmpty(host))
         {
             _httpHeader =
@@ -51,8 +52,18 @@ public class HttpStream : AsyncStreamDecorator
         }
     }
 
+    private HttpStream(Stream sourceStream, string httpHeader) 
+        : base(sourceStream, false)
+    {
+        _httpHeader = httpHeader;
+        _writeBuffer = sourceStream; // don't use write buffer in this version
+    }
+
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
+        if (_disposed) 
+            throw new ObjectDisposedException(GetType().Name);
+
         // ignore header
         if (!_isHttpHeaderRead)
         {
@@ -76,7 +87,7 @@ public class HttpStream : AsyncStreamDecorator
         var bytesToRead = Math.Min(_remainingChunkBytes, count);
         var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToRead, cancellationToken);
         if (bytesRead == 0)
-            throw new Exception("HTTP Stream closed unexpectedly!");
+            throw new Exception("HTTP Stream closed unexpectedly.");
 
         _remainingChunkBytes -= bytesRead;
         return bytesRead;
@@ -84,6 +95,9 @@ public class HttpStream : AsyncStreamDecorator
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+
         // write header for first time
         if (!_isHttpHeaderWritten)
         {
@@ -223,6 +237,17 @@ public class HttpStream : AsyncStreamDecorator
         return _writeBuffer.FlushAsync(cancellationToken);
     }
 
+    private bool _keepSourceOpen;
+    public async Task<HttpStream> CreateReuse()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+
+        _keepSourceOpen = true;
+        await DisposeAsync();
+        return new HttpStream(SourceStream, _httpHeader);
+    }
+
     public override async ValueTask DisposeAsync()
     {
         if (_disposed) return;
@@ -234,7 +259,8 @@ public class HttpStream : AsyncStreamDecorator
             await FlushAsync();
         }
 
-        await base.DisposeAsync();
+        if (!_keepSourceOpen)
+            await base.DisposeAsync();
     }
 
 }

@@ -111,7 +111,8 @@ internal static class TestHelper
         return ping.SendPingAsync(ipAddress ?? TEST_PingV4Address1, timeout, buffer);
     }
 
-    private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = DefaultTimeout)
+    private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, 
+        int timeout = DefaultTimeout)
     {
         uri ??= TEST_HttpsUri1;
 
@@ -186,7 +187,8 @@ internal static class TestHelper
         Test_HttpsAsync(httpClient, uri, timeout).Wait();
     }
 
-    public static async Task<bool> Test_HttpsAsync(HttpClient? httpClient = default, Uri? uri = default, int timeout = DefaultTimeout, bool throwError = true)
+    public static async Task<bool> Test_HttpsAsync(HttpClient? httpClient = default, Uri? uri = default, 
+        int timeout = DefaultTimeout, bool throwError = true)
     {
         if (throwError)
         {

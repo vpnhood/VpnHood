@@ -279,7 +279,7 @@ public static class VhUtil
 
     public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize)
     {
-        tcpClient.NoDelay = true;
+        tcpClient.NoDelay = false;
         if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
         if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
     }

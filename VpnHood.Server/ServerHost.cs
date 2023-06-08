@@ -25,6 +25,7 @@ namespace VpnHood.Server;
 
 internal class ServerHost : IAsyncDisposable
 {
+    private readonly HashSet<IClientStream> _ongoingClientStreams = new();
     private const int ServerProtocolVersion = 4;
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
     private CancellationTokenSource _cancellationTokenSource = new();
@@ -125,6 +126,12 @@ internal class ServerHost : IAsyncDisposable
             _tcpListeners.Clear();
         }
 
+        // dispose ongoing clientStreams
+        Task[] disposeTasks;
+        lock (_ongoingClientStreams)
+            disposeTasks = _ongoingClientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
+        await Task.WhenAll(disposeTasks);
+
         if (_startTask != null)
         {
             await _startTask;
@@ -145,8 +152,8 @@ internal class ServerHost : IAsyncDisposable
             try
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
-                VhUtil.ConfigTcpClient(tcpClient, 
-                    _sessionManager.SessionOptions.TcpKernelSendBufferSize, 
+                VhUtil.ConfigTcpClient(tcpClient,
+                    _sessionManager.SessionOptions.TcpKernelSendBufferSize,
                     _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
 
                 // config tcpClient
@@ -277,6 +284,14 @@ internal class ServerHost : IAsyncDisposable
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
+        // don't add new client in disposing
+        if (cancellationToken.IsCancellationRequested)
+        {
+            await clientStream.DisposeAsync(false);
+            return;
+        }
+
+        // process incoming client
         try
         {
             await ProcessClientStream(clientStream, cancellationToken);
@@ -293,6 +308,7 @@ internal class ServerHost : IAsyncDisposable
         using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
         try
         {
+            lock (_ongoingClientStreams) _ongoingClientStreams.Add(clientStream);
             await ProcessRequest(clientStream, cancellationToken);
         }
         catch (ObjectDisposedException)
@@ -333,6 +349,11 @@ internal class ServerHost : IAsyncDisposable
 
             await clientStream.DisposeAsync(false);
         }
+        finally
+        {
+            lock (_ongoingClientStreams)
+                _ongoingClientStreams.Remove(clientStream);
+        }
     }
 
     private async Task ProcessRequest(IClientStream clientStream, CancellationToken cancellationToken)
@@ -347,7 +368,7 @@ internal class ServerHost : IAsyncDisposable
                 throw new Exception("Connection closed before receiving any request.");
 
             var version = buffer[0];
-            if (version!=1)
+            if (version != 1)
                 throw new NotSupportedException("The request version is not supported!");
         }
 

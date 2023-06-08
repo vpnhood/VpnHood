@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Tunneling.Channels;
 
 namespace VpnHood.Tunneling.ClientStreams;
 
@@ -46,10 +47,10 @@ public class TcpClientStream : IClientStream
         if (_disposed) return;
         _disposed = true;
 
-        if (allowReuse && _reuseCallback != null && CheckIsAlive())
+        if (allowReuse && _reuseCallback != null && CheckIsAlive() && Stream is HttpStream httpStream)
         {
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"A {VhLogger.FormatType(this)} has been freed.");
-            _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, Stream, _reuseCallback));
+            _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, await httpStream.CreateReuse(), _reuseCallback));
         }
         else
         {

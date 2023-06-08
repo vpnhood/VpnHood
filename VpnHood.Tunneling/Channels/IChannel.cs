@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Channels;
 
 public interface IChannel : IAsyncDisposable
 {

@@ -104,6 +104,10 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
     {
         throw new NotSupportedException("Use DisposeAsync.");
     }
+    protected sealed override void Dispose(bool disposing)
+    {
+        throw new NotSupportedException("Use DisposeAsync.");
+    }
 
     public sealed override void WriteByte(byte value)
     {

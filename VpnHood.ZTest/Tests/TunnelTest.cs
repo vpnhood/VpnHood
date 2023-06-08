@@ -202,36 +202,59 @@ public class TunnelTest
             "550Clock\n\r,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock,550Clock"
         };
 
-        var stream = new MemoryStream();
-        
+        using var stream = new MemoryStream();
+
         // first stream
-        var chunkStream = new HttpStream(stream, true, "foo.com");
+        var chunkStream = new HttpStream(stream, "foo.com", keepOpen: true);
         foreach (var chunk in chunks)
             await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
         Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
         await chunkStream.DisposeAsync();
 
         // second stream
-        chunkStream = new HttpStream(stream, true, "foo.com");
+        chunkStream = new HttpStream(stream, "foo.com", keepOpen: true);
         foreach (var chunk in chunks)
             await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
         Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
         await chunkStream.DisposeAsync();
 
         stream.Position = 0;
-        
+
         // read first stream
-        chunkStream = new HttpStream(stream, true, null);
-        var sr = new StreamReader(chunkStream);
+        chunkStream = new HttpStream(stream, null, keepOpen: true);
+        var sr = new StreamReader(chunkStream, bufferSize: 10);
         var res = await sr.ReadToEndAsync();
         Assert.AreEqual(string.Join("", chunks), res);
         Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
 
         // read second stream
-        chunkStream = new HttpStream(stream, true, null);
+        chunkStream = new HttpStream(stream, null, keepOpen: true);
         sr = new StreamReader(chunkStream);
         res = await sr.ReadToEndAsync();
         Assert.AreEqual(string.Join("", chunks), res);
         Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
+    }
+
+    [TestMethod]
+    public async Task HttpStream_Binary()
+    {
+        var writeBuffer = new byte[10 * 1024 * 1024]; // 10MB buffer size
+        var random = new Random();
+        random.NextBytes(writeBuffer);
+        
+        using var stream = new MemoryStream();
+
+        // first stream
+        var httpStream = new HttpStream(stream, "foo.com", keepOpen: true);
+        await httpStream.WriteAsync(writeBuffer);
+        await httpStream.DisposeAsync();
+
+        stream.Position = 0;
+        var readBuffer = new byte[writeBuffer.Length];
+        httpStream = new HttpStream(stream, "foo.com", keepOpen: true);
+        _ = await httpStream.ReadAsync(readBuffer);
+        CollectionAssert.AreEqual(writeBuffer, readBuffer);
+
+        Assert.AreEqual(0, await httpStream.ReadAsync(readBuffer));
     }
 }

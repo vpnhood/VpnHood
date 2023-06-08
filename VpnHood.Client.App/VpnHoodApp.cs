@@ -210,9 +210,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private void Device_OnStartAsService(object sender, EventArgs e)
     {
         var clientProfile =
-            ClientProfileStore.ClientProfiles.FirstOrDefault(x =>
-                x.ClientProfileId == UserSettings.DefaultClientProfileId) ?? ClientProfileStore.ClientProfiles.FirstOrDefault();
-        if (clientProfile == null) throw new Exception("There is no default configuration!");
+            (ClientProfileStore.ClientProfiles.FirstOrDefault(x =>x.ClientProfileId == UserSettings.DefaultClientProfileId) 
+            ?? ClientProfileStore.ClientProfiles.FirstOrDefault()) 
+            ?? throw new Exception("There is no default configuration!");
 
         _ = Connect(clientProfile.ClientProfileId);
     }

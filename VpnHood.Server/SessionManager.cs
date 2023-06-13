@@ -34,9 +34,9 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
     public SessionOptions SessionOptions { get; set; } = new();
     public byte[] ServerSecret { get; set; } = VhUtil.GenerateKey();
 
-    public SessionManager(IAccessServer accessServer, 
-        INetFilter netFilter, 
-        SocketFactory socketFactory, 
+    public SessionManager(IAccessServer accessServer,
+        INetFilter netFilter,
+        SocketFactory socketFactory,
         ITracker? tracker)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
@@ -177,6 +177,11 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         if (session.SessionResponse.ErrorCode != SessionErrorCode.Ok)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse);
 
+        // unexpected close
+        if (session.IsDisposed)
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
+                new SessionResponseBase(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed });
+
         return session;
     }
 
@@ -192,7 +197,8 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         if (!cleaningLock.Succeeded)
             return;
 
-        // update all sessions status
+        // find expired or dead sessions
+        VhLogger.Instance.LogTrace("Cleaning up the expired sessions.");
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime)
@@ -200,8 +206,8 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
 
         foreach (var session in timeoutSessions)
         {
-            await session.Value.DisposeAsync();
             Sessions.Remove(session.Key, out _);
+            await session.Value.DisposeAsync();
         }
     }
 

@@ -52,9 +52,10 @@ public class AsyncLock
         }
     }
 
-    public Task<ILockAsyncResult> LockAsync()
+    public async Task<ILockAsyncResult> LockAsync(CancellationToken cancellationToken = default)
     {
-        return LockAsync(Timeout.InfiniteTimeSpan);
+        await _semaphoreSlimEx.WaitAsync(cancellationToken);
+        return new SemaphoreLock(_semaphoreSlimEx, true, null);
     }
 
     public async Task<ILockAsyncResult> LockAsync(TimeSpan timeout, CancellationToken cancellationToken = default)

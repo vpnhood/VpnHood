@@ -224,7 +224,7 @@ internal class ServerHost : IAsyncDisposable
         if (version == 1)
             return new TcpClientStream(tcpClient, stream);
 
-        throw new NotSupportedException("The request version is not supported!");
+        throw new NotSupportedException("The request version is not supported.");
     }
 
     private async Task ProcessClient(TcpClient tcpClient, CancellationToken cancellationToken)
@@ -254,11 +254,6 @@ internal class ServerHost : IAsyncDisposable
                 throw;
             }
         }
-        catch (ObjectDisposedException)
-        {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connection has been closed.");
-            tcpClient.Dispose();
-        }
         catch (TlsAuthenticateException ex) when (ex.InnerException is OperationCanceledException)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Tls, "Client TLS authentication has been canceled.");
@@ -272,7 +267,7 @@ internal class ServerHost : IAsyncDisposable
         catch (Exception ex)
         {
             if (ex is ISelfLog loggable) loggable.Log();
-            else VhLogger.Instance.LogInformation(ex, "ServerHost could not process this request.");
+            else VhLogger.LogError(GeneralEventId.Request, ex, "ServerHost could not process this request.");
 
             tcpClient.Dispose();
         }
@@ -295,10 +290,17 @@ internal class ServerHost : IAsyncDisposable
         try
         {
             await ProcessClientStream(clientStream, cancellationToken);
+
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                "ServerHost.ReuseClientStream: A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}",
+                clientStream.ClientStreamId);
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "Unhandled error in reusing ProcessClientStream.");
+            VhLogger.LogError(GeneralEventId.Tcp, ex, 
+                "ServerHost.ReuseClientStream: Could not reuse a ClientStream. ClientStreamId: {ClientStreamId}", 
+                clientStream.ClientStreamId);
+
             await clientStream.DisposeAsync(false);
         }
     }
@@ -310,11 +312,6 @@ internal class ServerHost : IAsyncDisposable
         {
             lock (_ongoingClientStreams) _ongoingClientStreams.Add(clientStream);
             await ProcessRequest(clientStream, cancellationToken);
-        }
-        catch (ObjectDisposedException)
-        {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connection has been closed.");
-            await clientStream.DisposeAsync(false);
         }
         catch (SessionException ex)
         {
@@ -328,6 +325,14 @@ internal class ServerHost : IAsyncDisposable
             else
                 VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
                     "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponseBase.ErrorCode);
+
+            await clientStream.DisposeAsync(false);
+        }
+        catch (Exception ex) when (VhLogger.IsSocketCloseException(ex))
+        {
+            VhLogger.LogError(GeneralEventId.Tcp, ex, 
+                "Connection has been closed. ClientStreamId: {ClientStreamId}", 
+                clientStream.ClientStreamId);
 
             await clientStream.DisposeAsync(false);
         }

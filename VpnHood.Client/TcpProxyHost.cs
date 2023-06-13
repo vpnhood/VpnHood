@@ -51,7 +51,7 @@ internal class TcpProxyHost : IDisposable
     public void Start()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
-        using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatType<TcpProxyHost>()}");
+        using var logScope = VhLogger.Instance.BeginScope("TcpProxyHost");
         VhLogger.Instance.LogInformation("Starting TcpProxyHost...");
 
         // IpV4
@@ -180,30 +180,6 @@ internal class TcpProxyHost : IDisposable
         return ret.ToArray(); //it is shared buffer; too array is necessary
     }
 
-    //private async Task ProcessClient2(TcpClient orgTcpClient, CancellationToken cancellationToken)
-    //{
-    //    // get original remote from NAT
-    //    var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
-    //    var ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
-    //        ? IPVersion.IPv4
-    //        : IPVersion.IPv6;
-    //    var natItem = (NatItemEx?)Client.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
-    //    if (natItem == null)
-    //        throw new Exception(
-    //            $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
-
-    //    // create a scope for the logger
-    //    using var scope = VhLogger.Instance.BeginScope(
-    //        $"LocalPort: {natItem.SourcePort}, RemoteEp: {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
-    //    VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
-
-    //    // check invalid income
-    //    var loopbackAddress = ipVersion == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
-    //    if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
-    //        throw new Exception("TcpProxy rejected an outbound connection!");
-
-    //}
-
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
@@ -226,8 +202,8 @@ internal class TcpProxyHost : IDisposable
                           ?? throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             // create a scope for the logger
-            using var scope = VhLogger.Instance.BeginScope(
-                $"LocalPort: {natItem.SourcePort}, RemoteEp: {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
+            using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}", 
+                natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, "New TcpProxy Request.");
 
             // check invalid income

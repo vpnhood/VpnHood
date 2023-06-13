@@ -28,19 +28,20 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public JobSection JobSection { get; } = new();
-    public string ChannelId => _clientStream.ClientStreamId;
+    public string ChannelId { get; }
     public bool IsClosePending { get; private set; }
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
-    public StreamDatagramChannel(IClientStream clientStream)
-    : this(clientStream, Timeout.InfiniteTimeSpan)
+    public StreamDatagramChannel(IClientStream clientStream, string channelId)
+    : this(clientStream, channelId, Timeout.InfiniteTimeSpan)
     {
     }
 
-    public StreamDatagramChannel(IClientStream clientStream, TimeSpan lifespan)
+    public StreamDatagramChannel(IClientStream clientStream, string channelId, TimeSpan lifespan)
     {
+        ChannelId = channelId;
         _clientStream = clientStream ?? throw new ArgumentNullException(nameof(clientStream));
         if (!VhUtil.IsInfinite(lifespan))
         {

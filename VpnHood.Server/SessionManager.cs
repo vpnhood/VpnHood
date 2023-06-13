@@ -80,7 +80,8 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         session.SessionResponse.ErrorMessage = "Could not add session to collection.";
         session.SessionResponse.ErrorCode = SessionErrorCode.SessionError;
         await session.DisposeAsync();
-        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse);
+        throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
+            session.SessionResponse, helloRequest?.RequestId ?? "recovered");
 
     }
 
@@ -90,6 +91,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
         var sessionResponseEx = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
         {
+            HostEndPoint = ipEndPointPair.LocalEndPoint,
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
         });
 
@@ -175,12 +177,13 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         }
 
         if (session.SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse);
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse, requestBase.RequestId);
 
         // unexpected close
         if (session.IsDisposed)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-                new SessionResponseBase(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed });
+                new SessionResponseBase(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
+                requestBase.RequestId);
 
         return session;
     }

@@ -20,6 +20,7 @@ using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
 using System.Collections.Generic;
 using VpnHood.Tunneling.Channels;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -43,7 +44,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    private async Task<IClientStream> GetTlsConnectionToServer(CancellationToken cancellationToken)
+    private async Task<IClientStream> GetTlsConnectionToServer(string clientStreamId, CancellationToken cancellationToken)
     {
         if (EndPointInfo == null) throw new InvalidOperationException($"{nameof(EndPointInfo)} is not initialized.");
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
@@ -82,8 +83,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
             Stat.NewConnectionCount++;
             var clientStream = UseHttp
-                ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName), ReuseStreamClient)
-                : new TcpClientStream(tcpClient, stream);
+                ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName), clientStreamId, ReuseStreamClient)
+                : new TcpClientStream(tcpClient, stream, clientStreamId);
 
             return clientStream;
         }
@@ -128,16 +129,16 @@ internal class ConnectorService : IAsyncDisposable, IJob
                EndPointInfo?.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
     }
 
-    public async Task<IClientStream> SendRequest(RequestCode requestCode, object request, CancellationToken cancellationToken)
+    public async Task<IClientStream> SendRequest(ClientRequest request, CancellationToken cancellationToken)
     {
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
-        mem.WriteByte((byte)requestCode);
+        mem.WriteByte(request.RequestCode);
         await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
-        return await SendRequest(mem.ToArray(), cancellationToken);
+        return await SendRequest(mem.ToArray(), request.RequestId, cancellationToken);
     }
 
-    public async Task<IClientStream> SendRequest(byte[] request, CancellationToken cancellationToken)
+    private async Task<IClientStream> SendRequest(byte[] request, string requestId, CancellationToken cancellationToken)
     {
         // try reuse
         var clientStream = GetFreeClientStream();
@@ -151,6 +152,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             {
                 await clientStream.Stream.WriteAsync(request, cancellationToken);
                 Stat.ReusedConnectionSucceededCount++;
+                clientStream.ClientStreamId = requestId;
                 return clientStream;
             }
             catch (Exception ex)
@@ -165,7 +167,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         }
 
         // get or create free connection
-        var tcpClientStream = await GetTlsConnectionToServer(cancellationToken);
+        var tcpClientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
 
         // send request
         await tcpClientStream.Stream.WriteAsync(request, cancellationToken);

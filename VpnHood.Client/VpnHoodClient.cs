@@ -180,7 +180,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync();
     }
 
-    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
+    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, string channelId,
         CancellationToken cancellationToken)
     {
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
@@ -192,9 +192,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
         // create add add channel
-        var channelId = "local_proxy_" + Guid.NewGuid();
-        var bypassChannel = new StreamProxyChannel(orgTcpClientStream,
-            new TcpClientStream(tcpClient, tcpClient.GetStream()), channelId,
+        var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
+            new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"),
             TunnelUtil.TcpTimeout);
 
         try { _proxyManager.AddChannel(bypassChannel); }
@@ -542,8 +541,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     }
                     else
                     {
-                        await using var requestResult = await SendRequest<UdpChannelSessionResponse>(RequestCode.UdpChannel,
-                            new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
+                        await using var requestResult = await SendRequest<UdpChannelSessionResponse>(
+                            new UdpChannelRequest(Guid.NewGuid().ToString(), SessionId, SessionKey), cancellationToken);
 
                         if (requestResult.Response.UdpPort != 0)
                             await AddUdpChannel(requestResult.Response.UdpPort, requestResult.Response.UdpKey);
@@ -657,14 +656,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UserAgent = UserAgent
             };
 
-            var request = new HelloRequest(Token.TokenId, clientInfo,
+            var request = new HelloRequest(Guid.NewGuid().ToString(), Token.TokenId, clientInfo,
                 VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret))
             {
                 UseUdpChannel = UseUdpChannel,
                 UseUdpChannel2 = true
             };
 
-            await using var requestResult = await SendRequest<HelloSessionResponse>(RequestCode.Hello, request, cancellationToken);
+            await using var requestResult = await SendRequest<HelloSessionResponse>(request, cancellationToken);
             if (requestResult.Response.ServerProtocolVersion < 2) // must be 3 (4 for Http)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
@@ -744,8 +743,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
-        var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
-        var requestResult = await SendRequest<SessionResponseBase>(RequestCode.TcpDatagramChannel, request, cancellationToken);
+        var request = new TcpDatagramChannelRequest(Guid.NewGuid().ToString(), SessionId, SessionKey);
+        var requestResult = await SendRequest<SessionResponseBase>(request, cancellationToken);
         StreamDatagramChannel? channel = null;
         try
         {
@@ -766,7 +765,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    internal async Task<ConnectorRequestResult<T>> SendRequest<T>(RequestCode requestCode, object request, CancellationToken cancellationToken)
+    internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
         where T : SessionResponseBase
     {
         IClientStream? clientStream = null;
@@ -774,6 +773,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // log this request
+            var requestCode = (RequestCode)request.RequestCode;
             var eventId = requestCode switch
             {
                 RequestCode.Hello => GeneralEventId.Session,
@@ -781,10 +781,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 RequestCode.TcpProxyChannel => GeneralEventId.TcpProxyChannel,
                 _ => GeneralEventId.Tcp
             };
-            VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}.");
 
             // create a connection and send the request 
-            clientStream = await _connectorService.SendRequest(requestCode, request, cancellationToken);
+            clientStream = await _connectorService.SendRequest(request, cancellationToken);
 
             // Reading the response
             var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
@@ -838,7 +837,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // send request
-            await using var requestResult = await _connectorService.SendRequest(RequestCode.Bye, new RequestBase(SessionId, SessionKey), cancellationToken);
+            await using var requestResult = await _connectorService.SendRequest(
+                new ByteRequest(Guid.NewGuid().ToString(), SessionId, SessionKey),
+                cancellationToken);
         }
         catch (Exception ex)
         {

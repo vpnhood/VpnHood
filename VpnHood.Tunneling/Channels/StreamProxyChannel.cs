@@ -28,6 +28,7 @@ public class StreamProxyChannel : IChannel, IJob
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
+    public string ChannelId => _tunnelTcpClientStream.ClientStreamId;
 
     public StreamProxyChannel(IClientStream orgClientStream, IClientStream tunnelClientStream,
         TimeSpan tcpTimeout, int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)

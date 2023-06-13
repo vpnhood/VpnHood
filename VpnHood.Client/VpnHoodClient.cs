@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -64,7 +63,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly ConnectorService _connectorService;
-    private bool _udpChannelAdded;
     private DateTime _lastReceivedPacketTime = DateTime.MinValue;
     private Traffic _helloTraffic = new();
     private bool _isUdpChannel2;
@@ -251,7 +249,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Dispose(ex);
+            await Dispose(ex);
             throw;
         }
     }
@@ -526,62 +524,49 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         try
         {
+
             // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
             if (UseUdpChannel)
             {
-                // check current channels
-                // ReSharper disable once MergeIntoPattern
-                if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel or UdpChannel2)
-                    return;
+                // first add the new udp channel
+                if (!Tunnel.DatagramChannels.Any(x => x is UdpChannel or UdpChannel2))
+                {
+                    // request udpChannel
+                    if (_isUdpChannel2)
+                    {
+                        await AddUdpChannel2();
+                    }
+                    else
+                    {
+                        await using var requestResult = await SendRequest<UdpChannelSessionResponse>(RequestCode.UdpChannel,
+                            new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
+
+                        if (requestResult.Response.UdpPort != 0)
+                            await AddUdpChannel(requestResult.Response.UdpPort, requestResult.Response.UdpKey);
+                        else
+                            UseUdpChannel = false;
+                    }
+                }
 
                 // remove all other datagram channel
-                foreach (var channel in Tunnel.DatagramChannels)
-                    await Tunnel.RemoveChannel(channel);
-
-                // request udpChannel
-                if (_isUdpChannel2)
-                {
-                    await AddUdpChannel2();
-                }
-                else
-                {
-                    await using var requestResult = await SendRequest<UdpChannelSessionResponse>(RequestCode.UdpChannel,
-                        new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
-
-                    if (requestResult.Response.UdpPort != 0)
-                        await AddUdpChannel(requestResult.Response.UdpPort, requestResult.Response.UdpKey);
-                    else
-                        UseUdpChannel = false;
-                }
-
+                var streamChannel = Tunnel.DatagramChannels.FirstOrDefault(x => x is StreamDatagramChannel);
+                if (streamChannel != null)
+                    await Tunnel.RemoveChannel(streamChannel, asClosePending: true);
             }
 
             // don't use else; UseUdpChannel may be changed if server does not assign the channel
             if (!UseUdpChannel)
             {
-                // remove UDP datagram channels
-                if (_udpChannelAdded)
-                    foreach (var channel in Tunnel.DatagramChannels.Where(x => x is UdpChannel or UdpChannel2))
-                        await Tunnel.RemoveChannel(channel);
-                _udpChannelTransmitter?.Dispose();
-                _udpChannelAdded = false;
-
                 // make sure there is enough DatagramChannel
-                var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
-                if (curDatagramChannelCount >= Tunnel.MaxDatagramChannelCount)
-                    return;
+                var curStreamChannelCount = Tunnel.DatagramChannels.Count(x => x is StreamDatagramChannel);
+                if (curStreamChannelCount < Tunnel.MaxDatagramChannelCount)
+                    await AddTcpDatagramChannel(cancellationToken);
 
-                // creating DatagramChannels
-                var tasks = new List<Task>();
-                for (var i = curDatagramChannelCount; i < Tunnel.MaxDatagramChannelCount; i++)
-                    tasks.Add(AddTcpDatagramChannel(cancellationToken));
-
-                await Task.WhenAll(tasks)
-                    .ContinueWith(x =>
-                    {
-                        if (x.IsFaulted)
-                            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, x.Exception, "Could not add a TcpDatagramChannel.");
-                    }, cancellationToken);
+                // remove UDP datagram channels
+                var udpChannel = Tunnel.DatagramChannels.FirstOrDefault(x => x is UdpChannel or UdpChannel2);
+                if (udpChannel != null)
+                    await Tunnel.RemoveChannel(udpChannel, asClosePending: true);
+                _udpChannelTransmitter?.Dispose();
             }
         }
         catch (Exception ex)
@@ -616,7 +601,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);
         try
         {
-            _udpChannelAdded = true; // let have it before add channel to make sure it will be removed if any exception occur
             Tunnel.AddChannel(udpChannel);
         }
         catch
@@ -645,10 +629,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
         _udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
 
-
         try
         {
-            _udpChannelAdded = true; // let have it before add channel to make sure it will be removed if any exception occur
             Tunnel.AddChannel(udpChannel);
         }
         catch
@@ -747,14 +729,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (RedirectHostException ex) when (!redirecting)
         {
-            if (_connectorService.EndPointInfo == null) throw new InvalidOperationException($"{nameof(ConnectorService.EndPointInfo)} is not initialized.");
+            if (_connectorService.EndPointInfo == null)
+                throw new InvalidOperationException($"{nameof(ConnectorService.EndPointInfo)} is not initialized.");
+
             _connectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
             HostTcpEndPoint = ex.RedirectHostEndPoint;
             await ConnectInternal(cancellationToken, true);
         }
     }
 
-    private async Task<StreamDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)
+    private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
         var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
@@ -770,7 +754,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // add the new channel
             channel = new StreamDatagramChannel(requestResult.ClientStream, lifespan);
             Tunnel.AddChannel(channel);
-            return channel;
         }
         catch
         {
@@ -842,7 +825,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (clientStream != null) await clientStream.DisposeAsync();
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
-                Dispose(ex);
+                _ = Dispose(ex);
             throw;
         }
     }
@@ -860,11 +843,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private void Dispose(Exception ex)
+    private ValueTask Dispose(Exception ex)
     {
-        if (_disposed) return;
+        if (_disposed) return default;
 
-        VhLogger.Instance.LogError($"Disposing. Error! {ex}");
+        VhLogger.LogError(GeneralEventId.Session, ex, "Disposing...");
 
         // set SessionStatus error code if not set yet
         if (SessionStatus.ErrorCode == SessionErrorCode.Ok)
@@ -888,7 +871,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
         }
 
-        _ = DisposeAsync();
+        return DisposeAsync();
     }
 
     public void Dispose()
@@ -938,7 +921,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _tcpProxyHost.Dispose();
 
         // Tunnel
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(Tunnel)}...");
+        VhLogger.Instance.LogTrace("Disposing Tunnel...");
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
         await Tunnel.DisposeAsync();
@@ -946,15 +929,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // UdpChannelClient
         if (_udpChannelTransmitter != null)
         {
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(_proxyManager)}...");
+            VhLogger.Instance.LogTrace("Disposing the UdpChannelTransmitter...");
             _udpChannelTransmitter.Dispose();
         }
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(_proxyManager)}...");
+        VhLogger.Instance.LogTrace("Disposing ProxyManager...");
         await _proxyManager.DisposeAsync();
 
         // dispose NAT
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(Nat)}...");
+        VhLogger.Instance.LogTrace("Disposing Nat...");
         Nat.Dispose();
 
         // close PacketCapture

@@ -2,7 +2,6 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
@@ -15,15 +14,27 @@ public class TcpClientStream : IClientStream
 {
     public delegate Task ReuseCallback(IClientStream clientStream);
 
-    private static long _lastId;
     private bool _disposed;
     private readonly ReuseCallback? _reuseCallback;
-    public string ClientStreamId { get; set; }
+    private string _clientStreamId;
 
-    public TcpClientStream(TcpClient tcpClient, Stream stream, ReuseCallback? reuseCallback = null)
+    public string ClientStreamId
     {
-        Interlocked.Increment(ref _lastId);
-        ClientStreamId = _lastId.ToString();
+        get => _clientStreamId;
+        set
+        {
+            if (_clientStreamId != value)
+                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, 
+                    "ClientStreamId has been changed. ClientStreamId: {ClientStreamId}, NewClientStreamId: {NewClientStreamId}",
+                    _clientStreamId, value);
+
+            _clientStreamId = value;
+        }
+    }
+
+    public TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback = null)
+    {
+        _clientStreamId = clientStreamId;
         _reuseCallback = reuseCallback;
         Stream = stream ?? throw new ArgumentNullException(nameof(stream));
         TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
@@ -57,7 +68,7 @@ public class TcpClientStream : IClientStream
             try
             {
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
-                _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, await httpStream.CreateReuse(), _reuseCallback));
+                _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, await httpStream.CreateReuse(), ClientStreamId, _reuseCallback));
             }
             catch (Exception ex)
             {

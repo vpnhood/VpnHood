@@ -43,7 +43,7 @@ public class TcpDatagramChannelTest
         // create server channel
         var serverTcpClient = await listenerTask;
         await using var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream());
-        await using var serverChannel = new StreamDatagramChannel(serverStream);
+        await using var serverChannel = new StreamDatagramChannel(serverStream, Guid.NewGuid().ToString());
         
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverChannel);
@@ -55,7 +55,7 @@ public class TcpDatagramChannelTest
 
         // create client channel
         await using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream());
-        await using var clientChannel = new StreamDatagramChannel(clientStream, TimeSpan.FromMilliseconds(1000));
+        await using var clientChannel = new StreamDatagramChannel(clientStream, Guid.NewGuid().ToString(), TimeSpan.FromMilliseconds(1000));
         await using var clientTunnel = new Tunnel(new TunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 

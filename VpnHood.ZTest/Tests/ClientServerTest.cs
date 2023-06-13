@@ -102,8 +102,15 @@ public class ClientServerTest
             UseUdpChannel = false,
             MaxDatagramChannelCount = 6
         });
-        await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
-        Thread.Sleep(1000);
+
+        // let channel be created gradually
+        for (var i = 0; i < 6; i++)
+        {
+            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
+            await Task.Delay(50);
+        }
+
+        Thread.Sleep(100);
         Assert.AreEqual(3, client.DatagramChannelsCount);
         await client.DisposeAsync();
 
@@ -115,8 +122,15 @@ public class ClientServerTest
             UseUdpChannel = false,
             MaxDatagramChannelCount = 1
         });
-        await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
-        Thread.Sleep(1000);
+
+        // let channel be removed gradually
+        for (var i = 0; i < 6; i++)
+        {
+            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
+            await Task.Delay(50);
+        }
+        
+        Thread.Sleep(200);
         Assert.AreEqual(1, client2.DatagramChannelsCount);
         await client.DisposeAsync();
     }
@@ -144,12 +158,12 @@ public class ClientServerTest
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
 
-        //// switch to tcp
+        // switch to tcp
         client.UseUdpChannel = false;
         await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
-        //// switch back to udp
+        // switch back to udp
         client.UseUdpChannel = true;
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);

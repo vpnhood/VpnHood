@@ -28,9 +28,9 @@ public class StreamProxyChannel : IChannel, IJob
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
-    public string ChannelId => _tunnelTcpClientStream.ClientStreamId;
+    public string ChannelId { get; }
 
-    public StreamProxyChannel(IClientStream orgClientStream, IClientStream tunnelClientStream,
+    public StreamProxyChannel(IClientStream orgClientStream, IClientStream tunnelClientStream, string channelId,
         TimeSpan tcpTimeout, int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)
     {
         _orgTcpClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
@@ -50,6 +50,7 @@ public class StreamProxyChannel : IChannel, IJob
             : throw new ArgumentOutOfRangeException(nameof(tunnelStreamBufferSize), tunnelStreamBufferSize,
                 $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}");
 
+        ChannelId = channelId;
         JobSection = new JobSection(tcpTimeout);
         JobRunner.Default.Add(this);
     }

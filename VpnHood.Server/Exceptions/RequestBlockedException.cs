@@ -7,8 +7,8 @@ namespace VpnHood.Server.Exceptions;
 
 internal class RequestBlockedException : ServerSessionException
 {
-    public RequestBlockedException(IPEndPoint remoteEndPoint, Session session)
-        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, "The destination address is blocked.")
+    public RequestBlockedException(IPEndPoint remoteEndPoint, Session session, string requestId)
+        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, "The destination address is blocked.")
     {
     }
 

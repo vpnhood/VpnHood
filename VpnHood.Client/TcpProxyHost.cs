@@ -248,7 +248,7 @@ internal class TcpProxyHost : IDisposable
                     request.CipherKey, null, request.CipherLength);
             }
 
-            channel = new StreamProxyChannel(orgTcpClientStream, proxyClientStream, TunnelUtil.TcpTimeout);
+            channel = new StreamProxyChannel(orgTcpClientStream, proxyClientStream, request.RequestId, TunnelUtil.TcpTimeout);
             Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)

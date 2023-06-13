@@ -214,15 +214,18 @@ internal class TcpProxyHost : IDisposable
             // Check IpFilter
             if (!Client.IsInIpRange(natItem.DestinationAddress))
             {
+                var channelId = Guid.NewGuid().ToString();
                 await Client.AddPassthruTcpStream(
-                    new TcpClientStream(orgTcpClient, orgTcpClient.GetStream()),
+                    new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
                     new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                    channelId,
                     cancellationToken);
                 return;
             }
 
             // Create the Request
             var request = new TcpProxyChannelRequest(
+                Guid.NewGuid().ToString(),
                 Client.SessionId,
                 Client.SessionKey,
                 new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
@@ -230,13 +233,13 @@ internal class TcpProxyHost : IDisposable
                 natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
             // read the response
-            connectorRequest = await Client.SendRequest<SessionResponseBase>(RequestCode.TcpProxyChannel, request, cancellationToken);
+            connectorRequest = await Client.SendRequest<SessionResponseBase>(request, cancellationToken);
             var proxyClientStream = connectorRequest.ClientStream;
 
             // create a TcpProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
-            var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream());
+            var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
             // Dispose ssl stream and replace it with a HeadCryptor
             //todo perhaps must be deprecated from >= 2.9.371
@@ -248,7 +251,7 @@ internal class TcpProxyHost : IDisposable
                     request.CipherKey, null, request.CipherLength);
             }
 
-            channel = new StreamProxyChannel(orgTcpClientStream, proxyClientStream, request.RequestId, TunnelUtil.TcpTimeout);
+            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, TunnelUtil.TcpTimeout);
             Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)

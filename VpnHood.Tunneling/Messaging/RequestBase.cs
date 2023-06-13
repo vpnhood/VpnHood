@@ -1,16 +1,17 @@
 ﻿using System;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class RequestBase
+public abstract class RequestBase : ClientRequest
 {
-    public RequestBase(ulong sessionId, byte[] sessionKey)
+    protected RequestBase(RequestCode requestCode, string requestId, ulong sessionId, byte[] sessionKey)
+        :base((byte)requestCode, requestId)
     {
         SessionId = sessionId;
         SessionKey = sessionKey ?? throw new ArgumentNullException(nameof(sessionKey));
     }
 
-    public string RequestId { get; set; } = Guid.NewGuid().ToString();
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; }
 }

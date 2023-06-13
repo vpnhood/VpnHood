@@ -435,7 +435,8 @@ internal static class TestHelper
     {
         clientId ??= Guid.NewGuid();
 
-        return new SessionRequestEx(token.TokenId,
+        return new SessionRequestEx("access:" + Guid.NewGuid(), 
+            token.TokenId,
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
             encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));

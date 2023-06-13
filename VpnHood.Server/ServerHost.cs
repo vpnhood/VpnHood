@@ -426,9 +426,9 @@ internal class ServerHost : IAsyncDisposable
         var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
         session.UseUdpChannel = request.UseUdpChannel;
 
-        // check client version; unfortunately it must be after CreateSession to preserver server anonymity
+        // check client version; unfortunately it must be after CreateSession to preserve server anonymity
         if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2) //todo: must be 3 (4 for Http)
-            throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient,
+            throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
 
         // Report new session
@@ -520,7 +520,7 @@ internal class ServerHost : IAsyncDisposable
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-        await session.ProcessTcpDatagramChannelRequest(clientStream, cancellationToken);
+        await session.ProcessTcpDatagramChannelRequest(clientStream, request, cancellationToken);
     }
 
     private async Task ProcessTcpProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)

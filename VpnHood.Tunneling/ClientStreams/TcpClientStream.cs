@@ -18,7 +18,7 @@ public class TcpClientStream : IClientStream
     private static long _lastId;
     private bool _disposed;
     private readonly ReuseCallback? _reuseCallback;
-    public string ClientStreamId { get; }
+    public string ClientStreamId { get; set; }
 
     public TcpClientStream(TcpClient tcpClient, Stream stream, ReuseCallback? reuseCallback = null)
     {

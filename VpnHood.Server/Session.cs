@@ -294,7 +294,7 @@ public class Session : IAsyncDisposable, IJob
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    public async Task ProcessTcpDatagramChannelRequest(IClientStream clientStream, CancellationToken cancellationToken)
+    public async Task ProcessTcpDatagramChannelRequest(IClientStream clientStream, TcpDatagramChannelRequest request, CancellationToken cancellationToken)
     {
         // send OK reply
         await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
@@ -306,7 +306,7 @@ public class Session : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
-        var channel = new StreamDatagramChannel(clientStream);
+        var channel = new StreamDatagramChannel(clientStream, request.RequestId);
         try
         {
             Tunnel.AddChannel(channel);
@@ -350,132 +350,142 @@ public class Session : IAsyncDisposable, IJob
 
             // connect to requested destination
             isRequestedEpException = true;
-            await VhUtil.RunTask(
-                tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                _tcpConnectTimeout, cancellationToken);
-            isRequestedEpException = false;
+            try
+            {
+                await VhUtil.RunTask(
+                    tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
+                    _tcpConnectTimeout, cancellationToken);
+                isRequestedEpException = false;
+
+            }
+            catch (Exception ex) //todo remove  
+            {
+
+                throw;
+            }
 
             // send response
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+                await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
-            // Dispose ssl stream and replace it with a Head-Cryptor
-            //todo perhaps must be deprecated from >= 2.9.371
-            if (clientStream.Stream is not HttpStream && clientStream is TcpClientStream tcpClientStream)
-            {
-                await clientStream.Stream.DisposeAsync();
-                tcpClientStream.Stream = StreamHeadCryptor.Create(
-                    tcpClientStream.TcpClient.GetStream(),
-                    request.CipherKey, null, request.CipherLength);
+                // Dispose ssl stream and replace it with a Head-Cryptor
+                //todo perhaps must be deprecated from >= 2.9.371
+                if (clientStream.Stream is not HttpStream && clientStream is TcpClientStream tcpClientStream)
+                {
+                    await clientStream.Stream.DisposeAsync();
+                    tcpClientStream.Stream = StreamHeadCryptor.Create(
+                        tcpClientStream.TcpClient.GetStream(),
+                        request.CipherKey, null, request.CipherLength);
+                }
+
+                // add the connection
+                VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
+                    $"Adding a {nameof(StreamProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
+
+                tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
+
+                tcpProxyChannel = new StreamProxyChannel(tcpClientStreamHost, clientStream,
+                    request.RequestId, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
+
+                Tunnel.AddChannel(tcpProxyChannel);
             }
+            catch (Exception ex)
+            {
+                tcpClientHost?.Dispose();
+                if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync();
+                if (tcpProxyChannel != null) await tcpProxyChannel.DisposeAsync();
 
-            // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
-                $"Adding a {nameof(StreamProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
+                if (isRequestedEpException)
+                    throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
+                        this, SessionErrorCode.GeneralError, request.RequestId, ex.Message);
 
-            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
-
-            tcpProxyChannel = new StreamProxyChannel(tcpClientStreamHost, clientStream, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
-
-            Tunnel.AddChannel(tcpProxyChannel);
+                throw;
+            }
+            finally
+            {
+                if (isTcpConnectIncreased)
+                    Interlocked.Decrement(ref _tcpConnectWaitCount);
+            }
         }
-        catch (Exception ex)
-        {
-            tcpClientHost?.Dispose();
-            if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync();
-            if (tcpProxyChannel != null) await tcpProxyChannel.DisposeAsync();
-
-            if (isRequestedEpException)
-                throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
-                    this, SessionErrorCode.GeneralError, ex.Message);
-
-            throw;
-        }
-        finally
-        {
-            if (isTcpConnectIncreased)
-                Interlocked.Decrement(ref _tcpConnectWaitCount);
-        }
-    }
 
     private void VerifyTcpChannelRequest(IClientStream clientStream, TcpProxyChannelRequest request)
-    {
-        // filter
-        var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
-        if (newEndPoint == null)
         {
-            LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
-            _filterReporter.Raised();
-            throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this);
-        }
-        request.DestinationEndPoint = newEndPoint;
+            // filter
+            var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);
+            if (newEndPoint == null)
+            {
+                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
+                _filterReporter.Raised();
+                throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
+            }
+            request.DestinationEndPoint = newEndPoint;
 
-        lock (_verifyRequestLock)
+            lock (_verifyRequestLock)
+            {
+                // NetScan limit
+                VerifyNetScan(ProtocolType.Tcp, request.DestinationEndPoint, request.RequestId);
+
+                // Channel Count limit
+                if (TcpChannelCount >= _maxTcpChannelCount)
+                {
+                    LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
+                    _maxTcpChannelExceptionReporter.Raised();
+                    throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
+                }
+
+                // Check tcp wait limit
+                if (TcpConnectWaitCount >= _maxTcpConnectWaitCount)
+                {
+                    LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
+                    _maxTcpConnectWaitExceptionReporter.Raised();
+                    throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
+                }
+            }
+        }
+
+        private void VerifyNetScan(ProtocolType protocol, IPEndPoint remoteEndPoint, string requestId)
         {
-            // NetScan limit
-            VerifyNetScan(ProtocolType.Tcp, request.DestinationEndPoint);
+            if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
 
-            // Channel Count limit
-            if (TcpChannelCount >= _maxTcpChannelCount)
-            {
-                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
-                _maxTcpChannelExceptionReporter.Raised();
-                throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this);
-            }
-
-            // Check tcp wait limit
-            if (TcpConnectWaitCount >= _maxTcpConnectWaitCount)
-            {
-                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
-                _maxTcpConnectWaitExceptionReporter.Raised();
-                throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this);
-            }
+            LogTrack(protocol.ToString(), null, remoteEndPoint, false, true, "NetScan");
+            _netScanExceptionReporter.Raised();
+            throw new NetScanException(remoteEndPoint, this, requestId);
         }
-    }
 
-    private void VerifyNetScan(ProtocolType protocol, IPEndPoint remoteEndPoint)
-    {
-        if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
+        public ValueTask Close()
+        {
+            return DisposeAsync(true, true);
+        }
 
-        LogTrack(protocol.ToString(), null, remoteEndPoint, false, true, "NetScan");
-        _netScanExceptionReporter.Raised();
-        throw new NetScanException(remoteEndPoint, this);
-    }
+        public ValueTask DisposeAsync()
+        {
+            return DisposeAsync(true, false);
+        }
 
-    public ValueTask Close()
-    {
-        return DisposeAsync(true, true);
-    }
+        private async ValueTask DisposeAsync(bool sync, bool byUser)
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
 
-    public ValueTask DisposeAsync()
-    {
-        return DisposeAsync(true, false);
-    }
+            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+            await Tunnel.DisposeAsync();
+            await _proxyManager.DisposeAsync();
+            _netScanExceptionReporter.Dispose();
+            _maxTcpChannelExceptionReporter.Dispose();
+            _maxTcpConnectWaitExceptionReporter.Dispose();
 
-    private async ValueTask DisposeAsync(bool sync, bool byUser)
-    {
-        if (IsDisposed) return;
-        IsDisposed = true;
+            if (sync)
+                await Sync(true, byUser);
 
-        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        await Tunnel.DisposeAsync();
-        await _proxyManager.DisposeAsync();
-        _netScanExceptionReporter.Dispose();
-        _maxTcpChannelExceptionReporter.Dispose();
-        _maxTcpConnectWaitExceptionReporter.Dispose();
+            // if there is no reason it is temporary
+            var reason = "Cleanup";
+            if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
+                reason = byUser ? "User" : "Access";
 
-        if (sync)
-            await Sync(true, byUser);
-
-        // if there is no reason it is temporary
-        var reason = "Cleanup";
-        if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            reason = byUser ? "User" : "Access";
-
-        // Report removing session
-        VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
-            "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
-            SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode, SessionResponse.ErrorMessage ?? "None");
-    }
+            // Report removing session
+            VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
+                "SessionId: {SessionId-5}\t{Mode,-5}\tActor: {Actor,-7}\tSuppressBy: {SuppressedBy,-8}\tErrorCode: {ErrorCode,-20}\tMessage: {message}",
+                SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode, SessionResponse.ErrorMessage ?? "None");
+        }
 
     private class SessionProxyManager : ProxyManager
     {
@@ -505,7 +515,7 @@ public class Session : IAsyncDisposable, IJob
 
         public override void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
         {
-            _session.VerifyNetScan(protocolType, remoteEndPoint);
+            _session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
         }
     }
 }

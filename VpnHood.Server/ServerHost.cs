@@ -219,10 +219,10 @@ internal class ServerHost : IAsyncDisposable
         // check request version
         var version = buffer[0];
         if (version == 'P' || version == 'p')
-            return new TcpClientStream(tcpClient, new HttpStream(stream, null), ReuseClientStream);
+            return new TcpClientStream(tcpClient, new HttpStream(stream, null), "S:" + Guid.NewGuid(), ReuseClientStream);
 
         if (version == 1)
-            return new TcpClientStream(tcpClient, stream);
+            return new TcpClientStream(tcpClient, stream, "S:" + Guid.NewGuid());
 
         throw new NotSupportedException("The request version is not supported.");
     }
@@ -331,7 +331,7 @@ internal class ServerHost : IAsyncDisposable
         catch (Exception ex) when (VhLogger.IsSocketCloseException(ex))
         {
             VhLogger.LogError(GeneralEventId.Tcp, ex, 
-                "Connection has been closed. ClientStreamId: {ClientStreamId}", 
+                "Connection has been closed. ClientStreamId: {ClientStreamId}.", 
                 clientStream.ClientStreamId);
 
             await clientStream.DisposeAsync(false);

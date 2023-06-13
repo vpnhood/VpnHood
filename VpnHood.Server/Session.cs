@@ -381,10 +381,10 @@ public class Session : IAsyncDisposable, IJob
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
                     $"Adding a {nameof(StreamProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
 
-                tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream());
+                tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
 
-                tcpProxyChannel = new StreamProxyChannel(tcpClientStreamHost, clientStream,
-                    request.RequestId, _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
+                tcpProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
+                    _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
 
                 Tunnel.AddChannel(tcpProxyChannel);
             }

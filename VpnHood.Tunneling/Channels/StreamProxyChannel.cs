@@ -30,7 +30,7 @@ public class StreamProxyChannel : IChannel, IJob
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
 
-    public StreamProxyChannel(IClientStream orgClientStream, IClientStream tunnelClientStream, string channelId,
+    public StreamProxyChannel(string channelId, IClientStream orgClientStream, IClientStream tunnelClientStream,
         TimeSpan tcpTimeout, int? orgStreamBufferSize = BufferSizeDefault, int? tunnelStreamBufferSize = BufferSizeDefault)
     {
         _orgTcpClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));

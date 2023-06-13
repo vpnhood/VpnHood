@@ -97,6 +97,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         LogAnonymous = options.LogAnonymous;
         VhLogger.IsAnonymousMode = options.LogAnonymous;
         VhLogger.Instance = CreateLogger(false);
+        VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
 
         // add default test public server if not added yet
         RemoveClientProfileByTokenId(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper

@@ -28,6 +28,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public JobSection JobSection { get; } = new();
+    public string ChannelId => _clientStream.ClientStreamId;
     public bool IsClosePending { get; private set; }
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
@@ -130,10 +131,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
         catch (Exception ex)
         {
-            if (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionAborted or SocketError.OperationAborted })
-                VhLogger.Instance.LogTrace(GeneralEventId.Udp, "StreamDatagram Connection has been aborted.");
-            else
-                VhLogger.Instance.LogTrace(GeneralEventId.Udp, ex, "Error in reading UDP from StreamDatagram.");
+            VhLogger.LogError(GeneralEventId.Udp, ex, "Could not read UDP from StreamDatagram.");
         }
         finally
         {

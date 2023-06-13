@@ -17,6 +17,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Configurations;
 using VpnHood.Server.SystemInformation;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server;
 
@@ -176,13 +177,14 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
             ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
+            VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
 
             // starting the listeners
             if (_serverHost.IsStarted && 
                 (!_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue) || 
                  !_serverHost.UdpEndPoints.SequenceEqual(serverConfig.UdpEndPointsValue)))
             {
-                VhLogger.Instance.LogInformation($"TcpEndPoints has changed. Stopping {VhLogger.FormatType(_serverHost)}...");
+                VhLogger.Instance.LogInformation("TcpEndPoints has changed. Stopping ServerHost...");
                 await _serverHost.Stop();
             }
 

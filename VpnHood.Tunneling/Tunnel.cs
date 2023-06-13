@@ -126,13 +126,15 @@ public class Tunnel : IAsyncDisposable
             datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
             DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                "A DatagramChannel has been added. ChannelCount: {ChannelCount}", DatagramChannels.Length);
+                "A DatagramChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
+                datagramChannel.ChannelId, DatagramChannels.Length);
 
             // remove additional Datagram channels
             while (DatagramChannels.Length > MaxDatagramChannelCount)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                    "Removing an exceeded DatagramChannel. ChannelCount: {ChannelCount}", DatagramChannels.Length);
+                    "Removing an exceeded DatagramChannel. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
+                    datagramChannel.ChannelId, DatagramChannels.Length);
 
                 _ = RemoveChannel(DatagramChannels[0]);
             }
@@ -165,7 +167,8 @@ public class Tunnel : IAsyncDisposable
         }
 
         VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
-            "A TcpProxyChannel has been added. ChannelCount: {ChannelCount}", TcpProxyChannelCount);
+            "A TcpProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
+            channel.ChannelId, TcpProxyChannelCount);
 
         // register finish
         channel.OnFinished += Channel_OnFinished;
@@ -177,7 +180,12 @@ public class Tunnel : IAsyncDisposable
         _ = channel.Start();
     }
 
-    public async Task RemoveChannel(IChannel channel)
+    public Task RemoveChannel(IChannel channel)
+    {
+        return RemoveChannel(channel, false);
+    }
+
+    public async Task RemoveChannel(IChannel channel, bool asClosePending)
     {
         if (!IsChannelExists(channel))
             return; // channel already removed or does not exist
@@ -204,7 +212,7 @@ public class Tunnel : IAsyncDisposable
 
         // dispose or close-pending
         // ReSharper disable once MergeIntoPattern
-        if (channel.Connected && channel.IsClosePending)
+        if (channel.Connected && (channel.IsClosePending || asClosePending))
             _closePendingChannels.TryAdd(channel, new TimeoutItem<IChannel>(channel, true));
         else
             await channel.DisposeAsync();

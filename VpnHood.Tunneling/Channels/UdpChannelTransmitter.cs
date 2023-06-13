@@ -68,7 +68,8 @@ public abstract class UdpChannelTransmitter : IDisposable
                 Dispose();
 
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
-                $"{VhLogger.FormatType(this)}: Could not send {buffer.Length} packets! DestinationIp: {VhLogger.Format(ipEndPoint)}");
+                "UdpChannelTransmitter: Could not send data. DataLength: {DataLength}, DestinationIp: {DestinationIp}",
+                buffer.Length, VhLogger.Format(ipEndPoint));
             throw;
         }
         finally

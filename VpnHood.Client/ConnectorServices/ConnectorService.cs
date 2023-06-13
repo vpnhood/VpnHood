@@ -143,7 +143,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
         var clientStream = GetFreeClientStream();
         if (clientStream != null)
         {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "A shared ClientStream has been reused.");
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, 
+                "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}", 
+                clientStream.ClientStreamId);
+
             try
             {
                 await clientStream.Stream.WriteAsync(request, cancellationToken);
@@ -155,7 +158,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 // dispose the connection and retry with new connection
                 Stat.ReusedConnectionFailedCount++;
                 _ = clientStream.DisposeAsync();
-                VhLogger.Instance.LogTrace(GeneralEventId.Tcp, ex, "Error in using the ClientStream. Try a new connection...");
+                VhLogger.LogError(GeneralEventId.TcpLife, ex, 
+                    "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}", 
+                    clientStream.ClientStreamId);
             }
         }
 

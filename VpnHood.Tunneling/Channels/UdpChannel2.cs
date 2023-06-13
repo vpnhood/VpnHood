@@ -27,6 +27,7 @@ public class UdpChannel2 : IDatagramChannel
 
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+    public string ChannelId { get; } = Guid.NewGuid().ToString();
 
     public UdpChannel2(ulong sessionId, byte[] sessionUdpKey, bool isServer)
     {

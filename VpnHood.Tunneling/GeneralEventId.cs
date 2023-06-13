@@ -18,6 +18,8 @@ public static class GeneralEventId
     public static EventId AccessServer = new((int)EventCode.AccessServer, nameof(AccessServer));
     public static EventId NetProtect = new((int)EventCode.NetProtect, nameof(NetProtect));
     public static EventId NetFilter = new((int)EventCode.NetFilter, nameof(NetFilter));
+    public static EventId Request = new((int)EventCode.Request, nameof(Request));
+    public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
 
     private enum EventCode
     {
@@ -34,6 +36,8 @@ public static class GeneralEventId
         AccessServer,
         NetProtect,
         NetFilter,
-        SessionTrack
+        SessionTrack,
+        Request,
+        TcpLife,
     }
 }

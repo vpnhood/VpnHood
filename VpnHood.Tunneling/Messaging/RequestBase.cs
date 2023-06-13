@@ -10,6 +10,7 @@ public class RequestBase
         SessionKey = sessionKey ?? throw new ArgumentNullException(nameof(sessionKey));
     }
 
+    public string RequestId { get; set; } = Guid.NewGuid().ToString();
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; }
 }

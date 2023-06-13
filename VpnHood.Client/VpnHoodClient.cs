@@ -192,7 +192,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
         // create add add channel
-        var bypassChannel = new StreamProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()), TunnelUtil.TcpTimeout);
+        var channelId = "local_proxy_" + Guid.NewGuid();
+        var bypassChannel = new StreamProxyChannel(orgTcpClientStream,
+            new TcpClientStream(tcpClient, tcpClient.GetStream()), channelId,
+            TunnelUtil.TcpTimeout);
+
         try { _proxyManager.AddChannel(bypassChannel); }
         catch { await bypassChannel.DisposeAsync(); throw; }
     }
@@ -566,7 +570,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var udpChannel = Tunnel.DatagramChannels.FirstOrDefault(x => x is UdpChannel or UdpChannel2);
                 if (udpChannel != null)
                     await Tunnel.RemoveChannel(udpChannel, asClosePending: true);
-                _udpChannelTransmitter?.Dispose();
             }
         }
         catch (Exception ex)
@@ -627,7 +630,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         udpClient.Connect(HostUdpEndPoint);
         var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
-        _udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
+        _udpChannelTransmitter ??= new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
 
         try
         {
@@ -752,7 +755,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 : Timeout.InfiniteTimeSpan;
 
             // add the new channel
-            channel = new StreamDatagramChannel(requestResult.ClientStream, lifespan);
+            channel = new StreamDatagramChannel(requestResult.ClientStream, request.RequestId, lifespan);
             Tunnel.AddChannel(channel);
         }
         catch

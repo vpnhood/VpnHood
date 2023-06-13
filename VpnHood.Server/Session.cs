@@ -138,7 +138,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 // remove tcpDatagram channels
                 foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel && x != UdpChannel2))
-                    _ = Tunnel.RemoveChannel(item);
+                    _ = Tunnel.RemoveChannel(item, asClosePending: true);
 
                 // create UdpKey
                 using var aes = Aes.Create();
@@ -165,7 +165,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 // remove udp channels
                 foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel || x == UdpChannel2))
-                    _ = Tunnel.RemoveChannel(item);
+                    _ = Tunnel.RemoveChannel(item, asClosePending: true);
                 UdpChannel = null;
             }
         }
@@ -305,6 +305,7 @@ public class Session : IAsyncDisposable, IJob
         // add channel
         VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
             "Creating a TcpDatagramChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
+
         var channel = new StreamDatagramChannel(clientStream);
         try
         {

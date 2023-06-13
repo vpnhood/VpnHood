@@ -28,6 +28,7 @@ public class UdpChannel : IDatagramChannel
     private bool _disposed;
     private IPEndPoint? _lastRemoteEp;
 
+    public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsClosePending => false;
     public byte[] Key { get; }
     public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;

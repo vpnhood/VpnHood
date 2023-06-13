@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using EmbedIO;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
@@ -143,12 +144,12 @@ public class ClientServerTest
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
 
-        // switch to tcp
+        //// switch to tcp
         client.UseUdpChannel = false;
         await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
-        // switch back to udp
+        //// switch back to udp
         client.UseUdpChannel = true;
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
@@ -403,17 +404,14 @@ public class ClientServerTest
         await using var client = TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
 
-        // restart server
+        // close session
+        VhLogger.Instance.LogInformation("Closing the session by Test.");
         await server.SessionManager.CloseSession(client.SessionId);
 
         // wait for disposing session in access server
-        for (var i = 0; i < 6; i++)
-        {
-            if (!fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) ||
-                !session.IsAlive)
-                break;
-            Thread.Sleep(200);
-        }
+        await VhTestUtil.AssertEqualsWait(false, () =>
+            fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
+            "Session has not been closed in the access server.");
 
         try
         {

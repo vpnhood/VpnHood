@@ -7,6 +7,7 @@ namespace VpnHood.Tunneling.ClientStreams;
 
 public interface IClientStream : IAsyncDisposable
 {
+    string ClientStreamId { get; }
     IPEndPointPair IpEndPointPair { get; }
     Stream Stream { get; }
     public bool CheckIsAlive();

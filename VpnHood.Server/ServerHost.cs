@@ -508,8 +508,8 @@ internal class ServerHost : IAsyncDisposable
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, $"Reading the {RequestCode.Bye} request ...");
-        var request = await ReadRequest<RequestBase>(clientStream, cancellationToken);
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, $"Reading the {RequestCode.Bye} request ...");
+        var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken);
 
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");

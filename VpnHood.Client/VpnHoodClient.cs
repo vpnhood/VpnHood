@@ -838,7 +838,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             // send request
             await using var requestResult = await _connectorService.SendRequest(
-                new ByteRequest(Guid.NewGuid().ToString(), SessionId, SessionKey),
+                new ByeRequest(Guid.NewGuid().ToString(), SessionId, SessionKey),
                 cancellationToken);
         }
         catch (Exception ex)

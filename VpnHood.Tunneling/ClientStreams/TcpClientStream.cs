@@ -33,13 +33,19 @@ public class TcpClientStream : IClientStream
     }
 
     public TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback = null)
+        : this(tcpClient, stream, clientStreamId, reuseCallback, true)
+    {
+    }
+    private TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback, bool log)
     {
         _clientStreamId = clientStreamId;
         _reuseCallback = reuseCallback;
         Stream = stream ?? throw new ArgumentNullException(nameof(stream));
         TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
         IpEndPointPair = new IPEndPointPair((IPEndPoint)TcpClient.Client.LocalEndPoint, (IPEndPoint)TcpClient.Client.RemoteEndPoint);
-        VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}", ClientStreamId);
+
+        if (log)
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}", ClientStreamId);
     }
 
     public TcpClient TcpClient { get; }
@@ -68,7 +74,7 @@ public class TcpClientStream : IClientStream
             try
             {
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
-                _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, await httpStream.CreateReuse(), ClientStreamId, _reuseCallback));
+                _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, await httpStream.CreateReuse(), ClientStreamId, _reuseCallback, false));
             }
             catch (Exception ex)
             {

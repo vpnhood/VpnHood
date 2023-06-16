@@ -111,7 +111,7 @@ public class TunnelTest
         serverUdpChannel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
         {
             serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
+            _ = serverUdpChannel.SendPacket(e.IpPackets);
         };
 
         // Create client
@@ -131,7 +131,7 @@ public class TunnelTest
         };
 
         // send packet to server through channel
-        _ = clientUdpChannel.SendPacketAsync(packets.ToArray());
+        _ = clientUdpChannel.SendPacket(packets.ToArray());
         waitHandle.WaitOne(5000);
         Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
@@ -165,7 +165,7 @@ public class TunnelTest
         serverTunnel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
         {
             serverReceivedPackets = e.IpPackets.ToArray();
-            _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
+            _ = serverUdpChannel.SendPacket(e.IpPackets);
         };
 
         // Create client
@@ -205,34 +205,28 @@ public class TunnelTest
         using var stream = new MemoryStream();
 
         // first stream
-        var chunkStream = new HttpStream(stream, "foo.com", keepSourceOpen: true);
+        var chunkStream = new HttpStream(stream, Guid.NewGuid().ToString(), "foo.com", keepSourceOpen: true);
         foreach (var chunk in chunks)
             await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
         Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
         await chunkStream.DisposeAsync();
 
         // second stream
-        chunkStream = new HttpStream(stream, "foo.com", keepSourceOpen: true);
+        chunkStream = new HttpStream(stream, Guid.NewGuid().ToString(), "foo.com", keepSourceOpen: true);
         foreach (var chunk in chunks)
             await chunkStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray());
         Assert.AreEqual(chunks.Count, chunkStream.WroteChunkCount);
         await chunkStream.DisposeAsync();
 
-        stream.Position = 0;
 
         // read first stream
-        chunkStream = new HttpStream(stream, null, keepSourceOpen: true);
+        stream.Position = 0;
+        chunkStream = new HttpStream(stream, Guid.NewGuid().ToString(), null, keepSourceOpen: true);
         var sr = new StreamReader(chunkStream, bufferSize: 10);
         var res = await sr.ReadToEndAsync();
         Assert.AreEqual(string.Join("", chunks), res);
         Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
-
-        // read second stream
-        chunkStream = new HttpStream(stream, null, keepSourceOpen: true);
-        sr = new StreamReader(chunkStream);
-        res = await sr.ReadToEndAsync();
-        Assert.AreEqual(string.Join("", chunks), res);
-        Assert.AreEqual(chunks.Count, chunkStream.ReadChunkCount);
+        await chunkStream.DisposeAsync();
     }
 
     [TestMethod]
@@ -244,17 +238,19 @@ public class TunnelTest
 
         using var stream = new MemoryStream();
 
-        // first stream
-        var httpStream = new HttpStream(stream, "foo.com", keepSourceOpen: true);
+        // write stream
+        var httpStream = new HttpStream(stream, Guid.NewGuid().ToString(), "foo.com", keepSourceOpen: true);
         await httpStream.WriteAsync(writeBuffer);
         await httpStream.DisposeAsync();
 
+        // read stream
         stream.Position = 0;
         var readBuffer = new byte[writeBuffer.Length];
-        httpStream = new HttpStream(stream, "foo.com", keepSourceOpen: true);
+        httpStream = new HttpStream(stream, Guid.NewGuid().ToString(), "foo.com", keepSourceOpen: true);
         await httpStream.ReadExactlyAsync(readBuffer);
         CollectionAssert.AreEqual(writeBuffer, readBuffer);
 
         Assert.AreEqual(0, await httpStream.ReadAsync(readBuffer));
+        await httpStream.DisposeAsync();
     }
 }

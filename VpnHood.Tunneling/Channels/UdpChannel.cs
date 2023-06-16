@@ -22,7 +22,7 @@ public class UdpChannel : IDatagramChannel
     private readonly long _cryptorPosBase;
     private readonly bool _isClient;
     private readonly object _lockCleanup = new();
-    private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
+    private readonly int _mtuWithFragmentation = TunnelDefaults.MtuWithFragmentation;
     private readonly uint _sessionId;
     private readonly UdpClient _udpClient;
     private bool _disposed;
@@ -70,7 +70,7 @@ public class UdpChannel : IDatagramChannel
         return ReadTask();
     }
 
-    public async Task SendPacketAsync(IPPacket[] ipPackets)
+    public async Task SendPacket(IPPacket[] ipPackets)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(StreamDatagramChannel));
@@ -152,8 +152,8 @@ public class UdpChannel : IDatagramChannel
                 if (IsInvalidState(ex))
                     await DisposeAsync();
                 else
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
-                        $"Error in receiving packets! Error: {ex.Message}");
+                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, 
+                        $"Error in receiving packets. Exception: {ex.Message}");
             }
 
             // send collected packets when there is no more packets in the UdpClient buffer
@@ -179,8 +179,8 @@ public class UdpChannel : IDatagramChannel
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
-                $"Error in processing received packets! Error: {ex.Message}");
+            VhLogger.Instance.LogWarning(GeneralEventId.Udp,
+                $"Error in processing received packets. Exception: {ex.Message}");
         }
     }
 

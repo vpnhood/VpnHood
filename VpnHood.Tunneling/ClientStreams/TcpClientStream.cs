@@ -24,11 +24,13 @@ public class TcpClientStream : IClientStream
         set
         {
             if (_clientStreamId != value)
-                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, 
+                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
                     "ClientStreamId has been changed. ClientStreamId: {ClientStreamId}, NewClientStreamId: {NewClientStreamId}",
                     _clientStreamId, value);
 
             _clientStreamId = value;
+            if (Stream is HttpStream httpStream)
+                httpStream.StreamId = value;
         }
     }
 
@@ -45,7 +47,9 @@ public class TcpClientStream : IClientStream
         IpEndPointPair = new IPEndPointPair((IPEndPoint)TcpClient.Client.LocalEndPoint, (IPEndPoint)TcpClient.Client.RemoteEndPoint);
 
         if (log)
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}", ClientStreamId);
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
+                ClientStreamId, VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
 
     public TcpClient TcpClient { get; }
@@ -69,16 +73,24 @@ public class TcpClientStream : IClientStream
         if (_disposed) return;
         _disposed = true;
 
-        if (allowReuse && _reuseCallback != null && CheckIsAlive() && Stream is HttpStream httpStream)
+        var httpStream = Stream as HttpStream;
+        if (allowReuse && _reuseCallback != null && CheckIsAlive() && httpStream?.IsCloseRequested == false)
         {
+            Stream? newStream = null;
             try
             {
-                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
-                _ = _reuseCallback?.Invoke(new TcpClientStream(TcpClient, await httpStream.CreateReuse(), ClientStreamId, _reuseCallback, false));
+                newStream = await httpStream.CreateReuse();
+                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback, false));
+
+                VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                    "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
             }
             catch (Exception ex)
             {
-                VhLogger.LogError(GeneralEventId.TcpLife, ex, "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
+                VhLogger.LogError(GeneralEventId.TcpLife, ex,
+                    "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
+
+                if (newStream != null) await newStream.DisposeAsync();
                 await Stream.DisposeAsync();
                 TcpClient.Dispose();
             }
@@ -86,9 +98,14 @@ public class TcpClientStream : IClientStream
         }
 
         // close without reuse
-        VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}", ClientStreamId);
+        if (httpStream!=null)
+            await httpStream.DisposeAsync(true);
         await Stream.DisposeAsync();
         TcpClient.Dispose();
+
+        VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+            "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}, CloseRequested: {CloseRequested}", 
+            ClientStreamId, httpStream?.IsCloseRequested);
     }
 
     public ValueTask DisposeAsync()

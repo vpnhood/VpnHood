@@ -13,7 +13,6 @@ using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
-using VpnHood.Tunneling.Messaging;
 using System.IO;
 using VpnHood.Tunneling.ClientStreams;
 using System.Collections.Concurrent;
@@ -21,6 +20,7 @@ using VpnHood.Common.JobController;
 using System.Collections.Generic;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Common.Messaging;
+using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -28,7 +28,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
 {
     private readonly IPacketCapture _packetCapture;
     private readonly SocketFactory _socketFactory;
-    private readonly ConcurrentQueue<ClientStreamItem> _clientStreams = new();
+    private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     public TimeSpan TcpTimeout { get; set; }
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
@@ -83,7 +83,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
             Stat.NewConnectionCount++;
             var clientStream = UseHttp
-                ? new TcpClientStream(tcpClient, new HttpStream(stream, hostName), clientStreamId, ReuseStreamClient)
+                ? new TcpClientStream(tcpClient, new HttpStream(stream, clientStreamId, hostName), clientStreamId, ReuseStreamClient)
                 : new TcpClientStream(tcpClient, stream, clientStreamId);
 
             return clientStream;
@@ -100,7 +100,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     private IClientStream? GetFreeClientStream()
     {
-        while (_clientStreams.TryDequeue(out var queueItem))
+        while (_freeClientStreams.TryDequeue(out var queueItem))
         {
             if (queueItem.ClientStream.CheckIsAlive())
                 return queueItem.ClientStream;
@@ -113,7 +113,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     private Task ReuseStreamClient(IClientStream clientStream)
     {
-        _clientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
+        _freeClientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
         return Task.CompletedTask;
     }
 
@@ -131,6 +131,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     public async Task<IClientStream> SendRequest(ClientRequest request, CancellationToken cancellationToken)
     {
+        VhLogger.Instance.LogTrace(GeneralEventId.Request,
+            "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
+            (RequestCode)request.RequestCode, request.RequestId);
+
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
@@ -144,9 +148,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
         var clientStream = GetFreeClientStream();
         if (clientStream != null)
         {
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife, 
-                "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}", 
-                clientStream.ClientStreamId);
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
+                clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
 
             try
             {
@@ -160,8 +164,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 // dispose the connection and retry with new connection
                 Stat.ReusedConnectionFailedCount++;
                 _ = clientStream.DisposeAsync();
-                VhLogger.LogError(GeneralEventId.TcpLife, ex, 
-                    "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}", 
+                VhLogger.LogError(GeneralEventId.TcpLife, ex,
+                    "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}",
                     clientStream.ClientStreamId);
             }
         }
@@ -179,7 +183,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public async ValueTask DisposeAsync()
     {
         var tasks = new List<Task>();
-        while (_clientStreams.TryDequeue(out var queueItem))
+        while (_freeClientStreams.TryDequeue(out var queueItem))
             tasks.Add(queueItem.ClientStream.DisposeAsync(false).AsTask());
 
         await Task.WhenAll(tasks);
@@ -189,9 +193,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
     {
         var now = FastDateTime.Now;
 
-        while (_clientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - TcpTimeout)
+        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - TcpTimeout)
         {
-            _clientStreams.TryDequeue(out queueItem);
+            _freeClientStreams.TryDequeue(out queueItem);
             await queueItem.ClientStream.DisposeAsync(false);
         }
     }

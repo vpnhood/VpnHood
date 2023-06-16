@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,12 +20,12 @@ public class Tunnel : IAsyncDisposable
 {
     private readonly object _channelListLock = new();
     private const int MaxQueueLength = 100;
-    private const int MtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
-    private const int MtuWithFragment = TunnelUtil.MtuWithFragmentation;
+    private const int MtuNoFragment = TunnelDefaults.MtuWithoutFragmentation;
+    private const int MtuWithFragment = TunnelDefaults.MtuWithFragmentation;
     private readonly Queue<IPPacket> _packetQueue = new();
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
-    private readonly HashSet<StreamProxyChannel> _tcpProxyChannels = new();
+    private readonly HashSet<StreamProxyChannel> _streamProxyChannels = new();
     private readonly Timer _speedMonitorTimer;
     private bool _disposed;
     private int _maxDatagramChannelCount;
@@ -33,6 +35,7 @@ public class Tunnel : IAsyncDisposable
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
     private readonly TimeoutDictionary<IChannel, TimeoutItem<IChannel>> _closePendingChannels = new(TimeSpan.FromSeconds(30));
+    private readonly TaskCollection _disposingTasks = new();
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public event EventHandler<ChannelEventArgs>? OnChannelAdded;
     public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
@@ -47,12 +50,12 @@ public class Tunnel : IAsyncDisposable
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
     }
 
-    public int TcpProxyChannelCount
+    public int StreamProxyChannelCount
     {
         get
         {
             lock (_channelListLock)
-                return _tcpProxyChannels.Count;
+                return _streamProxyChannels.Count;
         }
     }
 
@@ -64,8 +67,8 @@ public class Tunnel : IAsyncDisposable
             {
                 return new Traffic
                 {
-                    Sent = _trafficUsage.Sent + _tcpProxyChannels.Sum(x => x.Traffic.Sent) + DatagramChannels.Sum(x => x.Traffic.Sent),
-                    Received = _trafficUsage.Received + _tcpProxyChannels.Sum(x => x.Traffic.Received) + DatagramChannels.Sum(x => x.Traffic.Received)
+                    Sent = _trafficUsage.Sent + _streamProxyChannels.Sum(x => x.Traffic.Sent) + DatagramChannels.Sum(x => x.Traffic.Sent),
+                    Received = _trafficUsage.Received + _streamProxyChannels.Sum(x => x.Traffic.Received) + DatagramChannels.Sum(x => x.Traffic.Received)
                 };
             }
         }
@@ -108,7 +111,7 @@ public class Tunnel : IAsyncDisposable
         {
             return channel is IDatagramChannel
                 ? DatagramChannels.Contains(channel)
-                : _tcpProxyChannels.Contains(channel);
+                : _streamProxyChannels.Contains(channel);
         }
     }
 
@@ -161,14 +164,14 @@ public class Tunnel : IAsyncDisposable
         // add channel
         lock (_channelListLock)
         {
-            if (_tcpProxyChannels.Contains(channel))
+            if (_streamProxyChannels.Contains(channel))
                 throw new Exception($"{nameof(channel)} already exists in the collection.");
-            _tcpProxyChannels.Add(channel);
+            _streamProxyChannels.Add(channel);
         }
 
-        VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
-            "A TcpProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
-            channel.ChannelId, TcpProxyChannelCount);
+        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+            "A StreamProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
+            channel.ChannelId, StreamProxyChannelCount);
 
         // register finish
         channel.OnFinished += Channel_OnFinished;
@@ -180,12 +183,7 @@ public class Tunnel : IAsyncDisposable
         _ = channel.Start();
     }
 
-    public Task RemoveChannel(IChannel channel)
-    {
-        return RemoveChannel(channel, false);
-    }
-
-    public async Task RemoveChannel(IChannel channel, bool asClosePending)
+    public async void RemoveChannel(IChannel channel)
     {
         if (!IsChannelExists(channel))
             return; // channel already removed or does not exist
@@ -196,26 +194,24 @@ public class Tunnel : IAsyncDisposable
             {
                 DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                    "A DatagramChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatType(channel), DatagramChannels.Length, channel.Connected, channel.IsClosePending);
+                    "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
+                    "ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
+                    VhLogger.FormatType(channel), channel.ChannelId, DatagramChannels.Length, channel.Connected, channel.IsClosePending);
             }
-            else if (channel is StreamProxyChannel tcpProxyChannel)
+            else if (channel is StreamProxyChannel streamProxyChannel)
             {
-                _tcpProxyChannels.Remove(tcpProxyChannel);
-                VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
-                    "A TcpProxyChannel has been removed. Channel: {Channel}, ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatType(channel), _tcpProxyChannels.Count, channel.Connected, channel.IsClosePending);
+                _streamProxyChannels.Remove(streamProxyChannel);
+                VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+                    "A StreamProxyChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
+                    "ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
+                    VhLogger.FormatType(channel), channel.ChannelId, _streamProxyChannels.Count, channel.Connected, channel.IsClosePending);
             }
             else
                 throw new ArgumentOutOfRangeException(nameof(channel), "Unknown Channel.");
         }
 
-        // dispose or close-pending
-        // ReSharper disable once MergeIntoPattern
-        if (channel.Connected && (channel.IsClosePending || asClosePending))
-            _closePendingChannels.TryAdd(channel, new TimeoutItem<IChannel>(channel, true));
-        else
-            await channel.DisposeAsync();
+        // dispose
+        _disposingTasks.Add(channel.DisposeAsync());
 
         // clean up channel
         _trafficUsage.Add(channel.Traffic);
@@ -230,7 +226,7 @@ public class Tunnel : IAsyncDisposable
         if (_disposed)
             return;
 
-        _ = RemoveChannel((IChannel)sender);
+        RemoveChannel((IChannel)sender);
     }
 
     private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -364,7 +360,19 @@ public class Tunnel : IAsyncDisposable
                 {
                     _packetSenderSemaphore.Release(); // lets the other do the rest (if any)
                     _packetSentEvent.Release();
-                    await channel.SendPacketAsync(packets.ToArray());
+
+                    try
+                    {
+                        await channel.SendPacket(packets.ToArray());
+                    }
+                    catch
+                    {
+                        if (!_disposed)
+                            _ = SendPackets(packets); //resend packets
+
+                        if (!channel.Connected && !_disposed) 
+                            throw; // this channel has error
+                    }
                 }
                 // wait for next new packets
                 else
@@ -375,7 +383,9 @@ public class Tunnel : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(ex, "Could not send some packets via a channel. PacketCount: {PacketCount}", packets.Count);
+            VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
+                "Could not send some packets via a channel. ChannelId: {ChannelId}, PacketCount: {PacketCount}",
+                channel.ChannelId, packets.Count);
         }
 
         // make sure to remove the channel
@@ -385,7 +395,7 @@ public class Tunnel : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not remove a datagram channel.");
+            VhLogger.Instance.LogError(ex, "Could not remove a datagram channel. ChannelId: {ChannelId}", channel.ChannelId);
         }
 
         // lets the others do the rest of the job (if any)
@@ -402,7 +412,7 @@ public class Tunnel : IAsyncDisposable
         var removeTasks = new List<Task>();
         lock (_channelListLock)
         {
-            removeTasks.AddRange(_tcpProxyChannels.Select(RemoveChannel));
+            removeTasks.AddRange(_streamProxyChannels.Select(RemoveChannel));
             removeTasks.AddRange(DatagramChannels.Select(RemoveChannel));
         }
         await Task.WhenAll(removeTasks);

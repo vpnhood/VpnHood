@@ -155,7 +155,7 @@ public static class VhLogger
     {
         if (IsSocketCloseException(ex))
         {
-            Instance.LogTrace(TcpCloseEventId, message + $" Error: {ex.Message}", args);
+            Instance.LogTrace(TcpCloseEventId, message + $" Exception: {ex.Message}", args);
             return;
         }
 

@@ -172,8 +172,7 @@ internal class TcpProxyHost : IDisposable
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(
-                    $"{VhLogger.FormatType(this)}: Error in processing packet! Error: {ex}");
+                VhLogger.Instance.LogError(ex, "TcpProxyHost: Error in processing packet.");
             }
         }
 
@@ -204,7 +203,7 @@ internal class TcpProxyHost : IDisposable
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}", 
                 natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
 
             // check invalid income
             var loopbackAddress = ipVersion == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
@@ -214,7 +213,7 @@ internal class TcpProxyHost : IDisposable
             // Check IpFilter
             if (!Client.IsInIpRange(natItem.DestinationAddress))
             {
-                var channelId = Guid.NewGuid().ToString();
+                var channelId = Guid.NewGuid() + ":client";
                 await Client.AddPassthruTcpStream(
                     new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
                     new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
@@ -224,20 +223,20 @@ internal class TcpProxyHost : IDisposable
             }
 
             // Create the Request
-            var request = new TcpProxyChannelRequest(
-                Guid.NewGuid().ToString(),
+            var request = new StreamProxyChannelRequest(
+                Guid.NewGuid() + ":client",
                 Client.SessionId,
                 Client.SessionKey,
                 new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                 VhUtil.GenerateKey(),
-                natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
+                natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1);
 
             // read the response
             connectorRequest = await Client.SendRequest<SessionResponseBase>(request, cancellationToken);
             var proxyClientStream = connectorRequest.ClientStream;
 
-            // create a TcpProxyChannel
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
+            // create a StreamProxyChannel
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
@@ -251,7 +250,7 @@ internal class TcpProxyHost : IDisposable
                     request.CipherKey, null, request.CipherLength);
             }
 
-            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, TunnelUtil.TcpTimeout);
+            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, TunnelDefaults.TcpTimeout);
             Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)
@@ -259,7 +258,7 @@ internal class TcpProxyHost : IDisposable
             if (channel!=null) await channel.DisposeAsync();
             if (connectorRequest!=null ) await connectorRequest.DisposeAsync();
             orgTcpClient.Dispose();
-            VhLogger.Instance.LogError(GeneralEventId.TcpProxyChannel, $"{ex.Message}");
+            VhLogger.Instance.LogError(GeneralEventId.StreamProxyChannel, $"{ex.Message}");
         }
     }
 }

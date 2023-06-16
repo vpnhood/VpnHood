@@ -17,10 +17,13 @@ public class StreamProxyChannel : IChannel, IJob
     private readonly IClientStream _orgTcpClientStream;
     private readonly int _tunnelStreamBufferSize;
     private readonly IClientStream _tunnelTcpClientStream;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private const int BufferSizeDefault = 0x1000 * 4; //16k
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 0x1000;
     private bool _disposed;
+    private Task _tunnelCopyTask = Task.CompletedTask;
+    private Task _orgCopyTask = Task.CompletedTask;
 
     public JobSection JobSection { get; }
     public event EventHandler<ChannelEventArgs>? OnFinished;
@@ -57,15 +60,30 @@ public class StreamProxyChannel : IChannel, IJob
 
     public async Task Start()
     {
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+
         Connected = true;
         try
         {
-            var task1 = CopyToAsync(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false, _tunnelStreamBufferSize, CancellationToken.None); // read
-            var task2 = CopyToAsync(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamBufferSize, CancellationToken.None); //write
-            await Task.WhenAny(task1, task2);
+            _tunnelCopyTask = CopyToAsync(
+                _tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false, _tunnelStreamBufferSize,
+                _cancellationTokenSource.Token); // read
+
+            _orgCopyTask = CopyToAsync(
+                _orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamBufferSize,
+                _cancellationTokenSource.Token); //write
+
+            await Task.WhenAny(_tunnelCopyTask, _orgCopyTask);
         }
         finally
         {
+            // let tasks shutdown gracefully
+            var graceFulDelayTask = Task.Delay(TunnelDefaults.TcpGracefulTimeout);
+            var task1 = Task.WhenAny(_tunnelCopyTask, graceFulDelayTask);
+            var task2 = Task.WhenAny(_orgCopyTask, graceFulDelayTask);
+            await Task.WhenAll(task1, task2);
+
             await DisposeAsync();
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
@@ -81,11 +99,16 @@ public class StreamProxyChannel : IChannel, IJob
 
     private async Task CheckClientIsAlive()
     {
+        // check tcp states
         if (_orgTcpClientStream.CheckIsAlive() && _tunnelTcpClientStream.CheckIsAlive())
             return;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel,
-            $"Disposing a {VhLogger.FormatType(this)} due to its error state.");
+        // if either task is completed let graceful shutdown do its job
+        if (_tunnelCopyTask.IsCompleted || _orgCopyTask.IsCompleted)
+            return;
+
+        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
+            "Disposing a StreamProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
 
         await DisposeAsync();
     }
@@ -100,12 +123,13 @@ public class StreamProxyChannel : IChannel, IJob
         catch (Exception ex)
         {
             // Dispose if any side throw an exception
-            if (!_disposed)
-            {
-                var message = isSendingOut ? "to" : "from";
-                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, $"TcpProxyChannel: Error in copying {message} tunnel.");
-                await DisposeAsync();
-            }
+            VhLogger.LogError(GeneralEventId.Tcp, ex,
+                "StreamProxyChannel: Error in copying {direction} tunnel. ChannelId: {ChannelId}",
+                isSendingOut ? "to" : "from", ChannelId);
+
+            // we can't continue if any error occur, we can't write or read from that stream made the hole process useless
+            await DisposeAsync();
+
         }
     }
 
@@ -165,9 +189,13 @@ public class StreamProxyChannel : IChannel, IJob
         if (_disposed) return;
         _disposed = true;
 
+        _cancellationTokenSource.Cancel();
         Connected = false;
-        await Task.WhenAll(
-            _orgTcpClientStream.DisposeAsync().AsTask(),
-            _tunnelTcpClientStream.DisposeAsync().AsTask());
+        await Console.Out.WriteLineAsync($"ZZZ Disposing: {_tunnelTcpClientStream.ClientStreamId}");
+        await _tunnelCopyTask; //todo!!
+        //await Task.WhenAll(_tunnelCopyTask); //todo
+        await Console.Out.WriteLineAsync($"ZZZ Disposed: {_tunnelTcpClientStream.ClientStreamId}");
+        //await Task.WhenAll(_orgCopyTask);
+        //await Task.WhenAll(_orgTcpClientStream.DisposeAsync().AsTask(), _tunnelTcpClientStream.DisposeAsync().AsTask());
     }
 }

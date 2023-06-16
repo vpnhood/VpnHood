@@ -6,6 +6,7 @@ using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Client;
 
@@ -113,7 +114,7 @@ public class VpnHoodConnect : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
+            VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose client properly.");
         }
 
         // release _packetCapture

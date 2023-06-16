@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -34,11 +32,8 @@ public class Tunnel : IAsyncDisposable
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    private readonly TimeoutDictionary<IChannel, TimeoutItem<IChannel>> _closePendingChannels = new(TimeSpan.FromSeconds(30));
     private readonly TaskCollection _disposingTasks = new();
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
-    public event EventHandler<ChannelEventArgs>? OnChannelAdded;
-    public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
     public Traffic Speed { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
@@ -139,15 +134,9 @@ public class Tunnel : IAsyncDisposable
                     "Removing an exceeded DatagramChannel. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
                     datagramChannel.ChannelId, DatagramChannels.Length);
 
-                _ = RemoveChannel(DatagramChannels[0]);
+                RemoveChannel(DatagramChannels[0]);
             }
         }
-
-        // register finish
-        datagramChannel.OnFinished += Channel_OnFinished;
-
-        // notify channel has been added; must before channel.Start because channel may be removed immediately after channel.Start
-        OnChannelAdded?.Invoke(this, new ChannelEventArgs(datagramChannel));
 
         //should not be called in lock; its behaviour is unexpected
         _ = datagramChannel.Start();
@@ -165,7 +154,8 @@ public class Tunnel : IAsyncDisposable
         lock (_channelListLock)
         {
             if (_streamProxyChannels.Contains(channel))
-                throw new Exception($"{nameof(channel)} already exists in the collection.");
+                throw new Exception($"{channel.GetType()} already exists in the collection. ChannelId: {channel.ChannelId}");
+
             _streamProxyChannels.Add(channel);
         }
 
@@ -173,17 +163,11 @@ public class Tunnel : IAsyncDisposable
             "A StreamProxyChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
             channel.ChannelId, StreamProxyChannelCount);
 
-        // register finish
-        channel.OnFinished += Channel_OnFinished;
-
-        // notify channel has been added; must before channel.Start because channel may be removed immediately after channel.Start
-        OnChannelAdded?.Invoke(this, new ChannelEventArgs(channel));
-
         // should not be called in lock; its behaviour is unexpected
         _ = channel.Start();
     }
 
-    public async void RemoveChannel(IChannel channel)
+    public void RemoveChannel(IChannel channel)
     {
         if (!IsChannelExists(channel))
             return; // channel already removed or does not exist
@@ -195,16 +179,16 @@ public class Tunnel : IAsyncDisposable
                 DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
-                    "ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatType(channel), channel.ChannelId, DatagramChannels.Length, channel.Connected, channel.IsClosePending);
+                    "ChannelCount: {ChannelCount}, Connected: {Connected}",
+                    VhLogger.FormatType(channel), channel.ChannelId, DatagramChannels.Length, channel.Connected);
             }
             else if (channel is StreamProxyChannel streamProxyChannel)
             {
                 _streamProxyChannels.Remove(streamProxyChannel);
                 VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
                     "A StreamProxyChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
-                    "ChannelCount: {ChannelCount}, Connected: {Connected}, ClosePending: {ClosePending}",
-                    VhLogger.FormatType(channel), channel.ChannelId, _streamProxyChannels.Count, channel.Connected, channel.IsClosePending);
+                    "ChannelCount: {ChannelCount}, Connected: {Connected}",
+                    VhLogger.FormatType(channel), channel.ChannelId, _streamProxyChannels.Count, channel.Connected);
             }
             else
                 throw new ArgumentOutOfRangeException(nameof(channel), "Unknown Channel.");
@@ -215,18 +199,6 @@ public class Tunnel : IAsyncDisposable
 
         // clean up channel
         _trafficUsage.Add(channel.Traffic);
-        channel.OnFinished -= Channel_OnFinished;
-
-        // notify channel has been removed
-        OnChannelRemoved?.Invoke(this, new ChannelEventArgs(channel));
-    }
-
-    private void Channel_OnFinished(object sender, EventArgs e)
-    {
-        if (_disposed)
-            return;
-
-        RemoveChannel((IChannel)sender);
     }
 
     private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -303,7 +275,7 @@ public class Tunnel : IAsyncDisposable
         try
         {
             // ReSharper disable once MergeIntoPattern
-            while (channel.Connected && !channel.IsClosePending && !_disposed)
+            while (channel.Connected && !_disposed)
             {
                 if (_disposed)
                     return;
@@ -391,7 +363,7 @@ public class Tunnel : IAsyncDisposable
         // make sure to remove the channel
         try
         {
-            await RemoveChannel(channel);
+            RemoveChannel(channel);
         }
         catch (Exception ex)
         {
@@ -409,13 +381,14 @@ public class Tunnel : IAsyncDisposable
         _disposed = true;
 
         // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
-        var removeTasks = new List<Task>();
         lock (_channelListLock)
         {
-            removeTasks.AddRange(_streamProxyChannels.Select(RemoveChannel));
-            removeTasks.AddRange(DatagramChannels.Select(RemoveChannel));
+            foreach (var channel in _streamProxyChannels)
+                RemoveChannel(channel);
+
+            foreach (var channel in DatagramChannels)
+                RemoveChannel(channel);
         }
-        await Task.WhenAll(removeTasks);
 
         lock (_packetQueue)
             _packetQueue.Clear();
@@ -424,9 +397,11 @@ public class Tunnel : IAsyncDisposable
         Speed.Sent = 0;
         Speed.Received = 0;
 
-        // release worker threads
-        _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10); //make sure to release all semaphores
+        // release worker threads (make sure to release all semaphores)
+        _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10);
         _packetSentEvent.Release();
-        _closePendingChannels.Dispose();
+
+        // removing disposing objects
+        await _disposingTasks.DisposeAsync();
     }
 }

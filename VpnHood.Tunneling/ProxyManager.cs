@@ -93,17 +93,9 @@ public abstract class ProxyManager : IPacketProxyReceiver
     {
         if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
 
-        channel.OnFinished += Channel_OnFinished;
         lock (_channels)
             _channels.Add(channel);
         channel.Start();
-    }
-
-    private void Channel_OnFinished(object sender, ChannelEventArgs e)
-    {
-        e.Channel.OnFinished -= Channel_OnFinished;
-        lock (_channels)
-            _channels.Remove(e.Channel);
     }
 
     public async ValueTask DisposeAsync()

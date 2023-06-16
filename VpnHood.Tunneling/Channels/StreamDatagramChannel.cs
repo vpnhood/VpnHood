@@ -25,9 +25,8 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
     private bool _isCloseReceived;
-    private Task _readTask = Task.CompletedTask;
+    private Task _startTask = Task.CompletedTask;
 
-    public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public JobSection JobSection { get; } = new();
     public string ChannelId { get; }
@@ -53,6 +52,12 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     public Task Start()
     {
+        _startTask = StartInternal();
+        return _startTask;
+    }
+
+    public async Task StartInternal()
+    {
         if (_disposed)
             throw new ObjectDisposedException("StreamDatagramChannel");
 
@@ -60,8 +65,16 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             throw new Exception("StreamDatagramChannel has been already started.");
 
         Connected = true;
-        _readTask = ReadTask(_cancellationTokenSource.Token);
-        return Task.CompletedTask;
+        try
+        {
+            await ReadTask(_cancellationTokenSource.Token);
+            await SendClose();
+        }
+        finally
+        {
+            Connected = false;
+            await _clientStream.DisposeAsync();
+        }
     }
 
     public Task SendPacket(IPPacket[] ipPackets)
@@ -168,28 +181,37 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             "Receiving the close message from the peer. ChannelId: {ChannelId}, Lifetime: {Lifetime}, IsCloseSent: {IsCloseSent}",
             ChannelId, _lifeTime, _isCloseSent);
 
-        // dispose if this channel is already sent its request and get the answer from peer
-        if (!_isCloseSent)
-            _ = Close();
-
         return true;
     }
 
-    public Task Close()
+    private Task SendClose(bool throwException = false)
     {
-        // already send
-        if (!Connected)
+        try
+        {
+            // already send
+            if (_isCloseSent)
+                return Task.CompletedTask;
+            _isCloseSent = true;
+
+            // send close message to peer
+            var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
+            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
+                "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
+                ChannelId, _lifeTime);
+
+            return SendPacket(new[] { ipPacket }, true);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
+                "Could not set the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
+                ChannelId, _lifeTime);
+            
+            if (throwException)
+                throw;
+
             return Task.CompletedTask;
-
-        _isCloseSent = true;
-
-        // send close message to peer
-        var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
-            "StreamDatagramChannel sending the close message to the peer. ChannelId: {ChannelId}, Lifetime: {Lifetime}", 
-            ChannelId, _lifeTime);
-
-        return SendPacket(new[] { ipPacket }, true);
+        }
     }
 
     public async Task RunJob()
@@ -200,22 +222,24 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}", 
                 ChannelId, _lifeTime);
 
-            await Close();
+            await SendClose();
         }
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
+        _ = SendClose();
+
+        var gracefulDelayTask = Task.Delay(TunnelDefaults.TcpGracefulTimeout);
+        await Task.WhenAny(_startTask, gracefulDelayTask);
+
+        // set _disposed after finish tasks
         _disposed = true;
-        Connected = false;
 
         // cancel amd wait for all task to finish
         _cancellationTokenSource.Cancel();
-        await Task.WhenAll(_readTask, _sendSemaphore.WaitAsync());
+        await Task.WhenAll(_startTask, _sendSemaphore.WaitAsync());
         _sendSemaphore.Release();
-
-        await _clientStream.DisposeAsync();
-        OnFinished?.Invoke(this, new ChannelEventArgs(this));
     }
 }

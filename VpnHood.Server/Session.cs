@@ -138,7 +138,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 // remove tcpDatagram channels
                 foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel && x != UdpChannel2))
-                    _ = Tunnel.RemoveChannel(item, asClosePending: true);
+                    Tunnel.RemoveChannel(item);
 
                 // create UdpKey
                 using var aes = Aes.Create();
@@ -165,7 +165,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 // remove udp channels
                 foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel || x == UdpChannel2))
-                    _ = Tunnel.RemoveChannel(item, asClosePending: true);
+                    Tunnel.RemoveChannel(item);
                 UdpChannel = null;
             }
         }

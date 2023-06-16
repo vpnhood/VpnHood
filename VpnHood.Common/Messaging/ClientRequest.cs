@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace VpnHood.Common.Messaging;
+﻿namespace VpnHood.Common.Messaging;
 
 public abstract class ClientRequest
 {

@@ -302,7 +302,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
                 if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
                 if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.TcpProxyChannel) return VhLogger.IsDiagnoseMode;
+                if (eventId == GeneralEventId.StreamProxyChannel) return VhLogger.IsDiagnoseMode;
                 if (eventId == GeneralEventId.DatagramChannel) return true;
                 return true;
             });
@@ -315,7 +315,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // create packet capture
             var packetCapture = await Device.CreatePacketCapture();
             if (packetCapture.IsMtuSupported)
-                packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
+                packetCapture.Mtu = TunnelDefaults.MtuWithoutFragmentation;
 
             // App filters
             if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
@@ -519,7 +519,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
+                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose client properly.");
             }
 
             VhLogger.Instance = CreateLogger(false);

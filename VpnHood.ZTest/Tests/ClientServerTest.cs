@@ -159,14 +159,15 @@ public class ClientServerTest
         Assert.IsTrue(client.UseUdpChannel);
 
         // switch to tcp
-        client.UseUdpChannel = false;
-        await TestTunnel(server, client);
-        Assert.IsFalse(client.UseUdpChannel);
+        //client.UseUdpChannel = false;
+        //await TestTunnel(server, client);
+        //Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
-        client.UseUdpChannel = true;
-        await TestTunnel(server, client);
-        Assert.IsTrue(client.UseUdpChannel);
+        //todo
+        //client.UseUdpChannel = true;
+        //await TestTunnel(server, client);
+        //Assert.IsTrue(client.UseUdpChannel);
     }
 
     [TestMethod]

@@ -74,7 +74,7 @@ public class TcpClientStream : IClientStream
         _disposed = true;
 
         var httpStream = Stream as HttpStream;
-        if (allowReuse && _reuseCallback != null && CheckIsAlive() && httpStream?.IsCloseRequested == false)
+        if (allowReuse && _reuseCallback != null && CheckIsAlive() && httpStream?.CanReuse == true)
         {
             Stream? newStream = null;
             try
@@ -104,8 +104,8 @@ public class TcpClientStream : IClientStream
         TcpClient.Dispose();
 
         VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
-            "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}, CloseRequested: {CloseRequested}", 
-            ClientStreamId, httpStream?.IsCloseRequested);
+            "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}", 
+            ClientStreamId);
     }
 
     public ValueTask DisposeAsync()

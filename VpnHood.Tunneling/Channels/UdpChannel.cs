@@ -29,13 +29,11 @@ public class UdpChannel : IDatagramChannel
     private IPEndPoint? _lastRemoteEp;
 
     public string ChannelId { get; } = Guid.NewGuid().ToString();
-    public bool IsClosePending => false;
     public byte[] Key { get; }
     public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; }
-    public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
 
     public UdpChannel(bool isClient, UdpClient udpClient, ulong sessionId, byte[] key)
@@ -243,7 +241,6 @@ public class UdpChannel : IDatagramChannel
         _bufferCryptor.Dispose();
         _udpClient.Dispose();
 
-        OnFinished?.Invoke(this, new ChannelEventArgs(this));
         return default;
     }
 }

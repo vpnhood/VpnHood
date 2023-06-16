@@ -146,7 +146,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create tunnel
         Tunnel = new Tunnel();
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-        Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
         // create proxy host
         _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
@@ -287,16 +286,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _packetCapture.IncludeNetworks = includeIpRanges.Sort().ToIpNetworks().ToArray(); //sort and unify
         VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(x => x.ToString()))}");
-    }
-
-    private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
-    {
-        // device is sleep. Don't wake it up
-        if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && FastDateTime.Now - _lastReceivedPacketTime > _maxTcpDatagramLifespan)
-            return;
-
-        if (e.Channel is IDatagramChannel)
-            _ = ManageDatagramChannels(_cancellationToken);
     }
 
     // WARNING: Performance Critical!
@@ -554,21 +543,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 // remove all other datagram channel
                 var streamChannel = Tunnel.DatagramChannels.FirstOrDefault(x => x is StreamDatagramChannel);
                 if (streamChannel != null)
-                    await Tunnel.RemoveChannel(streamChannel, asClosePending: true);
+                    Tunnel.RemoveChannel(streamChannel);
             }
 
             // don't use else; UseUdpChannel may be changed if server does not assign the channel
             if (!UseUdpChannel)
             {
                 // make sure there is enough DatagramChannel
-                var curStreamChannelCount = Tunnel.DatagramChannels.Count(x => x is StreamDatagramChannel);
+                var curStreamChannelCount = Tunnel.DatagramChannels.Count(x => x is StreamDatagramChannel { Connected: true });
                 if (curStreamChannelCount < Tunnel.MaxDatagramChannelCount)
                     await AddTcpDatagramChannel(cancellationToken);
 
                 // remove UDP datagram channels
                 var udpChannel = Tunnel.DatagramChannels.FirstOrDefault(x => x is UdpChannel or UdpChannel2);
                 if (udpChannel != null)
-                    await Tunnel.RemoveChannel(udpChannel, asClosePending: true);
+                    Tunnel.RemoveChannel(udpChannel);
             }
         }
         catch (Exception ex)
@@ -926,7 +915,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Tunnel
         VhLogger.Instance.LogTrace("Disposing Tunnel...");
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
         await Tunnel.DisposeAsync();
 
         // UdpChannelClient

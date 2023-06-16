@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using PacketDotNet;
 
@@ -20,7 +21,7 @@ public class StreamPacketReader
 
 
     /// <returns>null if read nothing</returns>
-    public async Task<IPPacket[]?> ReadAsync()
+    public async Task<IPPacket[]?> ReadAsync(CancellationToken cancellationToken)
     {
         _ipPackets.Clear();
 
@@ -28,7 +29,7 @@ public class StreamPacketReader
         while (moreData)
         {
             var toRead = _buffer.Length - _bufferCount;
-            var read = await _stream.ReadAsync(_buffer, _bufferCount, toRead);
+            var read = await _stream.ReadAsync(_buffer, _bufferCount, toRead, cancellationToken);
             _bufferCount += read;
             moreData = toRead == read && read != 0;
 

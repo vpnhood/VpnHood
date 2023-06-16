@@ -4,9 +4,8 @@ namespace VpnHood.Common.Messaging;
 
 public abstract class ClientRequest
 {
-    [JsonIgnore]
     public byte RequestCode { get; }
-    public string RequestId { get; }
+    public string RequestId { get; set; }
 
     protected ClientRequest(byte requestCode, string requestId)
     {

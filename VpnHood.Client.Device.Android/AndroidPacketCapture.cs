@@ -254,7 +254,8 @@ namespace VpnHood.Client.Device.Android
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {VhLogger.FormatIpPacket(ipPacket.ToString())}! Error: {ex}");
+                VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}", 
+                    VhLogger.FormatIpPacket(ipPacket.ToString()));
             }
         }
 

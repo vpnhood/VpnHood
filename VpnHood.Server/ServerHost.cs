@@ -32,7 +32,7 @@ internal class ServerHost : IAsyncDisposable
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
-    private readonly List<UdpChannelTransmitter> _udpChannelClients = new();
+    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = new();
     private Task? _startTask;
     private bool _disposed;
 
@@ -62,7 +62,7 @@ internal class ServerHost : IAsyncDisposable
         try
         {
             //start UDPs
-            lock (_udpChannelClients)
+            lock (_udpChannelTransmitters)
             {
                 foreach (var udpEndPoint in udpEndPoints)
                 {
@@ -71,13 +71,13 @@ internal class ServerHost : IAsyncDisposable
 
                     var udpClient = new UdpClient(udpEndPoint);
                     var udpChannelTransmitter = new ServerUdpChannelTransmitter(udpClient, _sessionManager);
-                    _udpChannelClients.Add(udpChannelTransmitter);
+                    _udpChannelTransmitters.Add(udpChannelTransmitter);
 
                     if (udpEndPoint.Port == 0)
                         VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
                 }
 
-                UdpEndPoints = _udpChannelClients.Select(x => x.LocalEndPoint).ToArray();
+                UdpEndPoints = _udpChannelTransmitters.Select(x => x.LocalEndPoint).ToArray();
             }
 
             //start TCPs
@@ -111,11 +111,11 @@ internal class ServerHost : IAsyncDisposable
         _sslCertificateManager.ClearCache();
 
         // UDPs
-        lock (_udpChannelClients)
+        lock (_udpChannelTransmitters)
         {
-            foreach (var udpChannelClient in _udpChannelClients)
+            foreach (var udpChannelClient in _udpChannelTransmitters)
                 udpChannelClient.Dispose();
-            _udpChannelClients.Clear();
+            _udpChannelTransmitters.Clear();
         }
 
         // TCPs
@@ -214,12 +214,15 @@ internal class ServerHost : IAsyncDisposable
         var buffer = new byte[1];
         var res = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
         if (res == 0)
-            throw new Exception("Connection closed before receiving any request!");
+            throw new Exception("Connection has been closed before receiving any request.");
 
         // check request version
         var version = buffer[0];
         if (version == 'P' || version == 'p')
-            return new TcpClientStream(tcpClient, new HttpStream(stream, null), Guid.NewGuid() + ":incoming", ReuseClientStream);
+        {
+            var streamId = Guid.NewGuid() + ":incoming";
+            return new TcpClientStream(tcpClient, new HttpStream(stream, streamId, null), streamId, ReuseClientStream);
+        }
 
         if (version == 1)
             return new TcpClientStream(tcpClient, stream, Guid.NewGuid() + ":incoming");
@@ -297,8 +300,8 @@ internal class ServerHost : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.LogError(GeneralEventId.Tcp, ex, 
-                "ServerHost.ReuseClientStream: Could not reuse a ClientStream. ClientStreamId: {ClientStreamId}", 
+            VhLogger.LogError(GeneralEventId.Tcp, ex,
+                "ServerHost.ReuseClientStream: Could not reuse a ClientStream. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
 
             await clientStream.DisposeAsync(false);
@@ -326,33 +329,36 @@ internal class ServerHost : IAsyncDisposable
                 VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
                     "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponseBase.ErrorCode);
 
-            await clientStream.DisposeAsync(false);
+            await clientStream.DisposeAsync();
         }
         catch (Exception ex) when (VhLogger.IsSocketCloseException(ex))
         {
-            VhLogger.LogError(GeneralEventId.Tcp, ex, 
-                "Connection has been closed. ClientStreamId: {ClientStreamId}.", 
+            VhLogger.LogError(GeneralEventId.Tcp, ex,
+                "Connection has been closed. ClientStreamId: {ClientStreamId}.",
                 clientStream.ClientStreamId);
 
-            await clientStream.DisposeAsync(false);
+            await clientStream.DisposeAsync();
         }
         catch (Exception ex)
         {
             // return 401 for ANY non SessionException to keep server's anonymity
             // Server should always return 404 as error
             var unauthorizedResponse =
-                "HTTP/1.1 401 Unauthorized\r\n" + "Content-Length: 0\r\n" +
+                "HTTP/1.1 401 Unauthorized\r\n" + 
+                "Content-Length: 0\r\n" +
                 $"Date: {DateTime.UtcNow:r}\r\n" +
-                "Server: Kestrel\r\n" + "WWW-Authenticate: Bearer\r\n";
+                "Server: Kestrel\r\n" + 
+                "WWW-Authenticate: Bearer\r\n";
 
             await clientStream.Stream.WriteAsync(Encoding.UTF8.GetBytes(unauthorizedResponse), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
-                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, "Could not process the request and return 401.");
+                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex,
+                    "Could not process the request and return 401. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
 
-            await clientStream.DisposeAsync(false);
+            await clientStream.DisposeAsync();
         }
         finally
         {
@@ -369,8 +375,8 @@ internal class ServerHost : IAsyncDisposable
         if (clientStream.Stream is HttpStream)
         {
             var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-            if (rest != buffer.Length)
-                throw new Exception("Connection closed before receiving any request.");
+            if (rest == 0)
+                throw new Exception("ClientStream has been closed before receiving any request.");
 
             var version = buffer[0];
             if (version != 1)
@@ -379,8 +385,8 @@ internal class ServerHost : IAsyncDisposable
 
         // read request code
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-        if (res != buffer.Length)
-            throw new Exception("Connection closed before receiving any request.");
+        if (res == 0)
+            throw new Exception("ClientStream has been closed before receiving any request.");
 
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode)
@@ -393,8 +399,8 @@ internal class ServerHost : IAsyncDisposable
                 await ProcessTcpDatagramChannel(clientStream, cancellationToken);
                 break;
 
-            case RequestCode.TcpProxyChannel:
-                await ProcessTcpProxyChannel(clientStream, cancellationToken);
+            case RequestCode.StreamProxyChannel:
+                await ProcessStreamProxyChannel(clientStream, cancellationToken);
                 break;
 
             case RequestCode.UdpChannel:
@@ -412,8 +418,19 @@ internal class ServerHost : IAsyncDisposable
 
     private static async Task<T> ReadRequest<T>(IClientStream clientStream, CancellationToken cancellationToken) where T : ClientRequest
     {
+        // reading request
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, 
+            "Processing a request. RequestType: {RequestType}.",
+            VhLogger.FormatType<T>());
+
         var request = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
+        request.RequestId = request.RequestId.Replace(":client", ":server");
         clientStream.ClientStreamId = request.RequestId;
+
+        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+            "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",
+            VhLogger.FormatType<T>(), request.RequestId);
+
         return request;
     }
 
@@ -424,7 +441,7 @@ internal class ServerHost : IAsyncDisposable
         // reading request
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
             VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address));
-        
+
         var request = await ReadRequest<HelloRequest>(clientStream, cancellationToken);
 
         // creating a session
@@ -517,12 +534,12 @@ internal class ServerHost : IAsyncDisposable
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
-        await clientStream.DisposeAsync(false);
+        await clientStream.DisposeAsync(false); //todo false for test
     }
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel, "Reading the TcpDatagramChannelRequest ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest ...");
         var request = await ReadRequest<TcpDatagramChannelRequest>(clientStream, cancellationToken);
 
         // finding session
@@ -531,10 +548,10 @@ internal class ServerHost : IAsyncDisposable
         await session.ProcessTcpDatagramChannelRequest(clientStream, request, cancellationToken);
     }
 
-    private async Task ProcessTcpProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
+    private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.TcpProxyChannel, "Reading the TcpProxyChannelRequest ...");
-        var request = await ReadRequest<TcpProxyChannelRequest>(clientStream, cancellationToken);
+        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel, "Reading the StreamProxyChannelRequest ...");
+        var request = await ReadRequest<StreamProxyChannelRequest>(clientStream, cancellationToken);
 
         // find session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");

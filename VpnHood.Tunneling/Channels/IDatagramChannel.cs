@@ -7,5 +7,6 @@ namespace VpnHood.Tunneling.Channels;
 public interface IDatagramChannel : IChannel
 {
     event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
-    Task SendPacketAsync(IPPacket[] packets);
+    Task SendPacket(IPPacket[] packets);
+    Task Close();
 }

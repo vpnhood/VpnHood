@@ -4,12 +4,12 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class TcpProxyChannelRequest : RequestBase
+public class StreamProxyChannelRequest : RequestBase
 {
     [JsonConstructor]
-    public TcpProxyChannelRequest(string requestId, ulong sessionId, byte[] sessionKey, IPEndPoint destinationEndPoint,
+    public StreamProxyChannelRequest(string requestId, ulong sessionId, byte[] sessionKey, IPEndPoint destinationEndPoint,
         byte[] cipherKey, long cipherLength)
-        : base(Messaging.RequestCode.TcpProxyChannel, requestId, sessionId, sessionKey)
+        : base(Messaging.RequestCode.StreamProxyChannel, requestId, sessionId, sessionKey)
     {
         DestinationEndPoint = destinationEndPoint;
         CipherKey = cipherKey;

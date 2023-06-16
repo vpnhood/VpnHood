@@ -61,7 +61,7 @@ public class Session : IAsyncDisposable, IJob
     public JobSection JobSection { get; } = new();
     public HelloRequest? HelloRequest { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int TcpChannelCount => Tunnel.TcpProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
@@ -318,7 +318,7 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    public async Task ProcessTcpProxyRequest(IClientStream clientStream, TcpProxyChannelRequest request,
+    public async Task ProcessTcpProxyRequest(IClientStream clientStream, StreamProxyChannelRequest request,
         CancellationToken cancellationToken)
     {
         var isRequestedEpException = false;
@@ -326,11 +326,11 @@ public class Session : IAsyncDisposable, IJob
 
         TcpClient? tcpClientHost = null;
         TcpClientStream? tcpClientStreamHost = null;
-        StreamProxyChannel? tcpProxyChannel = null;
+        StreamProxyChannel? streamProxyChannel = null;
         try
         {
             // connect to requested site
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
             // Apply limitation
@@ -378,21 +378,22 @@ public class Session : IAsyncDisposable, IJob
             }
 
             // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.TcpProxyChannel,
-                $"Adding a StreamProxyChannel. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
+                "Adding a StreamProxyChannel. SessionId: {SessionId}, CipherLength: {CipherLength}", 
+                VhLogger.FormatSessionId(SessionId), request.CipherLength);
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
 
-            tcpProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
+            streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
                 _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
 
-            Tunnel.AddChannel(tcpProxyChannel);
+            Tunnel.AddChannel(streamProxyChannel);
         }
         catch (Exception ex)
         {
             tcpClientHost?.Dispose();
             if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync();
-            if (tcpProxyChannel != null) await tcpProxyChannel.DisposeAsync();
+            if (streamProxyChannel != null) await streamProxyChannel.DisposeAsync();
 
             if (isRequestedEpException)
                 throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
@@ -407,7 +408,7 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    private void VerifyTcpChannelRequest(IClientStream clientStream, TcpProxyChannelRequest request)
+    private void VerifyTcpChannelRequest(IClientStream clientStream, StreamProxyChannelRequest request)
     {
         // filter
         var newEndPoint = _netFilter.ProcessRequest(ProtocolType.Tcp, request.DestinationEndPoint);

@@ -75,22 +75,23 @@ public class ClientProfileStore
             return token;
 
         // update token
-        VhLogger.Instance.LogInformation($"Trying to get new token from token url, Url: {token.Url}");
+        VhLogger.Instance.LogInformation("Trying to get new token from token url, Url: {Url}", token.Url);
         try
         {
             using var client = new HttpClient();
             var accessKey = await VhUtil.RunTask(client.GetStringAsync(token.Url), TimeSpan.FromSeconds(20));
             var newToken = Token.FromAccessKey(accessKey);
             if (newToken.TokenId != token.TokenId)
-                throw new InvalidOperationException($"Could not updated Token because {nameof(token.TokenId)} has been changed! TokenId: {VhLogger.FormatId(token.TokenId)}");
+                throw new InvalidOperationException($"Could not updated Token because the tokenId has been changed! TokenId: {VhLogger.FormatId(token.TokenId)}");
 
             //update store
             AddAccessKey(accessKey);
-            VhLogger.Instance.LogInformation($"Token has been updated. TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+            VhLogger.Instance.LogInformation("Token has been updated. TokenId: {TokenId}, SupportId: {SupportId}",
+                VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError($"Could not update token from token url, Error: {ex.Message}");
+            VhLogger.Instance.LogError(ex, "Could not update token from token url.");
         }
 
         return token;

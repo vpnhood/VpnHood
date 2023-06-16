@@ -123,7 +123,8 @@ public abstract class UdpChannelTransmitter : IDisposable
                 if (IsInvalidState(ex) && receiving)
                     Dispose();
                 else
-                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, ex, $"Error in receiving UDP packets! Error: {ex.Message}");
+                    VhLogger.Instance.LogWarning(GeneralEventId.Udp,
+                        "Error in receiving UDP packets. Exception: {Message}", ex.Message);
             }
         }
 

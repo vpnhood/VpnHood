@@ -71,8 +71,9 @@ internal class UdpProxyEx : ITimeoutItem
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(
-                $"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+            VhLogger.Instance.LogWarning(GeneralEventId.Udp,
+                "Couldn't send a udp packet. RemoteEp: {RemoteEp}, Exception: {Message}",
+                VhLogger.Format(ipEndPoint), ex.Message);
 
             if (IsInvalidState(ex))
                 Dispose();

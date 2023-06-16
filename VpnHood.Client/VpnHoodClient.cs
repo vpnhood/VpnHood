@@ -194,7 +194,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create add add channel
         var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"),
-            TunnelUtil.TcpTimeout);
+            TunnelDefaults.TcpTimeout);
 
         try { _proxyManager.AddChannel(bypassChannel); }
         catch { await bypassChannel.DisposeAsync(); throw; }
@@ -542,7 +542,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     else
                     {
                         await using var requestResult = await SendRequest<UdpChannelSessionResponse>(
-                            new UdpChannelRequest(Guid.NewGuid().ToString(), SessionId, SessionKey), cancellationToken);
+                            new UdpChannelRequest(Guid.NewGuid() + ":client", SessionId, SessionKey), cancellationToken);
 
                         if (requestResult.Response.UdpPort != 0)
                             await AddUdpChannel(requestResult.Response.UdpPort, requestResult.Response.UdpKey);
@@ -656,7 +656,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UserAgent = UserAgent
             };
 
-            var request = new HelloRequest(Guid.NewGuid().ToString(), Token.TokenId, clientInfo,
+            var request = new HelloRequest(Guid.NewGuid() + ":client", Token.TokenId, clientInfo,
                 VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret))
             {
                 UseUdpChannel = UseUdpChannel,
@@ -743,7 +743,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
-        var request = new TcpDatagramChannelRequest(Guid.NewGuid().ToString(), SessionId, SessionKey);
+        var request = new TcpDatagramChannelRequest(Guid.NewGuid() + ":client", SessionId, SessionKey);
         var requestResult = await SendRequest<SessionResponseBase>(request, cancellationToken);
         StreamDatagramChannel? channel = null;
         try
@@ -778,7 +778,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             {
                 RequestCode.Hello => GeneralEventId.Session,
                 RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
-                RequestCode.TcpProxyChannel => GeneralEventId.TcpProxyChannel,
+                RequestCode.StreamProxyChannel => GeneralEventId.StreamProxyChannel,
                 _ => GeneralEventId.Tcp
             };
 
@@ -838,12 +838,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             // send request
             await using var requestResult = await _connectorService.SendRequest(
-                new ByeRequest(Guid.NewGuid().ToString(), SessionId, SessionKey),
+                new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
                 cancellationToken);
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Could not send the {RequestCode.Bye} request! Error: {ex.Message}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, ex, "Could not send the bye request.");
         }
     }
 
@@ -905,7 +905,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Disconnecting;
             if (SessionId != 0)
             {
-                VhLogger.Instance.LogTrace("Sending the Bye request!");
                 using var cancellationTokenSource = new CancellationTokenSource(disposeTimeout);
                 await SendByeRequest(cancellationTokenSource.Token);
             }

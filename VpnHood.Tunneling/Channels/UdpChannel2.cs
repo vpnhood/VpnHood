@@ -51,7 +51,7 @@ public class UdpChannel2 : IDatagramChannel
         return Task.CompletedTask;
     }
 
-    public async Task SendPacketAsync(IPPacket[] ipPackets)
+    public async Task SendPacket(IPPacket[] ipPackets)
     {
         try
         {

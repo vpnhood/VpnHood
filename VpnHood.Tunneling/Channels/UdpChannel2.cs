@@ -25,7 +25,6 @@ public class UdpChannel2 : IDatagramChannel
     private readonly long _cryptorPosBase;
     private readonly List<IPPacket> _receivedIpPackets = new();
 
-    public event EventHandler<ChannelEventArgs>? OnFinished;
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
 
@@ -130,12 +129,10 @@ public class UdpChannel2 : IDatagramChannel
 
     public ValueTask DisposeAsync()
     {
-        if (_disposed)
-            return default;
+        if (_disposed) return default;
         _disposed = true;
 
         Connected = false;
-        OnFinished?.Invoke(this, new ChannelEventArgs(this));
         return default;
     }
 }

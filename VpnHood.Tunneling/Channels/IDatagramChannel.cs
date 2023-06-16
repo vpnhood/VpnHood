@@ -8,5 +8,4 @@ public interface IDatagramChannel : IChannel
 {
     event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
     Task SendPacket(IPPacket[] packets);
-    Task Close();
 }

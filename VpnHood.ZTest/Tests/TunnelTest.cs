@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -186,9 +187,8 @@ public class TunnelTest
 
         // send packet to server through tunnel
         await clientTunnel.SendPackets(packets.ToArray());
-        await Task.Delay(5000);
-        Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
-        Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Length);
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Length);
     }
 
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -203,14 +203,17 @@ public class TunnelTest
             // Read the request data from the client to memoryStream
             var buffer = new byte[2048];
             var bytesRead = await httpStream.ReadAsync(buffer, 0, 4, cancellationToken);
-            if (bytesRead == 0) break;
-            if (bytesRead != 4) throw new Exception("Unexpected data.");
+            if (bytesRead == 0) 
+                break;
+            
+            if (bytesRead != 4) 
+                throw new Exception("Unexpected data.");
 
             var length = BitConverter.ToInt32(buffer, 0);
             var totalRead = 0;
             while (totalRead != length)
             {
-                bytesRead = await httpStream.ReadAsync(buffer, 0, 10, cancellationToken);
+                bytesRead = await httpStream.ReadAsync(buffer, 0, 120, cancellationToken);
                 if (bytesRead == 0) throw new Exception("Unexpected data");
                 totalRead += bytesRead;
                 memoryStream.Write(buffer, 0, bytesRead);
@@ -223,6 +226,8 @@ public class TunnelTest
 
             httpStream = await httpStream.CreateReuse();
         }
+
+        Assert.IsFalse(httpStream.CanReuse);
     }
 
     [TestMethod]
@@ -232,7 +237,7 @@ public class TunnelTest
         var tcpListener = new TcpListener(IPAddress.Loopback, 0);
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         tcpListener.Start();
-        _ = SimpleLoopback(tcpListener, cts.Token);
+        var workerTask = SimpleLoopback(tcpListener, cts.Token);
 
         // connect to server
         using var tcpClient = new TcpClient();
@@ -273,6 +278,13 @@ public class TunnelTest
         Assert.AreEqual(string.Join("", chunks), res);
 
         await httpStream.DisposeAsync();
+        tcpClient.Dispose();
+
+        // task must completed after httpStream.DisposeAsync
+        await workerTask.WaitAsync(TimeSpan.FromSeconds(2), cts.Token);
+        Assert.IsTrue(workerTask.IsCompletedSuccessfully);
+
+
         tcpListener.Stop();
         cts.Cancel();
     }

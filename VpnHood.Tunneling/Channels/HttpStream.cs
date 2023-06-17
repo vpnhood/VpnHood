@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,8 @@ public class HttpStream : AsyncStreamDecorator
     private CancellationTokenSource _cancellationTokenSource = new();
     private Task<int> _readTask = Task.FromResult(0);
     private Task _writeTask = Task.CompletedTask;
+    private readonly AsyncLock _disposeLock = new();
+    private bool _isConnectionClosed;
 
     private bool IsServer => _host == null;
     public int ReadChunkCount { get; private set; }
@@ -88,6 +91,13 @@ public class HttpStream : AsyncStreamDecorator
             if (!_isHttpHeaderRead)
             {
                 using var headerBuffer = await ReadHeadersAsync(SourceStream, cancellationToken);
+                if (headerBuffer.Length == 0)
+                {
+                    _isFinished = true;
+                    _isConnectionClosed = true;
+                    return 0;
+                }
+
                 _isHttpHeaderRead = true;
             }
 
@@ -168,6 +178,9 @@ public class HttpStream : AsyncStreamDecorator
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
+        if (_isFinished)
+            throw new SocketException((int)SocketError.ConnectionAborted);
+
         // Create CancellationToken
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
         cancellationToken = tokenSource.Token;
@@ -175,8 +188,8 @@ public class HttpStream : AsyncStreamDecorator
         // should not write a zero chunk if caller data is zero
         try
         {
-            _writeTask = count == 0 
-                ? SourceStream.WriteAsync(buffer, offset, count, cancellationToken) 
+            _writeTask = count == 0
+                ? SourceStream.WriteAsync(buffer, offset, count, cancellationToken)
                 : WriteInternalAsync(buffer, offset, count, cancellationToken);
 
             await _writeTask;
@@ -225,36 +238,49 @@ public class HttpStream : AsyncStreamDecorator
     {
         // read header
         var memStream = new MemoryStream(1024);
-        var readBuffer = new byte[1];
-        var lfCounter = 0;
-        while (lfCounter < 4)
+        try
         {
-            var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken);
-            if (bytesRead == 0)
-                throw new Exception("HttpStream has been closed unexpectedly.");
+            var readBuffer = new byte[1];
+            var lfCounter = 0;
+            while (lfCounter < 4)
+            {
+                var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken);
+                if (bytesRead == 0)
+                    return memStream.Length == 0
+                        ? memStream // connection has been closed gracefully before sending anything
+                        : throw new Exception("HttpStream has been closed unexpectedly.");
 
-            if (readBuffer[0] == '\r' || readBuffer[0] == '\n')
-                lfCounter++;
-            else
-                lfCounter = 0;
+                if (readBuffer[0] == '\r' || readBuffer[0] == '\n')
+                    lfCounter++;
+                else
+                    lfCounter = 0;
 
-            await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken);
+                await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken);
 
-            if (memStream.Length > maxLength)
-                throw new Exception("HTTP header is too big.");
+                if (memStream.Length > maxLength)
+                    throw new Exception("HTTP header is too big.");
+            }
+
+            memStream.Position = 0;
+            return memStream;
         }
-
-        return memStream;
+        catch
+        {
+            await memStream.DisposeAsync();
+            throw;
+        }
     }
 
 
     // ReSharper disable once UnusedMember.Local
-    private static async Task<Dictionary<string, string>> ParseHeadersAsync(Stream stream,
+    private static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = 8192)
     {
 
         using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
-        memStream.Position = 0;
+        if (memStream.Length == 0)
+            return null; // connection has been closed gracefully
+
         var reader = new StreamReader(memStream, Encoding.UTF8);
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -288,7 +314,7 @@ public class HttpStream : AsyncStreamDecorator
     }
 
     private bool _keepOpen;
-    public bool CanReuse => !_hasError;
+    public bool CanReuse => !_hasError && !_isConnectionClosed;
     public async Task<HttpStream> CreateReuse()
     {
         if (_disposed)
@@ -296,6 +322,9 @@ public class HttpStream : AsyncStreamDecorator
 
         if (_hasError)
             throw new InvalidOperationException($"Could not reuse a HttpStream that has error. StreamId: {StreamId}");
+
+        if (_isConnectionClosed)
+            throw new InvalidOperationException($"Could not reuse a HttpStream that its underling stream has been closed . StreamId: {StreamId}");
 
         // Dispose the stream but keep the original stream open
         _keepOpen = true;
@@ -349,7 +378,6 @@ public class HttpStream : AsyncStreamDecorator
         }
     }
 
-    private readonly AsyncLock _disposeLock = new();
     public override async ValueTask DisposeAsync()
     {
         using var locker = await _disposeLock.LockAsync(TimeSpan.Zero);
@@ -360,14 +388,13 @@ public class HttpStream : AsyncStreamDecorator
         _cancellationTokenSource.Cancel();
         await Task.WhenAll(_readTask, _writeTask);
 
-        // create a new cancellation token for CloseStream
-        _cancellationTokenSource = new CancellationTokenSource(); 
-
         // handle error
-        if (!_hasError)
+        if (!_hasError && !_isConnectionClosed)
         {
+            // create a new cancellation token for CloseStream
+            _cancellationTokenSource = new CancellationTokenSource(); // required to let CloseStream do the job
             //using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout); //todo
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(100));
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await CloseStream(cancellationTokenSource.Token);
         }
 

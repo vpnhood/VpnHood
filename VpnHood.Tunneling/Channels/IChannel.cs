@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Channels;
@@ -10,5 +9,5 @@ public interface IChannel : IAsyncDisposable
     bool Connected { get; }
     DateTime LastActivityTime { get; }
     Traffic Traffic { get; }
-    Task Start();
+    void Start();
 }

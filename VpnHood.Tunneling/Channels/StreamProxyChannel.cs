@@ -57,10 +57,9 @@ public class StreamProxyChannel : IChannel, IJob
         JobRunner.Default.Add(this);
     }
 
-    public Task Start()
+    public void Start()
     {
         _startTask = StartInternal();
-        return _startTask;
     }
 
     private async Task StartInternal()

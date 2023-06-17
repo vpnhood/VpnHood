@@ -97,9 +97,7 @@ public class TcpClientStream : IClientStream
             return;
         }
 
-        // close without reuse
-        if (httpStream!=null)
-            await httpStream.DisposeAsync(true);
+        // close the stream
         await Stream.DisposeAsync();
         TcpClient.Dispose();
 

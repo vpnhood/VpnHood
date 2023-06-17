@@ -50,10 +50,9 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    public Task Start()
+    public void Start()
     {
         _startTask = StartInternal();
-        return _startTask;
     }
 
     public async Task StartInternal()
@@ -73,7 +72,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         finally
         {
             Connected = false;
-            await _clientStream.DisposeAsync();
+            await DisposeInternalAsync();
         }
     }
 
@@ -160,10 +159,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         catch (Exception ex)
         {
             VhLogger.LogError(GeneralEventId.Udp, ex, "Could not read UDP from StreamDatagram.");
-        }
-        finally
-        {
-            await DisposeAsync();
+            throw;
         }
     }
 
@@ -192,6 +188,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             if (_isCloseSent)
                 return Task.CompletedTask;
             _isCloseSent = true;
+            _cancellationTokenSource.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
             // send close message to peer
             var ipPacket = DatagramMessageHandler.CreateMessage(new CloseDatagramMessage());
@@ -226,20 +223,18 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
+    private async Task DisposeInternalAsync()
+    {
+        _disposed = true;
+        await _clientStream.DisposeAsync();
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
-        _ = SendClose();
 
-        var gracefulDelayTask = Task.Delay(TunnelDefaults.TcpGracefulTimeout);
-        await Task.WhenAny(_startTask, gracefulDelayTask);
-
-        // set _disposed after finish tasks
-        _disposed = true;
-
-        // cancel amd wait for all task to finish
-        _cancellationTokenSource.Cancel();
-        await Task.WhenAll(_startTask, _sendSemaphore.WaitAsync());
-        _sendSemaphore.Release();
+        await SendClose();
+        await _startTask;
+        await DisposeInternalAsync();
     }
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,9 +17,8 @@ public class AccessTest
     [TestMethod]
     public async Task Foo()
     {
-        await Task.Delay(100);
-        var file = Environment.GetFolderPath(Environment.SpecialFolder.System);
-        Console.WriteLine(file);
+        var cancellationTokenSource = new CancellationTokenSource();
+        await Task.Delay(1000, cancellationTokenSource.Token);
 
     }
 

@@ -40,14 +40,16 @@ public class UdpChannel2 : IDatagramChannel
     public bool Connected { get; private set; }
     public DateTime LastActivityTime { get; private set; }
     public Traffic Traffic { get; } = new();
-    public Task Start()
+    public void Start()
     {
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+
         if (Connected)
             throw new InvalidOperationException("The udpChannel is already started.");
 
-        LastActivityTime = FastDateTime.Now;
         Connected = true;
-        return Task.CompletedTask;
+        LastActivityTime = FastDateTime.Now;
     }
 
     public async Task SendPacket(IPPacket[] ipPackets)

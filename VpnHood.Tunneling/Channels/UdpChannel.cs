@@ -56,7 +56,7 @@ public class UdpChannel : IDatagramChannel
 
     }
 
-    public Task Start()
+    public void Start()
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(StreamDatagramChannel));
@@ -65,7 +65,7 @@ public class UdpChannel : IDatagramChannel
             throw new Exception("Start has already been called!");
 
         Connected = true;
-        return ReadTask();
+        _ = ReadTask();
     }
 
     public async Task SendPacket(IPPacket[] ipPackets)

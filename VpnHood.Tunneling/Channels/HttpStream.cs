@@ -19,8 +19,6 @@ public class HttpStream : AsyncStreamDecorator
     private readonly byte[] _nextLineBuffer = new byte[2];
     private bool _disposed;
     private bool _isHttpHeaderSent;
-    private bool _isCloseConnectionSent;
-    private bool _isCloseConnectionReceived;
     private bool _isHttpHeaderRead;
     private bool _isFinished;
     private bool _hasError;
@@ -48,10 +46,8 @@ public class HttpStream : AsyncStreamDecorator
         StreamId = streamId;
     }
 
-    private string CreateHttpHeader(bool closeConnection)
+    private string CreateHttpHeader()
     {
-        var connection = closeConnection ? "Connection: close" : "Connection: keep-alive";
-
         if (IsServer)
         {
             return
@@ -59,7 +55,6 @@ public class HttpStream : AsyncStreamDecorator
                 "Content-Type: application/octet-stream\r\n" +
                 "Cache-Control: no-store\r\n" +
                 "Transfer-Encoding: chunked\r\n" +
-                $"{connection}\r\n" +
                 "\r\n";
         }
 
@@ -69,7 +64,6 @@ public class HttpStream : AsyncStreamDecorator
             "Content-Type: application/octet-stream\r\n" +
             "Cache-Control: no-store\r\n" +
             "Transfer-Encoding: chunked\r\n" +
-            $"{connection}\r\n" +
             "\r\n";
     }
 
@@ -93,11 +87,7 @@ public class HttpStream : AsyncStreamDecorator
             // ignore header
             if (!_isHttpHeaderRead)
             {
-                var headers = await ReadHeadersAsync(SourceStream, cancellationToken);
-                _isCloseConnectionReceived =
-                    headers.TryGetValue("Connection", out var connectionValue)
-                    && connectionValue.Equals("close", StringComparison.OrdinalIgnoreCase);
-
+                using var headerBuffer = await ReadHeadersAsync(SourceStream, cancellationToken);
                 _isHttpHeaderRead = true;
             }
 
@@ -182,12 +172,12 @@ public class HttpStream : AsyncStreamDecorator
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
         cancellationToken = tokenSource.Token;
 
-        // should not call zero chunk if caller data is zero
+        // should not write a zero chunk if caller data is zero
         try
         {
             _writeTask = count == 0 
                 ? SourceStream.WriteAsync(buffer, offset, count, cancellationToken) 
-                : WriteInternalAsync(buffer, offset, count, false, cancellationToken);
+                : WriteInternalAsync(buffer, offset, count, cancellationToken);
 
             await _writeTask;
         }
@@ -199,16 +189,15 @@ public class HttpStream : AsyncStreamDecorator
     }
 
 
-    private async Task WriteInternalAsync(byte[] buffer, int offset, int count, bool closeConnection, CancellationToken cancellationToken)
+    private async Task WriteInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         try
         {
             // write header for first time
             if (!_isHttpHeaderSent)
             {
-                await SourceStream.WriteAsync(Encoding.UTF8.GetBytes(CreateHttpHeader(closeConnection)), cancellationToken);
+                await SourceStream.WriteAsync(Encoding.UTF8.GetBytes(CreateHttpHeader()), cancellationToken);
                 _isHttpHeaderSent = true;
-                _isCloseConnectionSent = closeConnection;
             }
 
             // Write the chunk header
@@ -231,11 +220,11 @@ public class HttpStream : AsyncStreamDecorator
         }
     }
 
-    private static async Task<Dictionary<string, string>> ReadHeadersAsync(Stream stream,
+    private static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = 8192)
     {
         // read header
-        using var memStream = new MemoryStream(1024);
+        var memStream = new MemoryStream(1024);
         var readBuffer = new byte[1];
         var lfCounter = 0;
         while (lfCounter < 4)
@@ -255,6 +244,16 @@ public class HttpStream : AsyncStreamDecorator
                 throw new Exception("HTTP header is too big.");
         }
 
+        return memStream;
+    }
+
+
+    // ReSharper disable once UnusedMember.Local
+    private static async Task<Dictionary<string, string>> ParseHeadersAsync(Stream stream,
+        CancellationToken cancellationToken, int maxLength = 8192)
+    {
+
+        using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
         memStream.Position = 0;
         var reader = new StreamReader(memStream, Encoding.UTF8);
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -289,7 +288,7 @@ public class HttpStream : AsyncStreamDecorator
     }
 
     private bool _keepOpen;
-    public bool CanReuse => !_isCloseConnectionReceived && !_isCloseConnectionSent && !_hasError;
+    public bool CanReuse => !_hasError;
     public async Task<HttpStream> CreateReuse()
     {
         if (_disposed)
@@ -297,9 +296,6 @@ public class HttpStream : AsyncStreamDecorator
 
         if (_hasError)
             throw new InvalidOperationException($"Could not reuse a HttpStream that has error. StreamId: {StreamId}");
-
-        if (_isCloseConnectionReceived || _isCloseConnectionSent)
-            throw new InvalidOperationException($"Could not reuse a HttpStream in close connection state. StreamId: {StreamId}");
 
         // Dispose the stream but keep the original stream open
         _keepOpen = true;
@@ -314,37 +310,18 @@ public class HttpStream : AsyncStreamDecorator
         throw new InvalidOperationException($"Could not reuse a HttpStream that has not been closed gracefully. StreamId: {StreamId}");
     }
 
-    private async Task CloseStream(bool closeConnection, CancellationToken cancellationToken)
+    private async Task CloseStream(CancellationToken cancellationToken)
     {
-        // manage close connection
-        if (IsServer)
-            closeConnection = _isCloseConnectionReceived;
-
         // finish writing current HttpStream gracefully
         try
         {
-            await WriteInternalAsync(Array.Empty<byte>(), 0, 0, closeConnection, cancellationToken);
+            await WriteInternalAsync(Array.Empty<byte>(), 0, 0, cancellationToken);
         }
         catch (Exception ex)
         {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
                 "Could not write the HTTP chunk terminator. StreamId: {StreamId}",
                 StreamId);
-        }
-
-        // try to send Connection close if it is still not sent
-        if (closeConnection && !_isCloseConnectionSent)
-        {
-            try
-            {
-                await WriteInternalAsync(Array.Empty<byte>(), 0, 0, closeConnection, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                VhLogger.LogError(GeneralEventId.TcpLife, ex,
-                    "Could not close connection by writing the HTTP chunk terminator. StreamId: {StreamId}",
-                    StreamId);
-            }
         }
 
         // make sure the read stream in finished gracefully
@@ -372,13 +349,8 @@ public class HttpStream : AsyncStreamDecorator
         }
     }
 
-    public override ValueTask DisposeAsync()
-    {
-        return DisposeAsync(false);
-    }
-
     private readonly AsyncLock _disposeLock = new();
-    public async ValueTask DisposeAsync(bool closeConnection)
+    public override async ValueTask DisposeAsync()
     {
         using var locker = await _disposeLock.LockAsync(TimeSpan.Zero);
         if (_disposed || !locker.Succeeded) return;
@@ -396,7 +368,7 @@ public class HttpStream : AsyncStreamDecorator
         {
             //using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout); //todo
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(100));
-            await CloseStream(closeConnection, cancellationTokenSource.Token);
+            await CloseStream(cancellationTokenSource.Token);
         }
 
         if (!_keepOpen)

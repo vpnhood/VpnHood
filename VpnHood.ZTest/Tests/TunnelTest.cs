@@ -8,7 +8,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using EmbedIO.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
@@ -270,9 +269,7 @@ public class TunnelTest
         res = await sr.ReadToEndAsync();
         Assert.AreEqual(string.Join("", chunks), res);
 
-        await httpStream.DisposeAsync(true);
-        Assert.IsFalse(httpStream.CanReuse);
-        
+        await httpStream.DisposeAsync();
         tcpListener.Stop();
     }
 

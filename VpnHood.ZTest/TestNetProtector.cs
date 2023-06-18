@@ -61,6 +61,7 @@ internal static class TestNetProtector
             for (var i = _freeTcpPort; i <= 0xFFFF; i++)
                 try
                 {
+                    Console.WriteLine("zzzzzzzzz:" + i); //todo
                     var localEndPoint = new IPEndPoint(addressFamily == AddressFamily.InterNetwork 
                         ? IPAddress.Any : IPAddress.IPv6Any, i);
 

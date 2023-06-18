@@ -10,6 +10,11 @@ public class TaskCollection : IAsyncDisposable, IJob
 {
     private readonly ConcurrentDictionary<Task, bool> _tasks = new();
     public JobSection JobSection { get; } = new();
+    public TaskCollection()
+    {
+        JobRunner.Default.Add(this);
+    }
+
 
     public void Add(Task task)
     {
@@ -20,12 +25,6 @@ public class TaskCollection : IAsyncDisposable, IJob
     {
         _tasks.TryAdd(valueTask.AsTask(), true);
     }
-
-    public TaskCollection()
-    {
-        JobRunner.Default.Add(this);
-    }
-
     public async ValueTask DisposeAsync()
     {
         await Task.WhenAll(_tasks.Keys);

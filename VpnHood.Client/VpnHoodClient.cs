@@ -873,14 +873,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
     {
-        // wait for dispose completion
-        var disposeTimeout = TimeSpan.FromSeconds(10);
-        using var disposeLock = await _disposeLock.LockAsync(disposeTimeout, CancellationToken.None);
-        if (!disposeLock.Succeeded)
-            return;
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        await _disposeTask.Value;
+    }
 
+    private async ValueTask DisposeAsyncCore()
+    {
         // return if already disposed
         if (_disposed) return;
         _disposed = true;
@@ -894,7 +896,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Disconnecting;
             if (SessionId != 0)
             {
-                using var cancellationTokenSource = new CancellationTokenSource(disposeTimeout);
+                using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
                 await SendByeRequest(cancellationTokenSource.Token);
             }
         }
@@ -909,7 +911,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatType(_tcpProxyHost)}...");
+        VhLogger.Instance.LogTrace($"Disposing TcpProxyHost...");
         _tcpProxyHost.Dispose();
 
         // Tunnel

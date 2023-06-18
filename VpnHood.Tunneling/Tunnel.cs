@@ -390,20 +390,29 @@ public class Tunnel : IJob, IAsyncDisposable
     }
 
 
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
     {
+        lock(_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore()
+    {
         if (_disposed) return;
-        _disposed = true;
 
         // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
+        IChannel[] channels;
         lock (_channelListLock)
-        {
-            foreach (var channel in _streamProxyChannels)
-                RemoveChannel(channel);
+            channels = _streamProxyChannels
+                .Select(x => (IChannel)x)
+                .Concat(DatagramChannels.Select(x => (IChannel)x))
+                .ToArray();
 
-            foreach (var channel in DatagramChannels)
-                RemoveChannel(channel);
-        }
+        foreach (var channel in channels)
+            RemoveChannel(channel);
 
         lock (_packetQueue)
             _packetQueue.Clear();
@@ -418,6 +427,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
         // removing disposing objects
         await _disposingTasks.DisposeAsync();
+        _disposed = true;
     }
 
 }

@@ -158,6 +158,8 @@ public class ClientServerTest
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
 
+        await client.DisposeAsync(); //todo
+
         // switch to tcp
         //client.UseUdpChannel = false;
         //await TestTunnel(server, client);

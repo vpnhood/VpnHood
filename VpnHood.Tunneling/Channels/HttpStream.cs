@@ -27,7 +27,6 @@ public class HttpStream : AsyncStreamDecorator
     private CancellationTokenSource _cancellationTokenSource = new();
     private Task<int> _readTask = Task.FromResult(0);
     private Task _writeTask = Task.CompletedTask;
-    private readonly AsyncLock _disposeLock = new();
     private bool _isConnectionClosed;
 
     private bool IsServer => _host == null;
@@ -70,17 +69,15 @@ public class HttpStream : AsyncStreamDecorator
             "\r\n";
     }
 
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
         // Create CancellationToken
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = tokenSource.Token;
-
-        _readTask = ReadInternalAsync(buffer, offset, count, cancellationToken);
-        return _readTask;
+        _readTask = ReadInternalAsync(buffer, offset, count, tokenSource.Token);
+        return await _readTask; // await needed to dispose tokenSource
     }
 
     private async Task<int> ReadInternalAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -124,18 +121,18 @@ public class HttpStream : AsyncStreamDecorator
         }
         catch (Exception ex)
         {
-            await CloseByError(ex);
+            CloseByError(ex);
             throw;
         }
     }
 
-    private ValueTask CloseByError(Exception ex)
+    private void CloseByError(Exception ex)
     {
         if (!_hasError)
             VhLogger.LogError(GeneralEventId.TcpLife, ex, "HttpStream has been disposed due an error. StreamId: {StreamId}", StreamId);
 
         _hasError = true;
-        return DisposeAsync();
+        _ =  DisposeAsync();
     }
 
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
@@ -183,20 +180,19 @@ public class HttpStream : AsyncStreamDecorator
 
         // Create CancellationToken
         using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
-        cancellationToken = tokenSource.Token;
 
         // should not write a zero chunk if caller data is zero
         try
         {
             _writeTask = count == 0
-                ? SourceStream.WriteAsync(buffer, offset, count, cancellationToken)
-                : WriteInternalAsync(buffer, offset, count, cancellationToken);
+                ? SourceStream.WriteAsync(buffer, offset, count, tokenSource.Token)
+                : WriteInternalAsync(buffer, offset, count, tokenSource.Token);
 
             await _writeTask;
         }
         catch (Exception ex)
         {
-            await CloseByError(ex);
+            CloseByError(ex);
             throw;
         }
     }
@@ -228,7 +224,7 @@ public class HttpStream : AsyncStreamDecorator
         }
         catch (Exception ex)
         {
-            await CloseByError(ex);
+            CloseByError(ex);
             throw;
         }
     }
@@ -378,24 +374,32 @@ public class HttpStream : AsyncStreamDecorator
         }
     }
 
-    public override async ValueTask DisposeAsync()
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
+    public override ValueTask DisposeAsync()
     {
-        using var locker = await _disposeLock.LockAsync(TimeSpan.Zero);
-        if (_disposed || !locker.Succeeded) return;
+        lock(_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        return _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore()
+    {
         _disposed = true;
 
         // cancel all pending requests
         _cancellationTokenSource.Cancel();
         await Task.WhenAll(_readTask, _writeTask);
+        _cancellationTokenSource.Dispose();
 
         // handle error
         if (!_hasError && !_isConnectionClosed)
         {
             // create a new cancellation token for CloseStream
             _cancellationTokenSource = new CancellationTokenSource(); // required to let CloseStream do the job
-            //using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout); //todo
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
             await CloseStream(cancellationTokenSource.Token);
+            _cancellationTokenSource.Dispose();
         }
 
         if (!_keepOpen)

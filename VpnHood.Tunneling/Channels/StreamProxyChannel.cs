@@ -96,10 +96,12 @@ public class StreamProxyChannel : IChannel, IJob
             var task1 = Task.WhenAny(tunnelCopyTask, gracefulDelayTask);
             var task2 = Task.WhenAny(hostCopyTask, gracefulDelayTask);
             await Task.WhenAll(task1, task2);
-            
-            // close tunnel if not closed yet
+
+
+            // close tunnel if it is not closed yet
             _hostCancellationTokenSource.Cancel();
             _tunnelCancellationTokenSource.Cancel();
+            await Task.WhenAll(hostCopyTask, tunnelCopyTask);
             await Task.WhenAll(_hostTcpClientStream.DisposeAsync().AsTask(), _tunnelTcpClientStream.DisposeAsync().AsTask());
 
             Connected = false;
@@ -133,7 +135,7 @@ public class StreamProxyChannel : IChannel, IJob
     {
         try
         {
-            await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize, 
+            await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize,
                 sourceCancellationToken, destinationCancellationToken);
         }
         catch (Exception ex)

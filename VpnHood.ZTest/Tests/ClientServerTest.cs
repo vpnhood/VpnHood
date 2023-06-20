@@ -129,7 +129,7 @@ public class ClientServerTest
             await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
             await Task.Delay(50);
         }
-        
+
         Thread.Sleep(200);
         Assert.AreEqual(1, client2.DatagramChannelsCount);
         await client.DisposeAsync();
@@ -147,6 +147,23 @@ public class ClientServerTest
     }
 
     [TestMethod]
+    public async Task UdpChannelFoo() //todo
+    {
+        // Create Server
+        await using var server = TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+
+        await TestHelper.Test_HttpsAsync();
+
+        await client.DisposeAsync();
+        await server.DisposeAsync();
+
+    }
+
+    [TestMethod]
     public async Task UdpChannel()
     {
         // Create Server
@@ -158,18 +175,15 @@ public class ClientServerTest
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
 
-        await client.DisposeAsync(); //todo
-
         // switch to tcp
-        //client.UseUdpChannel = false;
-        //await TestTunnel(server, client);
-        //Assert.IsFalse(client.UseUdpChannel);
+        client.UseUdpChannel = false;
+        await TestTunnel(server, client);
+        Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
-        //todo
-        //client.UseUdpChannel = true;
-        //await TestTunnel(server, client);
-        //Assert.IsTrue(client.UseUdpChannel);
+        client.UseUdpChannel = true;
+        await TestTunnel(server, client);
+        Assert.IsTrue(client.UseUdpChannel);
     }
 
     [TestMethod]
@@ -398,10 +412,8 @@ public class ClientServerTest
             stream.WriteByte(1);
             stream.ReadByte();
         }
-        catch (Exception ex) when (ex.InnerException is SocketException
-        {
-            SocketErrorCode: SocketError.ConnectionReset
-        })
+        catch (Exception ex)
+            when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset })
         {
             // OK
         }

@@ -141,7 +141,6 @@ public static class VhLogger
             ObjectDisposedException or
             OperationCanceledException or
             TaskCanceledException or
-            InvalidDataException or
             SocketException
             {
                 SocketErrorCode: SocketError.ConnectionAborted or
@@ -155,7 +154,7 @@ public static class VhLogger
     {
         if (IsSocketCloseException(ex))
         {
-            Instance.LogTrace(TcpCloseEventId, message + $" Exception: {ex.Message}", args);
+            Instance.LogTrace(TcpCloseEventId, message + $" Message: {ex.Message}", args);
             return;
         }
 

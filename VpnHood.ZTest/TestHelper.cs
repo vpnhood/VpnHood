@@ -332,7 +332,7 @@ internal static class TestHelper
         packetCapture ??= CreatePacketCapture(deviceOptions);
         clientId ??= Guid.NewGuid();
         options ??= new ClientOptions { MaxDatagramChannelCount = 1 };
-        if (options.TcpTimeout == new ClientOptions().TcpTimeout) options.TcpTimeout = TimeSpan.FromSeconds(3);
+        if (options.ConnectTimeout == new ClientOptions().ConnectTimeout) options.ConnectTimeout = TimeSpan.FromSeconds(3);
         options.SocketFactory = new TestSocketFactory(false);
         options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         options.ExcludeLocalNetwork = false;

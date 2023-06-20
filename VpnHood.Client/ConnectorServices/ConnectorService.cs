@@ -17,7 +17,6 @@ using System.IO;
 using VpnHood.Tunneling.ClientStreams;
 using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
-using System.Collections.Generic;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling.Messaging;

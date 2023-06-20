@@ -51,7 +51,7 @@ public class ClientServerTest
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessServer1, new[] { serverEndPoint1 });
         await using var client = TestHelper.CreateClient(token1);
-        TestHelper.Test_Https();
+        await TestHelper.Test_Https();
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
     }
@@ -218,7 +218,7 @@ public class ClientServerTest
 
         // ************
         // *** TEST ***: TCP (TLS) by quad9
-        await TestHelper.Test_HttpsAsync();
+        await TestHelper.Test_Https();
 
         // check there is send data
         Assert.IsTrue(client.SessionTraffic.Sent > oldClientSentByteCount + 100,
@@ -289,12 +289,12 @@ public class ClientServerTest
         // create client
         await using var client = TestHelper.CreateClient(token,
             options: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
-        TestHelper.Test_Https();
+        await TestHelper.Test_Https();
 
         await server.DisposeAsync();
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -304,7 +304,7 @@ public class ClientServerTest
         Thread.Sleep(1000);
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -361,7 +361,7 @@ public class ClientServerTest
         await server.DisposeAsync();
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -372,7 +372,7 @@ public class ClientServerTest
 
         // recreate server and reconnect
         await using var server2 = TestHelper.CreateServer(testAccessServer);
-        TestHelper.Test_Https();
+        await TestHelper.Test_Https();
 
     }
 
@@ -427,7 +427,7 @@ public class ClientServerTest
 
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -555,13 +555,13 @@ public class ClientServerTest
         await using var clientConnect = TestHelper.CreateClientConnect(token,
             connectOptions: new ConnectOptions { MaxReconnectCount = 1, ReconnectDelay = TimeSpan.Zero });
         Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-        await TestHelper.Test_HttpsAsync(); //let transfer something
+        await TestHelper.Test_Https(); //let transfer something
 
         fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
         server.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
         await TestHelper.AssertEqualsWait(ClientState.Connected, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false);
             return clientConnect.Client.State;
         }, timeout: 30_000);
         Assert.AreEqual(1, clientConnect.AttemptCount);
@@ -573,7 +573,7 @@ public class ClientServerTest
         await server.SessionManager.CloseSession(clientConnect.Client.SessionId);
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false);
             return clientConnect.Client.State;
         }, timeout: 30_000);
         Assert.AreEqual(1, clientConnect.AttemptCount);

@@ -99,7 +99,7 @@ public class AccessTest
 
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false);
             return client1.State;
         });
         Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
@@ -122,7 +122,7 @@ public class AccessTest
         // first try should just break the connection
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -133,7 +133,7 @@ public class AccessTest
         // second try should get the AccessTrafficOverflow status
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -182,7 +182,7 @@ public class AccessTest
 
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false);
             return client1.State;
         }, "Client1 has not been stopped yet.");
         Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedTo);
@@ -204,7 +204,7 @@ public class AccessTest
         // wait for finishing client2
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false);
             return client2.State;
         });
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);

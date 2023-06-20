@@ -23,7 +23,7 @@ public class NetProtectTest
 
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            await TestHelper.Test_Https();
             Assert.Fail("Exception expected!");
         }
         catch (Exception ex)
@@ -45,8 +45,8 @@ public class NetProtectTest
         var token = TestHelper.CreateAccessToken(server);
         await using var client = TestHelper.CreateClient(token);
 
-        await TestHelper.Test_HttpsAsync();
-        await TestHelper.Test_HttpsAsync();
+        await TestHelper.Test_Https();
+        await TestHelper.Test_Https();
     }
 
 }

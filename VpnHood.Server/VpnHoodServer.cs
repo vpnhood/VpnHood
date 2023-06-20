@@ -21,7 +21,7 @@ using VpnHood.Tunneling;
 
 namespace VpnHood.Server;
 
-public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
+public class VpnHoodServer : IAsyncDisposable, IJob
 {
     private readonly bool _autoDisposeAccessServer;
     private readonly ServerHost _serverHost;
@@ -346,11 +346,6 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         }
 
         return 0;
-    }
-
-    public void Dispose()
-    {
-        DisposeAsync().GetAwaiter().GetResult();
     }
 
     public async ValueTask DisposeAsync()

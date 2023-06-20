@@ -152,23 +152,23 @@ public class ServerTest
     }
 
     [TestMethod]
-    public void Recover_closed_session_from_access_server()
+    public async Task Recover_closed_session_from_access_server()
     {
         // create server
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        using var client = TestHelper.CreateClient(token);
+        await using var client = TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
         TestHelper.Test_Https();
 
         // restart server
-        server.Dispose();
+        await server.DisposeAsync();
 
-        using var server2 = TestHelper.CreateServer(testAccessServer);
+        await using var server2 = TestHelper.CreateServer(testAccessServer);
         TestHelper.Test_Https();
         Assert.AreEqual(ClientState.Connected, client.State);
     }

@@ -70,7 +70,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public IDevice Device => _clientAppProvider.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
-    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().TcpTimeout;
+    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
 
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
@@ -403,7 +403,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             IpRangeProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
-            TcpTimeout = TcpTimeout
+            ConnectTimeout = TcpTimeout
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;

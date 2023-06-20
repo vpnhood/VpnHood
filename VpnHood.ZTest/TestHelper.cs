@@ -173,12 +173,7 @@ internal static class TestHelper
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
-    {
-        Test_HttpsAsync(httpClient, uri, timeout).Wait();
-    }
-
-    public static async Task<bool> Test_HttpsAsync(HttpClient? httpClient = default, Uri? uri = default, 
+    public static async Task<bool> Test_Https(HttpClient? httpClient = default, Uri? uri = default, 
         int timeout = DefaultTimeout, bool throwError = true)
     {
         if (throwError)

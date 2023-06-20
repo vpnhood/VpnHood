@@ -58,7 +58,7 @@ public class ServerTest
         Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received == 0);
 
         // lets do transfer
-        await TestHelper.Test_HttpsAsync();
+        await TestHelper.Test_Https();
 
         // check usage should still not be 0 after interval
         await Task.Delay(1000);
@@ -163,13 +163,13 @@ public class ServerTest
         var token = TestHelper.CreateAccessToken(server);
         await using var client = TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
-        TestHelper.Test_Https();
+        await TestHelper.Test_Https();
 
         // restart server
         await server.DisposeAsync();
 
         await using var server2 = TestHelper.CreateServer(testAccessServer);
-        TestHelper.Test_Https();
+        await TestHelper.Test_Https();
         Assert.AreEqual(ClientState.Connected, client.State);
     }
 
@@ -187,10 +187,10 @@ public class ServerTest
         await server.DisposeAsync();
         await using var server2 = TestHelper.CreateServer(testAccessServer);
         await Task.WhenAll(
-            TestHelper.Test_HttpsAsync(timeout: 10000),
-            TestHelper.Test_HttpsAsync(timeout: 10000),
-            TestHelper.Test_HttpsAsync(timeout: 10000),
-            TestHelper.Test_HttpsAsync(timeout: 10000)
+            TestHelper.Test_Https(timeout: 10000),
+            TestHelper.Test_Https(timeout: 10000),
+            TestHelper.Test_Https(timeout: 10000),
+            TestHelper.Test_Https(timeout: 10000)
         );
 
         Assert.AreEqual(1, testAccessServer.SessionGetCounter);
@@ -215,7 +215,7 @@ public class ServerTest
 
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false);
             return client.State;
         });
         Assert.AreEqual(ClientState.Disposed, client.State);

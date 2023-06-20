@@ -14,6 +14,7 @@ using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 

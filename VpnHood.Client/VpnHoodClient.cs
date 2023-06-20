@@ -64,7 +64,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ConnectorService _connectorService;
     private Traffic _helloTraffic = new();
     private bool _isUdpChannel2;
-    private UdpChannelTransmitter? _udpChannelTransmitter;
     private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
@@ -609,22 +608,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        if (_packetCapture.CanProtectSocket)
-            _packetCapture.ProtectSocket(udpClient.Client);
-
-        udpClient.Connect(HostUdpEndPoint);
         var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
-
         try
         {
-            _udpChannelTransmitter?.Dispose();
-            _udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
+            if (_packetCapture.CanProtectSocket)
+                _packetCapture.ProtectSocket(udpClient.Client);
+
+            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverKey);
+            udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);
         }
         catch
         {
+            udpClient.Dispose();
             await udpChannel.DisposeAsync();
-            _udpChannelTransmitter?.Dispose();
             throw;
         }
     }
@@ -911,13 +908,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogTrace("Disposing Tunnel...");
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         await Tunnel.DisposeAsync();
-
-        // UdpChannelClient
-        if (_udpChannelTransmitter != null)
-        {
-            VhLogger.Instance.LogTrace("Disposing the UdpChannelTransmitter...");
-            _udpChannelTransmitter.Dispose();
-        }
 
         VhLogger.Instance.LogTrace("Disposing ProxyManager...");
         await _proxyManager.DisposeAsync();

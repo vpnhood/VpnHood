@@ -147,23 +147,6 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public async Task UdpChannelFoo() //todo
-    {
-        // Create Server
-        await using var server = TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
-
-        // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-
-        await TestHelper.Test_HttpsAsync();
-
-        await client.DisposeAsync();
-        await server.DisposeAsync();
-
-    }
-
-    [TestMethod]
     public async Task UdpChannel()
     {
         // Create Server

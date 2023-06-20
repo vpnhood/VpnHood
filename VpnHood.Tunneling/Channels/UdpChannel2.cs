@@ -76,7 +76,7 @@ public class UdpChannel2 : IDatagramChannel
             // send buffer
             if (_lastRemoteEp == null) throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
             if (_udpChannelTransmitter == null) throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
-            var ret = await _udpChannelTransmitter.SendAsync(_isServer ? _lastRemoteEp : null, _sessionId, sessionCryptoPosition, _buffer, bufferIndex);
+            var ret = await _udpChannelTransmitter.SendAsync(_lastRemoteEp, _sessionId, sessionCryptoPosition, _buffer, bufferIndex);
 
             Traffic.Sent += ret;
             LastActivityTime = FastDateTime.Now;
@@ -135,6 +135,9 @@ public class UdpChannel2 : IDatagramChannel
         _disposed = true;
 
         Connected = false;
+        if (!_isServer)
+            _udpChannelTransmitter?.Dispose();
+
         return default;
     }
 }

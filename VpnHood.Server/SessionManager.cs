@@ -16,7 +16,6 @@ using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
-using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 
 namespace VpnHood.Server;
 

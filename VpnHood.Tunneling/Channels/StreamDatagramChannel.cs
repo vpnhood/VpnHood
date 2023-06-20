@@ -25,7 +25,6 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool _isCloseSent;
     private bool _isCloseReceived;
-    private Task _startTask = Task.CompletedTask;
 
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public JobSection JobSection { get; } = new();
@@ -52,7 +51,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
     public void Start()
     {
-        _startTask = StartInternal();
+        _ = StartInternal();
     }
 
     public async Task StartInternal()

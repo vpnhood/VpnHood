@@ -87,16 +87,7 @@ internal static class TestHelper
 
         Assert.AreEqual(connectionSate, app.State.ConnectionState);
     }
-
-    public static void WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 6000)
-    {
-        var waitTime = 200;
-        for (var elapsed = 0; elapsed < timeout && client.State != clientState; elapsed += waitTime)
-            Thread.Sleep(waitTime);
-
-        Assert.AreEqual(clientState, client.State);
-    }
-
+    
     public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
     {
         return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);

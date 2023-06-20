@@ -247,7 +247,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            await Dispose(ex);
+            _ = DisposeAsync(ex);
             throw;
         }
     }
@@ -810,7 +810,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (clientStream != null) await clientStream.DisposeAsync();
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
-                _ = Dispose(ex);
+                _ = DisposeAsync(ex);
             throw;
         }
     }
@@ -830,7 +830,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private ValueTask Dispose(Exception ex)
+    private ValueTask DisposeAsync(Exception ex)
     {
         if (_disposed) return default;
 
@@ -863,7 +863,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        Task.Run(async () => await DisposeAsync(), CancellationToken.None).GetAwaiter().GetResult();
+        _ = DisposeAsync();
     }
 
     private readonly AsyncLock _disposeLock = new();

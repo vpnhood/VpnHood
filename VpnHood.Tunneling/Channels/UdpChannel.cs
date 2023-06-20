@@ -124,7 +124,7 @@ public class UdpChannel : IDatagramChannel
                     var sessionId = BitConverter.ToUInt32(buffer, bufferIndex);
                     bufferIndex += 4;
                     if (sessionId != _sessionId)
-                        throw new InvalidDataException("Invalid sessionId");
+                        throw new UnauthorizedAccessException("Invalid sessionId");
 
                     var cryptoPos = BitConverter.ToInt64(buffer, bufferIndex);
                     bufferIndex += 8;
@@ -135,7 +135,7 @@ public class UdpChannel : IDatagramChannel
                 var sessionId2 = BitConverter.ToUInt32(buffer, bufferIndex);
                 bufferIndex += 4;
                 if (sessionId2 != _sessionId)
-                    throw new InvalidDataException("Invalid sessionId");
+                    throw new UnauthorizedAccessException("Invalid sessionId");
 
                 // read all packets
                 while (bufferIndex < buffer.Length)

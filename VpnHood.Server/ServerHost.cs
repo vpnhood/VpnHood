@@ -104,9 +104,23 @@ internal class ServerHost : IAsyncDisposable
         }
     }
 
-    public async Task Stop()
+    private readonly AsyncLock _stopLock = new();
+    private Task? _stopTask;
+
+    public Task Stop()
     {
-        VhLogger.Instance.LogTrace($"Stopping {nameof(ServerHost)}...");
+        lock (_stopLock)
+            _stopTask ??= StopCore();
+
+        return _stopTask;
+    }
+
+    private async Task StopCore()
+    {
+        if (!IsStarted)
+            return;
+
+        VhLogger.Instance.LogTrace("Stopping ServerHost...");
         _cancellationTokenSource.Cancel();
         _sslCertificateManager.ClearCache();
 
@@ -132,12 +146,20 @@ internal class ServerHost : IAsyncDisposable
             disposeTasks = _ongoingClientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
         await Task.WhenAll(disposeTasks);
 
-        if (_startTask != null)
+        try
         {
-            await _startTask;
-            _startTask = null;
+            if (_startTask != null)
+                await _startTask;
         }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
+        }
+
+        _startTask = null;
         IsStarted = false;
+        lock (_stopLock)
+            _stopTask = null;
     }
 
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -344,10 +366,10 @@ internal class ServerHost : IAsyncDisposable
             // return 401 for ANY non SessionException to keep server's anonymity
             // Server should always return 404 as error
             var unauthorizedResponse =
-                "HTTP/1.1 401 Unauthorized\r\n" + 
+                "HTTP/1.1 401 Unauthorized\r\n" +
                 "Content-Length: 0\r\n" +
                 $"Date: {DateTime.UtcNow:r}\r\n" +
-                "Server: Kestrel\r\n" + 
+                "Server: Kestrel\r\n" +
                 "WWW-Authenticate: Bearer\r\n";
 
             await clientStream.Stream.WriteAsync(Encoding.UTF8.GetBytes(unauthorizedResponse), cancellationToken);
@@ -419,7 +441,7 @@ internal class ServerHost : IAsyncDisposable
     private static async Task<T> ReadRequest<T>(IClientStream clientStream, CancellationToken cancellationToken) where T : ClientRequest
     {
         // reading request
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, 
+        VhLogger.Instance.LogTrace(GeneralEventId.Session,
             "Processing a request. RequestType: {RequestType}.",
             VhLogger.FormatType<T>());
 

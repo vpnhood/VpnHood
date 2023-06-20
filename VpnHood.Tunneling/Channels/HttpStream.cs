@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -129,10 +130,10 @@ public class HttpStream : AsyncStreamDecorator
 
     private void CloseByError(Exception ex)
     {
-        if (!_hasError)
-            VhLogger.LogError(GeneralEventId.TcpLife, ex, "HttpStream has been disposed due an error. StreamId: {StreamId}", StreamId);
-
+        if (_hasError) return;
         _hasError = true;
+
+        VhLogger.LogError(GeneralEventId.TcpLife, ex, "Disposing HttpStream. StreamId: {StreamId}", StreamId);
         _ = DisposeAsync();
     }
 
@@ -342,7 +343,7 @@ public class HttpStream : AsyncStreamDecorator
         _readCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
         _writeCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
-        try { await Task.WhenAll(_writeTask); }
+        try { await _writeTask; }
         catch { /* Ignore */ }
         _writeCts.Dispose();
 

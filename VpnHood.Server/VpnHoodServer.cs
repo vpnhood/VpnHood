@@ -359,8 +359,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         // wait for configuration
         await _configureTask;
         await _sendStatusTask;
-        await _serverHost.DisposeAsync();
         await SessionManager.DisposeAsync();
+        await _serverHost.DisposeAsync();
 
         if (_autoDisposeAccessServer)
             AccessServer.Dispose();

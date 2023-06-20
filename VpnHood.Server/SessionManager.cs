@@ -14,13 +14,13 @@ using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 
 namespace VpnHood.Server;
 
-public class SessionManager : IDisposable, IAsyncDisposable, IJob
+public class SessionManager : IAsyncDisposable, IJob
 {
     private readonly IAccessServer _accessServer;
     private readonly SocketFactory _socketFactory;
@@ -48,24 +48,24 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    public Task SyncSessions()
+    public async Task SyncSessions()
     {
-        var tasks = Sessions.Values.Select(x => x.Sync());
-        return Task.WhenAll(tasks);
-    }
+        // launch all syncs
+        var syncTasks = Sessions.Values.Select(x => (x.SessionId, Task: x.Sync()));
 
-    public void Dispose()
-    {
-        DisposeAsync().GetAwaiter().GetResult();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask()));
-        await SyncSessions();
+        // wait for all
+        foreach (var syncTask in syncTasks)
+        {
+            try
+            {
+                await syncTask.Task;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(GeneralEventId.Session, ex,
+                    "Error in syncing a session. SessionId: {SessionId}", syncTask.SessionId);
+            }
+        }
     }
 
     private async Task<Session> CreateSessionInternal(SessionResponse sessionResponse,
@@ -230,5 +230,23 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         // find in session
         if (Sessions.TryGetValue(sessionId, out var session))
             await session.Close();
+    }
+
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
+    public async ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask()));
+        await SyncSessions();
     }
 }

@@ -86,18 +86,18 @@ internal class TcpProxyHost : IDisposable
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var tcpClient = await VhUtil.RunTask(tcpListener.AcceptTcpClientAsync(), default, cancellationToken);
+                var tcpClient = await tcpListener.AcceptTcpClientAsync();
                 _ = ProcessClient(tcpClient, cancellationToken);
             }
         }
         catch (Exception ex)
         {
-            if (ex is not ObjectDisposedException)
-                VhLogger.Instance.LogError($"{ex.Message}");
+            if (!_disposed)
+                VhLogger.LogError(GeneralEventId.Tcp, ex, "");
         }
         finally
         {
-            VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} Listener on {localEp} has been closed.");
+            VhLogger.Instance.LogInformation("TcpProxyHost Listener has been closed. LocalEp: {localEp}", localEp);
         }
     }
 
@@ -201,7 +201,7 @@ internal class TcpProxyHost : IDisposable
                           ?? throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             // create a scope for the logger
-            using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}", 
+            using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
                 natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "New TcpProxy Request.");
 
@@ -242,7 +242,7 @@ internal class TcpProxyHost : IDisposable
 
             // Dispose ssl stream and replace it with a HeadCryptor
             //todo perhaps must be deprecated from >= 2.9.371
-            if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream) 
+            if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
             {
                 await proxyClientStream.Stream.DisposeAsync();
                 tcpProxyClientStream.Stream = StreamHeadCryptor.Create(
@@ -255,8 +255,8 @@ internal class TcpProxyHost : IDisposable
         }
         catch (Exception ex)
         {
-            if (channel!=null) await channel.DisposeAsync();
-            if (connectorRequest!=null ) await connectorRequest.DisposeAsync();
+            if (channel != null) await channel.DisposeAsync();
+            if (connectorRequest != null) await connectorRequest.DisposeAsync();
             orgTcpClient.Dispose();
             VhLogger.Instance.LogError(GeneralEventId.StreamProxyChannel, $"{ex.Message}");
         }

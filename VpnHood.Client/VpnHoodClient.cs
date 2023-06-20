@@ -49,7 +49,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly bool _autoDisposePacketCapture;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly CancellationToken _cancellationToken;
     private readonly ClientProxyManager _proxyManager;
     private readonly Dictionary<IPAddress, bool> _includeIps = new();
     private readonly int _maxDatagramChannelCount;
@@ -63,7 +62,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly ConnectorService _connectorService;
-    private DateTime _lastReceivedPacketTime = DateTime.MinValue;
     private Traffic _helloTraffic = new();
     private bool _isUdpChannel2;
     private UdpChannelTransmitter? _udpChannelTransmitter;
@@ -152,7 +150,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
-        _cancellationToken = _cancellationTokenSource.Token;
 
 #if DEBUG
         if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
@@ -233,7 +230,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             HostTcpEndPoint = await Token.ResolveHostEndPointAsync();
 
             // Establish first connection and create a session
-            await ConnectInternal(_cancellationToken);
+            await ConnectInternal(_cancellationTokenSource.Token);
 
             // Create Tcp Proxy Host
             _tcpProxyHost.Start();
@@ -297,7 +294,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UpdateDnsRequest(ipPacket, false);
 
         _packetCapture.SendPacketToInbound(e.IpPackets);
-        _lastReceivedPacketTime = FastDateTime.Now;
     }
 
     // WARNING: Performance Critical!
@@ -387,10 +383,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
 
                 // send packets
-                if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationToken);
-                if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets).Wait(_cancellationToken);
+                if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+                if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets).Wait(_cancellationTokenSource.Token);
                 if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
-                if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationToken);
+                if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
                 if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets));
             }
         }
@@ -511,7 +507,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
     {
-        if (!await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken))
+        if (!await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken) || _disposed)
             return;
 
         try
@@ -618,16 +614,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         udpClient.Connect(HostUdpEndPoint);
         var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
-        _udpChannelTransmitter ??= new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
 
         try
         {
+            _udpChannelTransmitter?.Dispose();
+            _udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, HostUdpEndPoint, _serverKey);
             Tunnel.AddChannel(udpChannel);
         }
         catch
         {
             await udpChannel.DisposeAsync();
-            _udpChannelTransmitter.Dispose();
+            _udpChannelTransmitter?.Dispose();
             throw;
         }
     }
@@ -883,24 +880,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async ValueTask DisposeAsyncCore()
     {
-        // return if already disposed
-        if (_disposed) return;
-        _disposed = true;
-
-        if (State == ClientState.None)
-            return;
-
         VhLogger.Instance.LogTrace("Disconnecting...");
-        if (State is ClientState.Connecting or ClientState.Connected)
-        {
-            State = ClientState.Disconnecting;
-            if (SessionId != 0)
-            {
-                using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
-                await SendByeRequest(cancellationTokenSource.Token);
-            }
-        }
+        _disposed = true;
         _cancellationTokenSource.Cancel();
+        var wasConnected = State is ClientState.Connecting or ClientState.Connected;
+        State = ClientState.Disconnecting;
+
+        // disposing PacketCapture
+        _packetCapture.OnStopped -= PacketCapture_OnStopped;
+        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
+        if (_autoDisposePacketCapture)
+        {
+            VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
+            _packetCapture.Dispose();
+        }
 
         // log suppressedBy
         if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf)
@@ -911,7 +904,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
-        VhLogger.Instance.LogTrace($"Disposing TcpProxyHost...");
+        VhLogger.Instance.LogTrace("Disposing TcpProxyHost...");
         _tcpProxyHost.Dispose();
 
         // Tunnel
@@ -933,16 +926,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogTrace("Disposing Nat...");
         Nat.Dispose();
 
-        // close PacketCapture
-        _packetCapture.OnStopped -= PacketCapture_OnStopped;
-        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
-        if (_autoDisposePacketCapture)
+        // Sending Bye
+        if (wasConnected && SessionId != 0)
         {
-            VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
-            _packetCapture.Dispose();
+            using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
+            await SendByeRequest(cancellationTokenSource.Token);
         }
 
         State = ClientState.Disposed;
+        _cancellationTokenSource.Dispose();
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 }

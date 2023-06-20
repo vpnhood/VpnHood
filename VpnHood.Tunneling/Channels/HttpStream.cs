@@ -24,7 +24,8 @@ public class HttpStream : AsyncStreamDecorator
     private bool _isFinished;
     private bool _hasError;
     private readonly string? _host;
-    private CancellationTokenSource _cancellationTokenSource = new();
+    private readonly CancellationTokenSource _readCts = new();
+    private readonly CancellationTokenSource _writeCts = new();
     private Task<int> _readTask = Task.FromResult(0);
     private Task _writeTask = Task.CompletedTask;
     private bool _isConnectionClosed;
@@ -75,7 +76,7 @@ public class HttpStream : AsyncStreamDecorator
             throw new ObjectDisposedException(GetType().Name);
 
         // Create CancellationToken
-        using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+        using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_readCts.Token, cancellationToken);
         _readTask = ReadInternalAsync(buffer, offset, count, tokenSource.Token);
         return await _readTask; // await needed to dispose tokenSource
     }
@@ -132,7 +133,7 @@ public class HttpStream : AsyncStreamDecorator
             VhLogger.LogError(GeneralEventId.TcpLife, ex, "HttpStream has been disposed due an error. StreamId: {StreamId}", StreamId);
 
         _hasError = true;
-        _ =  DisposeAsync();
+        _ = DisposeAsync();
     }
 
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
@@ -179,7 +180,7 @@ public class HttpStream : AsyncStreamDecorator
             throw new SocketException((int)SocketError.ConnectionAborted);
 
         // Create CancellationToken
-        using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+        using var tokenSource = CancellationTokenSource.CreateLinkedTokenSource(_writeCts.Token, cancellationToken);
 
         // should not write a zero chunk if caller data is zero
         try
@@ -337,6 +338,14 @@ public class HttpStream : AsyncStreamDecorator
 
     private async Task CloseStream(CancellationToken cancellationToken)
     {
+        // cancel writing requests. 
+        _readCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
+        _writeCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
+
+        try { await Task.WhenAll(_writeTask); }
+        catch { /* Ignore */ }
+        _writeCts.Dispose();
+
         // finish writing current HttpStream gracefully
         try
         {
@@ -349,7 +358,10 @@ public class HttpStream : AsyncStreamDecorator
                 StreamId);
         }
 
-        // make sure the read stream in finished gracefully
+        // make sure current caller read has been finished gracefully or wait for cancellation time
+        try { await _readTask; }
+        catch { /* Ignore */ }
+
         try
         {
             if (_hasError)
@@ -378,28 +390,22 @@ public class HttpStream : AsyncStreamDecorator
     private ValueTask? _disposeTask;
     public override ValueTask DisposeAsync()
     {
-        lock(_disposeLock)
+        lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
         return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore()
     {
+        // prevent other caller requests
         _disposed = true;
 
-        // cancel all pending requests
-        _cancellationTokenSource.Cancel();
-        await Task.WhenAll(_readTask, _writeTask);
-        _cancellationTokenSource.Dispose();
-
-        // handle error
+        // close stream
         if (!_hasError && !_isConnectionClosed)
         {
             // create a new cancellation token for CloseStream
-            _cancellationTokenSource = new CancellationTokenSource(); // required to let CloseStream do the job
             using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
             await CloseStream(cancellationTokenSource.Token);
-            _cancellationTokenSource.Dispose();
         }
 
         if (!_keepOpen)

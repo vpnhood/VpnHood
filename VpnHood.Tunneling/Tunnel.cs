@@ -394,7 +394,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
     {
-        lock(_disposeLock)
+        lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
         await _disposeTask.Value;
     }
@@ -411,11 +411,16 @@ public class Tunnel : IJob, IAsyncDisposable
                 .Concat(DatagramChannels.Select(x => (IChannel)x))
                 .ToArray();
 
-        foreach (var channel in channels)
-            RemoveChannel(channel);
-
+        // remove packets
         lock (_packetQueue)
             _packetQueue.Clear();
+
+        foreach (var channel in channels)
+            try { RemoveChannel(channel); }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not remove a channel. ChannelId: {ChannelId}", channel.ChannelId);
+            }
 
         await _speedMonitorTimer.DisposeAsync();
         Speed.Sent = 0;

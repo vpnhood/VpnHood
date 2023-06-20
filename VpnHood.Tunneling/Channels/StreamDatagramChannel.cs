@@ -72,7 +72,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         finally
         {
             Connected = false;
-            await DisposeInternalAsync();
+            _ = DisposeAsync();
         }
     }
 
@@ -223,18 +223,19 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    private async Task DisposeInternalAsync()
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
+    public ValueTask DisposeAsync()
     {
-        _disposed = true;
-        await _clientStream.DisposeAsync();
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        return _disposeTask.Value;
     }
 
-    public async ValueTask DisposeAsync()
+    private async ValueTask DisposeAsyncCore()
     {
-        if (_disposed) return;
-
-        await SendClose();
-        await _startTask;
-        await DisposeInternalAsync();
+        await SendClose(); // this won't throw any error
+        await _clientStream.DisposeAsync();
+        _disposed = true;
     }
 }

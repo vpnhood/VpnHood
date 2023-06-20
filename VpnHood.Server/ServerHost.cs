@@ -278,7 +278,7 @@ internal class ServerHost : IAsyncDisposable
 
     private async Task ReuseClientStream(IClientStream clientStream)
     {
-        using var timeoutCt = new CancellationTokenSource(_requestTimeout);
+        using var timeoutCt = new CancellationTokenSource(TunnelDefaults.TcpReuseTimeout);
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
@@ -534,7 +534,7 @@ internal class ServerHost : IAsyncDisposable
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
-        await clientStream.DisposeAsync(false); //todo false for test
+        await clientStream.DisposeAsync(false);
     }
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)

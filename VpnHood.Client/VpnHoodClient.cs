@@ -123,7 +123,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
-        _connectorService = new ConnectorService(packetCapture, options.SocketFactory, options.TcpTimeout);
+        _connectorService = new ConnectorService(packetCapture, options.SocketFactory, options.ConnectTimeout);
         SocketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
         Token = token ?? throw new ArgumentNullException(nameof(token));
         Version = options.Version ?? throw new ArgumentNullException(nameof(Version));

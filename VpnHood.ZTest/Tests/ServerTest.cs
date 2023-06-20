@@ -171,6 +171,7 @@ public class ServerTest
         await using var server2 = TestHelper.CreateServer(testAccessServer);
         await TestHelper.Test_Https();
         Assert.AreEqual(ClientState.Connected, client.State);
+        await client.DisposeAsync(); //dispose before server2
     }
 
     [TestMethod]

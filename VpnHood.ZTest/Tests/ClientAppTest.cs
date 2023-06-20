@@ -336,12 +336,12 @@ public class ClientAppTest
     {
         // TCP
         var oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         if (testPing)
@@ -405,12 +405,12 @@ public class ClientAppTest
     {
         // TCP
         var oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
 
@@ -486,7 +486,7 @@ public class ClientAppTest
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
         // get data through tunnel
-        await TestHelper.Test_HttpsAsync();
+        await TestHelper.Test_Https();
 
         Assert.IsFalse(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseStarted);

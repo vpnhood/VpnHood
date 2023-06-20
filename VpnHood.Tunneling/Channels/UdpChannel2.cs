@@ -133,7 +133,6 @@ public class UdpChannel2 : IDatagramChannel
     {
         if (_disposed) return default;
         _disposed = true;
-
         Connected = false;
         if (!_isServer)
             _udpChannelTransmitter?.Dispose();

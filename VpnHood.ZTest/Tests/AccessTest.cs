@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,9 +27,9 @@ public class AccessTest
     }
 
     [TestMethod]
-    public void Server_reject_invalid_requests()
+    public async Task Server_reject_invalid_requests()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
 
         // ************
         // *** TEST ***: request with invalid tokenId
@@ -40,7 +38,7 @@ public class AccessTest
 
         try
         {
-            using var client1 = TestHelper.CreateClient(token);
+            await using var client1 = TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token id");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -54,7 +52,7 @@ public class AccessTest
 
         try
         {
-            using var client2 = TestHelper.CreateClient(token);
+            await using var client2 = TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token secret");
         }
         catch (Exception ex) when (ex is not AssertFailedException)

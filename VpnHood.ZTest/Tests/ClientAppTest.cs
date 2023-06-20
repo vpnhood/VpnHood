@@ -261,18 +261,18 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void Set_DnsServer_to_packetCapture()
+    public async Task Set_DnsServer_to_packetCapture()
     {
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
         using var packetCapture = TestHelper.CreatePacketCapture(new TestDeviceOptions { IsDnsServerSupported = true });
         Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
-        using var client = TestHelper.CreateClient(token, packetCapture);
-        TestHelper.WaitForClientState(client, ClientState.Connected);
+        await using var client = TestHelper.CreateClient(token, packetCapture);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Connected);
 
         Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });
     }

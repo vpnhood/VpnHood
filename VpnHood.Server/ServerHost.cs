@@ -189,7 +189,7 @@ internal class ServerHost : IAsyncDisposable
     {
         try
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating. CertSubject: {CertSubject}...", certificate.Subject);
             var sslStream = new SslStream(tcpClient.GetStream(), true);
             await sslStream.AuthenticateAsServerAsync(
                 new SslServerAuthenticationOptions

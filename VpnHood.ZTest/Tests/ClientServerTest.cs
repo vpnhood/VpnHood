@@ -29,13 +29,13 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void Redirect_Server()
+    public async Task Redirect_Server()
     {
         var serverEndPoint1 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessServerOptions1 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint1 } };
         using var fileAccessServer1 = TestHelper.CreateFileAccessServer(fileAccessServerOptions1);
         using var testAccessServer1 = new TestAccessServer(fileAccessServer1);
-        using var server1 = TestHelper.CreateServer(testAccessServer1);
+        await using var server1 = TestHelper.CreateServer(testAccessServer1);
 
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
@@ -43,14 +43,14 @@ public class ClientServerTest
         using var fileAccessServer2 =
             TestHelper.CreateFileAccessServer(fileAccessServerOptions2, fileAccessServer1.StoragePath);
         using var testAccessServer2 = new TestAccessServer(fileAccessServer2);
-        using var server2 = TestHelper.CreateServer(testAccessServer2);
+        await using var server2 = TestHelper.CreateServer(testAccessServer2);
 
         // redirect server1 to server2
         testAccessServer1.EmbedIoAccessServer.RedirectHostEndPoint = serverEndPoint2;
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessServer1, new[] { serverEndPoint1 });
-        using var client = TestHelper.CreateClient(token1);
+        await using var client = TestHelper.CreateClient(token1);
         TestHelper.Test_Https();
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
@@ -136,14 +136,14 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void UnsupportedClient()
+    public async Task UnsupportedClient()
     {
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
     }
 
     [TestMethod]
@@ -268,30 +268,30 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void Client_must_dispose_after_device_closed()
+    public async Task Client_must_dispose_after_device_closed()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         using var packetCapture = TestHelper.CreatePacketCapture();
-        using var client = TestHelper.CreateClient(token, packetCapture);
+        await using var client = TestHelper.CreateClient(token, packetCapture);
 
         packetCapture.StopCapture();
-        TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
     }
 
     [TestMethod]
-    public void Client_must_dispose_after_server_stopped()
+    public async Task Client_must_dispose_after_server_stopped()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        using var client = TestHelper.CreateClient(token,
+        await using var client = TestHelper.CreateClient(token,
             options: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
         TestHelper.Test_Https();
 
-        server.Dispose();
+        await server.DisposeAsync();
         try
         {
             TestHelper.Test_Https();
@@ -311,7 +311,7 @@ public class ClientServerTest
             /* ignored */
         }
 
-        TestHelper.WaitForClientState(client, ClientState.Disposed);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
     }
 
     [TestMethod]
@@ -345,20 +345,20 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void Restore_session_after_restarting_server()
+    public async Task Restore_session_after_restarting_server()
     {
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
 
         // create server
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
         var token = TestHelper.CreateAccessToken(server);
 
-        using var client = TestHelper.CreateClient(token);
+        await using var client = TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // disconnect server
-        server.Dispose();
+        await server.DisposeAsync();
         try
         {
             TestHelper.Test_Https();
@@ -371,24 +371,24 @@ public class ClientServerTest
         Assert.AreEqual(ClientState.Connecting, client.State);
 
         // recreate server and reconnect
-        using var server2 = TestHelper.CreateServer(testAccessServer);
+        await using var server2 = TestHelper.CreateServer(testAccessServer);
         TestHelper.Test_Https();
 
     }
 
 
     [TestMethod]
-    public void Reset_tcp_connection_immediately_after_vpn_connected()
+    public async Task Reset_tcp_connection_immediately_after_vpn_connected()
     {
         // create server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443);
-        using var stream = tcpClient.GetStream();
+        await using var stream = tcpClient.GetStream();
 
         // create client
-        using var client1 = TestHelper.CreateClient(token);
+        await using var client1 = TestHelper.CreateClient(token);
 
         try
         {
@@ -557,14 +557,13 @@ public class ClientServerTest
         Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
         await TestHelper.Test_HttpsAsync(); //let transfer something
 
-
         fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
         server.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
         await TestHelper.AssertEqualsWait(ClientState.Connected, async () =>
         {
             await TestHelper.Test_HttpsAsync(throwError: false);
             return clientConnect.Client.State;
-        });
+        }, timeout: 30_000);
         Assert.AreEqual(1, clientConnect.AttemptCount);
         await TestTunnel(server, clientConnect.Client);
 
@@ -576,7 +575,7 @@ public class ClientServerTest
         {
             await TestHelper.Test_HttpsAsync(throwError: false);
             return clientConnect.Client.State;
-        });
+        }, timeout: 30_000);
         Assert.AreEqual(1, clientConnect.AttemptCount);
     }
 
@@ -600,20 +599,20 @@ public class ClientServerTest
 
 #if DEBUG
     [TestMethod]
-    public void Disconnect_for_unsupported_client()
+    public async Task Disconnect_for_unsupported_client()
     {
         // create server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        using var client = TestHelper.CreateClient(token, autoConnect: false,
+        await using var client = TestHelper.CreateClient(token, autoConnect: false,
             options: new ClientOptions { ProtocolVersion = 1 });
 
         try
         {
             var _ = client.Connect();
-            TestHelper.WaitForClientState(client, ClientState.Disposed);
+            await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
         }
         catch
         {

@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Common.Collections;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -29,6 +30,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private readonly IPacketCapture _packetCapture;
     private readonly SocketFactory _socketFactory;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
+    private readonly TaskCollection _disposingTasks = new();
     public TimeSpan TcpTimeout { get; set; }
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
@@ -105,7 +107,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             if (queueItem.ClientStream.CheckIsAlive())
                 return queueItem.ClientStream;
 
-            _ = queueItem.ClientStream.DisposeAsync(false);
+            _disposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
         }
 
         return null;
@@ -163,7 +165,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             {
                 // dispose the connection and retry with new connection
                 Stat.ReusedConnectionFailedCount++;
-                _ = clientStream.DisposeAsync();
+                _disposingTasks.Add(clientStream.DisposeAsync(false));
                 VhLogger.LogError(GeneralEventId.TcpLife, ex,
                     "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}",
                     clientStream.ClientStreamId);
@@ -182,11 +184,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     public async ValueTask DisposeAsync()
     {
-        var tasks = new List<Task>();
         while (_freeClientStreams.TryDequeue(out var queueItem))
-            tasks.Add(queueItem.ClientStream.DisposeAsync(false).AsTask());
+            _disposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
 
-        await Task.WhenAll(tasks);
+        await _disposingTasks.DisposeAsync();
     }
 
     public async Task RunJob()

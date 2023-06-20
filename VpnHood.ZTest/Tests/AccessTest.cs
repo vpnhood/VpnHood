@@ -15,9 +15,8 @@ public class AccessTest
     [TestMethod]
     public async Task Foo()
     {
-        var cancellationTokenSource = new CancellationTokenSource();
-        await Task.Delay(1000, cancellationTokenSource.Token);
-
+        var cancellationTokenSource = new CancellationTokenSource(1000);
+        await Task.WhenAny(Task.Delay(10000, cancellationTokenSource.Token));
     }
 
     [TestInitialize]

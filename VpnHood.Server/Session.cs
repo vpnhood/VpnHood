@@ -350,19 +350,10 @@ public class Session : IAsyncDisposable, IJob
 
             // connect to requested destination
             isRequestedEpException = true;
-            try
-            {
-                await VhUtil.RunTask(
-                    tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                    _tcpConnectTimeout, cancellationToken);
-                isRequestedEpException = false;
-
-            }
-            catch (Exception ex) //todo remove  
-            {
-
-                throw;
-            }
+            await VhUtil.RunTask(
+                tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
+                _tcpConnectTimeout, cancellationToken);
+            isRequestedEpException = false;
 
             // send response
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
@@ -379,7 +370,7 @@ public class Session : IAsyncDisposable, IJob
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
-                "Adding a StreamProxyChannel. SessionId: {SessionId}, CipherLength: {CipherLength}", 
+                "Adding a StreamProxyChannel. SessionId: {SessionId}, CipherLength: {CipherLength}",
                 VhLogger.FormatSessionId(SessionId), request.CipherLength);
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");

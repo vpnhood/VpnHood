@@ -17,14 +17,10 @@ public class StreamProxyChannel : IChannel, IJob
     private readonly IClientStream _hostTcpClientStream;
     private readonly int _tunnelStreamBufferSize;
     private readonly IClientStream _tunnelTcpClientStream;
-    private readonly CancellationTokenSource _hostCancellationTokenSource = new();
-    private readonly CancellationTokenSource _tunnelCancellationTokenSource = new();
     private const int BufferSizeDefault = 0x1000 * 4; //16k
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 0x1000;
     private bool _disposed;
-    private bool _closing;
-    private Task _startTask = Task.CompletedTask;
 
     public JobSection JobSection { get; }
     public bool Connected { get; private set; }
@@ -59,7 +55,7 @@ public class StreamProxyChannel : IChannel, IJob
 
     public void Start()
     {
-        _startTask = StartInternal();
+        _ = StartInternal();
     }
 
     private async Task StartInternal()
@@ -71,47 +67,30 @@ public class StreamProxyChannel : IChannel, IJob
             throw new InvalidOperationException("StreamProxyChannel is already started.");
 
         Connected = true;
-        var tunnelCopyTask = Task.CompletedTask;
-        var hostCopyTask = Task.CompletedTask;
         try
         {
             // let pass CancellationToken for the host only to save the tunnel for reuse
 
-            tunnelCopyTask = CopyToAsync(
+            var tunnelCopyTask = CopyToAsync(
                 _tunnelTcpClientStream.Stream, _hostTcpClientStream.Stream, false, _tunnelStreamBufferSize,
-                _tunnelCancellationTokenSource.Token, _hostCancellationTokenSource.Token); // tunnel => host
+                CancellationToken.None, CancellationToken.None); // tunnel => host
 
-            hostCopyTask = CopyToAsync(
+            var hostCopyTask = CopyToAsync(
                 _hostTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamBufferSize,
-                _hostCancellationTokenSource.Token, _tunnelCancellationTokenSource.Token); // host = tunnel
+                CancellationToken.None, CancellationToken.None); // host = tunnel
 
             await Task.WhenAny(tunnelCopyTask, hostCopyTask);
         }
         finally
         {
-            _closing = true;
-
-            // let tasks shutdown gracefully
-            var gracefulDelayTask = Task.Delay(TunnelDefaults.TcpGracefulTimeout);
-            var task1 = Task.WhenAny(tunnelCopyTask, gracefulDelayTask);
-            var task2 = Task.WhenAny(hostCopyTask, gracefulDelayTask);
-            await Task.WhenAll(task1, task2);
-
-
-            // close tunnel if it is not closed yet
-            _hostCancellationTokenSource.Cancel();
-            _tunnelCancellationTokenSource.Cancel();
-            await Task.WhenAll(hostCopyTask, tunnelCopyTask);
-            await Task.WhenAll(_hostTcpClientStream.DisposeAsync().AsTask(), _tunnelTcpClientStream.DisposeAsync().AsTask());
-
-            Connected = false;
+            _ = DisposeAsync();
         }
     }
 
     public Task RunJob()
     {
         // if either task is completed let graceful shutdown do its job
-        if (_disposed || !Connected || _closing)
+        if (_disposed || !Connected)
             return Task.CompletedTask;
 
         CheckClientIsAlive();
@@ -127,9 +106,10 @@ public class StreamProxyChannel : IChannel, IJob
         VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel,
             "Disposing a StreamProxyChannel due to its error state. ChannelId: {ChannelId}", ChannelId);
 
-        _hostCancellationTokenSource.Cancel();
+        _ = DisposeAsync();
     }
 
+    private bool _isFinished;
     private async Task CopyToAsync(Stream source, Stream destination, bool isDestinationTunnel, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
@@ -137,10 +117,14 @@ public class StreamProxyChannel : IChannel, IJob
         {
             await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize,
                 sourceCancellationToken, destinationCancellationToken);
+            _isFinished = true;
         }
         catch (Exception ex)
         {
-            // Dispose if any side throw an exception
+            // show error if the stream hasn't finished
+            if (_isFinished && VhLogger.IsSocketCloseException(ex))
+                return;
+
             VhLogger.LogError(GeneralEventId.Tcp, ex,
                 "StreamProxyChannel: Error in copying {direction} tunnel. ChannelId: {ChannelId}",
                 isDestinationTunnel ? "to" : "from", ChannelId);
@@ -198,11 +182,25 @@ public class StreamProxyChannel : IChannel, IJob
         }
     }
 
-
-    public async ValueTask DisposeAsync()
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
+    public ValueTask DisposeAsync()
     {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        return _disposeTask.Value;
+    }
+
+    public async ValueTask DisposeAsyncCore()
+    {
+        Connected = false;
         _disposed = true;
-        _hostCancellationTokenSource.Cancel();
-        await _startTask;
+        await _hostTcpClientStream.DisposeAsync();
+        await _tunnelTcpClientStream.DisposeAsync();
+        //_hostCancellationTokenSource.Cancel();
+        //await _hostTcpClientStream.DisposeAsync();
+
+        //await Task.Delay(5000); //todo
+        //_tunnelCancellationTokenSource.Cancel();
     }
 }

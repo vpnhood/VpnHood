@@ -25,6 +25,7 @@ using VpnHood.Server.Configurations;
 using VpnHood.Server.Messaging;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Test.Factory;
+using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -492,6 +493,7 @@ internal static class TestHelper
         if (_isInit) return;
         _isInit = true;
 
+        TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
         VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         VhLogger.IsDiagnoseMode = true;
         WebServer = TestWebServer.Create();

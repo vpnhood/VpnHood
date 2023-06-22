@@ -2,7 +2,8 @@
 
 public class ConnectorStat
 {
+    public int FreeConnectionCount { get; internal set; }
     public int ReusedConnectionFailedCount { get; internal set; }
     public int ReusedConnectionSucceededCount { get; internal set; }
-    public int NewConnectionCount { get; internal set; }
+    public int CreatedConnectionCount { get; internal set; }
 }

@@ -82,7 +82,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 EnabledSslProtocols = sslProtocol
             }, cancellationToken);
 
-            Stat.NewConnectionCount++;
+            Stat.CreatedConnectionCount++;
+            await Console.Out.WriteLineAsync("VV:" + Stat.CreatedConnectionCount); //todo
             var clientStream = UseHttp
                 ? new TcpClientStream(tcpClient, new HttpStream(stream, clientStreamId, hostName), clientStreamId, ReuseStreamClient)
                 : new TcpClientStream(tcpClient, stream, clientStreamId);
@@ -103,6 +104,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     {
         while (_freeClientStreams.TryDequeue(out var queueItem))
         {
+            Stat.FreeConnectionCount--;
             if (queueItem.ClientStream.CheckIsAlive())
                 return queueItem.ClientStream;
 
@@ -115,6 +117,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private Task ReuseStreamClient(IClientStream clientStream)
     {
         _freeClientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
+        Stat.FreeConnectionCount++;
         return Task.CompletedTask;
     }
 

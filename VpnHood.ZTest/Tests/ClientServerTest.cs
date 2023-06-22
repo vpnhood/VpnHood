@@ -422,7 +422,7 @@ public class ClientServerTest
 
         // wait for disposing session in access server
         await VhTestUtil.AssertEqualsWait(false, () =>
-            fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
+                fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
             "Session has not been closed in the access server.");
 
         try
@@ -679,5 +679,70 @@ public class ClientServerTest
         Assert.AreEqual(fileAccessServerOptions.SessionOptions.MaxTcpChannelCount, session?.TcpChannelCount);
     }
 
+    [TestMethod]
+    public async Task Reusing_HttpStream()
+    {
+        // Create Server
+        await using var server = TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
 
+        // Create Client
+        await using var client = TestHelper.CreateClient(token);
+        var lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
+        var lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
+
+        // create one connection
+        await TestHelper.Test_Https();
+        Assert.AreEqual(lasCreatedConnectionCount + 1, client.Stat.ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount, client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
+        lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
+        await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
+
+        // this connection must reuse the old one
+        await TestHelper.Test_Https();
+        Assert.AreEqual(lasCreatedConnectionCount, client.Stat.ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount + 1, client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
+        lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
+        await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
+
+        // this connection must reuse the old one again
+        await TestHelper.Test_Https();
+        Assert.AreEqual(lasCreatedConnectionCount, client.Stat.ConnectorStat.CreatedConnectionCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount + 1, client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
+        lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
+        await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
+
+        // open 3 connections simultaneously
+        VhLogger.Instance.LogInformation("Test: Open 3 connections simultaneously.");
+        using (var tcpClient1 = new TcpClient())
+        using (var tcpClient2 = new TcpClient())
+        using (var tcpClient3 = new TcpClient())
+        {
+            await tcpClient1.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
+            await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
+            await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
+
+            //await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, ()=>client.Stat.ConnectorStat.CreatedConnectionCount);
+            //await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, ()=>client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+            lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
+            lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
+        }
+        await VhTestUtil.AssertEqualsWait(3, () => client.Stat.ConnectorStat.FreeConnectionCount);
+
+        // net two connection should use shared connection
+        using (var tcpClient4 = new TcpClient())
+        using (var tcpClient5 = new TcpClient())
+        {
+            await tcpClient4.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
+            await tcpClient5.ConnectAsync(TestHelper.TEST_HttpsEndPoint2);
+            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount, () => client.Stat.ConnectorStat.CreatedConnectionCount);
+            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 2, () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        }
+
+        // wait for free the used connections 
+        await VhTestUtil.AssertEqualsWait(3, () => client.Stat.ConnectorStat.FreeConnectionCount);
+    }
 }

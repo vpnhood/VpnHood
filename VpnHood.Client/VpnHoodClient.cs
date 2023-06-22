@@ -101,6 +101,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPEndPoint[]? HostUdpEndPoints { get; private set; }
 
     public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
+    public ClientStat Stat { get; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -149,6 +150,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
+        Stat = new ClientStat
+        {
+            ConnectorStat = _connectorService.Stat
+        };
 
 #if DEBUG
         if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;

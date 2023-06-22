@@ -347,6 +347,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         return 0;
     }
+    
+    public void Dispose()
+    {
+        Task.Run(async () => await DisposeAsync(), CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
+    }
 
     public async ValueTask DisposeAsync()
     {

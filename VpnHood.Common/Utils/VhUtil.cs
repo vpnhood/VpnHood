@@ -277,10 +277,11 @@ public static class VhUtil
         return channel?.DisposeAsync() ?? default;
     }
 
-    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize)
+    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize, bool? reuseAddress = null)
     {
         tcpClient.NoDelay = false;
         if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
         if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
+        if (reuseAddress != null) tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, reuseAddress.Value);
     }
 }

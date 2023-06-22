@@ -725,8 +725,8 @@ public class ClientServerTest
             await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
             await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
 
-            //await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, ()=>client.Stat.ConnectorStat.CreatedConnectionCount);
-            //await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, ()=>client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, ()=>client.Stat.ConnectorStat.CreatedConnectionCount);
+            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, ()=>client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
             lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
             lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         }

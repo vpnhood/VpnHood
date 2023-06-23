@@ -343,7 +343,7 @@ public class Session : IAsyncDisposable, IJob
             //set reuseAddress to  true to prevent error "Only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
             _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
-            VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize, reuseAddress: true);
+            VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
 
             //tracking
             LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint, request.DestinationEndPoint,

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.Factory;
 
@@ -13,8 +11,7 @@ public class SocketFactory : ISocketFactory
 
     public virtual TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
-        var anyIpAddress = IPAddressUtil.GetAnyIpAddress(addressFamily);
-        return new TcpClient(new IPEndPoint(anyIpAddress, 0));
+        return new TcpClient(addressFamily);
     }
 
     public virtual UdpClient CreateUdpClient(AddressFamily addressFamily)

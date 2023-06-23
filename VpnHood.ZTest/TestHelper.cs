@@ -293,7 +293,7 @@ internal static class TestHelper
         // ser server options
         var serverOptions = new ServerOptions
         {
-            SocketFactory = new TestSocketFactory(true),
+            SocketFactory = new TestSocketFactory(),
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessServer = autoDisposeAccessServer,
             StoragePath = WorkingPath,
@@ -334,7 +334,6 @@ internal static class TestHelper
         clientId ??= Guid.NewGuid();
         options ??= new ClientOptions { MaxDatagramChannelCount = 1 };
         if (options.ConnectTimeout == new ClientOptions().ConnectTimeout) options.ConnectTimeout = TimeSpan.FromSeconds(3);
-        options.SocketFactory = new TestSocketFactory(false);
         options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         options.ExcludeLocalNetwork = false;
 
@@ -397,7 +396,6 @@ internal static class TestHelper
             AppDataPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             LogToConsole = true,
             SessionTimeout = TimeSpan.FromSeconds(2),
-            SocketFactory = new TestSocketFactory(false),
             LogAnonymous = false
         };
         return appOptions;
@@ -409,7 +407,6 @@ internal static class TestHelper
         appOptions ??= CreateClientAppOptions();
 
         var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);
-        clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();

@@ -19,7 +19,6 @@ using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
-using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;

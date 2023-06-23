@@ -35,14 +35,14 @@ internal class TestPacketCapture : WinDivertPacketCapture
 
     protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
-        bool ignore = false;
+        var ignore = false;
 
         ignore |= 
             ipPacket.Extract<UdpPacket>()?.DestinationPort == 53 &&
             _deviceOptions.CaptureDnsAddresses != null &&
             _deviceOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
 
-        ignore |= TestNetProtector.IsProtectedPacket(ipPacket);
+        ignore |= TestSocketProtector.IsProtectedPacket(ipPacket);
             
         // ignore protected packets
         if (ignore)
@@ -54,7 +54,7 @@ internal class TestPacketCapture : WinDivertPacketCapture
     public override void ProtectSocket(Socket socket)
     {
         if (CanProtectSocket)
-            TestNetProtector.ProtectSocket(socket);
+            TestSocketProtector.ProtectSocket(socket);
         else
             base.ProtectSocket(socket);
     }

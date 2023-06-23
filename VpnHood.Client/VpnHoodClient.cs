@@ -74,7 +74,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
-    internal SocketFactory SocketFactory { get; }
+    internal ClientSocketFactory SocketFactory { get; }
 
     public Version? ServerVersion { get; private set; }
     public event EventHandler? StateChanged;
@@ -114,6 +114,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
+        SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
         _dnsServerIpV4 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
         _dnsServerIpV6 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
@@ -122,10 +123,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _packetCapture = packetCapture;
         _autoDisposePacketCapture = options.AutoDisposePacketCapture;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
-        _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory, new ProxyManagerOptions());
+        _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
-        _connectorService = new ConnectorService(packetCapture, options.SocketFactory, options.ConnectTimeout);
-        SocketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
+        _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         Token = token ?? throw new ArgumentNullException(nameof(token));
         Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
         UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
@@ -183,12 +183,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, string channelId,
         CancellationToken cancellationToken)
     {
-        var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
-        SocketFactory.SetKeepAlive(tcpClient.Client, true);
-        VhUtil.ConfigTcpClient(tcpClient, null, null);
-
         // connect to host
-        _packetCapture.ProtectSocket(tcpClient.Client);
+        var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
         await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
         // create add add channel
@@ -584,8 +580,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             "Creating a UdpChannel... ServerEp: {ServerEp}", VhLogger.Format(udpEndPoint));
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        if (_packetCapture.CanProtectSocket)
-            _packetCapture.ProtectSocket(udpClient.Client);
         udpClient.Connect(udpEndPoint);
 
         // add channel
@@ -616,9 +610,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
         try
         {
-            if (_packetCapture.CanProtectSocket)
-                _packetCapture.ProtectSocket(udpClient.Client);
-
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverKey);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);

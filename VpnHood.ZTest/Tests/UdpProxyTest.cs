@@ -46,7 +46,7 @@ public class UdpProxyTest
     public async Task Multiple_EndPoint()
     {
         var packetProxyReceiver = new MyPacketProxyReceiver();
-        var proxyPool = new UdpProxyPool(packetProxyReceiver, new TestSocketFactory(false), null, null);
+        var proxyPool = new UdpProxyPool(packetProxyReceiver, new TestSocketFactory(), null, null);
 
         // Test
         var udpEndPoint = TestHelper.WebServer.UdpV4EndPoints[0];
@@ -80,7 +80,7 @@ public class UdpProxyTest
 
 
         // Test timeout
-        proxyPool = new UdpProxyPool(packetProxyReceiver, new TestSocketFactory(false), TimeSpan.FromSeconds(1), null);
+        proxyPool = new UdpProxyPool(packetProxyReceiver, new TestSocketFactory(), TimeSpan.FromSeconds(1), null);
         udpEndPoint = TestHelper.WebServer.UdpV4EndPoints[0];
         ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
         await proxyPool.SendPacket(ipPacket);
@@ -97,7 +97,7 @@ public class UdpProxyTest
     public async Task Multiple_EndPointEx()
     {
         var packetProxyReceiver = new MyPacketProxyReceiver();
-        var proxyPool = new UdpProxyPoolEx(packetProxyReceiver, new TestSocketFactory(false), null, null);
+        var proxyPool = new UdpProxyPoolEx(packetProxyReceiver, new TestSocketFactory(), null, null);
 
         var udpEndPoint = TestHelper.WebServer.UdpV4EndPoints[0];
         var ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
@@ -138,7 +138,7 @@ public class UdpProxyTest
         // -------------
         // Test: timeout
         // -------------
-        proxyPool = new UdpProxyPoolEx(packetProxyReceiver, new TestSocketFactory(false), TimeSpan.FromSeconds(1), null);
+        proxyPool = new UdpProxyPoolEx(packetProxyReceiver, new TestSocketFactory(), TimeSpan.FromSeconds(1), null);
         ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
         await proxyPool.SendPacket(ipPacket);
         Assert.AreEqual(1, proxyPool.ClientCount);

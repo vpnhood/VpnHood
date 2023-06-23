@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -26,8 +25,7 @@ namespace VpnHood.Client.ConnectorServices;
 
 internal class ConnectorService : IAsyncDisposable, IJob
 {
-    private readonly IPacketCapture _packetCapture;
-    private readonly SocketFactory _socketFactory;
+    private readonly ISocketFactory _socketFactory;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     private readonly TaskCollection _disposingTasks = new();
     public TimeSpan TcpTimeout { get; set; }
@@ -36,9 +34,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public ConnectorStat Stat { get; } = new();
     public bool UseHttp { get; set; }
 
-    public ConnectorService(IPacketCapture packetCapture, SocketFactory socketFactory, TimeSpan tcpTimeout)
+    public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
-        _packetCapture = packetCapture;
         _socketFactory = socketFactory;
         TcpTimeout = tcpTimeout;
         JobSection = new JobSection(tcpTimeout);
@@ -53,15 +50,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
         // create new stream
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
-        _socketFactory.SetKeepAlive(tcpClient.Client, true);
-        VhUtil.ConfigTcpClient(tcpClient, null, null);
 
         try
         {
-            // create tcpConnection
-            if (_packetCapture.CanProtectSocket)
-                _packetCapture.ProtectSocket(tcpClient.Client);
-
             // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connecting to Server: {VhLogger.Format(tcpEndPoint)}...");
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);

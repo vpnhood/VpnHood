@@ -83,7 +83,6 @@ internal class ConnectorService : IAsyncDisposable, IJob
             }, cancellationToken);
 
             Stat.CreatedConnectionCount++;
-            await Console.Out.WriteLineAsync("VV:" + Stat.CreatedConnectionCount); //todo
             var clientStream = UseHttp
                 ? new TcpClientStream(tcpClient, new HttpStream(stream, clientStreamId, hostName), clientStreamId, ReuseStreamClient)
                 : new TcpClientStream(tcpClient, stream, clientStreamId);

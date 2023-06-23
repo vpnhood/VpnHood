@@ -5,21 +5,17 @@ namespace VpnHood.Test.Factory;
 
 public class TestSocketFactory : SocketFactory
 {
-    private readonly bool _autoProtect;
-
-    public TestSocketFactory(bool autoProtect)
-    {
-        _autoProtect = autoProtect;
-    }
-
     public override TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
-        return TestNetProtector.CreateTcpClient(addressFamily, _autoProtect);
+        var tcpClient = base.CreateTcpClient(addressFamily);
+        TestSocketProtector.ProtectSocket(tcpClient.Client);
+        return tcpClient;
     }
-
 
     public override UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        return TestNetProtector.CreateUdpClient(addressFamily, _autoProtect);
+        var udpClient = base.CreateUdpClient(addressFamily);
+        TestSocketProtector.ProtectSocket(udpClient.Client);
+        return udpClient;
     }
 }

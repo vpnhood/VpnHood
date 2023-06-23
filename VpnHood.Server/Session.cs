@@ -345,16 +345,16 @@ public class Session : IAsyncDisposable, IJob
             _socketFactory.SetKeepAlive(tcpClientHost.Client, true);
             VhUtil.ConfigTcpClient(tcpClientHost, _tcpKernelSendBufferSize, _tcpKernelReceiveBufferSize);
 
-            //tracking
-            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint, request.DestinationEndPoint,
-                true, true, null);
-
             // connect to requested destination
             isRequestedEpException = true;
             await VhUtil.RunTask(
                 tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
                 _tcpConnectTimeout, cancellationToken);
             isRequestedEpException = false;
+
+            //tracking
+            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClientHost.Client.LocalEndPoint, request.DestinationEndPoint,
+                true, true, null);
 
             // send response
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);

@@ -186,7 +186,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
     {
         var now = FastDateTime.Now;
 
-        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - TunnelDefaults.TcpReuseTimeout)
+        var tcpReuseTimeout = TunnelDefaults.TcpReuseTimeout - TunnelDefaults.TcpReuseTimeout / 3; // it must be less than server
+        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - tcpReuseTimeout)
         {
             _freeClientStreams.TryDequeue(out queueItem);
             await queueItem.ClientStream.DisposeAsync(false);

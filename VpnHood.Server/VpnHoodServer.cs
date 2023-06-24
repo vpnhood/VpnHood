@@ -364,10 +364,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation("Shutting down...");
 
         // wait for configuration
-        await _configureTask;
-        await _sendStatusTask;
+        try { await _configureTask; }catch {/* no error */ }
+        try { await _sendStatusTask; }catch {/* no error*/ }
+        await _serverHost.DisposeAsync(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync();
-        await _serverHost.DisposeAsync();
 
         if (_autoDisposeAccessServer)
             AccessServer.Dispose();

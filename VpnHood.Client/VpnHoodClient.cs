@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -798,7 +799,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             // set connecting state if could not establish any connection
-            if (ex is ConnectorEstablishException && !_disposed && State == ClientState.Connected)
+            if (!_disposed && State == ClientState.Connected)
                 State = ClientState.Connecting;
 
             // dispose by session timeout or known exception
@@ -829,7 +830,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         if (_disposed) return default;
 
-        VhLogger.LogError(GeneralEventId.Session, ex, "Disposing...");
+        VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Disposing...");
 
         // set SessionStatus error code if not set yet
         if (SessionStatus.ErrorCode == SessionErrorCode.Ok)

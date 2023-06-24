@@ -182,7 +182,7 @@ internal class TcpProxyHost : IDisposable
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
-        ConnectorRequestResult<SessionResponseBase>? connectorRequest = null;
+        ConnectorRequestResult<SessionResponseBase>? requestResult = null;
         StreamProxyChannel? channel = null;
 
         try
@@ -232,8 +232,8 @@ internal class TcpProxyHost : IDisposable
                 natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1);
 
             // read the response
-            connectorRequest = await Client.SendRequest<SessionResponseBase>(request, cancellationToken);
-            var proxyClientStream = connectorRequest.ClientStream;
+            requestResult = await Client.SendRequest<SessionResponseBase>(request, cancellationToken);
+            var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
@@ -256,7 +256,7 @@ internal class TcpProxyHost : IDisposable
         catch (Exception ex)
         {
             if (channel != null) await channel.DisposeAsync();
-            if (connectorRequest != null) await connectorRequest.DisposeAsync();
+            if (requestResult != null) await requestResult.DisposeAsync();
             orgTcpClient.Dispose();
             VhLogger.Instance.LogError(GeneralEventId.StreamProxyChannel, $"{ex.Message}");
         }

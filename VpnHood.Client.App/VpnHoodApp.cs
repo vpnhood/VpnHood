@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
@@ -30,7 +31,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private const string FolderNameProfileStore = "profiles";
     private static VpnHoodApp? _instance;
     private readonly IAppProvider _clientAppProvider;
-    private readonly bool _logToConsole;
     private readonly SocketFactory? _socketFactory;
     private bool _hasAnyDataArrived;
     private bool _hasConnectRequested;
@@ -41,7 +41,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
     private Exception? _lastException;
-    private StreamLogger? _streamLogger;
     private IpGroup? _lastClientIpGroup;
     private AppConnectionState _lastConnectionState;
     private VpnHoodClient? Client => ClientConnect?.Client;
@@ -58,11 +57,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public Diagnoser Diagnoser { get; set; } = new();
     public ClientProfile? ActiveClientProfile { get; private set; }
     public Guid LastActiveClientProfileId { get; private set; }
-    public bool LogAnonymous { get; }
     public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
     public static bool IsInit => _instance != null;
     public string AppDataFolderPath { get; }
-    public string LogFilePath => Path.Combine(AppDataFolderPath, FileNameLog);
     public AppSettings Settings { get; }
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
@@ -71,6 +68,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
+    public AppLogService LogService { get; }
 
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
@@ -82,7 +80,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (_clientAppProvider.Device == null) throw new ArgumentNullException(nameof(_clientAppProvider.Device));
         Device.OnStartAsService += Device_OnStartAsService;
 
-        _logToConsole = options.LogToConsole;
         AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.OnSaved += Settings_OnSaved;
@@ -92,12 +89,10 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _socketFactory = options.SocketFactory;
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
         JobSection = new JobSection(options.UpdateCheckerInterval);
+        LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
 
-        // create default logger
-        LogAnonymous = options.LogAnonymous;
-        VhLogger.IsAnonymousMode = options.LogAnonymous;
-        VhLogger.Instance = CreateLogger(false);
-        VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
+        // create start up logger
+        LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
         RemoveClientProfileByTokenId(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
@@ -124,7 +119,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
         DefaultClientProfileId = DefaultClientProfileId,
         LastActiveClientProfileId = LastActiveClientProfileId,
-        LogExists = IsIdle && File.Exists(LogFilePath),
+        LogExists = IsIdle && File.Exists(LogService.LogFilePath),
         LastError = LastError,
         HasDiagnoseStarted = _hasDiagnoseStarted,
         HasDisconnectedByUser = _hasDisconnectedByUser,
@@ -218,42 +213,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _ = Connect(clientProfile.ClientProfileId);
     }
 
-    public string GetLogForReport()
-    {
-        var log = File.ReadAllText(LogFilePath);
-        return log;
-    }
-
-    private ILogger CreateLogger(bool addFileLogger)
-    {
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            // console
-            if (_logToConsole)
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.TimestampFormat = "[HH:mm:ss.ffff] ";
-                    configure.IncludeScopes = true;
-                    configure.SingleLine = false;
-                });
-
-            // file logger, close old stream
-            _streamLogger?.Dispose();
-            _streamLogger = null;
-            if (addFileLogger)
-            {
-                var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new StreamLogger(fileStream);
-                builder.AddProvider(_streamLogger);
-            }
-
-            builder.SetMinimumLevel(Settings.UserSettings.LogVerbose ? LogLevel.Trace : LogLevel.Information);
-        });
-
-        var logger = loggerFactory.CreateLogger("");
-        return new SyncLogger(logger);
-    }
-
     public void ClearLastError()
     {
         if (!IsIdle)
@@ -289,24 +248,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             _isConnecting = true;
             _hasConnectRequested = true;
             _hasDiagnoseStarted = diagnose;
-            VhLogger.IsDiagnoseMode |= diagnose; // never disable VhLogger.IsDiagnoseMode
             CheckConnectionStateChanged();
-
-            if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
-            var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
-            VhLogger.Instance = new FilterLogger(logger, eventId =>
-            {
-                if (eventId == GeneralEventId.Session) return true;
-                if (eventId == GeneralEventId.Tcp) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Ping) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.StreamProxyChannel) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.DatagramChannel) return true;
-                return true;
-            });
-
+            LogService.Start(Settings.UserSettings.Logging, diagnose);
+            
             // Set ActiveProfile
             ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
             DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
@@ -522,7 +466,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose client properly.");
             }
 
-            VhLogger.Instance = CreateLogger(false);
+            LogService.Stop();
         }
         finally
         {

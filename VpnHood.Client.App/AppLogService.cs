@@ -30,7 +30,7 @@ public class AppLogService
         VhLogger.IsAnonymousMode = logSettings.LogAnonymous;
         VhLogger.IsDiagnoseMode = diagnose | logSettings.LogVerbose;
         VhLogger.Instance = NullLogger.Instance;
-        VhLogger.Instance = CreateLogger(true, logSettings.LogToFile | diagnose, diagnose);
+        VhLogger.Instance = CreateLogger(logSettings.LogToFile | diagnose, diagnose, true);
     }
 
     public void Stop()
@@ -40,12 +40,9 @@ public class AppLogService
         VhLogger.IsDiagnoseMode = false;
     }
 
-    private ILogger CreateLogger(bool addToConsole, bool addFileLogger, bool verbose)
+    private ILogger CreateLogger(bool addFileLogger, bool verbose, bool removeLastFile)
     {
-        if (File.Exists(LogFilePath))
-            File.Delete(LogFilePath);
-
-        var logger = CreateLoggerInternal(addToConsole, addFileLogger, verbose);
+        var logger = CreateLoggerInternal(true, addFileLogger, verbose, removeLastFile);
         logger = new SyncLogger(logger);
         logger = new FilterLogger(logger, eventId =>
         {
@@ -64,11 +61,15 @@ public class AppLogService
         return logger;
     }
 
-    private ILogger CreateLoggerInternal(bool addToConsole, bool addToFile, bool verbose)
+    private ILogger CreateLoggerInternal(bool addToConsole, bool addToFile, bool verbose, bool deleteLastFile)
     {
         // file logger, close old stream
         _streamLogger?.Dispose();
         _streamLogger = null;
+
+        // delete last lgo
+        if (deleteLastFile && File.Exists(LogFilePath))
+            File.Delete(LogFilePath);
 
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
@@ -83,6 +84,7 @@ public class AppLogService
 
             if (addToFile)
             {
+
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 _streamLogger = new StreamLogger(fileStream);
                 builder.AddProvider(_streamLogger);

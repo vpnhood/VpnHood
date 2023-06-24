@@ -463,7 +463,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose client properly.");
+                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose the client properly.");
             }
 
             LogService.Stop();

@@ -394,9 +394,7 @@ internal static class TestHelper
         var appOptions = new AppOptions
         {
             AppDataPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
-            LogToConsole = true,
             SessionTimeout = TimeSpan.FromSeconds(2),
-            LogAnonymous = false
         };
         return appOptions;
     }
@@ -411,6 +409,8 @@ internal static class TestHelper
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
+        clientApp.UserSettings.Logging.LogAnonymous = false;
+        clientApp.UserSettings.Logging.LogVerbose = true;
 
         return clientApp;
     }

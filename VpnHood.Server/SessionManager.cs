@@ -246,6 +246,5 @@ public class SessionManager : IAsyncDisposable, IJob
         _disposed = true;
 
         await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask()));
-        await SyncSessions();
     }
 }

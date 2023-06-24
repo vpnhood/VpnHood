@@ -5,7 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Common;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.Settings;
 
 public class AppSettings
 {

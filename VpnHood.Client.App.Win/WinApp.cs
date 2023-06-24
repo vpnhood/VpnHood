@@ -71,7 +71,6 @@ public class WinApp : IDisposable
 
     public void Start(string[] args)
     {
-        const bool logToConsole = true;
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         _showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
         // Make single instance
@@ -110,7 +109,6 @@ public class WinApp : IDisposable
         // init app
         VpnHoodApp.Init(new WinAppProvider(), new AppOptions
         {
-            LogToConsole = logToConsole,
             AppDataPath = AppLocalDataPath,
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
         });

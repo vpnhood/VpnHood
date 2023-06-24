@@ -2,13 +2,11 @@
 using System.Linq;
 using VpnHood.Common.Net;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.Settings;
 
 public class UserSettings
 {
-    public bool LogToFile { get; set; } = false;
-    public bool LogVerbose { get; set; } = true;
-    // ReSharper disable once UnusedMember.Global
+    public AppLogSettings Logging { get; set; } = new();
     public string CultureName { get; set; } = "en";
     public Guid? DefaultClientProfileId { get; set; }
     public int MaxReconnectCount { get; set; } = 3;

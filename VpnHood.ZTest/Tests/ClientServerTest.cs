@@ -345,7 +345,7 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public async Task Restore_session_after_restarting_server()
+    public async Task Restore_session_after_restarting_server(int a)
     {
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
@@ -358,7 +358,9 @@ public class ClientServerTest
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // disconnect server
+        VhLogger.Instance.LogInformation("Test: Server 1 is disposeAsync...");
         await server.DisposeAsync();
+        VhLogger.Instance.LogInformation("Test: Server 1 is disposed.");
         try
         {
             await TestHelper.Test_Https();
@@ -371,11 +373,11 @@ public class ClientServerTest
         Assert.AreEqual(ClientState.Connecting, client.State);
 
         // recreate server and reconnect
+        VhLogger.Instance.LogInformation("Test: Server 2 is starting...");
         await using var server2 = TestHelper.CreateServer(testAccessServer);
         await TestHelper.Test_Https();
-
+        VhLogger.Instance.LogInformation("Test: Server 2 is shutting down...");
     }
-
 
     [TestMethod]
     public async Task Reset_tcp_connection_immediately_after_vpn_connected()

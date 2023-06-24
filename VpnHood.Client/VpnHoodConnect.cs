@@ -55,7 +55,7 @@ public class VpnHoodConnect : IAsyncDisposable
             throw new ObjectDisposedException($"{VhLogger.FormatType(this)} is disposed!");
 
         if (Client.State != ClientState.None && Client.State != ClientState.Disposed)
-            throw new InvalidOperationException("Connection is already in progress!");
+            throw new InvalidOperationException("Connection is already in progress.");
 
         if (Client.State == ClientState.Disposed)
             Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);
@@ -101,7 +101,16 @@ public class VpnHoodConnect : IAsyncDisposable
         }
     }
 
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore()
     {
         if (IsDisposed) return;
         IsDisposed = true;
@@ -124,5 +133,4 @@ public class VpnHoodConnect : IAsyncDisposable
         // notify state changed
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
-
 }

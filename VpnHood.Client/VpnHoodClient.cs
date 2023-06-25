@@ -54,7 +54,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly int _maxDatagramChannelCount;
     private readonly IPacketCapture _packetCapture;
     private readonly SendingPackets _sendingPacket = new();
-    private readonly TcpProxyHost _tcpProxyHost;
+    private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private readonly IPAddress? _dnsServerIpV4;
     private readonly IPAddress? _dnsServerIpV6;
@@ -146,7 +146,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
         // create proxy host
-        _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
+        _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -189,8 +189,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // create add add channel
         var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
-            new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"),
-            TunnelDefaults.TcpTimeout);
+            new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
         try { _proxyManager.AddChannel(bypassChannel); }
         catch { await bypassChannel.DisposeAsync(); throw; }
@@ -233,7 +232,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await ConnectInternal(_cancellationTokenSource.Token);
 
             // Create Tcp Proxy Host
-            _tcpProxyHost.Start();
+            _clientHost.Start();
 
             // Preparing device;
             if (!_packetCapture.Started) //make sure it is not a shared packet capture
@@ -277,8 +276,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Make sure CatcherAddress is included
         includeIpRanges = includeIpRanges.Concat(new[]
         {
-            new IpRange(_tcpProxyHost.CatcherAddressIpV4),
-            new IpRange(_tcpProxyHost.CatcherAddressIpV6)
+            new IpRange(_clientHost.CatcherAddressIpV4),
+            new IpRange(_clientHost.CatcherAddressIpV6)
         });
 
         _packetCapture.IncludeNetworks = includeIpRanges.Sort().ToIpNetworks().ToArray(); //sort and unify
@@ -387,7 +386,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets).Wait(_cancellationTokenSource.Token);
                 if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                 if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
-                if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets));
+                if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
             }
         }
         catch (Exception ex)
@@ -435,8 +434,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return true;
 
         // check tcp-loopback
-        if (ipAddress.Equals(_tcpProxyHost.CatcherAddressIpV4) ||
-            ipAddress.Equals(_tcpProxyHost.CatcherAddressIpV6))
+        if (ipAddress.Equals(_clientHost.CatcherAddressIpV4) ||
+            ipAddress.Equals(_clientHost.CatcherAddressIpV6))
             return true;
 
         // check the cache
@@ -897,8 +896,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
-        VhLogger.Instance.LogTrace("Disposing TcpProxyHost...");
-        _tcpProxyHost.Dispose();
+        VhLogger.Instance.LogTrace("Disposing ClientHost...");
+        _clientHost.Dispose();
 
         // Tunnel
         VhLogger.Instance.LogTrace("Disposing Tunnel...");

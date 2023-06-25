@@ -493,6 +493,7 @@ internal static class TestHelper
         TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
         VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         VhLogger.IsDiagnoseMode = true;
+        VhLogger.IsAnonymousMode = false;   
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
         NetFilter.Init(new[]

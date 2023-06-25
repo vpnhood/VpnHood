@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -23,11 +24,10 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-internal class ServerHost : IAsyncDisposable
+internal class ServerHost : IAsyncDisposable, IJob
 {
-    private readonly HashSet<IClientStream> _ongoingClientStreams = new();
+    private readonly HashSet<IClientStream> _clientStreams = new();
     private const int ServerProtocolVersion = 4;
-    private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
@@ -36,6 +36,7 @@ internal class ServerHost : IAsyncDisposable
     private Task? _startTask;
     private bool _disposed;
 
+    public JobSection JobSection { get; } = new();
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
@@ -47,6 +48,7 @@ internal class ServerHost : IAsyncDisposable
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
         _sessionManager = sessionManager;
+        JobRunner.Default.Add(this);
     }
 
     public void Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
@@ -154,10 +156,10 @@ internal class ServerHost : IAsyncDisposable
         }
 
         // dispose ongoing clientStreams
-        VhLogger.Instance.LogTrace("Disposing ongoing ClientStreams...");
+        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
         Task[] disposeTasks;
-        lock (_ongoingClientStreams)
-            disposeTasks = _ongoingClientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
+        lock (_clientStreams)
+            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
         await Task.WhenAll(disposeTasks);
 
         _startTask = null;
@@ -259,7 +261,7 @@ internal class ServerHost : IAsyncDisposable
     private async Task ProcessClient(TcpClient tcpClient, CancellationToken cancellationToken)
     {
         // add timeout to cancellationToken
-        using var timeoutCt = new CancellationTokenSource(_requestTimeout);
+        using var timeoutCt = new CancellationTokenSource(TunnelDefaults.TcpRequestTimeout);
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
 
@@ -273,6 +275,8 @@ internal class ServerHost : IAsyncDisposable
 
             // create client stream
             var clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken);
+            lock (_clientStreams) _clientStreams.Add(clientStream);
+
             try
             {
                 await ProcessClientStream(clientStream, cancellationToken);
@@ -304,6 +308,7 @@ internal class ServerHost : IAsyncDisposable
 
     private async Task ReuseClientStream(IClientStream clientStream)
     {
+        lock (_clientStreams) _clientStreams.Add(clientStream);
         using var timeoutCt = new CancellationTokenSource(TunnelDefaults.TcpReuseTimeout);
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
@@ -311,7 +316,6 @@ internal class ServerHost : IAsyncDisposable
         // don't add new client in disposing
         if (cancellationToken.IsCancellationRequested)
         {
-            lock (_ongoingClientStreams) _ongoingClientStreams.Add(clientStream);
             _ = clientStream.DisposeAsync(false, false);
             return;
         }
@@ -344,7 +348,6 @@ internal class ServerHost : IAsyncDisposable
         using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint)}");
         try
         {
-            lock (_ongoingClientStreams) _ongoingClientStreams.Add(clientStream);
             await ProcessRequest(clientStream, cancellationToken);
         }
         catch (SessionException ex)
@@ -393,8 +396,8 @@ internal class ServerHost : IAsyncDisposable
         }
         finally
         {
-            lock (_ongoingClientStreams)
-                _ongoingClientStreams.Remove(clientStream);
+            lock (_clientStreams)
+                _clientStreams.Remove(clientStream);
         }
     }
 
@@ -594,6 +597,15 @@ internal class ServerHost : IAsyncDisposable
         await session.ProcessTcpProxyRequest(clientStream, request, cancellationToken);
     }
 
+    public Task RunJob()
+    {
+        lock (_clientStreams)
+            foreach (var item in _clientStreams.Where(x => x.Disposed))
+                _clientStreams.Remove(item);
+
+        return Task.CompletedTask;
+    }
+
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
@@ -610,4 +622,5 @@ internal class ServerHost : IAsyncDisposable
 
         await Stop();
     }
+   
 }

@@ -79,7 +79,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                         VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
                 }
 
-                UdpEndPoints = _udpChannelTransmitters.Select(x => x.LocalEndPoint).ToArray();
+                UdpEndPoints = udpEndPoints;
             }
 
             //start TCPs

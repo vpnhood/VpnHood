@@ -130,8 +130,8 @@ public class Tunnel : IJob, IAsyncDisposable
 
             DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                "A DatagramChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
-                datagramChannel.ChannelId, DatagramChannels.Length);
+                "A DatagramChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}, ChannelType: {ChannelType}",
+                datagramChannel.ChannelId, DatagramChannels.Length, datagramChannel.GetType().Name);
 
             // remove additional Datagram channels
             while (DatagramChannels.Length > MaxDatagramChannelCount)

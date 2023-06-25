@@ -90,7 +90,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         if (State == ServerState.Waiting && _configureTask.IsCompleted)
         {
-            _configureTask = Configure();
+            _configureTask = Configure(); // configure does not throw any error
             await _configureTask;
         }
 
@@ -123,8 +123,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         // Configure
         State = ServerState.Waiting;
+        using var jobLock = JobSection.Enter();
         await RunJob();
-        JobSection.Leave();
     }
 
     private async Task Configure()
@@ -169,7 +169,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
-            _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
@@ -180,8 +179,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
 
             // starting the listeners
-            if (_serverHost.IsStarted && 
-                (!_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue) || 
+            if (_serverHost.IsStarted &&
+                (!_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue) ||
                  !_serverHost.UdpEndPoints.SequenceEqual(serverConfig.UdpEndPointsValue)))
             {
                 VhLogger.Instance.LogInformation("TcpEndPoints has changed. Stopping ServerHost...");
@@ -195,6 +194,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             }
 
             // set config status
+            _lastConfigCode = serverConfig.ConfigCode;
             State = ServerState.Ready;
 
             _lastConfigError = null;
@@ -347,7 +347,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         return 0;
     }
-    
+
     public void Dispose()
     {
         Task.Run(async () => await DisposeAsync(), CancellationToken.None)
@@ -373,8 +373,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation("Shutting down...");
 
         // wait for configuration
-        try { await _configureTask; }catch {/* no error */ }
-        try { await _sendStatusTask; }catch {/* no error*/ }
+        try { await _configureTask; } catch {/* no error */ }
+        try { await _sendStatusTask; } catch {/* no error*/ }
         await _serverHost.DisposeAsync(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync();
 

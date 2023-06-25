@@ -125,6 +125,7 @@ internal class ServerHost : IAsyncDisposable
         _sslCertificateManager.ClearCache();
 
         // UDPs
+        VhLogger.Instance.LogTrace("Disposing UdpChannelTransmitters...");
         lock (_udpChannelTransmitters)
         {
             foreach (var udpChannelClient in _udpChannelTransmitters)
@@ -133,6 +134,7 @@ internal class ServerHost : IAsyncDisposable
         }
 
         // TCPs
+        VhLogger.Instance.LogTrace("Disposing TcpListeners...");
         lock (_tcpListeners)
         {
             foreach (var tcpListener in _tcpListeners)
@@ -140,12 +142,7 @@ internal class ServerHost : IAsyncDisposable
             _tcpListeners.Clear();
         }
 
-        // dispose ongoing clientStreams
-        Task[] disposeTasks;
-        lock (_ongoingClientStreams)
-            disposeTasks = _ongoingClientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
-        await Task.WhenAll(disposeTasks);
-
+        VhLogger.Instance.LogTrace("Waiting for processing requests...");
         try
         {
             if (_startTask != null)
@@ -155,6 +152,13 @@ internal class ServerHost : IAsyncDisposable
         {
             VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
         }
+
+        // dispose ongoing clientStreams
+        VhLogger.Instance.LogTrace("Disposing ongoing ClientStreams...");
+        Task[] disposeTasks;
+        lock (_ongoingClientStreams)
+            disposeTasks = _ongoingClientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
+        await Task.WhenAll(disposeTasks);
 
         _startTask = null;
         IsStarted = false;
@@ -307,13 +311,18 @@ internal class ServerHost : IAsyncDisposable
         // don't add new client in disposing
         if (cancellationToken.IsCancellationRequested)
         {
-            await clientStream.DisposeAsync(false);
+            lock (_ongoingClientStreams) _ongoingClientStreams.Add(clientStream);
+            _ = clientStream.DisposeAsync(false, false);
             return;
         }
 
         // process incoming client
         try
         {
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                "ServerHost.ReuseClientStream: A shared ClientStream is pending for reuse. ClientStreamId: {ClientStreamId}",
+                clientStream.ClientStreamId);
+
             await ProcessClientStream(clientStream, cancellationToken);
 
             VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
@@ -585,7 +594,16 @@ internal class ServerHost : IAsyncDisposable
         await session.ProcessTcpProxyRequest(clientStream, request, cancellationToken);
     }
 
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore()
     {
         if (_disposed) return;
         _disposed = true;

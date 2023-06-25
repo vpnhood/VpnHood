@@ -4,6 +4,7 @@ using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
@@ -169,6 +170,7 @@ public class ServerTest
         await server.DisposeAsync();
 
         await using var server2 = TestHelper.CreateServer(testAccessServer);
+        VhLogger.Instance.LogInformation("Test: Sending another HTTP Request...");
         await TestHelper.Test_Https();
         Assert.AreEqual(ClientState.Connected, client.State);
         await client.DisposeAsync(); //dispose before server2

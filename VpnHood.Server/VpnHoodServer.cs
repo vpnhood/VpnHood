@@ -355,7 +355,16 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             .GetResult();
     }
 
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync()
+    {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore();
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore()
     {
         if (_disposed) return;
         _disposed = true;

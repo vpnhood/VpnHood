@@ -345,7 +345,7 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public async Task Restore_session_after_restarting_server(int a)
+    public async Task Restore_session_after_restarting_server()
     {
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);

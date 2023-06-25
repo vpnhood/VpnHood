@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling.Channels;
 
 namespace VpnHood.Tunneling.ClientStreams;
@@ -68,7 +69,24 @@ public class TcpClientStream : IClientStream
         }
     }
 
-    public async ValueTask DisposeAsync(bool allowReuse)
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true);
+    }
+
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
+    public async ValueTask DisposeAsync(bool allowReuse, bool graceful = true)
+    {
+        if (!graceful)
+            TcpClient.Dispose();
+
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore(allowReuse);
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore(bool allowReuse)
     {
         if (_disposed) return;
         _disposed = true;
@@ -102,12 +120,7 @@ public class TcpClientStream : IClientStream
         TcpClient.Dispose();
 
         VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
-            "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}", 
+            "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
             ClientStreamId);
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        return DisposeAsync(true);
     }
 }

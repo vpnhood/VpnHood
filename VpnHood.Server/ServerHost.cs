@@ -144,6 +144,13 @@ internal class ServerHost : IAsyncDisposable, IJob
             _tcpListeners.Clear();
         }
 
+        // dispose clientStreams
+        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
+        Task[] disposeTasks;
+        lock (_clientStreams)
+            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
+        await Task.WhenAll(disposeTasks);
+
         VhLogger.Instance.LogTrace("Waiting for processing requests...");
         try
         {
@@ -154,13 +161,6 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
         }
-
-        // dispose ongoing clientStreams
-        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
-        Task[] disposeTasks;
-        lock (_clientStreams)
-            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
-        await Task.WhenAll(disposeTasks);
 
         _startTask = null;
         IsStarted = false;

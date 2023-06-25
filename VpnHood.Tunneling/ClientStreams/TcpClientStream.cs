@@ -13,12 +13,12 @@ namespace VpnHood.Tunneling.ClientStreams;
 
 public class TcpClientStream : IClientStream
 {
-    public delegate Task ReuseCallback(IClientStream clientStream);
-
-    private bool _disposed;
     private readonly ReuseCallback? _reuseCallback;
     private string _clientStreamId;
 
+    public bool Disposed { get; private set; }
+    public delegate Task ReuseCallback(IClientStream clientStream);
+    
     public string ClientStreamId
     {
         get => _clientStreamId;
@@ -88,8 +88,8 @@ public class TcpClientStream : IClientStream
 
     private async ValueTask DisposeAsyncCore(bool allowReuse)
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Disposed) return;
+        Disposed = true;
 
         var httpStream = Stream as HttpStream;
         if (allowReuse && _reuseCallback != null && CheckIsAlive() && httpStream?.CanReuse == true)

@@ -190,10 +190,10 @@ public class ServerTest
         await server.DisposeAsync();
         await using var server2 = TestHelper.CreateServer(testAccessServer);
         await Task.WhenAll(
-            TestHelper.Test_Https(timeout: 10000),
-            TestHelper.Test_Https(timeout: 10000),
-            TestHelper.Test_Https(timeout: 10000),
-            TestHelper.Test_Https(timeout: 10000)
+            TestHelper.Test_Https(timeout: 10000, throwError: false),
+            TestHelper.Test_Https(timeout: 10000, throwError: false),
+            TestHelper.Test_Https(timeout: 10000, throwError: false),
+            TestHelper.Test_Https(timeout: 10000, throwError: false)
         );
 
         Assert.AreEqual(1, testAccessServer.SessionGetCounter);

@@ -294,7 +294,7 @@ public class ClientServerTest
         await server.DisposeAsync();
         try
         {
-            await TestHelper.Test_Https();
+            await TestHelper.Test_Https(timeout: 3000);
         }
         catch
         {
@@ -304,7 +304,7 @@ public class ClientServerTest
         Thread.Sleep(1000);
         try
         {
-            await TestHelper.Test_Https();
+            await TestHelper.Test_Https(timeout: 3000);
         }
         catch
         {
@@ -312,6 +312,7 @@ public class ClientServerTest
         }
 
         await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
+        await client.DisposeAsync();
     }
 
     [TestMethod]

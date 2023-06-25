@@ -18,7 +18,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
-internal class TcpProxyHost : IDisposable
+internal class ClientHost : IDisposable
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -31,7 +31,7 @@ internal class TcpProxyHost : IDisposable
     public IPAddress CatcherAddressIpV4 { get; }
     public IPAddress CatcherAddressIpV6 { get; }
 
-    public TcpProxyHost(VpnHoodClient client, IPAddress catcherAddressIpV4, IPAddress catcherAddressIpV6)
+    public ClientHost(VpnHoodClient client, IPAddress catcherAddressIpV4, IPAddress catcherAddressIpV6)
     {
         Client = client ?? throw new ArgumentNullException(nameof(client));
         CatcherAddressIpV4 = catcherAddressIpV4 ?? throw new ArgumentNullException(nameof(catcherAddressIpV4));
@@ -50,9 +50,9 @@ internal class TcpProxyHost : IDisposable
 
     public void Start()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
-        using var logScope = VhLogger.Instance.BeginScope("TcpProxyHost");
-        VhLogger.Instance.LogInformation("Starting TcpProxyHost...");
+        if (_disposed) throw new ObjectDisposedException(nameof(ClientHost));
+        using var logScope = VhLogger.Instance.BeginScope("ClientHost");
+        VhLogger.Instance.LogInformation("Starting ClientHost...");
 
         // IpV4
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
@@ -97,7 +97,7 @@ internal class TcpProxyHost : IDisposable
         }
         finally
         {
-            VhLogger.Instance.LogInformation("TcpProxyHost Listener has been closed. LocalEp: {localEp}", localEp);
+            VhLogger.Instance.LogInformation("ClientHost Listener has been closed. LocalEp: {localEp}", localEp);
         }
     }
 
@@ -121,7 +121,7 @@ internal class TcpProxyHost : IDisposable
             try
             {
                 if (ipPacket.Protocol != ProtocolType.Tcp)
-                    throw new InvalidOperationException($"{typeof(TcpProxyHost)} can not handle {ipPacket.Protocol} packets!");
+                    throw new InvalidOperationException($"{typeof(ClientHost)} can not handle {ipPacket.Protocol} packets!");
 
                 // extract tcpPacket
                 var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
@@ -172,7 +172,7 @@ internal class TcpProxyHost : IDisposable
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "TcpProxyHost: Error in processing packet.");
+                VhLogger.Instance.LogError(ex, "ClientHost: Error in processing packet.");
             }
         }
 
@@ -250,7 +250,7 @@ internal class TcpProxyHost : IDisposable
                     request.CipherKey, null, request.CipherLength);
             }
 
-            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, TunnelDefaults.TcpTimeout);
+            channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             Client.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)

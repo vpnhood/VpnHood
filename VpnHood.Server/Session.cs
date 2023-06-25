@@ -37,7 +37,6 @@ public class Session : IAsyncDisposable, IJob
     private readonly int? _tcpBufferSize;
     private readonly int? _tcpKernelSendBufferSize;
     private readonly int? _tcpKernelReceiveBufferSize;
-    private readonly TimeSpan _tcpTimeout;
     private readonly long _syncCacheSize;
     private readonly TimeSpan _tcpConnectTimeout;
     private readonly TrackingOptions _trackingOptions;
@@ -93,7 +92,6 @@ public class Session : IAsyncDisposable, IJob
         _tcpKernelSendBufferSize = options.TcpKernelSendBufferSize;
         _tcpKernelReceiveBufferSize = options.TcpKernelReceiveBufferSize;
         _syncCacheSize = options.SyncCacheSizeValue;
-        _tcpTimeout = options.TcpTimeoutValue;
         _tcpConnectTimeout = options.TcpConnectTimeoutValue;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -376,8 +374,7 @@ public class Session : IAsyncDisposable, IJob
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
 
-            streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
-                _tcpTimeout, _tcpBufferSize, _tcpBufferSize);
+            streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream, _tcpBufferSize, _tcpBufferSize);
 
             Tunnel.AddChannel(streamProxyChannel);
         }

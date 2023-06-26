@@ -124,7 +124,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         // Configure
         State = ServerState.Waiting;
         using var jobLock = JobSection.Enter();
-        await RunJob();
+        if (jobLock.IsEntered)
+            await RunJob();
     }
 
     private async Task Configure()

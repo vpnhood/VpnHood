@@ -1,4 +1,4 @@
-# Upcoming
+# v3.0.380
 ### Client
 * Feature: Client Protocol Version 4 
 * Feature: HTTP Tunnel (partially)

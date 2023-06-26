@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,6 +16,15 @@ public class AccessTest
     [TestMethod]
     public async Task Foo()
     {
+        Console.WriteLine(RuntimeInformation.OSDescription);
+        Console.WriteLine(Environment.OSVersion.Platform);
+        Console.WriteLine(RuntimeInformation.RuntimeIdentifier);
+        Console.WriteLine(RuntimeInformation.OSArchitecture);
+        Console.WriteLine(RuntimeInformation.ProcessArchitecture);
+        Console.WriteLine(Environment.OSVersion.Version.ToString(3));
+
+        
+
         var cancellationTokenSource = new CancellationTokenSource(1000);
         await Task.WhenAny(Task.Delay(10000, cancellationTokenSource.Token));
     }

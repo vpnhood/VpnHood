@@ -36,7 +36,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     private Task? _startTask;
     private bool _disposed;
 
-    public JobSection JobSection { get; } = new();
+    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
@@ -600,8 +600,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public Task RunJob()
     {
         lock (_clientStreams)
-            foreach (var item in _clientStreams.Where(x => x.Disposed))
-                _clientStreams.Remove(item);
+            _clientStreams.RemoveWhere(x => x.Disposed);
 
         return Task.CompletedTask;
     }

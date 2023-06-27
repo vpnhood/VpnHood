@@ -33,13 +33,15 @@ public class ProjectTest
         //-----------
         var updateParams = new ProjectUpdateParams
         {
-            GoogleAnalyticsTrackId = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
             ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() },
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         var project1C = await projectsClient.GetAsync(projectId);
         Assert.AreEqual(projectId, project1C.ProjectId);
-        Assert.AreEqual(project1C.GoogleAnalyticsTrackId, updateParams.GoogleAnalyticsTrackId.Value);
+        Assert.AreEqual(project1C.GaMeasurementId, updateParams.GaMeasurementId.Value);
+        Assert.AreEqual(project1C.GaApiSecret, updateParams.GaApiSecret.Value);
         Assert.AreEqual(project1C.ProjectName, updateParams.ProjectName.Value);
 
         //-----------
@@ -47,11 +49,13 @@ public class ProjectTest
         //-----------
         updateParams = new ProjectUpdateParams
         {
-            GoogleAnalyticsTrackId = new PatchOfString { Value = "12345" },
+            GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         project1C = await projectsClient.GetAsync(projectId);
-        Assert.AreEqual(project1C.GoogleAnalyticsTrackId, updateParams.GoogleAnalyticsTrackId.Value);
+        Assert.AreEqual(project1C.GaMeasurementId, updateParams.GaMeasurementId.Value);
+        Assert.AreEqual(project1C.GaApiSecret, updateParams.GaApiSecret.Value);
 
 
         //-----------

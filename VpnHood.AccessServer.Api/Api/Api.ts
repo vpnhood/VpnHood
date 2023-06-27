@@ -4494,7 +4494,8 @@ export class Project implements IProject {
     projectName?: string | undefined;
     createdTime!: Date;
     subscriptionType!: SubscriptionType;
-    googleAnalyticsTrackId?: string | undefined;
+    gaMeasurementId?: string | undefined;
+    gaApiSecret?: string | undefined;
 
     constructor(data?: IProject) {
         if (data) {
@@ -4511,7 +4512,8 @@ export class Project implements IProject {
             this.projectName = _data["projectName"];
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>undefined;
             this.subscriptionType = _data["subscriptionType"];
-            this.googleAnalyticsTrackId = _data["googleAnalyticsTrackId"];
+            this.gaMeasurementId = _data["gaMeasurementId"];
+            this.gaApiSecret = _data["gaApiSecret"];
         }
     }
 
@@ -4528,7 +4530,8 @@ export class Project implements IProject {
         data["projectName"] = this.projectName;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>undefined;
         data["subscriptionType"] = this.subscriptionType;
-        data["googleAnalyticsTrackId"] = this.googleAnalyticsTrackId;
+        data["gaMeasurementId"] = this.gaMeasurementId;
+        data["gaApiSecret"] = this.gaApiSecret;
         return data;
     }
 }
@@ -4538,7 +4541,8 @@ export interface IProject {
     projectName?: string | undefined;
     createdTime: Date;
     subscriptionType: SubscriptionType;
-    googleAnalyticsTrackId?: string | undefined;
+    gaMeasurementId?: string | undefined;
+    gaApiSecret?: string | undefined;
 }
 
 export enum SubscriptionType {
@@ -4548,7 +4552,8 @@ export enum SubscriptionType {
 
 export class ProjectUpdateParams implements IProjectUpdateParams {
     projectName?: PatchOfString | undefined;
-    googleAnalyticsTrackId?: PatchOfString | undefined;
+    gaMeasurementId?: PatchOfString | undefined;
+    gaApiSecret?: PatchOfString | undefined;
     maxTcpCount?: PatchOfInteger | undefined;
 
     constructor(data?: IProjectUpdateParams) {
@@ -4563,7 +4568,8 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
     init(_data?: any) {
         if (_data) {
             this.projectName = _data["projectName"] ? PatchOfString.fromJS(_data["projectName"]) : <any>undefined;
-            this.googleAnalyticsTrackId = _data["googleAnalyticsTrackId"] ? PatchOfString.fromJS(_data["googleAnalyticsTrackId"]) : <any>undefined;
+            this.gaMeasurementId = _data["gaMeasurementId"] ? PatchOfString.fromJS(_data["gaMeasurementId"]) : <any>undefined;
+            this.gaApiSecret = _data["gaApiSecret"] ? PatchOfString.fromJS(_data["gaApiSecret"]) : <any>undefined;
             this.maxTcpCount = _data["maxTcpCount"] ? PatchOfInteger.fromJS(_data["maxTcpCount"]) : <any>undefined;
         }
     }
@@ -4578,7 +4584,8 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["projectName"] = this.projectName ? this.projectName.toJSON() : <any>undefined;
-        data["googleAnalyticsTrackId"] = this.googleAnalyticsTrackId ? this.googleAnalyticsTrackId.toJSON() : <any>undefined;
+        data["gaMeasurementId"] = this.gaMeasurementId ? this.gaMeasurementId.toJSON() : <any>undefined;
+        data["gaApiSecret"] = this.gaApiSecret ? this.gaApiSecret.toJSON() : <any>undefined;
         data["maxTcpCount"] = this.maxTcpCount ? this.maxTcpCount.toJSON() : <any>undefined;
         return data;
     }
@@ -4586,7 +4593,8 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
 
 export interface IProjectUpdateParams {
     projectName?: PatchOfString | undefined;
-    googleAnalyticsTrackId?: PatchOfString | undefined;
+    gaMeasurementId?: PatchOfString | undefined;
+    gaApiSecret?: PatchOfString | undefined;
     maxTcpCount?: PatchOfInteger | undefined;
 }
 

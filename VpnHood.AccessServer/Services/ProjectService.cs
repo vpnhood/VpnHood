@@ -134,7 +134,8 @@ public class ProjectService
         var project = await _vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
 
         if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
-        if (updateParams.GoogleAnalyticsTrackId != null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
+        if (updateParams.GaMeasurementId != null) project.GaMeasurementId = updateParams.GaMeasurementId;
+        if (updateParams.GaApiSecret != null) project.GaApiSecret = updateParams.GaApiSecret;
         await _vhContext.SaveChangesAsync();
         await _agentCacheClient.InvalidateProject(projectId);
 

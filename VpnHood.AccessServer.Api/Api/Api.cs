@@ -7596,10 +7596,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public SubscriptionType SubscriptionType { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("googleAnalyticsTrackId")]
+        [System.Text.Json.Serialization.JsonPropertyName("gaMeasurementId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? GoogleAnalyticsTrackId { get; set; } = default!;
+        public string? GaMeasurementId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gaApiSecret")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? GaApiSecret { get; set; } = default!;
 
     }
 
@@ -7624,10 +7629,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfString? ProjectName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("googleAnalyticsTrackId")]
+        [System.Text.Json.Serialization.JsonPropertyName("gaMeasurementId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfString? GoogleAnalyticsTrackId { get; set; } = default!;
+        public PatchOfString? GaMeasurementId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("gaApiSecret")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfString? GaApiSecret { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTcpCount")]
 

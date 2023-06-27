@@ -273,7 +273,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         var vhToken = Token.FromAccessKey(accessKey);
 
         var secret = vhToken.Secret;
-        var sessionRequestEx = new SessionRequestEx(
+        var sessionRequestEx = new SessionRequestEx(string.Empty, 
             accessToken.AccessTokenId,
             clientInfo,
             VhUtil.EncryptClientId(clientInfo.ClientId, secret),

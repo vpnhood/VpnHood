@@ -11,7 +11,8 @@ public static class ProjectConverter
         {
             ProjectId = model.ProjectId,
             ProjectName = model.ProjectName,
-            GoogleAnalyticsTrackId = model.GaTrackId,
+            GaApiSecret = model.GaApiSecret,
+            GaMeasurementId = model.GaMeasurementId,
             SubscriptionType = model.SubscriptionType,
             CreatedTime = model.CreatedTime
         };

@@ -1,13 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.AccessServer.Test.Helper;
 using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
 
 namespace VpnHood.AccessServer.Test.Tests;

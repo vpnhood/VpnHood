@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Security.Authentication;
+using Ga4.Ga4Tracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -8,9 +9,9 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
+using System.Text.RegularExpressions;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -36,47 +37,44 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(ServerModel serverModel, DeviceModel device, string serverFarmName, string accessTokenName)
+    private static async Task TrackUsage(ulong sessionId, ServerModel server, AccessTokenModel accessToken, DeviceModel device, Traffic traffic)
     {
-        var project = serverModel.Project;
-        if (string.IsNullOrEmpty(project?.GaTrackId))
+        var project = server.Project;
+        if (project == null)
             return;
 
-        var analyticsTracker = new GoogleAnalyticsTracker(project.GaTrackId, device.DeviceId.ToString(),
-            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
-        {
-            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
-        };
-
-        var trackData = new TrackData($"{serverFarmName}/{accessTokenName}", accessTokenName);
-        await analyticsTracker.Track(trackData);
-    }
-
-    private static async Task TrackUsage(ServerModel serverModel, AccessTokenModel accessTokenModel, DeviceModel device, Traffic traffic)
-    {
-        var project = serverModel.Project;
-        if (string.IsNullOrEmpty(project?.GaTrackId))
+        if (string.IsNullOrEmpty(project.GaMeasurementId) || string.IsNullOrEmpty(project.GaApiSecret))
             return;
 
-        var analyticsTracker = new GoogleAnalyticsTracker(project.GaTrackId, device.DeviceId.ToString(),
-            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
+        // check isMobile from agent
+        var mobileRegex = new Regex(@"(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino",
+            RegexOptions.IgnoreCase);
+        var isMobile = !string.IsNullOrEmpty(device.UserAgent) && mobileRegex.IsMatch(device.UserAgent);
+
+        var ga4Tracker = new Ga4Tracker
         {
-            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null
+            MeasurementId = project.GaMeasurementId,
+            ApiSecret = project.GaApiSecret,
+            UserAgent = device.UserAgent ?? "",
+            ClientId = device.ClientId.ToString(),
+            SessionId = sessionId.ToString(),
+            UserId = accessToken.AccessTokenId.ToString(),
+            IsMobile = isMobile
         };
 
-        var trafficValue = traffic.Total * 2 / 1000000;
-        var accessTokenName = string.IsNullOrEmpty(accessTokenModel.AccessTokenName) ? accessTokenModel.AccessTokenId.ToString() : accessTokenModel.AccessTokenName;
-        var groupName = accessTokenModel.ServerFarm?.ServerFarmName ?? accessTokenModel.ServerFarmId.ToString();
-        var serverName = string.IsNullOrEmpty(serverModel.ServerName) ? serverModel.ServerId.ToString() : serverModel.ServerName;
-        var trackDatas = new TrackData[]
+        var ga4Event = new Ga4Event
         {
-            new ("Usage", "GroupUsage", groupName, trafficValue),
-            new ("Usage", "AccessTokenModel", accessTokenName, trafficValue),
-            new ("Usage", "ServerUsage", serverName, trafficValue),
-            new ("Usage", "Device", device.DeviceId.ToString(), trafficValue)
+            Name = "Usage",
+            Parameters = new Dictionary<string, object>()
+            {
+                {"FarmId", server.ServerFarmId},
+                {"DeviceId", device.DeviceId},
+                {"TokenId", accessToken.AccessTokenId},
+                {"Traffic", traffic.Total * 2 / 1_000_000},
+            }
         };
 
-        await analyticsTracker.Track(trackDatas);
+        await ga4Tracker.Send(ga4Event);
     }
 
     private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
@@ -261,7 +259,6 @@ public class SessionService
         await _cacheService.AddSession(session);
         _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.SessionId);
 
-        _ = TrackSession(server, device, accessToken.ServerFarm!.ServerFarmName, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }
@@ -376,17 +373,17 @@ public class SessionService
         };
     }
 
-    public async Task<SessionResponseBase> AddUsage(ServerModel serverModel, uint sessionId, Traffic traffic, bool closeSession)
+    public async Task<SessionResponseBase> AddUsage(ServerModel server, uint sessionId, Traffic traffic, bool closeSession)
     {
         // temp for server bug
         // LogWarning should be reported
         SessionModel session;
-        try { session = await _cacheService.GetSession(serverModel.ServerId, sessionId); }
+        try { session = await _cacheService.GetSession(server.ServerId, sessionId); }
         catch
         {
             _logger.LogWarning(AccessEventId.Session,
                 "VpnServer tries to add usage to a session usage that does not exists. SessionId: {SessionId}, ServerId: {ServerId}",
-                sessionId, serverModel.ServerId);
+                sessionId, server.ServerId);
 
             // todo: temporary for servers less or equal than v2.4.321
             return new SessionResponseBase(SessionErrorCode.SessionClosed);
@@ -397,7 +394,7 @@ public class SessionService
         var accessedTime = DateTime.UtcNow;
 
         // check projectId
-        if (accessToken.ProjectId != serverModel.ProjectId)
+        if (accessToken.ProjectId != server.ProjectId)
             throw new AuthenticationException();
 
         // update access if session is open
@@ -425,13 +422,13 @@ public class SessionService
             CreatedTime = DateTime.UtcNow,
             AccessId = session.AccessId,
             SessionId = session.SessionId,
-            ProjectId = serverModel.ProjectId,
-            ServerId = serverModel.ServerId,
+            ProjectId = server.ProjectId,
+            ServerId = server.ServerId,
             AccessTokenId = accessToken.AccessTokenId,
             ServerFarmId = accessToken.ServerFarmId,
         });
 
-        _ = TrackUsage(serverModel, accessToken, session.Device!, traffic);
+        _ = TrackUsage(sessionId, server, accessToken, session.Device!, traffic);
 
         // build response
         var sessionResponse = await BuildSessionResponse(session, accessedTime);

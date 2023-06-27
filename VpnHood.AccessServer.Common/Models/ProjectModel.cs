@@ -6,7 +6,8 @@ public class ProjectModel
 {
     public Guid ProjectId { get; set; }
     public string? ProjectName { get; set; }
-    public string? GaTrackId { get; set; }
+    public string? GaMeasurementId { get; set; }
+    public string? GaApiSecret { get; set; }
     public SubscriptionType SubscriptionType { get; set; }
     public DateTime CreatedTime { get; set; }
 

@@ -24,8 +24,8 @@
 
   <ItemGroup>
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="System.Text.Json" Version="7.0.2" />
-    <PackageReference Include="VpnHood.Common" Version="2.9.371" />
+    <PackageReference Include="System.Text.Json" Version="7.0.3" />
+    <PackageReference Include="VpnHood.Common" Version="3.0.380-prerelease" />
   </ItemGroup>
 
 </Project>

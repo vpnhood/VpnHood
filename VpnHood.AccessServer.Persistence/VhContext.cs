@@ -58,7 +58,10 @@ public class VhContext : DbContext
         {
             entity.HasKey(e => e.ProjectId);
 
-            entity.Property(e => e.GaTrackId)
+            entity.Property(e => e.GaMeasurementId)
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.GaApiSecret)
                 .HasMaxLength(50);
 
             entity.Property(e => e.ProjectName)

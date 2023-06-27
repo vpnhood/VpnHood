@@ -39,4 +39,5 @@ public class HelloSessionResponse : SessionResponse
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
+    public string? GaMeasurementId { get; init;}
 }

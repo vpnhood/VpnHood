@@ -520,6 +520,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             ServerSecret = _sessionManager.ServerSecret,
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
+            Ga4MeasurementId = sessionResponse.GaMeasurementId,
             UdpKey = request.UseUdpChannel2 ? sessionResponse.SessionKey : session.UdpChannel?.Key,
             UdpPort = session.UdpChannel?.LocalPort ?? 0,
             ServerVersion = _sessionManager.ServerVersion,

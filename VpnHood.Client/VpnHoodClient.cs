@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -655,6 +654,23 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ServerVersion: {sessionResponse.ServerVersion}, " +
                 $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
+
+            // Track new session
+            if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
+            {
+                var ga4Tracking = new Ga4.Ga4Tracking.Ga4Tracker
+                {
+                    ApiSecret = string.Empty,
+                    ClientId = ClientId.ToString(),
+                    SessionId = SessionId.ToString(),
+                    IsMobile = true,
+                    MeasurementId = sessionResponse.GaMeasurementId,
+                    IsEnabled = true,
+                    UserId = Token.TokenId.ToString(),
+                    UserAgent = "VpnHoodClient/" + Version,
+                };
+                await ga4Tracking.SendGTag(new Ga4.Ga4Tracking.Ga4TagParam { AppName = "VpnHoodClient", EventName = "session_start" });
+            }
 
             // get session id
             SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");

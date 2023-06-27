@@ -14,8 +14,8 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.Tunneling</Product>
     <Description>Provides tunnelling classes and protocols shared between VpnHood.Client and VpnHood.Server.</Description>
-    <Version>3.0.380</Version>
-    <AssemblyVersion>3.0.380</AssemblyVersion>
+    <Version>3.0.381</Version>
+    <AssemblyVersion>3.0.381</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

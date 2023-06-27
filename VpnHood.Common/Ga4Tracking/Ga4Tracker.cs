@@ -88,15 +88,14 @@ public class Ga4Tracker
             ("sid", SessionId), // Session Id
             ("sct", 1), // Session Count
             ("seg", 1), // Session Engagement. If the current user is engaged in any way, this value will be 1
-            //("dl", tagParam.DocumentLocation), // document location
-            //("dt", tagParam.DocumentTitle), // document title
             ("en", tagParam.EventName), // event name
             ("_ee", "1"), // External Event
-            ("_dbg", IsDebug ? 1 : 0), // Analytics debug view
         };
 
-        if (UserId != null)
-            parameters.Add(("uid", UserId));
+        if (UserId != null) parameters.Add(("uid", UserId));
+        if (tagParam.DocumentLocation != null) parameters.Add(("dl", tagParam.DocumentLocation)); // Document Location
+        if (tagParam.DocumentTitle != null) parameters.Add(("dt", tagParam.DocumentTitle)); // Document Title
+        if (IsDebug) parameters.Add(("_dbg", 1)); // Analytics debug view
 
         var url = new Uri(
             "https://www.google-analytics.com/g/collect?" +

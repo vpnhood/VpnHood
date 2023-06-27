@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 // ReSharper disable once CheckNamespace
@@ -19,16 +19,18 @@ public class Ga4Tracker
 
     public required string MeasurementId { get; init; }
     public required string ApiSecret { get; init; }
-    public required bool IsMobile { get; init; }
     public required string SessionId { get; set; }
     public long SessionEngagementId { get; set; } = 1000;
     public string UserAgent { get; init; } = Environment.OSVersion.ToString().Replace(" ", "");
     public required string ClientId { get; init; }
     public string? UserId { get; init; }
     public bool IsEnabled { get; set; } = true;
-    public Dictionary<string, object> UserParameters { get; } = new();
-    public IPAddress? IpAddress { get; set; }
     public bool IsDebug { get; set; }
+    public Dictionary<string, object> UserParameters { get; } = new();
+    public bool? IsMobile { get; init; } // GTag only
+    public required string AppName { get; init; }
+    public required string AppVersion { get; init; }
+
 
     private static string GetPlatform()
     {
@@ -44,9 +46,26 @@ public class Ga4Tracker
         return "Unknown";
     }
 
-    private static long _eventSequenceNumber = 1;
-    public Task SendGTag(Ga4TagParam tagParam)
+    private static bool CheckIsMobileByUserAgent(string? userAgent)
     {
+        if (string.IsNullOrEmpty(userAgent))
+            return false;
+
+        // check isMobile from agent
+        var mobileRegex = new Regex(
+            @"(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino",
+            RegexOptions.IgnoreCase);
+
+        var isMobile = !string.IsNullOrEmpty(userAgent) && mobileRegex.IsMatch(userAgent);
+        return isMobile;
+    }
+
+    private static long _eventSequenceNumber = 1;
+    public Task TrackByGTag(Ga4TagParam tagParam)
+    {
+        if (!IsEnabled) return Task.CompletedTask;
+        var isMobile = IsMobile ?? CheckIsMobileByUserAgent(UserAgent);
+
         // ReSharper disable StringLiteralTypo
         var parameters = new List<(string, object)>
         {
@@ -59,8 +78,8 @@ public class Ga4Tracker
             //("sr", "1024x768"), //screen resolution 
             ("uaa", RuntimeInformation.ProcessArchitecture.ToString().ToLower()), //User Agent Architecture
             ("uab", Environment.Is64BitOperatingSystem ? "x64" : "x86"), //User Agent Bits
-            ("uafvl", tagParam.AppName), // Not.A%252FBrand%3B8.0.0.0%7CChromium%3B114.0.5735.134%7CGoogle%2520Chrome%3B114.0.5735.134  //User Agent Bits
-            ("uamb", IsMobile ? 1 : 0), // User Agent Mobile
+            ("uafvl", $"{AppName} {AppVersion}"), // Not.A%252FBrand%3B8.0.0.0%7CChromium%3B114.0.5735.134%7CGoogle%2520Chrome%3B114.0.5735.134  // User Agent Full Version List
+            ("uamb", isMobile ? 1 : 0), // User Agent Mobile
             ("uam", ""), // User Agent Model. The device model on which the browser is running. Will likely be empty for desktop browsers, Example "Nexus 6"
             ("uap", GetPlatform()), // User Agent Mobile
             ("uapv", Environment.OSVersion.Version.ToString(3)), //User Agent Platform Version, The version of the operating system on which the user agent is running, "14.0.0"
@@ -91,18 +110,18 @@ public class Ga4Tracker
     }
 
 
-    public Task Send(Ga4Event ga4Event)
+    public Task Track(Ga4Event ga4Event)
     {
         var tracks = new[] { ga4Event };
-        return Send(tracks);
+        return Track(tracks);
     }
 
-    public async Task Send(IEnumerable<Ga4Event> ga4Events)
+    public async Task Track(IEnumerable<Ga4Event> ga4Events)
     {
         if (!IsEnabled) return;
         var gaEventArray = ga4Events.Select(x => (Ga4Event)x.Clone()).ToArray();
         if (!gaEventArray.Any()) throw new ArgumentException("Events can not be empty! ", nameof(ga4Events));
-        
+
         // updating events by default values
         foreach (var ga4Event in gaEventArray)
         {
@@ -112,7 +131,7 @@ public class Ga4Tracker
             if (!string.IsNullOrEmpty(SessionId) && !ga4Event.Parameters.TryGetValue("session_id", out _))
                 ga4Event.Parameters.Add("session_id", SessionId);
 
-            if (SessionEngagementId !=0 && !ga4Event.Parameters.TryGetValue("engagement_time_msec", out _))
+            if (SessionEngagementId != 0 && !ga4Event.Parameters.TryGetValue("engagement_time_msec", out _))
                 ga4Event.Parameters.Add("engagement_time_msec", SessionEngagementId);
         }
 

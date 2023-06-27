@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.ConnectorServices;
@@ -658,18 +659,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Track new session
             if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
             {
-                var ga4Tracking = new Ga4.Ga4Tracking.Ga4Tracker
+                var ga4Tracking = new Ga4Tracker
                 {
+                    AppName = "VpnHoodClient",
+                    AppVersion = Version.ToString(3),
+                    MeasurementId = sessionResponse.GaMeasurementId,
                     ApiSecret = string.Empty,
                     ClientId = ClientId.ToString(),
                     SessionId = SessionId.ToString(),
-                    IsMobile = true,
-                    MeasurementId = sessionResponse.GaMeasurementId,
-                    IsEnabled = true,
                     UserId = Token.TokenId.ToString(),
-                    UserAgent = "VpnHoodClient/" + Version,
+                    UserAgent = UserAgent,
                 };
-                await ga4Tracking.SendGTag(new Ga4.Ga4Tracking.Ga4TagParam { AppName = "VpnHoodClient", EventName = "session_start" });
+                await ga4Tracking.TrackByGTag(new Ga4TagParam { EventName = Ga4TagEvents.SessionStart });
             }
 
             // get session id

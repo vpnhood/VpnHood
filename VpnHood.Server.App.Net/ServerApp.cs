@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Ga4.Ga4Tracking;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -9,7 +10,6 @@ using NLog.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.App.SystemInformation;
 using VpnHood.Server.Providers.FileAccessServerProvider;
@@ -26,15 +26,15 @@ public class ServerApp : IDisposable
     private const string FileNameAppCommand = "appcommand";
     private const string FolderNameStorage = "storage";
     private const string FolderNameInternal = "internal";
-    private readonly GoogleAnalyticsTracker _googleAnalytics;
+    private readonly Ga4Tracker _gaTracker;
     private readonly CommandListener _commandListener;
     private VpnHoodServer? _vpnHoodServer;
     private FileStream? _lockStream;
     private bool _disposed;
 
-    public string AppName => "VpnHoodServer";
+    public static string AppName => "VpnHoodServer";
     public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
-    public string AppVersion => typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "*";
+    public static string AppVersion => typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "*";
     public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();
     public string InternalStoragePath { get; }
@@ -80,13 +80,16 @@ public class ServerApp : IDisposable
 
         // tracker
         var anonyClientId = GetServerId(InternalStoragePath).ToString();
-        _googleAnalytics = new GoogleAnalyticsTracker(
-            "UA-183010362-1",
-            anonyClientId,
-            typeof(ServerApp).Assembly.GetName().Name ?? "VpnHoodServer",
-            typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "x")
+        _gaTracker = new Ga4Tracker
         {
-            IsEnabled = AppSettings.IsAnonymousTrackerEnabled
+            // ReSharper disable once StringLiteralTypo
+            MeasurementId = "G-9SWLGEX6BT",
+            ApiSecret = string.Empty,
+            AppName = typeof(ServerApp).Assembly.GetName().Name ?? "VpnHoodServer",
+            AppVersion = AppVersion,
+            ClientId = anonyClientId,
+            SessionId = Guid.NewGuid().ToString(),
+            IsEnabled = AppSettings.IsAnonymousTrackerEnabled,
         };
 
         // create access server
@@ -112,7 +115,7 @@ public class ServerApp : IDisposable
         }
         else
         {
-            VhLogger.Instance.LogWarning($"Could not find NLog file. {configFilePath}");
+            VhLogger.Instance.LogWarning("Could not find NLog file. ConfigFilePath: {configFilePath}", configFilePath);
         }
     }
 
@@ -241,14 +244,14 @@ public class ServerApp : IDisposable
             // run server
             _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions
             {
-                Tracker = _googleAnalytics,
+                GaTracker = _gaTracker,
                 SystemInfoProvider = systemInfoProvider,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig
             });
 
             // track
-            _ = _googleAnalytics.TrackEvent("Usage", "ServerRun");
+            _ = _gaTracker.TrackByGTag(new Ga4TagParam{EventName = Ga4TagEvents.SessionStart});
 
             // Command listener
             _commandListener.Start();

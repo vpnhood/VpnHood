@@ -3,12 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
@@ -23,7 +23,7 @@ public class SessionManager : IAsyncDisposable, IJob
 {
     private readonly IAccessServer _accessServer;
     private readonly SocketFactory _socketFactory;
-    private readonly ITracker? _tracker;
+    private readonly Ga4Tracker? _ga4Tracker;
     private bool _disposed;
 
     public INetFilter NetFilter { get; }
@@ -37,12 +37,12 @@ public class SessionManager : IAsyncDisposable, IJob
     public SessionManager(IAccessServer accessServer,
         INetFilter netFilter,
         SocketFactory socketFactory,
-        ITracker? tracker)
+        Ga4Tracker? ga4Tracker)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
         NetFilter = netFilter;
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _tracker = tracker;
+        _ga4Tracker = ga4Tracker;
         ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
         JobRunner.Default.Add(this);
     }
@@ -105,7 +105,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // create the session and add it to list
         var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest);
 
-        _ = _tracker?.TrackEvent("Usage", "SessionCreated");
+        _ = _ga4Tracker?.TrackByGTag(new Ga4TagParam{ EventName = "NewVpnSession" });
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponseEx;
     }

@@ -69,8 +69,8 @@ public class Ga4Tracker
             ("sid", SessionId), // Session Id
             ("sct", 1), // Session Count
             ("seg", 1), // Session Engagement. If the current user is engaged in any way, this value will be 1
-            ("dl", "home"), // document location
-            ("dt", "home page"), // document title
+            ("dl", tagParam.DocumentLocation), // document location
+            ("dt", tagParam.DocumentTitle), // document title
             ("en", tagParam.EventName), // event name
             ("_ee", "1"), // External Event
             ("_dbg", IsDebug ? 1 : 0), // Analytics debug view

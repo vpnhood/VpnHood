@@ -105,7 +105,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // create the session and add it to list
         var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest);
 
-        _ = _ga4Tracker?.TrackByGTag(new Ga4TagParam{ EventName = "NewVpnSession" });
+        _ = _ga4Tracker?.TrackByGTag(new Ga4TagParam{ EventName = "new_vpn_session" });
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponseEx;
     }

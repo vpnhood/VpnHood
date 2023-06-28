@@ -347,7 +347,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             IpRangeProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
-            ConnectTimeout = TcpTimeout
+            ConnectTimeout = TcpTimeout,
+            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;

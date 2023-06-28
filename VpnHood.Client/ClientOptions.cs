@@ -36,6 +36,7 @@ public class ClientOptions
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan MaxTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(10);
+    public bool AllowAnonymousTracker { get; set; } = true;
 
 #if DEBUG
     public int ProtocolVersion { get; set; }

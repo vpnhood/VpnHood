@@ -62,6 +62,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly ConnectorService _connectorService;
+    private readonly bool _allowAnonymousTracker;
     private Traffic _helloTraffic = new();
     private bool _isUdpChannel2;
     private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
@@ -116,6 +117,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
+        _allowAnonymousTracker = options.AllowAnonymousTracker;
         _dnsServerIpV4 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
         _dnsServerIpV6 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
@@ -669,6 +671,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     SessionId = SessionId.ToString(),
                     UserId = Token.TokenId.ToString(),
                     UserAgent = UserAgent,
+                    IsEnabled = _allowAnonymousTracker,
                 };
                 await ga4Tracking.TrackByGTag(new Ga4TagParam { EventName = Ga4TagEvents.SessionStart });
             }
@@ -880,6 +883,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
+
     public async ValueTask DisposeAsync()
     {
         lock (_disposeLock)

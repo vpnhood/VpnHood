@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="VpnHood.Common" Version="3.0.380-prerelease" />
-    <PackageReference Include="VpnHood.Server.Access" Version="3.0.380-prerelease" />
+    <PackageReference Include="VpnHood.Common" Version="3.0.382-prerelease" />
+    <PackageReference Include="VpnHood.Server.Access" Version="3.0.382-prerelease" />
   </ItemGroup>
 
 </Project>

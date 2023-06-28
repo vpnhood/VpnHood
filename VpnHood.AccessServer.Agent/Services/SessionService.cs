@@ -53,6 +53,8 @@ public class SessionService
 
         var ga4Tracker = new Ga4Tracker
         {
+            AppName = "VpnHoodService",
+            AppVersion = device.ClientVersion ?? "",
             MeasurementId = project.GaMeasurementId,
             ApiSecret = project.GaApiSecret,
             UserAgent = device.UserAgent ?? "",
@@ -74,7 +76,7 @@ public class SessionService
             }
         };
 
-        await ga4Tracker.Send(ga4Event);
+        await ga4Tracker.Track(ga4Event);
     }
 
     private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)

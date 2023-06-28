@@ -13,6 +13,6 @@ public class AppSettings
     public HttpAccessServerOptions? HttpAccessServer { get; set; }
     public FileAccessServerOptions? FileAccessServer { get; set; } = new();
     public ServerConfig? ServerConfig { get; set; }
-    public bool IsAnonymousTrackerEnabled { get; set; } = true;
+    public bool AllowAnonymousTracker { get; set; } = true;
     public bool IsDiagnoseMode { get; set; }
 }

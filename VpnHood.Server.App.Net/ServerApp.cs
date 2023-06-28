@@ -89,7 +89,7 @@ public class ServerApp : IDisposable
             AppVersion = AppVersion,
             ClientId = anonyClientId,
             SessionId = Guid.NewGuid().ToString(),
-            IsEnabled = AppSettings.IsAnonymousTrackerEnabled,
+            IsEnabled = AppSettings.AllowAnonymousTracker,
         };
 
         // create access server

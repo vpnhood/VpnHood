@@ -20,7 +20,7 @@ public class Ga4Tracker
     public required string MeasurementId { get; init; }
     public required string ApiSecret { get; init; }
     public required string SessionId { get; set; }
-    public long SessionEngagementId { get; set; } = 1000;
+    public long SessionEngagementTime { get; set; } = 1000;
     public string UserAgent { get; init; } = Environment.OSVersion.ToString().Replace(" ", "");
     public required string ClientId { get; init; }
     public string? UserId { get; init; }
@@ -130,8 +130,8 @@ public class Ga4Tracker
             if (!string.IsNullOrEmpty(SessionId) && !ga4Event.Parameters.TryGetValue("session_id", out _))
                 ga4Event.Parameters.Add("session_id", SessionId);
 
-            if (SessionEngagementId != 0 && !ga4Event.Parameters.TryGetValue("engagement_time_msec", out _))
-                ga4Event.Parameters.Add("engagement_time_msec", SessionEngagementId);
+            if (SessionEngagementTime != 0 && !ga4Event.Parameters.TryGetValue("engagement_time_msec", out _))
+                ga4Event.Parameters.Add("engagement_time_msec", SessionEngagementTime);
         }
 
 

@@ -15,6 +15,10 @@ internal class Ga4Payload
     [JsonPropertyName("client_id")] 
     public required string ClientId { get; set; }
 
+    [JsonPropertyName("user_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? UserId { get; set; }
+
     [JsonPropertyName("timestamp_micros")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ulong? TimestampMicros { get; set; }

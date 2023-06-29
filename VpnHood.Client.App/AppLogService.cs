@@ -30,19 +30,19 @@ public class AppLogService
         VhLogger.IsAnonymousMode = logSettings.LogAnonymous;
         VhLogger.IsDiagnoseMode = diagnose | logSettings.LogVerbose;
         VhLogger.Instance = NullLogger.Instance;
-        VhLogger.Instance = CreateLogger(logSettings.LogToFile | diagnose, diagnose, true);
+        VhLogger.Instance = CreateLogger(logSettings.LogToConsole, logSettings.LogToFile | diagnose, diagnose, true);
     }
 
     public void Stop()
     {
         VhLogger.Instance = NullLogger.Instance;
-        VhLogger.Instance = CreateLogger(false, false, false);
+        VhLogger.Instance = CreateLogger(false, false, false, false);
         VhLogger.IsDiagnoseMode = false;
     }
 
-    private ILogger CreateLogger(bool addFileLogger, bool verbose, bool removeLastFile)
+    private ILogger CreateLogger(bool addToConsole, bool addToFile, bool verbose, bool removeLastFile)
     {
-        var logger = CreateLoggerInternal(true, addFileLogger, verbose, removeLastFile);
+        var logger = CreateLoggerInternal(addToConsole, addToFile, verbose, removeLastFile);
         logger = new SyncLogger(logger);
         logger = new FilterLogger(logger, eventId =>
         {

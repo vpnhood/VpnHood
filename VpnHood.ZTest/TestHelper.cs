@@ -395,6 +395,7 @@ internal static class TestHelper
         {
             AppDataPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
+            IsLogToConsoleSupported = true,
         };
         return appOptions;
     }

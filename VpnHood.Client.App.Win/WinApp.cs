@@ -109,6 +109,7 @@ public class WinApp : IDisposable
         // init app
         VpnHoodApp.Init(new WinAppProvider(), new AppOptions
         {
+            IsLogToConsoleSupported = true,
             AppDataPath = AppLocalDataPath,
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
         });

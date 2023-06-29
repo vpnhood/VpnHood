@@ -133,7 +133,7 @@ public class Ga4Tracker
                 ga4Event.Parameters.Add("session_id", SessionId);
 
             if (SessionEngagementTime != 0 && !ga4Event.Parameters.TryGetValue("engagement_time_msec", out _))
-                ga4Event.Parameters.Add("engagement_time_msec", SessionEngagementTime);
+                ga4Event.Parameters.Add("engagement_time_msec", SessionEngagementTime.ToString());
         }
 
 

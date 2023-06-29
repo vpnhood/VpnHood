@@ -17,4 +17,5 @@ public class AppOptions
     public TimeSpan SessionTimeout { get; set; } = new ClientOptions().SessionTimeout;
     public SocketFactory? SocketFactory { get; set; } = null;
     public TimeSpan UpdateCheckerInterval { get; set; } = TimeSpan.FromHours(1);
+    public bool IsLogToConsoleSupported { get; set; }
 }

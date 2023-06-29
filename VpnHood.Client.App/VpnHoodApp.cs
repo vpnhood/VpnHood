@@ -92,6 +92,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
 
         // create start up logger
+        if (!options.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet

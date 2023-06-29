@@ -25,7 +25,9 @@ public class Ga4Tracker
     public required string ClientId { get; init; }
     public string? UserId { get; init; }
     public bool IsEnabled { get; set; } = true;
-    public bool IsDebug { get; set; }
+    public bool IsDebugEndPoint { get; set; }
+    public bool IsAdminDebugView { get; set; }
+    public bool IsLogEnabled => IsDebugEndPoint || IsAdminDebugView;
     public Dictionary<string, object> UserParameters { get; } = new();
     public bool? IsMobile { get; init; } // GTag only
     public required string AppName { get; init; }
@@ -95,14 +97,14 @@ public class Ga4Tracker
         if (UserId != null) parameters.Add(("uid", UserId));
         if (tagParam.DocumentLocation != null) parameters.Add(("dl", tagParam.DocumentLocation)); // Document Location
         if (tagParam.DocumentTitle != null) parameters.Add(("dt", tagParam.DocumentTitle)); // Document Title
-        if (IsDebug) parameters.Add(("_dbg", 1)); // Analytics debug view
+        if (IsAdminDebugView) parameters.Add(("_dbg", 1)); // Analytics debug view
 
         var url = new Uri(
             "https://www.google-analytics.com/g/collect?" +
             string.Join('&', parameters.Select(x => $"{x.Item1}={x.Item2}"))
             );
 
-        if (IsDebug)
+        if (IsLogEnabled)
             Console.Out.WriteLine("Sending GTag: " + url);
 
         return HttpClient.GetStringAsync(url);
@@ -124,7 +126,7 @@ public class Ga4Tracker
         // updating events by default values
         foreach (var ga4Event in gaEventArray)
         {
-            if (IsDebug && !ga4Event.Parameters.TryGetValue("debug_mode", out _))
+            if (IsAdminDebugView && !ga4Event.Parameters.TryGetValue("debug_mode", out _))
                 ga4Event.Parameters.Add("debug_mode", 1);
 
             if (!string.IsNullOrEmpty(SessionId) && !ga4Event.Parameters.TryGetValue("session_id", out _))
@@ -138,11 +140,12 @@ public class Ga4Tracker
         var ga4Payload = new Ga4Payload
         {
             ClientId = ClientId,
+            UserId = UserId,
             Events = gaEventArray,
             UserProperties = UserParameters.Any() ? UserParameters.ToDictionary(p => p.Key, p => new Ga4Payload.UserProperty { Value = p.Value }) : null,
         };
 
-        var baseUri = IsDebug ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");
+        var baseUri = IsDebugEndPoint ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");
         var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}&_dbg=1")); //todo: _dbg
         requestMessage.Headers.Add("User-Agent", UserAgent);
         requestMessage.Content = new StringContent(JsonSerializer.Serialize(ga4Payload));
@@ -150,7 +153,7 @@ public class Ga4Tracker
         try
         {
             var res = await HttpClient.SendAsync(requestMessage);
-            if (IsDebug)
+            if (IsLogEnabled)
             {
                 await Console.Out.WriteLineAsync(JsonSerializer.Serialize(ga4Payload, new JsonSerializerOptions { WriteIndented = true }));
                 await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync());
@@ -158,7 +161,7 @@ public class Ga4Tracker
         }
         catch
         {
-            if (IsDebug)
+            if (IsDebugEndPoint)
                 throw;
         }
 

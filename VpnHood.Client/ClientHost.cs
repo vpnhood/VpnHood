@@ -12,6 +12,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -245,7 +246,7 @@ internal class ClientHost : IDisposable
             if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
             {
                 await proxyClientStream.Stream.DisposeAsync();
-                tcpProxyClientStream.Stream = StreamHeadCryptor.Create(
+                tcpProxyClientStream.Stream = StreamCryptor.Create(
                     tcpProxyClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
             }

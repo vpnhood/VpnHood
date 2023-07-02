@@ -146,7 +146,7 @@ public class Ga4Tracker
         };
 
         var baseUri = IsDebugEndPoint ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");
-        var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}&_dbg=1")); //todo: _dbg
+        var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
         requestMessage.Headers.Add("User-Agent", UserAgent);
         requestMessage.Content = new StringContent(JsonSerializer.Serialize(ga4Payload));
         requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");

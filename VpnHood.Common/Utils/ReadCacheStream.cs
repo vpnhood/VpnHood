@@ -17,8 +17,8 @@ public class ReadCacheStream : AsyncStreamDecorator
 
     public override bool CanSeek => false;
 
-    public ReadCacheStream(Stream sourceStream, bool keepOpen, int cacheSize = 1024)
-        : base(sourceStream, keepOpen)
+    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024)
+        : base(sourceStream, leaveOpen)
     {
         _cache = new byte[cacheSize];
     }

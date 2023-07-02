@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Tunneling.Channels;
+namespace VpnHood.Tunneling.Channels.Streams;
 
-public class HttpStream : AsyncStreamDecorator
+public class HttpStream : ChunkStream
 {
     private readonly byte[] _newLineBytes = "\r\n"u8.ToArray();
 
@@ -31,22 +31,17 @@ public class HttpStream : AsyncStreamDecorator
     private bool _isConnectionClosed;
 
     private bool IsServer => _host == null;
-    public int ReadChunkCount { get; private set; }
-    public int WroteChunkCount { get; private set; }
-    public string StreamId { get; internal set; }
 
     public HttpStream(Stream sourceStream, string streamId, string? host, bool keepSourceOpen = false)
-        : base(new ReadCacheStream(sourceStream, keepSourceOpen, 512), false)
+        : base(new ReadCacheStream(sourceStream, keepSourceOpen, 512), streamId)
     {
         _host = host;
-        StreamId = streamId;
     }
 
     private HttpStream(Stream sourceStream, string streamId, string? host)
-        : base(sourceStream, false)
+        : base(sourceStream, streamId)
     {
         _host = host;
-        StreamId = streamId;
     }
 
     private string CreateHttpHeader()
@@ -311,8 +306,8 @@ public class HttpStream : AsyncStreamDecorator
     }
 
     private bool _keepOpen;
-    public bool CanReuse => !_hasError && !_isConnectionClosed;
-    public async Task<HttpStream> CreateReuse()
+    public override bool CanReuse => !_hasError && !_isConnectionClosed;
+    public override async Task<ChunkStream> CreateReuse()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);

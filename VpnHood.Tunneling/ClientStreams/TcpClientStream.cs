@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.Channels.Streams;
 
 namespace VpnHood.Tunneling.ClientStreams;
 

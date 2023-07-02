@@ -16,10 +16,10 @@ using System.IO;
 using VpnHood.Tunneling.ClientStreams;
 using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
-using VpnHood.Tunneling.Channels;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling.Messaging;
 using VpnHood.Common.Collections;
+using VpnHood.Tunneling.Channels.Streams;
 
 namespace VpnHood.Client.ConnectorServices;
 

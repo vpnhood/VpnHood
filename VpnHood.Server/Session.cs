@@ -16,6 +16,7 @@ using VpnHood.Server.Configurations;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -362,7 +363,7 @@ public class Session : IAsyncDisposable, IJob
             if (clientStream.Stream is not HttpStream && clientStream is TcpClientStream tcpClientStream)
             {
                 await clientStream.Stream.DisposeAsync();
-                tcpClientStream.Stream = StreamHeadCryptor.Create(
+                tcpClientStream.Stream = StreamCryptor.Create(
                     tcpClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
             }

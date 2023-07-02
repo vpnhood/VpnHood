@@ -19,6 +19,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 
@@ -212,13 +213,13 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation($"Listening on {VhLogger.Format(localEp)} has been stopped.");
     }
 
-    private static async Task<SslStream> AuthenticateAsServerAsync(TcpClient tcpClient, X509Certificate certificate,
+    private static async Task<SslStream> AuthenticateAsServerAsync(Stream stream, X509Certificate certificate,
         CancellationToken cancellationToken)
     {
         try
         {
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating. CertSubject: {CertSubject}...", certificate.Subject);
-            var sslStream = new SslStream(tcpClient.GetStream(), true);
+            var sslStream = new SslStream(stream, true);
             await sslStream.AuthenticateAsServerAsync(
                 new SslServerAuthenticationOptions
                 {
@@ -271,7 +272,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
             // establish SSL
-            var sslStream = await AuthenticateAsServerAsync(tcpClient, certificate, cancellationToken);
+            var sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), certificate, cancellationToken);
 
             // create client stream
             var clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken);
@@ -492,7 +493,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // Report new session
         var clientIp = _sessionManager.TrackingOptions.TrackClientIpValue ? VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address) : "*";
-        
+
         // report in main log
         VhLogger.Instance.LogInformation(GeneralEventId.Session, "New Session. SessionId: {SessionId}, Agent: {Agent}", VhLogger.FormatSessionId(session.SessionId), request.ClientInfo.UserAgent);
 
@@ -622,5 +623,5 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         await Stop();
     }
-   
+
 }

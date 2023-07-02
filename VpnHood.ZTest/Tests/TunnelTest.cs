@@ -14,6 +14,7 @@ using PacketDotNet.Utils;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.Channels.Streams;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Tests;
@@ -194,15 +195,15 @@ public class TunnelTest
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
-
+        
         // Create a memory stream to store the incoming data
-        var httpStream = new HttpStream(client.GetStream(), Guid.NewGuid().ToString(), null);
+        ChunkStream binaryStream = new BinaryStream(client.GetStream(), Guid.NewGuid().ToString(), new byte[16]);
         while (true)
         {
             using var memoryStream = new MemoryStream();
             // Read the request data from the client to memoryStream
             var buffer = new byte[2048];
-            var bytesRead = await httpStream.ReadAsync(buffer, 0, 4, cancellationToken);
+            var bytesRead = await binaryStream.ReadAsync(buffer, 0, 4, cancellationToken);
             if (bytesRead == 0) 
                 break;
             
@@ -213,25 +214,25 @@ public class TunnelTest
             var totalRead = 0;
             while (totalRead != length)
             {
-                bytesRead = await httpStream.ReadAsync(buffer, 0, 120, cancellationToken);
+                bytesRead = await binaryStream.ReadAsync(buffer, 0, 120, cancellationToken);
                 if (bytesRead == 0) throw new Exception("Unexpected data");
                 totalRead += bytesRead;
                 memoryStream.Write(buffer, 0, bytesRead);
             }
 
-            await httpStream.WriteAsync(memoryStream.ToArray(), cancellationToken);
+            await binaryStream.WriteAsync(memoryStream.ToArray(), cancellationToken);
 
-            if (!httpStream.CanReuse)
+            if (!binaryStream.CanReuse)
                 break;
 
-            httpStream = await httpStream.CreateReuse();
+            binaryStream = await binaryStream.CreateReuse();
         }
 
-        Assert.IsFalse(httpStream.CanReuse);
+        Assert.IsFalse(binaryStream.CanReuse);
     }
 
     [TestMethod]
-    public async Task HttpStream()
+    public async Task ChunkStream()
     {
         // create server
         var tcpListener = new TcpListener(IPAddress.Loopback, 0);
@@ -254,43 +255,42 @@ public class TunnelTest
         };
 
         // first stream
-        var httpStream = new HttpStream(stream, Guid.NewGuid().ToString(), "foo.com");
-        await httpStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)), cts.Token);
+        ChunkStream binaryStream = new BinaryStream(stream, Guid.NewGuid().ToString(), new byte[16]);
+        await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)), cts.Token);
         foreach (var chunk in chunks)
-            await httpStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
-        Assert.AreEqual(chunks.Count + 1, httpStream.WroteChunkCount);
+            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
+        Assert.AreEqual(chunks.Count + 1, binaryStream.WroteChunkCount);
 
         // read first stream
-        var sr = new StreamReader(httpStream, bufferSize: 10);
+        var sr = new StreamReader(binaryStream, bufferSize: 10);
         var res = await sr.ReadToEndAsync(cts.Token);
         Assert.AreEqual(string.Join("", chunks), res);
 
         // write second stream
-        httpStream = await httpStream.CreateReuse();
-        await httpStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)).ToArray(), cts.Token);
+        binaryStream = (BinaryStream)await binaryStream.CreateReuse();
+        await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)).ToArray(), cts.Token);
         foreach (var chunk in chunks)
-            await httpStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
-        Assert.AreEqual(chunks.Count + 1, httpStream.WroteChunkCount);
+            await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
+        Assert.AreEqual(chunks.Count + 1, binaryStream.WroteChunkCount);
 
         // read second stream
-        sr = new StreamReader(httpStream, bufferSize: 10);
+        sr = new StreamReader(binaryStream, bufferSize: 10);
         res = await sr.ReadToEndAsync(cts.Token);
         Assert.AreEqual(string.Join("", chunks), res);
 
-        await httpStream.DisposeAsync();
+        await binaryStream.DisposeAsync();
         tcpClient.Dispose();
 
-        // task must completed after httpStream.DisposeAsync
+        // task must completed after binaryStream.DisposeAsync
         await workerTask.WaitAsync(TimeSpan.FromSeconds(2), cts.Token);
         Assert.IsTrue(workerTask.IsCompletedSuccessfully);
-
 
         tcpListener.Stop();
         cts.Cancel();
     }
 
     [TestMethod]
-    public async Task HttpStream_Binary()
+    public async Task ChunkStream_Binary()
     {
         // create server
         var tcpListener = new TcpListener(IPAddress.Loopback, 0);
@@ -309,17 +309,17 @@ public class TunnelTest
         random.NextBytes(writeBuffer);
 
         // write stream
-        var httpStream = new HttpStream(stream, Guid.NewGuid().ToString(), "foo.com", keepSourceOpen: true);
-        await httpStream.WriteAsync(BitConverter.GetBytes(writeBuffer.Length), cts.Token);
-        await httpStream.WriteAsync(writeBuffer, cts.Token);
+        ChunkStream binaryStream = new BinaryStream(stream, Guid.NewGuid().ToString(), new byte[16]);
+        await binaryStream.WriteAsync(BitConverter.GetBytes(writeBuffer.Length), cts.Token);
+        await binaryStream.WriteAsync((byte[])writeBuffer.Clone(), cts.Token);
 
         // read stream
         var readBuffer = new byte[writeBuffer.Length];
-        await httpStream.ReadExactlyAsync(readBuffer, cts.Token);
+        await binaryStream.ReadExactlyAsync(readBuffer, cts.Token);
         CollectionAssert.AreEqual(writeBuffer, readBuffer);
 
-        Assert.AreEqual(0, await httpStream.ReadAsync(readBuffer, cts.Token));
-        await httpStream.DisposeAsync();
+        Assert.AreEqual(0, await binaryStream.ReadAsync(readBuffer, cts.Token));
+        await binaryStream.DisposeAsync();
 
         tcpListener.Stop();
         cts.Cancel();

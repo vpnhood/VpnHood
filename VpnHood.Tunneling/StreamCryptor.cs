@@ -2,10 +2,11 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class StreamHeadCryptor : Stream
+public class StreamCryptor : AsyncStreamDecorator
 {
     private readonly BufferCryptor _bufferCryptor;
     private readonly bool _leaveOpen;
@@ -15,28 +16,21 @@ public class StreamHeadCryptor : Stream
     private long _readCount;
     private long _writeCount;
 
-    public StreamHeadCryptor(Stream stream, byte[] key, long maxCipherPos, bool leaveOpen = false)
+    private StreamCryptor(Stream stream, byte[] key, long maxCipherCount, bool leaveOpen = false)
+        : base(stream, leaveOpen)
     {
         if (key is null) throw new ArgumentNullException(nameof(key));
 
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         _bufferCryptor = new BufferCryptor(key);
-        _maxCipherCount = maxCipherPos;
+        _maxCipherCount = maxCipherCount;
         _leaveOpen = leaveOpen;
     }
 
-    public override bool CanRead => _stream.CanRead;
     public override bool CanSeek => false;
-    public override bool CanWrite => _stream.CanWrite;
-    public override long Length => throw new NotSupportedException();
 
-    public override long Position
-    {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
 
-    public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[]? salt, long maxCipherPos,
+    public static StreamCryptor Create(Stream stream, byte[] key, byte[]? salt = null, long maxCipherPos = long.MaxValue,
         bool leaveOpen = false)
     {
         if (stream is null) throw new ArgumentNullException(nameof(stream));
@@ -48,29 +42,15 @@ public class StreamHeadCryptor : Stream
         if (salt != null)
         {
             if (key.Length != salt.Length)
-                throw new Exception($"{nameof(key)} length and {nameof(salt)} length is not same!");
+                throw new Exception($"{nameof(key)} length and {nameof(salt)} length is not same.");
             encKey = (byte[])key.Clone();
             for (var i = 0; i < encKey.Length; i++)
                 encKey[i] ^= salt[i];
         }
 
-        return new StreamHeadCryptor(stream, encKey, maxCipherPos, leaveOpen);
+        return new StreamCryptor(stream, encKey, maxCipherPos, leaveOpen);
     }
 
-    public override void Flush()
-    {
-        _stream.Flush();
-    }
-
-    public override void SetLength(long value)
-    {
-        throw new NotSupportedException();
-    }
-
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        throw new NotSupportedException();
-    }
 
     private void PrepareReadBuffer(byte[] buffer, int offset, int count)
     {
@@ -92,13 +72,6 @@ public class StreamHeadCryptor : Stream
         }
     }
 
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        var readCount = _stream.Read(buffer, offset, count);
-        PrepareReadBuffer(buffer, offset, readCount);
-        return readCount;
-    }
-
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
         CancellationToken cancellationToken)
     {
@@ -107,27 +80,18 @@ public class StreamHeadCryptor : Stream
         return readCount;
     }
 
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-        PrepareWriteBuffer(buffer, offset, count);
-        _stream.Write(buffer, offset, count);
-    }
-
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         PrepareWriteBuffer(buffer, offset, count);
         return _stream.WriteAsync(buffer, offset, count, cancellationToken);
     }
 
-    protected override void Dispose(bool disposing)
+    public override ValueTask DisposeAsync()
     {
-        if (disposing)
-        {
-            _bufferCryptor.Dispose();
-            if (!_leaveOpen)
-                _stream.Dispose();
-        }
+        _bufferCryptor.Dispose();
+        if (!_leaveOpen)
+            _stream.Dispose();
 
-        base.Dispose(disposing);
+        return base.DisposeAsync();
     }
 }

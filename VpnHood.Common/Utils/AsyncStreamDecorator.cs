@@ -8,12 +8,12 @@ namespace VpnHood.Common.Utils;
 public class AsyncStreamDecorator<T> : Stream where T : Stream
 {
     protected T SourceStream;
-    private readonly bool _keepOpen;
+    private readonly bool _leaveOpen;
 
-    public AsyncStreamDecorator(T sourceStream, bool keepOpen)
+    public AsyncStreamDecorator(T sourceStream, bool leaveOpen)
     {
         SourceStream = sourceStream;
-        _keepOpen = keepOpen;
+        _leaveOpen = leaveOpen;
     }
 
     public override bool CanRead => SourceStream.CanRead;
@@ -74,7 +74,7 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
 
     public override ValueTask DisposeAsync()
     {
-        return _keepOpen ? default : SourceStream.DisposeAsync();
+        return _leaveOpen ? default : SourceStream.DisposeAsync();
     }
 
     // Sealed
@@ -167,8 +167,8 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
 
 public class AsyncStreamDecorator : AsyncStreamDecorator<Stream>
 {
-    public AsyncStreamDecorator(Stream sourceStream, bool keepOpen)
-        : base(sourceStream, keepOpen)
+    public AsyncStreamDecorator(Stream sourceStream, bool leaveOpen)
+        : base(sourceStream, leaveOpen)
     {
     }
 }

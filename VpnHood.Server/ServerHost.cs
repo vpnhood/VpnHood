@@ -252,7 +252,8 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         //todo perhaps must be deprecated from >= 2.9.371
         if (version == 1)
-            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false, cacheData: new[] { version }), streamId);
+            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false,
+                cacheData: new[] { version }, cacheSize: 1), streamId);
 
         // Version 2 is HTTP and starts with POST
         if (version == 'P' || version == 'p')

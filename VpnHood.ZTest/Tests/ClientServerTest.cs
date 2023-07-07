@@ -378,6 +378,9 @@ public class ClientServerTest
         await using var server2 = TestHelper.CreateServer(testAccessServer);
         await TestHelper.Test_Https();
         VhLogger.Instance.LogInformation("Test: Server 2 is shutting down...");
+
+        await client.DisposeAsync();
+        await server2.DisposeAsync();
     }
 
     [TestMethod]

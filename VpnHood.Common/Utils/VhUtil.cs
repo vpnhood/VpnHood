@@ -284,4 +284,28 @@ public static class VhUtil
         if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
         if (reuseAddress != null) tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, reuseAddress.Value);
     }
+
+    public static bool IsTcpClientHealthy(TcpClient tcpClient)
+    {
+        try
+        {
+            // Check if the TcpClient is connected
+            if (!tcpClient.Connected)
+                return false;
+
+            // Check if the underlying socket is connected
+            var socket = tcpClient.Client;
+            var healthy = socket is { Connected: true } &&
+                          (socket.Poll(1, SelectMode.SelectRead) && socket.Available == 0);
+
+            // return TcpClient.Connected && !TcpClient.Client.Poll(1, SelectMode.SelectError);
+            
+            return healthy;
+        }
+        catch (Exception)
+        {
+            // An error occurred while checking the TcpClient
+            return false;
+        }
+    }
 }

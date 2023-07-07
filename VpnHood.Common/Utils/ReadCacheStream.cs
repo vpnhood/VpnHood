@@ -17,11 +17,17 @@ public class ReadCacheStream : AsyncStreamDecorator
 
     public override bool CanSeek => false;
 
-    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024)
+    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024, byte[]? cacheData = null)
         : base(sourceStream, leaveOpen)
     {
         _cache = new byte[cacheSize];
+        if (cacheData != null)
+        {
+            cacheData.CopyTo(_cache, 0);
+            _cacheRemain = cacheData.Length;
+        }
     }
+
 
     public override long Position
     {

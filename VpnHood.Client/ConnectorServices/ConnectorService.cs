@@ -20,6 +20,9 @@ using VpnHood.Common.Messaging;
 using VpnHood.Tunneling.Messaging;
 using VpnHood.Common.Collections;
 using VpnHood.Tunneling.Channels.Streams;
+using System.Text;
+using VpnHood.Tunneling.Utils;
+using System.Net.Sockets;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -28,11 +31,18 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private readonly ISocketFactory _socketFactory;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     private readonly TaskCollection _disposingTasks = new();
+    private string _apiKey = "";
+
     public TimeSpan TcpTimeout { get; set; }
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; } = new();
-    public bool UseHttp { get; set; }
+    public bool UseBinaryStream { get; set; }
+
+    public byte[]? ServerKey
+    {
+        set => _apiKey = value != null ? HttpUtil.GetApiKey(value, TunnelDefaults.HttpPassCheck) : "";
+    }
 
     public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
@@ -42,7 +52,35 @@ internal class ConnectorService : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    private async Task<IClientStream> GetTlsConnectionToServer(string clientStreamId, CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
+    {
+        // compatibility
+        if (!UseBinaryStream)
+            return new TcpClientStream(tcpClient, sslStream, streamId);
+
+        var streamSecret = VhUtil.GenerateKey(128);
+
+        // write HTTP request
+        var header =
+            $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
+            $"Authorization: ApiKey {_apiKey}\r\n" +
+            $"X-Version: 2\r\n" +
+            $"X-Secret: {Convert.ToBase64String(streamSecret)}\r\n" +
+            "\r\n";
+
+        // Wait for result
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
+        await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
+
+        //if (!string.IsNullOrEmpty(_apiKey))
+          //  await sslStream.DisposeAsync(); //todo
+
+        return string.IsNullOrEmpty(_apiKey)
+            ? new TcpClientStream(tcpClient, sslStream, streamId)
+            : new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
+    }
+
+    private async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
     {
         if (EndPointInfo == null) throw new InvalidOperationException($"{nameof(EndPointInfo)} is not initialized.");
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
@@ -57,8 +95,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connecting to Server: {VhLogger.Format(tcpEndPoint)}...");
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
-            // start TLS
-            var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
+            var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
 
             // Establish a TLS connection
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"TLS Authenticating. HostName: {VhLogger.FormatDns(hostName)}...");
@@ -67,17 +104,14 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 ? SslProtocols.Tls12 // windows 7
                 : SslProtocols.None; //auto
 
-            await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+            await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = hostName,
                 EnabledSslProtocols = sslProtocol
             }, cancellationToken);
 
             Stat.CreatedConnectionCount++;
-            var clientStream = UseHttp
-                ? new TcpClientStream(tcpClient, new HttpStream(stream, clientStreamId, hostName), clientStreamId, ReuseStreamClient)
-                : new TcpClientStream(tcpClient, stream, clientStreamId);
-
+            var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
             return clientStream;
         }
         catch (MaintenanceException)
@@ -133,7 +167,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
         await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
-        return await SendRequest(mem.ToArray(), request.RequestId, cancellationToken);
+        var clientStream = await SendRequest(mem.ToArray(), request.RequestId, cancellationToken);
+        return clientStream;
     }
 
     private async Task<IClientStream> SendRequest(byte[] request, string requestId, CancellationToken cancellationToken)
@@ -166,13 +201,11 @@ internal class ConnectorService : IAsyncDisposable, IJob
         }
 
         // get or create free connection
-        var tcpClientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
+        clientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
 
         // send request
-        await tcpClientStream.Stream.WriteAsync(request, cancellationToken);
-
-        // resend request if the connection is not new
-        return tcpClientStream;
+        await clientStream.Stream.WriteAsync(request, cancellationToken);
+        return clientStream;
     }
 
     public async ValueTask DisposeAsync()

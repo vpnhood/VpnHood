@@ -16,6 +16,7 @@ using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Server;
 
@@ -24,15 +25,26 @@ public class SessionManager : IAsyncDisposable, IJob
     private readonly IAccessServer _accessServer;
     private readonly SocketFactory _socketFactory;
     private readonly Ga4Tracker? _ga4Tracker;
+    private byte[] _serverSecret;
     private bool _disposed;
 
+    public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
-    public byte[] ServerSecret { get; set; } = VhUtil.GenerateKey();
+
+    public byte[] ServerSecret
+    {
+        get => _serverSecret;
+        set
+        {
+            ApiKey = HttpUtil.GetApiKey(value, TunnelDefaults.HttpPassCheck);
+            _serverSecret = value; 
+        }
+    }
 
     public SessionManager(IAccessServer accessServer,
         INetFilter netFilter,
@@ -40,9 +52,11 @@ public class SessionManager : IAsyncDisposable, IJob
         Ga4Tracker? ga4Tracker)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-        NetFilter = netFilter;
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _ga4Tracker = ga4Tracker;
+        _serverSecret = VhUtil.GenerateKey(128);
+        ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
+        NetFilter = netFilter;
         ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
         JobRunner.Default.Add(this);
     }

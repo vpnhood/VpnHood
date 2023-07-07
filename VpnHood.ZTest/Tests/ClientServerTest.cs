@@ -424,8 +424,8 @@ public class ClientServerTest
         await server.SessionManager.CloseSession(client.SessionId);
 
         // wait for disposing session in access server
-        await VhTestUtil.AssertEqualsWait(false, () =>
-                fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
+        await VhTestUtil.AssertEqualsWait(false, 
+            () => fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
             "Session has not been closed in the access server.");
 
         try
@@ -683,7 +683,7 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public async Task Reusing_HttpStream()
+    public async Task Reusing_ChunkStream()
     {
         // Create Server
         await using var server = TestHelper.CreateServer();

@@ -243,13 +243,17 @@ internal class ClientHost : IDisposable
 
             // Dispose ssl stream and replace it with a HeadCryptor
             //todo perhaps must be deprecated from >= 2.9.371
-            if (proxyClientStream.Stream is not HttpStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
+            if (proxyClientStream.Stream is not ChunkStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
             {
                 await proxyClientStream.Stream.DisposeAsync();
                 tcpProxyClientStream.Stream = StreamCryptor.Create(
                     tcpProxyClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
             }
+
+            // MaxEncryptChunk
+            if (proxyClientStream.Stream is BinaryStream binaryStream)
+                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
 
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             Client.Tunnel.AddChannel(channel);

@@ -21,7 +21,7 @@ public class BinaryStream : ChunkStream
     private Task _writeTask = Task.CompletedTask;
     private bool _isConnectionClosed;
     private bool _isCurrentReadingChunkEncrypted;
-    private readonly StreamCryptor _streamCryptor;
+    private readonly Stream _streamCryptor;
     private readonly byte[] _readChunkHeaderBuffer = new byte[5];
     private readonly byte[] _writeChunkHeaderBuffer = new byte[5];
     public long MaxEncryptChunk { get; set; } = long.MaxValue;
@@ -29,10 +29,10 @@ public class BinaryStream : ChunkStream
     public BinaryStream(Stream sourceStream, string streamId, byte[] secret)
         : base(sourceStream, streamId)
     {
-        _streamCryptor = StreamCryptor.Create(sourceStream, secret, leaveOpen: true);
+        _streamCryptor = sourceStream; //StreamCryptor.Create(sourceStream, secret, leaveOpen: true); //todo
     }
 
-    private BinaryStream(Stream sourceStream, string streamId, StreamCryptor streamCryptor, int reusedCount)
+    private BinaryStream(Stream sourceStream, string streamId, Stream streamCryptor, int reusedCount)
         : base(sourceStream, streamId, reusedCount)
     {
         _streamCryptor = streamCryptor;

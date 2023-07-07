@@ -360,7 +360,7 @@ public class Session : IAsyncDisposable, IJob
 
             // Dispose ssl stream and replace it with a Head-Cryptor
             //todo perhaps must be deprecated from >= 2.9.371
-            if (clientStream.Stream is not HttpStream && clientStream is TcpClientStream tcpClientStream)
+            if (clientStream.Stream is not ChunkStream && clientStream is TcpClientStream tcpClientStream)
             {
                 await clientStream.Stream.DisposeAsync();
                 tcpClientStream.Stream = StreamCryptor.Create(
@@ -368,13 +368,16 @@ public class Session : IAsyncDisposable, IJob
                     request.CipherKey, null, request.CipherLength);
             }
 
+            // MaxEncryptChunk
+            if (clientStream.Stream is BinaryStream binaryStream)
+                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
+
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}, CipherLength: {CipherLength}",
                 VhLogger.FormatSessionId(SessionId), request.CipherLength);
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
-
             streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream, _tcpBufferSize, _tcpBufferSize);
 
             Tunnel.AddChannel(streamProxyChannel);

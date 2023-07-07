@@ -18,7 +18,10 @@ public class TcpClientStream : IClientStream
 
     public bool Disposed { get; private set; }
     public delegate Task ReuseCallback(IClientStream clientStream);
-    
+    public TcpClient TcpClient { get; }
+    public Stream Stream { get; set; } //todo: deprecated from >= 2.9.371
+    public IPEndPointPair IpEndPointPair { get; }
+
     public string ClientStreamId
     {
         get => _clientStreamId;
@@ -30,8 +33,8 @@ public class TcpClientStream : IClientStream
                     _clientStreamId, value);
 
             _clientStreamId = value;
-            if (Stream is HttpStream httpStream)
-                httpStream.StreamId = value;
+            if (Stream is ChunkStream chunkStream)
+                chunkStream.StreamId = value;
         }
     }
 
@@ -39,23 +42,20 @@ public class TcpClientStream : IClientStream
         : this(tcpClient, stream, clientStreamId, reuseCallback, true)
     {
     }
+
     private TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback, bool log)
     {
         _clientStreamId = clientStreamId;
         _reuseCallback = reuseCallback;
-        Stream = stream ?? throw new ArgumentNullException(nameof(stream));
-        TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
+        Stream = stream;
+        TcpClient = tcpClient;
         IpEndPointPair = new IPEndPointPair((IPEndPoint)TcpClient.Client.LocalEndPoint, (IPEndPoint)TcpClient.Client.RemoteEndPoint);
 
         if (log)
             VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
-                "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-                ClientStreamId, VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
+                "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
+                ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
-
-    public TcpClient TcpClient { get; }
-    public Stream Stream { get; set; }
-    public IPEndPointPair IpEndPointPair { get; }
 
     public bool CheckIsAlive()
     {
@@ -91,14 +91,14 @@ public class TcpClientStream : IClientStream
         if (Disposed) return;
         Disposed = true;
 
-        var httpStream = Stream as HttpStream;
-        if (allowReuse && _reuseCallback != null && CheckIsAlive() && httpStream?.CanReuse == true)
+        var chunkStream = Stream as ChunkStream;
+        if (allowReuse && _reuseCallback != null && CheckIsAlive() && chunkStream?.CanReuse == true)
         {
             Stream? newStream = null;
             try
             {
-                newStream = await httpStream.CreateReuse();
-                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback, false));
+                newStream = await chunkStream.CreateReuse();
+                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream,  ClientStreamId, _reuseCallback, false));
 
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
                     "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
@@ -115,8 +115,8 @@ public class TcpClientStream : IClientStream
             return;
         }
 
-        // close the stream
-        await Stream.DisposeAsync();
+        // close streams
+        await Stream.DisposeAsync(); // first close stream 2
         TcpClient.Dispose();
 
         VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,

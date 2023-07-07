@@ -22,6 +22,7 @@ using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Server;
 
@@ -186,7 +187,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                     _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
 
                 // config tcpClient
-                _ = ProcessClient(tcpClient, cancellationToken);
+                _ = ProcessTcpClient(tcpClient, cancellationToken);
                 errorCounter = 0;
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
@@ -210,7 +211,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         }
 
         tcpListener.Stop();
-        VhLogger.Instance.LogInformation($"Listening on {VhLogger.Format(localEp)} has been stopped.");
+        VhLogger.Instance.LogInformation("TCP Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
     }
 
     private static async Task<SslStream> AuthenticateAsServerAsync(Stream stream, X509Certificate certificate,
@@ -236,36 +237,73 @@ internal class ServerHost : IAsyncDisposable, IJob
         }
     }
 
-    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream stream, CancellationToken cancellationToken)
+    private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, CancellationToken cancellationToken)
     {
         // read version
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
-        var buffer = new byte[1];
-        var res = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+        var buffer = new byte[16];
+        var res = await sslStream.ReadAsync(buffer, 0, 1, cancellationToken);
         if (res == 0)
             throw new Exception("Connection has been closed before receiving any request.");
 
         // check request version
+        var streamId = Guid.NewGuid() + ":incoming";
         var version = buffer[0];
+
+        //todo perhaps must be deprecated from >= 2.9.371
+        if (version == 1)
+            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false, cacheData: new[] { version }), streamId);
+
+        // Version 2 is HTTP and starts with POST
         if (version == 'P' || version == 'p')
         {
-            var streamId = Guid.NewGuid() + ":incoming";
-            return new TcpClientStream(tcpClient, new HttpStream(stream, streamId, null), streamId, ReuseClientStream);
-        }
+            var headers =
+                await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken)
+                ?? throw new Exception("Connection has been closed before receiving any request.");
 
-        if (version == 1)
-            return new TcpClientStream(tcpClient, stream, Guid.NewGuid() + ":incoming");
+            // read api key
+            var hasPassChecked = false;
+            if (headers.TryGetValue("Authorization", out var authorization))
+            {
+                var parts = authorization.Split(' ');
+                if (parts.Length >= 2 &&
+                    parts[0].Equals("ApiKey", StringComparison.OrdinalIgnoreCase) &&
+                    parts[1].Equals(_sessionManager.ApiKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    var apiKey = parts[1];
+                    hasPassChecked = apiKey == _sessionManager.ApiKey;
+                }
+            }
+
+            if (hasPassChecked)
+            {
+                if (headers.TryGetValue("X-Version", out var xVersion) && int.Parse(xVersion) == 2 &&
+                    headers.TryGetValue("X-Secret", out var xSecret))
+                {
+                    await sslStream.WriteAsync(GetHttpOk(), cancellationToken);
+                    var secret = Convert.FromBase64String(xSecret);
+                    // await sslStream.DisposeAsync(); //todo dispose somewhere
+                    return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
+                }
+            }
+            else
+            {
+                await sslStream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken); //always return UnauthorizedMessage 
+                return new TcpClientStream(tcpClient, sslStream, streamId);
+            }
+        }
 
         throw new NotSupportedException("The request version is not supported.");
     }
 
-    private async Task ProcessClient(TcpClient tcpClient, CancellationToken cancellationToken)
+    private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
     {
         // add timeout to cancellationToken
         using var timeoutCt = new CancellationTokenSource(TunnelDefaults.TcpRequestTimeout);
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
 
+        IClientStream? clientStream = null;
         try
         {
             // find certificate by ip 
@@ -275,18 +313,10 @@ internal class ServerHost : IAsyncDisposable, IJob
             var sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), certificate, cancellationToken);
 
             // create client stream
-            var clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken);
+            clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken);
             lock (_clientStreams) _clientStreams.Add(clientStream);
 
-            try
-            {
-                await ProcessClientStream(clientStream, cancellationToken);
-            }
-            catch
-            {
-                await clientStream.DisposeAsync(false);
-                throw;
-            }
+            await ProcessClientStream(clientStream, cancellationToken);
         }
         catch (TlsAuthenticateException ex) when (ex.InnerException is OperationCanceledException)
         {
@@ -301,8 +331,10 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             if (ex is ISelfLog loggable) loggable.Log();
-            else VhLogger.LogError(GeneralEventId.Request, ex, "ServerHost could not process this request.");
+            else VhLogger.LogError(GeneralEventId.Request, ex,
+                "ServerHost could not process this request. ClientStreamId: {ClientStreamId}", clientStream?.ClientStreamId);
 
+            if (clientStream != null) await clientStream.DisposeAsync(false, false);
             tcpClient.Dispose();
         }
     }
@@ -378,14 +410,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             // return 401 for ANY non SessionException to keep server's anonymity
             // Server should always return 404 as error
-            var unauthorizedResponse =
-                "HTTP/1.1 401 Unauthorized\r\n" +
-                "Content-Length: 0\r\n" +
-                $"Date: {DateTime.UtcNow:r}\r\n" +
-                "Server: Kestrel\r\n" +
-                "WWW-Authenticate: Bearer\r\n";
-
-            await clientStream.Stream.WriteAsync(Encoding.UTF8.GetBytes(unauthorizedResponse), cancellationToken);
+            await clientStream.Stream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
@@ -393,7 +418,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                 VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex,
                     "Could not process the request and return 401. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
 
-            await clientStream.DisposeAsync();
+            await clientStream.DisposeAsync(false, false);
         }
         finally
         {
@@ -406,17 +431,14 @@ internal class ServerHost : IAsyncDisposable, IJob
     {
         var buffer = new byte[1];
 
-        // to support old version we have already read the first byte, in new version we need to read it here
-        if (clientStream.Stream is HttpStream)
-        {
-            var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-            if (rest == 0)
-                throw new Exception("ClientStream has been closed before receiving any request.");
+        // read request version
+        var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
+        if (rest == 0)
+            throw new Exception("ClientStream has been closed before receiving any request.");
 
-            var version = buffer[0];
-            if (version != 1)
-                throw new NotSupportedException("The request version is not supported!");
-        }
+        var version = buffer[0];
+        if (version != 1)
+            throw new NotSupportedException("The request version is not supported!");
 
         // read request code
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
@@ -487,7 +509,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2) //todo: must be 3 (4 for Http)
+        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2) //todo: must be 3 or upper (4 for BinaryStream); 3 is deprecated by >= 2.9.371
             throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
 
@@ -565,7 +587,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, $"Reading the {RequestCode.Bye} request ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the Bye request ...");
         var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken);
 
         // finding session
@@ -597,6 +619,29 @@ internal class ServerHost : IAsyncDisposable, IJob
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
         await session.ProcessTcpProxyRequest(clientStream, request, cancellationToken);
+    }
+
+    private static byte[] GetHttpOk()
+    {
+        var response =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Length: 0\r\n" +
+            "\r\n";
+
+        return Encoding.UTF8.GetBytes(response);
+    }
+
+    private static byte[] GetHttpUnauthorizedMessage()
+    {
+        var response =
+            "HTTP/1.1 401 Unauthorized\r\n" +
+            "Content-Length: 0\r\n" +
+            $"Date: {DateTime.UtcNow:r}\r\n" +
+            "Server: Kestrel\r\n" +
+            "WWW-Authenticate: Bearer\r\n" +
+            "\r\n";
+
+        return Encoding.UTF8.GetBytes(response);
     }
 
     public Task RunJob()

@@ -184,7 +184,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             try
             {
                 await clientStream.Stream.WriteAsync(request, cancellationToken);
-                _ = await clientStream.Stream.ReadAsync(request, 0, 0, cancellationToken); // wait for any available data 
+                if (!clientStream.CheckIsAlive()) throw new Exception("TcpClient is not connected.");
                 Stat.ReusedConnectionSucceededCount++;
                 clientStream.ClientStreamId = requestId;
                 return clientStream;

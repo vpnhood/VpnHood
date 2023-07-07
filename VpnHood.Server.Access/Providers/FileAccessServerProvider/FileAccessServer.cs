@@ -25,6 +25,14 @@ public class FileAccessServer : IAccessServer
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
     public ServerConfig ServerConfig { get; }
+    public byte[] ServerSecret { get; }
+    public string StoragePath { get; }
+    public FileAccessServerSessionManager SessionManager { get; }
+    public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
+    public X509Certificate2 DefaultCert { get; }
+    public ServerStatus? ServerStatus { get; private set; }
+    public ServerInfo? ServerInfo { get; private set; }
+    public bool IsMaintenanceMode => false; //this server never goes into maintenance mode
 
     public FileAccessServer(string storagePath, FileAccessServerOptions options)
     {
@@ -40,18 +48,19 @@ public class FileAccessServer : IAccessServer
         DefaultCert = File.Exists(defaultCertFile)
             ? new X509Certificate2(defaultCertFile, _sslCertificatesPassword, X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, _sslCertificatesPassword);
+
+        // get or create server secret
+        ServerConfig.ServerSecret ??= LoadServerSecret();
     }
 
-    public string StoragePath { get; }
+    public byte[] LoadServerSecret()
+    {
+        var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
+        if (!File.Exists(serverSecretFile))
+            File.WriteAllText(serverSecretFile, Convert.ToBase64String(VhUtil.GenerateKey(128)));
 
-    public FileAccessServerSessionManager SessionManager { get; }
-    public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
-    public X509Certificate2 DefaultCert { get; }
-
-    public ServerStatus? ServerStatus { get; private set; }
-
-    public ServerInfo? ServerInfo { get; private set; }
-    public bool IsMaintenanceMode => false; //this server never goes into maintenance mode
+        return Convert.FromBase64String(File.ReadAllText(serverSecretFile));
+    }
 
     public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
@@ -211,9 +220,6 @@ public class FileAccessServer : IAccessServer
         bool isValidHostName = false,
         int hostPort = 443)
     {
-        // find or create the certificate
-        var certificate = DefaultCert;
-
         // generate key
         var aes = Aes.Create();
         aes.KeySize = 128;
@@ -226,10 +232,9 @@ public class FileAccessServer : IAccessServer
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
             Token = new Token(aes.Key,
-                certificate.GetCertHash(),
-                certificate.GetNameInfo(X509NameType.DnsName, false) ??
-                throw new Exception("Certificate must have a subject!")
-            )
+                DefaultCert.GetCertHash(),
+                DefaultCert.GetNameInfo(X509NameType.DnsName, false) ??
+                throw new Exception("Certificate must have a subject!"))
             {
                 Name = tokenName,
                 HostPort = hostPort,
@@ -255,7 +260,7 @@ public class FileAccessServer : IAccessServer
     public async Task AccessItem_Delete(Guid tokenId)
     {
         // remove index
-        _ = await AccessItem_Read(tokenId) 
+        _ = await AccessItem_Read(tokenId)
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete files

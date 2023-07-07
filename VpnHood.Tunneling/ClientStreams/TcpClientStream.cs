@@ -59,14 +59,7 @@ public class TcpClientStream : IClientStream
 
     public bool CheckIsAlive()
     {
-        try
-        {
-            return TcpClient.Connected && !TcpClient.Client.Poll(0, SelectMode.SelectError);
-        }
-        catch
-        {
-            return false;
-        }
+        return VhUtil.IsTcpClientHealthy(TcpClient);
     }
 
     public ValueTask DisposeAsync()

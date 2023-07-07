@@ -145,6 +145,7 @@ public static class VhLogger
                 SocketErrorCode: SocketError.ConnectionAborted or
                 SocketError.OperationAborted or
                 SocketError.ConnectionReset or
+                SocketError.ConnectionRefused or
                 SocketError.NetworkReset
             };
     }

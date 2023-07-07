@@ -786,7 +786,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Reading the response
             var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
-            VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}.");
+            VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", response.ErrorCode);
 
             // set SessionStatus
             if (response.AccessUsage != null)
@@ -827,6 +827,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 _ = DisposeAsync(ex);
+
             throw;
         }
     }
@@ -842,7 +843,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, ex, "Could not send the bye request.");
+            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
         }
     }
 

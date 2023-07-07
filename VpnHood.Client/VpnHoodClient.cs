@@ -647,7 +647,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (requestResult.Response.ServerProtocolVersion < 2) // must be 3 (4 for Http)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
-            _connectorService.UseHttp = requestResult.Response.ServerProtocolVersion >= 4;
+            _connectorService.UseBinaryStream = requestResult.Response.ServerProtocolVersion >= 4;
+            _connectorService.ServerKey = requestResult.Response.ServerSecret;
             var sessionResponse = requestResult.Response;
 
             // log response
@@ -939,6 +940,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await SendByeRequest(cancellationTokenSource.Token);
         }
 
+        // dispose ConnectorService
+        VhLogger.Instance.LogTrace("Disposing ConnectorService...");
+        await _connectorService.DisposeAsync();
+        
         State = ClientState.Disposed;
         _cancellationTokenSource.Dispose();
         VhLogger.Instance.LogInformation("Bye Bye!");

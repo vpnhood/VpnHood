@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net.Sockets;
@@ -8,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling.Channels.Streams;
 
@@ -83,7 +83,7 @@ public class HttpStream : ChunkStream
             // ignore header
             if (!_isHttpHeaderRead)
             {
-                using var headerBuffer = await ReadHeadersAsync(SourceStream, cancellationToken);
+                using var headerBuffer = await HttpUtil.ReadHeadersAsync(SourceStream, cancellationToken);
                 if (headerBuffer.Length == 0)
                 {
                     _isFinished = true;
@@ -224,79 +224,6 @@ public class HttpStream : ChunkStream
             throw;
         }
     }
-
-    private static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
-        CancellationToken cancellationToken, int maxLength = 8192)
-    {
-        // read header
-        var memStream = new MemoryStream(1024);
-        try
-        {
-            var readBuffer = new byte[1];
-            var lfCounter = 0;
-            while (lfCounter < 4)
-            {
-                var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken);
-                if (bytesRead == 0)
-                    return memStream.Length == 0
-                        ? memStream // connection has been closed gracefully before sending anything
-                        : throw new Exception("HttpStream has been closed unexpectedly.");
-
-                if (readBuffer[0] == '\r' || readBuffer[0] == '\n')
-                    lfCounter++;
-                else
-                    lfCounter = 0;
-
-                await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken);
-
-                if (memStream.Length > maxLength)
-                    throw new Exception("HTTP header is too big.");
-            }
-
-            memStream.Position = 0;
-            return memStream;
-        }
-        catch
-        {
-            await memStream.DisposeAsync();
-            throw;
-        }
-    }
-
-
-    // ReSharper disable once UnusedMember.Local
-    private static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
-        CancellationToken cancellationToken, int maxLength = 8192)
-    {
-
-        using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
-        if (memStream.Length == 0)
-            return null; // connection has been closed gracefully
-
-        var reader = new StreamReader(memStream, Encoding.UTF8);
-        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        // Read the header lines until an empty line is encountered
-        while (true)
-        {
-            // ReSharper disable once MethodHasAsyncOverload
-            var line = reader.ReadLine();
-            if (string.IsNullOrEmpty(line))
-                break;
-
-            // Split the header line into header field and value
-            var separatorIndex = line.IndexOf(':');
-            if (separatorIndex > 0)
-            {
-                var headerField = line[..separatorIndex].Trim();
-                var headerValue = line[(separatorIndex + 1)..].Trim();
-                headers[headerField] = headerValue;
-            }
-        }
-
-        return headers;
-    }
-
 
     private async Task ReadNextLine(CancellationToken cancellationToken)
     {

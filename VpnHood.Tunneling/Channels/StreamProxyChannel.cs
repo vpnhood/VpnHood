@@ -196,10 +196,5 @@ public class StreamProxyChannel : IChannel, IJob
         _disposed = true;
         await _hostTcpClientStream.DisposeAsync();
         await _tunnelTcpClientStream.DisposeAsync();
-        //_hostCancellationTokenSource.Cancel();
-        //await _hostTcpClientStream.DisposeAsync();
-
-        //await Task.Delay(5000); //todo
-        //_tunnelCancellationTokenSource.Cancel();
     }
 }

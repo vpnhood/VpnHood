@@ -73,8 +73,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
         // dispose Ssl
-        if (!string.IsNullOrEmpty(_apiKey)) 
-            await sslStream.DisposeAsync(); 
+        if (!string.IsNullOrEmpty(_apiKey))
+            await sslStream.DisposeAsync();
 
         return string.IsNullOrEmpty(_apiKey)
             ? new TcpClientStream(tcpClient, sslStream, streamId)
@@ -111,7 +111,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 EnabledSslProtocols = sslProtocol
             }, cancellationToken);
 
-            Stat.CreatedConnectionCount++;
+            lock (Stat) Stat.CreatedConnectionCount++;
             var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
             return clientStream;
         }
@@ -129,7 +129,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     {
         while (_freeClientStreams.TryDequeue(out var queueItem))
         {
-            Stat.FreeConnectionCount--;
+            lock(Stat) Stat.FreeConnectionCount--;
             if (queueItem.ClientStream.CheckIsAlive())
                 return queueItem.ClientStream;
 
@@ -142,7 +142,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private Task ReuseStreamClient(IClientStream clientStream)
     {
         _freeClientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
-        Stat.FreeConnectionCount++;
+        lock(Stat) Stat.FreeConnectionCount++;
         return Task.CompletedTask;
     }
 
@@ -186,14 +186,14 @@ internal class ConnectorService : IAsyncDisposable, IJob
             {
                 await clientStream.Stream.WriteAsync(request, cancellationToken);
                 if (!clientStream.CheckIsAlive()) throw new Exception("TcpClient is not connected.");
-                Stat.ReusedConnectionSucceededCount++;
+                lock(Stat) Stat.ReusedConnectionSucceededCount++;
                 clientStream.ClientStreamId = requestId;
                 return clientStream;
             }
             catch (Exception ex)
             {
                 // dispose the connection and retry with new connection
-                Stat.ReusedConnectionFailedCount++;
+                lock (Stat) Stat.ReusedConnectionFailedCount++;
                 _disposingTasks.Add(clientStream.DisposeAsync(false));
                 VhLogger.LogError(GeneralEventId.TcpLife, ex,
                     "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}",

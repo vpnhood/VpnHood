@@ -19,7 +19,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
-internal class ClientHost : IDisposable
+internal class ClientHost : IAsyncDisposable
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -28,6 +28,7 @@ internal class ClientHost : IDisposable
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
+    private int _processingCount;
     private VpnHoodClient Client { get; }
     public IPAddress CatcherAddressIpV4 { get; }
     public IPAddress CatcherAddressIpV6 { get; }
@@ -39,15 +40,6 @@ internal class ClientHost : IDisposable
         CatcherAddressIpV6 = catcherAddressIpV6 ?? throw new ArgumentNullException(nameof(catcherAddressIpV6));
     }
 
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        _cancellationTokenSource.Cancel();
-        _tcpListenerIpV4?.Stop();
-        _tcpListenerIpV6?.Stop();
-    }
 
     public void Start()
     {
@@ -188,6 +180,10 @@ internal class ClientHost : IDisposable
 
         try
         {
+            // check cancellation
+            Interlocked.Increment(ref _processingCount);
+            cancellationToken.ThrowIfCancellationRequested();
+
             // config tcpOrgClient
             Client.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
             VhUtil.ConfigTcpClient(orgTcpClient, null, null);
@@ -263,7 +259,24 @@ internal class ClientHost : IDisposable
             if (channel != null) await channel.DisposeAsync();
             if (requestResult != null) await requestResult.DisposeAsync();
             orgTcpClient.Dispose();
-            VhLogger.Instance.LogError(GeneralEventId.StreamProxyChannel, $"{ex.Message}");
+            VhLogger.LogError(GeneralEventId.StreamProxyChannel, ex, "");
         }
+        finally
+        {
+            Interlocked.Decrement(ref _processingCount);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _cancellationTokenSource.Cancel();
+        _tcpListenerIpV4?.Stop();
+        _tcpListenerIpV6?.Stop();
+
+        // wait for clean disposal
+        while (_processingCount > 0)
+            await Task.Delay(50);
     }
 }

@@ -226,15 +226,22 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {
+        return DisposeAsync(true);
+    }
+
+    public ValueTask DisposeAsync(bool graceFul)
+    {
         lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
+            _disposeTask ??= DisposeAsyncCore(graceFul);
         return _disposeTask.Value;
     }
 
-    private async ValueTask DisposeAsyncCore()
+    private async ValueTask DisposeAsyncCore(bool graceFul)
     {
-        await SendClose(); // this won't throw any error
-        await _clientStream.DisposeAsync();
+        if (graceFul)
+            await SendClose(); // this won't throw any error
+
+        await _clientStream.DisposeAsync(graceFul);
         _disposed = true;
     }
 }

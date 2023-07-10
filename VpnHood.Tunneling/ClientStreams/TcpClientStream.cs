@@ -71,6 +71,7 @@ public class TcpClientStream : IClientStream
     private ValueTask? _disposeTask;
     public async ValueTask DisposeAsync(bool allowReuse, bool graceful = true)
     {
+        allowReuse &= graceful;
         if (!graceful)
             TcpClient.Dispose();
 

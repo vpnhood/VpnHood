@@ -295,11 +295,8 @@ public static class VhUtil
 
             // Check if the underlying socket is connected
             var socket = tcpClient.Client;
-            var healthy = socket is { Connected: true } &&
-                          (socket.Poll(1, SelectMode.SelectRead) && socket.Available == 0);
+            var healthy = tcpClient.Connected && socket.Connected && !tcpClient.Client.Poll(1, SelectMode.SelectError);
 
-            // return TcpClient.Connected && !TcpClient.Client.Poll(1, SelectMode.SelectError);
-            
             return healthy;
         }
         catch (Exception)

@@ -72,8 +72,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        //if (!string.IsNullOrEmpty(_apiKey))
-          //  await sslStream.DisposeAsync(); //todo
+        // dispose Ssl
+        if (!string.IsNullOrEmpty(_apiKey)) 
+            await sslStream.DisposeAsync(); 
 
         return string.IsNullOrEmpty(_apiKey)
             ? new TcpClientStream(tcpClient, sslStream, streamId)

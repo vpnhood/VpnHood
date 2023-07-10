@@ -1,21 +1,25 @@
 # v3.0.380
 ### Client
 * Feature: Client Protocol Version 4 
-* Feature: HTTP Tunnel (partially)
-* Feature: TCP connection reuse by HTTP 1.1
+* Feature: TCP connection reuse
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
 
 ### Server
 * Feature: Server Protocol Version 4 
-* Feature: HTTP Tunnel (partially)
-* Feature: TCP connection reuse by HTTP 1.1
+* Feature: TCP connection reuse
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
 * Fix: Server Kernel SendBufferSize
 * Fix: ClientCount report 0 in the FileAccessServer log
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
+
+### Development
+* Update: Use IAsyncDisposable
+* Update: Improve tests and make them faster
+* Feature: Add graceful disconnection
+
 
 # v2.9.370
 ### Server

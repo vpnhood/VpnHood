@@ -222,7 +222,7 @@ public class ServerTest
 
         await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_Https(throwError: false);
+            await TestHelper.Test_Https(throwError: false, timeout: 1000);
             return client.State;
         });
         Assert.AreEqual(ClientState.Disposed, client.State);

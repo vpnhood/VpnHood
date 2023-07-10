@@ -20,6 +20,7 @@ public static class GeneralEventId
     public static EventId NetFilter = new((int)EventCode.NetFilter, nameof(NetFilter));
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
+    public static EventId Test = new((int)EventCode.Test, nameof(Test));
 
     private enum EventCode
     {
@@ -39,5 +40,6 @@ public static class GeneralEventId
         SessionTrack,
         Request,
         TcpLife,
+        Test,
     }
 }

@@ -283,7 +283,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                 {
                     await sslStream.WriteAsync(GetHttpOk(), cancellationToken);
                     var secret = Convert.FromBase64String(xSecret);
-                    // await sslStream.DisposeAsync(); //todo dispose somewhere
+                    await sslStream.DisposeAsync(); // dispose Ssl
                     return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
                 }
             }

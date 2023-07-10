@@ -197,6 +197,10 @@ public class ServerTest
         );
 
         Assert.AreEqual(1, testAccessServer.SessionGetCounter);
+
+
+        await client.DisposeAsync();
+        await server2.DisposeAsync();
     }
 
     [TestMethod]

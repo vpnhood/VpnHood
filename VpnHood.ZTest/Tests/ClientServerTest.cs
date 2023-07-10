@@ -16,6 +16,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
 
@@ -423,7 +424,7 @@ public class ClientServerTest
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // close session
-        VhLogger.Instance.LogInformation("Closing the session by Test.");
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Closing the session by Test.");
         await server.SessionManager.CloseSession(client.SessionId);
 
         // wait for disposing session in access server
@@ -440,7 +441,7 @@ public class ClientServerTest
             // ignored
         }
 
-        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed, 5000);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
     }
 
     [TestMethod]
@@ -699,8 +700,8 @@ public class ClientServerTest
 
         // create one connection
         await TestHelper.Test_Https();
-        Assert.AreEqual(lasCreatedConnectionCount + 1, client.Stat.ConnectorStat.CreatedConnectionCount);
         Assert.AreEqual(lasReusedConnectionSucceededCount, client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lasCreatedConnectionCount + 1, client.Stat.ConnectorStat.CreatedConnectionCount);
         lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
@@ -722,7 +723,7 @@ public class ClientServerTest
         await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
 
         // open 3 connections simultaneously
-        VhLogger.Instance.LogInformation("Test: Open 3 connections simultaneously.");
+        VhLogger.Instance.LogTrace("Test: Open 3 connections simultaneously.");
         using (var tcpClient1 = new TcpClient())
         using (var tcpClient2 = new TcpClient())
         using (var tcpClient3 = new TcpClient())
@@ -736,6 +737,7 @@ public class ClientServerTest
             lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
             lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         }
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for free connections...");
         await VhTestUtil.AssertEqualsWait(3, () => client.Stat.ConnectorStat.FreeConnectionCount);
 
         // net two connection should use shared connection

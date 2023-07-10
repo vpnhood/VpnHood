@@ -25,7 +25,6 @@ public class FileAccessServer : IAccessServer
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
     public ServerConfig ServerConfig { get; }
-    public byte[] ServerSecret { get; }
     public string StoragePath { get; }
     public FileAccessServerSessionManager SessionManager { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");

@@ -129,6 +129,12 @@ public class UdpChannel2 : IDatagramChannel
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
+    public ValueTask DisposeAsync(bool graceFul)
+    {
+        _ = graceFul;
+        return DisposeAsync();
+    }
+
     public ValueTask DisposeAsync()
     {
         if (_disposed) return default;

@@ -20,8 +20,6 @@ public class UdpChannel : IDatagramChannel
     private readonly int _bufferHeaderLength;
     private readonly long _cryptorPosBase;
     private readonly bool _isClient;
-    private readonly object _lockCleanup = new();
-    private readonly int _mtuWithFragmentation = TunnelDefaults.MtuWithFragmentation;
     private readonly uint _sessionId;
     private readonly UdpClient _udpClient;
     private bool _disposed;
@@ -75,7 +73,7 @@ public class UdpChannel : IDatagramChannel
         // Tunnel optimizes the packets in regard of MTU without fragmentation 
         // so here we are not worry about optimizing it and can use fragmentation because the sum of 
         // packets should be small enough to fill a udp packet
-        var maxDataLen = _mtuWithFragmentation - _bufferHeaderLength;
+        var maxDataLen = TunnelDefaults.MtuWithFragmentation - _bufferHeaderLength;
         var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
         if (dataLen > maxDataLen)
             throw new InvalidOperationException(
@@ -149,7 +147,7 @@ public class UdpChannel : IDatagramChannel
                 if (IsInvalidState(ex))
                     await DisposeAsync();
                 else
-                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, 
+                    VhLogger.Instance.LogWarning(GeneralEventId.Udp,
                         $"Error in receiving packets. Exception: {ex.Message}");
             }
 
@@ -225,13 +223,16 @@ public class UdpChannel : IDatagramChannel
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
+    public ValueTask DisposeAsync(bool graceFul)
+    {
+        _ = graceFul;
+        return DisposeAsync();
+    }
+
     public ValueTask DisposeAsync()
     {
-        lock (_lockCleanup)
-        {
-            if (_disposed) return default;
-            _disposed = true;
-        }
+        if (_disposed) return default;
+        _disposed = true;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Udp,
             $"Disposing a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");

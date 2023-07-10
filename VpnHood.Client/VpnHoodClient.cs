@@ -901,15 +901,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var wasConnected = State is ClientState.Connecting or ClientState.Connected;
         State = ClientState.Disconnecting;
 
-        // disposing PacketCapture
-        _packetCapture.OnStopped -= PacketCapture_OnStopped;
-        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
-        if (_autoDisposePacketCapture)
-        {
-            VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
-            _packetCapture.Dispose();
-        }
-
         // log suppressedBy
         if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf)
             VhLogger.Instance.LogWarning("You suppressed by a session of yourself!");
@@ -920,7 +911,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
         VhLogger.Instance.LogTrace("Disposing ClientHost...");
-        _clientHost.Dispose();
+        await _clientHost.DisposeAsync();
 
         // Tunnel
         VhLogger.Instance.LogTrace("Disposing Tunnel...");
@@ -935,7 +926,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Nat.Dispose();
 
         // Sending Bye
-        if (wasConnected && SessionId != 0)
+        if (wasConnected && SessionId != 0 && SessionStatus.ErrorCode == SessionErrorCode.Ok)
         {
             using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
             await SendByeRequest(cancellationTokenSource.Token);
@@ -944,7 +935,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // dispose ConnectorService
         VhLogger.Instance.LogTrace("Disposing ConnectorService...");
         await _connectorService.DisposeAsync();
-        
+
+        // disposing PacketCapture. Must be at end for graceful shutdown
+        _packetCapture.OnStopped -= PacketCapture_OnStopped;
+        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
+        if (_autoDisposePacketCapture)
+        {
+            VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
+            _packetCapture.Dispose();
+        }
+
         State = ClientState.Disposed;
         _cancellationTokenSource.Dispose();
         VhLogger.Instance.LogInformation("Bye Bye!");

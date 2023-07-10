@@ -168,6 +168,11 @@ public class Tunnel : IJob, IAsyncDisposable
 
     public void RemoveChannel(IChannel channel)
     {
+        RemoveChannel(channel, true);
+    }
+
+    private void RemoveChannel(IChannel channel, bool graceFul)
+    {
         if (!IsChannelExists(channel))
             return; // channel already removed or does not exist
 
@@ -194,7 +199,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
 
         // dispose
-        _disposingTasks.Add(channel.DisposeAsync());
+        _disposingTasks.Add(channel.DisposeAsync(graceFul));
 
         // clean up channel
         _trafficUsage.Add(channel.Traffic);
@@ -416,7 +421,7 @@ public class Tunnel : IJob, IAsyncDisposable
             _packetQueue.Clear();
 
         foreach (var channel in channels)
-            try { RemoveChannel(channel); }
+            try { RemoveChannel(channel, false); }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError(ex, "Could not remove a channel. ChannelId: {ChannelId}", channel.ChannelId);

@@ -288,7 +288,8 @@ internal class ServerHost : IAsyncDisposable, IJob
             }
             else
             {
-                await sslStream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken); //always return UnauthorizedMessage 
+                //always return UnauthorizedMessage 
+                await sslStream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken); 
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
         }
@@ -438,7 +439,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         var version = buffer[0];
         if (version != 1)
-            throw new NotSupportedException("The request version is not supported!");
+            throw new NotSupportedException($"The request version is not supported. Version: {version}");
 
         // read request code
         var res = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);

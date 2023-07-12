@@ -80,10 +80,11 @@ public class StreamCryptor : AsyncStreamDecorator
         return readCount;
     }
 
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        PrepareWriteBuffer(buffer, offset, count);
-        return _stream.WriteAsync(buffer, offset, count, cancellationToken);
+        var copyBuffer = buffer[offset..count];
+        PrepareWriteBuffer(copyBuffer, 0, copyBuffer.Length);
+        await _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
     }
 
     public override ValueTask DisposeAsync()

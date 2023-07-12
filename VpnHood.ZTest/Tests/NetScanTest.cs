@@ -16,10 +16,10 @@ public class NetScanTest
     public async Task Reject_by_server()
     {
         // create server
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.NetScanTimeout = TimeSpan.FromSeconds(100);
-        fileAccessServerOptions.SessionOptions.NetScanLimit = 1;
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.NetScanTimeout = TimeSpan.FromSeconds(100);
+        fileAccessManagerOptions.SessionOptions.NetScanLimit = 1;
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

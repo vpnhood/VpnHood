@@ -15,7 +15,9 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
+using VpnHood.Server.Access;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Managers;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 
@@ -23,7 +25,7 @@ namespace VpnHood.Server;
 
 public class VpnHoodServer : IAsyncDisposable, IJob
 {
-    private readonly bool _autoDisposeAccessServer;
+    private readonly bool _autoDisposeAccessManager;
     private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
@@ -36,29 +38,30 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _sendStatusTask = Task.CompletedTask;
     public JobSection JobSection { get; }
 
-    public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
+    public VpnHoodServer(IAccessManager accessManager, ServerOptions options)
     {
         if (options.SocketFactory == null)
             throw new ArgumentNullException(nameof(options.SocketFactory));
 
-        AccessServer = accessServer;
+        AccessManager = accessManager;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        SessionManager = new SessionManager(accessServer, options.NetFilter, options.SocketFactory, options.GaTracker);
+        SessionManager = new SessionManager(accessManager, options.NetFilter, options.SocketFactory, options.GaTracker);
         JobSection = new JobSection(options.ConfigureInterval);
 
         _configureInterval = options.ConfigureInterval;
-        _autoDisposeAccessServer = options.AutoDisposeAccessServer;
+        _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _serverHost = new ServerHost(SessionManager, new SslCertificateManager(AccessServer));
+        _serverHost = new ServerHost(SessionManager, new SslCertificateManager(AccessManager));
 
+        VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
         JobRunner.Default.Add(this);
     }
 
     public SessionManager SessionManager { get; }
     public ServerState State { get; private set; } = ServerState.NotStarted;
-    public IAccessServer AccessServer { get; }
+    public IAccessManager AccessManager { get; }
     public ISystemInfoProvider SystemInfoProvider { get; }
 
     private static void ConfigMinIoThreads(int? minCompletionPortThreads)
@@ -96,7 +99,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         if (State == ServerState.Ready && _sendStatusTask.IsCompleted)
         {
-            _sendStatusTask = SendStatusToAccessServer();
+            _sendStatusTask = SendStatusToAccessManager();
             await _sendStatusTask;
         }
     }
@@ -175,14 +178,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
             ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
-            VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
 
             // starting the listeners
             if (_serverHost.IsStarted &&
                 (!_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue) ||
                  !_serverHost.UdpEndPoints.SequenceEqual(serverConfig.UdpEndPointsValue)))
             {
-                VhLogger.Instance.LogInformation("TcpEndPoints has changed. Stopping ServerHost...");
+                VhLogger.Instance.LogInformation("EndPoints has been changed. Stopping ServerHost...");
                 await _serverHost.Stop();
             }
 
@@ -260,7 +262,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         try
         {
-            var serverConfig = await AccessServer.Server_Configure(serverInfo);
+            var serverConfig = await AccessManager.Server_Configure(serverInfo);
             try { await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig)); }
             catch { /* Ignore */ }
             return serverConfig;
@@ -311,12 +313,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
     }
 
-    private async Task SendStatusToAccessServer()
+    private async Task SendStatusToAccessManager()
     {
         try
         {
-            VhLogger.Instance.LogTrace("Sending status to Access...");
-            var res = await AccessServer.Server_UpdateStatus(Status);
+            VhLogger.Instance.LogTrace("Sending status to Access... ConfigCode: {ConfigCode}", Status.ConfigCode);
+            var res = await AccessManager.Server_UpdateStatus(Status);
 
             // reconfigure
             if (res.ConfigCode != _lastConfigCode || !_serverHost.IsStarted)
@@ -377,8 +379,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         await _serverHost.DisposeAsync(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync();
 
-        if (_autoDisposeAccessServer)
-            AccessServer.Dispose();
+        if (_autoDisposeAccessManager)
+            AccessManager.Dispose();
 
         State = ServerState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <RootNamespace>VpnHood.Server</RootNamespace>
+    <RootNamespace>VpnHood.Server.Access</RootNamespace>
     <AssemblyName>VpnHood.Server.Access</AssemblyName>
     <Company>OmegaHood LLC</Company>
     <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>

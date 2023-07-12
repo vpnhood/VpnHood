@@ -10,9 +10,10 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Managers;
+using VpnHood.Server.Access.Messaging;
 using VpnHood.Server.Exceptions;
-using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -22,7 +23,7 @@ namespace VpnHood.Server;
 
 public class SessionManager : IAsyncDisposable, IJob
 {
-    private readonly IAccessServer _accessServer;
+    private readonly IAccessManager _accessManager;
     private readonly SocketFactory _socketFactory;
     private readonly Ga4Tracker? _ga4Tracker;
     private byte[] _serverSecret;
@@ -46,12 +47,12 @@ public class SessionManager : IAsyncDisposable, IJob
         }
     }
 
-    public SessionManager(IAccessServer accessServer,
+    public SessionManager(IAccessManager accessManager,
         INetFilter netFilter,
         SocketFactory socketFactory,
         Ga4Tracker? ga4Tracker)
     {
-        _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
+        _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _ga4Tracker = ga4Tracker;
         _serverSecret = VhUtil.GenerateKey(128);
@@ -84,7 +85,7 @@ public class SessionManager : IAsyncDisposable, IJob
     private async Task<Session> CreateSessionInternal(SessionResponse sessionResponse,
         IPEndPointPair ipEndPointPair, HelloRequest? helloRequest)
     {
-        var session = new Session(_accessServer, sessionResponse, NetFilter, _socketFactory,
+        var session = new Session(_accessManager, sessionResponse, NetFilter, _socketFactory,
             ipEndPointPair.LocalEndPoint, SessionOptions, TrackingOptions, helloRequest);
 
         // add to sessions
@@ -103,7 +104,7 @@ public class SessionManager : IAsyncDisposable, IJob
     {
         // validate the token
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
-        var sessionResponseEx = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
+        var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
@@ -138,7 +139,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
         try
         {
-            var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId,
+            var sessionResponse = await _accessManager.Session_Get(sessionRequest.SessionId,
                 ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address);
 
             // Check session key for recovery
@@ -235,7 +236,7 @@ public class SessionManager : IAsyncDisposable, IJob
     }
 
     /// <summary>
-    ///     Close session in this server and AccessServer
+    ///     Close session in this server and AccessManager
     /// </summary>
     /// <param name="sessionId"></param>
     public async Task CloseSession(ulong sessionId)

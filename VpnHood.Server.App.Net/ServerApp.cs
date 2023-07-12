@@ -11,9 +11,10 @@ using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Access.Managers;
+using VpnHood.Server.Access.Managers.File;
+using VpnHood.Server.Access.Managers.Http;
 using VpnHood.Server.App.SystemInformation;
-using VpnHood.Server.Providers.FileAccessServerProvider;
-using VpnHood.Server.Providers.HttpAccessServerProvider;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -93,9 +94,9 @@ public class ServerApp : IDisposable
         };
 
         // create access server
-        AccessServer = AppSettings.HttpAccessServer != null
-            ? CreateHttpAccessServer(AppSettings.HttpAccessServer)
-            : CreateFileAccessServer(StoragePath, AppSettings.FileAccessServer);
+        AccessManager = AppSettings.HttpAccessManager != null
+            ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
+            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
     }
 
     private void InitFileLogger()
@@ -154,26 +155,26 @@ public class ServerApp : IDisposable
         return serverKey;
     }
 
-    public IAccessServer AccessServer { get; }
-    public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
+    public IAccessManager AccessManager { get; }
+    public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
 
-    private static FileAccessServer CreateFileAccessServer(string storageFolderPath, FileAccessServerOptions? options)
+    private static FileAccessManager CreateFileAccessManager(string storageFolderPath, FileAccessManagerOptions? options)
     {
-        var accessServerFolder = Path.Combine(storageFolderPath, "access");
-        VhLogger.Instance.LogInformation($"Using FileAccessServer. AccessFolder: {accessServerFolder}");
-        var ret = new FileAccessServer(accessServerFolder, options ?? new FileAccessServerOptions());
+        var accessManagerFolder = Path.Combine(storageFolderPath, "access");
+        VhLogger.Instance.LogInformation($"Using FileAccessManager. AccessFolder: {accessManagerFolder}");
+        var ret = new FileAccessManager(accessManagerFolder, options ?? new FileAccessManagerOptions());
         return ret;
     }
 
-    private static HttpAccessServer CreateHttpAccessServer(HttpAccessServerOptions options)
+    private static HttpAccessManager CreateHttpAccessManager(HttpAccessManagerOptions options)
     {
-        VhLogger.Instance.LogInformation("Initializing ResetAccessServer. BaseUrl: {BaseUrl}", options.BaseUrl);
-        var httpAccessServer = new HttpAccessServer(options)
+        VhLogger.Instance.LogInformation("Initializing ResetAccessManager. BaseUrl: {BaseUrl}", options.BaseUrl);
+        var httpAccessManager = new HttpAccessManager(options)
         {
             Logger = VhLogger.Instance,
-            LoggerEventId = GeneralEventId.AccessServer
+            LoggerEventId = GeneralEventId.AccessManager
         };
-        return httpAccessServer;
+        return httpAccessManager;
     }
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
@@ -225,16 +226,16 @@ public class ServerApp : IDisposable
             if (IsAnotherInstanceRunning())
                 throw new AnotherInstanceIsRunning();
 
-            // check FileAccessServer
-            if (FileAccessServer != null && FileAccessServer.AccessItem_LoadAll().Length == 0)
+            // check FileAccessManager
+            if (FileAccessManager != null && FileAccessManager.AccessItem_LoadAll().Length == 0)
                 VhLogger.Instance.LogWarning(
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");
 
             // Init File Logger before starting server; other log should be on console or other file
             InitFileLogger();
-            if (AccessServer is HttpAccessServer httpAccessServer)
-                httpAccessServer.Logger = VhLogger.Instance;
+            if (AccessManager is HttpAccessManager httpAccessManager)
+                httpAccessManager.Logger = VhLogger.Instance;
 
             // systemInfoProvider
             ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
@@ -242,7 +243,7 @@ public class ServerApp : IDisposable
                 : new WinSystemInfoProvider();
 
             // run server
-            _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions
+            _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions
             {
                 GaTracker = _gaTracker,
                 SystemInfoProvider = systemInfoProvider,
@@ -296,8 +297,8 @@ public class ServerApp : IDisposable
         cmdApp.Command("start", StartServer);
         cmdApp.Command("stop", StopServer);
 
-        if (FileAccessServer != null)
-            new FileAccessServerCommand(FileAccessServer)
+        if (FileAccessManager != null)
+            new FileAccessManagerCommand(FileAccessManager)
                 .AddCommands(cmdApp);
 
         await cmdApp.ExecuteAsync(args);

@@ -12,7 +12,8 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
@@ -27,7 +28,7 @@ namespace VpnHood.Server;
 public class Session : IAsyncDisposable, IJob
 {
     private readonly INetFilter _netFilter;
-    private readonly IAccessServer _accessServer;
+    private readonly IAccessManager _accessManager;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
     private readonly IPEndPoint _localEndPoint;
@@ -65,7 +66,7 @@ public class Session : IAsyncDisposable, IJob
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionResponse sessionResponse,
+    internal Session(IAccessManager accessManager, SessionResponse sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
@@ -75,7 +76,7 @@ public class Session : IAsyncDisposable, IJob
         var logScope = new LogScope();
         logScope.Data.Add(sessionTuple);
 
-        _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
+        _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions
         {
@@ -229,8 +230,8 @@ public class Session : IAsyncDisposable, IJob
         try
         {
             SessionResponse = closeSession
-                ? await _accessServer.Session_Close(SessionId, traffic)
-                : await _accessServer.Session_AddUsage(SessionId, traffic);
+                ? await _accessManager.Session_Close(SessionId, traffic)
+                : await _accessManager.Session_AddUsage(SessionId, traffic);
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
@@ -244,7 +245,7 @@ public class Session : IAsyncDisposable, IJob
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(GeneralEventId.AccessServer, ex,
+            VhLogger.Instance.LogWarning(GeneralEventId.AccessManager, ex,
                 "Could not report usage to the access-server.");
         }
         finally

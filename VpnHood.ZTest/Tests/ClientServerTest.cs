@@ -200,8 +200,8 @@ public class ClientServerTest
 
         // ************
         // *** TEST ***: TCP invalid request should not close the vpn connection
-        var oldClientSentByteCount = client.SessionTraffic.Sent;
-        var oldClientReceivedByteCount = client.SessionTraffic.Received;
+        var oldClientSentByteCount = client.Stat.SessionTraffic.Sent;
+        var oldClientReceivedByteCount = client.Stat.SessionTraffic.Received;
         var oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         var oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
@@ -224,9 +224,9 @@ public class ClientServerTest
         await TestHelper.Test_Https();
 
         // check there is send data
-        Assert.IsTrue(client.SessionTraffic.Sent > oldClientSentByteCount + 100,
+        Assert.IsTrue(client.Stat.SessionTraffic.Sent > oldClientSentByteCount + 100,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.SessionTraffic.Received > oldClientReceivedByteCount + 2000,
+        Assert.IsTrue(client.Stat.SessionTraffic.Received > oldClientReceivedByteCount + 2000,
             "Not enough data has been sent through the client!");
         Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 2000,
             "Not enough data has been sent through the client!");
@@ -235,16 +235,16 @@ public class ClientServerTest
 
         // ************
         // *** TEST ***: UDP v4
-        oldClientSentByteCount = client.SessionTraffic.Sent;
-        oldClientReceivedByteCount = client.SessionTraffic.Received;
+        oldClientSentByteCount = client.Stat.SessionTraffic.Sent;
+        oldClientReceivedByteCount = client.Stat.SessionTraffic.Received;
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
         await TestHelper.Test_Udp();
 
-        Assert.IsTrue(client.SessionTraffic.Sent > oldClientSentByteCount + 500,
+        Assert.IsTrue(client.Stat.SessionTraffic.Sent > oldClientSentByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.SessionTraffic.Received > oldClientReceivedByteCount + 500,
+        Assert.IsTrue(client.Stat.SessionTraffic.Received > oldClientReceivedByteCount + 500,
             "Not enough data has been sent through the client!");
         Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 500,
             "Not enough data has been sent through the client!");
@@ -253,16 +253,16 @@ public class ClientServerTest
 
         // ************
         // *** TEST ***: IcmpV4
-        oldClientSentByteCount = client.SessionTraffic.Sent;
-        oldClientReceivedByteCount = client.SessionTraffic.Received;
+        oldClientSentByteCount = client.Stat.SessionTraffic.Sent;
+        oldClientReceivedByteCount = client.Stat.SessionTraffic.Received;
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
         await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
 
-        Assert.IsTrue(client.SessionTraffic.Sent > oldClientSentByteCount + 500,
+        Assert.IsTrue(client.Stat.SessionTraffic.Sent > oldClientSentByteCount + 500,
             "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.SessionTraffic.Received > oldClientReceivedByteCount + 500,
+        Assert.IsTrue(client.Stat.SessionTraffic.Received > oldClientReceivedByteCount + 500,
             "Not enough data has been sent through the client!");
         Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 500,
             "Not enough data has been sent through the client!");

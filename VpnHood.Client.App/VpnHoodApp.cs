@@ -126,9 +126,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         HasDisconnectedByUser = _hasDisconnectedByUser,
         HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
         SessionStatus = LastSessionStatus,
-        Speed = Client?.Speed ?? new Traffic(),
-        AccountTraffic = Client?.AccountTraffic ?? new Traffic(),
-        SessionTraffic = Client?.SessionTraffic ?? new Traffic(),
+        Speed = Client?.Stat.Speed ?? new Traffic(),
+        AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
+        SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
         ClientIpGroup = _lastClientIpGroup,
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = VersionStatus,
@@ -448,7 +448,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // check for any success
             if (Client != null)
             {
-                _hasAnyDataArrived = Client.SessionTraffic.Received > 1000;
+                _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
                 if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _lastException = new Exception("No data has arrived!");
             }

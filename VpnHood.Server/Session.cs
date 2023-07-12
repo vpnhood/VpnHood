@@ -82,7 +82,7 @@ public class Session : IAsyncDisposable, IJob
         {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
-            MaxUdpWorkerCount = options.MaxUdpPortCount,
+            MaxUdpWorkerCount = options.MaxUdpPortCountValue,
             UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope
         });

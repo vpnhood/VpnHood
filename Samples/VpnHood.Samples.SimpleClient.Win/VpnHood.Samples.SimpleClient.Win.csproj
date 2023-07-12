@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="VpnHood.Client" Version="2.9.369" />
-    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="2.9.369" />
+    <PackageReference Include="VpnHood.Client" Version="2.9.371" />
+    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="2.9.371" />
   </ItemGroup>
 
 </Project>

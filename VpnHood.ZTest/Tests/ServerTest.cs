@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Net;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -155,9 +154,7 @@ public class ServerTest
         Assert.IsTrue(fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
         await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
-        Thread.Sleep(1000);
-
-        Assert.IsFalse(session.IsAlive);
+        await VhTestUtil.AssertEqualsWait(false, () => session.IsAlive);
     }
 
     [TestMethod]
@@ -176,8 +173,8 @@ public class ServerTest
 
         // restart server
         await server.DisposeAsync();
-
         await using var server2 = TestHelper.CreateServer(testAccessManager);
+
         VhLogger.Instance.LogInformation("Test: Sending another HTTP Request...");
         await TestHelper.Test_Https();
         Assert.AreEqual(ClientState.Connected, client.State);

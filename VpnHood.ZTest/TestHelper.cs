@@ -21,9 +21,10 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
-using VpnHood.Server.Configurations;
-using VpnHood.Server.Messaging;
-using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Managers;
+using VpnHood.Server.Access.Managers.File;
+using VpnHood.Server.Access.Messaging;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -88,7 +89,7 @@ internal static class TestHelper
 
         Assert.AreEqual(connectionSate, app.State.ConnectionState);
     }
-    
+
     public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
     {
         return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
@@ -103,7 +104,7 @@ internal static class TestHelper
         return ping.SendPingAsync(ipAddress ?? TEST_PingV4Address1, timeout, buffer);
     }
 
-    private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, 
+    private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default,
         int timeout = DefaultTimeout)
     {
         uri ??= TEST_HttpsUri1;
@@ -116,13 +117,13 @@ internal static class TestHelper
 
         httpClient ??= httpClientT;
         var cancellationTokenSource = new CancellationTokenSource(timeout);
-        
+
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
-        if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint ))
+        if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint))
             requestMessage.Headers.Host = NetFilter.ProcessRequest(ProtocolType.Tcp, ipEndPoint)!.Address.ToString();
-        
+
         var response = await httpClient.SendAsync(requestMessage, cancellationTokenSource.Token);
         var res = await response.Content.ReadAsStringAsync(cancellationTokenSource.Token);
         return res.Length > 100;
@@ -162,7 +163,7 @@ internal static class TestHelper
             await Test_Udp(udpClientIpV6, udpEndPoint, timeout);
         }
     }
- 
+
     public static async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, int timeout = DefaultTimeout)
     {
         var buffer = new byte[1024];
@@ -174,7 +175,7 @@ internal static class TestHelper
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public static async Task<bool> Test_Https(HttpClient? httpClient = default, Uri? uri = default, 
+    public static async Task<bool> Test_Https(HttpClient? httpClient = default, Uri? uri = default,
         int timeout = DefaultTimeout, bool throwError = true)
     {
         if (throwError)
@@ -218,11 +219,11 @@ internal static class TestHelper
         }
     }
 
-    public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint[]? hostEndPoints = null,
+    public static Token CreateAccessToken(FileAccessManager fileAccessManager, IPEndPoint[]? hostEndPoints = null,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
-        return fileAccessServer.AccessItem_Create(
-            hostEndPoints ?? fileAccessServer.ServerConfig.TcpEndPointsValue,
+        return fileAccessManager.AccessItem_Create(
+            hostEndPoints ?? fileAccessManager.ServerConfig.TcpEndPointsValue,
             tokenName: $"Test Server {++_accessItemIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
@@ -233,21 +234,21 @@ internal static class TestHelper
     public static Token CreateAccessToken(VpnHoodServer server,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
-        var testAccessServer = (TestAccessServer)server.AccessServer;
-        var fileAccessServer = (FileAccessServer)testAccessServer.BaseAccessServer;
-        return CreateAccessToken(fileAccessServer, null, maxClientCount, maxTrafficByteCount, expirationTime);
+        var testAccessManager = (TestAccessManager)server.AccessManager;
+        var fileAccessManager = (FileAccessManager)testAccessManager.BaseAccessManager;
+        return CreateAccessToken(fileAccessManager, null, maxClientCount, maxTrafficByteCount, expirationTime);
     }
 
-    public static FileAccessServer CreateFileAccessServer(FileAccessServerOptions? options = null, string? storagePath = null)
+    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null)
     {
-        storagePath ??= Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}");
-        options ??= CreateFileAccessServerOptions();
-        return new FileAccessServer(storagePath, options);
+        storagePath ??= Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
+        options ??= CreateFileAccessManagerOptions();
+        return new FileAccessManager(storagePath, options);
     }
 
-    public static FileAccessServerOptions CreateFileAccessServerOptions()
+    public static FileAccessManagerOptions CreateFileAccessManagerOptions()
     {
-        var options = new FileAccessServerOptions
+        var options = new FileAccessManagerOptions
         {
             TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) },
             UdpEndPoints = new[] { new IPEndPoint(IPAddress.Loopback, 0) },
@@ -267,27 +268,27 @@ internal static class TestHelper
         return options;
     }
 
-    public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, bool autoStart = true, TimeSpan? configureInterval = null)
+    public static VpnHoodServer CreateServer(IAccessManager? accessManager = null, bool autoStart = true, TimeSpan? configureInterval = null)
     {
-        return CreateServer(accessServer, null, autoStart, configureInterval);
+        return CreateServer(accessManager, null, autoStart, configureInterval);
     }
 
-    public static VpnHoodServer CreateServer(FileAccessServerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
+    public static VpnHoodServer CreateServer(FileAccessManagerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
     {
         return CreateServer(null, options, autoStart, configureInterval);
     }
 
-    private static VpnHoodServer CreateServer(IAccessServer? accessServer, FileAccessServerOptions? fileAccessServerOptions, bool autoStart,
+    private static VpnHoodServer CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, bool autoStart,
         TimeSpan? configureInterval = null)
     {
-        if (accessServer != null && fileAccessServerOptions != null)
-            throw new InvalidOperationException($"Could not set both {nameof(accessServer)} and {nameof(fileAccessServerOptions)}.");
+        if (accessManager != null && fileAccessManagerOptions != null)
+            throw new InvalidOperationException($"Could not set both {nameof(accessManager)} and {nameof(fileAccessManagerOptions)}.");
 
-        var autoDisposeAccessServer = false;
-        if (accessServer == null)
+        var autoDisposeAccessManager = false;
+        if (accessManager == null)
         {
-            accessServer = new TestAccessServer(CreateFileAccessServer(fileAccessServerOptions));
-            autoDisposeAccessServer = true;
+            accessManager = new TestAccessManager(CreateFileAccessManager(fileAccessManagerOptions));
+            autoDisposeAccessManager = true;
         }
 
         // ser server options
@@ -295,14 +296,14 @@ internal static class TestHelper
         {
             SocketFactory = new TestSocketFactory(),
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
-            AutoDisposeAccessServer = autoDisposeAccessServer,
+            AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
             NetFilter = NetFilter,
             PublicIpDiscovery = true, //it slows down our tests
         };
 
         // Create server
-        var server = new VpnHoodServer(accessServer, serverOptions);
+        var server = new VpnHoodServer(accessManager, serverOptions);
         if (autoStart)
         {
             server.Start().Wait();
@@ -322,6 +323,15 @@ internal static class TestHelper
         return CreateDevice(options).CreatePacketCapture().Result;
     }
 
+    public static ClientOptions CreateClientOptions(bool useUdp = false)
+    {
+        return new ClientOptions
+        {
+            MaxDatagramChannelCount = 1,
+            UseUdpChannel = useUdp
+        };
+    }
+
     public static VpnHoodClient CreateClient(Token token,
         IPacketCapture? packetCapture = default,
         TestDeviceOptions? deviceOptions = default,
@@ -332,7 +342,7 @@ internal static class TestHelper
     {
         packetCapture ??= CreatePacketCapture(deviceOptions);
         clientId ??= Guid.NewGuid();
-        options ??= new ClientOptions { MaxDatagramChannelCount = 1 };
+        options ??= CreateClientOptions();
         if (options.ConnectTimeout == new ClientOptions().ConnectTimeout) options.ConnectTimeout = TimeSpan.FromSeconds(3);
         options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         options.ExcludeLocalNetwork = false;
@@ -420,7 +430,7 @@ internal static class TestHelper
     {
         clientId ??= Guid.NewGuid();
 
-        return new SessionRequestEx("access:" + Guid.NewGuid(), 
+        return new SessionRequestEx("access:" + Guid.NewGuid(),
             token.TokenId,
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
@@ -456,7 +466,7 @@ internal static class TestHelper
     }
     public static async Task AssertEqualsWait<T, TValue>(T obj, TValue? expectedValue, Func<T, TValue> valueFactory, string? message = null, int timeout = 5000)
     {
-        await WaitForValue(expectedValue, ()=>valueFactory(obj), timeout);
+        await WaitForValue(expectedValue, () => valueFactory(obj), timeout);
 
         if (message != null)
             Assert.AreEqual(expectedValue, valueFactory(obj), message);
@@ -494,7 +504,7 @@ internal static class TestHelper
         TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
         VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         VhLogger.IsDiagnoseMode = true;
-        VhLogger.IsAnonymousMode = false;   
+        VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
         NetFilter.Init(new[]

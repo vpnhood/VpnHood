@@ -89,8 +89,8 @@ public class AccessTest
     [TestMethod]
     public async Task Server_reject_expired_access_at_runtime()
     {
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create an short expiring token
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddMilliseconds(500));

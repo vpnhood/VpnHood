@@ -15,7 +15,7 @@ public static class GeneralEventId
     public static EventId Track = new((int)EventCode.Track, nameof(Track));
     public static EventId StreamProxyChannel = new((int)EventCode.StreamChannel, nameof(StreamProxyChannel));
     public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
-    public static EventId AccessServer = new((int)EventCode.AccessServer, nameof(AccessServer));
+    public static EventId AccessManager = new((int)EventCode.AccessManager, nameof(AccessManager));
     public static EventId NetProtect = new((int)EventCode.NetProtect, nameof(NetProtect));
     public static EventId NetFilter = new((int)EventCode.NetFilter, nameof(NetFilter));
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
@@ -34,7 +34,7 @@ public static class GeneralEventId
         DatagramChannel,
         Track,
         Tls,
-        AccessServer,
+        AccessManager,
         NetProtect,
         NetFilter,
         SessionTrack,

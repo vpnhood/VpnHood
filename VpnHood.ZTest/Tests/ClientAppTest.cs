@@ -503,9 +503,9 @@ public class ClientAppTest
     public async Task Get_token_from_tokenLink()
     {
         // create server
-        using var fileAccessServer = TestHelper.CreateFileAccessServer();
-        using var testAccessServer = new TestAccessServer(fileAccessServer);
-        await using var server = TestHelper.CreateServer(testAccessServer);
+        using var fileAccessManager = TestHelper.CreateFileAccessManager();
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        await using var server = TestHelper.CreateServer(testAccessManager);
 
         var token1 = TestHelper.CreateAccessToken(server);
         var token2 = TestHelper.CreateAccessToken(server);

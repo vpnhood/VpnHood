@@ -9,27 +9,28 @@ using EmbedIO.WebApi;
 using Swan.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
-using VpnHood.Server.Configurations;
-using VpnHood.Server.Messaging;
+using VpnHood.Server.Access;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Managers;
+using VpnHood.Server.Access.Messaging;
 
 // ReSharper disable UnusedMember.Local
 
 #nullable enable
 namespace VpnHood.Test;
 
-public class TestEmbedIoAccessServer : IDisposable
+public class TestEmbedIoAccessManager : IDisposable
 {
     private WebServer _webServer;
     
-    public IAccessServer FileAccessServer { get; }
+    public IAccessManager FileAccessManager { get; }
 
 
-    public TestEmbedIoAccessServer(IAccessServer fileFileAccessServer, bool autoStart = true)
+    public TestEmbedIoAccessManager(IAccessManager fileFileAccessManager, bool autoStart = true)
     {
         try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
 
-        FileAccessServer = fileFileAccessServer;
+        FileAccessManager = fileFileAccessManager;
         BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
@@ -77,19 +78,19 @@ public class TestEmbedIoAccessServer : IDisposable
 
     private class ApiController : WebApiController
     {
-        private readonly TestEmbedIoAccessServer _embedIoAccessServer;
+        private readonly TestEmbedIoAccessManager _embedIoAccessManager;
 
-        public ApiController(TestEmbedIoAccessServer embedIoAccessServer)
+        public ApiController(TestEmbedIoAccessManager embedIoAccessManager)
         {
-            _embedIoAccessServer = embedIoAccessServer;
+            _embedIoAccessManager = embedIoAccessManager;
         }
 
-        private IAccessServer AccessServer => _embedIoAccessServer.FileAccessServer;
+        private IAccessManager AccessManager => _embedIoAccessManager.FileAccessManager;
 
         protected override void OnBeforeHandler()
         {
-            if (_embedIoAccessServer.HttpException != null)
-                throw _embedIoAccessServer.HttpException;
+            if (_embedIoAccessManager.HttpException != null)
+                throw _embedIoAccessManager.HttpException;
             base.OnBeforeHandler();
         }
 
@@ -108,7 +109,7 @@ public class TestEmbedIoAccessServer : IDisposable
             [QueryField] string hostEndPoint, [QueryField] string? clientIp)
         {
             _ = serverId;
-            var res = await AccessServer.Session_Get(sessionId, IPEndPoint.Parse(hostEndPoint),
+            var res = await AccessManager.Session_Get(sessionId, IPEndPoint.Parse(hostEndPoint),
                 clientIp != null ? IPAddress.Parse(clientIp) : null);
             return res;
         }
@@ -118,11 +119,11 @@ public class TestEmbedIoAccessServer : IDisposable
         {
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
-            var res = await AccessServer.Session_Create(sessionRequestEx);
-            if (_embedIoAccessServer.RedirectHostEndPoint != null &&
-                !sessionRequestEx.HostEndPoint.Equals(_embedIoAccessServer.RedirectHostEndPoint))
+            var res = await AccessManager.Session_Create(sessionRequestEx);
+            if (_embedIoAccessManager.RedirectHostEndPoint != null &&
+                !sessionRequestEx.HostEndPoint.Equals(_embedIoAccessManager.RedirectHostEndPoint))
             {
-                res.RedirectHostEndPoint = _embedIoAccessServer.RedirectHostEndPoint;
+                res.RedirectHostEndPoint = _embedIoAccessManager.RedirectHostEndPoint;
                 res.ErrorCode = SessionErrorCode.RedirectHost;
             }
 
@@ -135,8 +136,8 @@ public class TestEmbedIoAccessServer : IDisposable
             _ = serverId;
             var traffic = await GetRequestDataAsync<Traffic>();
             var res = closeSession
-                ? await AccessServer.Session_Close(sessionId, traffic)
-                : await AccessServer.Session_AddUsage(sessionId, traffic);
+                ? await AccessManager.Session_Close(sessionId, traffic)
+                : await AccessManager.Session_AddUsage(sessionId, traffic);
             return res;
 
         }
@@ -145,7 +146,7 @@ public class TestEmbedIoAccessServer : IDisposable
         public Task<byte[]> GetSslCertificateData([QueryField] Guid serverId, string hostEndPoint)
         {
             _ = serverId;
-            return AccessServer.GetSslCertificateData(IPEndPoint.Parse(hostEndPoint));
+            return AccessManager.GetSslCertificateData(IPEndPoint.Parse(hostEndPoint));
         }
 
         [Route(HttpVerbs.Post, "/status")]
@@ -153,7 +154,7 @@ public class TestEmbedIoAccessServer : IDisposable
         {
             _ = serverId;
             var serverStatus = await GetRequestDataAsync<ServerStatus>();
-            return await AccessServer.Server_UpdateStatus(serverStatus);
+            return await AccessManager.Server_UpdateStatus(serverStatus);
         }
 
 
@@ -162,7 +163,7 @@ public class TestEmbedIoAccessServer : IDisposable
         {
             _ = serverId;
             var serverInfo = await GetRequestDataAsync<ServerInfo>();
-            return await AccessServer.Server_Configure(serverInfo);
+            return await AccessManager.Server_Configure(serverInfo);
         }
     }
 }

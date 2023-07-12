@@ -62,6 +62,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         _cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _cancellationTokenSource.Token;
         IsStarted = true;
+        lock (_stopLock) _stopTask = null;
 
         try
         {
@@ -153,7 +154,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
         await Task.WhenAll(disposeTasks);
 
-        VhLogger.Instance.LogTrace("Waiting for processing requests...");
+        VhLogger.Instance.LogTrace("Disposing current processing requests...");
         try
         {
             if (_startTask != null)
@@ -166,8 +167,6 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         _startTask = null;
         IsStarted = false;
-        lock (_stopLock)
-            _stopTask = null;
     }
 
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)

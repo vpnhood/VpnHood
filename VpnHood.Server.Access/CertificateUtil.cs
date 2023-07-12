@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace VpnHood.Server;
+namespace VpnHood.Server.Access;
 
 public static class CertificateUtil
 {

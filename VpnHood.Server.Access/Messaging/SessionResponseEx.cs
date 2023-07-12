@@ -1,10 +1,10 @@
-﻿using System.Net;
-using System;
+﻿using System;
+using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Converters;
+using VpnHood.Common.Messaging;
 
-namespace VpnHood.Server.Messaging;
+namespace VpnHood.Server.Access.Messaging;
 
 public class SessionResponseEx : SessionResponse
 {

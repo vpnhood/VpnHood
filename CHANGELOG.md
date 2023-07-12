@@ -12,7 +12,7 @@
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
 * Fix: Server Kernel SendBufferSize
-* Fix: ClientCount report 0 in the FileAccessServer log
+* Fix: ClientCount report 0 in the FileAccessManager log
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
 
 ### Development
@@ -163,7 +163,7 @@
 
 ### Server
 * Feature: Report IPv6 support to client
-* Feature: Add -domain to File AccessServer to set access-key endpoint will set to certificate domain
+* Feature: Add -domain to File AccessManager to set access-key endpoint will set to certificate domain
 * Fix: Update Script doesn't work
 * Fix: Hold some TCP connections
 * Fix: Delay in showing command-line helps for File Access Server
@@ -180,7 +180,7 @@
 * Fix: Windows Installer
 
 ### Server
-* Update: Improve Log for AccessServer API CALL
+* Update: Improve Log for AccessManager API CALL
 * Update: Port Tracker
 * Update: Improve session recovery
 * Fix: Critical bug that consume much resources
@@ -293,7 +293,7 @@
 * Fix: Add time-stamp to logger
 
 ### Server
-* Update: Move Sessions options to AccessServer via ServerConfig
+* Update: Move Sessions options to AccessManager via ServerConfig
 * Fix: Catch a lost packet when removing TcpDatagramChannel
 
 # v2.3.290
@@ -335,7 +335,7 @@
 * Fix: UDP Channel
 
 ### Server
-* Feature: Dynamic configuration from AccessServer
+* Feature: Dynamic configuration from AccessManager
 * Feature: Multi listeners for different EndPoints
 * Fix: Few bug in disposing
 * Fix: Linux: systemctl restart VpnHoodServer 
@@ -375,7 +375,7 @@
 * Feature: Validate packets integrity in UdpChannel
 * Update: Stop supporting the old version
 * Update: Improve Performance and Memory usage
-* Update: New REST AccessServer protocol
+* Update: New REST AccessManager protocol
 * Change: Stop supporting the old version
 
 ### Developer
@@ -480,7 +480,7 @@
 
 ### Server
 * Update: Auto restart if VpnHoodServer stops unexpectedly
-* Fix: Typo error in default.pfx filename for FileAccessServer
+* Fix: Typo error in default.pfx filename for FileAccessManager
 * Fix: Linux: Stop working after server update
 
 # v1.1.235
@@ -497,12 +497,12 @@
 * Fix: UDP loss in mass UDP traffic
 
 ### Server
-* New: Send ClientVersion to AccessServer
+* New: Send ClientVersion to AccessManager
 * Update: drop Hello version 1 support
 * Update: Significantly improve speed and stability
 * Update: Automatically remove profiles when token does not exist
 * Update: add some log EventId
-* Fix: token is ignored when created by FileAccessServer
+* Fix: token is ignored when created by FileAccessManager
 * Fix: UDP loss in mass UDP traffic
 
 # v1.1.217

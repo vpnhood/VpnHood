@@ -68,7 +68,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             $"X-Secret: {Convert.ToBase64String(streamSecret)}\r\n" +
             "\r\n";
 
-        // Wait for result
+        // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 

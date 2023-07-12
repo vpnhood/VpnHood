@@ -102,7 +102,7 @@ Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
 if ("$restBaseUrl" -ne "") {
 	# publish info
 	$appSettings = @{
-		HttpAccessServer = @{
+		HttpAccessManager = @{
 			BaseUrl       = $restBaseUrl;
 			Authorization = $restAuthorization;
 		};

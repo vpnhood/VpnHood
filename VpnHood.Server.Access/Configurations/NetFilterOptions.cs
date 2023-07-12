@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Server.Configurations;
+namespace VpnHood.Server.Access.Configurations;
 
 public class NetFilterOptions
 {

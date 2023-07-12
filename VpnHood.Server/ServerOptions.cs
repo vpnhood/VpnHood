@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using Ga4.Ga4Tracking;
-using VpnHood.Server.Configurations;
+using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling.Factory;
 
@@ -13,7 +13,7 @@ public class ServerOptions
     public Ga4Tracker? GaTracker { get; set; }
     public ISystemInfoProvider? SystemInfoProvider { get; set; }
     public INetFilter NetFilter { get; set; } = new NetFilter();
-    public bool AutoDisposeAccessServer { get; set; } = true;
+    public bool AutoDisposeAccessManager { get; set; } = true;
     public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; set; } = Directory.GetCurrentDirectory();
     public bool PublicIpDiscovery { get; set; } = true;

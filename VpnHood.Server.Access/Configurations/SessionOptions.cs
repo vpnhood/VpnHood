@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.Server.Configurations;
+namespace VpnHood.Server.Access.Configurations;
 
 public class SessionOptions
 {

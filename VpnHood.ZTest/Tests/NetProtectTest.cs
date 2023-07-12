@@ -12,10 +12,10 @@ public class NetProtectTest
     public async Task MaxTcpWaitConnect_reject()
     {
         // create server
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
-        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount = 0;
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
+        fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 0;
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -36,10 +36,10 @@ public class NetProtectTest
     public async Task MaxTcpWaitConnect_accept()
     {
         // create server
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
-        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount = 1;
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
+        fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 1;
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

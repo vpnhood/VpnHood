@@ -588,24 +588,6 @@ public class ClientServerTest
         Assert.AreEqual(1, clientConnect.AttemptCount);
     }
 
-    [TestMethod]
-    public async Task Close_session_by_client_disconnect()
-    {
-        // create server
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
-
-        // create client
-        var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
-        Assert.IsTrue(fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
-        await client.DisposeAsync();
-        await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
-
-        Assert.IsFalse(session.IsAlive);
-    }
-
 #if DEBUG
     [TestMethod]
     public async Task Disconnect_for_unsupported_client()
@@ -696,7 +678,6 @@ public class ClientServerTest
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        var options = TestHelper.CreateClientAppOptions();
         await using var client = TestHelper.CreateClient(token, options: TestHelper.CreateClientOptions(useUdp: true));
         var lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         var lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;

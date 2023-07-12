@@ -29,7 +29,7 @@ public class BinaryStream : ChunkStream
     public BinaryStream(Stream sourceStream, string streamId, byte[] secret)
         : base(sourceStream, streamId)
     {
-        _streamCryptor = sourceStream; //StreamCryptor.Create(sourceStream, secret, leaveOpen: true); //todo
+        _streamCryptor = StreamCryptor.Create(sourceStream, secret, leaveOpen: true);
     }
 
     private BinaryStream(Stream sourceStream, string streamId, Stream streamCryptor, int reusedCount)

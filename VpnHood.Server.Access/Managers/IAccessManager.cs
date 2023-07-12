@@ -2,12 +2,12 @@
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Configurations;
-using VpnHood.Server.Messaging;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server;
+namespace VpnHood.Server.Access.Managers;
 
-public interface IAccessServer : IDisposable
+public interface IAccessManager : IDisposable
 {
     bool IsMaintenanceMode { get; }
     Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx);

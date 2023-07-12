@@ -10,26 +10,26 @@ using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
-using VpnHood.Server.Messaging;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server.Providers.HttpAccessServerProvider;
+namespace VpnHood.Server.Access.Managers.Http;
 
-public class HttpAccessServer : ApiClientBase, IAccessServer
+public class HttpAccessManager : ApiClientBase, IAccessManager
 {
     public bool IsMaintenanceMode { get; private set; }
 
-    public HttpAccessServer(HttpClient httpClient)
+    public HttpAccessManager(HttpClient httpClient)
         : base(httpClient)
     {
     }
 
-    public HttpAccessServer(HttpAccessServerOptions options)
+    public HttpAccessManager(HttpAccessManagerOptions options)
         : this(new HttpClient(), options)
     {
     }
 
-    public HttpAccessServer(HttpClient httpClient, HttpAccessServerOptions options)
+    public HttpAccessManager(HttpClient httpClient, HttpAccessManagerOptions options)
         : base(httpClient)
     {
         httpClient.BaseAddress =

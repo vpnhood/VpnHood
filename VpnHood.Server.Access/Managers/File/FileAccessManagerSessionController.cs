@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Messaging;
+using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server.Providers.FileAccessServerProvider;
+namespace VpnHood.Server.Access.Managers.File;
 
-public class FileAccessServerSessionManager : IDisposable, IJob
+public class FileAccessManagerSessionController : IDisposable, IJob
 {
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
@@ -18,7 +18,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
 
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
 
-    public FileAccessServerSessionManager()
+    public FileAccessManagerSessionController()
     {
         JobRunner.Default.Add(this);
     }
@@ -50,14 +50,14 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
 
-    private static bool ValidateRequest(SessionRequest sessionRequest, FileAccessServer.AccessItem accessItem)
+    private static bool ValidateRequest(SessionRequest sessionRequest, FileAccessManager.AccessItem accessItem)
     {
         var encryptClientId = VhUtil.EncryptClientId(sessionRequest.ClientInfo.ClientId, accessItem.Token.Secret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
     public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
-        FileAccessServer.AccessItem accessItem)
+        FileAccessManager.AccessItem accessItem)
     {
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
@@ -91,7 +91,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(ulong sessionId, FileAccessServer.AccessItem accessItem,
+    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem,
         IPEndPoint? hostEndPoint)
     {
         // check existence
@@ -107,7 +107,7 @@ public class FileAccessServerSessionManager : IDisposable, IJob
         return ret;
     }
 
-    private SessionResponseEx BuildSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
+    private SessionResponseEx BuildSessionResponse(Session session, FileAccessManager.AccessItem accessItem)
     {
         var accessUsage = accessItem.AccessUsage;
 

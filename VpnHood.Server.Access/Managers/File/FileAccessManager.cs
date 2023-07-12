@@ -14,37 +14,37 @@ using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
-using VpnHood.Server.Messaging;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Server.Providers.FileAccessServerProvider;
+namespace VpnHood.Server.Access.Managers.File;
 
-public class FileAccessServer : IAccessServer
+public class FileAccessManager : IAccessManager
 {
     private const string FileExtToken = ".token";
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
     public ServerConfig ServerConfig { get; }
     public string StoragePath { get; }
-    public FileAccessServerSessionManager SessionManager { get; }
+    public FileAccessManagerSessionController SessionController { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
     public X509Certificate2 DefaultCert { get; }
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
     public bool IsMaintenanceMode => false; //this server never goes into maintenance mode
 
-    public FileAccessServer(string storagePath, FileAccessServerOptions options)
+    public FileAccessManager(string storagePath, FileAccessManagerOptions options)
     {
-        using var scope = VhLogger.Instance.BeginScope("FileAccessServer");
+        using var scope = VhLogger.Instance.BeginScope("FileAccessManager");
 
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
         _sslCertificatesPassword = options.SslCertificatesPassword ?? "";
-        SessionManager = new FileAccessServerSessionManager();
+        SessionController = new FileAccessManagerSessionController();
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
-        DefaultCert = File.Exists(defaultCertFile)
+        DefaultCert = System.IO.File.Exists(defaultCertFile)
             ? new X509Certificate2(defaultCertFile, _sslCertificatesPassword, X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, _sslCertificatesPassword);
 
@@ -55,10 +55,10 @@ public class FileAccessServer : IAccessServer
     public byte[] LoadServerSecret()
     {
         var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
-        if (!File.Exists(serverSecretFile))
-            File.WriteAllText(serverSecretFile, Convert.ToBase64String(VhUtil.GenerateKey(128)));
+        if (!System.IO.File.Exists(serverSecretFile))
+            System.IO.File.WriteAllText(serverSecretFile, Convert.ToBase64String(VhUtil.GenerateKey(128)));
 
-        return Convert.FromBase64String(File.ReadAllText(serverSecretFile));
+        return Convert.FromBase64String(System.IO.File.ReadAllText(serverSecretFile));
     }
 
     public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
@@ -96,7 +96,7 @@ public class FileAccessServer : IAccessServer
         if (accessItem == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
-        var ret = SessionManager.CreateSession(sessionRequestEx, accessItem);
+        var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
         // set endpoints
         ret.TcpEndPoints = new[] { sessionRequestEx.HostEndPoint };
@@ -114,7 +114,7 @@ public class FileAccessServer : IAccessServer
         _ = clientIp;
 
         // find token
-        var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
+        var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
@@ -132,7 +132,7 @@ public class FileAccessServer : IAccessServer
             };
 
         // read usage
-        return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
+        return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
     public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
@@ -148,7 +148,7 @@ public class FileAccessServer : IAccessServer
     private async Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
     {
         // find token
-        var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
+        var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
             return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
@@ -161,9 +161,9 @@ public class FileAccessServer : IAccessServer
         await WriteAccessItemUsage(accessItem);
 
         if (closeSession)
-            SessionManager.CloseSession(sessionId);
+            SessionController.CloseSession(sessionId);
 
-        var res = SessionManager.GetSession(sessionId, accessItem, null);
+        var res = SessionController.GetSession(sessionId, accessItem, null);
         var ret = new SessionResponseBase(res.ErrorCode)
         {
             AccessUsage = res.AccessUsage,
@@ -176,7 +176,7 @@ public class FileAccessServer : IAccessServer
 
     public void Dispose()
     {
-        SessionManager.Dispose();
+        SessionController.Dispose();
     }
 
     private string GetAccessItemFileName(Guid tokenId)
@@ -200,7 +200,7 @@ public class FileAccessServer : IAccessServer
         var certificate = CertificateUtil.CreateSelfSigned();
         var buf = certificate.Export(X509ContentType.Pfx, password);
         Directory.CreateDirectory(Path.GetDirectoryName(certFilePath)!);
-        File.WriteAllBytes(certFilePath, buf);
+        System.IO.File.WriteAllBytes(certFilePath, buf);
         return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
     }
 
@@ -247,7 +247,7 @@ public class FileAccessServer : IAccessServer
         var token = accessItem.Token;
 
         // Write accessItem
-        File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
+        System.IO.File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
 
         // build default usage
         ReadAccessItemUsage(accessItem).Wait();
@@ -263,10 +263,10 @@ public class FileAccessServer : IAccessServer
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete files
-        if (File.Exists(GetUsageFileName(tokenId)))
-            File.Delete(GetUsageFileName(tokenId));
-        if (File.Exists(GetAccessItemFileName(tokenId)))
-            File.Delete(GetAccessItemFileName(tokenId));
+        if (System.IO.File.Exists(GetUsageFileName(tokenId)))
+            System.IO.File.Delete(GetUsageFileName(tokenId));
+        if (System.IO.File.Exists(GetAccessItemFileName(tokenId)))
+            System.IO.File.Delete(GetAccessItemFileName(tokenId));
     }
 
     public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
@@ -274,10 +274,10 @@ public class FileAccessServer : IAccessServer
         // read access item
         var fileName = GetAccessItemFileName(tokenId);
         using var fileLock = await AsyncLock.LockAsync(fileName);
-        if (!File.Exists(fileName))
+        if (!System.IO.File.Exists(fileName))
             return null;
 
-        var json = await File.ReadAllTextAsync(fileName);
+        var json = await System.IO.File.ReadAllTextAsync(fileName);
         var accessItem = VhUtil.JsonDeserialize<AccessItem>(json);
         await ReadAccessItemUsage(accessItem);
         return accessItem;
@@ -299,9 +299,9 @@ public class FileAccessServer : IAccessServer
         {
             var fileName = GetUsageFileName(accessItem.Token.TokenId);
             using var fileLock = await AsyncLock.LockAsync(fileName);
-            if (File.Exists(fileName))
+            if (System.IO.File.Exists(fileName))
             {
-                var json = await File.ReadAllTextAsync(fileName);
+                var json = await System.IO.File.ReadAllTextAsync(fileName);
                 var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
                 accessItem.AccessUsage.Traffic = new Traffic { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
             }
@@ -326,13 +326,13 @@ public class FileAccessServer : IAccessServer
         // write accessItem
         var fileName = GetUsageFileName(accessItem.Token.TokenId);
         using var fileLock = await AsyncLock.LockAsync(fileName);
-        await File.WriteAllTextAsync(fileName, json);
+        await System.IO.File.WriteAllTextAsync(fileName, json);
     }
 
     private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)
     {
         var certFilePath = GetCertFilePath(hostEndPoint);
-        if (returnDefaultIfNotFound && !File.Exists(certFilePath))
+        if (returnDefaultIfNotFound && !System.IO.File.Exists(certFilePath))
             return DefaultCert;
         return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
     }

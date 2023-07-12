@@ -9,17 +9,17 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
-using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Server.Access.Managers.File;
 
 namespace VpnHood.Server.App;
 
-public class FileAccessServerCommand
+public class FileAccessManagerCommand
 {
-    private readonly FileAccessServer _fileAccessServer;
+    private readonly FileAccessManager _fileAccessManager;
 
-    public FileAccessServerCommand(FileAccessServer fileAccessServer)
+    public FileAccessManagerCommand(FileAccessManager fileAccessManager)
     {
-        _fileAccessServer = fileAccessServer;
+        _fileAccessManager = fileAccessManager;
     }
 
     public void AddCommands(CommandLineApplication cmdApp)
@@ -42,7 +42,7 @@ public class FileAccessServerCommand
 
     private async Task PrintToken(Guid tokenId)
     {
-        var accessItem = await _fileAccessServer.AccessItem_Read(tokenId);
+        var accessItem = await _fileAccessManager.AccessItem_Read(tokenId);
         if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
         var hostName = accessItem.Token.HostName + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
@@ -71,7 +71,7 @@ public class FileAccessServerCommand
     {
         var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
         var defaultPublicEps = new List<IPEndPoint>();
-        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPointsValue
+        var allListenerPorts = _fileAccessManager.ServerConfig.TcpEndPointsValue
             .Select(x => x.Port)
             .Distinct();
 
@@ -83,7 +83,7 @@ public class FileAccessServerCommand
 
     private void GenerateToken(CommandLineApplication cmdApp)
     {
-        var accessServer = _fileAccessServer;
+        var accessManager = _fileAccessManager;
 
         cmdApp.Description = "Generate a token";
         var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
@@ -97,7 +97,7 @@ public class FileAccessServerCommand
                 throw new InvalidOperationException("Can not set -domain and -ep options together.");
 
             var publicEndPoints = Array.Empty<IPEndPoint>();
-            var tcpEndPoints = accessServer.ServerConfig.TcpEndPointsValue;
+            var tcpEndPoints = accessManager.ServerConfig.TcpEndPointsValue;
             if (!useDomainOption.HasValue())
             {
                 publicEndPoints  = publicEndPointOption.HasValue()
@@ -120,7 +120,7 @@ public class FileAccessServerCommand
                 }
             }
 
-            var accessItem = accessServer.AccessItem_Create(
+            var accessItem = accessManager.AccessItem_Create(
                 tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                 publicEndPoints: publicEndPoints,
                 maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
@@ -130,7 +130,7 @@ public class FileAccessServerCommand
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessItem.Token.TokenId);
-            Console.WriteLine($"Store Token Count: {accessServer.AccessItem_LoadAll().Length}");
+            Console.WriteLine($"Store Token Count: {accessManager.AccessItem_LoadAll().Length}");
             return 0;
         });
     }

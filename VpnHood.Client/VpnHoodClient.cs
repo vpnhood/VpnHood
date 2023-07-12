@@ -89,9 +89,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
     public bool ExcludeLocalNetwork { get; }
-    public Traffic Speed => Tunnel.Speed;
-    public Traffic SessionTraffic => Tunnel.Traffic;
-    public Traffic AccountTraffic => _helloTraffic + SessionTraffic;
     public bool UseUdpChannel { get; set; }
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
@@ -152,10 +149,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
-        Stat = new ClientStat
-        {
-            ConnectorStat = _connectorService.Stat
-        };
+        Stat = new ClientStat(this);
 
 #if DEBUG
         if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
@@ -948,5 +942,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         State = ClientState.Disposed;
         _cancellationTokenSource.Dispose();
         VhLogger.Instance.LogInformation("Bye Bye!");
+    }
+
+    public class ClientStat
+    {
+        private readonly VpnHoodClient _client;
+        public ConnectorStat ConnectorStat => _client._connectorService.Stat;
+        public Traffic Speed => _client.Tunnel.Speed;
+        public Traffic SessionTraffic => _client.Tunnel.Traffic;
+        public Traffic AccountTraffic => _client._helloTraffic + SessionTraffic;
+
+        internal ClientStat(VpnHoodClient vpnHoodClient)
+        {
+            _client = vpnHoodClient;
+        }
     }
 }

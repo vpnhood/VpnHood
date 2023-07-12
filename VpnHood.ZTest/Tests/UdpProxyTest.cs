@@ -1,10 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
+using VpnHood.Client;
+using VpnHood.Common.Logging;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling;
+using ProtocolType = PacketDotNet.ProtocolType;
+
 
 namespace VpnHood.Test.Tests;
 
@@ -38,7 +45,8 @@ public class UdpProxyTest
         public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint) { }
 
         public void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
-            bool isNewLocalEndPoint, bool isNewRemoteEndPoint) { }
+            bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
+        { }
     }
 
 
@@ -61,7 +69,7 @@ public class UdpProxyTest
         await proxyPool.SendPacket(ipPacket);
         Assert.AreEqual(2, proxyPool.ClientCount);
         await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
-        
+
         // Test
         udpEndPoint = TestHelper.WebServer.UdpV4EndPoints[1];
         ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
@@ -92,7 +100,7 @@ public class UdpProxyTest
         await proxyPool.SendPacket(ipPacket);
         await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("::1")));
     }
-    
+
     [TestMethod]
     public async Task Multiple_EndPointEx()
     {
@@ -113,7 +121,7 @@ public class UdpProxyTest
         // -------------
         ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
         await proxyPool.SendPacket(ipPacket);
-        Assert.AreEqual(2, proxyPool.ClientCount, 
+        Assert.AreEqual(2, proxyPool.ClientCount,
             "New source with a same destination should create a new worker.");
         await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
 
@@ -132,7 +140,7 @@ public class UdpProxyTest
         var udpEndPoint2 = TestHelper.WebServer.UdpV4EndPoints[1];
         ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint2, Guid.NewGuid().ToByteArray());
         await proxyPool.SendPacket(ipPacket);
-        Assert.AreEqual(2, proxyPool.ClientCount,  
+        Assert.AreEqual(2, proxyPool.ClientCount,
             "new destination should not create a worker.");
 
         // -------------
@@ -152,10 +160,43 @@ public class UdpProxyTest
     }
 
     [TestMethod]
-    public Task Max_UdpClient()
+    public async Task Max_UdpClients()
     {
-        //todo
-        //throw new NotImplementedException();
-        return Task.CompletedTask;
+        VhLogger.IsDiagnoseMode = true;
+        var maxUdpCount = 3;
+
+        // Create Server
+        var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        accessManagerOptions.SessionOptions.MaxUdpPortCount = maxUdpCount;
+
+        await using var server = TestHelper.CreateServer(accessManagerOptions);
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+
+        // create udpClients and send packets
+        var udpClients = new List<UdpClient>();
+        var tasks = new List<Task>();
+        for (var i = 0; i < maxUdpCount + 1; i++)
+        {
+            var udpClient = new UdpClient(AddressFamily.InterNetwork);
+            udpClients.Add(udpClient);
+            tasks.Add(TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1, timeout: 2000));
+        }
+
+        foreach (var task in tasks)
+        {
+            try { await task; }
+            catch { /* Ignore */ }
+        }
+
+        // Check succeeded Udp
+        Assert.AreEqual(maxUdpCount, tasks.Count(x => x.IsCompletedSuccessfully));
+        Assert.AreEqual(1, tasks.Count(x => x.IsFaulted || x.IsCanceled));
+
+        // clean up
+        foreach (var udpClient in udpClients)
+            udpClient.Dispose();
     }
 }

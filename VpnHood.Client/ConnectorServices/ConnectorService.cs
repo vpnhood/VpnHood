@@ -111,8 +111,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 EnabledSslProtocols = sslProtocol
             }, cancellationToken);
 
-            lock (Stat) Stat.CreatedConnectionCount++;
             var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
+            lock (Stat) Stat.CreatedConnectionCount++;
             return clientStream;
         }
         catch (MaintenanceException)

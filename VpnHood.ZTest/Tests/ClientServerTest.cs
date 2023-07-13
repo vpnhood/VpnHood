@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -146,6 +147,52 @@ public class ClientServerTest
         // Create Client
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
     }
+
+    [TestMethod]
+    public async Task DatagramChannel_Stream()
+    {
+        VhLogger.IsDiagnoseMode = true;
+
+        // Create Server
+        await using var server = TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        {
+            UseUdpChannel = false,
+            MaxDatagramChannelCount = 4
+        });
+
+        var tasks = new List<Task>();
+        for (var i = 0; i < 10; i++)
+            tasks.Add(TestHelper.Test_Udp());
+
+        await Task.WhenAll(tasks);
+    }
+
+    [TestMethod]
+    public async Task DatagramChannel_Udp()
+    {
+        VhLogger.IsDiagnoseMode = true;
+
+        // Create Server
+        await using var server = TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        {
+            UseUdpChannel = true,
+        });
+
+        var tasks = new List<Task>();
+        for (var i = 0; i < 10; i++)
+            tasks.Add(TestHelper.Test_Udp());
+
+        await Task.WhenAll(tasks);
+    }
+
 
     [TestMethod]
     public async Task UdpChannel()
@@ -430,7 +477,7 @@ public class ClientServerTest
         await server.SessionManager.CloseSession(client.SessionId);
 
         // wait for disposing session in access server
-        await VhTestUtil.AssertEqualsWait(false, 
+        await VhTestUtil.AssertEqualsWait(false,
             () => fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
             "Session has not been closed in the access server.");
 
@@ -716,8 +763,8 @@ public class ClientServerTest
             await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
             await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
 
-            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, ()=>client.Stat.ConnectorStat.CreatedConnectionCount);
-            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, ()=>client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, () => client.Stat.ConnectorStat.CreatedConnectionCount);
+            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
             lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
             lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         }

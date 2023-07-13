@@ -4,19 +4,19 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using PacketDotNet;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class StreamPacketReader
+public class StreamPacketReader : IDisposable
 {
-    private readonly byte[] _buffer = new byte[1500 * 100];
     private readonly List<IPPacket> _ipPackets = new();
-    private readonly Stream _stream;
-    private int _bufferCount;
+    private readonly ReadCacheStream _stream;
+    private readonly byte[] _packetBuffer = new byte[0xFFFF];
 
     public StreamPacketReader(Stream stream)
     {
-        _stream = stream;
+        _stream = new ReadCacheStream(stream, true, 15000); //10 packets
     }
 
 
@@ -25,41 +25,31 @@ public class StreamPacketReader
     {
         _ipPackets.Clear();
 
-        var moreData = true;
-        while (moreData)
+        while (_ipPackets.Count < 10)
         {
-            var toRead = _buffer.Length - _bufferCount;
-            var read = await _stream.ReadAsync(_buffer, _bufferCount, toRead, cancellationToken);
-            _bufferCount += read;
-            moreData = toRead == read && read != 0;
+            // read packet header
+            const int minPacketSize = 20;
+            if (!await StreamUtil.ReadWaitForFillAsync(_stream, _packetBuffer, 0, minPacketSize, cancellationToken))
+                return _ipPackets.Count != 0 ? _ipPackets.ToArray() : null;
 
-            // read packet size
-            var bufferIndex = 0;
-            while (_bufferCount - bufferIndex >= 4)
-            {
-                var packetLength = PacketUtil.ReadPacketLength(_buffer, bufferIndex);
+            // find packet length
+            var packetLength = PacketUtil.ReadPacketLength(_packetBuffer, 0);
+            if (!await StreamUtil.ReadWaitForFillAsync(_stream, _packetBuffer, minPacketSize, packetLength - minPacketSize, cancellationToken))
+                throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
 
-                // read all packets
-                if (_bufferCount - bufferIndex < packetLength)
-                    break;
+            var ipPacket = Packet.ParsePacket(LinkLayers.Raw, _packetBuffer).Extract<IPPacket>();
+            _ipPackets.Add(ipPacket);
 
-                var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
-                var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
-                _ipPackets.Add(ipPacket);
-
-                bufferIndex += packetLength;
-            }
-
-            // shift the rest buffer to start
-            if (_bufferCount > bufferIndex)
-                Array.Copy(_buffer, bufferIndex, _buffer, 0, _bufferCount - bufferIndex);
-            _bufferCount -= bufferIndex;
-
-            //end of last packet aligned to last byte of buffer, so maybe there is no more packet
-            if (_bufferCount == 0)
-                moreData = false;
+            // send current packets if there is no more data in cache
+            if (!_stream.IsDataAvailableInCache)
+                break;
         }
 
-        return _ipPackets.Count != 0 ? _ipPackets.ToArray() : null;
+        return _ipPackets.ToArray();
+    }
+
+    public void Dispose()
+    {
+        _stream.Dispose();
     }
 }

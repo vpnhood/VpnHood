@@ -16,6 +16,7 @@ public class ReadCacheStream : AsyncStreamDecorator
     private int _cacheOffset;
 
     public override bool CanSeek => false;
+    public bool IsDataAvailableInCache => _cacheRemain > 0;
 
     public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024, byte[]? cacheData = null)
         : base(sourceStream, leaveOpen)
@@ -27,7 +28,6 @@ public class ReadCacheStream : AsyncStreamDecorator
             _cacheRemain = cacheData.Length;
         }
     }
-
 
     public override long Position
     {

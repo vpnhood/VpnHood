@@ -12,7 +12,7 @@ public class StreamPacketReader : IAsyncDisposable
 {
     private readonly List<IPPacket> _ipPackets = new();
     private readonly ReadCacheStream _stream;
-    private readonly byte[] _packetBuffer = new byte[0xFFFF];
+    private byte[] _packetBuffer = new byte[1600];
     private int _packetBufferCount;
 
     public StreamPacketReader(Stream stream)
@@ -57,6 +57,10 @@ public class StreamPacketReader : IAsyncDisposable
             var packetLength = PacketUtil.ReadPacketLength(_packetBuffer, 0);
             if (_packetBufferCount < packetLength)
             {
+                //not sure we get any packet more than 1600
+                if (_packetBufferCount > _packetBuffer.Length) 
+                    Array.Resize(ref _packetBuffer, _packetBufferCount); 
+
                 var toRead = packetLength - _packetBufferCount;
                 var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken);
                 _packetBufferCount += read;

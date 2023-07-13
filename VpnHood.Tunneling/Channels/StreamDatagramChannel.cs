@@ -127,7 +127,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
         try
         {
-            using var streamPacketReader = new StreamPacketReader(stream);
+            await using var streamPacketReader = new StreamPacketReader(stream);
             while (!cancellationToken.IsCancellationRequested && !_isCloseReceived)
             {
                 var ipPackets = await streamPacketReader.ReadAsync(cancellationToken);

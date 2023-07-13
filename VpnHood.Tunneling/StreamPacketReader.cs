@@ -8,15 +8,16 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class StreamPacketReader : IDisposable
+public class StreamPacketReader : IAsyncDisposable
 {
     private readonly List<IPPacket> _ipPackets = new();
     private readonly ReadCacheStream _stream;
     private readonly byte[] _packetBuffer = new byte[0xFFFF];
+    private int _packetBufferCount;
 
     public StreamPacketReader(Stream stream)
     {
-        _stream = new ReadCacheStream(stream, true, 15000); //10 packets
+        _stream = new ReadCacheStream(stream, true, 15000); // max batch
     }
 
 
@@ -25,31 +26,62 @@ public class StreamPacketReader : IDisposable
     {
         _ipPackets.Clear();
 
-        while (_ipPackets.Count < 10)
+        while (true)
         {
             // read packet header
             const int minPacketSize = 20;
-            if (!await StreamUtil.ReadWaitForFillAsync(_stream, _packetBuffer, 0, minPacketSize, cancellationToken))
-                return _ipPackets.Count != 0 ? _ipPackets.ToArray() : null;
+            if (_packetBufferCount < minPacketSize)
+            {
+                var toRead = minPacketSize - _packetBufferCount;
+                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken);
+                _packetBufferCount += read;
+                
+                // is eof?
+                if (read == 0 && _packetBufferCount == 0)
+                    return null;
+
+                // is unexpected eof?
+                if (read == 0)
+                    throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
+
+                // is uncompleted header?
+                if (toRead != read)
+                    break; 
+
+                // is just header?
+                if (!_stream.DataAvailableInCache)
+                    break;
+            }
 
             // find packet length
             var packetLength = PacketUtil.ReadPacketLength(_packetBuffer, 0);
-            if (!await StreamUtil.ReadWaitForFillAsync(_stream, _packetBuffer, minPacketSize, packetLength - minPacketSize, cancellationToken))
-                throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
+            if (_packetBufferCount < packetLength)
+            {
+                var toRead = packetLength - _packetBufferCount;
+                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken);
+                _packetBufferCount += read;
+                if (read == 0)
+                    throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");
+
+                // is packet read?
+                if (toRead != read)
+                    break; 
+            }
 
             var ipPacket = Packet.ParsePacket(LinkLayers.Raw, _packetBuffer).Extract<IPPacket>();
             _ipPackets.Add(ipPacket);
+            _packetBufferCount = 0;
 
-            // send current packets if there is no more data in cache
-            if (!_stream.IsDataAvailableInCache)
+            // Don't try to read more packet if there is no data in cache
+            if (!_stream.DataAvailableInCache)
                 break;
         }
 
         return _ipPackets.ToArray();
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
-        _stream.Dispose();
+        return _stream.DisposeAsync();
     }
 }

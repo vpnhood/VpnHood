@@ -165,7 +165,7 @@ public class ClientServerTest
         });
 
         var tasks = new List<Task>();
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < 50; i++)
             tasks.Add(TestHelper.Test_Udp());
 
         await Task.WhenAll(tasks);
@@ -187,7 +187,7 @@ public class ClientServerTest
         });
 
         var tasks = new List<Task>();
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < 50; i++)
             tasks.Add(TestHelper.Test_Udp());
 
         await Task.WhenAll(tasks);

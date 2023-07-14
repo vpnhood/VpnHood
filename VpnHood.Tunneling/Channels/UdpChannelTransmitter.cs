@@ -16,8 +16,8 @@ public abstract class UdpChannelTransmitter : IDisposable
     private readonly BufferCryptor _serverCryptor;
     private readonly RNGCryptoServiceProvider _randomGenerator = new();
     private readonly byte[] _sendIv = new byte[8];
-    private readonly byte[] _sendHeadKeyBuffer = new byte[24];
     public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
+    private readonly byte[] _sendHeadKeyBuffer = new byte[HeaderLength - 8]; // IV will not be encrypted
     private bool _disposed;
 
     protected UdpChannelTransmitter(UdpClient udpClient, byte[] serverKey)
@@ -29,7 +29,8 @@ public abstract class UdpChannelTransmitter : IDisposable
 
     public IPEndPoint LocalEndPoint => (IPEndPoint)_udpClient.Client.LocalEndPoint;
 
-    public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition, byte[] buffer, int bufferLength)
+    public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition,
+        byte[] buffer, int bufferLength, int protocolVersion)
     {
         try
         {
@@ -92,7 +93,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 receiving = false;
                 var buffer = udpResult.Buffer;
                 if (buffer.Length < HeaderLength)
-                    throw new Exception("Invalid UDP packet. Could not find its header.");
+                    throw new Exception("Invalid UDP packet size. Could not find its header.");
 
                 // build header key
                 var bufferIndex = 0;
@@ -106,7 +107,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                     buffer[bufferIndex + i] ^= headKeyBuffer[i]; //simple XOR with the generated unique key
 
                 // check packet signature OK
-                if (buffer[8] != 'O' || buffer[9] != 'K')
+                if (buffer[8] != 'O' || buffer[9] != 'K') 
                     throw new Exception("Packet signature does not match.");
 
                 // read session and session position

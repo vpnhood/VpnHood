@@ -158,7 +158,7 @@ public class ServerTest
     }
 
     [TestMethod]
-    public async Task Recover_closed_session_from_access_server()
+    public async Task Restore_session_after_restarting_server()
     {
         // create server
         using var fileAccessManager = TestHelper.CreateFileAccessManager();

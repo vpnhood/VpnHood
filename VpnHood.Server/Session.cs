@@ -61,6 +61,7 @@ public class Session : IAsyncDisposable, IJob
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; } = new();
     public HelloRequest? HelloRequest { get; }
+    public SessionExtraData SessionExtraData { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
     public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
@@ -70,7 +71,7 @@ public class Session : IAsyncDisposable, IJob
         INetFilter netFilter,
         ISocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
-        HelloRequest? helloRequest)
+        SessionExtraData sessionExtraData, HelloRequest? helloRequest)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -101,6 +102,7 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _syncJobSection = new JobSection(options.SyncIntervalValue);
         HelloRequest = helloRequest;
+        SessionExtraData = sessionExtraData;
         SessionResponse = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
@@ -150,7 +152,7 @@ public class Session : IAsyncDisposable, IJob
                 //deprecated version >= 2.9.362 
                 if (HelloRequest == null || HelloRequest.UseUdpChannel2)
                 {
-                    UdpChannel2 = new UdpChannel2(SessionId, SessionKey, true);
+                    UdpChannel2 = new UdpChannel2(SessionId, SessionKey, true, SessionExtraData.ProtocolVersion);
                     try { Tunnel.AddChannel(UdpChannel2); }
                     catch { UdpChannel2.DisposeAsync(); throw; }
                 }

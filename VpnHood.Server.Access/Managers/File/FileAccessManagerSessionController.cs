@@ -75,7 +75,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
-            AdditionalData = sessionRequestEx.ExtraData
+            ExtraData = sessionRequestEx.ExtraData
         };
 
         //create response
@@ -103,7 +103,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
         // create response
         var ret = BuildSessionResponse(session, accessItem);
-        ret.ExtraData = session.AdditionalData;
+        ret.ExtraData = session.ExtraData;
         return ret;
     }
 
@@ -206,7 +206,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         public string? ErrorMessage { get; internal set; }
         public IPEndPoint HostEndPoint { get; internal set; } = null!;
         public IPAddress? ClientIp { get; internal set; }
-        public string? AdditionalData { get; internal set; }
+        public string? ExtraData { get; internal set; }
 
         public void Kill()
         {

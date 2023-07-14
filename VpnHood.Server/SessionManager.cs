@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
@@ -43,7 +45,7 @@ public class SessionManager : IAsyncDisposable, IJob
         set
         {
             ApiKey = HttpUtil.GetApiKey(value, TunnelDefaults.HttpPassCheck);
-            _serverSecret = value; 
+            _serverSecret = value;
         }
     }
 
@@ -82,11 +84,18 @@ public class SessionManager : IAsyncDisposable, IJob
         }
     }
 
-    private async Task<Session> CreateSessionInternal(SessionResponse sessionResponse,
-        IPEndPointPair ipEndPointPair, HelloRequest? helloRequest)
+    private async Task<Session> CreateSessionInternal(
+        SessionResponseEx sessionResponseEx,
+        IPEndPointPair ipEndPointPair,
+        HelloRequest? helloRequest)
     {
-        var session = new Session(_accessManager, sessionResponse, NetFilter, _socketFactory,
-            ipEndPointPair.LocalEndPoint, SessionOptions, TrackingOptions, helloRequest);
+        var extraData = sessionResponseEx.ExtraData != null
+            ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
+            : new SessionExtraData { ProtocolVersion = 3 };
+
+        var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory,
+            ipEndPointPair.LocalEndPoint, SessionOptions, TrackingOptions,
+            extraData, helloRequest);
 
         // add to sessions
         if (Sessions.TryAdd(session.SessionId, session))
@@ -108,6 +117,10 @@ public class SessionManager : IAsyncDisposable, IJob
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
+            ExtraData = JsonSerializer.Serialize(new SessionExtraData
+            {
+                ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion
+            })
         });
 
         // Access Error should not pass to the client in create session
@@ -120,7 +133,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // create the session and add it to list
         var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest);
 
-        _ = _ga4Tracker?.TrackByGTag(new Ga4TagParam{ EventName = "new_vpn_session" });
+        _ = _ga4Tracker?.TrackByGTag(new Ga4TagParam { EventName = "new_vpn_session" });
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponseEx;
     }
@@ -163,13 +176,12 @@ public class SessionManager : IAsyncDisposable, IJob
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
             // Create a dead session if it is not created
-            session = await CreateSessionInternal(new SessionResponse(SessionErrorCode.SessionError)
+            session = await CreateSessionInternal(new SessionResponseEx(SessionErrorCode.SessionError)
             {
                 SessionId = sessionRequest.SessionId,
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
-                ErrorMessage = ex.Message
-
+                ErrorMessage = ex.Message,
             }, ipEndPointPair, null);
             await session.DisposeAsync();
             throw;

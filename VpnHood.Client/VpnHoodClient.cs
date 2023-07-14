@@ -602,7 +602,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var udpChannel = new UdpChannel2(SessionId, _udpKey, false);
+        var udpChannel = new UdpChannel2(SessionId, _udpKey, false, _connectorService.ServerProtocolVersion);
         try
         {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverKey);
@@ -638,10 +638,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
 
             await using var requestResult = await SendRequest<HelloSessionResponse>(request, cancellationToken);
-            if (requestResult.Response.ServerProtocolVersion < 2) // must be 3 (4 for Http)
+            if (requestResult.Response.ServerProtocolVersion < 2) // must be 3 (4 for BinaryStream)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
             _connectorService.UseBinaryStream = requestResult.Response.ServerProtocolVersion >= 4;
+            _connectorService.ServerProtocolVersion = requestResult.Response.ServerProtocolVersion;
             _connectorService.ServerKey = requestResult.Response.ServerSecret;
             var sessionResponse = requestResult.Response;
 

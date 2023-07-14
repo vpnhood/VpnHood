@@ -319,7 +319,7 @@ public class ClientAppTest
         await app.Connect(clientProfile.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
-        
+
         await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
 
@@ -412,7 +412,6 @@ public class ClientAppTest
         oldReceivedByteCount = app.State.SessionTraffic.Received;
         await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
-
 
         if (testPing)
         {

@@ -38,6 +38,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; } = new();
     public bool UseBinaryStream { get; set; }
+    public int ServerProtocolVersion { get; set; }
 
     public byte[]? ServerKey
     {

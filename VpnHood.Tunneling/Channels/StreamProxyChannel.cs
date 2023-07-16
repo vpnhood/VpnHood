@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -120,13 +121,14 @@ public class StreamProxyChannel : IChannel, IJob
         }
         catch (Exception ex)
         {
-            // show error if the stream hasn't finished
+            // show error if the stream hasn't been finished
             if (_isFinished && VhLogger.IsSocketCloseException(ex))
                 return;
 
-            VhLogger.LogError(GeneralEventId.Tcp, ex,
-                "StreamProxyChannel: Error in copying {direction} tunnel. ChannelId: {ChannelId}",
-                isDestinationTunnel ? "to" : "from", ChannelId);
+            var log = isDestinationTunnel
+                ? "StreamProxyChannel: Error in copying to tunnel. ChannelId: {ChannelId}"
+                : "StreamProxyChannel: Error in copying from tunnel. ChannelId: {ChannelId}";
+            VhLogger.LogError(GeneralEventId.Tcp, ex, log, ChannelId);
         }
     }
 

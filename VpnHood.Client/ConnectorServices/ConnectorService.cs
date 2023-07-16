@@ -155,8 +155,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
         if (parts.Any(x => x.Trim().Equals("OU=MT", StringComparison.OrdinalIgnoreCase)))
             throw new MaintenanceException();
 
-        return sslPolicyErrors == SslPolicyErrors.None ||
+        var ret = sslPolicyErrors == SslPolicyErrors.None ||
                EndPointInfo?.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+        return ret;
     }
 
     public async Task<IClientStream> SendRequest(ClientRequest request, CancellationToken cancellationToken)

@@ -13,5 +13,5 @@ public static class TunnelDefaults
     public static TimeSpan TcpGracefulTimeout { get; set; } = TimeSpan.FromSeconds(15);
     public static TimeSpan TcpReuseTimeout { get; set; } = TimeSpan.FromSeconds(60);
     public static TimeSpan TcpRequestTimeout { get; set; } = TimeSpan.FromSeconds(60);
-    public static int TcpProxyEncryptChunkCount { get; set; } = 4;
+    public static int TcpProxyEncryptChunkCount { get; set; } = 2;
 }

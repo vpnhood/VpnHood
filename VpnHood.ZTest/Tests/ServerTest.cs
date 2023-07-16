@@ -271,7 +271,7 @@ public class ServerTest
                 MaxDatagramChannelCount = 13,
                 MaxTcpChannelCount = 14,
                 MaxTcpConnectWaitCount = 16,
-                MaxUdpPortCount = 17,
+                MaxUdpClientCount = 17,
                 NetScanLimit = 18,
                 NetScanTimeout = TimeSpan.FromMinutes(51),
                 SyncCacheSize = 19,

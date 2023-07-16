@@ -23,7 +23,8 @@ public class SessionOptions
 
     public long? SyncCacheSize { get; set; }
     public int? MaxDatagramChannelCount { get; set; }
-    public int? MaxUdpPortCount { get; set; }
+    public int? MaxUdpClientCount { get; set; }
+    public int? MaxIcmpClientCount { get; set; }
     public int? TcpBufferSize { get; set; }
     public int? TcpKernelSendBufferSize { get; set; }
     public int? TcpKernelReceiveBufferSize { get; set; }
@@ -41,7 +42,8 @@ public class SessionOptions
     [JsonIgnore] public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
     [JsonIgnore] public long SyncCacheSizeValue => SyncCacheSize ?? 100 * 1000000; // 100 MB
     [JsonIgnore] public int MaxDatagramChannelCountValue => MaxDatagramChannelCount ?? 8;
-    [JsonIgnore] public int MaxUdpPortCountValue => MaxUdpPortCount ?? 500;
+    [JsonIgnore] public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
+    [JsonIgnore] public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
     [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(60);
     [JsonIgnore] public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
     [JsonIgnore] public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
@@ -56,7 +58,8 @@ public class SessionOptions
         if (obj.SyncInterval != null) SyncInterval = obj.SyncInterval;
         if (obj.SyncCacheSize != null) SyncCacheSize = obj.SyncCacheSize;
         if (obj.MaxDatagramChannelCount != null) MaxDatagramChannelCount = obj.MaxDatagramChannelCount;
-        if (obj.MaxUdpPortCount != null) MaxUdpPortCount = obj.MaxUdpPortCount;
+        if (obj.MaxUdpClientCount != null) MaxUdpClientCount = obj.MaxUdpClientCount;
+        if (obj.MaxIcmpClientCount != null) MaxIcmpClientCount = obj.MaxIcmpClientCount;
         if (obj.TcpBufferSize != null) TcpBufferSize = obj.TcpBufferSize;
         if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
         if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
@@ -77,7 +80,8 @@ public class SessionOptions
         SyncInterval = SyncIntervalValue;
         SyncCacheSize = SyncCacheSizeValue;
         MaxDatagramChannelCount = MaxDatagramChannelCountValue;
-        MaxUdpPortCount = MaxUdpPortCountValue;
+        MaxUdpClientCount = MaxUdpClientCountValue;
+        MaxIcmpClientCount = MaxIcmpClientCountValue;
         TcpBufferSize = TcpBufferSize; //no default
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default

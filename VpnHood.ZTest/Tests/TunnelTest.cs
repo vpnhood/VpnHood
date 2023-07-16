@@ -63,7 +63,7 @@ public class TunnelTest
         ipPacket.PayloadPacket = icmpPacket;
         PacketUtil.UpdateIpPacket(ipPacket);
 
-        using var pingProxyPool = new PingProxyPool(packetReceiver, maxWorkerCount: 3);
+        using var pingProxyPool = new PingProxyPool(packetReceiver, maxClientCount: 3, icmpTimeout: null);
         var task1 = pingProxyPool.SendPacket(PacketUtil.ClonePacket(ipPacket));
 
         ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("127.0.0.1"), IPAddress.Parse("127.0.0.2"));

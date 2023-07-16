@@ -83,7 +83,8 @@ public class Session : IAsyncDisposable, IJob
         {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
-            MaxUdpWorkerCount = options.MaxUdpPortCountValue,
+            MaxUdpClientCount = options.MaxUdpClientCountValue,
+            MaxIcmpClientCount = options.MaxIcmpClientCountValue,
             UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope
         });
@@ -373,7 +374,7 @@ public class Session : IAsyncDisposable, IJob
 
             // MaxEncryptChunk
             if (clientStream.Stream is BinaryStream binaryStream)
-                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
+                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount; 
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,

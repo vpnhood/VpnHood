@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
@@ -58,8 +60,11 @@ public class StreamPacketReader : IAsyncDisposable
             if (_packetBufferCount < packetLength)
             {
                 //not sure we get any packet more than 1600
-                if (_packetBufferCount > _packetBuffer.Length) 
-                    Array.Resize(ref _packetBuffer, _packetBufferCount); 
+                if (packetLength > _packetBuffer.Length)
+                {
+                    Array.Resize(ref _packetBuffer, packetLength);
+                    VhLogger.Instance.LogWarning("Resizing a PacketLength to {packetLength}", packetLength);
+                }
 
                 var toRead = packetLength - _packetBufferCount;
                 var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken);
@@ -72,7 +77,10 @@ public class StreamPacketReader : IAsyncDisposable
                     break; 
             }
 
-            var ipPacket = Packet.ParsePacket(LinkLayers.Raw, _packetBuffer).Extract<IPPacket>();
+            // WARNING: we shouldn't use shared memory for packet
+            var packetBuffer = _packetBuffer[.. + packetLength]; //
+            var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
+           
             _ipPackets.Add(ipPacket);
             _packetBufferCount = 0;
 

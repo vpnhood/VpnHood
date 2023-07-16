@@ -36,10 +36,10 @@ public abstract class ProxyManager : IPacketProxyReceiver
 
     protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, logScope: options.LogScope);
+        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, options.MaxIcmpClientCount,  logScope: options.LogScope);
         _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount, logScope: options.LogScope)
-            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount, logScope: options.LogScope);
+            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope)
+            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope);
     }
 
     public async Task SendPackets(IEnumerable<IPPacket> ipPackets)

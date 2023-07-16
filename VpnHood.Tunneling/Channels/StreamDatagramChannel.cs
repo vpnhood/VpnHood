@@ -106,8 +106,8 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
             foreach (var ipPacket in ipPackets)
             {
-                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
-                bufferIndex += ipPacket.TotalPacketLength;
+                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalLength);
+                bufferIndex += ipPacket.TotalLength;
             }
 
             await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, _cancellationTokenSource.Token);
@@ -202,7 +202,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             VhLogger.LogError(GeneralEventId.DatagramChannel, ex,
                 "Could not set the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
-            
+
             if (throwException)
                 throw;
 
@@ -215,7 +215,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         if (Connected && FastDateTime.Now > _lifeTime)
         {
             VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
-                "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}", 
+                "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
             await SendClose();

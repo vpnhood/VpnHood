@@ -167,7 +167,7 @@ public class UdpProxyTest
 
         // Create Server
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        accessManagerOptions.SessionOptions.MaxUdpPortCount = maxUdpCount;
+        accessManagerOptions.SessionOptions.MaxUdpClientCount = maxUdpCount;
 
         await using var server = TestHelper.CreateServer(accessManagerOptions);
         var token = TestHelper.CreateAccessToken(server);

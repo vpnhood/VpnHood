@@ -140,6 +140,7 @@ namespace VpnHood.Client.Device.Android
                 OnStartAsService?.Invoke(this, EventArgs.Empty);
         }
 
+
         private void StartService()
         {
             var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));

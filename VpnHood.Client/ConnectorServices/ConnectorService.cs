@@ -74,12 +74,11 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
         // dispose Ssl
-        if (!string.IsNullOrEmpty(_apiKey))
-            await sslStream.DisposeAsync();
-
-        return string.IsNullOrEmpty(_apiKey)
-            ? new TcpClientStream(tcpClient, sslStream, streamId)
-            : new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
+        if (string.IsNullOrEmpty(_apiKey))
+            return new TcpClientStream(tcpClient, sslStream, streamId);
+        
+        await sslStream.DisposeAsync();
+        return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
     }
 
     private async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
@@ -186,7 +185,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
             try
             {
-                await clientStream.Stream.WriteAsync(request, cancellationToken);
+                // we may use this buffer to encrypt so clone it for retry
+                await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken);
                 if (!clientStream.CheckIsAlive()) throw new Exception("TcpClient is not connected.");
                 lock(Stat) Stat.ReusedConnectionSucceededCount++;
                 clientStream.ClientStreamId = requestId;

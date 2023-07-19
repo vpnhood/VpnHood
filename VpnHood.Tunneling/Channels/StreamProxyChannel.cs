@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.Design;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +7,7 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 
 namespace VpnHood.Tunneling.Channels;
@@ -18,12 +18,12 @@ public class StreamProxyChannel : IChannel, IJob
     private readonly IClientStream _hostTcpClientStream;
     private readonly int _tunnelStreamBufferSize;
     private readonly IClientStream _tunnelTcpClientStream;
-    private const int BufferSizeDefault = 0x1000 * 4; //16k
+    private const int BufferSizeDefault = TunnelDefaults.StreamProxyBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 0x1000;
     private bool _disposed;
 
-    public JobSection JobSection { get; } = new (TunnelDefaults.TcpCheckInterval);
+    public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
@@ -132,11 +132,9 @@ public class StreamProxyChannel : IChannel, IJob
         }
     }
 
-    private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,
+    private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingToTunnel, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
-        var doubleBuffer = false; //i am not sure it could help!
-
         // Microsoft Stream Source Code:
         // We pick a value that is the largest multiple of 4096 that is still smaller than the large object heap threshold (85K).
         // The CopyTo/CopyToAsync buffer is short-lived and is likely to be collected at Gen0, and it offers a significant
@@ -146,37 +144,33 @@ public class StreamProxyChannel : IChannel, IJob
             throw new ArgumentException($"Buffer is too big, maximum supported size is {BufferSizeMax}",
                 nameof(bufferSize));
 
+        // use PreserveWriteBuffer if possible
+        var preserveCount = 0;
+        if (destination is ChunkStream chunkStream)
+        {
+            chunkStream.PreserveWriteBuffer = true;
+            preserveCount = chunkStream.PreserveWriteBufferLength;
+        }
+
         // <<----------------- the MOST memory consuming in the APP! >> ----------------------
-        var readBuffer = new byte[bufferSize];
-        var writeBuffer = doubleBuffer ? new byte[readBuffer.Length] : null;
-        Task? writeTask = null;
+        var readBuffer = new byte[bufferSize + preserveCount];
         while (!sourceCancellationToken.IsCancellationRequested && !destinationCancellationToken.IsCancellationRequested)
         {
             // read from source
-            var bytesRead = await source.ReadAsync(readBuffer, 0, readBuffer.Length, sourceCancellationToken);
-            if (writeTask != null)
-                await writeTask;
+            var bytesRead = await source.ReadAsync(readBuffer, preserveCount, readBuffer.Length - preserveCount, sourceCancellationToken);
 
             // check end of the stream
             if (bytesRead == 0)
                 break;
 
             // write to destination
-            if (writeBuffer != null)
-            {
-                Array.Copy(readBuffer, writeBuffer, bytesRead);
-                writeTask = destination.WriteAsync(writeBuffer, 0, bytesRead, destinationCancellationToken);
-            }
-            else
-            {
-                await destination.WriteAsync(readBuffer, 0, bytesRead, destinationCancellationToken);
-            }
+            await destination.WriteAsync(readBuffer, preserveCount, bytesRead, destinationCancellationToken);
 
             // calculate transferred bytes
-            if (!isSendingOut)
-                Traffic.Received += bytesRead;
-            else
+            if (isSendingToTunnel)
                 Traffic.Sent += bytesRead;
+            else
+                Traffic.Received += bytesRead;
 
             // set LastActivityTime as some data delegated
             LastActivityTime = FastDateTime.Now;

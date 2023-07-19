@@ -5,6 +5,7 @@
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
 * Fix: Some UDP Packet loss
+* Fix: Android: VpnHood system notification
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
 
 ### Server

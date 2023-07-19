@@ -12,11 +12,13 @@ public class StreamCryptor : AsyncStreamDecorator
     private readonly bool _leaveOpen;
     private readonly long _maxCipherCount;
     private readonly Stream _stream;
+    private readonly bool _encryptInGivenBuffer;
 
     private long _readCount;
     private long _writeCount;
 
-    private StreamCryptor(Stream stream, byte[] key, long maxCipherCount, bool leaveOpen = false)
+    private StreamCryptor(Stream stream, byte[] key, long maxCipherCount, 
+        bool leaveOpen, bool encryptInGivenBuffer)
         : base(stream, leaveOpen)
     {
         if (key is null) throw new ArgumentNullException(nameof(key));
@@ -25,13 +27,14 @@ public class StreamCryptor : AsyncStreamDecorator
         _bufferCryptor = new BufferCryptor(key);
         _maxCipherCount = maxCipherCount;
         _leaveOpen = leaveOpen;
+        _encryptInGivenBuffer = encryptInGivenBuffer;
     }
 
     public override bool CanSeek => false;
 
 
     public static StreamCryptor Create(Stream stream, byte[] key, byte[]? salt = null, long maxCipherPos = long.MaxValue,
-        bool leaveOpen = false)
+        bool leaveOpen = false, bool encryptInGivenBuffer = true)
     {
         if (stream is null) throw new ArgumentNullException(nameof(stream));
         if (key is null) throw new ArgumentNullException(nameof(key));
@@ -48,26 +51,28 @@ public class StreamCryptor : AsyncStreamDecorator
                 encKey[i] ^= salt[i];
         }
 
-        return new StreamCryptor(stream, encKey, maxCipherPos, leaveOpen);
+        return new StreamCryptor(stream, encKey, maxCipherPos, leaveOpen, encryptInGivenBuffer);
     }
 
 
-    private void PrepareReadBuffer(byte[] buffer, int offset, int count)
+    public void Decrypt(byte[] buffer, int offset, int count)
     {
         var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
         if (cipherCount > 0)
         {
-            _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
+            lock (_bufferCryptor)
+                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
             _readCount += count;
         }
     }
 
-    private void PrepareWriteBuffer(byte[] buffer, int offset, int count)
+    public void Encrypt(byte[] buffer, int offset, int count)
     {
         var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
         if (cipherCount > 0)
         {
-            _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
+            lock (_bufferCryptor)
+                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
             _writeCount += cipherCount;
         }
     }
@@ -76,23 +81,33 @@ public class StreamCryptor : AsyncStreamDecorator
         CancellationToken cancellationToken)
     {
         var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
-        PrepareReadBuffer(buffer, offset, readCount);
+        Decrypt(buffer, offset, readCount);
         return readCount;
     }
 
     public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        var copyBuffer = buffer[offset..count];
-        PrepareWriteBuffer(copyBuffer, 0, copyBuffer.Length);
-        await _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
+        if (_encryptInGivenBuffer)
+        {
+            Encrypt(buffer, offset, count);
+            await _stream.WriteAsync(buffer, offset, count, cancellationToken);
+        }
+        else
+        {
+            var copyBuffer = buffer[offset..count];
+            Encrypt(copyBuffer, 0, copyBuffer.Length);
+            await _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
+        }
     }
 
-    public override ValueTask DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
-        _bufferCryptor.Dispose();
-        if (!_leaveOpen)
-            _stream.Dispose();
+        lock (_bufferCryptor)
+            _bufferCryptor.Dispose();
 
-        return base.DisposeAsync();
+        if (!_leaveOpen)
+            await _stream.DisposeAsync();
+
+        await base.DisposeAsync();
     }
 }

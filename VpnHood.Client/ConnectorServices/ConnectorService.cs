@@ -187,6 +187,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
             {
                 // we may use this buffer to encrypt so clone it for retry
                 await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken);
+
+                // make sure there is no error
+                _ = await clientStream.Stream.ReadAsync(Array.Empty<byte>(), cancellationToken); 
                 if (!clientStream.CheckIsAlive()) throw new Exception("TcpClient is not connected.");
                 lock(Stat) Stat.ReusedConnectionSucceededCount++;
                 clientStream.ClientStreamId = requestId;

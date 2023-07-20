@@ -69,30 +69,26 @@ public class TcpClientStream : IClientStream
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync(bool allowReuse, bool graceful = true)
+    public async ValueTask DisposeAsync(bool graceful)
     {
-        allowReuse &= graceful;
-        if (!graceful)
-            TcpClient.Dispose();
-
         lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(allowReuse);
+            _disposeTask ??= DisposeAsyncCore(graceful);
         await _disposeTask.Value;
     }
 
-    private async ValueTask DisposeAsyncCore(bool allowReuse)
+    private async ValueTask DisposeAsyncCore(bool graceful)
     {
         if (Disposed) return;
         Disposed = true;
 
         var chunkStream = Stream as ChunkStream;
-        if (allowReuse && _reuseCallback != null && CheckIsAlive() && chunkStream?.CanReuse == true)
+        if (graceful && _reuseCallback != null && CheckIsAlive() && chunkStream?.CanReuse == true)
         {
             Stream? newStream = null;
             try
             {
                 newStream = await chunkStream.CreateReuse();
-                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream,  ClientStreamId, _reuseCallback, false));
+                _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback, false));
 
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
                     "A TcpClientStream has been freed. ClientStreamId: {ClientStreamId}", ClientStreamId);
@@ -106,15 +102,16 @@ public class TcpClientStream : IClientStream
                 await Stream.DisposeAsync();
                 TcpClient.Dispose();
             }
-            return;
         }
+        else
+        {
+            // close streams
+            await Stream.DisposeAsync(); // first close stream 2
+            TcpClient.Dispose();
 
-        // close streams
-        await Stream.DisposeAsync(); // first close stream 2
-        TcpClient.Dispose();
-
-        VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
-            "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
-            ClientStreamId);
+            VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
+                "A TcpClientStream has been disposed. ClientStreamId: {ClientStreamId}",
+                ClientStreamId);
+        }
     }
 }

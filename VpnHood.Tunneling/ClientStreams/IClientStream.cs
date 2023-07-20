@@ -12,5 +12,5 @@ public interface IClientStream : IAsyncDisposable
     IPEndPointPair IpEndPointPair { get; }
     Stream Stream { get; }
     bool CheckIsAlive();
-    ValueTask DisposeAsync(bool allowReuse, bool graceful = true);
+    ValueTask DisposeAsync(bool graceful = true);
 }

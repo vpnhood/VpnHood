@@ -55,12 +55,15 @@ public abstract class TextLogger : ILogger, ILoggerProvider
         if (_includeScopes)
         {
             logBuilder.AppendLine();
-            logBuilder.Append($"{logLevel.ToString().Substring(0, 4)} ");
+            logBuilder.Append($"{logLevel.ToString()[..4]} ");
             GetScopeInformation(logBuilder);
             logBuilder.AppendLine();
         }
 
         var message = $"| {DateTime.Now:HH:mm:ss.ffff} | {eventId.Name} | {formatter(state, exception)}";
+        if (exception != null)
+            message += "\r\nException: " + exception;
+
         logBuilder.Append(message);
         return logBuilder.ToString();
     }

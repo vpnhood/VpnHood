@@ -920,6 +920,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogTrace("Disposing Nat...");
         Nat.Dispose();
 
+        // disposing PacketCapture. Must be at end for graceful shutdown
+        _packetCapture.OnStopped -= PacketCapture_OnStopped;
+        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
+        if (_autoDisposePacketCapture)
+        {
+            VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
+            _packetCapture.Dispose();
+        }
+
         // Sending Bye
         if (wasConnected && SessionId != 0 && SessionStatus.ErrorCode == SessionErrorCode.Ok)
         {
@@ -930,15 +939,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // dispose ConnectorService
         VhLogger.Instance.LogTrace("Disposing ConnectorService...");
         await _connectorService.DisposeAsync();
-
-        // disposing PacketCapture. Must be at end for graceful shutdown
-        _packetCapture.OnStopped -= PacketCapture_OnStopped;
-        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
-        if (_autoDisposePacketCapture)
-        {
-            VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
-            _packetCapture.Dispose();
-        }
 
         State = ClientState.Disposed;
         _cancellationTokenSource.Dispose();

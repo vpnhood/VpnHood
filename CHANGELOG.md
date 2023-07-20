@@ -4,6 +4,7 @@
 * Feature: TCP connection reuse
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
+* Update: Include internal exception messages and stack trace in diagnostic file
 * Fix: Some UDP Packet loss
 * Fix: Android: VpnHood system notification
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)

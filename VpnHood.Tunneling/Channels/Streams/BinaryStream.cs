@@ -232,8 +232,11 @@ public class BinaryStream : ChunkStream
         {
             await _writeTask;
         }
-        catch
+        catch (Exception ex)
         {
+            VhLogger.LogError(GeneralEventId.TcpLife, ex,
+                "Final stream write has not been completed gracefully. StreamId: {StreamId}",
+                StreamId);
             return;
         }
         _writeCts.Dispose();
@@ -256,8 +259,19 @@ public class BinaryStream : ChunkStream
         }
 
         // make sure current caller read has been finished gracefully or wait for cancellation time
-        try { await _readTask; }
-        catch { /* Ignore */ }
+        try
+        {
+            await _readTask;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.LogError(GeneralEventId.TcpLife, ex,
+                "Final stream read has not been completed gracefully. StreamId: {StreamId}",
+                StreamId);
+            return;
+        }
+
+        _readCts.Dispose();
 
         try
         {
@@ -269,7 +283,7 @@ public class BinaryStream : ChunkStream
 
             if (!_finished)
             {
-                var buffer = new byte[10];
+                var buffer = new byte[1];
                 var read = await ReadInternalAsync(buffer, 0, buffer.Length, cancellationToken);
                 if (read != 0)
                     throw new InvalidDataException("BinaryStream read unexpected data on end.");

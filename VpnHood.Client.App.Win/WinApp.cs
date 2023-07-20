@@ -80,7 +80,7 @@ public class WinApp : IDisposable
             // open main window if app is already running and user run the app again
             if (_showWindowAfterStart)
                 _commandListener.SendCommand("/openWindow");
-            VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} is already running!");
+            VhLogger.Instance.LogInformation("WinApp is already running!");
             return;
         }
 

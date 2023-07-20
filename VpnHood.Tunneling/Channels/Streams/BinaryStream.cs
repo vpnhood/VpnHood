@@ -239,7 +239,7 @@ public class BinaryStream : ChunkStream
         catch (Exception ex)
         {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
-                "Could not write the HTTP chunk terminator. StreamId: {StreamId}",
+                "Could not write the chunk terminator. StreamId: {StreamId}",
                 StreamId);
         }
 

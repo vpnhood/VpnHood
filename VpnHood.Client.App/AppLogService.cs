@@ -47,13 +47,13 @@ public class AppLogService
         logger = new FilterLogger(logger, eventId =>
         {
             if (eventId == GeneralEventId.Session) return true;
-            if (eventId == GeneralEventId.Tcp) return VhLogger.IsDiagnoseMode;
-            if (eventId == GeneralEventId.Ping) return VhLogger.IsDiagnoseMode;
-            if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
-            if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
-            if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
-            if (eventId == GeneralEventId.TcpLife) return VhLogger.IsDiagnoseMode;
-            if (eventId == GeneralEventId.StreamProxyChannel) return VhLogger.IsDiagnoseMode;
+            if (eventId == GeneralEventId.Tcp) return verbose;
+            if (eventId == GeneralEventId.Ping) return verbose;
+            if (eventId == GeneralEventId.Nat) return verbose;
+            if (eventId == GeneralEventId.Dns) return verbose;
+            if (eventId == GeneralEventId.Udp) return verbose;
+            if (eventId == GeneralEventId.TcpLife) return verbose;
+            if (eventId == GeneralEventId.StreamProxyChannel) return verbose;
             if (eventId == GeneralEventId.DatagramChannel) return true;
             return true;
         });
@@ -84,7 +84,6 @@ public class AppLogService
 
             if (addToFile)
             {
-
                 var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 _streamLogger = new StreamLogger(fileStream);
                 builder.AddProvider(_streamLogger);

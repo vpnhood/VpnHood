@@ -151,7 +151,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace("Disposing ClientStreams...");
         Task[] disposeTasks;
         lock (_clientStreams)
-            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false, false).AsTask()).ToArray();
+            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
         await Task.WhenAll(disposeTasks);
 
         VhLogger.Instance.LogTrace("Disposing current processing requests...");
@@ -335,7 +335,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             else VhLogger.LogError(GeneralEventId.Request, ex,
                 "ServerHost could not process this request. ClientStreamId: {ClientStreamId}", clientStream?.ClientStreamId);
 
-            if (clientStream != null) await clientStream.DisposeAsync(false, false);
+            if (clientStream != null) await clientStream.DisposeAsync(false);
             tcpClient.Dispose();
         }
     }
@@ -350,7 +350,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         // don't add new client in disposing
         if (cancellationToken.IsCancellationRequested)
         {
-            _ = clientStream.DisposeAsync(false, false);
+            _ = clientStream.DisposeAsync(false);
             return;
         }
 
@@ -419,7 +419,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                 VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex,
                     "Could not process the request and return 401. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
 
-            await clientStream.DisposeAsync(false, false);
+            await clientStream.DisposeAsync(false);
         }
         finally
         {

@@ -195,7 +195,8 @@ public class StreamProxyChannel : IChannel, IJob
     {
         Connected = false;
         _disposed = true;
-        await _hostTcpClientStream.DisposeAsync(graceFul);
-        await _tunnelTcpClientStream.DisposeAsync(graceFul);
+        await Task.WhenAll(
+            _hostTcpClientStream.DisposeAsync(graceFul).AsTask(),
+            _tunnelTcpClientStream.DisposeAsync(graceFul).AsTask());
     }
 }

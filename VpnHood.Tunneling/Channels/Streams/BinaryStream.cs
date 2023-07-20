@@ -25,7 +25,7 @@ public class BinaryStream : ChunkStream
     private readonly StreamCryptor _streamCryptor;
     private readonly byte[] _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private byte[] _writeBuffer = Array.Empty<byte>();
-    
+
     public long MaxEncryptChunk { get; set; } = long.MaxValue;
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
@@ -66,7 +66,7 @@ public class BinaryStream : ChunkStream
             {
                 _remainingChunkBytes = await ReadChunkHeaderAsync(cancellationToken);
                 _finished = _remainingChunkBytes == 0;
-                
+
                 // check last chunk
                 if (_finished)
                     return 0;
@@ -227,20 +227,32 @@ public class BinaryStream : ChunkStream
         _readCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
         _writeCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
 
-        try { await _writeTask; }
-        catch { /* Ignore */ }
+        // wait for finishing current write
+        try
+        {
+            await _writeTask;
+        }
+        catch
+        {
+            return;
+        }
         _writeCts.Dispose();
 
         // finish writing current BinaryStream gracefully
         try
         {
-            await WriteInternalAsync(Array.Empty<byte>(), 0, 0, cancellationToken);
+            if (PreserveWriteBuffer)
+                await WriteInternalAsync(new byte[ChunkHeaderLength], ChunkHeaderLength, 0, cancellationToken);
+            else
+                await WriteInternalAsync(Array.Empty<byte>(), 0, 0, cancellationToken);
+
         }
         catch (Exception ex)
         {
             VhLogger.LogError(GeneralEventId.TcpLife, ex,
                 "Could not write the chunk terminator. StreamId: {StreamId}",
                 StreamId);
+            return;
         }
 
         // make sure current caller read has been finished gracefully or wait for cancellation time

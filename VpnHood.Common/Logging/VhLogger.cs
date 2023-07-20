@@ -95,9 +95,9 @@ public static class VhLogger
 
     public static string FormatDns(string dnsName)
     {
-        if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
-            return Format(ipEndPoint);
-        return FormatId(dnsName);
+        return IPEndPointConverter.TryParse(dnsName, out var ipEndPoint) 
+            ? Format(ipEndPoint) 
+            : FormatId(dnsName);
     }
 
     public static string FormatIpPacket(string ipPacketText)

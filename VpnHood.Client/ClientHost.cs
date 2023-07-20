@@ -108,56 +108,44 @@ internal class ClientHost : IAsyncDisposable
             var ipPacket = item;
             var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
-            if (localEndPoint == null)
-                continue;
+            TcpPacket? tcpPacket = null;
 
             try
             {
-                if (ipPacket.Protocol != ProtocolType.Tcp)
-                    throw new InvalidOperationException($"{typeof(ClientHost)} can not handle {ipPacket.Protocol} packets!");
+                tcpPacket = PacketUtil.ExtractTcp(ipPacket);
 
-                // extract tcpPacket
-                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                // check local endpoint
+                if (localEndPoint == null)
+                    throw new Exception("There is no localEndPoint registered for this packet.");
+
+                // ignore new packets 
+                if (_disposed)
+                    throw new ObjectDisposedException(GetType().Name);
+
+                // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, loopbackAddress))
                 {
-                    // redirect to inbound
-                    var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort);
-                    if (natItem != null)
-                    {
-                        ipPacket.SourceAddress = natItem.DestinationAddress;
-                        ipPacket.DestinationAddress = natItem.SourceAddress;
-                        tcpPacket.SourcePort = natItem.DestinationPort;
-                        tcpPacket.DestinationPort = natItem.SourcePort;
-                    }
-                    else
-                    {
-                        VhLogger.Instance.LogInformation(GeneralEventId.Nat,
-                            $"Could not find incoming destination in NAT! Packet has been dropped. Packet: {PacketUtil.Format(ipPacket)}");
-                        ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
-                    }
+                    var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                                  ?? throw new Exception("Could not find incoming tcp destination in NAT.");
+
+                    ipPacket.SourceAddress = natItem.DestinationAddress;
+                    ipPacket.DestinationAddress = natItem.SourceAddress;
+                    tcpPacket.SourcePort = natItem.DestinationPort;
+                    tcpPacket.DestinationPort = natItem.SourcePort;
                 }
+
                 // Redirect outbound to the local address
                 else
                 {
                     var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
                     var natItem = sync
                         ? Client.Nat.Add(ipPacket, true)
-                        : Client.Nat.Get(ipPacket);
+                        : Client.Nat.Get(ipPacket) ?? throw new Exception("Could not find outgoing tcp destination in NAT.");
 
-                    // could not find the tcp session natItem
-                    if (natItem != null)
-                    {
-                        tcpPacket.SourcePort = natItem.NatId; // 1
-                        ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                        ipPacket.SourceAddress = loopbackAddress; //3
-                        tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
-                    }
-                    else
-                    {
-                        VhLogger.Instance.LogInformation(GeneralEventId.Nat,
-                            $"Could not find outgoing tcp destination in NAT! Packet has been dropped. Packet: {PacketUtil.Format(ipPacket)}");
-                        ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
-                    }
+                    tcpPacket.SourcePort = natItem.NatId; // 1
+                    ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                    ipPacket.SourceAddress = loopbackAddress; //3
+                    tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
                 }
 
                 PacketUtil.UpdateIpPacket(ipPacket);
@@ -165,7 +153,15 @@ internal class ClientHost : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "ClientHost: Error in processing packet.");
+                if (tcpPacket != null)
+                {
+                    ret.Add(PacketUtil.CreateTcpResetReply(ipPacket));
+                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.", LogLevel.Error, ex);
+                }
+                else
+                {
+                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.", LogLevel.Error, ex);
+                }
             }
         }
 

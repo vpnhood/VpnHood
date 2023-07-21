@@ -941,7 +941,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         await _connectorService.DisposeAsync();
 
         State = ClientState.Disposed;
-        _cancellationTokenSource.Dispose();
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 

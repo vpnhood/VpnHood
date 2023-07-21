@@ -205,15 +205,18 @@ public class ClientServerTest
 
         // Create Client
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Testing by UdpChannel.");
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
 
         // switch to tcp
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
         await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
@@ -271,14 +274,14 @@ public class ClientServerTest
         await TestHelper.Test_Https();
 
         // check there is send data
-        Assert.IsTrue(client.Stat.SessionTraffic.Sent > oldClientSentByteCount + 100,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.Stat.SessionTraffic.Received > oldClientReceivedByteCount + 2000,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 2000,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Received > oldServerReceivedByteCount + 100,
-            "Not enough data has been sent through the client!");
+        Assert.AreNotEqual(oldClientSentByteCount, client.Stat.SessionTraffic.Sent, 100,
+            "Not enough data has been sent through the client.");
+        Assert.AreNotEqual(oldClientReceivedByteCount, client.Stat.SessionTraffic.Received, 2000,
+            "Not enough data has been received through the client.");
+        Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 2000,
+            "Not enough data has been sent through the server.");
+        Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 100,
+            "Not enough data has been received through the server.");
 
         // ************
         // *** TEST ***: UDP v4
@@ -289,14 +292,14 @@ public class ClientServerTest
 
         await TestHelper.Test_Udp();
 
-        Assert.IsTrue(client.Stat.SessionTraffic.Sent > oldClientSentByteCount + 500,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.Stat.SessionTraffic.Received > oldClientReceivedByteCount + 500,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 500,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Received > oldServerReceivedByteCount + 500,
-            "Not enough data has been sent through the client!");
+        Assert.AreNotEqual(oldClientSentByteCount, client.Stat.SessionTraffic.Sent, 500,
+            "Not enough data has been sent through the client.");
+        Assert.AreNotEqual(oldClientReceivedByteCount, client.Stat.SessionTraffic.Received, 500,
+            "Not enough data has been received through the client.");
+        Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
+            "Not enough data has been sent through the server.");
+        Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
+            "Not enough data has been received through the server.");
 
         // ************
         // *** TEST ***: IcmpV4
@@ -307,14 +310,14 @@ public class ClientServerTest
 
         await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
 
-        Assert.IsTrue(client.Stat.SessionTraffic.Sent > oldClientSentByteCount + 500,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(client.Stat.SessionTraffic.Received > oldClientReceivedByteCount + 500,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Sent > oldServerSentByteCount + 500,
-            "Not enough data has been sent through the client!");
-        Assert.IsTrue(serverSession.Tunnel.Traffic.Received > oldServerReceivedByteCount + 500,
-            "Not enough data has been sent through the client!");
+        Assert.AreNotEqual(oldClientSentByteCount, client.Stat.SessionTraffic.Sent, 500,
+            "Not enough data has been sent through the client.");
+        Assert.AreNotEqual(oldClientReceivedByteCount, client.Stat.SessionTraffic.Received, 500,
+            "Not enough data has been received through the client.");
+        Assert.AreNotEqual(oldServerSentByteCount, serverSession.Tunnel.Traffic.Sent, 500,
+            "Not enough data has been sent through the server.");
+        Assert.AreNotEqual(oldServerReceivedByteCount, serverSession.Tunnel.Traffic.Received, 500,
+            "Not enough data has been received through the server.");
     }
 
     [TestMethod]

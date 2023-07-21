@@ -135,7 +135,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                     break;
 
                 LastActivityTime = FastDateTime.Now;
-                Traffic.Received += ipPackets.Sum(x => x.TotalPacketLength);
+                Traffic.Received += ipPackets.Sum(x => x.TotalLength);
 
                 // check datagram message
                 List<IPPacket>? processedPackets = null;
@@ -157,7 +157,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
         catch (Exception ex)
         {
-            VhLogger.LogError(GeneralEventId.Udp, ex, "Could not read UDP from StreamDatagram.");
+            VhLogger.LogError(GeneralEventId.Packet, ex, "Could not read packet from StreamDatagram.");
             throw;
         }
     }

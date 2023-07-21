@@ -263,16 +263,14 @@ internal class ClientHost : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (_disposed) return;
+        if (_disposed) return default;
         _disposed = true;
         _cancellationTokenSource.Cancel();
         _tcpListenerIpV4?.Stop();
         _tcpListenerIpV6?.Stop();
 
-        // wait for clean disposal
-        while (_processingCount > 0)
-            await Task.Delay(50);
+        return default;
     }
 }

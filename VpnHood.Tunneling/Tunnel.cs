@@ -211,7 +211,7 @@ public class Tunnel : IJob, IAsyncDisposable
             return;
 
         if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPackets(e.IpPackets, $"Packets received from {nameof(Tunnel)}.");
+            PacketUtil.LogPackets(e.IpPackets, $"Packets received from a channel. ChannelId: {e.Channel.ChannelId}");
 
         // check datagram message
         // performance critical; don't create another array by linq

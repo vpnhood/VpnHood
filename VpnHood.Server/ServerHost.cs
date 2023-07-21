@@ -289,7 +289,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             else
             {
                 //always return UnauthorizedMessage 
-                await sslStream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken); 
+                await sslStream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken);
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
         }
@@ -624,7 +624,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private static byte[] GetHttpOk()
     {
-        var response =
+        const string response =
             "HTTP/1.1 200 OK\r\n" +
             "Content-Length: 0\r\n" +
             "\r\n";

@@ -461,7 +461,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             try
             {
                 if (ClientConnect != null)
-                    await ClientConnect.DisposeAsync();
+                {
+                    var disposeTask = ClientConnect.DisposeAsync();
+                    if (!byUser || _hasDiagnoseStarted)
+                        await disposeTask;
+                }
             }
             catch (Exception ex)
             {

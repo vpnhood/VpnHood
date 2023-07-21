@@ -7,6 +7,7 @@
 * Update: Include internal exception messages and stack trace in diagnostic file
 * Fix: Some UDP Packet loss
 * Fix: Android: VpnHood system notification
+* Fix: Remain in Disconnecting state
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
 
 ### Server

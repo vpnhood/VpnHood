@@ -378,8 +378,7 @@ public class Session : IAsyncDisposable, IJob
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
-                "Adding a StreamProxyChannel. SessionId: {SessionId}, CipherLength: {CipherLength}",
-                VhLogger.FormatSessionId(SessionId), request.CipherLength);
+                "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
             tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
             streamProxyChannel = new StreamProxyChannel(request.RequestId, tcpClientStreamHost, clientStream, _tcpBufferSize, _tcpBufferSize);

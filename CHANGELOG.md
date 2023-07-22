@@ -1,4 +1,4 @@
-# v3.0.380
+# Upcoming
 ### Client
 * Feature: Client Protocol Version 4 
 * Feature: TCP connection reuse
@@ -8,6 +8,7 @@
 * Fix: Some UDP Packet loss
 * Fix: Android: VpnHood system notification
 * Fix: Remain in Disconnecting state
+* Fix: Windows: VpnHood Window display can't reach this page instead of UI
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
 
 ### Server

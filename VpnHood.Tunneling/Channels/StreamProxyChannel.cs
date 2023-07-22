@@ -77,7 +77,7 @@ public class StreamProxyChannel : IChannel, IJob
 
             var hostCopyTask = CopyToAsync(
                 _hostTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamBufferSize,
-                CancellationToken.None, CancellationToken.None); // host = tunnel
+                CancellationToken.None, CancellationToken.None); // host => tunnel
 
             await Task.WhenAny(tunnelCopyTask, hostCopyTask);
         }

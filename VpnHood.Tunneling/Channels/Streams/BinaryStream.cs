@@ -278,15 +278,31 @@ public class BinaryStream : ChunkStream
             if (_hasError)
                 throw new InvalidOperationException("Could not close a BinaryStream due internal error.");
 
-            if (_remainingChunkBytes != 0)
-                throw new InvalidOperationException("Attempt to dispose a BinaryStream before finishing the current chunk.");
+            //todo
+            //if (_remainingChunkBytes != 0)
+                //throw new InvalidOperationException("Attempt to dispose a BinaryStream before finishing the current chunk.");
 
             if (!_finished)
             {
-                var buffer = new byte[1];
-                var read = await ReadInternalAsync(buffer, 0, buffer.Length, cancellationToken);
-                if (read != 0)
-                    throw new InvalidDataException("BinaryStream read unexpected data on end.");
+                var buffer = new byte[500];
+                var trashedLength = 0;
+                while (true)
+                {
+                    var read = await ReadInternalAsync(buffer, 0, buffer.Length, cancellationToken);
+                    if (read == 0)
+                        break;
+
+                    trashedLength += read;
+                }
+
+                if (trashedLength > 0)
+                    VhLogger.Instance.LogWarning(GeneralEventId.TcpLife,
+                        "Trashing unexpected binary stream data. StreamId: {StreamId}, TrashedLength: {TrashedLength}",
+                        StreamId, trashedLength);
+
+                //todo
+                //if (read != 0)
+                //throw new InvalidDataException("BinaryStream read unexpected data on end.");
             }
         }
         catch (Exception ex)

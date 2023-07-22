@@ -103,9 +103,8 @@ internal class ClientHost : IAsyncDisposable
         _ipPackets.Clear(); // prevent reallocation in this intensive method
         var ret = _ipPackets;
 
-        foreach (var item in ipPackets)
+        foreach (var ipPacket in ipPackets)
         {
-            var ipPacket = item;
             var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             TcpPacket? tcpPacket = null;
@@ -155,7 +154,7 @@ internal class ClientHost : IAsyncDisposable
             {
                 if (tcpPacket != null)
                 {
-                    ret.Add(PacketUtil.CreateTcpResetReply(ipPacket));
+                    ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
                     PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.", LogLevel.Error, ex);
                 }
                 else

@@ -53,6 +53,7 @@ public class AppLogService
             if (eventId == GeneralEventId.Dns) return verbose;
             if (eventId == GeneralEventId.Udp) return verbose;
             if (eventId == GeneralEventId.TcpLife) return verbose;
+            if (eventId == GeneralEventId.Packet) return verbose;
             if (eventId == GeneralEventId.StreamProxyChannel) return verbose;
             if (eventId == GeneralEventId.DatagramChannel) return true;
             return true;

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
@@ -18,7 +19,8 @@ namespace VpnHood.Client.App;
 
 public class WinApp : IDisposable
 {
-    private const string LocalHostIpAddress = "127.10.10.10";
+    private const string DefaultLocalHost = "myvpnhood";
+    private readonly IPEndPoint _defaultLocalHostEndPoint = IPEndPoint.Parse("127.10.10.10:80");
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
     private readonly Timer _uiTimer;
@@ -29,7 +31,6 @@ public class WinApp : IDisposable
     private bool _disposed;
     private bool _showWindowAfterStart;
     private string AppLocalDataPath { get; }
-    public Uri LocalHostUrl = new("http://myvpnhood");
 
     public WinApp()
     {
@@ -85,16 +86,7 @@ public class WinApp : IDisposable
         }
 
         // configure local host
-        var registerLocalDomain = false;
-        try
-        {
-            RegisterLocalDomain();
-            registerLocalDomain = true;
-        }
-        catch
-        {
-            // ignored
-        }
+        var localWebUrl = RegisterLocalDomain();
 
         // configuring Windows Firewall
         try
@@ -113,7 +105,7 @@ public class WinApp : IDisposable
             AppDataPath = AppLocalDataPath,
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
         });
-        VpnHoodAppUi.Init(new MemoryStream(Resource.SPA), url2: registerLocalDomain ? LocalHostUrl : null);
+        VpnHoodAppUi.Init(new MemoryStream(Resource.SPA), url2: localWebUrl);
 
         // auto connect
         if (autoConnect &&
@@ -397,16 +389,79 @@ public class WinApp : IDisposable
         if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
     }
 
-    private void RegisterLocalDomain()
+    private Uri? RegisterLocalDomain()
     {
-        var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
-        var hosts = File.ReadLines(hostsFilePath).ToList();
-        var hostItem = $"{LocalHostIpAddress} {LocalHostUrl.Host}";
-        
-        if (!hosts.Contains(hostItem))
+        // check default ip
+        IPEndPoint? freeLocalEndPoint = null;
+        try
         {
-            hosts.Add(hostItem);
-            File.WriteAllLines(hostsFilePath, hosts.ToArray());
+            freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(_defaultLocalHostEndPoint.Address, _defaultLocalHostEndPoint.Port);
         }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
+                _defaultLocalHostEndPoint.Address, ex.Message);
+        }
+
+        // check 127.0.0.1
+        if (freeLocalEndPoint == null)
+        {
+            try
+            {
+                freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, 9090);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}", 
+                    IPAddress.Loopback , ex.Message);
+                return null;
+            }
+        }
+
+        try
+        {
+            var hostsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+            var hostLines = File.ReadLines(hostsFilePath).ToList();
+
+            // remove wrong items
+            var newHostLines = hostLines
+                .Where(x =>
+                {
+                    var items = x.Split(" ");
+                    var isWrongVpnHoodLine =
+                        items.Length > 1 &&
+                        items[0].Trim() != freeLocalEndPoint.Address.ToString() &&
+                        items[1].Trim().Equals(DefaultLocalHost, StringComparison.OrdinalIgnoreCase);
+                    return !isWrongVpnHoodLine;
+                })
+                .ToList();
+
+            // add item if does not exists
+            var isAlreadyAdded = newHostLines
+                .Any(x =>
+                {
+                    var items = x.Split(" ");
+                    var isVpnHoodLine =
+                        items.Length > 1 &&
+                        items[0].Trim() == freeLocalEndPoint.Address.ToString() &&
+                        items[1].Trim().Equals(DefaultLocalHost, StringComparison.OrdinalIgnoreCase);
+                    return isVpnHoodLine;
+                });
+            
+            if (!isAlreadyAdded)
+                newHostLines.Add($"{freeLocalEndPoint.Address} {DefaultLocalHost} # Added by VpnHood!");
+
+            // update if changed
+            if (!hostLines.SequenceEqual(newHostLines))
+                File.WriteAllLines(hostsFilePath, newHostLines.ToArray());
+
+            return new Uri($"http://{DefaultLocalHost}:{freeLocalEndPoint.Port}");
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not register local domain.");
+            return null;
+        }
+
     }
 }

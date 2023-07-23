@@ -7,7 +7,6 @@ using System;
 using VpnHood.Common.JobController;
 using VpnHood.Tunneling.Exceptions;
 using VpnHood.Common.Logging;
-using System.Threading;
 
 namespace VpnHood.Tunneling;
 

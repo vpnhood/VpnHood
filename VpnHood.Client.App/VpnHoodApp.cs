@@ -178,7 +178,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         // Check new version after connection
         if (VersionStatus == VersionStatus.Unknown)
             _ = CheckNewVersion();
-        
+
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -207,8 +207,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private void Device_OnStartAsService(object sender, EventArgs e)
     {
         var clientProfile =
-            (ClientProfileStore.ClientProfiles.FirstOrDefault(x =>x.ClientProfileId == UserSettings.DefaultClientProfileId) 
-            ?? ClientProfileStore.ClientProfiles.FirstOrDefault()) 
+            (ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.ClientProfileId == UserSettings.DefaultClientProfileId)
+            ?? ClientProfileStore.ClientProfiles.FirstOrDefault())
             ?? throw new Exception("There is no default configuration!");
 
         _ = Connect(clientProfile.ClientProfileId);
@@ -251,7 +251,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             _hasDiagnoseStarted = diagnose;
             CheckConnectionStateChanged();
             LogService.Start(Settings.UserSettings.Logging, diagnose);
-            
+
             // Set ActiveProfile
             ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
             DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
@@ -460,12 +460,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // close client
             try
             {
+                // do not wait for bye if user request disconnection
                 if (ClientConnect != null)
-                {
-                    var disposeTask = ClientConnect.DisposeAsync();
-                    if (!byUser || _hasDiagnoseStarted)
-                        await disposeTask;
-                }
+                    await ClientConnect.DisposeAsync(waitForBye: !byUser);
             }
             catch (Exception ex)
             {
@@ -541,7 +538,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             VhLogger.Instance.LogTrace("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl); 
+            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl);
             LatestPublishInfo = VhUtil.JsonDeserialize<PublishInfo>(publishInfoJson);
 
             // Check version
@@ -559,7 +556,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             else
                 VersionStatus = VersionStatus.Latest;
 
-            VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}", 
+            VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
                 VersionStatus, LatestPublishInfo.Version);
         }
         catch (Exception ex)

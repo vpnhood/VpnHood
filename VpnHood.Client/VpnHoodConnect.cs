@@ -103,14 +103,19 @@ public class VpnHoodConnect : IAsyncDisposable
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true);
+    }
+
+    public async ValueTask DisposeAsync(bool waitForBye)
     {
         lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
+            _disposeTask ??= DisposeAsyncCore(waitForBye);
         await _disposeTask.Value;
     }
 
-    private async ValueTask DisposeAsyncCore()
+    private async ValueTask DisposeAsyncCore(bool waitForBye)
     {
         if (IsDisposed) return;
         IsDisposed = true;
@@ -118,7 +123,7 @@ public class VpnHoodConnect : IAsyncDisposable
         // close client
         try
         {
-            await Client.DisposeAsync();
+            await Client.DisposeAsync(waitForBye);
             Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
         }
         catch (Exception ex)

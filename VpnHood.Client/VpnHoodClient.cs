@@ -881,14 +881,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true);
+    }
+
+    public async ValueTask DisposeAsync(bool waitForBye)
     {
         lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
+            _disposeTask ??= DisposeAsyncCore(waitForBye);
         await _disposeTask.Value;
     }
 
-    private async ValueTask DisposeAsyncCore()
+    private async ValueTask DisposeAsyncCore(bool waitForBye)
     {
         VhLogger.Instance.LogTrace("Disconnecting...");
         _disposed = true;
@@ -929,6 +934,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _packetCapture.Dispose();
         }
 
+        var finalizeTask = Finalize(wasConnected);
+        if (waitForBye)
+            await finalizeTask;
+    }
+
+    private async Task Finalize(bool wasConnected)
+    {
         // Sending Bye
         if (wasConnected && SessionId != 0 && SessionStatus.ErrorCode == SessionErrorCode.Ok)
         {
@@ -942,6 +954,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         State = ClientState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");
+
     }
 
     public class ClientStat

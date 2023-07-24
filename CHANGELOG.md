@@ -1,10 +1,10 @@
 # v3.0.401
-### Client
+### Upcoming
 * Feature: Client Protocol Version 4 
 * Feature: TCP connection reuse
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
-* Update: Include internal exception messages and stack trace in diagnostic file
+* Update: Include internal exception messages and stack trace in the diagnostic file
 * Fix: Some UDP Packet loss
 * Fix: Android: VpnHood system notification
 * Fix: Remain in Disconnecting state

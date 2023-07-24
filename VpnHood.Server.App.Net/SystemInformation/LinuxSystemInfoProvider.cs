@@ -35,6 +35,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
 
     private long _lastCpuTotalTime;
     private long _lastCpuIdleTime;
+    private int _lastUsage;
     private int? GetCpuUsage()
     {
         try
@@ -62,11 +63,16 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             // Calculate the CPU usage
             var lapIdleTime = idleTime - _lastCpuIdleTime;
             var lapTotalTime = totalTime - _lastCpuTotalTime;
+            if (lapTotalTime == 0)
+                return _lastUsage;
+
             var usage = 100.0 * (lapTotalTime - lapIdleTime) / lapTotalTime;
 
             _lastCpuIdleTime = idleTime;
-            _lastCpuTotalTime = totalTime;
+            _lastCpuTotalTime = totalTime; 
+            _lastUsage = (int)usage;
             return (int)usage;
+
         }
         catch (Exception ex)
         {

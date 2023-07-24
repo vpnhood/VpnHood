@@ -9,7 +9,7 @@ namespace VpnHood.Server.App;
 public class AppSettings
 {
     [Obsolete ("Use HttpAccessManager")]
-    public HttpAccessManagerOptions? RestAccessManager { get=> HttpAccessManager; set => HttpAccessManager = value;}
+    public HttpAccessManagerOptions? RestAccessServer { get=> HttpAccessManager; set => HttpAccessManager = value;}
     [Obsolete ("Use HttpAccessManager")]
     public HttpAccessManagerOptions? HttpAccessServer { get=> HttpAccessManager; set => HttpAccessManager = value;}
     [Obsolete("Use FileAccessManager")]

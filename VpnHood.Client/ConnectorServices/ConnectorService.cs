@@ -37,20 +37,28 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; } = new();
-    public bool UseBinaryStream { get; set; }
-    public int ServerProtocolVersion { get; set; }
-
-    public byte[]? ServerKey
-    {
-        set => _apiKey = value != null ? HttpUtil.GetApiKey(value, TunnelDefaults.HttpPassCheck) : "";
-    }
+    public bool UseBinaryStream { get; private set; }
+    public TimeSpan TcpRequestTimeout { get; private set; }
+    public TimeSpan TcpReuseTimeout { get; private set; }
+    public int ServerProtocolVersion { get; private set; }
 
     public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
         _socketFactory = socketFactory;
         TcpTimeout = tcpTimeout;
         JobSection = new JobSection(tcpTimeout);
+        TcpRequestTimeout = TimeSpan.FromSeconds(60);
+        TcpReuseTimeout = TimeSpan.FromSeconds(60);
         JobRunner.Default.Add(this);
+    }
+
+    public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, TimeSpan tcpReuseTimeout, byte[]? serverSecret)
+    {
+        ServerProtocolVersion = serverProtocolVersion;
+        UseBinaryStream = serverProtocolVersion >= 4;
+        TcpRequestTimeout = tcpRequestTimeout;
+        TcpReuseTimeout = tcpReuseTimeout;
+        _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : "";
     }
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
@@ -165,6 +173,11 @@ internal class ConnectorService : IAsyncDisposable, IJob
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
 
+        // set request timeout
+        using var cancellationTokenSource = new CancellationTokenSource(TcpRequestTimeout);
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+        cancellationToken = linkedCancellationTokenSource.Token;
+
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
@@ -225,9 +238,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public async Task RunJob()
     {
         var now = FastDateTime.Now;
-
-        var tcpReuseTimeout = TunnelDefaults.TcpReuseTimeout - TunnelDefaults.TcpReuseTimeout / 3; // it must be less than server
-        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - tcpReuseTimeout)
+        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - TcpReuseTimeout)
         {
             _freeClientStreams.TryDequeue(out queueItem);
             await queueItem.ClientStream.DisposeAsync(false);

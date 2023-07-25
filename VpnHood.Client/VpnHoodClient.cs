@@ -179,6 +179,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, string channelId,
         CancellationToken cancellationToken)
     {
+        // set timeout
+        using var cancellationTokenSource = new CancellationTokenSource(_connectorService.TcpRequestTimeout);
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
+        cancellationToken = linkedCancellationTokenSource.Token;
+
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
         await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
@@ -641,9 +646,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (requestResult.Response.ServerProtocolVersion < 2) // must be 3 (4 for BinaryStream)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
-            _connectorService.UseBinaryStream = requestResult.Response.ServerProtocolVersion >= 4;
-            _connectorService.ServerProtocolVersion = requestResult.Response.ServerProtocolVersion;
-            _connectorService.ServerKey = requestResult.Response.ServerSecret;
+            // initialize the connector
+            _connectorService.Init(
+                requestResult.Response.ServerProtocolVersion, 
+                requestResult.Response.RequestTimeout,
+                requestResult.Response.TcpReuseTimeout,
+                requestResult.Response.ServerSecret);
+            
             var sessionResponse = requestResult.Response;
 
             // log response
@@ -813,6 +822,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
+            await Console.Out.WriteLineAsync(ex.ToString()); //todo
+            VhLogger.Instance.LogTrace(ex, "GGG: " + request.RequestId);
+
             // set connecting state if could not establish any connection
             if (!_disposed && State == ClientState.Connected)
                 State = ClientState.Connecting;

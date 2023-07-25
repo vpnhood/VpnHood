@@ -278,10 +278,6 @@ public class BinaryStream : ChunkStream
             if (_hasError)
                 throw new InvalidOperationException("Could not close a BinaryStream due internal error.");
 
-            //todo
-            //if (_remainingChunkBytes != 0)
-                //throw new InvalidOperationException("Attempt to dispose a BinaryStream before finishing the current chunk.");
-
             if (!_finished)
             {
                 var buffer = new byte[500];
@@ -299,10 +295,6 @@ public class BinaryStream : ChunkStream
                     VhLogger.Instance.LogWarning(GeneralEventId.TcpLife,
                         "Trashing unexpected binary stream data. StreamId: {StreamId}, TrashedLength: {TrashedLength}",
                         StreamId, trashedLength);
-
-                //todo
-                //if (read != 0)
-                //throw new InvalidDataException("BinaryStream read unexpected data on end.");
             }
         }
         catch (Exception ex)

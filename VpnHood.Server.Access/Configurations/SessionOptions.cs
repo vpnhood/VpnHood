@@ -29,6 +29,7 @@ public class SessionOptions
     public int? TcpKernelSendBufferSize { get; set; }
     public int? TcpKernelReceiveBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
+    public TimeSpan? TcpReuseTimeout { get; set; }
     public int? MaxTcpConnectWaitCount { get; set; }
     public int? MaxTcpChannelCount { get; set; }
     public int? NetScanLimit { get; set; }
@@ -44,7 +45,8 @@ public class SessionOptions
     [JsonIgnore] public int MaxDatagramChannelCountValue => MaxDatagramChannelCount ?? 8;
     [JsonIgnore] public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
     [JsonIgnore] public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
-    [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(60);
+    [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
+    [JsonIgnore] public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(30);
     [JsonIgnore] public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
     [JsonIgnore] public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
     [JsonIgnore] public bool UseUdpProxy2Value => UseUdpProxy2 ?? false;
@@ -64,6 +66,7 @@ public class SessionOptions
         if (obj.TcpKernelSendBufferSize != null) TcpKernelSendBufferSize = obj.TcpKernelSendBufferSize;
         if (obj.TcpKernelReceiveBufferSize != null) TcpKernelReceiveBufferSize = obj.TcpKernelReceiveBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
+        if (obj.TcpReuseTimeout != null) TcpReuseTimeout = obj.TcpReuseTimeout;
         if (obj.MaxTcpConnectWaitCount != null) MaxTcpConnectWaitCount = obj.MaxTcpConnectWaitCount;
         if (obj.MaxTcpChannelCount != null) MaxTcpChannelCount = obj.MaxTcpChannelCount;
         if (obj.NetScanLimit != null) NetScanLimit = obj.NetScanLimit;
@@ -86,6 +89,7 @@ public class SessionOptions
         TcpKernelSendBufferSize = TcpKernelSendBufferSize; //no default
         TcpKernelReceiveBufferSize = TcpKernelReceiveBufferSize; //no default
         TcpConnectTimeout = TcpConnectTimeoutValue;
+        TcpReuseTimeout = TcpReuseTimeoutValue;
         MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;
         MaxTcpChannelCount = MaxTcpChannelCountValue;
         NetScanLimit = NetScanLimit;

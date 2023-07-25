@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -249,13 +248,13 @@ internal class ServerHost : IAsyncDisposable, IJob
         var streamId = Guid.NewGuid() + ":incoming";
         var version = buffer[0];
 
-        //todo perhaps must be deprecated from >= 2.9.371
+        //todo must be deprecated from >= 2.9.371
         if (version == 1)
             return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false,
                 cacheData: new[] { version }, cacheSize: 1), streamId);
 
         // Version 2 is HTTP and starts with POST
-        if (version == 'P' || version == 'p')
+        try
         {
             var headers =
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken)
@@ -280,21 +279,22 @@ internal class ServerHost : IAsyncDisposable, IJob
                 if (headers.TryGetValue("X-Version", out var xVersion) && int.Parse(xVersion) == 2 &&
                     headers.TryGetValue("X-Secret", out var xSecret))
                 {
-                    await sslStream.WriteAsync(GetHttpOk(), cancellationToken);
+                    await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
                     var secret = Convert.FromBase64String(xSecret);
                     await sslStream.DisposeAsync(); // dispose Ssl
                     return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
                 }
             }
-            else
-            {
-                //always return UnauthorizedMessage 
-                await sslStream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken);
-                return new TcpClientStream(tcpClient, sslStream, streamId);
-            }
-        }
 
-        throw new NotSupportedException("The request version is not supported.");
+            throw new UnauthorizedAccessException();
+        }
+        catch
+        {
+            //always return BadRequest 
+            if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
+            await sslStream.WriteAsync(HttpResponses.GetBadRequest(), cancellationToken);
+            throw new Exception("Bad request.");
+        }
     }
 
     private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
@@ -410,8 +410,9 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             // return 401 for ANY non SessionException to keep server's anonymity
-            // Server should always return 404 as error
-            await clientStream.Stream.WriteAsync(GetHttpUnauthorizedMessage(), cancellationToken);
+            // Server should always return bad request as error
+            //todo : deprecated from version 400 or upper
+            await clientStream.Stream.WriteAsync(HttpResponses.GetBadRequest(), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
@@ -620,29 +621,6 @@ internal class ServerHost : IAsyncDisposable, IJob
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
         await session.ProcessTcpProxyRequest(clientStream, request, cancellationToken);
-    }
-
-    private static byte[] GetHttpOk()
-    {
-        const string response =
-            "HTTP/1.1 200 OK\r\n" +
-            "Content-Length: 0\r\n" +
-            "\r\n";
-
-        return Encoding.UTF8.GetBytes(response);
-    }
-
-    private static byte[] GetHttpUnauthorizedMessage()
-    {
-        var response =
-            "HTTP/1.1 401 Unauthorized\r\n" +
-            "Content-Length: 0\r\n" +
-            $"Date: {DateTime.UtcNow:r}\r\n" +
-            "Server: Kestrel\r\n" +
-            "WWW-Authenticate: Bearer\r\n" +
-            "\r\n";
-
-        return Encoding.UTF8.GetBytes(response);
     }
 
     public Task RunJob()

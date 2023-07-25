@@ -10,7 +10,7 @@ namespace VpnHood.Tunneling.Utils;
 
 public static class HttpUtil
 {
-    public  static async Task<MemoryStream> ReadHeadersAsync(Stream stream, 
+    public static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = 8192)
     {
         // read header

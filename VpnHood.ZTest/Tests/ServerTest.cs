@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -35,7 +38,7 @@ public class ServerTest
         Assert.IsNotNull(testAccessManager.LastServerInfo);
         Assert.IsTrue(testAccessManager.LastServerInfo.FreeUdpPortV4 > 0);
         Assert.IsTrue(
-            testAccessManager.LastServerInfo.PrivateIpAddresses.All(x => x.AddressFamily != System.Net.Sockets.AddressFamily.InterNetworkV6) ||
+            testAccessManager.LastServerInfo.PrivateIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetworkV6) ||
             testAccessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
 
@@ -206,6 +209,24 @@ public class ServerTest
 
         await client.DisposeAsync();
         await server2.DisposeAsync();
+    }
+    
+    [TestMethod]
+    public async Task Unauthorized_response_is_expected_for_unknown_request()
+    {
+        await using var server = TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(token.HostEndPoints!.First());
+        var ssl = new SslStream(tcpClient.GetStream(), false, TestHelper.IgnoreCertificateValidationCallback);
+        await ssl.AuthenticateAsClientAsync(token.HostName);
+        await ssl.WriteAsync("asfasfasfasgas asfasggd\r\n\r\n"u8.ToArray());
+
+        var readBuffer = new byte[1000];
+        _ = await ssl.ReadAsync(readBuffer);
+        var response = Encoding.UTF8.GetString(readBuffer);
+        Assert.AreEqual(0, response.IndexOf("HTTP/1.1 400 Bad Request", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]

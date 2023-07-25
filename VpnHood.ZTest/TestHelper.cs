@@ -5,7 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -492,6 +494,16 @@ internal static class TestHelper
             Assert.AreEqual(expectedValue, await valueFactory(), message);
         else
             Assert.AreEqual(expectedValue, await valueFactory());
+    }
+
+    public static bool IgnoreCertificateValidationCallback(object sender, 
+        X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
+    {
+        _ = sender;
+        _ = certificate;
+        _ = chain;
+        _ = sslPolicyErrors;
+        return true;
     }
 
 

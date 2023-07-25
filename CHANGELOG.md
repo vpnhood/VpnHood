@@ -16,9 +16,11 @@
 * Feature: TCP connection reuse
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
+* Update: Returns bad request for any unknown or unauthorized access
 * Fix: Server Kernel SendBufferSize
 * Fix: ClientCount report 0 in the FileAccessManager log
 * Fix: Some UDP Packet loss
+* Fix: Reporting CPU usage
 * Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
 
 ### Development

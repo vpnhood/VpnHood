@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
@@ -99,7 +100,7 @@ public class AccessTest
         await using var client = TestHelper.CreateClient(accessToken, throwConnectException: false);
 
         // test expiration
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_Https(throwError: false, timeout: 1000);
             return client.State;
@@ -185,7 +186,7 @@ public class AccessTest
 
         // wait for finishing client1
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_Https(throwError: false, timeout: 2000);
             return client1.State;
@@ -208,7 +209,7 @@ public class AccessTest
 
         // wait for finishing client2
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_Https(throwError: false, timeout: 2000);
             return client2.State;

@@ -92,9 +92,9 @@ internal static class TestHelper
         Assert.AreEqual(connectionSate, app.State.ConnectionState);
     }
 
-    public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
+    public static async Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
     {
-        return AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
+        await VhTestUtil.AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
     }
 
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = DefaultTimeout)
@@ -437,63 +437,6 @@ internal static class TestHelper
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
             encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
-    }
-
-    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
-    {
-        const int waitTime = 100;
-        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
-        {
-            if (Equals(expectedValue, valueFactory()))
-                return true;
-
-            await Task.Delay(waitTime);
-        }
-
-        return false;
-    }
-
-    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
-    {
-        const int waitTime = 100;
-        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
-        {
-            if (Equals(expectedValue, await valueFactory()))
-                return true;
-
-            await Task.Delay(waitTime);
-        }
-
-        return false;
-    }
-    public static async Task AssertEqualsWait<T, TValue>(T obj, TValue? expectedValue, Func<T, TValue> valueFactory, string? message = null, int timeout = 5000)
-    {
-        await WaitForValue(expectedValue, () => valueFactory(obj), timeout);
-
-        if (message != null)
-            Assert.AreEqual(expectedValue, valueFactory(obj), message);
-        else
-            Assert.AreEqual(expectedValue, valueFactory(obj));
-    }
-
-    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<TValue?> valueFactory, string? message = null, int timeout = 5000)
-    {
-        await WaitForValue(expectedValue, valueFactory, timeout);
-
-        if (message != null)
-            Assert.AreEqual(expectedValue, valueFactory(), message);
-        else
-            Assert.AreEqual(expectedValue, valueFactory());
-    }
-
-    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, string? message = null, int timeout = 5000)
-    {
-        await WaitForValue(expectedValue, valueFactory, timeout);
-
-        if (message != null)
-            Assert.AreEqual(expectedValue, await valueFactory(), message);
-        else
-            Assert.AreEqual(expectedValue, await valueFactory());
     }
 
     public static bool IgnoreCertificateValidationCallback(object sender, 

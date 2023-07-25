@@ -300,7 +300,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
     {
         // add timeout to cancellationToken
-        using var timeoutCt = new CancellationTokenSource(TunnelDefaults.TcpRequestTimeout);
+        using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
 
@@ -343,7 +343,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     private async Task ReuseClientStream(IClientStream clientStream)
     {
         lock (_clientStreams) _clientStreams.Add(clientStream);
-        using var timeoutCt = new CancellationTokenSource(TunnelDefaults.TcpReuseTimeout);
+        using var timeoutCt = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
         var cancellationToken = cancellationTokenSource.Token;
 
@@ -557,6 +557,10 @@ internal class ServerHost : IAsyncDisposable, IJob
             IncludeIpRanges = NetFilterIncludeIpRanges,
             PacketCaptureIncludeIpRanges = NetFilterPacketCaptureIncludeIpRanges,
             IsIpV6Supported = IsIpV6Supported,
+            // client should wait more to get session exception replies
+            RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue + TunnelDefaults.ClientRequestTimeoutDelta,
+            // client should wait less to make sure server is not closing the connection
+            TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta, 
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);

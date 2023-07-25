@@ -318,6 +318,14 @@ public static class PacketUtil
                         packetPayload = udpPacket.PayloadData ?? Array.Empty<byte>();
                         break;
                     }
+
+                case ProtocolType.Tcp:
+                {
+                    eventId = GeneralEventId.Tcp;
+                    var tcpPacket = ExtractTcp(ipPacket);
+                    packetPayload = tcpPacket.PayloadData ?? Array.Empty<byte>();
+                    break;
+                }
             }
 
             VhLogger.Instance.Log(logLevel, eventId, exception,

@@ -246,7 +246,7 @@ public class ServerTest
         fileAccessManager.SessionController.Sessions.Clear();
         await server.SessionManager.SyncSessions();
 
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
             await TestHelper.Test_Https(throwError: false, timeout: 1000);
             return client.State;

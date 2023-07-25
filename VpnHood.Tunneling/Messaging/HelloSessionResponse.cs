@@ -40,4 +40,6 @@ public class HelloSessionResponse : SessionResponse
     public IpRange[]? IncludeIpRanges { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
     public string? GaMeasurementId { get; init;}
+    public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
+    public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
 }

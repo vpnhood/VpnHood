@@ -29,7 +29,6 @@ public class BinaryStream : ChunkStream
     public long MaxEncryptChunk { get; set; } = long.MaxValue;
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
-    //todo buffer size
     public BinaryStream(Stream sourceStream, string streamId, byte[] secret)
         : base(new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize), streamId)
     {

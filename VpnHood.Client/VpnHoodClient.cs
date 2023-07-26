@@ -559,7 +559,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             if (_disposed) return;
-            VhLogger.Instance.LogError(GeneralEventId.DatagramChannel, ex, "Could not Manage DatagramChannels.");
+            VhLogger.LogError(GeneralEventId.DatagramChannel, ex, "Could not Manage DatagramChannels.");
         }
         finally
         {

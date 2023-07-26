@@ -180,9 +180,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
         return ret;
     }
 
-    public async Task<IClientStream> SendRequest(ClientRequest request, CancellationToken cancellationToken)
+    public async Task<ConnectorRequestResult<T>> SendRequest<T>(EventId eventId, ClientRequest request, CancellationToken cancellationToken)
+        where T : SessionResponseBase
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Request,
+        VhLogger.Instance.LogTrace(eventId,
             "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
             (RequestCode)request.RequestCode, request.RequestId);
 
@@ -195,11 +196,17 @@ internal class ConnectorService : IAsyncDisposable, IJob
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
         await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
-        var clientStream = await SendRequest(mem.ToArray(), request.RequestId, cancellationToken);
-        return clientStream;
+        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken);
+
+        // log the response
+        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", 
+            ret.Response.ErrorCode);
+
+        return ret;
     }
 
-    private async Task<IClientStream> SendRequest(byte[] request, string requestId, CancellationToken cancellationToken)
+    private async Task<ConnectorRequestResult<T>> SendRequest<T>(byte[] request, string requestId, CancellationToken cancellationToken)
+        where T : SessionResponseBase
     {
         // try reuse
         var clientStream = GetFreeClientStream();
@@ -213,13 +220,13 @@ internal class ConnectorService : IAsyncDisposable, IJob
             {
                 // we may use this buffer to encrypt so clone it for retry
                 await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken);
-
-                // make sure there is no error
-                _ = await clientStream.Stream.ReadAsync(Array.Empty<byte>(), cancellationToken);
-                if (!clientStream.CheckIsAlive()) throw new Exception("TcpClient is not connected.");
+                var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
                 lock (Stat) Stat.ReusedConnectionSucceededCount++;
-                clientStream.ClientStreamId = requestId;
-                return clientStream;
+                return new ConnectorRequestResult<T>
+                {
+                    Response = response,
+                    ClientStream = clientStream
+                };
             }
             catch (Exception ex)
             {
@@ -237,7 +244,12 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
         // send request
         await clientStream.Stream.WriteAsync(request, cancellationToken);
-        return clientStream;
+        var response2 = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
+        return new ConnectorRequestResult<T>
+        {
+            Response = response2,
+            ClientStream = clientStream
+        };
     }
 
     public async ValueTask DisposeAsync()

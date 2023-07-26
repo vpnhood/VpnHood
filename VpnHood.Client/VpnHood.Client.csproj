@@ -12,8 +12,8 @@
     <Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.Client.App.</Description>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
-    <Version>3.0.403</Version>
-    <AssemblyVersion>3.0.403</AssemblyVersion>
+    <Version>3.0.405</Version>
+    <AssemblyVersion>3.0.405</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

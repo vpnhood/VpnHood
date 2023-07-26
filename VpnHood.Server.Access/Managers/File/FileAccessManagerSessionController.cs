@@ -80,6 +80,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 
         //create response
         var ret = BuildSessionResponse(session, accessItem);
+        ret.ExtraData = session.ExtraData;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 

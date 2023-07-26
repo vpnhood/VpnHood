@@ -786,11 +786,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
 
             // create a connection and send the request 
-            clientStream = await _connectorService.SendRequest(request, cancellationToken);
-
-            // Reading the response
-            var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
-            VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", response.ErrorCode);
+            var requestResult = await _connectorService.SendRequest<T>(eventId, request, cancellationToken);
+            var response = requestResult.Response;
+            clientStream = requestResult.ClientStream;
 
             // set SessionStatus
             if (response.AccessUsage != null)
@@ -806,12 +804,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             _lastConnectionErrorTime = null;
             State = ClientState.Connected;
-            var ret = new ConnectorRequestResult<T>
-            {
-                Response = response,
-                ClientStream = clientStream
-            };
-            return ret;
+            return requestResult;
         }
         catch (SessionException ex) when (ex.SessionResponseBase.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
         {
@@ -841,7 +834,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // send request
-            await using var requestResult = await _connectorService.SendRequest(
+            await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(GeneralEventId.Session,
                 new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
                 cancellationToken);
         }

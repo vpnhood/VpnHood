@@ -112,15 +112,14 @@ public class SessionManager : IAsyncDisposable, IJob
     {
         // validate the token
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
+        var extraData = JsonSerializer.Serialize(new SessionExtraData { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
         var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
-            ExtraData = JsonSerializer.Serialize(new SessionExtraData
-            {
-                ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion
-            })
+            ExtraData = extraData
         });
+        sessionResponseEx.ExtraData = extraData; //extraData may not return by session creation
 
         // Access Error should not pass to the client in create session
         if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)

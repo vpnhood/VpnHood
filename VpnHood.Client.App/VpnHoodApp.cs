@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Settings;
@@ -252,6 +253,10 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             CheckConnectionStateChanged();
             LogService.Start(Settings.UserSettings.Logging, diagnose);
 
+            // dump user settings
+            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
+                JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
+
             // Set ActiveProfile
             ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
             DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
@@ -292,8 +297,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     private void Settings_OnSaved(object sender, EventArgs e)
     {
-        if (Client != null)
-            Client.UseUdpChannel = UserSettings.UseUdpChannel;
+        if (Client == null) return;
+        Client.UseUdpChannel = UserSettings.UseUdpChannel;
+        Client.DropUdpPackets = UserSettings.DropUdpPackets;
     }
 
     private async Task<string?> GetClientCountry()
@@ -349,7 +355,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
-            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker
+            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
+            DropUdpPackets = UserSettings.DropUdpPackets
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
@@ -363,7 +370,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             new ConnectOptions
             {
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
-                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
+                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off,
             });
 
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);

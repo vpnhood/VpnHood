@@ -20,6 +20,7 @@ public class UserSettings
     public string[]? AppFilters { get; set; }
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
     public bool UseUdpChannel { get; set; } = DefaultClientOptions.UseUdpChannel;
+    public bool DropUdpPackets { get; set; } = DefaultClientOptions.DropUdpPackets;
     public bool ExcludeLocalNetwork { get; set; } = DefaultClientOptions.ExcludeLocalNetwork;
     public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[]? PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();

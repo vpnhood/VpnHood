@@ -180,7 +180,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken)
     {
         // set timeout
-        using var cancellationTokenSource = new CancellationTokenSource(_connectorService.TcpRequestTimeout);
+        using var cancellationTokenSource = new CancellationTokenSource(_connectorService.RequestTimeout);
         using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
         cancellationToken = linkedCancellationTokenSource.Token;
 
@@ -822,9 +822,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            await Console.Out.WriteLineAsync(ex.ToString()); //todo
-            VhLogger.Instance.LogTrace(ex, "GGG: " + request.RequestId);
-
             // set connecting state if could not establish any connection
             if (!_disposed && State == ClientState.Connected)
                 State = ClientState.Connecting;

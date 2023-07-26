@@ -569,7 +569,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessUdpChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Udp, "Reading a TcpDatagramChannel request...");
+        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, "Reading a TcpDatagramChannel request...");
         var request = await ReadRequest<UdpChannelRequest>(clientStream, cancellationToken);
 
         // finding session
@@ -593,7 +593,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the Bye request ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the Bye request...");
         var request = await ReadRequest<ByeRequest>(clientStream, cancellationToken);
 
         // finding session
@@ -602,12 +602,13 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
         await clientStream.DisposeAsync(false);
     }
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest ...");
+        VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
         var request = await ReadRequest<TcpDatagramChannelRequest>(clientStream, cancellationToken);
 
         // finding session
@@ -618,7 +619,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel, "Reading the StreamProxyChannelRequest ...");
+        VhLogger.Instance.LogInformation(GeneralEventId.StreamProxyChannel, "Reading the StreamProxyChannelRequest...");
         var request = await ReadRequest<StreamProxyChannelRequest>(clientStream, cancellationToken);
 
         // find session

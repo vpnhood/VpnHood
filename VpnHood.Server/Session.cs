@@ -137,6 +137,9 @@ public class Session : IAsyncDisposable, IJob
             if (value == UseUdpChannel)
                 return;
 
+            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, "Set DatagramMode: {DatagramMode}", 
+                value ? "UdpChannel" : "StreamDatagram");
+
             if (value)
             {
                 // remove tcpDatagram channels

@@ -560,7 +560,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             // client should wait more to get session exception replies
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue + TunnelDefaults.ClientRequestTimeoutDelta,
             // client should wait less to make sure server is not closing the connection
-            TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta, 
+            TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta,
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
@@ -602,7 +602,9 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
+        if (session.SessionExtraData.ProtocolVersion >= 4) //todo: condition should remove from version 400 or later
+            await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
+
         await clientStream.DisposeAsync(false);
     }
 

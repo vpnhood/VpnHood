@@ -36,18 +36,19 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public TimeSpan TcpTimeout { get; set; }
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
-    public ConnectorStat Stat { get; } = new();
+    public ConnectorStat Stat { get; }
     public bool UseBinaryStream { get; private set; }
-    public TimeSpan TcpRequestTimeout { get; private set; }
+    public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
 
     public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
         _socketFactory = socketFactory;
+        Stat = new ConnectorStatImpl(this);
         TcpTimeout = tcpTimeout;
         JobSection = new JobSection(tcpTimeout);
-        TcpRequestTimeout = TimeSpan.FromSeconds(60);
+        RequestTimeout = TimeSpan.FromSeconds(60);
         TcpReuseTimeout = TimeSpan.FromSeconds(60);
         JobRunner.Default.Add(this);
     }
@@ -56,7 +57,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     {
         ServerProtocolVersion = serverProtocolVersion;
         UseBinaryStream = serverProtocolVersion >= 4;
-        TcpRequestTimeout = tcpRequestTimeout;
+        RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
         _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : "";
     }
@@ -84,14 +85,14 @@ internal class ConnectorService : IAsyncDisposable, IJob
         // dispose Ssl
         if (string.IsNullOrEmpty(_apiKey))
             return new TcpClientStream(tcpClient, sslStream, streamId);
-        
+
         await sslStream.DisposeAsync();
         return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
     }
 
     private async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
     {
-        if (EndPointInfo == null) throw new InvalidOperationException($"{nameof(EndPointInfo)} is not initialized.");
+        if (EndPointInfo == null) throw new InvalidOperationException($"{nameof(EndPointInfo)} has not been initialized.");
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
         var hostName = EndPointInfo.HostName;
 
@@ -101,13 +102,13 @@ internal class ConnectorService : IAsyncDisposable, IJob
         try
         {
             // Client.SessionTimeout does not affect in ConnectAsync
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connecting to Server: {VhLogger.Format(tcpEndPoint)}...");
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
             var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
 
             // Establish a TLS connection
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"TLS Authenticating. HostName: {VhLogger.FormatDns(hostName)}...");
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatDns(hostName));
             var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT &&
                               Environment.OSVersion.Version.Major < 10
                 ? SslProtocols.Tls12 // windows 7
@@ -135,10 +136,11 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     private IClientStream? GetFreeClientStream()
     {
+        var now = FastDateTime.Now;
         while (_freeClientStreams.TryDequeue(out var queueItem))
         {
-            lock(Stat) Stat.FreeConnectionCount--;
-            if (queueItem.ClientStream.CheckIsAlive())
+            // make sure the clientStream timeout has not been reached
+            if (queueItem.EnqueueTime + TcpReuseTimeout > now && queueItem.ClientStream.CheckIsAlive())
                 return queueItem.ClientStream;
 
             _disposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
@@ -150,7 +152,18 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private Task ReuseStreamClient(IClientStream clientStream)
     {
         _freeClientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
-        lock(Stat) Stat.FreeConnectionCount++;
+        return Task.CompletedTask;
+    }
+
+    public Task RunJob()
+    {
+        var now = FastDateTime.Now;
+        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime + TcpReuseTimeout <= now)
+        {
+            _freeClientStreams.TryDequeue(out queueItem);
+            _disposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
+        }
+
         return Task.CompletedTask;
     }
 
@@ -174,7 +187,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             (RequestCode)request.RequestCode, request.RequestId);
 
         // set request timeout
-        using var cancellationTokenSource = new CancellationTokenSource(TcpRequestTimeout);
+        using var cancellationTokenSource = new CancellationTokenSource(RequestTimeout);
         using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
         cancellationToken = linkedCancellationTokenSource.Token;
 
@@ -202,9 +215,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
                 await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken);
 
                 // make sure there is no error
-                _ = await clientStream.Stream.ReadAsync(Array.Empty<byte>(), cancellationToken); 
+                _ = await clientStream.Stream.ReadAsync(Array.Empty<byte>(), cancellationToken);
                 if (!clientStream.CheckIsAlive()) throw new Exception("TcpClient is not connected.");
-                lock(Stat) Stat.ReusedConnectionSucceededCount++;
+                lock (Stat) Stat.ReusedConnectionSucceededCount++;
                 clientStream.ClientStreamId = requestId;
                 return clientStream;
             }
@@ -235,19 +248,20 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await _disposingTasks.DisposeAsync();
     }
 
-    public async Task RunJob()
-    {
-        var now = FastDateTime.Now;
-        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime < now - TcpReuseTimeout)
-        {
-            _freeClientStreams.TryDequeue(out queueItem);
-            await queueItem.ClientStream.DisposeAsync(false);
-        }
-    }
-
     private class ClientStreamItem
     {
         public required IClientStream ClientStream { get; init; }
         public DateTime EnqueueTime { get; } = FastDateTime.Now;
+    }
+
+    public class ConnectorStatImpl : ConnectorStat
+    {
+        private readonly ConnectorService _connectorService;
+        public override int FreeConnectionCount => _connectorService._freeClientStreams.Count;
+
+        internal ConnectorStatImpl(ConnectorService connectorService)
+        {
+            _connectorService = connectorService;
+        }
     }
 }

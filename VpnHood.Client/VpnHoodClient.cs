@@ -648,11 +648,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // initialize the connector
             _connectorService.Init(
-                requestResult.Response.ServerProtocolVersion, 
+                requestResult.Response.ServerProtocolVersion,
                 requestResult.Response.RequestTimeout,
                 requestResult.Response.TcpReuseTimeout,
                 requestResult.Response.ServerSecret);
-            
+
             var sessionResponse = requestResult.Response;
 
             // log response
@@ -834,9 +834,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // send request
-            await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(GeneralEventId.Session,
-                new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
-                cancellationToken);
+            if (_connectorService.ServerProtocolVersion >= 4) //todo: condition should remove from version 400 or later
+            {
+                await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(GeneralEventId.Session,
+                    new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
+                    cancellationToken);
+            }
         }
         catch (Exception ex)
         {

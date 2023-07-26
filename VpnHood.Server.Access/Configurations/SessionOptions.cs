@@ -46,7 +46,7 @@ public class SessionOptions
     [JsonIgnore] public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
     [JsonIgnore] public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
     [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
-    [JsonIgnore] public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(30);
+    [JsonIgnore] public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(40);
     [JsonIgnore] public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
     [JsonIgnore] public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
     [JsonIgnore] public bool UseUdpProxy2Value => UseUdpProxy2 ?? false;

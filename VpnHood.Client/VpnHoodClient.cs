@@ -97,6 +97,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPEndPoint? HostUdpEndPoint { get; private set; }
     public IPEndPoint[]? HostTcpEndPoints { get; private set; }
     public IPEndPoint[]? HostUdpEndPoints { get; private set; }
+    public bool DropUdpPackets { get; set; }
 
     public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
     public ClientStat Stat { get; }
@@ -134,6 +135,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         UseUdpChannel = options.UseUdpChannel;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
+        DropUdpPackets = options.DropUdpPackets;
         Nat = new Nat(true);
 
         // init packetCapture cancellation
@@ -206,12 +208,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // report config
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-        VhLogger.Instance.LogInformation("UseUdpChannel: {UseUdpChannel}, MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
-            UseUdpChannel, workerThreads, completionPortThreads);
+        VhLogger.Instance.LogInformation(
+            "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, ExcludeLocalNetwork: {ExcludeLocalNetwork}, " +
+            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
+            UseUdpChannel, DropUdpPackets, ExcludeLocalNetwork, workerThreads, completionPortThreads);
 
-        // Replace dot in version to prevent anonymous make treat it as ip.
+        // report version
         VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
             Version, ProtocolVersion, VhLogger.FormatId(ClientId));
+
+
 
         // Starting
         State = ClientState.Connecting;
@@ -343,12 +349,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         else if (ipPacket.Protocol == ProtocolType.Tcp)
                             tcpHostPackets.Add(ipPacket);
 
-                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6 or ProtocolType.Udp)
+                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
+                            tunnelPackets.Add(ipPacket);
+
+                        else if (ipPacket.Protocol is ProtocolType.Udp)
                             tunnelPackets.Add(ipPacket);
 
                         else
                             droppedPackets.Add(ipPacket);
-
                     }
                     else
                     {
@@ -381,6 +389,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                     }
                 }
+
+                // drop all UDP packets except DNS
+                if (DropUdpPackets)
+                    tunnelPackets.RemoveAll(x => x.Protocol == ProtocolType.Udp && PacketUtil.ExtractUdp(x).DestinationPort != 53);
 
                 // send packets
                 if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationTokenSource.Token);
@@ -467,7 +479,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var dnsServer = ipPacket.Version == IPVersion.IPv4 ? _dnsServerIpV4 : _dnsServerIpV6;
         if (dnsServer == null)
         {
-            VhLogger.Instance.LogWarning($"There is no DNS server for {ipPacket.DestinationAddress.AddressFamily}");
+            VhLogger.Instance.LogWarning("There is no DNS server for this Address Family. AddressFamily : {AddressFamily}",
+                ipPacket.DestinationAddress.AddressFamily);
             return false;
         }
 

@@ -87,6 +87,32 @@ public class ClientServerTest
     }
 
     [TestMethod]
+    public async Task UdpPackets_Drop()
+    {
+        // Create Server
+        await using var server = TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        {
+            DropUdpPackets = true,
+            MaxDatagramChannelCount = 6
+        });
+
+        try
+        {
+            await TestHelper.Test_Udp(3000);
+            Assert.Fail("UDP must be failed.");
+        }
+        catch (Exception ex)
+        {
+            Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
+        }
+
+    }
+
+
+    [TestMethod]
     public async Task MaxDatagramChannels()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();

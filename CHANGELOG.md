@@ -1,4 +1,4 @@
-# Upcoming
+# v3.0.405
 ### Client
 * Feature: Client Protocol Version 4 
 * Feature: TCP connection reuse

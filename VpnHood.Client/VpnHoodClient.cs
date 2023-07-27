@@ -167,7 +167,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             if (_state == value) return;
             _state = value; //must set before raising the event; 
-            VhLogger.Instance.LogInformation($"Client is {State}");
+            VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -230,6 +230,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _connectorService.EndPointInfo = new ConnectorEndPointInfo
             {
                 HostName = Token.HostName,
+                //todo
+                //TcpEndPoint = new IPEndPoint(IPAddress.Parse("51.81.81.250"), 443), //  await Token.ResolveHostEndPointAsync(),
                 TcpEndPoint = await Token.ResolveHostEndPointAsync(),
                 CertificateHash = Token.CertificateHash
             };
@@ -752,7 +754,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             _connectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
             HostTcpEndPoint = ex.RedirectHostEndPoint;
-            await ConnectInternal(cancellationToken, true);
+            await ConnectInternal(_cancellationTokenSource.Token, true);
         }
     }
 

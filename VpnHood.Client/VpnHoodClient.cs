@@ -230,8 +230,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _connectorService.EndPointInfo = new ConnectorEndPointInfo
             {
                 HostName = Token.HostName,
-                //todo
-                //TcpEndPoint = new IPEndPoint(IPAddress.Parse("51.81.81.250"), 443), //  await Token.ResolveHostEndPointAsync(),
                 TcpEndPoint = await Token.ResolveHostEndPointAsync(),
                 CertificateHash = Token.CertificateHash
             };
@@ -915,7 +913,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async ValueTask DisposeAsyncCore(bool waitForBye)
     {
-        VhLogger.Instance.LogTrace("Disconnecting...");
+        // shutdown
+        VhLogger.Instance.LogTrace("Shutting down...");
+
         _disposed = true;
         _cancellationTokenSource.Cancel();
         var wasConnected = State is ClientState.Connecting or ClientState.Connected;
@@ -927,23 +927,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         else if (SessionStatus.SuppressedBy == SessionSuppressType.Other)
             VhLogger.Instance.LogWarning("You suppressed a session of another client!");
-
-        // shutdown
-        VhLogger.Instance.LogTrace("Shutting down...");
-        VhLogger.Instance.LogTrace("Disposing ClientHost...");
-        await _clientHost.DisposeAsync();
-
-        // Tunnel
-        VhLogger.Instance.LogTrace("Disposing Tunnel...");
-        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        await Tunnel.DisposeAsync();
-
-        VhLogger.Instance.LogTrace("Disposing ProxyManager...");
-        await _proxyManager.DisposeAsync();
-
-        // dispose NAT
-        VhLogger.Instance.LogTrace("Disposing Nat...");
-        Nat.Dispose();
 
         // disposing PacketCapture. Must be at end for graceful shutdown
         _packetCapture.OnStopped -= PacketCapture_OnStopped;
@@ -961,6 +944,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async Task Finalize(bool wasConnected)
     {
+        VhLogger.Instance.LogTrace("Disposing ClientHost...");
+        await _clientHost.DisposeAsync();
+
+        // Tunnel
+        VhLogger.Instance.LogTrace("Disposing Tunnel...");
+        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+        await Tunnel.DisposeAsync();
+
+        VhLogger.Instance.LogTrace("Disposing ProxyManager...");
+        await _proxyManager.DisposeAsync();
+
+        // dispose NAT
+        VhLogger.Instance.LogTrace("Disposing Nat...");
+        Nat.Dispose();
+
         // Sending Bye
         if (wasConnected && SessionId != 0 && SessionStatus.ErrorCode == SessionErrorCode.Ok)
         {

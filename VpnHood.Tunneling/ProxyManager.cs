@@ -110,6 +110,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
         var disposeTasks = new List<Task>();
         lock (_channels)
             disposeTasks.AddRange(_channels.Select(channel => channel.DisposeAsync(false).AsTask()));
+
         await Task.WhenAll(disposeTasks);
     }
 }

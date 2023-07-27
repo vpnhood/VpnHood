@@ -48,7 +48,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         Stat = new ConnectorStatImpl(this);
         TcpTimeout = tcpTimeout;
         JobSection = new JobSection(tcpTimeout);
-        RequestTimeout = TimeSpan.FromSeconds(60);
+        RequestTimeout = TimeSpan.FromSeconds(30);
         TcpReuseTimeout = TimeSpan.FromSeconds(60);
         JobRunner.Default.Add(this);
     }

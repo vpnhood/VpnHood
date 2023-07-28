@@ -1,8 +1,9 @@
-# v3.0.405
+# Upcoming
 ### Client
 * Feature: Client Protocol Version 4 
 * Feature: TCP connection reuse
 * Feature: Allow Drop UDP packets
+* Feature: Add IPv6 support to country exclusion/inclusion
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
 * Update: Include internal exception messages and stack trace in the diagnostic file

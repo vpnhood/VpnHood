@@ -505,7 +505,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
 
         // AddFromIp2Location if hash has been changed
-        await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_CSV);
+        await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
         memZipStream.Seek(0, SeekOrigin.Begin);
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(memZipStream);
@@ -527,7 +527,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
             memZipStream.Seek(0, SeekOrigin.Begin);
             using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV") ?? throw new Exception("Could not find ip2location database!");
+            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database!");
             await using var stream = entry.Open();
             await _ipGroupManager.AddFromIp2Location(stream);
         }

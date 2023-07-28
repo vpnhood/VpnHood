@@ -175,7 +175,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private void PacketCapture_OnStopped(object sender, EventArgs e)
     {
         VhLogger.Instance.LogTrace("Device has been stopped!");
-        _ = DisposeAsync();
+        _ = DisposeAsync(false);
     }
 
     internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, string channelId,
@@ -888,7 +888,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
         }
 
-        return DisposeAsync();
+        return DisposeAsync(false);
     }
 
     public void Dispose()
@@ -901,7 +901,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        return DisposeAsync(true);
+        return DisposeAsync(false);
     }
 
     public async ValueTask DisposeAsync(bool waitForBye)

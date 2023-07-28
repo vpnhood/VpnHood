@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -67,7 +69,11 @@ public class IpGroupManager
                 ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
             }
 
-            var ipRange = new IpRange(long.Parse(items[0]), long.Parse(items[1]));
+            var addressFamily = items[0].Length > 10 || items[1].Length > 10 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
+            var ipRange = new IpRange(
+                IPAddressUtil.FromBigInteger(BigInteger.Parse(items[0]), addressFamily),
+                IPAddressUtil.FromBigInteger(BigInteger.Parse(items[1]), addressFamily));
+
             ipGroupNetwork.IpRanges.Add(ipRange);
         }
 
@@ -91,29 +97,42 @@ public class IpGroupManager
         await File.WriteAllTextAsync(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
     }
 
-    public async Task<IpRange[]> GetIpRanges(string ipGroupId)
+
+    public async Task<IEnumerable<IpRange>> GetIpRanges(string ipGroupId)
     {
         var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroupId}.json");
         var json = await File.ReadAllTextAsync(filePath);
-        return JsonSerializer.Deserialize<IpRange[]>(json) ?? throw new Exception($"Could not deserialize {filePath}!");
+        var ipRanges = JsonSerializer.Deserialize<IpRange[]>(json) ?? throw new Exception($"Could not deserialize {filePath}!");
+        
+        var ip4Ranges = ipRanges.Where(x => x.IsIPv4MappedToIPv6).Select(x => x.MapToIPv4());
+        var ret = ipRanges.Concat(ip4Ranges);
+        return ret;
     }
 
     private readonly SemaphoreSlim _sortedIpRangesSemaphore = new(1, 1);
-    private async Task LoadIpRangeGroup()
+    private async Task<IpRange[]> LoadIpRangeGroup()
     {
         // load all groups
         try
         {
             await _sortedIpRangesSemaphore.WaitAsync();
+            
+            // use cache
+            if (_sortedIpRanges != null)
+                return _sortedIpRanges;
+
+            // load 
             _ipRangeGroups.Clear();
-            List<IpRange> ipRanges = new();
+            var ipRanges = new List<IpRange>();
             foreach (var ipGroup in IpGroups)
-            foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId))
-            {
-                ipRanges.Add(ipRange);
-                _ipRangeGroups.Add(ipRange, ipGroup);
-            }
+                foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId))
+                {
+                    ipRanges.Add(ipRange);
+                    _ipRangeGroups.Add(ipRange, ipGroup);
+                }
             _sortedIpRanges = IpRange.Sort(ipRanges.ToArray(), false).ToArray();
+
+            return _sortedIpRanges;
         }
         finally
         {
@@ -123,8 +142,8 @@ public class IpGroupManager
 
     public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress)
     {
-        await LoadIpRangeGroup();
-        var findIpRange = IpRange.FindInSortedRanges(_sortedIpRanges!, ipAddress);
+        var sortedIpRanges = await LoadIpRangeGroup();
+        var findIpRange = IpRange.FindInSortedRanges(sortedIpRanges, ipAddress);
         return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
     }
 

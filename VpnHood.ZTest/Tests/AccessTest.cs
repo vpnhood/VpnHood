@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq;
+using System.Net;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -6,6 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 
@@ -14,14 +18,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest
 {
-
-    [TestMethod]
-    public async Task Foo()
-    {
-        var cancellationTokenSource = new CancellationTokenSource(1000);
-        await Task.WhenAny(Task.Delay(10000, cancellationTokenSource.Token));
-    }
-
     [TestInitialize]
     public void Initialize()
     {

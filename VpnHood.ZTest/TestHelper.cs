@@ -83,13 +83,9 @@ internal static class TestHelper
         }
     }
 
-    public static void WaitForClientState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
+    public static async Task WaitForClientStateAsync(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
     {
-        var waitTime = 200;
-        for (var elapsed = 0; elapsed < timeout && app.State.ConnectionState != connectionSate; elapsed += waitTime)
-            Thread.Sleep(waitTime);
-
-        Assert.AreEqual(connectionSate, app.State.ConnectionState);
+        await VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState, "App state didn't reach the expected value.", timeout);
     }
 
     public static async Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
@@ -408,6 +404,7 @@ internal static class TestHelper
             AppDataPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             IsLogToConsoleSupported = true,
+            LoadCountryIpGroups = false,
         };
         return appOptions;
     }

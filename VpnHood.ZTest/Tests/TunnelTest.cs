@@ -20,7 +20,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class TunnelTest
+public class TunnelTest : TestBase
 {
     private class PacketProxyReceiverTest : IPacketProxyReceiver
     {

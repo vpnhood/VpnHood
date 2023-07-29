@@ -16,7 +16,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class UdpProxyTest
+public class UdpProxyTest : TestBase
 {
     private class MyPacketProxyReceiver : IPacketProxyReceiver
     {

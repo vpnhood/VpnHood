@@ -14,7 +14,7 @@ using VpnHood.Tunneling.DatagramMessaging;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class TcpDatagramChannelTest
+public class TcpDatagramChannelTest : TestBase
 {
     [TestMethod]
     public void DatagramMessages()

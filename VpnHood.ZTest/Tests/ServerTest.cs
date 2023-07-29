@@ -20,7 +20,7 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ServerTest
+public class ServerTest : TestBase
 {
     [TestMethod]
     public async Task Configure()

@@ -7,7 +7,7 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class NatTest
+public class NatTest : TestBase
 {
     [TestMethod]
     public void Nat_NatItem_Test()

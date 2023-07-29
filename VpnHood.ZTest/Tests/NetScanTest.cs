@@ -9,7 +9,7 @@ using VpnHood.Server;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class NetScanTest
+public class NetScanTest : TestBase
 {
 
     [TestMethod]

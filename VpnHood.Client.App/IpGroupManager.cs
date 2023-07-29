@@ -1,48 +1,106 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App;
 
 public class IpGroupManager
 {
-    private readonly string _ipGroupsFilePath;
+    private IpGroup[]? _ipGroups;
 
-    public IpGroup[] IpGroups { get; private set; } = Array.Empty<IpGroup>();
-    private readonly Dictionary<IpRange, IpGroup> _ipRangeGroups = new();
-    private IpRange[]? _sortedIpRanges;
+    private string IpGroupsFolderPath => Path.Combine(StorageFolder, "ipgroups");
+    private string IpGroupsFilePath => Path.Combine(StorageFolder, "ipgroups.json");
+    private string VersionFilePath => Path.Combine(StorageFolder, "version.txt");
+    private string GetIpGroupFilePath(string ipGroup) => Path.Combine(IpGroupsFolderPath, ipGroup + ".json");
+    public string StorageFolder { get; }
 
-    public IpGroupManager(string ipGroupsFilePath)
+    private IpGroupManager(string storageFolder)
     {
-        _ipGroupsFilePath = ipGroupsFilePath;
-        try
-        {
-            IpGroups = JsonSerializer.Deserialize<IpGroup[]>(File.ReadAllText(ipGroupsFilePath))
-                       ?? throw new FormatException($"Could deserialize {ipGroupsFilePath}!");
-        }
-        catch
-        {
-            // ignored
-        }
+        StorageFolder = storageFolder;
     }
 
-    private string IpGroupsFolderPath => Path.Combine(Path.GetDirectoryName(_ipGroupsFilePath)!, "ipgroups");
+    public static Task<IpGroupManager> Create(string storageFolder)
+    {
+        var ret = new IpGroupManager(storageFolder);
+        return Task.FromResult(ret);
+    }
 
-    public async Task AddFromIp2Location(Stream ipLocationsStream)
+    public async Task InitByIp2LocationZipStream(ZipArchiveEntry archiveEntry)
+    {
+        var newVersion = archiveEntry.LastWriteTime.ToUniversalTime().ToString("u");
+        var oldVersion = "NotFound";
+
+        // check is version changed
+        if (File.Exists(VersionFilePath))
+        {
+            try
+            {
+                oldVersion = await File.ReadAllTextAsync(VersionFilePath);
+                if (oldVersion == newVersion)
+                    return;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not read last version file. File: {File}", VersionFilePath);
+            }
+        }
+
+        // Build new structure
+        VhLogger.Instance.LogInformation("Building IPLocation. OldVersion: {OldVersion}, NewVersion {NewVersion},", oldVersion, newVersion);
+
+        // delete all files and other versions if any
+        if (Directory.Exists(IpGroupsFolderPath))
+        {
+            VhLogger.Instance.LogTrace("Deleting the old IpGroups...");
+            Directory.Delete(IpGroupsFolderPath, true);
+        }
+
+        // Loading the ip2Location stream
+        VhLogger.Instance.LogTrace("Loading the ip2Location stream...");
+        await using var ipLocationsStream = archiveEntry.Open();
+        var ipGroupNetworks = await LoadIp2Location(ipLocationsStream);
+
+        // Building the IpGroups directory structure
+        VhLogger.Instance.LogTrace("Building the IpGroups directory structure...");
+        Directory.CreateDirectory(IpGroupsFolderPath);
+        foreach (var ipGroupNetwork in ipGroupNetworks)
+        {
+            ipGroupNetwork.Value.IpRanges = ipGroupNetwork.Value.IpRanges.ToArray().Sort().ToList();
+            await File.WriteAllTextAsync(GetIpGroupFilePath(ipGroupNetwork.Key), JsonSerializer.Serialize(ipGroupNetwork.Value.IpRanges));
+        }
+
+        // write IpGroups file
+        var ipGroups = ipGroupNetworks.Select(x =>
+                new IpGroup
+                {
+                    IpGroupId = x.Value.IpGroupId,
+                    IpGroupName = x.Value.IpGroupName
+                })
+            .OrderBy(x => x.IpGroupName)
+            .ToArray();
+        await File.WriteAllTextAsync(IpGroupsFilePath, JsonSerializer.Serialize(ipGroups));
+
+        // write version
+        await File.WriteAllTextAsync(VersionFilePath, newVersion);
+        _ipGroups = null; // clear cache
+    }
+
+    private static async Task<Dictionary<string, IpGroupNetwork>> LoadIp2Location(Stream ipLocationsStream)
     {
         // extract IpGroups
-        Dictionary<string, IpGroupNetwork> ipGroupNetworks = new();
+        var ipGroupNetworks = new Dictionary<string, IpGroupNetwork>();
         using var streamReader = new StreamReader(ipLocationsStream);
         while (!streamReader.EndOfStream)
         {
@@ -54,7 +112,6 @@ public class IpGroupManager
             var ipGroupId = items[2].ToLower();
             if (ipGroupId == "-") continue;
             if (ipGroupId == "um") ipGroupId = "us";
-
             if (!ipGroupNetworks.TryGetValue(ipGroupId, out var ipGroupNetwork))
             {
                 var ipGroupName = ipGroupId switch
@@ -63,9 +120,14 @@ public class IpGroupManager
                     "gb" => "United Kingdom",
                     _ => items[3]
                 };
-                ipGroupName = Regex.Replace(ipGroupName, @"\(.*?\)", "").Replace("  ", " ");
 
-                ipGroupNetwork = new IpGroupNetwork(ipGroupId, ipGroupName);
+                ipGroupName = Regex.Replace(ipGroupName, @"\(.*?\)", "").Replace("  ", " ");
+                ipGroupNetwork = new IpGroupNetwork
+                {
+                    IpGroupId = ipGroupId,
+                    IpGroupName = ipGroupName
+                };
+
                 ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
             }
 
@@ -74,86 +136,60 @@ public class IpGroupManager
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[0]), addressFamily),
                 IPAddressUtil.FromBigInteger(BigInteger.Parse(items[1]), addressFamily));
 
-            ipGroupNetwork.IpRanges.Add(ipRange);
+            ipGroupNetwork.IpRanges.Add(ipRange.IsIPv4MappedToIPv6 ? ipRange.MapToIPv4() : ipRange);
         }
 
-        //generating files
-        VhLogger.Instance.LogTrace($"Generating IpGroups files. IpGroupCount: {ipGroupNetworks.Count}");
-        Directory.CreateDirectory(IpGroupsFolderPath);
-        foreach (var item in ipGroupNetworks)
-        {
-            var ipGroup = item.Value;
-            var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroup.IpGroupId}.json");
-            await using var fileStream = File.Create(filePath);
-            await JsonSerializer.SerializeAsync(fileStream, ipGroup.IpRanges);
-        }
-
-        // creating IpGroups
-        IpGroups = IpGroups.Concat(ipGroupNetworks.Values.Select(x => new IpGroup(x.IpGroupId, x.IpGroupName)))
-            .ToArray();
-        _sortedIpRanges = null;
-
-        // save
-        await File.WriteAllTextAsync(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
+        return ipGroupNetworks;
     }
 
+    public async Task<IpGroup[]> GetIpGroups()
+    {
+        if (_ipGroups != null)
+            return _ipGroups;
+
+        var json = await File.ReadAllTextAsync(IpGroupsFilePath);
+        _ipGroups =  VhUtil.JsonDeserialize<IpGroup[]>(json);
+        return _ipGroups;
+    }
 
     public async Task<IEnumerable<IpRange>> GetIpRanges(string ipGroupId)
     {
-        var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroupId}.json");
+        var filePath = GetIpGroupFilePath(ipGroupId);
         var json = await File.ReadAllTextAsync(filePath);
         var ipRanges = JsonSerializer.Deserialize<IpRange[]>(json) ?? throw new Exception($"Could not deserialize {filePath}!");
-        
-        var ip4Ranges = ipRanges.Where(x => x.IsIPv4MappedToIPv6).Select(x => x.MapToIPv4());
-        var ret = ipRanges.Concat(ip4Ranges);
+        var ip4MappedRanges = ipRanges.Where(x => x.AddressFamily==AddressFamily.InterNetwork).Select(x => x.MapToIPv6());
+        var ret = ipRanges.Concat(ip4MappedRanges);
         return ret;
     }
 
-    private readonly SemaphoreSlim _sortedIpRangesSemaphore = new(1, 1);
-    private async Task<IpRange[]> LoadIpRangeGroup()
+    // it is sequential search
+    public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress, string? lastIpGroupId)
     {
-        // load all groups
-        try
+        var ipGroups = await GetIpGroups();
+        var lastIpGroup = ipGroups.FirstOrDefault(x => x.IpGroupId == lastIpGroupId);
+
+        // IpGroup
+        if (lastIpGroup != null)
         {
-            await _sortedIpRangesSemaphore.WaitAsync();
-            
-            // use cache
-            if (_sortedIpRanges != null)
-                return _sortedIpRanges;
-
-            // load 
-            _ipRangeGroups.Clear();
-            var ipRanges = new List<IpRange>();
-            foreach (var ipGroup in IpGroups)
-                foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId))
-                {
-                    ipRanges.Add(ipRange);
-                    _ipRangeGroups.Add(ipRange, ipGroup);
-                }
-            _sortedIpRanges = IpRange.Sort(ipRanges.ToArray(), false).ToArray();
-
-            return _sortedIpRanges;
+            var ipRanges = await GetIpRanges(lastIpGroup.IpGroupId);
+            if (ipRanges.Any(x => x.IsInRange(ipAddress)))
+                return lastIpGroup;
         }
-        finally
+
+        // iterate through all groups
+        foreach (var ipGroup in ipGroups)
         {
-            _sortedIpRangesSemaphore.Release();
+            var ipRanges = await GetIpRanges(ipGroup.IpGroupId);
+            if (ipRanges.Any(x => x.IsInRange(ipAddress)))
+                return ipGroup;
         }
-    }
 
-    public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress)
-    {
-        var sortedIpRanges = await LoadIpRangeGroup();
-        var findIpRange = IpRange.FindInSortedRanges(sortedIpRanges, ipAddress);
-        return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
+        return null;
     }
 
     private class IpGroupNetwork : IpGroup
     {
-        public IpGroupNetwork(string ipGroupId, string ipGroupName)
-            : base(ipGroupId, ipGroupName)
-        {
-        }
-
-        public List<IpRange> IpRanges { get; } = new();
+        public List<IpRange> IpRanges { get; set; } = new();
     }
+
 }

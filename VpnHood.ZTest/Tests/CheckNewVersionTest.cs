@@ -8,7 +8,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class CheckNewVersionTest
+public class CheckNewVersionTest : TestBase
 {
     private static void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = default, Version? deprecatedVersion = default)
     {

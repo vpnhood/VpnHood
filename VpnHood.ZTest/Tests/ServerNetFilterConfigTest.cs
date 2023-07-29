@@ -8,7 +8,7 @@ using VpnHood.Common.Net;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ServerNetFilterConfigTest
+public class ServerNetFilterConfigTest : TestBase
 {
     [TestMethod]
     public async Task PacketCapture_Include()

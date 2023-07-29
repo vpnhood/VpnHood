@@ -12,7 +12,7 @@ using VpnHood.Server.Access.Managers.Http;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class FileAccessManagerTest
+public class FileAccessManagerTest : TestBase
 {
     [TestMethod]
     public void GetSslCertificateData()

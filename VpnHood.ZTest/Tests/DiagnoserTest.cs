@@ -6,7 +6,7 @@ using VpnHood.Client.Exceptions;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class DiagnoserTest
+public class DiagnoserTest : TestBase
 {
     [TestMethod]
     public async Task NormalConnect_NoInternet()

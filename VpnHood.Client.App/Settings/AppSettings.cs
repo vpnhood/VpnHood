@@ -14,6 +14,7 @@ public class AppSettings
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
     public Token TestServerToken => Token.FromAccessKey(TestServerAccessKey);
+    public string? LastCountryIpGroupId { get; set; }
     public string? TestServerTokenAutoAdded { get; set; }
 
     // ReSharper disable StringLiteralTypo

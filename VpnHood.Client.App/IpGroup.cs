@@ -2,12 +2,7 @@
 
 public class IpGroup
 {
-    public string IpGroupId { get; set; }
-    public string IpGroupName { get; set; }
+    public required string IpGroupId { get; init; }
+    public required string IpGroupName { get; init; }
 
-    public IpGroup(string ipGroupId, string ipGroupName)
-    {
-        IpGroupName = ipGroupName;
-        IpGroupId = ipGroupId;
-    }
 }

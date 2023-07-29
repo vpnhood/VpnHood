@@ -262,6 +262,7 @@ internal static class TestHelper
                 SyncCacheSize = 50,
                 SyncInterval = TimeSpan.FromMilliseconds(100)
             },
+            LogAnonymizer = false
         };
         return options;
     }

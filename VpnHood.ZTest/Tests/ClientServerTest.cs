@@ -24,12 +24,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class ClientServerTest
 {
-    [TestInitialize]
-    public void Initialize()
-    {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
-    }
-
     [TestMethod]
     public async Task Redirect_Server()
     {

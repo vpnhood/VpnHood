@@ -8,7 +8,7 @@ using VpnHood.Common.Logging;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class UtilTest
+public class UtilTest : TestBase
 {
     private class TestEventReporter : EventReporter
     {

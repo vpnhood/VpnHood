@@ -18,7 +18,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ClientAppTest
+public class ClientAppTest : TestBase
 {
     private int _lastSupportId;
 

@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class NetProtectTest
+public class NetProtectTest : TestBase
 {
     [TestMethod]
     public async Task MaxTcpWaitConnect_reject()

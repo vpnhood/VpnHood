@@ -12,9 +12,8 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class AccessTest
+public class AccessTest : TestBase
 {
-
     [TestMethod]
     public async Task Server_reject_invalid_requests()
     {

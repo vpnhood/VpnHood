@@ -22,7 +22,7 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ClientServerTest
+public class ClientServerTest : TestBase
 {
     [TestMethod]
     public async Task Redirect_Server()

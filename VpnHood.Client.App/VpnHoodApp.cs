@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -28,7 +27,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
-    private const string FileNameIpGroups = "ipgroups.json";
     private const string FolderNameProfileStore = "profiles";
     private static VpnHoodApp? _instance;
     private readonly IAppProvider _clientAppProvider;
@@ -42,12 +40,14 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
     private Exception? _lastException;
-    private IpGroup? _lastClientIpGroup;
+    private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
-
+    private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
+    private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
+    
     public VersionStatus VersionStatus { get; private set; } = VersionStatus.Unknown;
 
     public event EventHandler? ConnectionStateChanged;
@@ -130,7 +130,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Speed = Client?.Stat.Speed ?? new Traffic(),
         AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
         SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
-        ClientIpGroup = _lastClientIpGroup,
+        ClientIpGroup = _lastCountryIpGroup,
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = VersionStatus,
         LastPublishInfo = VersionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null
@@ -314,11 +314,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 return null;
 
             var ipGroupManager = await GetIpGroupManager();
-            var ipGroup = await ipGroupManager.FindIpGroup(ipAddress);
-            return ipGroup?.IpGroupName;
+            _lastCountryIpGroup = await ipGroupManager.FindIpGroup(ipAddress, Settings.LastCountryIpGroupId);
+            Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
+            return _lastCountryIpGroup?.IpGroupName;
         }
-        catch
+        catch (Exception ex)
         {
+            VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
             return null;
         }
     }
@@ -409,9 +411,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         return IpRange.Invert(await GetIpRanges(ipGroupIds)).ToArray();
     }
 
-    private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
+    private async Task<IpRange[]> GetIpRanges(IEnumerable<string> ipGroupIds)
     {
-        List<IpRange> ipRanges = new();
+        var ipRanges = new List<IpRange>();
         foreach (var ipGroupId in ipGroupIds)
             try
             {
@@ -492,9 +494,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public async Task<IpGroup[]> GetIpGroups()
     {
         var ipGroupManager = await GetIpGroupManager();
-        //var customIpGroup = new IpGroup { IpGroupId = "custom", IpGroupName = "Custom" };
-        //return ipGroupManager.IpGroups.Concat(new[] { customIpGroup }).ToArray();
-        return ipGroupManager.IpGroups;
+        return await ipGroupManager.GetIpGroups();
     }
 
     private async Task<IpGroupManager> GetIpGroupManager()
@@ -502,36 +502,12 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
-        var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
-
         // AddFromIp2Location if hash has been changed
         await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
-        memZipStream.Seek(0, SeekOrigin.Begin);
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(memZipStream);
-        var hashString = BitConverter.ToString(hash).Replace("-", "");
-        var path = Path.Combine(ipGroupsPath, hashString);
-
-        // create
-        _ipGroupManager = new IpGroupManager(Path.Combine(path, FileNameIpGroups));
-        if (!Directory.Exists(path))
-        {
-            try
-            {
-                Directory.Delete(ipGroupsPath, true);
-            }
-            catch
-            {
-                // ignored
-            }
-
-            memZipStream.Seek(0, SeekOrigin.Begin);
-            using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database!");
-            await using var stream = entry.Open();
-            await _ipGroupManager.AddFromIp2Location(stream);
-        }
-
+        using var zipArchive = new ZipArchive(memZipStream);
+        var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+        _ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
+        await _ipGroupManager.InitByIp2LocationZipStream(entry);
         return _ipGroupManager;
     }
 
@@ -575,13 +551,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
     {
         var ipGroupManager = await GetIpGroupManager();
-        var ipGroup = await ipGroupManager.FindIpGroup(clientIp);
-        _lastClientIpGroup = ipGroup;
-        VhLogger.Instance.LogInformation($"Client Country is: {ipGroup?.IpGroupName}");
+        _lastCountryIpGroup = await ipGroupManager.FindIpGroup(clientIp, Settings.LastCountryIpGroupId);
+        Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
+        VhLogger.Instance.LogInformation($"Client Country is: {_lastCountryIpGroup?.IpGroupName}");
 
         // use TunnelMyCountry
         if (!UserSettings.TunnelClientCountry)
-            return ipGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, new[] { ipGroup.IpGroupId }) : null;
+            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, new[] { _lastCountryIpGroup.IpGroupId }) : null;
 
         // use advanced options
         return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);

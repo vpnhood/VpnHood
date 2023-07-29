@@ -36,6 +36,7 @@ public class IpRange
 
     public bool IsIPv4MappedToIPv6 => FirstIpAddress.IsIPv4MappedToIPv6;
     public IpRange MapToIPv4() => new (FirstIpAddress.MapToIPv4(), LastIpAddress.MapToIPv4());
+    public IpRange MapToIPv6() => new (FirstIpAddress.MapToIPv6(), LastIpAddress.MapToIPv6());
     public AddressFamily AddressFamily => FirstIpAddress.AddressFamily;
     public IPAddress FirstIpAddress { get; }
     public IPAddress LastIpAddress { get; }

@@ -18,4 +18,5 @@ public class AppOptions
     public SocketFactory? SocketFactory { get; set; } = null;
     public TimeSpan UpdateCheckerInterval { get; set; } = TimeSpan.FromHours(1);
     public bool IsLogToConsoleSupported { get; set; }
+    public bool LoadCountryIpGroups { get; set; } = true;
 }

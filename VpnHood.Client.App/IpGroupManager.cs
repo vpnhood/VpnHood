@@ -147,6 +147,10 @@ public class IpGroupManager
         if (_ipGroups != null)
             return _ipGroups;
 
+        // no countries if there is not import
+        if (!File.Exists(IpGroupsFilePath))
+            return Array.Empty<IpGroup>();
+
         var json = await File.ReadAllTextAsync(IpGroupsFilePath);
         _ipGroups =  VhUtil.JsonDeserialize<IpGroup[]>(json);
         return _ipGroups;

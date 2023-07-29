@@ -31,6 +31,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private static VpnHoodApp? _instance;
     private readonly IAppProvider _clientAppProvider;
     private readonly SocketFactory? _socketFactory;
+    private readonly bool _loadCountryIpGroups;
     private bool _hasAnyDataArrived;
     private bool _hasConnectRequested;
     private bool _hasDiagnoseStarted;
@@ -91,6 +92,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
         JobSection = new JobSection(options.UpdateCheckerInterval);
         LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
+        _loadCountryIpGroups = options.LoadCountryIpGroups;
 
         // create start up logger
         if (!options.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
@@ -502,12 +504,17 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
-        // AddFromIp2Location if hash has been changed
-        await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
-        using var zipArchive = new ZipArchive(memZipStream);
-        var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
         _ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
-        await _ipGroupManager.InitByIp2LocationZipStream(entry);
+        
+        // AddFromIp2Location if hash has been changed
+        if (_loadCountryIpGroups)
+        {
+            await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
+            using var zipArchive = new ZipArchive(memZipStream);
+            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+            await _ipGroupManager.InitByIp2LocationZipStream(entry);
+        }
+
         return _ipGroupManager;
     }
 

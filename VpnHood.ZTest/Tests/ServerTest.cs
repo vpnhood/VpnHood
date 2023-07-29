@@ -22,12 +22,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class ServerTest
 {
-    [TestInitialize]
-    public void Initialize()
-    {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
-    }
-
     [TestMethod]
     public async Task Configure()
     {

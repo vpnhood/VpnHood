@@ -38,7 +38,7 @@ internal static class TestHelper
 {
     private const int DefaultTimeout = 30000;
     public static readonly Uri TEST_HttpsUri1 = new("https://www.quad9.net/");
-    public static readonly Uri TEST_HttpsUri2 = new("https://www.shell.com/");
+    public static readonly Uri TEST_HttpsUri2 = new("https://www.google.com/");
     public static readonly IPEndPoint TEST_NsEndPoint1 = IPEndPoint.Parse("1.1.1.1:53");
     public static readonly IPEndPoint TEST_NsEndPoint2 = IPEndPoint.Parse("1.0.0.1:53");
     public static readonly IPEndPoint TEST_TcpEndPoint1 = IPEndPoint.Parse("198.18.0.1:80");

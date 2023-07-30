@@ -548,7 +548,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             GaMeasurementId = sessionResponse.GaMeasurementId,
             UdpKey = request.UseUdpChannel2 ? sessionResponse.SessionKey : session.UdpChannel?.Key,
             UdpPort = session.UdpChannel?.LocalPort ?? 0,
-            ServerVersion = _sessionManager.ServerVersion,
+            ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,
             SuppressedTo = sessionResponse.SuppressedTo,
             AccessUsage = sessionResponse.AccessUsage,

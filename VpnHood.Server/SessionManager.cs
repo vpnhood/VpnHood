@@ -26,17 +26,17 @@ public class SessionManager : IAsyncDisposable, IJob
 {
     private readonly IAccessManager _accessManager;
     private readonly SocketFactory _socketFactory;
-    private readonly Ga4Tracker? _ga4Tracker;
     private byte[] _serverSecret;
     private bool _disposed;
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(10));
-    public string ServerVersion { get; }
+    public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
+    public Ga4Tracker? GaTracker { get; }
 
     public byte[] ServerSecret
     {
@@ -51,15 +51,16 @@ public class SessionManager : IAsyncDisposable, IJob
     public SessionManager(IAccessManager accessManager,
         INetFilter netFilter,
         SocketFactory socketFactory,
-        Ga4Tracker? ga4Tracker)
+        Ga4Tracker? gaTracker,
+        Version serverVersion)
     {
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _ga4Tracker = ga4Tracker;
+        GaTracker = gaTracker;
         _serverSecret = VhUtil.GenerateKey(128);
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
-        ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
+        ServerVersion = serverVersion;
         JobRunner.Default.Add(this);
     }
 
@@ -131,9 +132,31 @@ public class SessionManager : IAsyncDisposable, IJob
         // create the session and add it to list
         var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest);
 
-        _ = _ga4Tracker?.Track(new Ga4TagEvent { EventName = "new_vpn_session" });
+        // Anonymous Report to GA
+        _ = GaTrackNewSession(helloRequest.ClientInfo);
+
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponseEx;
+    }
+
+    private async Task GaTrackNewSession(ClientInfo clientInfo)
+    {
+        if (GaTracker == null)
+            return;
+
+        // track new session
+        var serverVersion = ServerVersion.ToString(3);
+        await GaTracker.Track(new Ga4TagEvent
+        {
+            EventName = Ga4TagEvents.PageView,
+            Properties = new Dictionary<string, object>()
+            {
+                { "client_version", clientInfo.ClientVersion  },
+                { "server_version", serverVersion  },
+                { Ga4TagProperties.PageTitle , $"server_version/{serverVersion}"},
+                { Ga4TagProperties.PageLocation, $"server_version/{serverVersion}"}
+            }
+        });
     }
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
@@ -215,6 +238,17 @@ public class SessionManager : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
+        // anonymous heart_beat reporter
+        _ = GaTracker?.Track(new Ga4TagEvent
+        {
+            EventName = "heartbeat",
+            Properties = new Dictionary<string, object>()
+            {
+                { "session_count", Sessions.Count(x=>!x.Value.IsDisposed)  },
+            }
+        });
+
+        // clean disposed sessions
         return Cleanup();
     }
 

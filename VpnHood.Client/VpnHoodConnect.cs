@@ -37,8 +37,7 @@ public class VpnHoodConnect : IAsyncDisposable
 
         //this class Connect change this option temporary and restore it after last attempt
         _clientOptions.AutoDisposePacketCapture = false;
-        _clientOptions.UseUdpChannel = connectOptions.UdpChannelMode == UdpChannelMode.On ||
-                                       connectOptions.UdpChannelMode == UdpChannelMode.Auto;
+        _clientOptions.UseUdpChannel = connectOptions.UdpChannelMode is UdpChannelMode.On or UdpChannelMode.Auto;
 
         // let always have a Client to access its member after creating VpnHoodConnect
         Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);

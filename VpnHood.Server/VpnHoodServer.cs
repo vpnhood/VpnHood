@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
@@ -36,6 +37,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
     public JobSection JobSection { get; }
+    public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
 
     public VpnHoodServer(IAccessManager accessManager, ServerOptions options)
     {
@@ -44,7 +46,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         AccessManager = accessManager;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        SessionManager = new SessionManager(accessManager, options.NetFilter, options.SocketFactory, options.GaTracker);
+        SessionManager = new SessionManager(accessManager, options.NetFilter, options.SocketFactory, options.GaTracker, ServerVersion);
         JobSection = new JobSection(options.ConfigureInterval);
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
@@ -123,6 +125,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation("DefaultTcpKernelSentBufferSize: {DefaultTcpKernelSentBufferSize}, DefaultTcpKernelReceiveBufferSize: {DefaultTcpKernelReceiveBufferSize}",
             tcpClient.SendBufferSize, tcpClient.ReceiveBufferSize);
 
+        // Report Anonymous info
+        _ = GaTrackStart();
+
         // Configure
         State = ServerState.Waiting;
         await RunJob();
@@ -168,7 +173,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            JobSection.Interval = serverConfig.UpdateStatusIntervalValue; 
+            JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
@@ -203,6 +208,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         {
             State = ServerState.Waiting;
             _lastConfigError = ex.Message;
+            _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await _serverHost.Stop();
         }
@@ -347,6 +353,28 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
 
         return 0;
+    }
+
+    private async Task GaTrackStart()
+    {
+        if (SessionManager.GaTracker == null)
+            return;
+
+        // track
+        var useProperties = new Dictionary<string, object>
+        {
+            { "server_version", ServerVersion },
+            { "access_manager", AccessManager.GetType().Name },
+        };
+
+        await SessionManager.GaTracker.Track(new Ga4TagEvent
+        {
+            EventName = Ga4TagEvents.SessionStart,
+            Properties = new Dictionary<string, object>()
+            {
+                { "access_manager", AccessManager.GetType().Name },
+            }
+        }, useProperties);
     }
 
     public void Dispose()

@@ -1,11 +1,12 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Ga4Tracking;
 
-public class Ga4Event : ICloneable
+public class Ga4MeasurementEvent : ICloneable
 {
     [JsonPropertyName("name")]
     public required string Name { get; init; }
@@ -15,7 +16,7 @@ public class Ga4Event : ICloneable
 
     public object Clone()
     {
-        var ret = new Ga4Event
+        var ret = new Ga4MeasurementEvent
         {
             Name = Name,
             Parameters = new Dictionary<string, object>(Parameters, StringComparer.OrdinalIgnoreCase)

@@ -1,6 +1,40 @@
+# v3.0.411
+### Client
+* Feature: Client Protocol Version 4 
+* Feature: TCP connection reuse
+* Feature: Allow Drop UDP packets
+* Feature: Add IPv6 support to country exclusion/inclusion
+* Update: Improve reliability
+* Update: Improve logging by adding channel Id
+* Update: Include internal exception messages and stack trace in the diagnostic file
+* Update: Improve connection speed
+* Fix: Some UDP Packet loss
+* Fix: Android: VpnHood system notification
+* Fix: Remain in Disconnecting state
+* Fix: Windows: VpnHood Window display can't reach this page instead of UI
+* Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
+
+### Server
+* Feature: Server Protocol Version 4 
+* Feature: TCP connection reuse
+* Update: Improve reliability
+* Update: Improve logging by adding channel Id
+* Update: Returns bad request for any unknown or unauthorized access
+* Fix: Server Kernel SendBufferSize
+* Fix: ClientCount report 0 in the FileAccessManager log
+* Fix: Some UDP Packet loss
+* Fix: Reporting CPU usage
+* Warning: Preparing to deprecate v2.8.361 (Protocol Version 3)
+
+### Development
+* Update: Use IAsyncDisposable
+* Update: Improve tests and make them faster
+* Feature: Add graceful disconnection
+
+
 # v2.9.370
 ### Server
-* Fix Restart listener on servers by UdpEndPoints changes
+* Fix: Restart listener on servers by UdpEndPoints changes
 
 # v2.9.369
 ### Client & Server
@@ -15,7 +49,7 @@
 
 # v2.8.361
 ### Server
-* Feature: Enable hot reconfig for VpnHood Server TCP listener to avoid unnecessary restarts on unchanged endpoints
+* Feature: Enable hot reconfigure for VpnHood Server TCP listener to avoid unnecessary restarts on unchanged endpoints
 * Update: Replace AllowIpV6 to BlockIpV6
 * Update: Improve server security 
 
@@ -32,11 +66,11 @@
 
 # v2.7.356
 ### Client
-* Farture: Windows: Add "Open in Browser" item to system menu
+* Feature: Windows: Add "Open in Browser" item to system menu
 * Update: windows: ""Open in browser" if WebView is not initialized properly
 
 ### Server
-* Farture: Merge Server Configuration
+* Feature: Merge Server Configuration
 * Fix: Setting TCP kernel buffer
 * Fix: Error in parsing IPNetwork as Range
 * Update: Move NetFilter event from log to track
@@ -50,8 +84,8 @@
 * Windows: Fix Auto Updater
 
 ### Server
-* Farture: Filter server local networks
-* Farture: Filter networks by IP ranges
+* Feature: Filter server local networks
+* Feature: Filter networks by IP ranges
 * Fix: Missing some NetProtector log
 * Fix: Windows: AutoUpdater
 * Security: Always block access to loopback addresses
@@ -62,7 +96,7 @@
 * Update: Improve stability when using no UDP mode
 
 ### Server
-* Feature: Improve stability by adding lifetime to TcpDatagarmChannel
+* Feature: Improve stability by adding lifetime to TcpDatagramChannel
 * Fix: IpV6 detection
 
 # v2.6.342
@@ -85,7 +119,7 @@
 
 ### Server
 * Fix: It doesn't generate log
-* Feature: Add linux-arm64 installation
+* Feature: Add Linux-arm64 installation
 
 # v2.6.336
 ### Client
@@ -140,7 +174,7 @@
 
 ### Server
 * Feature: Report IPv6 support to client
-* Feature: Add -domain to File AccessServer to set access-key endpoint will set to certificate domain
+* Feature: Add -domain to File AccessManager to set access-key endpoint will set to certificate domain
 * Fix: Update Script doesn't work
 * Fix: Hold some TCP connections
 * Fix: Delay in showing command-line helps for File Access Server
@@ -157,7 +191,7 @@
 * Fix: Windows Installer
 
 ### Server
-* Update: Improve Log for AccessServer API CALL
+* Update: Improve Log for AccessManager API CALL
 * Update: Port Tracker
 * Update: Improve session recovery
 * Fix: Critical bug that consume much resources
@@ -203,7 +237,7 @@
 
 # v2.4.304
 ### Client
-* Fix: Triming AccessKey
+* Fix: Trimming AccessKey
 * Update: Improve detecting countries
 
 ### Server
@@ -234,7 +268,7 @@
 * Fix: Windows: WebView2 could not be installed on some devices
 
 ### Server
-* Feature: Add linux docker package
+* Feature: Add Linux docker package
 * Update: Sync all active sessions to access the server every few minutes
 * Fix: Maintenance mode detection
 * Fix: Synching sessions to access server on shut down
@@ -270,7 +304,7 @@
 * Fix: Add time-stamp to logger
 
 ### Server
-* Update: Move Sessions options to AccessServer via ServerConfig
+* Update: Move Sessions options to AccessManager via ServerConfig
 * Fix: Catch a lost packet when removing TcpDatagramChannel
 
 # v2.3.290
@@ -302,7 +336,7 @@
 * Update: Upgrade to .NET 6
 * Update: Configuration by access server
 * Feature: Close session faster by handling client bye request
-* Fix: Refact IP addresses in the log 
+* Fix: Redact IP addresses in the log 
 
 # v2.2.283
 ### Client
@@ -312,10 +346,10 @@
 * Fix: UDP Channel
 
 ### Server
-* Feature: Dynamic configuration from AccessServer
+* Feature: Dynamic configuration from AccessManager
 * Feature: Multi listeners for different EndPoints
 * Fix: Few bug in disposing
-* Fix: linux: systemctl restart VpnHoodServer 
+* Fix: Linux: systemctl restart VpnHoodServer 
 
 # v2.1.276
 * Feature: IPv6 Support
@@ -352,7 +386,7 @@
 * Feature: Validate packets integrity in UdpChannel
 * Update: Stop supporting the old version
 * Update: Improve Performance and Memory usage
-* Update: New REST AccessServer protocol
+* Update: New REST AccessManager protocol
 * Change: Stop supporting the old version
 
 ### Developer
@@ -382,7 +416,7 @@
 * Fix: Windows: Didn't bypass Some local network traffics
 
 ### Server
-* Update: Imporve Performance and Memory usage
+* Update: Improve Performance and Memory usage
 
 # v1.2.250
 ### Client
@@ -393,7 +427,7 @@
 ### Server
 * Update: Check session id for each UdpPacket
 * Update: Reject unSupported client
-* Fix: Updater on linux
+* Fix: Updater on Linux
 * Fix: Nlog maxArchiveDays maxArchiveFiles
 
 # v1.2.249
@@ -440,7 +474,7 @@
 
 # v1.1.240
 ### Client
-* Fix: Diangnostic report "No Internet", when there is internet 
+* Fix: Diagnostic report "No Internet", when there is internet 
 * Update: Windows: Change Updater
 
 # v1.1.238
@@ -457,8 +491,8 @@
 
 ### Server
 * Update: Auto restart if VpnHoodServer stops unexpectedly
-* Fix: Typo error in default.pfx filename for FileAccessServer
-* Fix: linux: Stop working after server update
+* Fix: Typo error in default.pfx filename for FileAccessManager
+* Fix: Linux: Stop working after server update
 
 # v1.1.235
 ### Client
@@ -474,12 +508,12 @@
 * Fix: UDP loss in mass UDP traffic
 
 ### Server
-* New: Send ClientVersion to AccessServer
+* New: Send ClientVersion to AccessManager
 * Update: drop Hello version 1 support
 * Update: Significantly improve speed and stability
 * Update: Automatically remove profiles when token does not exist
 * Update: add some log EventId
-* Fix: token is ignored when created by FileAccessServer
+* Fix: token is ignored when created by FileAccessManager
 * Fix: UDP loss in mass UDP traffic
 
 # v1.1.217
@@ -508,7 +542,7 @@
 
 # v1.1.197
 ### Client
-* Fix: rejecting accesskey with vh://
+* Fix: rejecting AccessKey with vh://
 
 ### Server
 * New: Report Linux Distribution info
@@ -532,7 +566,7 @@
 * Feature: Windows: Add Context menu to system tray
 * Update: Add Microsoft WebView2 Edge to Windows Installer prerequisites
 * Update: Send ClientVersion to server
-* Fix: accesskey prefix
+* Fix: AccessKey prefix
 
 ### Server
 * Fix: Reading server port number from appsettings.json
@@ -548,7 +582,7 @@
 ### Server
 * Fix: Unhandled NullReferenceException on ping packets
 * Fix: Improve server memory cleanup
-* Fix: Prevent new conenction after session disposed
+* Fix: Prevent new connection after session disposed
 * Fix: Speed Monitor and connection idle state
 * Fix: Improve connection stability and lost packets
 * Feature: ICMP logging for client and server with IsDiagnoseMode
@@ -574,7 +608,7 @@
 * Fix: Checking update from the Internet
 
 ### Server
-* Update: add subdomain when creating self-signed certifiates with random CN
+* Update: add subdomain when creating self-signed certificates with random CN
 
 # v1.1.91
 * Fix: AppUpdater throw error if UpdateUrl in publish.json was empty string

@@ -57,9 +57,7 @@ public static class StreamUtil
     public static T ReadJson<T>(Stream stream, int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = ReadWaitForFill(stream, 4);
-        if (buffer == null)
-            throw new Exception($"Could not read {typeof(T).Name}");
+        var buffer = ReadWaitForFill(stream, 4) ?? throw new Exception($"Could not read {typeof(T).Name}");
 
         // check json size
         var jsonSize = BitConverter.ToInt32(buffer);
@@ -84,9 +82,8 @@ public static class StreamUtil
         int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken);
-        if (buffer == null)
-            throw new Exception($"Could not read {typeof(T).Name}");
+        var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken)
+                     ?? throw new Exception($"Could not read {typeof(T).Name}");
 
         // check unauthorized exception
         if (Encoding.UTF8.GetString(buffer) == "HTTP") //: HTTP/1.1 401

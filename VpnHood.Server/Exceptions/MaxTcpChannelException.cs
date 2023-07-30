@@ -7,8 +7,8 @@ namespace VpnHood.Server.Exceptions;
 
 internal class MaxTcpChannelException : ServerSessionException
 {
-    public MaxTcpChannelException(IPEndPoint remoteEndPoint, Session session)
-        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, "Maximum TcpChannel has been reached.")
+    public MaxTcpChannelException(IPEndPoint remoteEndPoint, Session session, string requestId)
+        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, "Maximum TcpChannel has been reached.")
     {
     }
 

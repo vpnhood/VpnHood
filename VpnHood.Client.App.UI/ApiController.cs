@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 
 // ReSharper disable InconsistentNaming
@@ -105,7 +106,7 @@ internal class ApiController : WebApiController
         Response.ContentType = MimeType.PlainText;
         await using var stream = HttpContext.OpenResponseStream();
         await using var streamWriter = new StreamWriter(stream);
-        var log = App.GetLogForReport();
+        var log = await App.LogService.GetLog();
         await streamWriter.WriteAsync(log);
     }
 

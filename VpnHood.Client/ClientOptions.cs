@@ -25,9 +25,9 @@ public class ClientOptions
 
     public bool AutoDisposePacketCapture { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.MaxValue;
-    public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromSeconds(60);
+    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
-    public bool UseUdpChannel { get; set; } = false;
+    public bool UseUdpChannel { get; set; } 
     public bool ExcludeLocalNetwork { get; set; } = true;
     public IIpRangeProvider? IpRangeProvider { get; set; }
     public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
@@ -36,6 +36,8 @@ public class ClientOptions
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan MaxTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(10);
+    public bool AllowAnonymousTracker { get; set; } = true;
+    public bool DropUdpPackets { get; set; }
 
 #if DEBUG
     public int ProtocolVersion { get; set; }

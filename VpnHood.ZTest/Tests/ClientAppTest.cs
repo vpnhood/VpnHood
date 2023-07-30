@@ -18,7 +18,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ClientAppTest
+public class ClientAppTest : TestBase
 {
     private int _lastSupportId;
 
@@ -37,11 +37,27 @@ public class ClientAppTest
         };
     }
 
-    [TestInitialize]
-    public void Initialize()
+    [TestMethod]
+    public async Task Load_country_ip_groups()
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        // ************
+        // *** TEST ***: 
+        await using var app1 = TestHelper.CreateClientApp();
+        var ipGroups = await app1.GetIpGroups();
+        Assert.IsFalse(ipGroups.Any(x=>x.IpGroupId=="us"), 
+            "Countries should not be extracted in test due to performance.");
+        await app1.DisposeAsync();
+
+        // ************
+        // *** TEST ***: 
+        var appOptions = TestHelper.CreateClientAppOptions();
+        appOptions.LoadCountryIpGroups = true;
+        await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
+        var ipGroups2 = await app2.GetIpGroups();
+        Assert.IsTrue(ipGroups2.Any(x => x.IpGroupId == "us"),
+            "Countries has not been extracted.");
     }
+
 
     [TestMethod]
     public async Task Add_remove_clientProfiles()
@@ -201,10 +217,10 @@ public class ClientAppTest
         // ************
         // Test: With diagnose
         _ = app.Connect(clientProfile1.ClientProfileId, true);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected, 10000);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected, 10000);
         app.ClearLastError(); // should not effect
         await app.Disconnect(true);
-        TestHelper.WaitForClientState(app, AppConnectionState.None);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
 
         Assert.IsTrue(app.State.LogExists);
         Assert.IsTrue(app.State.HasDiagnoseStarted);
@@ -221,9 +237,9 @@ public class ClientAppTest
         // Test: Without diagnose
         // ReSharper disable once RedundantAssignment
         _ = app.Connect(clientProfile1.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
         await app.Disconnect(true);
-        TestHelper.WaitForClientState(app, AppConnectionState.None);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
 
         Assert.IsFalse(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseStarted);
@@ -253,7 +269,7 @@ public class ClientAppTest
             // ignored
         }
 
-        TestHelper.WaitForClientState(app, AppConnectionState.None);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
         Assert.IsFalse(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseStarted);
         Assert.IsTrue(app.State.HasProblemDetected);
@@ -261,18 +277,18 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void Set_DnsServer_to_packetCapture()
+    public async Task Set_DnsServer_to_packetCapture()
     {
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
         using var packetCapture = TestHelper.CreatePacketCapture(new TestDeviceOptions { IsDnsServerSupported = true });
         Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
-        using var client = TestHelper.CreateClient(token, packetCapture);
-        TestHelper.WaitForClientState(client, ClientState.Connected);
+        await using var client = TestHelper.CreateClient(token, packetCapture);
+        await TestHelper.WaitForClientStateAsync(client, ClientState.Connected);
 
         Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });
     }
@@ -317,9 +333,9 @@ public class ClientAppTest
         app.UserSettings.IpGroupFilters = new[] { "custom" };
         app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
         await app.Connect(clientProfile.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
-        
+
         await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
 
@@ -327,7 +343,7 @@ public class ClientAppTest
         // *** TEST ***: Test Exclude ip filters
         app.UserSettings.IpGroupFiltersMode = FilterMode.Exclude;
         await app.Connect(clientProfile.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
         await IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
     }
@@ -336,12 +352,12 @@ public class ClientAppTest
     {
         // TCP
         var oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         if (testPing)
@@ -405,14 +421,13 @@ public class ClientAppTest
     {
         // TCP
         var oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_HttpsAsync(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
-
 
         if (testPing)
         {
@@ -483,10 +498,10 @@ public class ClientAppTest
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
         var _ = app.Connect(clientProfile.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
         // get data through tunnel
-        await TestHelper.Test_HttpsAsync();
+        await TestHelper.Test_Https();
 
         Assert.IsFalse(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseStarted);
@@ -496,16 +511,16 @@ public class ClientAppTest
 
         // test disconnect
         await app.Disconnect();
-        TestHelper.WaitForClientState(app, AppConnectionState.None);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
     }
 
     [TestMethod]
     public async Task Get_token_from_tokenLink()
     {
         // create server
-        using var fileAccessServer = TestHelper.CreateFileAccessServer();
-        using var testAccessServer = new TestAccessServer(fileAccessServer);
-        await using var server = TestHelper.CreateServer(testAccessServer);
+        using var fileAccessManager = TestHelper.CreateFileAccessManager();
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        await using var server = TestHelper.CreateServer(testAccessManager);
 
         var token1 = TestHelper.CreateAccessToken(server);
         var token2 = TestHelper.CreateAccessToken(server);
@@ -529,7 +544,7 @@ public class ClientAppTest
         var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
         app.ClientProfileStore.UpdateTokenFromUrl(token1).Wait();
         var _ = app.Connect(clientProfile.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
         Assert.IsTrue(isTokenRetrieved);
     }
@@ -549,10 +564,10 @@ public class ClientAppTest
         var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
 
         await app.Connect(clientProfile1.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
         await app.Connect(clientProfile2.ClientProfileId);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
             "Client connection has not been changed!");

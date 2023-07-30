@@ -215,7 +215,7 @@ public class ServerTest : TestBase
         await tcpClient.ConnectAsync(token.HostEndPoints!.First());
         var ssl = new SslStream(tcpClient.GetStream(), false, TestHelper.IgnoreCertificateValidationCallback);
         await ssl.AuthenticateAsClientAsync(token.HostName);
-        await ssl.WriteAsync("asfasfasfasgas asfasggd\r\n\r\n"u8.ToArray());
+        await ssl.WriteAsync("Foo1 Foo2 Foo3\r\n\r\n"u8.ToArray());
 
         var readBuffer = new byte[1000];
         _ = await ssl.ReadAsync(readBuffer);

@@ -23,12 +23,15 @@ public class PingProxyPool : IPacketProxyPool, IJob
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
 
-    public PingProxyPool(IPacketProxyReceiver packetProxyReceiver, TimeSpan? icmpTimeout = null,
-        int maxWorkerCount = 20, LogScope? logScope = null)
+    public PingProxyPool(IPacketProxyReceiver packetProxyReceiver, TimeSpan? icmpTimeout,
+        int? maxClientCount, LogScope? logScope = null)
     {
-        _workerMaxCount = (maxWorkerCount > 0) ? maxWorkerCount : throw new ArgumentException($"{nameof(maxWorkerCount)} must be greater than 0", nameof(maxWorkerCount));
+        icmpTimeout ??= TimeSpan.FromSeconds(120);
+        maxClientCount ??= int.MaxValue;
+
+        _workerMaxCount = (maxClientCount > 0) ? maxClientCount.Value : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
         _packetProxyReceiver = packetProxyReceiver;
-        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(icmpTimeout ?? TimeSpan.FromMilliseconds(120));
+        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(icmpTimeout);
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to the maximum ping workers.", logScope: logScope);
 
         JobRunner.Default.Add(this);

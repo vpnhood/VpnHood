@@ -4,18 +4,20 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.Common.Exceptions;
+using VpnHood.Server.Access;
+using VpnHood.Server.Access.Managers;
 
 namespace VpnHood.Server;
 
 public class SslCertificateManager
 {
-    private readonly IAccessServer _accessServer;
+    private readonly IAccessManager _accessManager;
     private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new();
     private readonly Lazy<X509Certificate2> _maintenanceCertificate = new(InitMaintenanceCertificate);
 
-    public SslCertificateManager(IAccessServer accessServer)
+    public SslCertificateManager(IAccessManager accessManager)
     {
-        _accessServer = accessServer;
+        _accessManager = accessManager;
     }
 
     private static X509Certificate2 InitMaintenanceCertificate()
@@ -37,7 +39,7 @@ public class SslCertificateManager
         // get from access server
         try
         {
-            var certificateData = await _accessServer.GetSslCertificateData(ipEndPoint);
+            var certificateData = await _accessManager.GetSslCertificateData(ipEndPoint);
             certificate = new X509Certificate2(certificateData);
             _certificates.TryAdd(ipEndPoint, certificate);
             return certificate;

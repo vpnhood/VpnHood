@@ -88,7 +88,7 @@ if [ "$restBaseUrl" != "" ]; then
 	echo "creating the appsettings...";
 
 	appSettings="{
-  \"HttpAccessServer\": {
+  \"HttpAccessManager\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
   },

@@ -7,12 +7,14 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class TcpDatagramChannelTest
+public class TcpDatagramChannelTest : TestBase
 {
     [TestMethod]
     public void DatagramMessages()
@@ -40,9 +42,10 @@ public class TcpDatagramChannelTest
 
         // create server channel
         var serverTcpClient = await listenerTask;
-        var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream());
-        using var serverChannel = new TcpDatagramChannel(serverStream);
-        using var serverTunnel = new Tunnel(new TunnelOptions());
+        await using var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
+        await using var serverChannel = new StreamDatagramChannel(serverStream, Guid.NewGuid().ToString());
+        
+        var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IPPacket? lastServerReceivedPacket = null;
         serverTunnel.OnPacketReceived += (_, args) =>
@@ -51,9 +54,9 @@ public class TcpDatagramChannelTest
         };
 
         // create client channel
-        var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream());
-        using var clientChannel = new TcpDatagramChannel(clientStream, TimeSpan.FromMilliseconds(1000));
-        using var clientTunnel = new Tunnel(new TunnelOptions());
+        await using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client");
+        await using var clientChannel = new StreamDatagramChannel(clientStream, Guid.NewGuid().ToString(), TimeSpan.FromMilliseconds(1000));
+        await using var clientTunnel = new Tunnel(new TunnelOptions());
         clientTunnel.AddChannel(clientChannel);
 
         // -------
@@ -61,9 +64,9 @@ public class TcpDatagramChannelTest
         // ------
         var testPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), new byte[] { 1, 2, 3 });
         await clientTunnel.SendPacket(testPacket);
-        await TestHelper.AssertEqualsWait(testPacket.ToString(), () => lastServerReceivedPacket?.ToString());
-        await TestHelper.AssertEqualsWait(0, () => clientTunnel.DatagramChannels.Length);
-        await TestHelper.AssertEqualsWait(0, () => serverTunnel.DatagramChannels.Length);
+        await VhTestUtil.AssertEqualsWait(testPacket.ToString(), () => lastServerReceivedPacket?.ToString());
+        await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.DatagramChannels.Length);
+        await VhTestUtil.AssertEqualsWait(0, () => serverTunnel.DatagramChannels.Length);
     }
 
 

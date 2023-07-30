@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <Authors>VpnHood</Authors>
+    <Company>OmegaHood LLC</Company>
     <Company />
-    <Copyright>2022 VpnHood</Copyright>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
@@ -12,8 +12,8 @@
     <PackageId>VpnHood.Common</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>VpnHood Common Library is shared among all other VpnHood modules.</Description>
-    <Version>2.9.370</Version>
-    <AssemblyVersion>2.9.370</AssemblyVersion>
+    <Version>3.0.411</Version>
+    <AssemblyVersion>3.0.411</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
-    <PackageReference Include="System.Text.Json" Version="7.0.2" />
+    <PackageReference Include="System.Text.Json" Version="7.0.3" />
   </ItemGroup>
 
   <ItemGroup>

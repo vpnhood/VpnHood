@@ -6,16 +6,16 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class NetProtectTest
+public class NetProtectTest : TestBase
 {
     [TestMethod]
     public async Task MaxTcpWaitConnect_reject()
     {
         // create server
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
-        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount = 0;
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
+        fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 0;
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -23,7 +23,7 @@ public class NetProtectTest
 
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            await TestHelper.Test_Https();
             Assert.Fail("Exception expected!");
         }
         catch (Exception ex)
@@ -36,17 +36,17 @@ public class NetProtectTest
     public async Task MaxTcpWaitConnect_accept()
     {
         // create server
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
-        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount = 1;
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
+        fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 1;
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = TestHelper.CreateClient(token);
 
-        await TestHelper.Test_HttpsAsync();
-        await TestHelper.Test_HttpsAsync();
+        await TestHelper.Test_Https();
+        await TestHelper.Test_Https();
     }
 
 }

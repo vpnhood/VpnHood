@@ -4,13 +4,13 @@ using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.Server.Messaging;
+namespace VpnHood.Server.Access.Messaging;
 
 public class SessionRequestEx : SessionRequest
 {
     [JsonConstructor]
-    public SessionRequestEx(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
-        : base(tokenId, clientInfo, encryptedClientId)
+    public SessionRequestEx(string requestId, Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
+        : base(0, requestId, tokenId, clientInfo, encryptedClientId)
     {
         HostEndPoint = hostEndPoint;
     }

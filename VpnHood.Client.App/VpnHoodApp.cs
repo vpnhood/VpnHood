@@ -6,9 +6,10 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
@@ -26,12 +27,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
-    private const string FileNameIpGroups = "ipgroups.json";
     private const string FolderNameProfileStore = "profiles";
     private static VpnHoodApp? _instance;
     private readonly IAppProvider _clientAppProvider;
-    private readonly bool _logToConsole;
     private readonly SocketFactory? _socketFactory;
+    private readonly bool _loadCountryIpGroups;
     private bool _hasAnyDataArrived;
     private bool _hasConnectRequested;
     private bool _hasDiagnoseStarted;
@@ -41,13 +41,14 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
     private Exception? _lastException;
-    private StreamLogger? _streamLogger;
-    private IpGroup? _lastClientIpGroup;
+    private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
-
+    private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
+    private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
+    
     public VersionStatus VersionStatus { get; private set; } = VersionStatus.Unknown;
 
     public event EventHandler? ConnectionStateChanged;
@@ -58,19 +59,18 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public Diagnoser Diagnoser { get; set; } = new();
     public ClientProfile? ActiveClientProfile { get; private set; }
     public Guid LastActiveClientProfileId { get; private set; }
-    public bool LogAnonymous { get; }
     public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
     public static bool IsInit => _instance != null;
     public string AppDataFolderPath { get; }
-    public string LogFilePath => Path.Combine(AppDataFolderPath, FileNameLog);
     public AppSettings Settings { get; }
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileStore ClientProfileStore { get; }
     public IDevice Device => _clientAppProvider.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
-    public JobSection? JobSection { get; }
-    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().TcpTimeout;
+    public JobSection JobSection { get; }
+    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
+    public AppLogService LogService { get; }
 
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
@@ -82,7 +82,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (_clientAppProvider.Device == null) throw new ArgumentNullException(nameof(_clientAppProvider.Device));
         Device.OnStartAsService += Device_OnStartAsService;
 
-        _logToConsole = options.LogToConsole;
         AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.OnSaved += Settings_OnSaved;
@@ -92,11 +91,12 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _socketFactory = options.SocketFactory;
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
         JobSection = new JobSection(options.UpdateCheckerInterval);
+        LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
+        _loadCountryIpGroups = options.LoadCountryIpGroups;
 
-        // create default logger
-        LogAnonymous = options.LogAnonymous;
-        VhLogger.IsAnonymousMode = options.LogAnonymous;
-        VhLogger.Instance = CreateLogger(false);
+        // create start up logger
+        if (!options.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
+        LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
         RemoveClientProfileByTokenId(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
@@ -123,16 +123,16 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
         DefaultClientProfileId = DefaultClientProfileId,
         LastActiveClientProfileId = LastActiveClientProfileId,
-        LogExists = IsIdle && File.Exists(LogFilePath),
+        LogExists = IsIdle && File.Exists(LogService.LogFilePath),
         LastError = LastError,
         HasDiagnoseStarted = _hasDiagnoseStarted,
         HasDisconnectedByUser = _hasDisconnectedByUser,
         HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
         SessionStatus = LastSessionStatus,
-        Speed = Client?.Speed ?? new Traffic(),
-        AccountTraffic = Client?.AccountTraffic ?? new Traffic(),
-        SessionTraffic = Client?.SessionTraffic ?? new Traffic(),
-        ClientIpGroup = _lastClientIpGroup,
+        Speed = Client?.Stat.Speed ?? new Traffic(),
+        AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
+        SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
+        ClientIpGroup = _lastCountryIpGroup,
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = VersionStatus,
         LastPublishInfo = VersionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null
@@ -181,14 +181,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         // Check new version after connection
         if (VersionStatus == VersionStatus.Unknown)
             _ = CheckNewVersion();
-        
+
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_instance == null) return;
-        Settings.Save();
         await Disconnect();
         _instance = null;
     }
@@ -210,47 +209,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private void Device_OnStartAsService(object sender, EventArgs e)
     {
         var clientProfile =
-            ClientProfileStore.ClientProfiles.FirstOrDefault(x =>
-                x.ClientProfileId == UserSettings.DefaultClientProfileId) ?? ClientProfileStore.ClientProfiles.FirstOrDefault();
-        if (clientProfile == null) throw new Exception("There is no default configuration!");
+            (ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.ClientProfileId == UserSettings.DefaultClientProfileId)
+            ?? ClientProfileStore.ClientProfiles.FirstOrDefault())
+            ?? throw new Exception("There is no default configuration!");
 
         _ = Connect(clientProfile.ClientProfileId);
-    }
-
-    public string GetLogForReport()
-    {
-        var log = File.ReadAllText(LogFilePath);
-        return log;
-    }
-
-    private ILogger CreateLogger(bool addFileLogger)
-    {
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            // console
-            if (_logToConsole)
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.TimestampFormat = "[HH:mm:ss.ffff] ";
-                    configure.IncludeScopes = true;
-                    configure.SingleLine = false;
-                });
-
-            // file logger, close old stream
-            _streamLogger?.Dispose();
-            _streamLogger = null;
-            if (addFileLogger)
-            {
-                var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                _streamLogger = new StreamLogger(fileStream);
-                builder.AddProvider(_streamLogger);
-            }
-
-            builder.SetMinimumLevel(Settings.UserSettings.LogVerbose ? LogLevel.Trace : LogLevel.Information);
-        });
-
-        var logger = loggerFactory.CreateLogger("");
-        return new SyncLogger(logger);
     }
 
     public void ClearLastError()
@@ -288,23 +251,12 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             _isConnecting = true;
             _hasConnectRequested = true;
             _hasDiagnoseStarted = diagnose;
-            VhLogger.IsDiagnoseMode |= diagnose; // never disable VhLogger.IsDiagnoseMode
             CheckConnectionStateChanged();
+            LogService.Start(Settings.UserSettings.Logging, diagnose);
 
-            if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
-            var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
-            VhLogger.Instance = new FilterLogger(logger, eventId =>
-            {
-                if (eventId == GeneralEventId.Session) return true;
-                if (eventId == GeneralEventId.Tcp) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Ping) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.TcpProxyChannel) return VhLogger.IsDiagnoseMode;
-                if (eventId == GeneralEventId.DatagramChannel) return true;
-                return true;
-            });
+            // dump user settings
+            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
+                JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
 
             // Set ActiveProfile
             ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
@@ -314,7 +266,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // create packet capture
             var packetCapture = await Device.CreatePacketCapture();
             if (packetCapture.IsMtuSupported)
-                packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
+                packetCapture.Mtu = TunnelDefaults.MtuWithoutFragmentation;
 
             // App filters
             if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
@@ -346,8 +298,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     private void Settings_OnSaved(object sender, EventArgs e)
     {
-        if (Client != null)
-            Client.UseUdpChannel = UserSettings.UseUdpChannel;
+        if (Client == null) return;
+        Client.UseUdpChannel = UserSettings.UseUdpChannel;
+        Client.DropUdpPackets = UserSettings.DropUdpPackets;
     }
 
     private async Task<string?> GetClientCountry()
@@ -362,11 +315,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 return null;
 
             var ipGroupManager = await GetIpGroupManager();
-            var ipGroup = await ipGroupManager.FindIpGroup(ipAddress);
-            return ipGroup?.IpGroupName;
+            _lastCountryIpGroup = await ipGroupManager.FindIpGroup(ipAddress, Settings.LastCountryIpGroupId);
+            Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
+            return _lastCountryIpGroup?.IpGroupName;
         }
-        catch
+        catch (Exception ex)
         {
+            VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
             return null;
         }
     }
@@ -387,6 +342,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         var token = ClientProfileStore.GetToken(tokenId, true);
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
+        // save settings
+        Settings.Save();
+
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
@@ -402,7 +360,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             IpRangeProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
-            TcpTimeout = TcpTimeout
+            ConnectTimeout = TcpTimeout,
+            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
+            DropUdpPackets = UserSettings.DropUdpPackets
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
@@ -416,7 +376,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             new ConnectOptions
             {
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
-                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
+                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off,
             });
 
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);
@@ -455,9 +415,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         return IpRange.Invert(await GetIpRanges(ipGroupIds)).ToArray();
     }
 
-    private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
+    private async Task<IpRange[]> GetIpRanges(IEnumerable<string> ipGroupIds)
     {
-        List<IpRange> ipRanges = new();
+        var ipRanges = new List<IpRange>();
         foreach (var ipGroupId in ipGroupIds)
             try
             {
@@ -495,13 +455,16 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 _hasDisconnectedByUser = true;
             }
 
+            // save settings
+            Settings.Save();
+
             _isDisconnecting = true;
             CheckConnectionStateChanged();
 
             // check for any success
             if (Client != null)
             {
-                _hasAnyDataArrived = Client.SessionTraffic.Received > 1000;
+                _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
                 if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _lastException = new Exception("No data has arrived!");
             }
@@ -513,15 +476,16 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // close client
             try
             {
+                // do not wait for bye if user request disconnection
                 if (ClientConnect != null)
-                    await ClientConnect.DisposeAsync();
+                    await ClientConnect.DisposeAsync(waitForBye: !byUser);
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
+                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose the client properly.");
             }
 
-            VhLogger.Instance = CreateLogger(false);
+            LogService.Stop();
         }
         finally
         {
@@ -537,9 +501,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public async Task<IpGroup[]> GetIpGroups()
     {
         var ipGroupManager = await GetIpGroupManager();
-        //var customIpGroup = new IpGroup { IpGroupId = "custom", IpGroupName = "Custom" };
-        //return ipGroupManager.IpGroups.Concat(new[] { customIpGroup }).ToArray();
-        return ipGroupManager.IpGroups;
+        return await ipGroupManager.GetIpGroups();
     }
 
     private async Task<IpGroupManager> GetIpGroupManager()
@@ -547,34 +509,15 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
-        var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
-
+        _ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
+        
         // AddFromIp2Location if hash has been changed
-        await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_CSV);
-        memZipStream.Seek(0, SeekOrigin.Begin);
-        using var md5 = MD5.Create();
-        var hash = md5.ComputeHash(memZipStream);
-        var hashString = BitConverter.ToString(hash).Replace("-", "");
-        var path = Path.Combine(ipGroupsPath, hashString);
-
-        // create
-        _ipGroupManager = new IpGroupManager(Path.Combine(path, FileNameIpGroups));
-        if (!Directory.Exists(path))
+        if (_loadCountryIpGroups)
         {
-            try
-            {
-                Directory.Delete(ipGroupsPath, true);
-            }
-            catch
-            {
-                // ignored
-            }
-
-            memZipStream.Seek(0, SeekOrigin.Begin);
+            await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
             using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV") ?? throw new Exception("Could not find ip2location database!");
-            await using var stream = entry.Open();
-            await _ipGroupManager.AddFromIp2Location(stream);
+            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+            await _ipGroupManager.InitByIp2LocationZipStream(entry);
         }
 
         return _ipGroupManager;
@@ -590,7 +533,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             VhLogger.Instance.LogTrace("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl); 
+            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl);
             LatestPublishInfo = VhUtil.JsonDeserialize<PublishInfo>(publishInfoJson);
 
             // Check version
@@ -608,7 +551,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             else
                 VersionStatus = VersionStatus.Latest;
 
-            VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}", 
+            VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
                 VersionStatus, LatestPublishInfo.Version);
         }
         catch (Exception ex)
@@ -620,13 +563,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
     {
         var ipGroupManager = await GetIpGroupManager();
-        var ipGroup = await ipGroupManager.FindIpGroup(clientIp);
-        _lastClientIpGroup = ipGroup;
-        VhLogger.Instance.LogInformation($"Client Country is: {ipGroup?.IpGroupName}");
+        _lastCountryIpGroup = await ipGroupManager.FindIpGroup(clientIp, Settings.LastCountryIpGroupId);
+        Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
+        VhLogger.Instance.LogInformation($"Client Country is: {_lastCountryIpGroup?.IpGroupName}");
 
         // use TunnelMyCountry
         if (!UserSettings.TunnelClientCountry)
-            return ipGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, new[] { ipGroup.IpGroupId }) : null;
+            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, new[] { _lastCountryIpGroup.IpGroupId }) : null;
 
         // use advanced options
         return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);

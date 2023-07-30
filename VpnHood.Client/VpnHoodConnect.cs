@@ -6,6 +6,7 @@ using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Client;
 
@@ -36,8 +37,7 @@ public class VpnHoodConnect : IAsyncDisposable
 
         //this class Connect change this option temporary and restore it after last attempt
         _clientOptions.AutoDisposePacketCapture = false;
-        _clientOptions.UseUdpChannel = connectOptions.UdpChannelMode == UdpChannelMode.On ||
-                                       connectOptions.UdpChannelMode == UdpChannelMode.Auto;
+        _clientOptions.UseUdpChannel = connectOptions.UdpChannelMode is UdpChannelMode.On or UdpChannelMode.Auto;
 
         // let always have a Client to access its member after creating VpnHoodConnect
         Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);
@@ -54,7 +54,7 @@ public class VpnHoodConnect : IAsyncDisposable
             throw new ObjectDisposedException($"{VhLogger.FormatType(this)} is disposed!");
 
         if (Client.State != ClientState.None && Client.State != ClientState.Disposed)
-            throw new InvalidOperationException("Connection is already in progress!");
+            throw new InvalidOperationException("Connection is already in progress.");
 
         if (Client.State == ClientState.Disposed)
             Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);
@@ -100,7 +100,21 @@ public class VpnHoodConnect : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private readonly AsyncLock _disposeLock = new();
+    private ValueTask? _disposeTask;
+    public ValueTask DisposeAsync()
+    {
+        return DisposeAsync(true);
+    }
+
+    public async ValueTask DisposeAsync(bool waitForBye)
+    {
+        lock (_disposeLock)
+            _disposeTask ??= DisposeAsyncCore(waitForBye);
+        await _disposeTask.Value;
+    }
+
+    private async ValueTask DisposeAsyncCore(bool waitForBye)
     {
         if (IsDisposed) return;
         IsDisposed = true;
@@ -108,12 +122,12 @@ public class VpnHoodConnect : IAsyncDisposable
         // close client
         try
         {
-            await Client.DisposeAsync();
+            await Client.DisposeAsync(waitForBye);
             Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
+            VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose client properly.");
         }
 
         // release _packetCapture
@@ -123,5 +137,4 @@ public class VpnHoodConnect : IAsyncDisposable
         // notify state changed
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
-
 }

@@ -188,7 +188,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public async ValueTask DisposeAsync()
     {
         if (_instance == null) return;
-        Settings.Save();
         await Disconnect();
         _instance = null;
     }
@@ -343,6 +342,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         var token = ClientProfileStore.GetToken(tokenId, true);
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
+        // save settings
+        Settings.Save();
+
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
@@ -452,6 +454,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 VhLogger.Instance.LogTrace("User requests disconnection.");
                 _hasDisconnectedByUser = true;
             }
+
+            // save settings
+            Settings.Save();
 
             _isDisconnecting = true;
             CheckConnectionStateChanged();

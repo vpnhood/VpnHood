@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -35,7 +36,7 @@ public class ServerApp : IDisposable
 
     public static string AppName => "VpnHoodServer";
     public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
-    public static string AppVersion => typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "*";
+    public static string AppVersion => typeof(ServerApp).Assembly.GetName().Version?.ToString(3) ?? "*";
     public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();
     public string InternalStoragePath { get; }
@@ -86,8 +87,6 @@ public class ServerApp : IDisposable
             // ReSharper disable once StringLiteralTypo
             MeasurementId = "G-9SWLGEX6BT",
             ApiSecret = string.Empty,
-            AppName = typeof(ServerApp).Assembly.GetName().Name ?? "VpnHoodServer",
-            AppVersion = AppVersion,
             ClientId = anonyClientId,
             SessionId = Guid.NewGuid().ToString(),
             IsEnabled = AppSettings.AllowAnonymousTracker,
@@ -252,7 +251,8 @@ public class ServerApp : IDisposable
             });
 
             // track
-            _ = _gaTracker.TrackByGTag(new Ga4TagParam{EventName = Ga4TagEvents.SessionStart});
+            var useProperties = new Dictionary<string, object> { { "client_version", AppVersion} };
+            _ = _gaTracker.Track(new Ga4TagEvent {EventName = Ga4TagEvents.SessionStart}, useProperties);
 
             // Command listener
             _commandListener.Start();

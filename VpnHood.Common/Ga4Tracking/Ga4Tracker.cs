@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -21,31 +22,36 @@ public class Ga4Tracker
     public required string ApiSecret { get; init; }
     public required string SessionId { get; set; }
     public long SessionEngagementTime { get; set; } = 1000;
-    public string UserAgent { get; init; } = Environment.OSVersion.ToString().Replace(" ", "");
+    public string UserAgent { get; set; } = Environment.OSVersion.ToString().Replace(" ", "");
     public required string ClientId { get; init; }
     public string? UserId { get; init; }
     public bool IsEnabled { get; set; } = true;
     public bool IsDebugEndPoint { get; set; }
     public bool IsAdminDebugView { get; set; }
     public bool IsLogEnabled => IsDebugEndPoint || IsAdminDebugView;
-    public Dictionary<string, object> UserParameters { get; } = new();
     public bool? IsMobile { get; init; } // GTag only
-    public required string AppName { get; init; }
-    public required string AppVersion { get; init; }
 
 
-    private static string GetPlatform()
+    //private static string GetPlatform()
+    //{
+    //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    //        return "Windows";
+
+    //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    //        return "Linux";
+
+    //    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+    //        return "macOS";
+
+    //    return "Unknown";
+    //}
+
+    private void PrepareHttpHeaders(HttpHeaders httpHeaders)
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return "Windows";
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            return "Linux";
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return "macOS";
-
-        return "Unknown";
+        httpHeaders.Add("User-Agent", UserAgent);
+        //requestMessage.Headers.Add("Sec-Ch-Ua", "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Microsoft Edge\";v=\"114\"");
+        //httpHeaders.Add("Sec-Ch-Ua-Mobile", "1");
+        //httpHeaders.Add("Sec-Ch-Ua-Platform", "\"Android\"");
     }
 
     private static bool CheckIsMobileByUserAgent(string? userAgent)
@@ -62,11 +68,11 @@ public class Ga4Tracker
         return isMobile;
     }
 
-    private static long _eventSequenceNumber = 1;
-    public Task TrackByGTag(Ga4TagParam tagParam)
+    public Task Track(Ga4TagEvent ga4Event, Dictionary<string, object>? userProperties = null)
     {
         if (!IsEnabled) return Task.CompletedTask;
         var isMobile = IsMobile ?? CheckIsMobileByUserAgent(UserAgent);
+        userProperties ??= new Dictionary<string, object>();
 
         // ReSharper disable StringLiteralTypo
         var parameters = new List<(string, object)>
@@ -76,51 +82,86 @@ public class Ga4Tracker
             ("gtm", Environment.TickCount), // GTM Hash
             ("_p", Environment.TickCount + 10), // finger print, a random number 
             ("cid", ClientId), // Client Id
-            ("ul", CultureInfo.CurrentCulture.Name.ToLower()), // user language
-            //("sr", "1024x768"), //screen resolution 
+
+            // client device info, user agent info
+            ("ul", CultureInfo.CurrentCulture.Name.ToLower() ), // user language
+            // ("sr", "1024x768"),  *Finalized // screen resolution        
             ("uaa", RuntimeInformation.ProcessArchitecture.ToString().ToLower()), //User Agent Architecture
-            ("uab", Environment.Is64BitOperatingSystem ? "x64" : "x86"), //User Agent Bits
-            ("uafvl", $"{AppName} {AppVersion}"), // Not.A%252FBrand%3B8.0.0.0%7CChromium%3B114.0.5735.134%7CGoogle%2520Chrome%3B114.0.5735.134  // User Agent Full Version List
-            ("uamb", isMobile ? 1 : 0), // User Agent Mobile
-            ("uam", ""), // User Agent Model. The device model on which the browser is running. Will likely be empty for desktop browsers, Example "Nexus 6"
-            ("uap", GetPlatform()), // User Agent Mobile
+            ("uab", Environment.Is64BitOperatingSystem ? "64" : "32"), //User Agent Bits
+            ("uamb",isMobile ? 1 : 0), // User Agent Mobile
+            // ("uam", "MyModel"), *Finalized // User Agent Model. The device model on which the browser is running. Will likely be empty for desktop browsers, Example "Nexus 6"
+            // ("uap", "Android"), *Finalized //GetPlatform() ), // User Agent Platform, 	Android, macOS
             ("uapv", Environment.OSVersion.Version.ToString(3)), //User Agent Platform Version, The version of the operating system on which the user agent is running, "14.0.0"
-            ("uaw", 0), // User Agent WOW64
-            ("_s", _eventSequenceNumber++), // event sequence number
-            ("sid", SessionId), // Session Id
-            ("sct", 1), // Session Count
-            ("seg", 1), // Session Engagement. If the current user is engaged in any way, this value will be 1
-            ("en", tagParam.EventName), // event name
+            // ("uaw", 0), *Finalized // User Agent WOW64
+
+            // "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.199|Google%20Chrome;114.0.5735.199" 
+            // "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.201|Microsoft%20Edge;114.0.1823.67"
+            // ("uafvl", "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.201|Microsoft%20Edge;114.0.1823.67"),  *Finalized  // User Agent Full Version List
+
+            // document
+            //("dl", "https://localhost"),      // Document Location, Actual page's Pathname. It does not include the hostname, quertyString or Fragment. document.location.pathname
+            //("dt", "My page title"),          // Document Title, Actual page's Title, document.title
+            //("dr", "https://www.google.com"), // Document Referrer, Actual page's Referrer, document.referrer
+                                   
+            // session
+            ("sid", SessionId), // GA4 Session Id. This comes from the GA4 Cookie. It may be different for each Stream ID Configured on the site
+            ("seg", 1), // Required.  Session Engagement. If the current user is engaged in any way, this value will be 1
+            //("_s", 1), // Current hits counter for the current page load
+            //("sct", 1), // Count of sessions. This value increases by one each time a new session is detected ( when the session expires )
+
+            // event
+            ("en", ga4Event.EventName), // event name
             ("_ee", "1"), // External Event
+
+            // Reference: https://www.thyngster.com/ga4-measurement-protocol-cheatsheet/
+            //("up.foo_string", "1.1"), //User Property String
+            //("upn.foo-number", 1), //User Property Number
+            //("ep.foo-string", "hello"), //Event Property string 
+            //("epn.foo-number", 1), //Event Property Number
+            
         };
 
         if (UserId != null) parameters.Add(("uid", UserId));
-        if (tagParam.DocumentLocation != null) parameters.Add(("dl", tagParam.DocumentLocation)); // Document Location
-        if (tagParam.DocumentTitle != null) parameters.Add(("dt", tagParam.DocumentTitle)); // Document Title
+        if (ga4Event.DocumentLocation != null) parameters.Add(("dl", ga4Event.DocumentLocation)); // Document Location
+        if (ga4Event.DocumentTitle != null) parameters.Add(("dt", ga4Event.DocumentTitle)); // Document Title
         if (IsAdminDebugView) parameters.Add(("_dbg", 1)); // Analytics debug view
+
+        // add user Properties
+        foreach (var userProperty in userProperties)
+        {
+            var propName = userProperty.Value is int or long ? "upn" : "up";
+            propName += "." + userProperty.Key;
+            parameters.Add((propName, userProperty.Value));
+        }
+
+        // add Event Properties
+        foreach (var eventProperties in ga4Event.Properties)
+        {
+            var propName = eventProperties.Value is int or long ? "epn" : "ep";
+            propName += "." + eventProperties.Key;
+            parameters.Add((propName, eventProperties.Value));
+        }
 
         var url = new Uri(
             "https://www.google-analytics.com/g/collect?" +
             string.Join('&', parameters.Select(x => $"{x.Item1}={x.Item2}"))
             );
 
-        if (IsLogEnabled)
-            Console.Out.WriteLine("Sending GTag: " + url);
-
-        return HttpClient.GetStringAsync(url);
+        var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+        PrepareHttpHeaders(requestMessage.Headers);
+        return SendHttpRequest(requestMessage, "GTag");
     }
 
-
-    public Task Track(Ga4Event ga4Event)
+    public Task Track(Ga4MeasurementEvent ga4Event)
     {
         var tracks = new[] { ga4Event };
         return Track(tracks);
     }
 
-    public async Task Track(IEnumerable<Ga4Event> ga4Events)
+    public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events, Dictionary<string, object>? userProperties = null)
     {
-        if (!IsEnabled) return;
-        var gaEventArray = ga4Events.Select(x => (Ga4Event)x.Clone()).ToArray();
+        if (!IsEnabled) return Task.CompletedTask;
+        var gaEventArray = ga4Events.Select(x => (Ga4MeasurementEvent)x.Clone()).ToArray();
         if (!gaEventArray.Any()) throw new ArgumentException("Events can not be empty! ", nameof(ga4Events));
 
         // updating events by default values
@@ -137,25 +178,43 @@ public class Ga4Tracker
         }
 
 
-        var ga4Payload = new Ga4Payload
+        var ga4Payload = new Ga4MeasurementPayload
         {
             ClientId = ClientId,
             UserId = UserId,
             Events = gaEventArray,
-            UserProperties = UserParameters.Any() ? UserParameters.ToDictionary(p => p.Key, p => new Ga4Payload.UserProperty { Value = p.Value }) : null,
+            UserProperties = userProperties != null && userProperties.Any() ? userProperties.ToDictionary(p => p.Key, p => new Ga4MeasurementPayload.UserProperty { Value = p.Value }) : null,
         };
 
         var baseUri = IsDebugEndPoint ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");
         var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
-        requestMessage.Headers.Add("User-Agent", UserAgent);
-        requestMessage.Content = new StringContent(JsonSerializer.Serialize(ga4Payload));
-        requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        PrepareHttpHeaders(requestMessage.Headers);
+        return SendHttpRequest(requestMessage, "Measurement", ga4Payload);
+
+    }
+
+    private async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData = null)
+    {
         try
         {
+            if (IsLogEnabled)
+            {
+                await Console.Out.WriteLineAsync($"* Sending {name}...");
+                await Console.Out.WriteLineAsync($"Url: {requestMessage.RequestUri}");
+                await Console.Out.WriteLineAsync($"Headers: {JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true })}");
+            }
+
+            if (jsonData != null)
+            {
+                requestMessage.Content = new StringContent(JsonSerializer.Serialize(jsonData));
+                requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                await Console.Out.WriteLineAsync($"Data: {JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true })}");
+            }
+
             var res = await HttpClient.SendAsync(requestMessage);
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync(JsonSerializer.Serialize(ga4Payload, new JsonSerializerOptions { WriteIndented = true }));
+                await Console.Out.WriteLineAsync("Result: ");
                 await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync());
             }
         }
@@ -164,6 +223,6 @@ public class Ga4Tracker
             if (IsDebugEndPoint)
                 throw;
         }
-
     }
+
 }

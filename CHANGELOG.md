@@ -7,6 +7,7 @@
 * Update: Improve reliability
 * Update: Improve logging by adding channel Id
 * Update: Include internal exception messages and stack trace in the diagnostic file
+* Update: Improve connect speed
 * Fix: Some UDP Packet loss
 * Fix: Android: VpnHood system notification
 * Fix: Remain in Disconnecting state

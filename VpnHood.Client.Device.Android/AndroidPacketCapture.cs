@@ -72,6 +72,7 @@ namespace VpnHood.Client.Device.Android
         {
             var builder = new Builder(this)
                 .SetBlocking(true)
+                .SetMetered(false)
                 .SetSession(VpnServiceName)
                 .AddAddress("192.168.199.188", 24);
 
@@ -194,7 +195,7 @@ namespace VpnHood.Client.Device.Android
                     }
                     catch (Exception ex)
                     {
-                        VhLogger.Instance.LogError(ex, $"Could not add allowed app: {app}");
+                        VhLogger.Instance.LogError(ex, "Could not add an allowed app. App: {app}", app);
                     }
             }
 
@@ -209,7 +210,7 @@ namespace VpnHood.Client.Device.Android
                     }
                     catch (Exception ex)
                     {
-                        VhLogger.Instance.LogError(ex, $"Could not add allowed app: {app}");
+                        VhLogger.Instance.LogError(ex, "Could not add a disallowed app. App: {app}", app);
                     }
             }
         }
@@ -237,7 +238,7 @@ namespace VpnHood.Client.Device.Android
             catch (Exception ex)
             {
                 if (!VhUtil.IsSocketClosedException(ex))
-                    VhLogger.Instance.LogError($"ReadingPacketTask: {ex}");
+                    VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
             }
 
             if (Started)
@@ -254,7 +255,8 @@ namespace VpnHood.Client.Device.Android
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {VhLogger.FormatIpPacket(ipPacket.ToString())}! Error: {ex}");
+                VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}", 
+                    VhLogger.FormatIpPacket(ipPacket.ToString()));
             }
         }
 
@@ -274,10 +276,21 @@ namespace VpnHood.Client.Device.Android
 
             VhLogger.Instance.LogTrace("Closing VpnService...");
 
+            // close streams
             try
             {
                 _inStream?.Dispose();
                 _outStream?.Dispose();
+
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
+            }
+
+            // close VpnService
+            try
+            {
                 _mInterface?.Close(); //required to close the vpn. dispose is not enough
                 _mInterface?.Dispose();
                 _mInterface = null;
@@ -285,7 +298,7 @@ namespace VpnHood.Client.Device.Android
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Error while closing the VpnService!");
+                VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
             }
 
             // it must be after _mInterface.Close

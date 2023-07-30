@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Server;
+﻿namespace VpnHood.Server.Access;
 
 public class ServerCommand
 {

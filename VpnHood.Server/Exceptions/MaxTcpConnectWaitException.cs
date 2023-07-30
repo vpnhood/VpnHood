@@ -7,8 +7,8 @@ namespace VpnHood.Server.Exceptions;
 
 internal class MaxTcpConnectWaitException : ServerSessionException
 {
-    public MaxTcpConnectWaitException(IPEndPoint remoteEndPoint, Session session)
-        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, "Maximum TcpConnectWait has been reached.")
+    public MaxTcpConnectWaitException(IPEndPoint remoteEndPoint, Session session, string requestId)
+        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, "Maximum TcpConnectWait has been reached.")
     {
     }
 

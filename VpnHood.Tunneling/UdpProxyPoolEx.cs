@@ -94,7 +94,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
                     isNewLocalEndPoint = true;
                 }
 
-                // Add destinationEndPoint; each newUdpWorker can not map a destinationEndPoint to more than one source port
+                // Add destinationEndPoint; a newUdpWorker can not map a destinationEndPoint to more than one source port
                 newUdpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint, new TimeoutItem<IPEndPoint>(sourceEndPoint));
                 return newUdpProxy;
             }

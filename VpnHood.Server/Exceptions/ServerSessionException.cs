@@ -15,12 +15,14 @@ public class ServerSessionException : SessionException, ISelfLog
     public Guid? TokenId { get; }
     public ulong? SessionId { get; set; }
     public Session? Session { get; }
+    public string RequestId { get; }
     public Guid? ClientId { get; }
 
     public ServerSessionException(
         IPEndPoint remoteEndPoint,
         Session session,
         SessionErrorCode sessionErrorCode,
+        string requestId,
         string message)
         : base(sessionErrorCode, message)
     {
@@ -29,12 +31,15 @@ public class ServerSessionException : SessionException, ISelfLog
         TokenId = session.HelloRequest?.TokenId;
         ClientId = session.HelloRequest?.ClientInfo.ClientId;
         Session = session;
+        RequestId = requestId;
     }
 
     public ServerSessionException(
         IPEndPoint remoteEndPoint,
         Session session,
-        SessionResponseBase sessionResponseBase)
+        SessionResponseBase sessionResponseBase,
+        string requestId
+        )
         : base(sessionResponseBase)
     {
         RemoteEndPoint = remoteEndPoint;
@@ -42,7 +47,7 @@ public class ServerSessionException : SessionException, ISelfLog
         ClientId = session.HelloRequest?.ClientInfo.ClientId;
         SessionId = session.SessionId;
         Session = session;
-
+        RequestId = requestId;
     }
 
     public ServerSessionException(
@@ -54,6 +59,7 @@ public class ServerSessionException : SessionException, ISelfLog
         RemoteEndPoint = remoteEndPoint;
         TokenId = sessionRequest.TokenId;
         ClientId = sessionRequest.ClientInfo.ClientId;
+        RequestId = sessionRequest.RequestId;
     }
 
     public ServerSessionException(
@@ -64,6 +70,7 @@ public class ServerSessionException : SessionException, ISelfLog
     {
         RemoteEndPoint = remoteEndPoint;
         SessionId = requestBase.SessionId;
+        RequestId = requestBase.RequestId;
     }
 
     protected virtual LogLevel LogLevel => LogLevel.Information;
@@ -74,8 +81,8 @@ public class ServerSessionException : SessionException, ISelfLog
     public virtual void Log()
     {
         VhLogger.Instance.Log(LogLevel, EventId, this,
-            "{Message} SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}, SessionErrorCode: {SessionErrorCode}",
-            Message, VhLogger.FormatSessionId(SessionId), VhLogger.Format(RemoteEndPoint.Address),
+            "{Message} SessionId: {SessionId}, RequestId: {RequestId}, ClientIp: {ClientIp}, TokenId: {TokenId}, SessionErrorCode: {SessionErrorCode}",
+            Message, VhLogger.FormatSessionId(SessionId), RequestId, VhLogger.Format(RemoteEndPoint.Address),
             VhLogger.FormatId(TokenId), SessionResponseBase.ErrorCode);
     }
 }

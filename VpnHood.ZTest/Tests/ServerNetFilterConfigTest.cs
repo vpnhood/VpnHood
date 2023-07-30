@@ -8,12 +8,12 @@ using VpnHood.Common.Net;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ServerNetFilterConfigTest
+public class ServerNetFilterConfigTest : TestBase
 {
     [TestMethod]
     public async Task PacketCapture_Include()
     {
-        var serverOptions = TestHelper.CreateFileAccessServerOptions();
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("230.0.0.100-230.0.0.250") };
 
         // Create Server
@@ -45,7 +45,7 @@ public class ServerNetFilterConfigTest
     [TestMethod]
     public async Task PacketCapture_Exclude()
     {
-        var serverOptions = TestHelper.CreateFileAccessServerOptions();
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100-230.0.0.250") };
 
         // Create Server
@@ -78,7 +78,7 @@ public class ServerNetFilterConfigTest
     [TestMethod]
     public async Task PacketCapture_Include_Exclude_LocalNetwork()
     {
-        var serverOptions = TestHelper.CreateFileAccessServerOptions();
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.IncludeLocalNetwork = false;
         serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("000.0.0.000 - 230.0.0.220") };
         serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100 - 230.0.0.250") };
@@ -106,7 +106,7 @@ public class ServerNetFilterConfigTest
     [TestMethod]
     public async Task IpRange_Include_Exclude()
     {
-        var serverOptions = TestHelper.CreateFileAccessServerOptions();
+        var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.IncludeIpRanges = new[] { IpRange.Parse("000.0.0.000 - 230.0.0.220") };
         serverOptions.NetFilterOptions.ExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100 - 230.0.0.250") };
 

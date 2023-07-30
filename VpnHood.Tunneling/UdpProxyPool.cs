@@ -28,10 +28,11 @@ public class UdpProxyPool : IPacketProxyPool, IJob
         TimeSpan? udpTimeout, int? maxClientCount, LogScope? logScope = null)
     {
         udpTimeout ??= TimeSpan.FromSeconds(120);
+        maxClientCount ??= int.MaxValue;
 
         _packetProxyReceiver = packetProxyReceiver;
         _socketFactory = socketFactory;
-        _maxClientCount = maxClientCount ?? int.MaxValue;
+        _maxClientCount = maxClientCount > 0 ? maxClientCount.Value : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
         _udpProxies.Timeout = udpTimeout;
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,

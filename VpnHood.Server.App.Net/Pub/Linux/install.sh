@@ -95,7 +95,7 @@ chmod +x "$destinationPath/vhupdate";
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
 	appSettings="{
-  \"HttpAccessServer\": {
+  \"HttpAccessManager\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
   },

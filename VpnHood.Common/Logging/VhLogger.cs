@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Common.Converters;
@@ -23,6 +24,7 @@ public static class VhLogger
         }
     }
 
+    public static EventId TcpCloseEventId { get; set; } = new();
     public static bool IsAnonymousMode { get; set; } = true;
     public static bool IsDiagnoseMode
     {
@@ -93,9 +95,9 @@ public static class VhLogger
 
     public static string FormatDns(string dnsName)
     {
-        if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
-            return Format(ipEndPoint);
-        return FormatId(dnsName);
+        return IPEndPointConverter.TryParse(dnsName, out var ipEndPoint) 
+            ? Format(ipEndPoint) 
+            : FormatId(dnsName);
     }
 
     public static string FormatIpPacket(string ipPacketText)
@@ -130,4 +132,33 @@ public static class VhLogger
             return "*";
         }
     }
+
+    public static bool IsSocketCloseException(Exception ex)
+    {
+        return (ex.InnerException != null && IsSocketCloseException(ex.InnerException)) ||
+            ex is
+            ObjectDisposedException or
+            OperationCanceledException or
+            TaskCanceledException or
+            SocketException
+            {
+                SocketErrorCode: SocketError.ConnectionAborted or
+                SocketError.OperationAborted or
+                SocketError.ConnectionReset or
+                SocketError.ConnectionRefused or
+                SocketError.NetworkReset
+            };
+    }
+
+    public static void LogError(EventId eventId, Exception ex, string message, params object?[] args)
+    {
+        if (IsSocketCloseException(ex))
+        {
+            Instance.LogTrace(TcpCloseEventId, message + $" Message: {ex.Message}", args);
+            return;
+        }
+
+        Instance.LogError(eventId, ex, message, args);
+    }
+
 }

@@ -1,36 +1,29 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class AccessTest
+public class AccessTest : TestBase
 {
-
     [TestMethod]
     public async Task Foo()
     {
-        await Task.Delay(100);
-        var file = Environment.GetFolderPath(Environment.SpecialFolder.System);
-        Console.WriteLine(file);
-
-    }
-
-    [TestInitialize]
-    public void Initialize()
-    {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        await Task.Delay(0);
     }
 
     [TestMethod]
-    public void Server_reject_invalid_requests()
+    public async Task Server_reject_invalid_requests()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
 
         // ************
         // *** TEST ***: request with invalid tokenId
@@ -39,7 +32,7 @@ public class AccessTest
 
         try
         {
-            using var client1 = TestHelper.CreateClient(token);
+            await using var client1 = TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token id");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -53,7 +46,7 @@ public class AccessTest
 
         try
         {
-            using var client2 = TestHelper.CreateClient(token);
+            await using var client2 = TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token secret");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -89,22 +82,22 @@ public class AccessTest
     [TestMethod]
     public async Task Server_reject_expired_access_at_runtime()
     {
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
-        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create an short expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
+        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddMilliseconds(500));
 
         // connect and download
-        await using var client1 = TestHelper.CreateClient(accessToken, throwConnectException: false);
+        await using var client = TestHelper.CreateClient(accessToken, throwConnectException: false);
 
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        // test expiration
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
-            return client1.State;
+            await TestHelper.Test_Https(throwError: false, timeout: 1000);
+            return client.State;
         });
-        Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessExpired, client.SessionStatus.ErrorCode);
     }
 
     [TestMethod]
@@ -124,7 +117,7 @@ public class AccessTest
         // first try should just break the connection
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            await TestHelper.Test_Https();
         }
         catch
         {
@@ -132,10 +125,10 @@ public class AccessTest
         }
 
         Thread.Sleep(1000);
-        // second try should get the AccessTrafficOverflow status
         try
         {
-            await TestHelper.Test_HttpsAsync();
+            VhLogger.Instance.LogTrace("Test: second try should get the AccessTrafficOverflow status.");
+            await TestHelper.Test_Https(timeout: 2000);
         }
         catch
         {
@@ -149,6 +142,7 @@ public class AccessTest
         // ----------
         try
         {
+            VhLogger.Instance.LogTrace("Test: try to connect with another client.");
             await using var client2 = TestHelper.CreateClient(accessToken);
             Assert.Fail("Exception expected! Traffic must been overflowed!");
         }
@@ -182,15 +176,18 @@ public class AccessTest
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
 
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        // wait for finishing client1
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false, timeout: 2000);
             return client1.State;
         }, "Client1 has not been stopped yet.");
         Assert.AreEqual(SessionSuppressType.None, client1.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
 
         // suppress by other (MaxTokenClient is 2)
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");
         await using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
             clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
@@ -202,11 +199,11 @@ public class AccessTest
         await using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(),
             token: accessTokenX, options: new ClientOptions { AutoDisposePacketCapture = false });
 
-
         // wait for finishing client2
-        await TestHelper.AssertEqualsWait(ClientState.Disposed, async () =>
+        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
         {
-            await TestHelper.Test_HttpsAsync(throwError: false);
+            await TestHelper.Test_Https(throwError: false, timeout: 2000);
             return client2.State;
         });
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);

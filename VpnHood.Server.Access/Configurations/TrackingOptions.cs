@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Server.Configurations;
+namespace VpnHood.Server.Access.Configurations;
 
 public class TrackingOptions
 {

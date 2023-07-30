@@ -8,7 +8,7 @@ using VpnHood.Common.Net;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class IpNetworkTest
+public class IpNetworkTest : TestBase
 {
     [TestMethod]
     public void Invert_Unify_Convert()

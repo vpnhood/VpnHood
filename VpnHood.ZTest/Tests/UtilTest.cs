@@ -8,11 +8,12 @@ using VpnHood.Common.Logging;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class UtilTest
+public class UtilTest : TestBase
 {
     private class TestEventReporter : EventReporter
     {
         public int ReportedCount { get; private set; }
+
         public TestEventReporter(ILogger logger, string message)
             : base(logger, message)
         {
@@ -33,7 +34,7 @@ public class UtilTest
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);
-        
+
         reportCounter.Raised(); // report
         Assert.AreEqual(1, reportCounter.TotalEventCount);
         Assert.AreEqual(1, reportCounter.ReportedCount);

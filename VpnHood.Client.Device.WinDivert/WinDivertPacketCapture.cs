@@ -50,7 +50,7 @@ public class WinDivertPacketCapture : IPacketCapture
     public virtual void ProtectSocket(Socket socket)
     {
         throw new NotSupportedException(
-            $"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
+            $"{nameof(ProtectSocket)} is not supported by {GetType().Name}");
     }
 
     public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)

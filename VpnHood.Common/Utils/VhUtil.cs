@@ -272,4 +272,37 @@ public static class VhUtil
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
     }
 
+    public static ValueTask DisposeAsync(IAsyncDisposable? channel)
+    {
+        return channel?.DisposeAsync() ?? default;
+    }
+
+    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize, bool? reuseAddress = null)
+    {
+        tcpClient.NoDelay = false;
+        if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
+        if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
+        if (reuseAddress != null) tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, reuseAddress.Value);
+    }
+
+    public static bool IsTcpClientHealthy(TcpClient tcpClient)
+    {
+        try
+        {
+            // Check if the TcpClient is connected
+            if (!tcpClient.Connected)
+                return false;
+
+            // Check if the underlying socket is connected
+            var socket = tcpClient.Client;
+            var healthy = tcpClient.Connected && socket.Connected && !tcpClient.Client.Poll(1, SelectMode.SelectError);
+
+            return healthy;
+        }
+        catch (Exception)
+        {
+            // An error occurred while checking the TcpClient
+            return false;
+        }
+    }
 }

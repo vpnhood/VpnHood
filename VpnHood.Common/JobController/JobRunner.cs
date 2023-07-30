@@ -56,7 +56,7 @@ public class JobRunner
                 }
 
                 // The watch dog is busy
-                if (job.JobSection != null && !job.JobSection.EnterRunner())
+                if (!job.JobSection.EnterRunner())
                     continue;
 
                 try
@@ -65,7 +65,7 @@ public class JobRunner
                         .RunJob()
                         .ContinueWith(_ =>
                         {
-                            job.JobSection?.Leave();
+                            job.JobSection.Leave();
                         });
                 }
                 catch (ObjectDisposedException)

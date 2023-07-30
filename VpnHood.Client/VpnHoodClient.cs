@@ -681,8 +681,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             {
                 var ga4Tracking = new Ga4Tracker
                 {
-                    AppName = "VpnHoodClient",
-                    AppVersion = Version.ToString(3),
                     MeasurementId = sessionResponse.GaMeasurementId,
                     ApiSecret = string.Empty,
                     ClientId = ClientId.ToString(),
@@ -691,7 +689,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     UserAgent = UserAgent,
                     IsEnabled = _allowAnonymousTracker,
                 };
-                await ga4Tracking.TrackByGTag(new Ga4TagParam { EventName = Ga4TagEvents.SessionStart });
+
+                var useProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } };
+                await ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEvents.SessionStart }, useProperties);
             }
 
             // get session id

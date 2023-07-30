@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Factory;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling;
 
-public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
+public abstract class ProxyManager : IPacketProxyReceiver
 {
     private readonly IPAddress[] _blockList =
     {
@@ -35,10 +36,10 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
 
     protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, logScope: options.LogScope);
+        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout, options.MaxIcmpClientCount,  logScope: options.LogScope);
         _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount, logScope: options.LogScope)
-            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount, logScope: options.LogScope);
+            ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope)
+            : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope);
     }
 
     public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
@@ -92,20 +93,12 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
 
-        channel.OnFinished += Channel_OnFinished;
         lock (_channels)
             _channels.Add(channel);
         channel.Start();
     }
 
-    private void Channel_OnFinished(object sender, ChannelEventArgs e)
-    {
-        e.Channel.OnFinished -= Channel_OnFinished;
-        lock (_channels)
-            _channels.Remove(e.Channel);
-    }
-
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
@@ -114,10 +107,10 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
         _pingProxyPool.Dispose();
 
         // dispose channels
+        var disposeTasks = new List<Task>();
         lock (_channels)
-        {
-            foreach (var channel in _channels)
-                channel.Dispose();
-        }
+            disposeTasks.AddRange(_channels.Select(channel => channel.DisposeAsync(false).AsTask()));
+
+        await Task.WhenAll(disposeTasks);
     }
 }

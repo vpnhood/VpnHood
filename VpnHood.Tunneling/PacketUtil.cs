@@ -135,25 +135,25 @@ public static class PacketUtil
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
     {
         return ipPacket.Extract<IcmpV4Packet>() ??
-               throw new InvalidDataException($"Invalid IcmpV4 packet! It is: {ipPacket.Protocol}");
+               throw new InvalidDataException($"Invalid IcmpV4 packet. It is: {ipPacket.Protocol}");
     }
 
     public static IcmpV6Packet ExtractIcmpV6(IPPacket ipPacket)
     {
         return ipPacket.Extract<IcmpV6Packet>() ??
-               throw new InvalidDataException($"Invalid IcmpV6 packet! It is: {ipPacket.Protocol}");
+               throw new InvalidDataException($"Invalid IcmpV6 packet. It is: {ipPacket.Protocol}");
     }
 
     public static UdpPacket ExtractUdp(IPPacket ipPacket)
     {
         return ipPacket.Extract<UdpPacket>() ??
-               throw new InvalidDataException($"Invalid UDP packet! It is: {ipPacket.Protocol}");
+               throw new InvalidDataException($"Invalid UDP packet. It is: {ipPacket.Protocol}");
     }
 
     public static TcpPacket ExtractTcp(IPPacket ipPacket)
     {
         return ipPacket.Extract<TcpPacket>() ??
-               throw new InvalidDataException($"Invalid TCP packet! It is: {ipPacket.Protocol}");
+               throw new InvalidDataException($"Invalid TCP packet. It is: {ipPacket.Protocol}");
     }
 
     public static IPPacket CreateUnreachableReply(IPPacket ipPacket)
@@ -285,58 +285,59 @@ public static class PacketUtil
             LogPacket(ipPacket, operation);
     }
 
-    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information, Exception? ex = null)
+    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information, Exception? exception = null)
     {
-        if (!VhLogger.IsDiagnoseMode) return;
-
-        // log ICMP
-        if (ipPacket.Protocol == ProtocolType.Icmp)
+        try
         {
-            var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-            if (icmpPacket != null)
+            if (!VhLogger.IsDiagnoseMode) return;
+            var eventId = GeneralEventId.Packet;
+            var packetPayload = Array.Empty<byte>();
+
+            switch (ipPacket.Protocol)
             {
-                var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(logLevel, GeneralEventId.Ping, ex,
-                    $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                case ProtocolType.Icmp:
+                    {
+                        eventId = GeneralEventId.Ping;
+                        var icmpPacket = ExtractIcmp(ipPacket);
+                        packetPayload = icmpPacket.PayloadData ?? Array.Empty<byte>();
+                        break;
+                    }
+
+                case ProtocolType.IcmpV6:
+                    {
+                        eventId = GeneralEventId.Ping;
+                        var icmpPacket = ExtractIcmpV6(ipPacket);
+                        packetPayload = icmpPacket.PayloadData ?? Array.Empty<byte>();
+                        break;
+                    }
+
+                case ProtocolType.Udp:
+                    {
+                        eventId = GeneralEventId.Udp;
+                        var udpPacket = ExtractUdp(ipPacket);
+                        packetPayload = udpPacket.PayloadData ?? Array.Empty<byte>();
+                        break;
+                    }
+
+                case ProtocolType.Tcp:
+                {
+                    eventId = GeneralEventId.Tcp;
+                    var tcpPacket = ExtractTcp(ipPacket);
+                    packetPayload = tcpPacket.PayloadData ?? Array.Empty<byte>();
+                    break;
+                }
             }
-            else
-            {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, ex,
-                    $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
-            }
+
+            VhLogger.Instance.Log(logLevel, eventId, exception,
+                message + " Packet: {Packet}, PayloadLength: {PayloadLength}, Payload: {Payload}",
+                Format(ipPacket), packetPayload.Length, BitConverter.ToString(packetPayload, 0, Math.Min(10, packetPayload.Length)));
+
         }
-
-        if (ipPacket.Protocol == ProtocolType.IcmpV6)
+        catch (Exception ex)
         {
-            var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
-            if (icmpPacket != null)
-            {
-                var payload = icmpPacket.Bytes[8..] ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(logLevel, GeneralEventId.Ping, ex,
-                    $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
-            }
-            else
-            {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, ex,
-                    $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
-            }
-        }
-
-        // log Udp
-        if (ipPacket.Protocol == ProtocolType.Udp)
-        {
-            var udpPacket = ipPacket.Extract<UdpPacket>();
-            if (udpPacket != null)
-            {
-                var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(logLevel, GeneralEventId.Udp, ex,
-                    $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
-            }
-            else
-            {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, ex,
-                    $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
-            }
+            VhLogger.Instance.LogError(GeneralEventId.Packet,
+                ex, "Could not extract packet for log. Packet: {Packet}, Message: {Message}, Exception: {Exception}", 
+                Format(ipPacket), message, exception);
         }
     }
 
@@ -420,10 +421,10 @@ public static class PacketUtil
         {
             var tcpPacket = ExtractTcp(ipPacket);
             return new IPEndPointPair(
-                new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort), 
+                new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
                 new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
         }
-        
+
         if (ipPacket.Protocol == ProtocolType.Udp)
         {
             var udpPacket = ExtractUdp(ipPacket);

@@ -7,8 +7,8 @@ namespace VpnHood.Server.Exceptions;
 
 internal class NetScanException : ServerSessionException
 {
-    public NetScanException(IPEndPoint remoteEndPoint, Session session)
-        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, "NetScan protector does not allow this request.")
+    public NetScanException(IPEndPoint remoteEndPoint, Session session, string requestId)
+        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, "NetScan protector does not allow this request.")
     {
     }
 

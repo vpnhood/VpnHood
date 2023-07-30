@@ -5,14 +5,14 @@
     <TargetFramework>net6.0</TargetFramework>
     <Description>Simple VpnHood Client usage</Description>
     <Product>VpnHood Samples</Product>
-    <Company>VpnHood</Company>
-    <Authors>VpnHood</Authors>
+    <Company>OmegaHood LLC</Company>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="VpnHood.Client" Version="2.9.369" />
-    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="2.9.369" />
+    <PackageReference Include="VpnHood.Client" Version="3.0.410" />
+    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.0.410" />
   </ItemGroup>
 
 </Project>

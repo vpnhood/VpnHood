@@ -193,6 +193,19 @@ public class Ga4Tracker
 
     }
 
+    public Task TrackErrorByTag(string action, string msg)
+    {
+        return Track(new Ga4TagEvent
+        {
+            EventName = "exception",
+            Properties = new Dictionary<string, object>
+            {
+                {"page_location", "ex/" + action},
+                {"page_title", msg}
+            }
+        });
+    }
+
     private async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData = null)
     {
         try

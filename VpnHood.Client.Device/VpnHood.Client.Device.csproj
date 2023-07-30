@@ -13,8 +13,8 @@
     <RepositoryType></RepositoryType>
     <PackageId>VpnHood.Client.Device</PackageId>
     <RootNamespace>VpnHood.Client.Device</RootNamespace>
-    <Version>3.0.410</Version>
-    <AssemblyVersion>3.0.410</AssemblyVersion>
+    <Version>3.0.411</Version>
+    <AssemblyVersion>3.0.411</AssemblyVersion>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

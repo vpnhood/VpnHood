@@ -147,7 +147,7 @@ public class UdpChannel : IDatagramChannel
                 if (IsInvalidState(ex))
                     await DisposeAsync();
                 else
-                    VhLogger.Instance.LogWarning(GeneralEventId.Udp,
+                    VhLogger.Instance.LogTrace(GeneralEventId.Udp,
                         $"Error in receiving packets. Exception: {ex.Message}");
             }
 

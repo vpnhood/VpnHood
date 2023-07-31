@@ -86,11 +86,12 @@ public abstract class UdpChannelTransmitter : IDisposable
         // wait for all incoming UDP packets
         while (!_disposed)
         {
-            var receiving = true;
+            IPEndPoint? remoteEndPoint = null;
             try
             {
+                remoteEndPoint = null;
                 var udpResult = await _udpClient.ReceiveAsync();
-                receiving = false;
+                remoteEndPoint = udpResult.RemoteEndPoint;
                 var buffer = udpResult.Buffer;
                 if (buffer.Length < HeaderLength)
                     throw new Exception("Invalid UDP packet size. Could not find its header.");
@@ -107,7 +108,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                     buffer[bufferIndex + i] ^= headKeyBuffer[i]; //simple XOR with the generated unique key
 
                 // check packet signature OK
-                if (buffer[8] != 'O' || buffer[9] != 'K') 
+                if (buffer[8] != 'O' || buffer[9] != 'K')
                     throw new Exception("Packet signature does not match.");
 
                 // read session and session position
@@ -121,11 +122,14 @@ public abstract class UdpChannelTransmitter : IDisposable
             }
             catch (Exception ex)
             {
-                if (IsInvalidState(ex) && receiving)
-                    Dispose();
-                else
+                // break only for the first call
+                if (IsInvalidState(ex))
+                    break;
+
+                if (VhLogger.IsDiagnoseMode)
                     VhLogger.Instance.LogWarning(GeneralEventId.Udp,
-                        "Error in receiving UDP packets. Exception: {Message}", ex.Message);
+                        "Error in receiving UDP packets. RemoteEndPoint: {RemoteEndPoint}, Message: {Message}",
+                        VhLogger.FormatId(remoteEndPoint), ex.Message);
             }
         }
 

@@ -11,7 +11,7 @@ namespace VpnHood.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
-    private readonly EventReporter _invalidPacketSignatureReporter = new(VhLogger.Instance, "Invalid packet signature.", GeneralEventId.InvalidUdp);
+    private readonly EventReporter _invalidUdpSignatureReporter = new(VhLogger.Instance, "Invalid udp signature.", GeneralEventId.InvalidUdp);
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BufferCryptor _serverCryptor;
@@ -112,7 +112,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 //todo: log too many unknown packet
                 if (buffer[8] != 'O' || buffer[9] != 'K')
                 {
-                    _invalidPacketSignatureReporter.Raise();
+                    _invalidUdpSignatureReporter.Raise();
                     throw new Exception("Packet signature does not match.");
                 }
 

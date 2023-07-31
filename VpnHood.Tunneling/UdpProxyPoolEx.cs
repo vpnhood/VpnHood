@@ -85,7 +85,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
                     // check WorkerMaxCount
                     if (_udpProxies.Count >= _maxLocalEndPointCount)
                     {
-                        _maxWorkerEventReporter.Raised();
+                        _maxWorkerEventReporter.Raise();
                         throw new UdpClientQuotaException(_udpProxies.Count);
                     }
 

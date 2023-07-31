@@ -9,7 +9,7 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.Server;
+using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Services;
 

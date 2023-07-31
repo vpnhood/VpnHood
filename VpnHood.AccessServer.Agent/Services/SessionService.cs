@@ -10,8 +10,7 @@ using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Messaging;
-using System.Text.RegularExpressions;
+using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -46,35 +45,37 @@ public class SessionService
         if (string.IsNullOrEmpty(project.GaMeasurementId) || string.IsNullOrEmpty(project.GaApiSecret))
             return;
 
-        // check isMobile from agent
-        var mobileRegex = new Regex(@"(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino",
-            RegexOptions.IgnoreCase);
-        var isMobile = !string.IsNullOrEmpty(device.UserAgent) && mobileRegex.IsMatch(device.UserAgent);
-
         var ga4Tracker = new Ga4Tracker
         {
-            AppName = "VpnHoodService",
-            AppVersion = device.ClientVersion ?? "",
             MeasurementId = project.GaMeasurementId,
             ApiSecret = project.GaApiSecret,
             UserAgent = device.UserAgent ?? "",
             ClientId = device.ClientId.ToString(),
             SessionId = sessionId.ToString(),
             UserId = accessToken.AccessTokenId.ToString(),
-            IsMobile = isMobile
         };
 
-        var ga4Event = new Ga4Event
+        var ga4Event = new Ga4TagEvent
         {
-            Name = "Usage",
-            Parameters = new Dictionary<string, object>()
+            EventName = Ga4TagEvents.PageView,
+            DocumentLocation = $"{server.ServerFarm?.ServerFarmName}/{server.ServerName}",
+            DocumentTitle = $"{server.ServerFarm?.ServerFarmName}",
+            Properties = new Dictionary<string, object>()
             {
-                {"FarmId", server.ServerFarmId},
                 {"DeviceId", device.DeviceId},
                 {"TokenId", accessToken.AccessTokenId},
+                {"TokenCode", accessToken.SupportCode},
+                {"ServerId", server.ServerId},
+                {"FarmId", server.ServerFarmId},
                 {"Traffic", traffic.Total * 2 / 1_000_000},
+                {"Sent", traffic.Sent / 1_000_000},
+                {"Received", traffic.Received / 1_000_000},
             }
         };
+
+        if (!string.IsNullOrEmpty(accessToken.AccessTokenName)) ga4Event.Properties.Add("TokenName", accessToken.AccessTokenName);
+        if (!string.IsNullOrEmpty(server.ServerName)) ga4Event.Properties.Add("ServerName", server.ServerName);
+        if (!string.IsNullOrEmpty(server.ServerFarm?.ServerFarmName)) ga4Event.Properties.Add("FarmName", server.ServerFarm.ServerFarmName);
 
         await ga4Tracker.Track(ga4Event);
     }
@@ -228,6 +229,7 @@ public class SessionService
             ClientVersion = device.ClientVersion,
             EndTime = null,
             ServerId = serverId,
+            ExtraData = sessionRequestEx.ExtraData,
             SuppressedBy = SessionSuppressType.None,
             SuppressedTo = SessionSuppressType.None,
             ErrorCode = SessionErrorCode.Ok,
@@ -238,12 +240,14 @@ public class SessionService
         };
 
         var ret = await BuildSessionResponse(session, accessedTime);
+        ret.ExtraData = session.ExtraData;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
         // update AccessToken
         accessToken.FirstUsedTime ??= session.CreatedTime;
         accessToken.LastUsedTime = session.CreatedTime;
+        ret.GaMeasurementId = server.Project?.GaMeasurementId;
         ret.TcpEndPoints = new[] { bestTcpEndPoint };
         ret.UdpEndPoints = server.AccessPoints
             .Where(x => x is { IsPublic: true, UdpPort: > 0 })
@@ -276,6 +280,7 @@ public class SessionService
 
             // build response
             var ret = await BuildSessionResponse(session, DateTime.UtcNow);
+            ret.ExtraData = session.ExtraData;
             _logger.LogInformation(AccessEventId.Session,
                 "Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId, session.EndTime);
             return ret;
@@ -434,7 +439,7 @@ public class SessionService
 
         // build response
         var sessionResponse = await BuildSessionResponse(session, accessedTime);
-
+        
         // close session
         if (closeSession)
         {

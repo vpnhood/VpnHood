@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.AccessServer.Utils;
-using VpnHood.Server;
+using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -171,7 +171,7 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task Configure_manual_UDP_return_nothing_when_port_is_minues_one()
+    public async Task Configure_manual_UDP_return_nothing_when_port_is_minus_one()
     {
         // create serverInfo
         var farm = await ServerFarmDom.Create();

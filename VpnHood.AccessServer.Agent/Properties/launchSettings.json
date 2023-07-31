@@ -4,11 +4,12 @@
       "commandName": "Project",
       "launchBrowser": false,
       "launchUrl": "swagger",
+      "commandLineArgs": "",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:7011;http://localhost:5011"
+      "applicationUrl": "https://localhost:7011"
     },
     "WSL": {
       "commandName": "WSL2",

@@ -7,15 +7,12 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
-using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
-using VpnHood.Server.Messaging;
 using VpnHood.AccessServer.Report.Persistence;
 using System.Net.Http.Headers;
 using GrayMint.Authorization.Abstractions;
@@ -26,8 +23,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Server.Access;
+using VpnHood.Server.Access.Messaging;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -167,6 +167,7 @@ public class TestInit : IHttpClientFactory, IDisposable
                     services.AddSingleton<IHttpClientFactory>(this);
                 });
             });
+
         return webApp;
     }
 
@@ -291,10 +292,9 @@ public class TestInit : IHttpClientFactory, IDisposable
         var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId).Result;
 
         var http = AgentApp.CreateClient();
-        var options = new Server.Providers.HttpAccessServerProvider.HttpAccessServerOptions(
-            installManual.AppSettings.HttpAccessServer.BaseUrl,
-            installManual.AppSettings.HttpAccessServer.Authorization
-        );
+        var options = new Server.Access.Managers.Http.HttpAccessManagerOptions(
+            installManual.AppSettings.HttpAccessManager.BaseUrl, 
+            installManual.AppSettings.HttpAccessManager.Authorization);
 
         return new AgentClient(http, options);
     }

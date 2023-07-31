@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Server;
+using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

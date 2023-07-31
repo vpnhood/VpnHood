@@ -37,11 +37,14 @@ public class Program
         // nLog
         LogManager.Setup();
         var builder = WebApplication.CreateBuilder(args);
-        var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
         var authConfiguration = builder.Configuration.GetSection("Auth");
         var isTest = Environment.GetEnvironmentVariable("IsTest") == true.ToString();
 
+        // app options
+        var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+
+        // Graymint
         builder.AddGrayMintCommonServices(
             new GrayMintCommonOptions { AppName = "VpnHood Access Server" },
             new RegisterServicesOptions());

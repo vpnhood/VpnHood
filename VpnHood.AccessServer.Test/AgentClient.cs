@@ -1,11 +1,11 @@
 ﻿using System.Net.Http;
-using VpnHood.Server.Providers.HttpAccessServerProvider;
+using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.AccessServer.Test;
 
-public class AgentClient : HttpAccessServer
+public class AgentClient : HttpAccessManager
 {
-    public AgentClient(HttpClient httpClient, HttpAccessServerOptions options) 
+    public AgentClient(HttpClient httpClient, HttpAccessManagerOptions options) 
         : base(httpClient, options)
     {
     }

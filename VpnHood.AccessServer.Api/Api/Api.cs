@@ -8347,11 +8347,11 @@ namespace VpnHood.AccessServer.Api
     public partial class ServerInstallAppSettings
     {
 
-        [System.Text.Json.Serialization.JsonPropertyName("httpAccessServer")]
+        [System.Text.Json.Serialization.JsonPropertyName("httpAccessManager")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required]
-        public HttpAccessServerOptions HttpAccessServer { get; set; } = new HttpAccessServerOptions();
+        public HttpAccessManagerOptions HttpAccessManager { get; set; } = new HttpAccessManagerOptions();
 
         [System.Text.Json.Serialization.JsonPropertyName("managementSecret")]
 
@@ -8362,7 +8362,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.19.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class HttpAccessServerOptions
+    public partial class HttpAccessManagerOptions
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("baseUrl")]

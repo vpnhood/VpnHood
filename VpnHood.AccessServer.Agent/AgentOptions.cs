@@ -1,5 +1,5 @@
-﻿using VpnHood.Server.Configurations;
-using SessionOptions = VpnHood.Server.Configurations;
+﻿using VpnHood.Server.Access.Configurations;
+using SessionOptions = VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Agent;
 

@@ -1,10 +1,11 @@
-﻿using VpnHood.Server.Providers.HttpAccessServerProvider;
+﻿
+using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.AccessServer.Dtos;
 
 public class ServerInstallAppSettings
 {
-    public required HttpAccessServerOptions HttpAccessServer { get; init; }
+    public required HttpAccessManagerOptions HttpAccessManager { get; init; }
 
     public required byte[] ManagementSecret { get; init; }
 }

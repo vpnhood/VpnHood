@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using VpnHood.Server;
 using VpnHood.AccessServer.Api;
 using System.Net;
+using VpnHood.Server.Access;
+using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
@@ -17,7 +18,7 @@ public class ServerDom
     public List<SessionDom> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; set; }
     public ServerStatus ServerStatus => ServerInfo.Status;
-    public Server.Configurations.ServerConfig ServerConfig { get; private set; } = default!;
+    public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
     public ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInfo)

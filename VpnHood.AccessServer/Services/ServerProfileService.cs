@@ -8,7 +8,7 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.Common.Utils;
-using VpnHood.Server.Configurations;
+using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Services;
 

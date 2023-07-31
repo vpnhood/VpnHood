@@ -10,7 +10,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
-using VpnHood.Server;
+using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -152,7 +152,7 @@ public class ServerTest
         var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         Assert.AreEqual(Convert.ToBase64String(install.AppSettings.ManagementSecret), Convert.ToBase64String(actualAppSettings.ManagementSecret));
-        Assert.AreEqual(install.AppSettings.HttpAccessServer.BaseUrl, actualAppSettings.HttpAccessServer.BaseUrl);
+        Assert.AreEqual(install.AppSettings.HttpAccessManager.BaseUrl, actualAppSettings.HttpAccessManager.BaseUrl);
         Assert.IsTrue(install.LinuxCommand.Contains("x64.sh"));
         Assert.IsTrue(install.WindowsCommand.Contains("x64.ps1"));
     }

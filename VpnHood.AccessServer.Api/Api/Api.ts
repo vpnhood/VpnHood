@@ -5730,7 +5730,7 @@ export interface IServerInstallManual {
 }
 
 export class ServerInstallAppSettings implements IServerInstallAppSettings {
-    httpAccessServer!: HttpAccessServerOptions;
+    httpAccessManager!: HttpAccessManagerOptions;
     managementSecret!: string;
 
     constructor(data?: IServerInstallAppSettings) {
@@ -5741,13 +5741,13 @@ export class ServerInstallAppSettings implements IServerInstallAppSettings {
             }
         }
         if (!data) {
-            this.httpAccessServer = new HttpAccessServerOptions();
+            this.httpAccessManager = new HttpAccessManagerOptions();
         }
     }
 
     init(_data?: any) {
         if (_data) {
-            this.httpAccessServer = _data["httpAccessServer"] ? HttpAccessServerOptions.fromJS(_data["httpAccessServer"]) : new HttpAccessServerOptions();
+            this.httpAccessManager = _data["httpAccessManager"] ? HttpAccessManagerOptions.fromJS(_data["httpAccessManager"]) : new HttpAccessManagerOptions();
             this.managementSecret = _data["managementSecret"];
         }
     }
@@ -5761,22 +5761,22 @@ export class ServerInstallAppSettings implements IServerInstallAppSettings {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["httpAccessServer"] = this.httpAccessServer ? this.httpAccessServer.toJSON() : <any>undefined;
+        data["httpAccessManager"] = this.httpAccessManager ? this.httpAccessManager.toJSON() : <any>undefined;
         data["managementSecret"] = this.managementSecret;
         return data;
     }
 }
 
 export interface IServerInstallAppSettings {
-    httpAccessServer: HttpAccessServerOptions;
+    httpAccessManager: HttpAccessManagerOptions;
     managementSecret: string;
 }
 
-export class HttpAccessServerOptions implements IHttpAccessServerOptions {
+export class HttpAccessManagerOptions implements IHttpAccessManagerOptions {
     baseUrl!: string;
     authorization!: string;
 
-    constructor(data?: IHttpAccessServerOptions) {
+    constructor(data?: IHttpAccessManagerOptions) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5792,9 +5792,9 @@ export class HttpAccessServerOptions implements IHttpAccessServerOptions {
         }
     }
 
-    static fromJS(data: any): HttpAccessServerOptions {
+    static fromJS(data: any): HttpAccessManagerOptions {
         data = typeof data === 'object' ? data : {};
-        let result = new HttpAccessServerOptions();
+        let result = new HttpAccessManagerOptions();
         result.init(data);
         return result;
     }
@@ -5807,7 +5807,7 @@ export class HttpAccessServerOptions implements IHttpAccessServerOptions {
     }
 }
 
-export interface IHttpAccessServerOptions {
+export interface IHttpAccessManagerOptions {
     baseUrl: string;
     authorization: string;
 }

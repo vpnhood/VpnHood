@@ -15,7 +15,7 @@ using VpnHood.Common.Utils;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Utils;
-using VpnHood.Server.Providers.HttpAccessServerProvider;
+using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -315,7 +315,7 @@ public class ServerService
         var usageSummary = new ServersStatusSummary
         {
             TotalServerCount = servers.Length,
-            NotInstalledServerCount = servers.Count(x => x.ServerStatus is null),
+            NotInstalledServerCount = servers.Count(x => x.ServerState is ServerState.NotInstalled),
             ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
             IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
             LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
@@ -438,7 +438,7 @@ public class ServerService
         var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
         var appSettings = new ServerInstallAppSettings
         {
-            HttpAccessServer = new HttpAccessServerOptions(_appOptions.AgentUrl, authorization),
+            HttpAccessManager = new HttpAccessManagerOptions(_appOptions.AgentUrl, authorization),
             ManagementSecret = server.ManagementSecret
         };
         return appSettings;
@@ -452,8 +452,8 @@ public class ServerService
             "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux-x64.sh) " +
             autoCommand +
             $"-secret '{Convert.ToBase64String(installAppSettings.ManagementSecret)}' " +
-            $"-restBaseUrl '{installAppSettings.HttpAccessServer.BaseUrl}' " +
-            $"-restAuthorization '{installAppSettings.HttpAccessServer.Authorization}'\"";
+            $"-restBaseUrl '{installAppSettings.HttpAccessManager.BaseUrl}' " +
+            $"-restAuthorization '{installAppSettings.HttpAccessManager.Authorization}'\"";
 
         return script;
     }
@@ -467,8 +467,8 @@ public class ServerService
             "& ([ScriptBlock]::Create((Invoke-WebRequest(\"https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-win-x64.ps1\")))) " +
             autoCommand +
             $"-secret \"{Convert.ToBase64String(installAppSettings.ManagementSecret)}\" " +
-            $"-restBaseUrl \"{installAppSettings.HttpAccessServer.BaseUrl}\" " +
-            $"-restAuthorization \"{installAppSettings.HttpAccessServer.Authorization}\"";
+            $"-restBaseUrl \"{installAppSettings.HttpAccessManager.BaseUrl}\" " +
+            $"-restAuthorization \"{installAppSettings.HttpAccessManager.Authorization}\"";
 
         return script;
     }

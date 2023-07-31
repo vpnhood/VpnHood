@@ -5,6 +5,6 @@ namespace VpnHood.AccessServer.Dtos;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SubscriptionType
 {
-    Free,
-    Unlimited
+    Free = 0,
+    Unlimited = 1,
 }

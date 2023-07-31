@@ -9,9 +9,10 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
-using VpnHood.Server.Configurations;
-using VpnHood.Server.Messaging;
+using VpnHood.Server.Access;
+using VpnHood.Server.Access.Configurations;
+using VpnHood.Server.Access.Messaging;
+using SessionOptions = VpnHood.Server.Access.Configurations.SessionOptions;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -204,7 +205,7 @@ public class AgentService
                 TrackDestinationPort = true,
                 TrackDestinationIp = true
             },
-            SessionOptions = new Server.Configurations.SessionOptions
+            SessionOptions = new SessionOptions
             {
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
             },
@@ -232,7 +233,7 @@ public class AgentService
             TcpEndPoints = tcpEndPoints,
             UdpEndPoints = udpEndPoints,
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
-            SessionOptions = new Server.Configurations.SessionOptions
+            SessionOptions = new SessionOptions
             {
                 Timeout = _agentOptions.SessionTemporaryTimeout,
                 SyncInterval = _agentOptions.SessionSyncInterval,

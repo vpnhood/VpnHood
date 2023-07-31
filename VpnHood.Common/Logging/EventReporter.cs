@@ -33,7 +33,7 @@ public class EventReporter : IDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    public void Raised()
+    public void Raise()
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
 

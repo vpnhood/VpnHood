@@ -23,6 +23,7 @@ public static class GeneralEventId
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
     public static EventId Test = new((int)EventCode.Test, nameof(Test));
+    public static EventId InvalidUdp = new((int)EventCode.InvalidUdp, nameof(InvalidUdp));
 
     private enum EventCode
     {
@@ -34,6 +35,7 @@ public static class GeneralEventId
         Packet,
         Tcp,
         Udp,
+        InvalidUdp,
         StreamChannel,
         DatagramChannel,
         Track,

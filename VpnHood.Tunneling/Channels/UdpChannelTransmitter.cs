@@ -11,6 +11,7 @@ namespace VpnHood.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
+    private readonly EventReporter _invalidPacketSignatureReporter = new(VhLogger.Instance, "Invalid packet signature.", GeneralEventId.InvalidUdp);
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BufferCryptor _serverCryptor;
@@ -108,8 +109,12 @@ public abstract class UdpChannelTransmitter : IDisposable
                     buffer[bufferIndex + i] ^= headKeyBuffer[i]; //simple XOR with the generated unique key
 
                 // check packet signature OK
+                //todo: log too many unknown packet
                 if (buffer[8] != 'O' || buffer[9] != 'K')
+                {
+                    _invalidPacketSignatureReporter.Raise();
                     throw new Exception("Packet signature does not match.");
+                }
 
                 // read session and session position
                 bufferIndex += 8;
@@ -124,12 +129,14 @@ public abstract class UdpChannelTransmitter : IDisposable
             {
                 // break only for the first call
                 if (IsInvalidState(ex))
+                {
+                    VhLogger.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter has stopped reading.");
                     break;
+                }
 
-                if (VhLogger.IsDiagnoseMode)
-                    VhLogger.Instance.LogWarning(GeneralEventId.Udp,
-                        "Error in receiving UDP packets. RemoteEndPoint: {RemoteEndPoint}, Message: {Message}",
-                        VhLogger.FormatId(remoteEndPoint), ex.Message);
+                VhLogger.Instance.LogWarning(GeneralEventId.Udp,
+                    "Error in receiving UDP packets. RemoteEndPoint: {RemoteEndPoint}, Message: {Message}",
+                    VhLogger.FormatId(remoteEndPoint), ex.Message);
             }
         }
 

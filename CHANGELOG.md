@@ -1,6 +1,7 @@
 # Upcoming
 ### Client
 * Fix: Invalid UDP packet signature
+* Fix: Android: setMetered error
 
 ### Server
 * Fix: Invalid UDP packet signature

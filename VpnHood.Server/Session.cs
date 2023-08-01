@@ -190,7 +190,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 var ipeEndPointPair = PacketUtil.GetPacketEndPoints(ipPacket);
                 LogTrack(ipPacket.Protocol.ToString(), null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
-                _filterReporter.Raised();
+                _filterReporter.Raise();
                 continue;
             }
 
@@ -414,7 +414,7 @@ public class Session : IAsyncDisposable, IJob
         if (newEndPoint == null)
         {
             LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "NetFilter");
-            _filterReporter.Raised();
+            _filterReporter.Raise();
             throw new RequestBlockedException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
         }
         request.DestinationEndPoint = newEndPoint;
@@ -428,7 +428,7 @@ public class Session : IAsyncDisposable, IJob
             if (TcpChannelCount >= _maxTcpChannelCount)
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
-                _maxTcpChannelExceptionReporter.Raised();
+                _maxTcpChannelExceptionReporter.Raise();
                 throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
             }
 
@@ -436,7 +436,7 @@ public class Session : IAsyncDisposable, IJob
             if (TcpConnectWaitCount >= _maxTcpConnectWaitCount)
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
-                _maxTcpConnectWaitExceptionReporter.Raised();
+                _maxTcpConnectWaitExceptionReporter.Raise();
                 throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
             }
         }
@@ -447,7 +447,7 @@ public class Session : IAsyncDisposable, IJob
         if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
 
         LogTrack(protocol.ToString(), null, remoteEndPoint, false, true, "NetScan");
-        _netScanExceptionReporter.Raised();
+        _netScanExceptionReporter.Raise();
         throw new NetScanException(remoteEndPoint, this, requestId);
     }
 

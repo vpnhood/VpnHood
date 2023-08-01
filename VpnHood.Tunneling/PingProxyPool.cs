@@ -55,7 +55,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
                 return pingProxy;
             }
 
-            _maxWorkerEventReporter.Raised();
+            _maxWorkerEventReporter.Raise();
 
             pingProxy = _pingProxies.OrderBy(x => x.LastUsedTime).First();
             pingProxy.Cancel();

@@ -4,6 +4,7 @@ namespace VpnHood.Tunneling;
 
 public static class GeneralEventId
 {
+    public static EventId Essential = new((int)EventCode.Essential, nameof(Essential));
     public static EventId Session = new((int)EventCode.Session, nameof(Session));
     public static EventId SessionTrack = new((int)EventCode.SessionTrack, nameof(SessionTrack));
     public static EventId Nat = new((int)EventCode.Nat, nameof(Nat));
@@ -22,16 +23,19 @@ public static class GeneralEventId
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
     public static EventId Test = new((int)EventCode.Test, nameof(Test));
+    public static EventId UdpSign = new((int)EventCode.UdpSign, nameof(UdpSign));
 
     private enum EventCode
     {
-        Session = 10,
+        Essential = 10,
+        Session,
         Nat,
         Ping,
         Dns,
         Packet,
         Tcp,
         Udp,
+        UdpSign,
         StreamChannel,
         DatagramChannel,
         Track,

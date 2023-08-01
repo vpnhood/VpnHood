@@ -202,6 +202,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", 
             ret.Response.ErrorCode);
 
+        lock (Stat) Stat.RequestCount++;
         return ret;
     }
 

@@ -63,8 +63,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly ConnectorService _connectorService;
     private readonly bool _allowAnonymousTracker;
+    private readonly string? _appGa4MeasurementId;
     private Traffic _helloTraffic = new();
     private bool _isUdpChannel2;
+    private ClientUsageTracker? _clientUsageTracker;
     private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
@@ -125,6 +127,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
+        _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         Token = token ?? throw new ArgumentNullException(nameof(token));
         Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
@@ -676,22 +679,35 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
 
-            // Track new session
-            if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
+            // usage tracker
+            if (_allowAnonymousTracker)
             {
-                var ga4Tracking = new Ga4Tracker
+                // Anonymous server usage tracker
+                if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
                 {
-                    MeasurementId = sessionResponse.GaMeasurementId,
-                    ApiSecret = string.Empty,
-                    ClientId = ClientId.ToString(),
-                    SessionId = SessionId.ToString(),
-                    UserId = Token.TokenId.ToString(),
-                    UserAgent = UserAgent,
-                    IsEnabled = _allowAnonymousTracker,
-                };
+                    var ga4Tracking = new Ga4Tracker
+                    {
+                        MeasurementId = sessionResponse.GaMeasurementId,
+                        ApiSecret = string.Empty,
+                        ClientId = ClientId.ToString(),
+                        SessionId = SessionId.ToString(),
+                        UserAgent = UserAgent
+                    };
 
-                var useProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } };
-                await ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEvents.SessionStart }, useProperties);
+                    var useProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } };
+                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEvents.SessionStart }, useProperties);
+                }
+
+                // Anonymous app usage tracker
+                if (!string.IsNullOrEmpty(_appGa4MeasurementId))
+                    _clientUsageTracker = new ClientUsageTracker(Stat, Version, new Ga4Tracker
+                    {
+                        MeasurementId = _appGa4MeasurementId,
+                        ApiSecret = string.Empty,
+                        ClientId = ClientId.ToString(),
+                        SessionId = SessionId.ToString(),
+                        UserAgent = UserAgent
+                    });
             }
 
             // get session id
@@ -944,6 +960,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private async Task Finalize(bool wasConnected)
     {
+        // Anonymous usage tracker
+        _clientUsageTracker?.DisposeAsync();
+
         VhLogger.Instance.LogTrace("Disposing ClientHost...");
         await _clientHost.DisposeAsync();
 

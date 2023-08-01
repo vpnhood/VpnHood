@@ -19,4 +19,6 @@ public class AppOptions
     public TimeSpan UpdateCheckerInterval { get; set; } = TimeSpan.FromHours(1);
     public bool IsLogToConsoleSupported { get; set; }
     public bool LoadCountryIpGroups { get; set; } = true;
+    // ReSharper disable once StringLiteralTypo
+    public string? AppGa4MeasurementId { get; init; } = "G-4LE99XKZYE";
 }

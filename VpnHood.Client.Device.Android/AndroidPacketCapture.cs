@@ -72,9 +72,11 @@ namespace VpnHood.Client.Device.Android
         {
             var builder = new Builder(this)
                 .SetBlocking(true)
-                .SetMetered(false)
                 .SetSession(VpnServiceName)
                 .AddAddress("192.168.199.188", 24);
+
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+                builder.SetMetered(false);
 
             if (AddIpV6Address)
                 builder.AddAddress("fd00::1000", 64);

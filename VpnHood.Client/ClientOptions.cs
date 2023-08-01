@@ -38,6 +38,7 @@ public class ClientOptions
     public TimeSpan MaxTcpDatagramTimespan { get; set; } = TimeSpan.FromMinutes(10);
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool DropUdpPackets { get; set; }
+    public string? AppGa4MeasurementId { get; set; }
 
 #if DEBUG
     public int ProtocolVersion { get; set; }

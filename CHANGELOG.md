@@ -1,3 +1,12 @@
+# v3.0.412
+### Client
+* Fix: Invalid UDP packet signature
+* Fix: Android: setMetered error
+
+### Server
+* Fix: Invalid UDP packet signature
+* Update: Reduce server default logging
+
 # v3.0.411
 ### Client
 * Feature: Client Protocol Version 4 

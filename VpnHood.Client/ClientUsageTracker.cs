@@ -17,7 +17,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
     private int _lastRequestCount;
     private int _lastConnectionCount;
     private bool _disposed;
-    public JobSection JobSection { get; } = new(TimeSpan.FromSeconds(5));
+    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(25));
 
     public ClientUsageTracker(VpnHoodClient.ClientStat clientStat, Version version, Ga4Tracker ga4Tracker)
     {

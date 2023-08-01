@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.Common;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Messaging;
 
@@ -22,5 +23,4 @@ public class SessionResponseEx : SessionResponse
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
     public string? GaMeasurementId { get; set; }
-
 }

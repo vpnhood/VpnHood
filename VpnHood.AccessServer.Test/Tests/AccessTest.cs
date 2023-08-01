@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
@@ -13,6 +14,9 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
+        Console.Out.WriteLine(Math.Round(1200/1000d));
+        Console.Out.WriteLine(Math.Round(1700 / 1000d));
+        Console.Out.WriteLine((int)33.3);
     }
 
     [TestMethod]

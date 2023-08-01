@@ -67,9 +67,9 @@ public class SessionService
                 {"TokenCode", accessToken.SupportCode},
                 {"ServerId", server.ServerId},
                 {"FarmId", server.ServerFarmId},
-                {"Traffic", traffic.Total * 2 / 1_000_000},
-                {"Sent", traffic.Sent / 1_000_000},
-                {"Received", traffic.Received / 1_000_000},
+                {"Traffic", Math.Round(traffic.Total / 1_000_000d)},
+                {"Sent", Math.Round(traffic.Sent / 1_000_000d)},
+                {"Received", Math.Round(traffic.Received / 1_000_000d)},
             }
         };
 
@@ -439,7 +439,7 @@ public class SessionService
 
         // build response
         var sessionResponse = await BuildSessionResponse(session, accessedTime);
-        
+
         // close session
         if (closeSession)
         {

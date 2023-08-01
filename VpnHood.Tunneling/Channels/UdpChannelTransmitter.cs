@@ -109,7 +109,6 @@ public abstract class UdpChannelTransmitter : IDisposable
                     buffer[bufferIndex + i] ^= headKeyBuffer[i]; //simple XOR with the generated unique key
 
                 // check packet signature OK
-                //todo: log too many unknown packet
                 if (buffer[8] != 'O' || buffer[9] != 'K')
                 {
                     _invalidUdpSignatureReporter.Raise();
@@ -136,7 +135,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
                 VhLogger.Instance.LogWarning(GeneralEventId.Udp,
                     "Error in receiving UDP packets. RemoteEndPoint: {RemoteEndPoint}, Message: {Message}",
-                    VhLogger.FormatId(remoteEndPoint), ex.Message);
+                    VhLogger.Format(remoteEndPoint), ex.Message);
             }
         }
 

@@ -32,6 +32,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private readonly IAppProvider _clientAppProvider;
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
+    private readonly string? _appGa4MeasurementId;
     private bool _hasAnyDataArrived;
     private bool _hasConnectRequested;
     private bool _hasDiagnoseStarted;
@@ -93,6 +94,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         JobSection = new JobSection(options.UpdateCheckerInterval);
         LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
         _loadCountryIpGroups = options.LoadCountryIpGroups;
+        _appGa4MeasurementId = options.AppGa4MeasurementId;
 
         // create start up logger
         if (!options.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
@@ -362,7 +364,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
-            DropUdpPackets = UserSettings.DropUdpPackets
+            DropUdpPackets = UserSettings.DropUdpPackets,
+            AppGa4MeasurementId = _appGa4MeasurementId
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;

@@ -11,10 +11,11 @@ namespace VpnHood.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
-    private readonly EventReporter _invalidUdpSignatureReporter = new(VhLogger.Instance, "Invalid udp signature.", GeneralEventId.InvalidUdp);
+    private readonly EventReporter _udpSignReporter = new(VhLogger.Instance, "Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly BufferCryptor _serverCryptor;
+    private readonly BufferCryptor _serverEncryptor;
+    private readonly BufferCryptor _serverDecryptor; // decryptor must be different object for thread safety
     private readonly RNGCryptoServiceProvider _randomGenerator = new();
     private readonly byte[] _sendIv = new byte[8];
     public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
@@ -24,7 +25,8 @@ public abstract class UdpChannelTransmitter : IDisposable
     protected UdpChannelTransmitter(UdpClient udpClient, byte[] serverKey)
     {
         _udpClient = udpClient;
-        _serverCryptor = new BufferCryptor(serverKey);
+        _serverEncryptor = new BufferCryptor(serverKey);
+        _serverDecryptor = new BufferCryptor(serverKey);
         _ = ReadTask();
     }
 
@@ -51,7 +53,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             // never repeats so ECB generate a new key each time. It is just for the head obfuscation and the reset of data will encrypt
             // by session key and that counter
             Array.Clear(_sendHeadKeyBuffer, 0, _sendHeadKeyBuffer.Length);
-            _serverCryptor.Cipher(_sendHeadKeyBuffer, 0, _sendHeadKeyBuffer.Length, BitConverter.ToInt64(_sendIv));
+            _serverEncryptor.Cipher(_sendHeadKeyBuffer, 0, _sendHeadKeyBuffer.Length, BitConverter.ToInt64(_sendIv));
             for (var i = 0; i < _sendHeadKeyBuffer.Length; i++)
                 buffer[_sendIv.Length + i] ^= _sendHeadKeyBuffer[i]; //simple XOR with generated unique key
 
@@ -101,7 +103,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 var bufferIndex = 0;
                 var iv = BitConverter.ToInt64(buffer, 0);
                 Array.Clear(headKeyBuffer, 0, headKeyBuffer.Length);
-                _serverCryptor.Cipher(headKeyBuffer, 0, headKeyBuffer.Length, iv);
+                _serverDecryptor.Cipher(headKeyBuffer, 0, headKeyBuffer.Length, iv);
                 bufferIndex += 8;
 
                 // decrypt header
@@ -111,7 +113,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 // check packet signature OK
                 if (buffer[8] != 'O' || buffer[9] != 'K')
                 {
-                    _invalidUdpSignatureReporter.Raise();
+                    _udpSignReporter.Raise();
                     throw new Exception("Packet signature does not match.");
                 }
 

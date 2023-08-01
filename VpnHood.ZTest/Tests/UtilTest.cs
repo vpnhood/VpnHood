@@ -35,13 +35,13 @@ public class UtilTest : TestBase
 
         Assert.AreEqual(0, reportCounter.ReportedCount);
 
-        reportCounter.Raised(); // report
+        reportCounter.Raise(); // report
         Assert.AreEqual(1, reportCounter.TotalEventCount);
         Assert.AreEqual(1, reportCounter.ReportedCount);
 
-        reportCounter.Raised(); // wait
-        reportCounter.Raised(); // wait
-        reportCounter.Raised(); // wait
+        reportCounter.Raise(); // wait
+        reportCounter.Raise(); // wait
+        reportCounter.Raise(); // wait
         Assert.AreEqual(4, reportCounter.TotalEventCount);
         Assert.AreEqual(1, reportCounter.ReportedCount);
 
@@ -51,7 +51,7 @@ public class UtilTest : TestBase
 
         reportCounter.JobSection.Interval = JobRunner.Default.Interval / 2;
         await Task.Delay(reportCounter.JobSection.Interval);
-        reportCounter.Raised(); // immediate
+        reportCounter.Raise(); // immediate
         Assert.AreEqual(5, reportCounter.TotalEventCount);
         Assert.AreEqual(3, reportCounter.ReportedCount);
     }

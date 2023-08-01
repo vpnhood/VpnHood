@@ -691,7 +691,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 };
 
                 var useProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } };
-                await ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEvents.SessionStart }, useProperties);
+                _ = ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEvents.SessionStart }, useProperties);
             }
 
             // get session id

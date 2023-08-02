@@ -174,7 +174,9 @@ public class CertificateService
                     RawData = null,
                 },
                 ServerFarms = includeSummary
-                    ? x.ServerFarms!.Select(y => IdName.Create(y.ServerFarmId, y.ServerFarmName))
+                    ? x.ServerFarms!
+                        .Where(y=>!y.IsDeleted)
+                        .Select(y => IdName.Create(y.ServerFarmId, y.ServerFarmName))
                     : null
             })
             .ToArrayAsync();

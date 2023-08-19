@@ -6,4 +6,5 @@ namespace VpnHood.Client.App;
 internal class WinAppProvider : IAppProvider
 {
     public IDevice Device { get; } = new WinDivertDevice();
+    public bool IsLogToConsoleSupported => true;
 }

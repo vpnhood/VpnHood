@@ -30,7 +30,6 @@ public class WinApp : IDisposable
     private WebViewWindow? _webViewWindow;
     private bool _disposed;
     private bool _showWindowAfterStart;
-    private string AppLocalDataPath { get; }
 
     public WinApp()
     {
@@ -43,10 +42,9 @@ public class WinApp : IDisposable
             Interval = 1000
         };
         _uiTimer.Tick += (_, _) => UpdateNotifyIconText();
-        AppLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
 
         //create command Listener
-        _commandListener = new CommandListener(Path.Combine(AppLocalDataPath, FileNameAppCommand));
+        _commandListener = new CommandListener(Path.Combine(new AppOptions().AppDataFolderPath, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
@@ -74,6 +72,7 @@ public class WinApp : IDisposable
     {
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         _showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
         if (IsAnotherInstanceRunning())
@@ -91,7 +90,7 @@ public class WinApp : IDisposable
         // configuring Windows Firewall
         try
         {
-            OpenLocalFirewall(AppLocalDataPath);
+            OpenLocalFirewall(VhApp.AppDataFolderPath);
         }
         catch
         {
@@ -101,8 +100,6 @@ public class WinApp : IDisposable
         // init app
         VpnHoodApp.Init(new WinAppProvider(), new AppOptions
         {
-            IsLogToConsoleSupported = true,
-            AppDataPath = AppLocalDataPath,
             UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
         });
         VpnHoodAppUi.Init(new MemoryStream(Resource.SPA), url2: localWebUrl);

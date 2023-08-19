@@ -29,7 +29,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private const string FileNameSettings = "settings.json";
     private const string FolderNameProfileStore = "profiles";
     private static VpnHoodApp? _instance;
-    private readonly IAppProvider _clientAppProvider;
+    private readonly IAppProvider _appProvider;
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
     private readonly string? _appGa4MeasurementId;
@@ -67,23 +67,23 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileStore ClientProfileStore { get; }
-    public IDevice Device => _clientAppProvider.Device;
+    public IDevice Device => _appProvider.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
 
-    private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
+    private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatType(this)} is already initialized.");
         options ??= new AppOptions();
-        Directory.CreateDirectory(options.AppDataPath); //make sure directory exists
+        Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
 
-        _clientAppProvider = clientAppProvider ?? throw new ArgumentNullException(nameof(clientAppProvider));
-        if (_clientAppProvider.Device == null) throw new ArgumentNullException(nameof(_clientAppProvider.Device));
+        _appProvider = appProvider ?? throw new ArgumentNullException(nameof(appProvider));
+        if (_appProvider.Device == null) throw new ArgumentNullException(nameof(_appProvider.Device));
         Device.OnStartAsService += Device_OnStartAsService;
 
-        AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
+        AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.OnSaved += Settings_OnSaved;
         ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FolderNameProfileStore));
@@ -97,7 +97,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _appGa4MeasurementId = options.AppGa4MeasurementId;
 
         // create start up logger
-        if (!options.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
+        if (!appProvider.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet

@@ -1,3 +1,7 @@
+# v3.0.416
+### Client
+* Feature: Offer Premium if VpnHood Public server selected
+
 # v3.0.412
 ### Client
 * Fix: Invalid UDP packet signature

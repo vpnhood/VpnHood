@@ -11,4 +11,5 @@ internal class TestAppProvider : IAppProvider
     }
 
     public IDevice Device { get; }
+    public bool IsLogToConsoleSupported => true;
 }

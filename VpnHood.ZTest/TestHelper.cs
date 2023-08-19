@@ -402,7 +402,7 @@ internal static class TestHelper
     {
         var appOptions = new AppOptions
         {
-            AppDataPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
+            AppDataFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             IsLogToConsoleSupported = true,
             LoadCountryIpGroups = false,

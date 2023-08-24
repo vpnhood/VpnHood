@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="VpnHood.Common" Version="3.0.414" />
+    <PackageReference Include="VpnHood.Common" Version="3.0.416" />
   </ItemGroup>
 
 </Project>

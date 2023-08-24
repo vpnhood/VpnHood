@@ -75,6 +75,7 @@ public class AppLogService
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
             // console
+            // todo: use try
             if (addToConsole)
                 builder.AddSimpleConsole(configure =>
                 {

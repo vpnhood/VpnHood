@@ -5,11 +5,11 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.Graphics;
 using AppWindow = Microsoft.UI.Windowing.AppWindow;
-using Microsoft.Maui.Controls;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
+// ReSharper disable once CheckNamespace
 namespace VpnHood.Client.App.Maui.WinUI;    
 
 /// <summary>
@@ -19,7 +19,7 @@ public partial class App : MauiWinUIApplication
 {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool SetForegroundWindow(IntPtr hWnd);
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
     private AppWindow? _appWindow;
     private readonly SizeInt32 _defWindowSize = new(400, 700);
     private readonly WinApp _winApp;
@@ -79,10 +79,4 @@ public partial class App : MauiWinUIApplication
         if (mainWindowHandle != nint.Zero)
             SetForegroundWindow(mainWindowHandle);
     }
-
-    public void Foo()
-    {
-
     }
-
-}

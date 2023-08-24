@@ -34,6 +34,7 @@ public class VpnHoodAppUi : IDisposable
     }
 
     public int DefaultPort { get; }
+    public Uri Url => Url2 ?? Url1;
     public Uri Url1 => _url1 ?? throw new InvalidOperationException($"{nameof(Url1)} is not initialized");
     public Uri? Url2 { get; }
 

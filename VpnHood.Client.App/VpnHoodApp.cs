@@ -111,7 +111,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Features.TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId;
         Features.IsExcludeAppsSupported = Device.IsExcludeAppsSupported;
         Features.IsIncludeAppsSupported = Device.IsIncludeAppsSupported;
-        Features.UpdateInfoUrl = options.UpdateInfoUrl;
         _ = CheckNewVersion();
 
         _instance = this;

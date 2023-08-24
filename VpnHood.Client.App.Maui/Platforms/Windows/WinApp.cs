@@ -10,6 +10,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using WinNative;
 
+// ReSharper disable once CheckNamespace
 namespace VpnHood.Client.App;
 
 public class WinApp : IDisposable
@@ -42,8 +43,7 @@ public class WinApp : IDisposable
         _sysTray = new SystemTray("VpnHood!", _disconnectedIconHandle);
 
         //init timer
-        //todo
-        //_uiTimer = new Timer(UpdateNotifyIconText, null, 1000, 1000);
+        _uiTimer = new Timer(UpdateNotifyIconText, null, 1000, 1000);
         _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
 
         //create command Listener
@@ -118,22 +118,11 @@ public class WinApp : IDisposable
 
         // create notification icon
         InitNotifyIcon();
-
-        // Create webview if installed
-        //InitWevView();
-
-        // show MainWindow if _webViewWindow does not exist otherwise wait for InitCompleted event
-        //        if (_webViewWindow == null && _showWindowAfterStart)
         OpenMainWindow();
 
         _commandListener.Start();
 
         return true;
-    }
-
-    private void App_Exit(object? sender, EventArgs e)
-    {
-        //_webViewWindow?.Close();
     }
 
     private void UpdateNotifyIconText(object? state)
@@ -149,12 +138,6 @@ public class WinApp : IDisposable
         _sysTray.Update($@"{AppUiResource.AppName} - {stateName}", hIcon);
 
         CheckForUpdate();
-    }
-
-    private void WebViewWindow_InitCompleted(object? sender, EventArgs e)
-    {
-        if (_showWindowAfterStart)
-            OpenMainWindow();
     }
 
     private void CheckForUpdate()
@@ -226,7 +209,7 @@ public class WinApp : IDisposable
 
     private void InitNotifyIcon()
     {
-        _sysTray.Clicked += (sender, e) =>
+        _sysTray.Clicked += (_, _) =>
         {
             OpenMainWindow();
         };
@@ -235,52 +218,13 @@ public class WinApp : IDisposable
         _sysTray.ContextMenu.AddMenuItem(UiResource.Open, (_, _) => OpenMainWindow());
         _sysTray.ContextMenu.AddMenuItem(UiResource.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
-        _sysTray.ContextMenu.AddMenuItem(UiResource.Connect, (_, _) => OpenMainWindow());
-        _sysTray.ContextMenu.AddMenuItem(UiResource.Disconnect, (_, _) => OpenMainWindowInBrowser());
+        _sysTray.ContextMenu.AddMenuItem(UiResource.Connect, (_, _) => ConnectClicked());
+        _sysTray.ContextMenu.AddMenuItem(UiResource.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(UiResource.Exit, (_, _) => Exit());
     }
 
-    //private void InitNotifyIcon2()
-    //{
-
-    //    _notifyIcon = new NotifyIcon
-    //    {
-    //        Icon = Resource.VpnHoodIcon
-    //    };
-    //    _notifyIcon.MouseClick += (_, e) =>
-    //    {
-    //        if (e.Button == MouseButtons.Left)
-    //            OpenMainWindow();
-    //    };
-
-    //    var menu = new ContextMenuStrip();
-    //    var menuItem = menu.Items.Add(AppUiResource.Open, null, (_, _) => OpenMainWindow());
-    //    menuItem.Name = "open";
-
-    //    menuItem = menu.Items.Add(AppUiResource.OpenInBrowser, null, (_, _) => OpenMainWindowInBrowser());
-    //    menuItem.Name = "openInBrowser";
-
-    //    menu.Items.Add("-");
-    //    menuItem = menu.Items.Add(AppUiResource.Connect);
-    //    menuItem.Name = "connect";
-    //    menuItem.Click += ConnectMenuItem_Click;
-
-    //    menuItem = menu.Items.Add(AppUiResource.Disconnect);
-    //    menuItem.Name = "disconnect";
-    //    menuItem.Click += (_, _) => _ = VhApp.Disconnect(true);
-
-    //    menu.Items.Add("-");
-    //    menu.Items.Add(AppUiResource.Exit, null, (_, _) => Application.Exit());
-    //    menu.Opening += Menu_Opening;
-    //    _notifyIcon.ContextMenuStrip = menu;
-    //    _notifyIcon.Text = AppUiResource.AppName;
-    //    _notifyIcon.Visible = true;
-
-    //    UpdateNotifyIconText();
-    //}
-
-    private void ConnectMenuItem_Click(object? sender, EventArgs e)
+    private void ConnectClicked()
     {
         if (VhApp.Settings.UserSettings.DefaultClientProfileId != null)
         {

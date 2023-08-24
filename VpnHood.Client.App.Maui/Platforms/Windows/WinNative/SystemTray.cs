@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using Windows.UI.Notifications;
 
 // ReSharper disable once CheckNamespace
 namespace WinNative;

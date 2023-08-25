@@ -108,12 +108,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="VpnHood.Client">
-      <Version>3.0.410</Version>
+      <Version>3.0.416</Version>
     </PackageReference>
     <PackageReference Include="VpnHood.Client.Device.Android">
-      <Version>3.0.410</Version>
+      <Version>3.0.416</Version>
     </PackageReference>
-    <PackageReference Include="Xamarin.Essentials" Version="1.7.7" />
+    <PackageReference Include="Xamarin.Essentials" Version="1.8.0" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

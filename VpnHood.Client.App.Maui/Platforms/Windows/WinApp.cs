@@ -59,7 +59,6 @@ public class WinApp : IDisposable
 
     public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
     private static VpnHoodApp VhApp => VpnHoodApp.Instance;
-    private static VpnHoodAppUi VhAppUi => VpnHoodAppUi.Instance;
 
     public bool IsAnotherInstanceRunning(string? name = null)
     {
@@ -200,7 +199,7 @@ public class WinApp : IDisposable
     {
         Process.Start(new ProcessStartInfo
         {
-            FileName = VhAppUi.Url2?.AbsoluteUri ?? VhAppUi.Url1.AbsoluteUri,
+            FileName = VpnHoodAppUi.Instance.Url.AbsoluteUri,
             UseShellExecute = true,
             Verb = "open"
         });
@@ -320,7 +319,7 @@ public class WinApp : IDisposable
         _uiTimer.Dispose();
         //_notifyIcon?.Dispose();
         //_webViewWindow?.Close();
-        if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
+        if (VpnHoodAppUi.IsInit) VpnHoodAppUi.Instance.Dispose();
         if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
     }
 

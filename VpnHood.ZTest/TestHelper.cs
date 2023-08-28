@@ -404,7 +404,6 @@ internal static class TestHelper
         {
             AppDataFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            IsLogToConsoleSupported = true,
             LoadCountryIpGroups = false,
         };
         return appOptions;

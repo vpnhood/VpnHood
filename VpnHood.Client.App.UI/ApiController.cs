@@ -6,56 +6,51 @@ using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Settings;
+using VpnHood.Client.App.UI.Api;
 using VpnHood.Client.Device;
 
-// ReSharper disable InconsistentNaming
-// ReSharper disable ClassNeverInstantiated.Local
-// ReSharper disable UnusedAutoPropertyAccessor.Local
-// ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
-
-#pragma warning disable IDE1006 // Naming Styles
 namespace VpnHood.Client.App.UI;
 
-internal class ApiController : WebApiController
+internal class ClientApiController : WebApiController, IClientApi
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    [Route(HttpVerbs.Post, "/" + nameof(loadApp))]
-    public async Task<LoadAppResult> loadApp()
+    [Route(HttpVerbs.Post, "/" + nameof (loadApp))]
+    public async Task<LoadAppResponse> loadApp(LoadAppParam loadAppParam)
     {
-        var parameters = await GetRequestDataAsync<LoadAppParam>();
-        var ret = new LoadAppResult
+        loadAppParam = await GetRequestDataAsync<LoadAppParam>();
+        var ret = new LoadAppResponse
         {
-            Features = parameters.WithFeatures ? App.Features : null,
-            State = parameters.WithState ? App.State : null,
-            Settings = parameters.WithSettings ? App.Settings : null,
+            Features = loadAppParam.WithFeatures ? App.Features : null,
+            State = loadAppParam.WithState ? App.State : null,
+            Settings = loadAppParam.WithSettings ? App.Settings : null,
             ClientProfileItems =
-                parameters.WithClientProfileItems ? App.ClientProfileStore.ClientProfileItems : null
+                loadAppParam.WithClientProfileItems ? App.ClientProfileStore.ClientProfileItems : null
         };
         return ret;
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
-    public async Task<ClientProfile> addAccessKey()
+    public async Task<ClientProfile> addAccessKey(AddClientProfileParam addClientProfileParam)
     {
-        var parameters = await GetRequestDataAsync<AddClientProfileParam>();
-        var clientProfile = App.ClientProfileStore.AddAccessKey(parameters.AccessKey);
+        addClientProfileParam = await GetRequestDataAsync<AddClientProfileParam>();
+        var clientProfile = App.ClientProfileStore.AddAccessKey(addClientProfileParam.AccessKey);
         App.Settings.UserSettings.DefaultClientProfileId = clientProfile.ClientProfileId;
         return clientProfile;
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(connect))]
-    public async Task connect()
+    public async Task connect(ConnectParam connectParam)
     {
-        var parameters = await GetRequestDataAsync<ConnectParam>();
-        await App.Connect(parameters.ClientProfileId, userAgent: HttpContext.Request.UserAgent);
+        connectParam = await GetRequestDataAsync<ConnectParam>();
+        await App.Connect(connectParam.ClientProfileId, userAgent: HttpContext.Request.UserAgent);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(diagnose))]
-    public async Task diagnose()
+    public async Task diagnose(ConnectParam connectParam)
     {
-        var parameters = await GetRequestDataAsync<ConnectParam>();
-        await App.Connect(parameters.ClientProfileId, true, HttpContext.Request.UserAgent);
+        connectParam = await GetRequestDataAsync<ConnectParam>();
+        await App.Connect(connectParam.ClientProfileId, true, HttpContext.Request.UserAgent);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(disconnect))]
@@ -65,19 +60,19 @@ internal class ApiController : WebApiController
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(removeClientProfile))]
-    public async Task removeClientProfile()
+    public async Task removeClientProfile(RemoveClientProfileParam removeClientProfileParam)
     {
-        var parameters = await GetRequestDataAsync<RemoveClientProfileParam>();
-        if (parameters.ClientProfileId == App.ActiveClientProfile?.ClientProfileId)
+        removeClientProfileParam = await GetRequestDataAsync<RemoveClientProfileParam>();
+        if (removeClientProfileParam.ClientProfileId == App.ActiveClientProfile?.ClientProfileId)
             await App.Disconnect(true);
-        App.ClientProfileStore.RemoveClientProfile(parameters.ClientProfileId);
+        App.ClientProfileStore.RemoveClientProfile(removeClientProfileParam.ClientProfileId);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
-    public async Task setClientProfile()
+    public async Task setClientProfile(SetClientProfileParam setClientProfileParam)
     {
-        var parameters = await GetRequestDataAsync<SetClientProfileParam>();
-        App.ClientProfileStore.SetClientProfile(parameters.ClientProfile);
+        setClientProfileParam = await GetRequestDataAsync<SetClientProfileParam>();
+        App.ClientProfileStore.SetClientProfile(setClientProfileParam.ClientProfile);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(clearLastError))]
@@ -93,10 +88,10 @@ internal class ApiController : WebApiController
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(setUserSettings))]
-    public async Task setUserSettings()
+    public async Task setUserSettings(UserSettings userSettings)
     {
-        var parameters = await GetRequestDataAsync<UserSettings>();
-        App.Settings.UserSettings = parameters;
+        userSettings = await GetRequestDataAsync<UserSettings>();
+        App.Settings.UserSettings = userSettings;
         App.Settings.Save();
     }
 
@@ -110,14 +105,14 @@ internal class ApiController : WebApiController
         await streamWriter.WriteAsync(log);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(installedApps))]
-    public DeviceAppInfo[] installedApps()
+    [Route(HttpVerbs.Post, "/" + nameof(InstalledApps))]
+    public DeviceAppInfo[] InstalledApps()
     {
         return App.Device.InstalledApps;
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(ipGroups))]
-    public Task<IpGroup[]> ipGroups()
+    [Route(HttpVerbs.Post, "/" + nameof(IpGroups))]
+    public Task<IpGroup[]> IpGroups()
     {
         return App.GetIpGroups();
     }
@@ -131,40 +126,5 @@ internal class ApiController : WebApiController
             throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
         return res;
     }
-
-    private class LoadAppParam
-    {
-        public bool WithFeatures { get; set; }
-        public bool WithState { get; set; }
-        public bool WithSettings { get; set; }
-        public bool WithClientProfileItems { get; set; }
-    }
-
-    public class LoadAppResult
-    {
-        public AppFeatures? Features { get; set; }
-        public AppSettings? Settings { get; set; }
-        public AppState? State { get; set; }
-        public ClientProfileItem[]? ClientProfileItems { get; set; }
-    }
-
-    private class AddClientProfileParam
-    {
-        public string AccessKey { get; set; } = null!;
-    }
-
-    private class ConnectParam
-    {
-        public Guid ClientProfileId { get; set; }
-    }
-
-    private class RemoveClientProfileParam
-    {
-        public Guid ClientProfileId { get; set; }
-    }
-
-    private class SetClientProfileParam
-    {
-        public ClientProfile ClientProfile { get; set; } = null!;
-    }
+   
 }

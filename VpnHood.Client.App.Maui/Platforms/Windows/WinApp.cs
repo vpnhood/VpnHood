@@ -126,8 +126,11 @@ public class WinApp : IDisposable
 
     private void UpdateNotifyIconText(object? state)
     {
+        if (!VpnHoodApp.IsInit)
+            return;
+
         var stateName = VhApp.State.ConnectionState == AppConnectionState.None
-            ? "Disconnected" //todo localize
+            ? UiResource.Disconnect
             : VhApp.State.ConnectionState.ToString();
 
         var hIcon = _connectingIconHandle;

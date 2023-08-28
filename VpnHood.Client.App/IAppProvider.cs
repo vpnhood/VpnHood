@@ -5,5 +5,5 @@ namespace VpnHood.Client.App;
 public interface IAppProvider
 {
     IDevice Device { get; }
-    bool IsLogToConsoleSupported { get; }
+    bool IsLogToConsoleSupported { get; } //todo: remove
 }

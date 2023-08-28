@@ -55,9 +55,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.ZUdpTrafficTest", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.Android2", "VpnHood.Client.Device.Android2\VpnHood.Client.Device.Android2.csproj", "{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.Android", "VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj", "{CAF87B57-E046-466F-B8C5-32066CF8886B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.Android", "VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj", "{CAF87B57-E046-466F-B8C5-32066CF8886B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Maui", "VpnHood.Client.App.Maui\VpnHood.Client.App.Maui.csproj", "{9D64DCB0-06E0-4C2E-B87D-C29C0DACD6E7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Maui", "VpnHood.Client.App.Maui\VpnHood.Client.App.Maui.csproj", "{9D64DCB0-06E0-4C2E-B87D-C29C0DACD6E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Swagger", "VpnHood.Client.App.Swagger\VpnHood.Client.App.Swagger.csproj", "{FCFCDDED-C80B-44D3-ABF7-C0BBC9C11880}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -147,6 +149,10 @@ Global
 		{9D64DCB0-06E0-4C2E-B87D-C29C0DACD6E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D64DCB0-06E0-4C2E-B87D-C29C0DACD6E7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9D64DCB0-06E0-4C2E-B87D-C29C0DACD6E7}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{FCFCDDED-C80B-44D3-ABF7-C0BBC9C11880}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCFCDDED-C80B-44D3-ABF7-C0BBC9C11880}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCFCDDED-C80B-44D3-ABF7-C0BBC9C11880}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCFCDDED-C80B-44D3-ABF7-C0BBC9C11880}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -160,6 +166,7 @@ Global
 		{DE35DB53-EABB-489D-9A4F-6B22D31E4A95} = {5194E054-10CD-4832-B733-33B02A08E4B6}
 		{1247900C-916A-426B-8733-D43B17FAA694} = {5194E054-10CD-4832-B733-33B02A08E4B6}
 		{9D64DCB0-06E0-4C2E-B87D-C29C0DACD6E7} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
+		{FCFCDDED-C80B-44D3-ABF7-C0BBC9C11880} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

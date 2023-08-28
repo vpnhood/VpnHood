@@ -23,7 +23,7 @@ public static class MauiProgram
         // init app
         var appProvider = CreateAppProvider();
         VpnHoodApp.Init(appProvider, new AppOptions { UpdateInfoUrl = GetUpdateInfoUrl() });
-        VpnHoodAppUi.Init(File.OpenRead(Path.Combine(AppContext.BaseDirectory, "SPA.zip")));
+        VpnHoodAppUi.Init(FileSystem.OpenAppPackageFileAsync("SPA.zip").Result);
 
         return builder.Build();
     }
@@ -33,6 +33,8 @@ public static class MauiProgram
     {
 #if WINDOWS
         return new WinAppProvider();
+#elif ANDROID
+        return new AndroidAppProvider();
 #else
         throw new NotSupportedException();
 #endif

@@ -24,7 +24,7 @@ internal class MyWebViewClient : WebViewClient
                 ? BrowserLaunchMode.External
                 : BrowserLaunchMode.SystemPreferred
         };
-        Browser.OpenAsync(request.Url.ToString(), options);
+        Browser. OpenAsync(request.Url.ToString(), options);
         return true;
     }
 

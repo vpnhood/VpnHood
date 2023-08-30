@@ -17,7 +17,7 @@
 		<!-- App Identifier -->
 		<ApplicationId>com.companyname.vpnhood.client.app.maui</ApplicationId>
 		<ApplicationIdGuid>cb0b2eba-e9ad-4616-acc0-5b96904a3911</ApplicationIdGuid>
-
+		
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
@@ -37,11 +37,11 @@
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#1940b0" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#1940b0" BaseSize="64,64" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\splash.svg" BaseSize="128,128"/>
+		<MauiImage Update="Resources\Images\splash.svg" BaseSize="128,128" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />

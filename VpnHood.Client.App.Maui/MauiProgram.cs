@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MauiApp3;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.UI;
 
 namespace VpnHood.Client.App.Maui;
@@ -14,7 +15,22 @@ public static class MauiProgram
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            })
+            .ConfigureMauiHandlers(handlers =>
+            {
+#if ANDROID
+                //handlers.AddHandler<WebView, AndroidWebViewHandler>();
+#endif
             });
+
+#if ANDROID
+        Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping(nameof(Android.Webkit.WebViewClient),
+            (handler, view) =>
+            {
+                handler.PlatformView.SetWebViewClient(new MyWebViewClient());
+            });
+#endif
+
 
 #if DEBUG
         builder.Logging.AddDebug();

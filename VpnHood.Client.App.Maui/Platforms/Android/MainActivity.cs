@@ -1,6 +1,10 @@
 ﻿using Android.App;
 using Android.Content.PM;
 using Android.Content;
+using Android.Net;
+using VpnHood.Client.Device.Android;
+using Android.OS;
+using Android.Runtime;
 
 namespace VpnHood.Client.App.Maui;
 
@@ -20,4 +24,38 @@ namespace VpnHood.Client.App.Maui;
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 public class MainActivity : MauiAppCompatActivity
 {
+    private const int RequestVpnPermission = 10;
+    private AndroidDevice Device => AndroidDevice.Current ?? throw new InvalidOperationException("AndroidDevice has not been initialized.");
+
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+
+        // manage VpnPermission
+        Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+
+    }
+
+    private void Device_OnRequestVpnPermission(object? sender, EventArgs e)
+    {
+        var intent = VpnService.Prepare(this);
+        if (intent == null)
+            Device.VpnPermissionGranted();
+        else
+            StartActivityForResult(intent, RequestVpnPermission);
+    }
+
+    protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
+    {
+        if (requestCode == RequestVpnPermission && resultCode == Result.Ok)
+            Device.VpnPermissionGranted();
+        else
+            Device.VpnPermissionRejected();
+    }
+
+    protected override void OnDestroy()
+    {
+        Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
+        base.OnDestroy();
+    }
 }

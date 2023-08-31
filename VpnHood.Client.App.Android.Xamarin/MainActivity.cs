@@ -51,7 +51,8 @@ public class MainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
+        Platform.Init(this, savedInstanceState);
+        
         // initialize web view
         InitSplashScreen();
 

@@ -1,5 +1,5 @@
-﻿using MauiApp3;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Handlers;
 using VpnHood.Client.App.UI;
 
 namespace VpnHood.Client.App.Maui;
@@ -23,13 +23,6 @@ public static class MauiProgram
 #endif
             });
 
-#if ANDROID
-        Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping(nameof(Android.Webkit.WebViewClient),
-            (handler, view) =>
-            {
-                handler.PlatformView.SetWebViewClient(new MyWebViewClient());
-            });
-#endif
 
 
 #if DEBUG

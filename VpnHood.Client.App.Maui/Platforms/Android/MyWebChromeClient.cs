@@ -1,27 +1,36 @@
 ﻿using Android.OS;
 using Android.Webkit;
+using Java.Net;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
+using WebView = Android.Webkit.WebView;
 
 namespace VpnHood.Client.App.Maui;
 
-public class MyWebChromeClient : WebChromeClient
+public class MyWebChromeClient : MauiWebChromeClient
 {
-    public MyWebChromeClient(IWebViewHandler handler) 
-    {
+    private readonly WebViewHandler _webViewHandler;
 
+    public override bool OnCreateWindow(WebView? webView, bool isDialog, bool isUserGesture, Message? resultMsg)
+    {
+        if (webView?.Context == null)
+            return false;
+
+        var newWebView = new WebView(webView.Context);
+        newWebView.SetWebViewClient(new MyWebViewClient(_webViewHandler));
+        newWebView.SetWebChromeClient(this);
+
+        if (resultMsg?.Obj is not WebView.WebViewTransport transport)
+            return false;
+
+        transport.WebView = newWebView;
+        resultMsg.SendToTarget();
+        return true;
     }
 
-    public override bool OnCreateWindow(Android.Webkit.WebView? view, bool isDialog, bool isUserGesture, Message? resultMsg)
+    public MyWebChromeClient(WebViewHandler handler) 
+        : base(handler)
     {
-        return base.OnCreateWindow(view, isDialog, isUserGesture, resultMsg);
-        //if (view?.Context == null) return false;
-        //var newWebView = new WebView(view.Context);
-        //newWebView.SetWebViewClient(new MyWebViewClient());
-
-        //if (resultMsg?.Obj is not WebView.WebViewTransport transport) return false;
-        //transport.WebView = newWebView;
-        //resultMsg.SendToTarget();
-        //return true;
+        _webViewHandler = handler;
     }
 }

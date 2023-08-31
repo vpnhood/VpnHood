@@ -18,4 +18,11 @@ public partial class App : Application
         window.Height = 700;
         return window;
     }
+
+    public new static App? Current => (App?)Application.Current;
+
+    public Color? BackgroundColor =>
+        (Resources.TryGetValue("Primary", out var primaryColor) == true)
+            ? primaryColor as Color : null;
+
 }

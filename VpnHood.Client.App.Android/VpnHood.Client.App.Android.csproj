@@ -122,9 +122,9 @@
       <Project>{53914191-5b94-41cc-8ce4-37c9b2e0a877}</Project>
       <Name>VpnHood.Client.App</Name>
     </ProjectReference>
-    <ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj">
+    <ProjectReference Include="..\VpnHood.Client.Device.Android2\VpnHood.Client.Device.Android2.csproj">
       <Project>{0dd136c1-f0bb-4cbe-9d8f-246dccad47f1}</Project>
-      <Name>VpnHood.Client.Device.Android</Name>
+      <Name>VpnHood.Client.Device.Android2</Name>
     </ProjectReference>
     <ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj">
       <Project>{ca6d2e1d-bcc2-4f8e-b78d-d28ebd943831}</Project>

@@ -3,7 +3,7 @@ using Android.Runtime;
 
 namespace VpnHood.Client.App.Maui;
 
-[Application]
+[Application(Debuggable = true, UsesCleartextTraffic = true)]
 public class MainApplication : MauiApplication
 {
 

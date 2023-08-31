@@ -75,14 +75,15 @@ public class AppLogService
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
             // console
-            // todo: use try
             if (addToConsole)
+            {
                 builder.AddSimpleConsole(configure =>
                 {
                     configure.TimestampFormat = "[HH:mm:ss.ffff] ";
                     configure.IncludeScopes = true;
                     configure.SingleLine = false;
                 });
+            }
 
             if (addToFile)
             {

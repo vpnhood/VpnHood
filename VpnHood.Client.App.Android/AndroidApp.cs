@@ -26,6 +26,7 @@ namespace VpnHood.Client.App.Android
 
         public static AndroidApp? Current { get; private set; }
         public IDevice Device { get; }
+        public bool IsLogToConsoleSupported => false;
 
         public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
             : base(javaReference, transfer)

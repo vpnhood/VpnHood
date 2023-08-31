@@ -1,66 +1,44 @@
 ﻿#nullable enable
-using System;
-using Android.Graphics;
 using Android.Webkit;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
-//using WebView = Microsoft.Maui.Controls.WebView;
+using WebView = Android.Webkit.WebView;
 
-namespace MauiApp3;
+namespace VpnHood.Client.App.Maui;
 
 
-internal class MyWebViewClient : WebViewClient
+internal class MyWebViewClient : MauiWebViewClient
 {
     public bool BrowseLinkInExternalBrowser { get; set; } = false;
-    public event EventHandler? PageLoaded;
 
-    public MyWebViewClient()  //: base(handler)
+    public MyWebViewClient(WebViewHandler handler) 
+        : base(handler)
     {
-        
     }
 
-    public override bool ShouldOverrideUrlLoading(Android.Webkit.WebView? view, string? url)
+    public override bool ShouldOverrideUrlLoading(WebView? webView, string? url)
     {
-        return base.ShouldOverrideUrlLoading(view, url);
+        if (webView == null || url == null)
+            return false;
+
+        var options = new BrowserLaunchOptions
+        {
+            TitleMode = BrowserTitleMode.Hide,
+            LaunchMode = BrowseLinkInExternalBrowser
+                ? BrowserLaunchMode.External
+                : BrowserLaunchMode.SystemPreferred
+        };
+
+        // covert to ThemePrimaryColor to Android Color
+        if (App.Current?.BackgroundColor != null)
+            options.PreferredToolbarColor = App.Current.BackgroundColor;
+
+        Browser.OpenAsync(url, options);
+        return true;
     }
 
-    public override bool ShouldOverrideUrlLoading(Android.Webkit.WebView? view, IWebResourceRequest? request)
+    public override bool ShouldOverrideUrlLoading(WebView? webView, IWebResourceRequest? request)
     {
-        return base.ShouldOverrideUrlLoading(view, request);
-    }
-
-    // used for Window.Open such as SendReport
-    //public bool ShouldOverrideUrlLoading(WebView? webView, IWebResourceRequest? request)
-    //{
-    //    if (webView == null || request?.Url == null)
-    //        return false;
-
-    //    var options = new BrowserLaunchOptions
-    //    {
-    //        TitleMode = BrowserTitleMode.Hide,
-    //        LaunchMode = BrowseLinkInExternalBrowser
-    //            ? BrowserLaunchMode.External
-    //            : BrowserLaunchMode.SystemPreferred
-    //    };
-    //    Browser. OpenAsync(request.Url.ToString(), options);
-    //    return true;
-    //}
-    //public override void OnPageStarted(Android.Webkit.WebView? view, string? url, Bitmap? favicon)
-    //{
-    //    base.OnPageStarted(view, url, favicon);
-    //}
-    //public override WebResourceResponse? ShouldInterceptRequest(Android.Webkit.WebView? view, IWebResourceRequest? request)
-    //{
-    //    return base.ShouldInterceptRequest(view, request);
-    //}
-
-    //public override WebResourceResponse? ShouldInterceptRequest(Android.Webkit.WebView? view, string? url)
-    //{
-    //    return base.ShouldInterceptRequest(view, url);
-    //}
-
-    public override void OnPageFinished(Android.Webkit.WebView? view, string? url)
-    {
-        base.OnPageFinished(view, url);
+        return ShouldOverrideUrlLoading(webView, request?.Url?.ToString());
     }
 }

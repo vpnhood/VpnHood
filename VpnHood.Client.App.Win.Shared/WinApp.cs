@@ -52,7 +52,7 @@ public class WinApp : IDisposable
     private WinApp()
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        _disconnectedIcon = new Icon(new MemoryStream(UiResource.VpnDisconnected));
+        _disconnectedIcon = new Icon(new MemoryStream(UiResource.VpnDisconnectedIcon));
         _connectedIcon = new Icon(new MemoryStream(UiResource.VpnConnectedIcon));
         _connectingIcon = new Icon(new MemoryStream(UiResource.VpnConnectingIcon));
         _sysTray = new SystemTray("VpnHood!", _disconnectedIcon.Handle);

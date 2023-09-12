@@ -65,9 +65,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
+		<PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 	  <ProjectReference Include="..\VpnHood.Client.App.UI\VpnHood.Client.App.UI.csproj" />
 	  <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 	</ItemGroup>
@@ -79,6 +81,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Win.Shared\VpnHood.Client.App.Win.Shared.csproj" />
 	</ItemGroup>
 
 
@@ -87,20 +90,9 @@
 	  <Compile Update="Platforms\Android\AndroidAppProvider.cs">
 	    <ExcludeFromCurrentConfiguration>true</ExcludeFromCurrentConfiguration>
 	  </Compile>
-	  <Compile Update="Resources\UiResource.Designer.cs">
-	    <DependentUpon>UiResource.resx</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
+	  <Compile Update="Platforms\Windows\AppWebView.cs">
+	    <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
 	  </Compile>
-	</ItemGroup>
-
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Resources\UiResource.resx">
-	    <SubType>Designer</SubType>
-	    <LastGenOutput>UiResource.Designer.cs</LastGenOutput>
-	    <Generator>PublicResXFileCodeGenerator</Generator>
-	  </EmbeddedResource>
 	</ItemGroup>
 
 

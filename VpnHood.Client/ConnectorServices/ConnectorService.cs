@@ -110,15 +110,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
             // Establish a TLS connection
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatDns(hostName));
-            var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT &&
-                              Environment.OSVersion.Version.Major < 10
-                ? SslProtocols.Tls12 // windows 7
-                : SslProtocols.None; //auto
-
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = hostName,
-                EnabledSslProtocols = sslProtocol
+                EnabledSslProtocols = SslProtocols.None // auto
             }, cancellationToken);
 
             var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);

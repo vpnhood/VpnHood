@@ -1,14 +1,19 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Maui.Resources;
-using VpnHood.Client.App.UI;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Client.App.Resources;
 using WinNative;
+using System.Runtime.InteropServices;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.Client.App;
@@ -16,7 +21,7 @@ namespace VpnHood.Client.App;
 public class WinApp : IDisposable
 {
     private const string DefaultLocalHost = "myvpnhood";
-    private readonly IPEndPoint _defaultLocalHostEndPoint = IPEndPoint.Parse("127.10.10.10:80");
+    private readonly IPEndPoint _defaultLocalHostEndPoint = new(IPAddress.Parse("127.10.10.10"), 80);
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
     private readonly Timer _uiTimer;
@@ -24,26 +29,36 @@ public class WinApp : IDisposable
     private readonly SystemTray _sysTray;
     private readonly CommandListener _commandListener;
     private bool _disposed;
-    private bool _showWindowAfterStart;
     private readonly string _appLocalDataPath;
-    private readonly IntPtr _disconnectedIconHandle;
-    private readonly IntPtr _connectedIconHandle;
-    private readonly IntPtr _connectingIconHandle;
+    private readonly Icon _disconnectedIcon;
+    private readonly Icon _connectedIcon;
+    private readonly Icon _connectingIcon;
+    private int _connectMenuItemId;
+    private int _disconnectMenuItemId;
+    private int _openMainWindowMenuItemId;
+    private int _openMainWindowInBrowserMenuItemId;
+    private static VpnHoodApp VhApp => VpnHoodApp.Instance;
+    private static readonly Lazy<WinApp> InstanceFiled = new(() => new WinApp());
 
-    public event EventHandler? OpenWindowRequested;
+    public event EventHandler? OpenMainWindowRequested;
+    public event EventHandler? OpenMainWindowInBrowserRequested;
     public event EventHandler? ExitRequested;
+    public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
+    public static WinApp Instance => InstanceFiled.Value;
+    public bool ShowWindowAfterStart { get; private set; }
+    public bool ConnectAfterStart { get; private set; }
+    public bool EnableOpenMainWindow { get; set; } = true;
 
-    public WinApp()
+    private WinApp()
     {
-        // console logger
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        _disconnectedIconHandle = SystemTray.LoadImage(IntPtr.Zero, Path.Combine(AppContext.BaseDirectory, "Icons", "VpnDisconnected.ico"), 1, 16, 16, 0x00000010);
-        _connectedIconHandle = SystemTray.LoadImage(IntPtr.Zero, Path.Combine(AppContext.BaseDirectory, "Icons", "VpnConnected.ico"), 1, 16, 16, 0x00000010);
-        _connectingIconHandle = SystemTray.LoadImage(IntPtr.Zero, Path.Combine(AppContext.BaseDirectory, "Icons", "VpnConnecting.ico"), 1, 16, 16, 0x00000010);
-        _sysTray = new SystemTray("VpnHood!", _disconnectedIconHandle);
+        _disconnectedIcon = new Icon(new MemoryStream(UiResource.VpnDisconnected));
+        _connectedIcon = new Icon(new MemoryStream(UiResource.VpnConnectedIcon));
+        _connectingIcon = new Icon(new MemoryStream(UiResource.VpnConnectingIcon));
+        _sysTray = new SystemTray("VpnHood!", _disconnectedIcon.Handle);
 
         //init timer
-        _uiTimer = new Timer(UpdateNotifyIconText, null, 1000, 1000);
+        _uiTimer = new Timer(UpdateNotifyIcon, null, 1000, 1000);
         _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
 
         //create command Listener
@@ -51,14 +66,30 @@ public class WinApp : IDisposable
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
+    [DllImport("DwmApi")]
+    private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
+    public static void SetWindowTitleBarColor(IntPtr hWnd, Color color)
+    {
+        var attrValue = new[] { color.B << 16 | color.G << 8 | color.R };
+        const int captionColor = 35;
+        DwmSetWindowAttribute(hWnd, captionColor, attrValue, attrValue.Length * 4);
+    }
+
+    public static void OpenUrlInExternalBrowser(Uri url)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = url.AbsoluteUri,
+            UseShellExecute = true,
+            Verb = "open"
+        });
+    }
+
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
         if (e.Arguments.Any(x => x.Equals("/openwindow", StringComparison.OrdinalIgnoreCase)))
             OpenMainWindow();
     }
-
-    public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
-    private static VpnHoodApp VhApp => VpnHoodApp.Instance;
 
     public bool IsAnotherInstanceRunning(string? name = null)
     {
@@ -70,24 +101,20 @@ public class WinApp : IDisposable
         return !_instanceMutex.WaitOne(TimeSpan.FromSeconds(0), false);
     }
 
-    public bool Start(string[] args)
+    public void PreStart(string[] args)
     {
-        var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        _showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        ConnectAfterStart = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
+        ShowWindowAfterStart = !ConnectAfterStart && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
 
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
         if (IsAnotherInstanceRunning())
         {
             // open main window if app is already running and user run the app again
-            if (_showWindowAfterStart)
+            if (ShowWindowAfterStart)
                 _commandListener.SendCommand("/openWindow");
-            VhLogger.Instance.LogInformation("WinApp is already running!");
-            return false;
+            throw new Exception("VpnHood client is already running.");
         }
-
-        // configure local host
-        var localWebUrl = RegisterLocalDomain();
 
         // configuring Windows Firewall
         try
@@ -98,18 +125,13 @@ public class WinApp : IDisposable
         {
             /*ignored*/
         }
+    }
 
-        // init app
-        //VpnHoodApp.Init(new WinAppProvider(), new AppOptions
-        //{
-        //    IsLogToConsoleSupported = true,
-        //    AppDataPath = AppLocalDataPath,
-        //    UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
-        //});
-        //VpnHoodAppUi.Init(new MemoryStream(Resource.SPA), url2: localWebUrl);
 
+    public bool Start()
+    {
         // auto connect
-        if (autoConnect &&
+        if (ConnectAfterStart &&
             VhApp.UserSettings.DefaultClientProfileId != null &&
             VhApp.ClientProfileStore.ClientProfileItems.Any(x =>
                 x.ClientProfile.ClientProfileId == VhApp.UserSettings.DefaultClientProfileId))
@@ -117,27 +139,32 @@ public class WinApp : IDisposable
 
         // create notification icon
         InitNotifyIcon();
-        OpenMainWindow();
 
+        // start command listener
         _commandListener.Start();
-
         return true;
     }
 
-    private void UpdateNotifyIconText(object? state)
+    private void UpdateNotifyIcon(object? state)
     {
         if (!VpnHoodApp.IsInit)
             return;
 
+        // update icon and text
         var stateName = VhApp.State.ConnectionState == AppConnectionState.None
-            ? UiResource.Disconnect
+            ? UiResource.Disconnected
             : VhApp.State.ConnectionState.ToString();
 
-        var hIcon = _connectingIconHandle;
-        if (VhApp.State.ConnectionState == AppConnectionState.Connected) hIcon = _connectedIconHandle;
-        else if (VhApp.IsIdle) hIcon = _disconnectedIconHandle;
+        var hIcon = _connectingIcon.Handle;
+        if (VhApp.State.ConnectionState == AppConnectionState.Connected) hIcon = _connectedIcon.Handle;
+        else if (VhApp.IsIdle) hIcon = _disconnectedIcon.Handle;
 
-        _sysTray.Update($@"{AppUiResource.AppName} - {stateName}", hIcon);
+        _sysTray.Update($@"{UiResource.AppName} - {stateName}", hIcon);
+        _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VhApp.IsIdle);
+        _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VhApp.IsIdle);
+        _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId, !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting);
+        _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowMenuItemId, EnableOpenMainWindow);
+        _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowInBrowserMenuItemId, true);
 
         CheckForUpdate();
     }
@@ -190,7 +217,15 @@ public class WinApp : IDisposable
 
     private void OpenMainWindow()
     {
-        OpenWindowRequested?.Invoke(this, EventArgs.Empty);
+        if (EnableOpenMainWindow)
+            OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
+        else
+            OpenMainWindowInBrowser();
+    }
+
+    public void OpenMainWindowInBrowser()
+    {
+        OpenMainWindowInBrowserRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void Exit()
@@ -198,30 +233,15 @@ public class WinApp : IDisposable
         ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    public void OpenMainWindowInBrowser()
-    {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = VpnHoodAppUi.Instance.Url.AbsoluteUri,
-            UseShellExecute = true,
-            Verb = "open"
-        });
-
-    }
-
     private void InitNotifyIcon()
     {
-        _sysTray.Clicked += (_, _) =>
-        {
-            OpenMainWindow();
-        };
-
+        _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
-        _sysTray.ContextMenu.AddMenuItem(UiResource.Open, (_, _) => OpenMainWindow());
-        _sysTray.ContextMenu.AddMenuItem(UiResource.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
+        _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Open, (_, _) => OpenMainWindow());
+        _openMainWindowInBrowserMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
-        _sysTray.ContextMenu.AddMenuItem(UiResource.Connect, (_, _) => ConnectClicked());
-        _sysTray.ContextMenu.AddMenuItem(UiResource.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
+        _connectMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Connect, (_, _) => ConnectClicked());
+        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(UiResource.Exit, (_, _) => Exit());
     }
@@ -244,15 +264,6 @@ public class WinApp : IDisposable
             OpenMainWindow();
         }
     }
-
-    //private void Menu_Opening(object? sender, CancelEventArgs e)
-    //{
-    //    var menu = (ContextMenuStrip)sender!;
-    //    menu.Items["connect"].Enabled = VhApp.IsIdle;
-    //    menu.Items["disconnect"].Enabled = !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
-    //    menu.Items["open"].Visible = _webViewWindow is { IsInitCompleted: true };
-    //    menu.Items["openInBrowser"].Visible = true;
-    //}
 
     private static string FindExePath(string exe)
     {
@@ -320,13 +331,10 @@ public class WinApp : IDisposable
         _disposed = true;
 
         _uiTimer.Dispose();
-        //_notifyIcon?.Dispose();
-        //_webViewWindow?.Close();
-        if (VpnHoodAppUi.IsInit) VpnHoodAppUi.Instance.Dispose();
-        if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
+        _sysTray.Dispose();
     }
 
-    private Uri? RegisterLocalDomain()
+    public Uri? RegisterLocalDomain()
     {
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
@@ -399,6 +407,5 @@ public class WinApp : IDisposable
             VhLogger.Instance.LogError(ex, "Could not register local domain.");
             return null;
         }
-
     }
 }

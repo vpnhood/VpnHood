@@ -8,6 +8,8 @@ using Android.Runtime;
 
 namespace VpnHood.Client.App.Maui;
 
+
+
 [Activity(
     Theme = "@style/Maui.SplashTheme", 
     MainLauncher = true,

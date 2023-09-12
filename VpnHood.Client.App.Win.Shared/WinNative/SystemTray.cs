@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 // ReSharper disable once CheckNamespace
@@ -10,7 +11,7 @@ public class SystemTray : IDisposable
     private static extern bool Shell_NotifyIcon(uint message, ref NotifyIconData data);
     
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern IntPtr LoadImage(IntPtr hinst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+    public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
 
     public event EventHandler? DoubleClicked;
     public event EventHandler? Clicked;
@@ -72,9 +73,9 @@ public class SystemTray : IDisposable
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
 
-        if (msg == Message && wParam == SystemTrayId)
+        if (msg == Message && (int)wParam == SystemTrayId)
         {
-            switch (lParam)
+            switch ((int)lParam)
             {
                 case (int)ContextMenuEvent.LeftButtonUp:
                     Clicked?.Invoke(this, EventArgs.Empty);

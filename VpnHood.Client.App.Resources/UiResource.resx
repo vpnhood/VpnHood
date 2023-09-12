@@ -118,13 +118,16 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppName" xml:space="preserve">
-    <value>VpnHood</value>
+    <value>VpnHood!</value>
   </data>
   <data name="Connect" xml:space="preserve">
     <value>Connect</value>
   </data>
   <data name="Disconnect" xml:space="preserve">
     <value>Disconnect</value>
+  </data>
+  <data name="Disconnected" xml:space="preserve">
+    <value>Disconnected</value>
   </data>
   <data name="Exit" xml:space="preserve">
     <value>Exit</value>
@@ -134,5 +137,24 @@
   </data>
   <data name="OpenInBrowser" xml:space="preserve">
     <value>Open in Browser</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="SPA" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>resources\spa.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnConnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Icons\VpnConnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnConnectingIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Icons\VpnConnecting.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnDisconnectedIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Icons\VpnDisconnected.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnHoodIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Icons\VpnHood.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="VpnKeyIcon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Icons\VpnKey.ico;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Handlers;
+using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.UI;
-
 namespace VpnHood.Client.App.Maui;
 
 public static class MauiProgram
@@ -15,49 +14,20 @@ public static class MauiProgram
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-            })
-            .ConfigureMauiHandlers(handlers =>
-            {
-#if ANDROID
-                //handlers.AddHandler<WebView, AndroidWebViewHandler>();
-#endif
             });
-
-
 
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
         // init app
-        var appProvider = CreateAppProvider();
-        VpnHoodApp.Init(appProvider, new AppOptions { UpdateInfoUrl = GetUpdateInfoUrl() });
-        VpnHoodAppUi.Init(FileSystem.OpenAppPackageFileAsync("SPA.zip").Result);
+#if WINDOWS
+        var appProvider = new VpnHoodAppProvider();
+        using var spaResource = new MemoryStream(UiResource.SPA);
+        VpnHoodApp.Init(appProvider, new AppOptions { UpdateInfoUrl = appProvider.UpdateInfoUrl });
+        VpnHoodAppUi.Init(spaResource, url2: appProvider.AdditionalUiUrl);
+#endif
 
         return builder.Build();
-    }
-
-    // Create VpnHood IAppProvider 
-    private static IAppProvider CreateAppProvider()
-    {
-#if WINDOWS
-        return new WinAppProvider();
-#elif ANDROID
-        return new AndroidAppProvider();
-#else
-        throw new NotSupportedException();
-#endif
-
-    }
-
-    private static Uri GetUpdateInfoUrl()
-    {
-#if WINDOWS
-        return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json");
-#elif ANDROID
-        return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
-#else
-        throw new NotSupportedException();
-#endif
     }
 }

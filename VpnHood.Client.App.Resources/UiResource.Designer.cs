@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace VpnHood.Client.App.Maui.Resources {
+namespace VpnHood.Client.App.Resources {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace VpnHood.Client.App.Maui.Resources {
         public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.Client.App.Maui.Resources.UiResource", typeof(UiResource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.Client.App.Resources.UiResource", typeof(UiResource).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,7 +61,7 @@ namespace VpnHood.Client.App.Maui.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to VpnHood.
+        ///   Looks up a localized string similar to VpnHood!.
         /// </summary>
         public static string AppName {
             get {
@@ -84,6 +84,15 @@ namespace VpnHood.Client.App.Maui.Resources {
         public static string Disconnect {
             get {
                 return ResourceManager.GetString("Disconnect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disconnected.
+        /// </summary>
+        public static string Disconnected {
+            get {
+                return ResourceManager.GetString("Disconnected", resourceCulture);
             }
         }
         
@@ -111,6 +120,66 @@ namespace VpnHood.Client.App.Maui.Resources {
         public static string OpenInBrowser {
             get {
                 return ResourceManager.GetString("OpenInBrowser", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] SPA {
+            get {
+                object obj = ResourceManager.GetObject("SPA", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VpnConnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnConnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VpnConnectingIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnConnectingIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VpnDisconnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnDisconnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VpnHoodIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnHoodIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] VpnKeyIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnKeyIcon", resourceCulture);
+                return ((byte[])(obj));
             }
         }
     }

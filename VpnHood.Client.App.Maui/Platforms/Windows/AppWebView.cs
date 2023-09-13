@@ -1,5 +1,4 @@
-﻿using Microsoft.Maui.Handlers;
-using Microsoft.UI.Xaml.Controls;
+﻿using Microsoft.UI.Xaml.Controls;
 
 namespace VpnHood.Client.App.Maui;
 

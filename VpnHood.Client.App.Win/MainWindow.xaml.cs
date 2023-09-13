@@ -25,7 +25,6 @@ public partial class MainWindow : Window
         Width = UiDefaults.WindowSize.Width;
         Height = UiDefaults.WindowSize.Height;
         Title = UiResource.AppName;
-        UpdateIcon();
 
         // initialize MainWebView
         MainWebView.DefaultBackgroundColor = UiDefaults.WindowBackgroundColor;
@@ -72,17 +71,25 @@ public partial class MainWindow : Window
         // update icon and text
         var icon = VpnHoodApp.Instance.State.ConnectionState switch
         {
-            AppConnectionState.Connected => UiResource.VpnConnectedIcon,
-            AppConnectionState.None => UiResource.VpnDisconnectedIcon,
-            _ => UiResource.VpnConnectingIcon
+            AppConnectionState.Connected => UiResource.BadgeVpnConnected,
+            AppConnectionState.None => null,
+            _ => UiResource.BadgeVpnConnecting
         };
 
+        // remove overlay
+        if (icon == null)
+        {
+            TaskbarItemInfo.Overlay = null;
+            return;
+        }
+
+        // set overlay
         using var memStream = new MemoryStream(icon);
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.StreamSource = memStream;
         bitmapImage.EndInit();
-        Icon = bitmapImage;
+        TaskbarItemInfo.Overlay = bitmapImage;
     }
 
     protected override void OnClosing(CancelEventArgs e)

@@ -70,6 +70,26 @@ namespace VpnHood.Client.App.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] BadgeVpnConnected {
+            get {
+                object obj = ResourceManager.GetObject("BadgeVpnConnected", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        public static byte[] BadgeVpnConnecting {
+            get {
+                object obj = ResourceManager.GetObject("BadgeVpnConnecting", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Connect.
         /// </summary>
         public static string Connect {

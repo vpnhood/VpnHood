@@ -5,6 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d">
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo></TaskbarItemInfo>
+    </Window.TaskbarItemInfo>
     <Grid>
         <wpf:WebView2 x:Name="MainWebView" ></wpf:WebView2>
     </Grid>

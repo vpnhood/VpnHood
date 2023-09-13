@@ -14,19 +14,20 @@ using VpnHood.Common.Utils;
 using VpnHood.Client.App.Resources;
 using WinNative;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using VpnHood.Common.JobController;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.Client.App;
 
-public class WinApp : IDisposable
+public class WinApp : IDisposable, IJob
 {
     private const string DefaultLocalHost = "myvpnhood";
     private readonly IPEndPoint _defaultLocalHostEndPoint = new(IPAddress.Parse("127.10.10.10"), 80);
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
-    private readonly Timer _uiTimer;
+    private SystemTray? _sysTray;
     private DateTime _lastUpdateTime = DateTime.MinValue;
-    private readonly SystemTray _sysTray;
     private readonly CommandListener _commandListener;
     private bool _disposed;
     private readonly string _appLocalDataPath;
@@ -43,7 +44,8 @@ public class WinApp : IDisposable
     public event EventHandler? OpenMainWindowRequested;
     public event EventHandler? OpenMainWindowInBrowserRequested;
     public event EventHandler? ExitRequested;
-    public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
+    public TimeSpan CheckUpdateInterval { get; set; } = TimeSpan.FromHours(24);
+    public JobSection JobSection { get; } = new();
     public static WinApp Instance => InstanceFiled.Value;
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }
@@ -55,15 +57,15 @@ public class WinApp : IDisposable
         _disconnectedIcon = new Icon(new MemoryStream(UiResource.VpnDisconnectedIcon));
         _connectedIcon = new Icon(new MemoryStream(UiResource.VpnConnectedIcon));
         _connectingIcon = new Icon(new MemoryStream(UiResource.VpnConnectingIcon));
-        _sysTray = new SystemTray("VpnHood!", _disconnectedIcon.Handle);
 
-        //init timer
-        _uiTimer = new Timer(UpdateNotifyIcon, null, 1000, 1000);
         _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(_appLocalDataPath, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
+
+        // add to job runner
+        JobRunner.Default.Add(this);
     }
 
     [DllImport("DwmApi")]
@@ -127,7 +129,6 @@ public class WinApp : IDisposable
         }
     }
 
-
     public bool Start()
     {
         // auto connect
@@ -137,17 +138,23 @@ public class WinApp : IDisposable
                 x.ClientProfile.ClientProfileId == VhApp.UserSettings.DefaultClientProfileId))
             _ = VhApp.Connect(VhApp.UserSettings.DefaultClientProfileId.Value);
 
+        // check for update
+        CheckForUpdate();
+
         // create notification icon
         InitNotifyIcon();
+        VhApp.ConnectionStateChanged += (_, _) => UpdateNotifyIcon();
+        UpdateNotifyIcon();
 
         // start command listener
         _commandListener.Start();
         return true;
     }
 
-    private void UpdateNotifyIcon(object? state)
+
+    private void UpdateNotifyIcon()
     {
-        if (!VpnHoodApp.IsInit)
+        if (!VpnHoodApp.IsInit || _sysTray == null)
             return;
 
         // update icon and text
@@ -165,8 +172,6 @@ public class WinApp : IDisposable
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId, !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting);
         _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowMenuItemId, EnableOpenMainWindow);
         _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowInBrowserMenuItemId, true);
-
-        CheckForUpdate();
     }
 
     private void CheckForUpdate()
@@ -184,7 +189,7 @@ public class WinApp : IDisposable
             }
 
         // check last update time
-        if (FastDateTime.Now - _lastUpdateTime < UpdateInterval)
+        if (FastDateTime.Now - _lastUpdateTime < CheckUpdateInterval)
             return;
 
         // set updateTime before checking filename
@@ -235,6 +240,7 @@ public class WinApp : IDisposable
 
     private void InitNotifyIcon()
     {
+        _sysTray = new SystemTray("VpnHood!", _disconnectedIcon.Handle);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
         _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Open, (_, _) => OpenMainWindow());
@@ -330,8 +336,7 @@ public class WinApp : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _uiTimer.Dispose();
-        _sysTray.Dispose();
+        _sysTray?.Dispose();
     }
 
     public Uri? RegisterLocalDomain()
@@ -408,4 +413,11 @@ public class WinApp : IDisposable
             return null;
         }
     }
+
+    public Task RunJob()
+    {
+        CheckForUpdate();
+        return Task.CompletedTask;
+    }
+
 }

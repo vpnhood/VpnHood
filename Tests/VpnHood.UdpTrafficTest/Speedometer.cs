@@ -2,7 +2,7 @@
 using VpnHood.Common.JobController;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.ZUdpTrafficTest;
+namespace VpnHood.UdpTrafficTest;
 
 public class Speedometer : IJob
 {

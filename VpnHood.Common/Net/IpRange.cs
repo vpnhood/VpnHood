@@ -140,7 +140,7 @@ public class IpRange
         return $"{FirstIpAddress}-{LastIpAddress}";
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is IpRange ipRange &&
                FirstIpAddress.Equals(ipRange.FirstIpAddress) &&

@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using Android.App;
 using Android.Content;
 using VpnHood.Client.App.Resources;

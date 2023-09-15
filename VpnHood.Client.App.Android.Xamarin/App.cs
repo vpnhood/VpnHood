@@ -1,157 +1,49 @@
 ﻿#nullable enable
 using System;
 using Android.App;
-using Android.Content;
 using Android.Graphics;
-using Android.OS;
 using Android.Runtime;
-using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Resources;
-using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid
 {
 #if DEBUG
-    [Application(Debuggable = true, UsesCleartextTraffic = true)]
+    [Application(Debuggable = true)]
 #else
-    [Application(Debuggable = false, UsesCleartextTraffic = true)]
+    [Application(Debuggable = false)]
 #endif
     internal class App : Application
     {
-        private const int NotificationId = 1000;
-        private const string NotificationChannelGeneralId = "general";
-        private const string NotificationChannelGeneralName = "General";
-        private Notification.Builder? _notifyBuilder;
-        private AppConnectionState _lastNotifyState = AppConnectionState.None;
-        public static Color BackgroundColor => new(UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
-        public static App? Current { get; private set; }
+        private AppNotification? _notification;
         public IAppProvider AppProvider { get; } = new AppProvider();
+        public static App? Current { get; private set; }
+        public static Color BackgroundColor => new (UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
 
         public App(IntPtr javaReference, JniHandleOwnership transfer)
             : base(javaReference, transfer)
         {
         }
 
-        private readonly object _stateLock = new();
-        private void UpdateNotification()
-        {
-            lock (_stateLock)
-            {
-                if (_notifyBuilder == null)
-                    return; // _notifyBuilder has not been initialized yet
-
-                // update only when the state changed
-                var connectionState = VpnHoodApp.Instance.ConnectionState;
-                if (_lastNotifyState == connectionState)
-                    return;
-
-                // connection status
-                _notifyBuilder.SetSubText(connectionState == AppConnectionState.Connected
-                    ? $"{connectionState}"
-                    : $"{connectionState}...");
-
-                // progress
-                if (connectionState != AppConnectionState.Connected)
-                    _notifyBuilder.SetProgress(100, 0, true);
-                else
-                    _notifyBuilder.SetProgress(0, 0, false);
-
-                // show or hide
-                var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
-                if (notificationManager == null)
-                    return;
-
-                if (connectionState != AppConnectionState.None)
-                    notificationManager.Notify(NotificationId, _notifyBuilder.Build());
-                else
-                    notificationManager.Cancel(NotificationId);
-
-                // set it at the end of method to make sure change is applied without any exception
-                _lastNotifyState = connectionState;
-            }
-        }
-
         public override void OnCreate()
         {
             base.OnCreate();
+            Current = this;
 
             //app init
             VpnHoodApp.Init(AppProvider);
-            VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => UpdateNotification();
-            InitNotification();
-            Current = this;
+            _notification = new AppNotification(this);
+            VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _notification.UpdateNotification();
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _notifyBuilder?.Dispose();
-                _notifyBuilder = null;
-                if (VpnHoodApp.IsInit)
-                    _ = VpnHoodApp.Instance.DisposeAsync();
-
+                if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
+                _notification?.Dispose();
             }
 
             base.Dispose(disposing);
-        }
-
-        public PendingIntent CreatePendingIntent(string name)
-        {
-            var intent = new Intent(this, typeof(NotificationBroadcastReceiver));
-            intent.SetAction(name);
-            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, PendingIntentFlags.Immutable) ?? throw new Exception("Could not acquire Broadcast intent!");
-            return pendingIntent;
-        }
-
-        private void InitNotification()
-        {
-            // check notification manager
-            var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
-            if (notificationManager == null)
-            {
-                VhLogger.Instance.LogError($"Could not acquire {nameof(NotificationManager)}!");
-                return;
-            }
-
-            // open intent
-            var openIntent = new Intent(this, typeof(MainActivity));
-            openIntent.AddFlags(ActivityFlags.NewTask);
-            openIntent.SetAction(Intent.ActionMain);
-            openIntent.AddCategory(Intent.CategoryLauncher);
-            var pendingOpenIntent = PendingIntent.GetActivity(this, 0, openIntent, PendingIntentFlags.Immutable);
-
-            //create channel
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-            {
-                var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName,
-                    NotificationImportance.Low);
-                channel.EnableVibration(false);
-                channel.EnableLights(false);
-                channel.SetShowBadge(false);
-                channel.LockscreenVisibility = NotificationVisibility.Public;
-                channel.Importance = NotificationImportance.Low;
-                notificationManager.CreateNotificationChannel(channel);
-                _notifyBuilder = new Notification.Builder(this, NotificationChannelGeneralId);
-            }
-            else
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                _notifyBuilder = new Notification.Builder(this);
-#pragma warning restore CS0618 // Type or member is obsolete
-            }
-
-            // for android 5.1 (no subtext will be shown if we don't call SetContentText)
-            if (Build.VERSION.SdkInt < BuildVersionCodes.N)
-                _notifyBuilder.SetContentText(Resources?.GetString(Resource.String.app_name) ?? "VpnHood!");
-
-            _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
-            _notifyBuilder.SetContentIntent(pendingOpenIntent);
-            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.disconnect) ?? "Disconnect", CreatePendingIntent("disconnect")));
-            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.manage) ?? "Manage", pendingOpenIntent));
-            _notifyBuilder.SetSmallIcon(Resource.Mipmap.ic_notification);
-            _notifyBuilder.SetOngoing(true); // ignored by StartForeground
-            _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground
         }
     }
 }

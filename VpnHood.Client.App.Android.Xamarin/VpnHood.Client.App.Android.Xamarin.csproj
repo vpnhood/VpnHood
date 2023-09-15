@@ -91,12 +91,14 @@
     <None Include="Ads\VpnHoodAdActivity.cs" />
     <Compile Include="App.cs" />
     <None Include="Ads\InterstitialAdLoadCallback.cs" />
+    <Compile Include="AppNotification.cs" />
     <Compile Include="AppProvider.cs" />
     <Compile Include="MainActivity.cs" />
     <None Include="Ads\VpnHoodInterstitialAdLoadCallback.cs" />
     <Compile Include="AppWebChromeClient.cs" />
     <Compile Include="AppWebViewClient.cs" />
     <Compile Include="NotificationBroadcastReceiver.cs" />
+    <Compile Include="OperatingSystem.cs" />
     <Compile Include="Resources\Resource.designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -217,26 +219,6 @@
     </AndroidResource>
   </ItemGroup>
   <ItemGroup>
-    <AndroidResource Include="Resources\mipmap-hdpi\ic_notification.png">
-      <Generator>MSBuild:UpdateGeneratedFiles</Generator>
-    </AndroidResource>
-  </ItemGroup>
-  <ItemGroup>
-    <AndroidResource Include="Resources\mipmap-mdpi\ic_notification.png">
-      <Generator>MSBuild:UpdateGeneratedFiles</Generator>
-    </AndroidResource>
-  </ItemGroup>
-  <ItemGroup>
-    <AndroidResource Include="Resources\mipmap-xxhdpi\ic_notification.png">
-      <Generator>MSBuild:UpdateGeneratedFiles</Generator>
-    </AndroidResource>
-  </ItemGroup>
-  <ItemGroup>
-    <AndroidResource Include="Resources\mipmap-xxxhdpi\ic_notification.png">
-      <Generator>MSBuild:UpdateGeneratedFiles</Generator>
-    </AndroidResource>
-  </ItemGroup>
-  <ItemGroup>
     <AndroidResource Include="Resources\mipmap-xhdpi\banner.png" />
   </ItemGroup>
   <ItemGroup>
@@ -247,9 +229,6 @@
   </ItemGroup>
   <ItemGroup>
     <AndroidResource Include="Resources\mipmap-xhdpi\ic_launcher_round.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <AndroidResource Include="Resources\mipmap-xhdpi\ic_notification.png" />
   </ItemGroup>
   <ItemGroup>
     <AndroidResource Include="Resources\mipmap-mdpi\banner.png">

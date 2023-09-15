@@ -22,7 +22,7 @@ public static class MauiProgram
 
         var appProvider = CreateAppProvider();
         using var spaResource = new MemoryStream(UiResource.SPA);
-        VpnHoodApp.Init(appProvider, new AppOptions { UpdateInfoUrl = appProvider.UpdateInfoUrl });
+        VpnHoodApp.Init(appProvider, new AppOptions());
         VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);
 
         return builder.Build();

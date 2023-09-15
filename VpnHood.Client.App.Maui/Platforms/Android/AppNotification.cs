@@ -1,9 +1,8 @@
-﻿using Android.Content;
-using Android.Graphics;
-using Java.IO;
+﻿using Android.App;
+using Android.Content;
 using VpnHood.Client.App.Resources;
 
-namespace VpnHood.Client.App.Droid;
+namespace VpnHood.Client.App.Maui;
 
 public sealed class AppNotification : IDisposable
 {
@@ -18,9 +17,9 @@ public sealed class AppNotification : IDisposable
     public AppNotification(Context context)
     {
         _context = context;
-        
+
         // check notification manager
-        var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService) 
+        var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService)
                                   ?? throw new Exception("Could not acquire NotificationManager.");
 
         // open intent
@@ -57,7 +56,7 @@ public sealed class AppNotification : IDisposable
         _notifyBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Disconnect, CreatePendingIntent("disconnect")).Build());
         _notifyBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Manage, pendingOpenIntent).Build());
 
-        // ReSharper disable once AccessToStaticMemberViaDerivedType
+
         _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
         _notifyBuilder.SetOngoing(true); // ignored by StartForeground
         _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground

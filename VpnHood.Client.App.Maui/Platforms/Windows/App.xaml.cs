@@ -7,7 +7,7 @@ using Windows.Data.Xml.Dom;
 using AppWindow = Microsoft.UI.Windowing.AppWindow;
 using VpnHood.Client.App.Resources;
 using Windows.UI.Notifications;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -81,7 +81,7 @@ public partial class App : MauiWinUIApplication
 
     private void OpenMainWindowInBrowserRequested(object? sender, EventArgs e)
     {
-        Browser.Default.OpenAsync(VpnHoodAppUi.Instance.Url, BrowserLaunchMode.External);
+        Browser.Default.OpenAsync(VpnHoodAppWebServer.Instance.Url, BrowserLaunchMode.External);
     }
 
     private static void ConnectionStateChanged(object? sender, EventArgs e)

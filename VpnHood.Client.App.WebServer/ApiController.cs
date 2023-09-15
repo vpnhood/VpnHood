@@ -6,10 +6,10 @@ using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Settings;
-using VpnHood.Client.App.UI.Api;
+using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
 
-namespace VpnHood.Client.App.UI;
+namespace VpnHood.Client.App.WebServer;
 
 internal class ClientApiController : WebApiController, IClientApi
 {

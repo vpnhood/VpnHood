@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using VpnHood.Client.App.Settings;
+using VpnHood.Client.Device;
 // ReSharper disable InconsistentNaming
 
 namespace VpnHood.Client.App.UI.Api;
@@ -17,4 +18,6 @@ public interface IClientApi
     void addTestServer();
     Task setUserSettings(UserSettings userSettings);
     Task log();
+    Task<DeviceAppInfo[]> InstalledApps();
+    Task<IpGroup[]> IpGroups();
 }

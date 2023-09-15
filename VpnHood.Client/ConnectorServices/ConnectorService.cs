@@ -23,7 +23,6 @@ using VpnHood.Tunneling.Channels.Streams;
 using System.Text;
 using VpnHood.Tunneling.Utils;
 using System.Net.Sockets;
-using System.Net;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -106,9 +105,8 @@ internal class ConnectorService : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
-            var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-
             // Establish a TLS connection
+            var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatDns(hostName));
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {

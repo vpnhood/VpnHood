@@ -139,6 +139,9 @@
   <data name="Exit" xml:space="preserve">
     <value>Exit</value>
   </data>
+  <data name="Manage" xml:space="preserve">
+    <value>Manage</value>
+  </data>
   <data name="Open" xml:space="preserve">
     <value>Open</value>
   </data>

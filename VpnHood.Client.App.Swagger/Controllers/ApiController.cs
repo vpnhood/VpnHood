@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.UI.Api;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.Swagger.Controllers
 {
@@ -68,8 +69,20 @@ namespace VpnHood.Client.App.Swagger.Controllers
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(log))]
+        [HttpGet(nameof(log))]
         public Task log()
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost(nameof(InstalledApps))]
+        public Task<DeviceAppInfo[]> InstalledApps()
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost(nameof(IpGroups))]
+        public Task<IpGroup[]> IpGroups()
         {
             throw new NotImplementedException();
         }

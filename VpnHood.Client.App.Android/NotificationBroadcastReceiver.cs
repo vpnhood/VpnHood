@@ -1,6 +1,4 @@
-﻿#nullable enable
-using Android.App;
-using Android.Content;
+﻿using Android.Content;
 
 namespace VpnHood.Client.App.Droid;
 

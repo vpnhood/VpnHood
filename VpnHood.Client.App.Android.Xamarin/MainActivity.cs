@@ -3,7 +3,6 @@ using System;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using Android.Graphics;
 using Android.Net;
 using Android.OS;
 using Android.Runtime;
@@ -14,7 +13,7 @@ using VpnHood.Client.App.UI;
 using VpnHood.Client.Device.Android;
 using Xamarin.Essentials;
 
-namespace VpnHood.Client.App.Android;
+namespace VpnHood.Client.App.Droid;
 
 
 [Activity(Label = "@string/app_name",
@@ -32,21 +31,9 @@ public class MainActivity : Activity
     private VpnHoodAppUi? _appUi;
 
     private AndroidDevice Device =>
-        (AndroidDevice?)AndroidApp.Current?.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
+        (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
 
     public WebView? WebView { get; private set; }
-    public Color BackgroundColor
-    {
-        get
-        {
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
-                return Resources?.GetColor(Resource.Color.colorBackground, Theme) ?? Color.DarkBlue;
-
-#pragma warning disable 618
-            return Resources?.GetColor(Resource.Color.colorBackground) ?? Color.DarkBlue;
-#pragma warning restore 618
-        }
-    }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -103,24 +90,24 @@ public class MainActivity : Activity
         imageView.SetImageResource(Resource.Mipmap.ic_launcher_round);
         imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
-        imageView.SetBackgroundColor(BackgroundColor);
+        imageView.SetBackgroundColor(App.BackgroundColor);
         SetContentView(imageView);
     }
 
     private void InitWebUi()
     {
         WebView = new WebView(this);
-        WebView.SetBackgroundColor(BackgroundColor);
+        WebView.SetBackgroundColor(App.BackgroundColor);
         WebView.Settings.JavaScriptEnabled = true;
         WebView.Settings.DomStorageEnabled = true;
         WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
         WebView.Settings.SetSupportMultipleWindows(true);
         WebView.SetLayerType(LayerType.Hardware, null);
 
-        var webViewClient = new MyWebViewClient();
+        var webViewClient = new AppWebViewClient();
         webViewClient.PageLoaded += WebViewClient_PageLoaded;
         WebView.SetWebViewClient(webViewClient);
-        WebView.SetWebChromeClient(new MyWebChromeClient());
+        WebView.SetWebChromeClient(new AppWebChromeClient());
 
 #if DEBUG
         WebView.SetWebContentsDebuggingEnabled(true);
@@ -133,7 +120,7 @@ public class MainActivity : Activity
     {
         if (WebView == null) throw new Exception("WebView has not been loaded yet!");
         SetContentView(WebView);
-        Window?.SetStatusBarColor(BackgroundColor);
+        Window?.SetStatusBarColor(App.BackgroundColor);
     }
 
     public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

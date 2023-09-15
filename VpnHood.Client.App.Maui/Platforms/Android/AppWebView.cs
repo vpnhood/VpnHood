@@ -27,9 +27,8 @@ public partial class AppWebView
         webView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
         webView.Settings.SetSupportMultipleWindows(true);
 
-        var webViewClient = new MyWebViewClient((WebViewHandler)Handler);
+        var webViewClient = new AppWebViewClient((WebViewHandler)Handler);
         webView.SetWebViewClient(webViewClient);
-        webView.SetWebChromeClient(new MyWebChromeClient((WebViewHandler)Handler));
-        webView.Settings.JavaScriptEnabled = true;
+        webView.SetWebChromeClient(new AppWebChromeClient((WebViewHandler)Handler));
     }
 }

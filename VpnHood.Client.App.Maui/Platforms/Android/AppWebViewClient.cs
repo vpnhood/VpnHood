@@ -7,11 +7,11 @@ using WebView = Android.Webkit.WebView;
 namespace VpnHood.Client.App.Maui;
 
 
-internal class MyWebViewClient : MauiWebViewClient
+internal class AppWebViewClient : MauiWebViewClient
 {
     public bool BrowseLinkInExternalBrowser { get; set; } = false;
 
-    public MyWebViewClient(WebViewHandler handler) 
+    public AppWebViewClient(WebViewHandler handler) 
         : base(handler)
     {
     }

@@ -3,9 +3,9 @@ using System;
 using Android.Webkit;
 using Xamarin.Essentials;
 
-namespace VpnHood.Client.App.Android;
+namespace VpnHood.Client.App.Droid;
 
-internal class MyWebViewClient : WebViewClient
+internal class AppWebViewClient : WebViewClient
 {
     public bool BrowseLinkInExternalBrowser { get; set; } = false;
     public event EventHandler? PageLoaded;

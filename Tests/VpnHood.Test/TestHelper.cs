@@ -409,12 +409,14 @@ internal static class TestHelper
         return appOptions;
     }
 
-    public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default)
+    public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default, 
+        Uri? updateInfoUrl = default)
     {
         //create app
         appOptions ??= CreateClientAppOptions();
 
-        var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions, appOptions.UpdateInfoUrl), appOptions);
+        var testAppProvider = new TestAppProvider(deviceOptions, updateInfoUrl);
+        var clientApp = VpnHoodApp.Init(testAppProvider, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();

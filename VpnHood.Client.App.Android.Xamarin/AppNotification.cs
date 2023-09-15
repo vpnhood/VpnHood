@@ -1,4 +1,7 @@
-﻿using Android.Content;
+﻿#nullable enable
+using System;
+using Android.App;
+using Android.Content;
 using VpnHood.Client.App.Resources;
 
 namespace VpnHood.Client.App.Droid;
@@ -42,7 +45,9 @@ public sealed class AppNotification : IDisposable
         }
         else
         {
+#pragma warning disable CS0618
             _notifyBuilder = new Notification.Builder(_context);
+#pragma warning restore CS0618
         }
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)

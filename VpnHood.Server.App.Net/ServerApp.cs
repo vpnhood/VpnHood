@@ -84,6 +84,7 @@ public class ServerApp : IDisposable
         {
             // ReSharper disable once StringLiteralTypo
             MeasurementId = "G-9SWLGEX6BT",
+            SessionCount = 1,
             ApiSecret = string.Empty,
             ClientId = anonyClientId,
             SessionId = Guid.NewGuid().ToString(),

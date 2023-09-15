@@ -6,7 +6,7 @@ using Android.Views;
 using Android.Webkit;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
-using VpnHood.Client.Device.Android;
+using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid;
 

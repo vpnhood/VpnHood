@@ -10,7 +10,7 @@
     <TemplateGuid>{9ef11e43-1701-4396-8835-8392d57abb70}</TemplateGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>VpnHood.Client.Device.Android</RootNamespace>
+    <RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
     <AssemblyName>VpnHood.Client.Device.Android</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <Deterministic>True</Deterministic>

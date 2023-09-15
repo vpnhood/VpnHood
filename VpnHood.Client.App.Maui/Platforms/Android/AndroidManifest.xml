@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="414" package="com.vpnhood.client.android" android:installLocation="auto" android:versionName="3.0.414">
+	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:supportsRtl="true" 
+	             android:usesCleartextTraffic="true" android:label="VpnHood!">
+	</application>
 	<uses-sdk android:minSdkVersion="22" android:targetSdkVersion="33" />
 	<uses-feature android:name="android.software.leanback" android:required="false" />
 	<uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -7,7 +10,6 @@
 	<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:supportsRtl="true" android:usesCleartextTraffic="true" android:label="VpnHood!"></application>
 	<queries>
 		<intent>
 			<action android:name="android.intent.action.VIEW" />

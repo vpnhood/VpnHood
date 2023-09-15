@@ -1,13 +1,11 @@
 ﻿using Android.OS;
-using Android.Webkit;
-using Java.Net;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using WebView = Android.Webkit.WebView;
 
 namespace VpnHood.Client.App.Maui;
 
-public class MyWebChromeClient : MauiWebChromeClient
+public class AppWebChromeClient : MauiWebChromeClient
 {
     private readonly WebViewHandler _webViewHandler;
 
@@ -17,7 +15,7 @@ public class MyWebChromeClient : MauiWebChromeClient
             return false;
 
         var newWebView = new WebView(webView.Context);
-        newWebView.SetWebViewClient(new MyWebViewClient(_webViewHandler));
+        newWebView.SetWebViewClient(new AppWebViewClient(_webViewHandler));
         newWebView.SetWebChromeClient(this);
 
         if (resultMsg?.Obj is not WebView.WebViewTransport transport)
@@ -28,7 +26,7 @@ public class MyWebChromeClient : MauiWebChromeClient
         return true;
     }
 
-    public MyWebChromeClient(WebViewHandler handler) 
+    public AppWebChromeClient(WebViewHandler handler) 
         : base(handler)
     {
         _webViewHandler = handler;

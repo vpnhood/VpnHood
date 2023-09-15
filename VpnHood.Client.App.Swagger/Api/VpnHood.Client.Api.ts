@@ -505,7 +505,7 @@ export class ApiClient {
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "POST",
+            method: "GET",
             url: url_,
             headers: {
             },
@@ -542,6 +542,116 @@ export class ApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<void>(null as any);
+    }
+
+    installedApps( cancelToken?: CancelToken | undefined): Promise<DeviceAppInfo[]> {
+        let url_ = this.baseUrl + "/api/InstalledApps";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processInstalledApps(_response);
+        });
+    }
+
+    protected processInstalledApps(response: AxiosResponse): Promise<DeviceAppInfo[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(DeviceAppInfo.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<DeviceAppInfo[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<DeviceAppInfo[]>(null as any);
+    }
+
+    ipGroups( cancelToken?: CancelToken | undefined): Promise<IpGroup[]> {
+        let url_ = this.baseUrl + "/api/IpGroups";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processIpGroups(_response);
+        });
+    }
+
+    protected processIpGroups(response: AxiosResponse): Promise<IpGroup[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(IpGroup.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<IpGroup[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<IpGroup[]>(null as any);
     }
 }
 
@@ -1707,6 +1817,50 @@ export class RemoveClientProfileParam implements IRemoveClientProfileParam {
 
 export interface IRemoveClientProfileParam {
     clientProfileId: string;
+}
+
+export class DeviceAppInfo implements IDeviceAppInfo {
+    appId!: string;
+    appName!: string;
+    iconPng!: string;
+
+    constructor(data?: IDeviceAppInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.appId = _data["appId"] !== undefined ? _data["appId"] : <any>null;
+            this.appName = _data["appName"] !== undefined ? _data["appName"] : <any>null;
+            this.iconPng = _data["iconPng"] !== undefined ? _data["iconPng"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): DeviceAppInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new DeviceAppInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["appId"] = this.appId !== undefined ? this.appId : <any>null;
+        data["appName"] = this.appName !== undefined ? this.appName : <any>null;
+        data["iconPng"] = this.iconPng !== undefined ? this.iconPng : <any>null;
+        return data;
+    }
+}
+
+export interface IDeviceAppInfo {
+    appId: string;
+    appName: string;
+    iconPng: string;
 }
 
 export class ApiException extends Error {

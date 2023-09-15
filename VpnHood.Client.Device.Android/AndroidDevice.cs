@@ -1,17 +1,11 @@
-﻿#nullable enable
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Android.App;
-using Android.Content;
+﻿using Android.Content;
+using Android.Content.PM;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.OS;
 using static Android.Graphics.Bitmap;
 
-namespace VpnHood.Client.Device.Android
+namespace VpnHood.Client.Device.Droid
 {
     public class AndroidDevice : IDevice
     {
@@ -33,16 +27,30 @@ namespace VpnHood.Client.Device.Android
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
+        private static IList<ResolveInfo> QueryIntentActivities(PackageManager packageManager, Intent intent)
+        {
+            if (Build.VERSION.SdkInt < BuildVersionCodes.Tiramisu)
+            {
+#pragma warning disable CA1422
+                return packageManager.QueryIntentActivities(intent, 0);
+#pragma warning restore CA1422
+            }
+
+#pragma warning disable CA1416
+            return packageManager.QueryIntentActivities(intent, PackageManager.ResolveInfoFlags.Of(0));
+#pragma warning restore CA1416
+        }
+
         public DeviceAppInfo[] InstalledApps
         {
             get
             {
                 var deviceAppInfos = new List<DeviceAppInfo>();
-                var packageManager = Application.Context.PackageManager ??
-                                     throw new Exception("Could not acquire PackageManager!");
+                var packageManager = Application.Context.PackageManager ?? throw new Exception("Could not acquire PackageManager!");
                 var intent = new Intent(Intent.ActionMain);
                 intent.AddCategory(Intent.CategoryLauncher);
-                var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
+                var resolveInfoList = QueryIntentActivities(packageManager, intent);
+
                 foreach (var resolveInfo in resolveInfoList)
                 {
                     if (resolveInfo.ActivityInfo == null)
@@ -106,7 +114,7 @@ namespace VpnHood.Client.Device.Android
 
         private static Bitmap DrawableToBitmap(Drawable drawable)
         {
-            if (drawable is BitmapDrawable {Bitmap: { }} drawable1)
+            if (drawable is BitmapDrawable { Bitmap: { } } drawable1)
                 return drawable1.Bitmap;
 
             //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);

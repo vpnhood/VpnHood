@@ -10,7 +10,7 @@ using Android.Views;
 using Android.Webkit;
 using Android.Widget;
 using VpnHood.Client.App.WebServer;
-using VpnHood.Client.Device.Android;
+using VpnHood.Client.Device.Droid;
 using Xamarin.Essentials;
 
 namespace VpnHood.Client.App.Droid;

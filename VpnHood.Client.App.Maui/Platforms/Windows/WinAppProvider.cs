@@ -4,7 +4,7 @@ using VpnHood.Client.Device.WinDivert;
 // ReSharper disable once CheckNamespace
 namespace VpnHood.Client.App.Maui;
 
-internal partial class VpnHoodAppProvider : IAppProvider
+public class WinAppProvider : IAppProvider
 {
     public IDevice Device { get; } = new WinDivertDevice();
     public bool IsLogToConsoleSupported => false;

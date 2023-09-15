@@ -20,14 +20,22 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // init app
-#if WINDOWS
-        var appProvider = new VpnHoodAppProvider();
+        var appProvider = CreateAppProvider();
         using var spaResource = new MemoryStream(UiResource.SPA);
         VpnHoodApp.Init(appProvider, new AppOptions { UpdateInfoUrl = appProvider.UpdateInfoUrl });
         VpnHoodAppUi.Init(spaResource, url2: appProvider.AdditionalUiUrl);
-#endif
 
         return builder.Build();
+    }
+
+    private static IAppProvider CreateAppProvider()
+    {
+#if WINDOWS
+        return new WinAppProvider();
+#elif ANDROID
+        return new AppProvider();
+#else
+        throw new PlatformNotSupportedException();
+#endif
     }
 }

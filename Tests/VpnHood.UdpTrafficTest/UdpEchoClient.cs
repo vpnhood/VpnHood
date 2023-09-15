@@ -2,7 +2,7 @@
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace VpnHood.ZUdpTrafficTest;
+namespace VpnHood.UdpTrafficTest;
 
 public class UdpEchoClient
 {

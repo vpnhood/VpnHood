@@ -27,7 +27,7 @@ internal class AppWebViewClient : WebViewClient
                 : BrowserLaunchMode.SystemPreferred
         };
 
-        Xamarin.Essentials.Browser.OpenAsync(url, options);
+        Browser.OpenAsync(url, options);
         return true;
     }
 

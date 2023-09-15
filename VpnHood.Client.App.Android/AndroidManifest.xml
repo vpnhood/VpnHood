@@ -1,13 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<uses-sdk />
 	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:label="@string/app_name" android:usesCleartextTraffic="true" android:supportsRtl="true"></application>
 	<uses-feature android:name="android.software.leanback" android:required="false" />
 	<uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-	<uses-permission android:name="android.permission.INTERNET" />
 	<queries>
 		<intent>
 			<action android:name="android.intent.action.VIEW" />
@@ -18,5 +17,4 @@
 			<data android:scheme="https" />
 		</intent>
 	</queries>
-	<uses-sdk />
 </manifest>

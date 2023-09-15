@@ -32,8 +32,7 @@ public class CheckNewVersionTest : TestBase
     public async Task Remote_is_unknown_if_remote_is_unreachable()
     {
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = new Uri("https://localhost:39999");
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: new Uri("https://localhost:39999"));
 
         await Task.Delay(1000);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Unknown, () => app.VersionStatus);
@@ -46,8 +45,7 @@ public class CheckNewVersionTest : TestBase
         SetNewRelease(CurrentAppVersion, DateTime.UtcNow, TimeSpan.Zero);
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.VersionStatus);
     }
@@ -59,8 +57,7 @@ public class CheckNewVersionTest : TestBase
             TimeSpan.Zero, CurrentAppVersion);
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Deprecated, () => app.VersionStatus);
     }
@@ -72,9 +69,8 @@ public class CheckNewVersionTest : TestBase
 
         // create client
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.UpdateCheckerInterval = TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
 
         // version should be latest
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.VersionStatus);
@@ -92,9 +88,8 @@ public class CheckNewVersionTest : TestBase
             DateTime.UtcNow, TimeSpan.FromSeconds(2));
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         appOptions.UpdateCheckerInterval= TimeSpan.FromMilliseconds(500);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.VersionStatus);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.VersionStatus);
@@ -108,8 +103,7 @@ public class CheckNewVersionTest : TestBase
             DateTime.UtcNow, TimeSpan.Zero);
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.VersionStatus);
     }
@@ -126,8 +120,7 @@ public class CheckNewVersionTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
         await Task.Delay(1000);

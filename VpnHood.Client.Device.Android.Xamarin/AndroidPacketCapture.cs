@@ -18,7 +18,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.Device.Android
+namespace VpnHood.Client.Device.Droid
 {
     [Service(Permission = Manifest.Permission.BindVpnService, Exported = false)]
     [IntentFilter(new[] { "android.net.VpnService" })]

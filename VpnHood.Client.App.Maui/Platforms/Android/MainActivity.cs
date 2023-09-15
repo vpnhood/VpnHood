@@ -2,7 +2,7 @@
 using Android.Content.PM;
 using Android.Content;
 using Android.Net;
-using VpnHood.Client.Device.Android;
+using VpnHood.Client.Device.Droid;
 using Android.OS;
 using Android.Runtime;
 

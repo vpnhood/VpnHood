@@ -8,9 +8,9 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: global::Android.Runtime.ResourceDesignerAttribute("VpnHood.Client.Device.Android.Resource", IsApplication=false)]
+[assembly: global::Android.Runtime.ResourceDesignerAttribute("VpnHood.Client.Device.Droid.Resource", IsApplication=false)]
 
-namespace VpnHood.Client.Device.Android
+namespace VpnHood.Client.Device.Droid
 {
 	
 	

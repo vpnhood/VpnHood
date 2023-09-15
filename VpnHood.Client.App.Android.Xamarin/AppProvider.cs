@@ -1,6 +1,6 @@
 ﻿using System;
 using VpnHood.Client.Device;
-using VpnHood.Client.Device.Android;
+using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid;
 

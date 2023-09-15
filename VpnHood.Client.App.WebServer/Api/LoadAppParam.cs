@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Client.App.UI.Api;
+﻿namespace VpnHood.Client.App.WebServer.Api;
 
 public class LoadAppParam
 {

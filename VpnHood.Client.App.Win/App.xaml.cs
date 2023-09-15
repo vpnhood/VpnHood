@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Windows;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Win;
@@ -23,11 +23,11 @@ public partial class App : Application
             var appProvider = new VpnHoodAppProvider();
             using var spaResource = new MemoryStream(UiResource.SPA);
             VpnHoodApp.Init(appProvider);
-            VpnHoodAppUi.Init(spaResource, url2: appProvider.AdditionalUiUrl);
+            VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);
 
             // initialize Win
             WinApp.Instance.ExitRequested += (_, _) => Shutdown();
-            WinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => WinApp.OpenUrlInExternalBrowser(VpnHoodAppUi.Instance.Url);
+            WinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => WinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             WinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
             WinApp.Instance.Start();
         }
@@ -50,7 +50,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         WinApp.Instance.Dispose();
-        if (VpnHoodAppUi.IsInit) VpnHoodAppUi.Instance.Dispose();
+        if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
         if (VpnHoodApp.IsInit) VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 
         base.OnExit(e);

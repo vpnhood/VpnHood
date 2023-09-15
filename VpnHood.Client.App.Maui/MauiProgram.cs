@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 namespace VpnHood.Client.App.Maui;
 
 public static class MauiProgram
@@ -23,7 +23,7 @@ public static class MauiProgram
         var appProvider = CreateAppProvider();
         using var spaResource = new MemoryStream(UiResource.SPA);
         VpnHoodApp.Init(appProvider, new AppOptions { UpdateInfoUrl = appProvider.UpdateInfoUrl });
-        VpnHoodAppUi.Init(spaResource, url2: appProvider.AdditionalUiUrl);
+        VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);
 
         return builder.Build();
     }

@@ -13,18 +13,18 @@ using EmbedIO.WebApi;
 using Swan.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App.UI;
+namespace VpnHood.Client.App.WebServer;
 
-public class VpnHoodAppUi : IDisposable
+public class VpnHoodAppWebServer : IDisposable
 {
-    private static VpnHoodAppUi? _instance;
+    private static VpnHoodAppWebServer? _instance;
     private readonly Stream _spaZipStream;
     private string? _indexHtml;
-    private WebServer? _server;
+    private EmbedIO.WebServer? _server;
     private string? _spaHash;
     private Uri? _url1;
 
-    private VpnHoodAppUi(Stream spaZipStream, int defaultPort, Uri? url2)
+    private VpnHoodAppWebServer(Stream spaZipStream, int defaultPort, Uri? url2)
     {
         if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
         _spaZipStream = spaZipStream;
@@ -41,8 +41,8 @@ public class VpnHoodAppUi : IDisposable
     public string SpaHash =>
         _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
-    public static VpnHoodAppUi Instance => _instance
-        ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUi)} has not been initialized yet!");
+    public static VpnHoodAppWebServer Instance => _instance
+        ?? throw new InvalidOperationException($"{nameof(VpnHoodAppWebServer)} has not been initialized yet!");
 
     public static bool IsInit => _instance != null;
 
@@ -53,9 +53,9 @@ public class VpnHoodAppUi : IDisposable
             _instance = null;
     }
 
-    public static VpnHoodAppUi Init(Stream zipStream, int defaultPort = 9090, Uri? url2 = null)
+    public static VpnHoodAppWebServer Init(Stream zipStream, int defaultPort = 9090, Uri? url2 = null)
     {
-        var ret = new VpnHoodAppUi(zipStream, defaultPort, url2);
+        var ret = new VpnHoodAppWebServer(zipStream, defaultPort, url2);
         ret.Start();
         return ret;
     }
@@ -114,7 +114,7 @@ public class VpnHoodAppUi : IDisposable
         return path;
     }
 
-    private WebServer CreateWebServer(Uri url1, Uri? url2, string spaPath)
+    private EmbedIO.WebServer CreateWebServer(Uri url1, Uri? url2, string spaPath)
     {
         // read index.html for fallback
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
@@ -122,7 +122,7 @@ public class VpnHoodAppUi : IDisposable
         if (url2 != null) urlPrefixes = urlPrefixes.Concat(new[] { url2.AbsoluteUri }).ToArray();
 
         // create the server
-        var server = new WebServer(o => o
+        var server = new EmbedIO.WebServer(o => o
                 .WithUrlPrefixes(urlPrefixes)
                 .WithMode(HttpListenerMode.EmbedIO))
             .WithCors(

@@ -116,9 +116,9 @@
       <Project>{CCEB6931-2B59-49D5-8916-BE184CEB0BA1}</Project>
       <Name>VpnHood.Client.App.Resources</Name>
     </ProjectReference>
-    <ProjectReference Include="..\VpnHood.Client.App.UI\VpnHood.Client.App.UI.csproj">
-      <Project>{18d028c5-3056-457f-9286-f469bee59bbe}</Project>
-      <Name>VpnHood.Client.App.UI</Name>
+    <ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj">
+      <Project>{28C9E8D4-8288-4A32-8B5C-8892B9C6958C}</Project>
+      <Name>VpnHood.Client.App.WebServer</Name>
     </ProjectReference>
     <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj">
       <Project>{53914191-5b94-41cc-8ce4-37c9b2e0a877}</Project>

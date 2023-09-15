@@ -1,12 +1,11 @@
-﻿#nullable enable
-using Android.Content;
+﻿using Android.Content;
 using Android.Content.PM;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.OS;
 using static Android.Graphics.Bitmap;
 
-namespace VpnHood.Client.Device.Android
+namespace VpnHood.Client.Device.Droid
 {
     public class AndroidDevice : IDevice
     {

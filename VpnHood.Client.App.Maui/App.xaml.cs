@@ -1,5 +1,4 @@
-﻿using Microsoft.Maui;
-using VpnHood.Client.App.Resources;
+﻿using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Maui;

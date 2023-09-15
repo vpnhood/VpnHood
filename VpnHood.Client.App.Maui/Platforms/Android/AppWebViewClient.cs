@@ -1,12 +1,9 @@
-﻿#nullable enable
-using Android.Webkit;
+﻿using Android.Webkit;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using WebView = Android.Webkit.WebView;
 
 namespace VpnHood.Client.App.Maui;
-
-
 internal class AppWebViewClient : MauiWebViewClient
 {
     public bool BrowseLinkInExternalBrowser { get; set; } = false;

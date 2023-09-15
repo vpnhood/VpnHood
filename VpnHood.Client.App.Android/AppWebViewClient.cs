@@ -1,8 +1,6 @@
-﻿using Android.Content;
-using Android.Webkit;
+﻿using Android.Webkit;
 using VpnHood.Client.App.Resources;
 using Xamarin.Essentials;
-using Browser = Android.Provider.Browser;
 
 namespace VpnHood.Client.App.Droid;
 

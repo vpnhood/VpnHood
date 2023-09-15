@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.Client.App.UI.Api;
+namespace VpnHood.Client.App.WebServer.Api;
 
 public class RemoveClientProfileParam
 {

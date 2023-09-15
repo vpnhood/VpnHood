@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.Client.App.Settings;
-using VpnHood.Client.App.UI.Api;
+using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.Swagger.Controllers

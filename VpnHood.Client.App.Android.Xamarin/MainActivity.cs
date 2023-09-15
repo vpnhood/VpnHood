@@ -9,7 +9,7 @@ using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using Android.Widget;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 using VpnHood.Client.Device.Android;
 using Xamarin.Essentials;
 
@@ -28,7 +28,7 @@ namespace VpnHood.Client.App.Droid;
 public class MainActivity : Activity
 {
     private const int RequestVpnPermission = 10;
-    private VpnHoodAppUi? _appUi;
+    private VpnHoodAppWebServer? _appUi;
 
     private AndroidDevice Device =>
         (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
@@ -48,7 +48,7 @@ public class MainActivity : Activity
 
         // Initialize UI
         var zipStream = Resources?.Assets?.Open("SPA.zip") ?? throw new Exception("Could not load SPA.zip resource!");
-        _appUi = VpnHoodAppUi.Init(zipStream);
+        _appUi = VpnHoodAppWebServer.Init(zipStream);
         InitWebUi();
     }
 

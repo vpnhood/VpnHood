@@ -1,4 +1,4 @@
-﻿using VpnHood.Client.App.UI;
+﻿using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Maui;
 
@@ -7,7 +7,7 @@ public partial class MainPage
     public MainPage()
     {
         InitializeComponent();
-        MainWebView.Source = VpnHoodAppUi.Instance.Url.AbsoluteUri;
+        MainWebView.Source = VpnHoodAppWebServer.Instance.Url.AbsoluteUri;
         MainWebView.Navigated += MainWebView_Navigated;
     }
 

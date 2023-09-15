@@ -1,6 +1,6 @@
 ﻿using Microsoft.Maui;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Maui;
 
@@ -27,7 +27,7 @@ public partial class App : Application
     protected override void CleanUp()
     {
         base.CleanUp();
-        if (VpnHoodAppUi.IsInit) VpnHoodAppUi.Instance.Dispose();
+        if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
         if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
     }
 
@@ -37,18 +37,4 @@ public partial class App : Application
         (Resources.TryGetValue("Primary", out var primaryColor) == true)
             ? primaryColor as Color : null;
 
-
-    private void UpdateIcon()
-    {
-        // update icon and text
-        var icon = VpnHoodApp.Instance.State.ConnectionState switch
-        {
-            AppConnectionState.Connected => UiResource.VpnConnectedIcon,
-            AppConnectionState.None => UiResource.VpnDisconnectedIcon,
-            _ => UiResource.VpnConnectingIcon
-        };
-
-        var memStream = new MemoryStream(icon);
-        //IconImageSource = ImageSource.FromStream(() => memStream);
-    }
 }

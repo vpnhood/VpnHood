@@ -1,6 +1,6 @@
 ﻿using VpnHood.Client.App.Settings;
 
-namespace VpnHood.Client.App.UI.Api;
+namespace VpnHood.Client.App.WebServer.Api;
 
 public class LoadAppResponse
 {

@@ -8,7 +8,7 @@ using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Win;
 
@@ -30,7 +30,7 @@ public partial class MainWindow : Window
         MainWebView.DefaultBackgroundColor = UiDefaults.WindowBackgroundColor;
         MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
-        MainWebView.Source = VpnHoodAppUi.Instance.Url;
+        MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
         _ = MainWebView.EnsureCoreWebView2Async(null);
 
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
@@ -61,7 +61,7 @@ public partial class MainWindow : Window
                 Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
                 WinApp.Instance.EnableOpenMainWindow = false;
                 if (WinApp.Instance.ShowWindowAfterStart)
-                    WinApp.OpenUrlInExternalBrowser(VpnHoodAppUi.Instance.Url);
+                    WinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             }
         }
     }

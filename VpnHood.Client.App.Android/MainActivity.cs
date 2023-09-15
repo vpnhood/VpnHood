@@ -5,19 +5,22 @@ using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.UI;
+using VpnHood.Client.App.WebServer;
 using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Droid;
 
 [Activity(Label = "@string/app_name",
     Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
+    MainLauncher = true,
     Exported = true,
-    MainLauncher = true, AlwaysRetainTaskState = true, LaunchMode = LaunchMode.SingleInstance,
+    AlwaysRetainTaskState = true, 
+    LaunchMode = LaunchMode.SingleInstance,
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
+
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 public class MainActivity : Activity
 {
@@ -40,7 +43,7 @@ public class MainActivity : Activity
 
         // Initialize UI
         using var memoryStream = new MemoryStream(UiResource.SPA);
-        VpnHoodAppUi.Init(memoryStream);
+        VpnHoodAppWebServer.Init(memoryStream);
 
         InitWebUi();
     }
@@ -65,8 +68,8 @@ public class MainActivity : Activity
     protected override void OnDestroy()
     {
         Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
-        if (VpnHoodAppUi.IsInit)
-            VpnHoodAppUi.Instance.Dispose();
+        if (VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Instance.Dispose();
 
         base.OnDestroy();
     }
@@ -105,7 +108,7 @@ public class MainActivity : Activity
 #if DEBUG
         WebView.SetWebContentsDebuggingEnabled(true);
 #endif
-        WebView.LoadUrl($"{VpnHoodAppUi.Instance.Url}?nocache={VpnHoodAppUi.Instance.SpaHash}");
+        WebView.LoadUrl($"{VpnHoodAppWebServer.Instance.Url}?nocache={VpnHoodAppWebServer.Instance.SpaHash}");
     }
 
     private void WebViewClient_PageLoaded(object? sender, EventArgs e)

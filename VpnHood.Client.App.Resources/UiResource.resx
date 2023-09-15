@@ -142,6 +142,9 @@
   <data name="Manage" xml:space="preserve">
     <value>Manage</value>
   </data>
+  <data name="NotificationImage" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Images\Notification.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="Open" xml:space="preserve">
     <value>Open</value>
   </data>

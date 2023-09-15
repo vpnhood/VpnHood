@@ -10,9 +10,9 @@
     <PackageReference Include="NSwag.AspNetCore" Version="13.20.0" />
   </ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.UI\VpnHood.Client.App.UI.csproj" />
-	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
+  </ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 	  <Exec Command="powershell -File _recreate-api.ps1" />

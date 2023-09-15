@@ -35,7 +35,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.UI\VpnHood.Client.App.UI.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Win.Shared\VpnHood.Client.App.Win.Shared.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />

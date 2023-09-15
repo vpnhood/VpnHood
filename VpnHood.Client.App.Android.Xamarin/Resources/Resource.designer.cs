@@ -773,9 +773,6 @@ namespace VpnHood.Client.App.Droid
 			// aapt resource value: 0x7F080007
 			public const int ic_launcher_round = 2131230727;
 			
-			// aapt resource value: 0x7F080008
-			public const int ic_notification = 2131230728;
-			
 			static Mipmap()
 			{
 				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
@@ -790,40 +787,25 @@ namespace VpnHood.Client.App.Droid
 		{
 			
 			// aapt resource value: 0x7F090000
-			public const int action_settings = 2131296256;
+			public const int app_name = 2131296256;
 			
 			// aapt resource value: 0x7F090001
-			public const int ad = 2131296257;
+			public const int copy_toast_msg = 2131296257;
 			
 			// aapt resource value: 0x7F090002
-			public const int app_name = 2131296258;
+			public const int fallback_menu_item_copy_link = 2131296258;
 			
 			// aapt resource value: 0x7F090003
-			public const int copy_toast_msg = 2131296259;
+			public const int fallback_menu_item_open_in_browser = 2131296259;
 			
 			// aapt resource value: 0x7F090004
-			public const int disconnect = 2131296260;
+			public const int fallback_menu_item_share_link = 2131296260;
 			
 			// aapt resource value: 0x7F090005
-			public const int fallback_menu_item_copy_link = 2131296261;
+			public const int hello = 2131296261;
 			
 			// aapt resource value: 0x7F090006
-			public const int fallback_menu_item_open_in_browser = 2131296262;
-			
-			// aapt resource value: 0x7F090007
-			public const int fallback_menu_item_share_link = 2131296263;
-			
-			// aapt resource value: 0x7F090008
-			public const int hello = 2131296264;
-			
-			// aapt resource value: 0x7F090009
-			public const int manage = 2131296265;
-			
-			// aapt resource value: 0x7F09000A
-			public const int open = 2131296266;
-			
-			// aapt resource value: 0x7F09000B
-			public const int status_bar_notification_info_overflow = 2131296267;
+			public const int status_bar_notification_info_overflow = 2131296262;
 			
 			static String()
 			{

@@ -2,38 +2,35 @@
 using System;
 using Android.App;
 using Android.Content;
+using Android.Graphics;
 using Android.OS;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.Device;
-using VpnHood.Client.Device.Android;
+using VpnHood.Client.App.Resources;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.Client.App.Android
+namespace VpnHood.Client.App.Droid
 {
 #if DEBUG
     [Application(Debuggable = true, UsesCleartextTraffic = true)]
 #else
     [Application(Debuggable = false, UsesCleartextTraffic = true)]
 #endif
-    internal class AndroidApp : Application, IAppProvider
+    internal class App : Application
     {
         private const int NotificationId = 1000;
         private const string NotificationChannelGeneralId = "general";
         private const string NotificationChannelGeneralName = "General";
         private Notification.Builder? _notifyBuilder;
         private AppConnectionState _lastNotifyState = AppConnectionState.None;
+        public static Color BackgroundColor => new(UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
+        public static App? Current { get; private set; }
+        public IAppProvider AppProvider { get; } = new AppProvider();
 
-        public static AndroidApp? Current { get; private set; }
-        public IDevice Device { get; }
-        public bool IsLogToConsoleSupported => false;
-
-        public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
+        public App(IntPtr javaReference, JniHandleOwnership transfer)
             : base(javaReference, transfer)
         {
-            Device = new AndroidDevice();
         }
-
 
         private readonly object _stateLock = new();
         private void UpdateNotification()
@@ -79,10 +76,7 @@ namespace VpnHood.Client.App.Android
             base.OnCreate();
 
             //app init
-            VpnHoodApp.Init(this, new AppOptions
-            {
-                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json")
-            });
+            VpnHoodApp.Init(AppProvider);
             VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => UpdateNotification();
             InitNotification();
             Current = this;

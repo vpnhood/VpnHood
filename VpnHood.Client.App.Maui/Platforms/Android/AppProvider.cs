@@ -3,7 +3,7 @@ using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Maui;
 
-internal class AndroidAppProvider : IAppProvider
+public class AppProvider : IAppProvider
 {
     public IDevice Device { get; } = new AndroidDevice();
     public bool IsLogToConsoleSupported => true;

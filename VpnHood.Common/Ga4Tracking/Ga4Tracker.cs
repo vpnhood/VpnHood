@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -21,7 +20,7 @@ public class Ga4Tracker
     public required string MeasurementId { get; init; }
     public required string ApiSecret { get; init; }
     public required string SessionId { get; set; }
-    public long SessionEngagementTime { get; set; } = 1000;
+    public required int SessionCount { get; set; } = 1;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString().Replace(" ", "");
     public required string ClientId { get; init; }
     public string? UserId { get; init; }
@@ -98,16 +97,12 @@ public class Ga4Tracker
             // "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.201|Microsoft%20Edge;114.0.1823.67"
             // ("uafvl", "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.201|Microsoft%20Edge;114.0.1823.67"),  *Finalized  // User Agent Full Version List
 
-            // document
-            //("dl", "https://localhost"),      // Document Location, Actual page's Pathname. It does not include the hostname, quertyString or Fragment. document.location.pathname
-            //("dt", "My page title"),          // Document Title, Actual page's Title, document.title
-            //("dr", "https://www.google.com"), // Document Referrer, Actual page's Referrer, document.referrer
-                                   
+                                  
             // session
             ("sid", SessionId), // GA4 Session Id. This comes from the GA4 Cookie. It may be different for each Stream ID Configured on the site
+            ("sct", SessionCount), //Count of sessions. This value increases by one each time a new session is detected ( when the session expires )
             ("seg", 1), // Required.  Session Engagement. If the current user is engaged in any way, this value will be 1
-            //("_s", 1), // Current hits counter for the current page load
-            //("sct", 1), // Count of sessions. This value increases by one each time a new session is detected ( when the session expires )
+            ("_s", 1), // Hit Counter. Current hits counter for the current page load
 
             // event
             ("en", ga4Event.EventName), // event name
@@ -122,8 +117,15 @@ public class Ga4Tracker
         };
 
         if (UserId != null) parameters.Add(("uid", UserId));
-        if (ga4Event.DocumentLocation != null) parameters.Add(("dl", ga4Event.DocumentLocation)); // Document Location
-        if (ga4Event.DocumentTitle != null) parameters.Add(("dt", ga4Event.DocumentTitle)); // Document Title
+        if (ga4Event.DocumentLocation != null) parameters.Add(("dl", ga4Event.DocumentLocation)); // Document Location, Actual page's Pathname. It does not include the hostname, query String or Fragment. document.location.pathname. eg: "https://localhost"
+        if (ga4Event.DocumentTitle != null) parameters.Add(("dt", ga4Event.DocumentTitle)); // Document Title, Actual page's Title, document.title. eg: "My page title"
+        if (ga4Event.DocumentReferrer!= null) parameters.Add(("dr", ga4Event.DocumentReferrer)); // Document Referrer, Actual page's Referrer, document.referrer. eg: "https://www.google.com"
+        if (ga4Event.IsFirstVisit) parameters.Add(("_fv", 1)); // first visit,  if the "_ga_THYNGSTER" cookie is not set, the first event will have this value present. This will internally create a new "first_visit" event on GA4. If this event is also a conversion the value will be "2" if not, will be "1"
+
+        // It's the total engagement time in milliseconds since the last event.
+        // The engagement time is measured only when the current page is visible and active ( ie: the browser window/tab must be active and visible ),
+        // for this GA4 uses the window.events: focus, blur, page_show, page_hide and the document:visibility change, these will determine when the timer starts and pauses
+        if (ga4Event.EngagementTime != null) parameters.Add(("_et ", ga4Event.EngagementTime));
         if (IsAdminDebugView) parameters.Add(("_dbg", 1)); // Analytics debug view
 
         // add user Properties
@@ -172,9 +174,6 @@ public class Ga4Tracker
 
             if (!string.IsNullOrEmpty(SessionId) && !ga4Event.Parameters.TryGetValue("session_id", out _))
                 ga4Event.Parameters.Add("session_id", SessionId);
-
-            if (SessionEngagementTime != 0 && !ga4Event.Parameters.TryGetValue("engagement_time_msec", out _))
-                ga4Event.Parameters.Add("engagement_time_msec", SessionEngagementTime.ToString());
         }
 
 

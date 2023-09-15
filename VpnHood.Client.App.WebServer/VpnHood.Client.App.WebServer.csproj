@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <RootNamespace>VpnHood.Client.App.UI</RootNamespace>
     <AssemblyName>VpnHood.Client.App.UI</AssemblyName>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <Company>OmegaHood LLC</Company>

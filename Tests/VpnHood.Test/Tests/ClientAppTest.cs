@@ -497,7 +497,7 @@ public class ClientAppTest : TestBase
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
-        var _ = app.Connect(clientProfile.ClientProfileId);
+        _ = app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
         // get data through tunnel
@@ -543,7 +543,7 @@ public class ClientAppTest : TestBase
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
         app.ClientProfileStore.UpdateTokenFromUrl(token1).Wait();
-        var _ = app.Connect(clientProfile.ClientProfileId);
+        _ = app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
         Assert.IsTrue(isTokenRetrieved);

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+	  <RootNamespace>VpnHood.Client.App.Resources</RootNamespace>
+	  <Description>UI Resources for client such as strings and icons.</Description>
+	  <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+	  <Company>OmegaHood LLC</Company>
+	  <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+	  <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+	  <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+	  <Version>3.0.414</Version>
+	  <AssemblyVersion>3.0.414</AssemblyVersion>
+	  <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	  <Nullable>enable</Nullable>
+	  <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Update="UiResource.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>UiResource.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="UiResource.resx">
+      <SubType>Designer</SubType>
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>UiResource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

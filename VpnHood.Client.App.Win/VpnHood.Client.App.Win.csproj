@@ -1,33 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup Label="Globals">
-    <WebView2LoaderPreference>Dynamic</WebView2LoaderPreference>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows7.0</TargetFramework>
-    <UseWindowsForms>True</UseWindowsForms>
-    <RootNamespace>VpnHood.Client.App</RootNamespace>
-    <AssemblyName>VpnHoodClient</AssemblyName>
-    <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
-    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
-    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <Company>OmegaHood LLC</Company>
-    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-    <PackageIcon>VpnHood.png</PackageIcon>
-    <PackageId>VpnHood.Client.App.Win</PackageId>
-    <StartupObject></StartupObject>
-    <Version>3.0.414</Version>
-    <AssemblyVersion>3.0.414</AssemblyVersion>
-    <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-    <Nullable>enable</Nullable>
-    <LangVersion>11</LangVersion>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
-    <UseWPF>False</UseWPF>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net7.0-windows10.0.22621.0</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>False</UseWindowsForms>
+		<RootNamespace>VpnHood.Client.App.Win</RootNamespace>
+		<AssemblyName>VpnHoodClient</AssemblyName>
+		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageId>VpnHood.Client.App.Win</PackageId>
+		<Version>3.0.414</Version>
+		<AssemblyVersion>3.0.414</AssemblyVersion>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>
+	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<PlatformTarget>AnyCPU</PlatformTarget>

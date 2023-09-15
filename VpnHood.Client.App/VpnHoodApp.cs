@@ -87,7 +87,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.OnSaved += Settings_OnSaved;
         ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FolderNameProfileStore));
-        Features = new AppFeatures();
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
@@ -108,9 +107,15 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             Settings.TestServerTokenAutoAdded = Settings.TestServerAccessKey;
         }
 
-        Features.TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId;
-        Features.IsExcludeAppsSupported = Device.IsExcludeAppsSupported;
-        Features.IsIncludeAppsSupported = Device.IsIncludeAppsSupported;
+        // initialize features
+        Features = new AppFeatures
+        {
+            Version = typeof(VpnHoodApp).Assembly.GetName().Version,
+            TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId,
+            IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
+            IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
+            UpdateInfoUrl = appProvider.UpdateInfoUrl,
+    };
         _ = CheckNewVersion();
 
         _instance = this;

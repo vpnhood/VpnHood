@@ -10,6 +10,7 @@ internal class TestAppProvider : IAppProvider
     {
         UpdateInfoUrl = updateInfoUrl;
         Device = TestHelper.CreateDevice(testDeviceOptions);
+        UpdateInfoUrl = updateInfoUrl;
     }
 
     public IDevice Device { get; }

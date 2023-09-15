@@ -634,7 +634,7 @@ public class ClientServerTest : TestBase
 
         try
         {
-            var _ = client.Connect();
+            _ = client.Connect();
             await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
         }
         catch

@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 

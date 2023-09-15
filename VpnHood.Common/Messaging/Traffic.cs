@@ -56,7 +56,7 @@ public class Traffic : IEquatable<Traffic>, ICloneable
         return Sent == other.Sent && Received == other.Received;
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return Equals(obj as Traffic);
     }

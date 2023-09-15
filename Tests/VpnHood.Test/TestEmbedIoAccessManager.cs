@@ -16,7 +16,6 @@ using VpnHood.Server.Access.Messaging;
 
 // ReSharper disable UnusedMember.Local
 
-#nullable enable
 namespace VpnHood.Test;
 
 public class TestEmbedIoAccessManager : IDisposable

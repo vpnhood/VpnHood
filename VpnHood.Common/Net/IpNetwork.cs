@@ -207,7 +207,7 @@ public class IpNetwork
         return $"{Prefix}/{PrefixLength}";
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is IpNetwork ipNetwork &&
                FirstIpAddress.Equals(ipNetwork.FirstIpAddress) &&

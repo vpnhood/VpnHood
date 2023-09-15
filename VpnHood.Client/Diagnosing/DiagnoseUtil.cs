@@ -57,7 +57,8 @@ public class DiagnoseUtil
                 "HttpTest: {HttpTestStatus}, Url: {url}, Timeout: {timeout}...", 
                 "Started", uri, timeout);
 
-            using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(timeout) };
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromMilliseconds(timeout);
             var result = await httpClient.GetStringAsync(uri);
             if (result.Length < 100)
                 throw new Exception("The http response data length is not expected!");

@@ -6,7 +6,7 @@ namespace VpnHood.Client.App.Maui;
 public class AppProvider : IAppProvider
 {
     public IDevice Device { get; } = new AndroidDevice();
-    public bool IsLogToConsoleSupported => true;
+    public bool IsLogToConsoleSupported => false;
     public Uri? AdditionalUiUrl => null;
-    public Uri? UpdateInfoUrl => null;
+    public Uri UpdateInfoUrl => new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
 }

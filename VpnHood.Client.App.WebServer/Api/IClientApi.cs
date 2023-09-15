@@ -3,7 +3,7 @@ using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 // ReSharper disable InconsistentNaming
 
-namespace VpnHood.Client.App.UI.Api;
+namespace VpnHood.Client.App.WebServer.Api;
 
 public interface IClientApi
 {

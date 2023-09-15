@@ -687,6 +687,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 {
                     var ga4Tracking = new Ga4Tracker
                     {
+                        SessionCount = 1,
                         MeasurementId = sessionResponse.GaMeasurementId,
                         ApiSecret = string.Empty,
                         ClientId = ClientId.ToString(),
@@ -703,6 +704,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     _clientUsageTracker = new ClientUsageTracker(Stat, Version, new Ga4Tracker
                     {
                         MeasurementId = _appGa4MeasurementId,
+                        SessionCount = 1,
                         ApiSecret = string.Empty,
                         ClientId = ClientId.ToString(),
                         SessionId = SessionId.ToString(),

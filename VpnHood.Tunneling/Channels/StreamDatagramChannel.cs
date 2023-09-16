@@ -32,6 +32,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
+    public bool IsStream => true;
 
     public StreamDatagramChannel(IClientStream clientStream, string channelId)
     : this(clientStream, channelId, Timeout.InfiniteTimeSpan)
@@ -229,19 +230,19 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         return DisposeAsync(true);
     }
 
-    public ValueTask DisposeAsync(bool graceFul)
+    public ValueTask DisposeAsync(bool graceful)
     {
         lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(graceFul);
+            _disposeTask ??= DisposeAsyncCore(graceful);
         return _disposeTask.Value;
     }
 
-    private async ValueTask DisposeAsyncCore(bool graceFul)
+    private async ValueTask DisposeAsyncCore(bool graceful)
     {
-        if (graceFul)
+        if (graceful)
             await SendClose(); // this won't throw any error
 
-        await _clientStream.DisposeAsync(graceFul);
+        await _clientStream.DisposeAsync(graceful);
         _disposed = true;
     }
 }

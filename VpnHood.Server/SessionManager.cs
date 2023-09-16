@@ -93,9 +93,8 @@ public class SessionManager : IAsyncDisposable, IJob
             ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData { ProtocolVersion = 3 };
 
-        var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory,
-            ipEndPointPair.LocalEndPoint, SessionOptions, TrackingOptions,
-            extraData, helloRequest);
+        var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory, 
+            SessionOptions, TrackingOptions, extraData, helloRequest);
 
         // add to sessions
         if (Sessions.TryAdd(session.SessionId, session))

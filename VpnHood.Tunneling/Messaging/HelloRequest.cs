@@ -9,7 +9,4 @@ public class HelloRequest : SessionRequest
         : base((byte)Messaging.RequestCode.Hello, requestId,  tokenId, clientInfo, encryptedClientId)
     {
     }
-
-    public bool UseUdpChannel { get; set; }
-    public bool UseUdpChannel2 { get; set; }
 }

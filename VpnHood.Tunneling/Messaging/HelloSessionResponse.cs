@@ -21,7 +21,7 @@ public class HelloSessionResponse : SessionResponse
     }
 
     [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress ClientPublicAddress { get; set; } = null!;
+    public IPAddress ClientPublicAddress { get; set; } = default!;
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[] TcpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
@@ -29,12 +29,10 @@ public class HelloSessionResponse : SessionResponse
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
 
-    public string ServerVersion { get; set; } = null!;
+    public string ServerVersion { get; set; } = default!;
     public int ServerProtocolVersion { get; set; }
     
-    public int UdpPort { get; set; }
-    public byte[]? UdpKey { get; set; } = null!;
-    public byte[]? ServerSecret { get; set; } //todo: must not null in version >= 2.9.362
+    public byte[] ServerSecret { get; set; } = default!;
     public int MaxDatagramChannelCount { get; set; } 
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }

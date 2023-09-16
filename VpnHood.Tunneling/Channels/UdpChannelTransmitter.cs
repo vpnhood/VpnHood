@@ -129,7 +129,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             catch (Exception ex)
             {
                 // break only for the first call
-                if (IsInvalidState(ex))
+                if (remoteEndPoint == null)
                 {
                     VhLogger.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter has stopped reading.");
                     break;

@@ -1,3 +1,10 @@
+# Upcoming
+### Client
+* Update: Remove the legacy Protocol Version 3
+ 
+### Server
+* Update: Remove the legacy Protocol Version 3
+
 # v3.0.416
 ### Client
 * Feature: Offer Premium if VpnHood Public server selected

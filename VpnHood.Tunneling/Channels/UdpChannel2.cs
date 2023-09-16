@@ -29,15 +29,16 @@ public class UdpChannel2 : IDatagramChannel
 
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
+    public bool IsStream => false;
 
-    public UdpChannel2(ulong sessionId, byte[] sessionUdpKey, bool isServer, int protocolVersion)
+    public UdpChannel2(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
     {
         _sessionId = sessionId;
         _isServer = isServer;
         _protocolVersion = protocolVersion;
         _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
-        _sessionCryptorReader = new BufferCryptor(sessionUdpKey);
-        _sessionCryptorWriter = new BufferCryptor(sessionUdpKey);
+        _sessionCryptorReader = new BufferCryptor(sessionKey);
+        _sessionCryptorWriter = new BufferCryptor(sessionKey);
     }
 
     public bool IsClosePending => false;
@@ -133,9 +134,9 @@ public class UdpChannel2 : IDatagramChannel
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public ValueTask DisposeAsync(bool graceFul)
+    public ValueTask DisposeAsync(bool graceful)
     {
-        _ = graceFul;
+        _ = graceful;
         return DisposeAsync();
     }
 

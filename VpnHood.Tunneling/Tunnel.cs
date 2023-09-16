@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common.Collections;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -25,6 +24,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = new();
+    private readonly List<IDatagramChannel> _datagramChannels = new();
     private readonly Timer _speedMonitorTimer;
     private bool _disposed;
     private int _maxDatagramChannelCount;
@@ -33,11 +33,9 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    private readonly TaskCollection _disposingTasks = new();
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public Traffic Speed { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
-    public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
     public JobSection JobSection { get; } = new();
 
     public Tunnel(TunnelOptions? options = null)
@@ -57,6 +55,25 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
+    public int DatagramChannelCount
+    {
+        get
+        {
+            lock (_channelListLock)
+                return _datagramChannels.Count;
+        }
+    }
+
+    public bool IsUdpMode => UdpChannel2 != null;
+    public UdpChannel2? UdpChannel2
+    {
+        get
+        {
+            lock (_channelListLock)
+                return (UdpChannel2?)_datagramChannels.FirstOrDefault(x => x is UdpChannel2);
+        }
+    }
+
     public Traffic Traffic
     {
         get
@@ -65,8 +82,8 @@ public class Tunnel : IJob, IAsyncDisposable
             {
                 return new Traffic
                 {
-                    Sent = _trafficUsage.Sent + _streamProxyChannels.Sum(x => x.Traffic.Sent) + DatagramChannels.Sum(x => x.Traffic.Sent),
-                    Received = _trafficUsage.Received + _streamProxyChannels.Sum(x => x.Traffic.Received) + DatagramChannels.Sum(x => x.Traffic.Received)
+                    Sent = _trafficUsage.Sent + _streamProxyChannels.Sum(x => x.Traffic.Sent) + _datagramChannels.Sum(x => x.Traffic.Sent),
+                    Received = _trafficUsage.Received + _streamProxyChannels.Sum(x => x.Traffic.Received) + _datagramChannels.Sum(x => x.Traffic.Received)
                 };
             }
         }
@@ -108,7 +125,7 @@ public class Tunnel : IJob, IAsyncDisposable
         lock (_channelListLock)
         {
             return channel is IDatagramChannel
-                ? DatagramChannels.Contains(channel)
+                ? _datagramChannels.Contains(channel)
                 : _streamProxyChannels.Contains(channel);
         }
     }
@@ -125,23 +142,27 @@ public class Tunnel : IJob, IAsyncDisposable
         // add to channel list
         lock (_channelListLock)
         {
-            if (DatagramChannels.Contains(datagramChannel))
+            if (_datagramChannels.Contains(datagramChannel))
                 throw new Exception("the DatagramChannel already exists in the collection.");
 
-            DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
+            _datagramChannels.Add(datagramChannel);
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                 "A DatagramChannel has been added. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}, ChannelType: {ChannelType}",
-                datagramChannel.ChannelId, DatagramChannels.Length, datagramChannel.GetType().Name);
+                datagramChannel.ChannelId, _datagramChannels.Count, datagramChannel.GetType().Name);
 
             // remove additional Datagram channels
-            while (DatagramChannels.Length > MaxDatagramChannelCount)
+            while (_datagramChannels.Count > MaxDatagramChannelCount)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "Removing an exceeded DatagramChannel. ChannelId: {ChannelId}, ChannelCount: {ChannelCount}",
-                    datagramChannel.ChannelId, DatagramChannels.Length);
+                    datagramChannel.ChannelId, _datagramChannels.Count);
 
-                RemoveChannel(DatagramChannels[0]);
+                RemoveChannel(_datagramChannels[0]);
             }
+
+            // UdpChannels and StreamChannels can not be added together
+            foreach (var channel in _datagramChannels.Where(x => x.IsStream != datagramChannel.IsStream))
+                RemoveChannel(channel);
         }
 
         //  SendPacketTask after starting the channel and outside of the lock
@@ -166,25 +187,20 @@ public class Tunnel : IJob, IAsyncDisposable
             channel.ChannelId, StreamProxyChannelCount);
     }
 
-    public void RemoveChannel(IChannel channel)
-    {
-        RemoveChannel(channel, true);
-    }
-
-    private void RemoveChannel(IChannel channel, bool graceFul)
+    private void RemoveChannel(IChannel channel)
     {
         if (!IsChannelExists(channel))
             return; // channel already removed or does not exist
 
         lock (_channelListLock)
         {
-            if (channel is IDatagramChannel)
+            if (channel is IDatagramChannel datagramChannel)
             {
-                DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
+                _datagramChannels.Remove(datagramChannel);
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                     "A DatagramChannel has been removed. Channel: {Channel}, ChannelId: {ChannelId}, " +
                     "ChannelCount: {ChannelCount}, Connected: {Connected}",
-                    VhLogger.FormatType(channel), channel.ChannelId, DatagramChannels.Length, channel.Connected);
+                    VhLogger.FormatType(channel), channel.ChannelId, _datagramChannels.Count, channel.Connected);
             }
             else if (channel is StreamProxyChannel streamProxyChannel)
             {
@@ -198,11 +214,9 @@ public class Tunnel : IJob, IAsyncDisposable
                 throw new ArgumentOutOfRangeException(nameof(channel), "Unknown Channel.");
         }
 
-        // dispose
-        _disposingTasks.Add(channel.DisposeAsync(graceFul));
-
         // clean up channel
         _trafficUsage.Add(channel.Traffic);
+        channel.DisposeAsync();
     }
 
     private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -243,7 +257,7 @@ public class Tunnel : IJob, IAsyncDisposable
         // ReSharper disable once InconsistentlySynchronizedField
         while (_packetQueue.Count > MaxQueueLength)
         {
-            var releaseCount = DatagramChannels.Length - _packetSenderSemaphore.CurrentCount;
+            var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there is some packet
             await _packetSentEvent.WaitAsync(1000); //Wait 1000 to prevent dead lock.
@@ -261,7 +275,7 @@ public class Tunnel : IJob, IAsyncDisposable
             foreach (var ipPacket in ipPackets)
                 _packetQueue.Enqueue(ipPacket);
 
-            var releaseCount = DatagramChannels.Length - _packetSenderSemaphore.CurrentCount;
+            var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
         }
@@ -387,7 +401,7 @@ public class Tunnel : IJob, IAsyncDisposable
             foreach (var channel in _streamProxyChannels.Where(x => !x.Connected))
                 RemoveChannel(channel);
 
-            foreach (var channel in DatagramChannels.Where(x => !x.Connected))
+            foreach (var channel in _datagramChannels.Where(x => !x.Connected))
                 RemoveChannel(channel);
         }
 
@@ -407,26 +421,17 @@ public class Tunnel : IJob, IAsyncDisposable
     private async ValueTask DisposeAsyncCore()
     {
         if (_disposed) return;
+        _disposed = true;
 
         // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
-        IChannel[] channels;
+        var disposeTasks = new List<Task>();
         lock (_channelListLock)
-            channels = _streamProxyChannels
-                .Select(x => (IChannel)x)
-                .Concat(DatagramChannels.Select(x => (IChannel)x))
-                .ToArray();
+        {
+            disposeTasks.AddRange(_streamProxyChannels.Select(channel => channel.DisposeAsync(false).AsTask()));
+            disposeTasks.AddRange(_datagramChannels.Select(channel => channel.DisposeAsync(false).AsTask()));
+        }
 
-        // remove packets
-        lock (_packetQueue)
-            _packetQueue.Clear();
-
-        foreach (var channel in channels)
-            try { RemoveChannel(channel, false); }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError(ex, "Could not remove a channel. ChannelId: {ChannelId}", channel.ChannelId);
-            }
-
+        // Stop speed monitor
         await _speedMonitorTimer.DisposeAsync();
         Speed.Sent = 0;
         Speed.Received = 0;
@@ -435,9 +440,7 @@ public class Tunnel : IJob, IAsyncDisposable
         _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10);
         _packetSentEvent.Release();
 
-        // removing disposing objects
-        await _disposingTasks.DisposeAsync();
-        _disposed = true;
+        // dispose all channels
+        await Task.WhenAll(disposeTasks);
     }
-
 }

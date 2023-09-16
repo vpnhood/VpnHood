@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -175,6 +177,32 @@ public class WinDivertPacketCapture : IPacketCapture
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
         _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+    }
+
+    private static void SetWinDivertDllFolder()
+    {
+        // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
+        var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice", "2.2.2");
+        var dllFolderPath = Environment.Is64BitOperatingSystem
+            ? Path.Combine(tempLibFolder, "x64")
+            : Path.Combine(tempLibFolder, "x86");
+        var requiredFiles = Environment.Is64BitOperatingSystem
+            ? new[] { "WinDivert.dll", "WinDivert64.sys" }
+            : new[] { "WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys" };
+
+        // extract WinDivert
+        //var checkFiles = requiredFiles.Select(x => Path.Combine(dllFolderPath, x));
+        //if (checkFiles.Any(x => !File.Exists(x)))
+        //{
+        //    using var memStream = new MemoryStream(Resource.WinDivertLibZip);
+        //    using var zipArchive = new ZipArchive(memStream);
+        //    zipArchive.ExtractToDirectory(tempLibFolder, true);
+        //}
+
+        // set dll folder
+        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+        if (path.IndexOf(dllFolderPath + ";", StringComparison.Ordinal) == -1)
+            Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
     }
 
     #region Applications Filter

@@ -161,7 +161,7 @@ public class Tunnel : IJob, IAsyncDisposable
             }
 
             // UdpChannels and StreamChannels can not be added together
-            foreach (var channel in _datagramChannels.Where(x => x.IsStream != datagramChannel.IsStream))
+            foreach (var channel in _datagramChannels.Where(x => x.IsStream != datagramChannel.IsStream).ToArray())
                 RemoveChannel(channel);
         }
 

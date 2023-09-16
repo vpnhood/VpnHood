@@ -162,7 +162,6 @@ public class UdpProxyTest : TestBase
     [TestMethod]
     public async Task Max_UdpClients()
     {
-        VhLogger.IsDiagnoseMode = true;
         var maxUdpCount = 3;
 
         // Create Server

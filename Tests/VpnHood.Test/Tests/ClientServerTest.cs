@@ -171,8 +171,6 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task DatagramChannel_Stream()
     {
-        VhLogger.IsDiagnoseMode = true;
-
         // Create Server
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
@@ -232,14 +230,12 @@ public class ClientServerTest : TestBase
         // switch to tcp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
-        await Task.Delay(1000);
         await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
-        await Task.Delay(1000);
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
     }

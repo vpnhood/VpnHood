@@ -11,5 +11,5 @@ public interface IChannel : IAsyncDisposable
     DateTime LastActivityTime { get; }
     Traffic Traffic { get; }
     void Start();
-    ValueTask DisposeAsync(bool graceFul);
+    ValueTask DisposeAsync(bool graceful);
 }

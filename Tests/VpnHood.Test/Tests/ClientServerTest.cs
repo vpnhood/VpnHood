@@ -133,7 +133,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(100);
-        Assert.AreEqual(3, client.DatagramChannelsCount);
+        Assert.AreEqual(3, client.Stat.DatagramChannelCount);
         await client.DisposeAsync();
 
         // --------
@@ -153,7 +153,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(200);
-        Assert.AreEqual(1, client2.DatagramChannelsCount);
+        Assert.AreEqual(1, client2.Stat.DatagramChannelCount);
         await client.DisposeAsync();
     }
 
@@ -232,12 +232,14 @@ public class ClientServerTest : TestBase
         // switch to tcp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
+        await Task.Delay(1000);
         await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
+        await Task.Delay(1000);
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
     }

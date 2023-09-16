@@ -184,19 +184,19 @@ public class StreamProxyChannel : IChannel, IJob
         return DisposeAsync(true);
     }
 
-    public ValueTask DisposeAsync(bool graceFul)
+    public ValueTask DisposeAsync(bool graceful)
     {
         lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(graceFul);
+            _disposeTask ??= DisposeAsyncCore(graceful);
         return _disposeTask.Value;
     }
 
-    private async ValueTask DisposeAsyncCore(bool graceFul)
+    private async ValueTask DisposeAsyncCore(bool graceful)
     {
         Connected = false;
         _disposed = true;
         await Task.WhenAll(
-            _hostTcpClientStream.DisposeAsync(graceFul).AsTask(),
-            _tunnelTcpClientStream.DisposeAsync(graceFul).AsTask());
+            _hostTcpClientStream.DisposeAsync(graceful).AsTask(),
+            _tunnelTcpClientStream.DisposeAsync(graceful).AsTask());
     }
 }

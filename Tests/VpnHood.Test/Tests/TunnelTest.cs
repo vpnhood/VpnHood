@@ -4,13 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
+using VpnHood.Client;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
@@ -22,6 +22,23 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class TunnelTest : TestBase
 {
+    private class ServerUdpChannelTransmitterTest : UdpChannelTransmitter
+    {
+        private readonly UdpChannel2 _udpChannel;
+
+        public ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey, UdpChannel2 udpChannel) 
+            : base(udpClient, serverKey)
+        {
+            _udpChannel = udpChannel;
+        }
+
+        protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition, byte[] buffer, int bufferIndex)
+        {
+            _udpChannel.SetRemote(this, remoteEndPoint);
+            _udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+        }
+    }
+
     private class PacketProxyReceiverTest : IPacketProxyReceiver
     {
         public int ReceivedCount { get; private set; }
@@ -100,13 +117,16 @@ public class TunnelTest : TestBase
             IPPacket.RandomPacket(IPVersion.IPv4)
         };
 
-        // Create server
-        using var aes = Aes.Create();
-        aes.KeySize = 128;
-        aes.GenerateKey();
+        // create keys
+        var serverKey = VhUtil.GenerateKey();
+        var sessionKey = VhUtil.GenerateKey();
 
-        var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverUdpChannel = new UdpChannel(false, serverUdpClient, 200, aes.Key);
+        // Create server
+        using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint 
+            ?? throw new Exception("Server connection is not established");
+        var serverUdpChannel = new UdpChannel2(1, sessionKey, true, 4);
+        using var serverUdpChannelTransmitter = new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
         serverUdpChannel.Start();
 
         var serverReceivedPackets = Array.Empty<IPPacket>();
@@ -118,11 +138,8 @@ public class TunnelTest : TestBase
 
         // Create client
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        if (serverUdpClient.Client.LocalEndPoint == null)
-            throw new Exception("Client connection has not been established!");
-
-        clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
-        var clientUdpChannel = new UdpChannel(true, clientUdpClient, 200, aes.Key);
+        var clientUdpChannel = new UdpChannel2(1, sessionKey, false, 4);
+        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey), serverEndPoint);
         clientUdpChannel.Start();
 
         var clientReceivedPackets = Array.Empty<IPPacket>();
@@ -153,15 +170,19 @@ public class TunnelTest : TestBase
             IPPacket.RandomPacket(IPVersion.IPv4)
         };
 
-        using var aes = Aes.Create();
-        aes.KeySize = 128;
-        aes.GenerateKey();
+        // create keys
+        var serverKey = VhUtil.GenerateKey();
+        var sessionKey = VhUtil.GenerateKey();
 
         // Create server
-        var serverReceivedPackets = Array.Empty<IPPacket>();
-        var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverUdpChannel = new UdpChannel(false, serverUdpClient, 200, aes.Key);
+        // Create server
+        using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
+                             ?? throw new Exception("Server connection is not established");
+        var serverUdpChannel = new UdpChannel2(1, sessionKey, true, 4);
+        using var serverUdpChannelTransmitter = new ServerUdpChannelTransmitterTest(serverUdpClient, serverKey, serverUdpChannel);
 
+        var serverReceivedPackets = Array.Empty<IPPacket>();
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
         serverTunnel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
@@ -171,13 +192,11 @@ public class TunnelTest : TestBase
         };
 
         // Create client
-        var clientReceivedPackets = Array.Empty<IPPacket>();
         var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        if (serverUdpClient.Client.LocalEndPoint == null)
-            throw new Exception($"{nameof(serverUdpClient)} connection has not been established!");
-        clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
-        var clientUdpChannel = new UdpChannel(true, clientUdpClient, 200, aes.Key);
+        var clientUdpChannel = new UdpChannel2(1, sessionKey, false, 4);
+        clientUdpChannel.SetRemote(new ClientUdpChannelTransmitter(clientUdpChannel, clientUdpClient, serverKey), serverEndPoint);
 
+        var clientReceivedPackets = Array.Empty<IPPacket>();
         var clientTunnel = new Tunnel();
         clientTunnel.AddChannel(clientUdpChannel);
         clientTunnel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)

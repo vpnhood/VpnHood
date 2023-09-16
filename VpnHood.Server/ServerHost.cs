@@ -462,10 +462,6 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await ProcessStreamProxyChannel(clientStream, cancellationToken);
                 break;
 
-            case RequestCode.UdpChannel:
-                await ProcessUdpChannel(clientStream, cancellationToken);
-                break;
-
             case RequestCode.Bye:
                 await ProcessBye(clientStream, cancellationToken);
                 break;
@@ -508,10 +504,9 @@ internal class ServerHost : IAsyncDisposable, IJob
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
         var sessionResponse = await _sessionManager.CreateSession(request, ipEndPointPair);
         var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
-        session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2) //todo: must be 3 or upper (4 for BinaryStream); 3 is deprecated by >= 2.9.371
+        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 4)
             throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
 
@@ -546,8 +541,6 @@ internal class ServerHost : IAsyncDisposable, IJob
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
             GaMeasurementId = sessionResponse.GaMeasurementId,
-            UdpKey = request.UseUdpChannel2 ? sessionResponse.SessionKey : session.UdpChannel?.Key,
-            UdpPort = session.UdpChannel?.LocalPort ?? 0,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,
             SuppressedTo = sessionResponse.SuppressedTo,
@@ -564,30 +557,6 @@ internal class ServerHost : IAsyncDisposable, IJob
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
-        await clientStream.DisposeAsync();
-    }
-
-    private async Task ProcessUdpChannel(IClientStream clientStream, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, "Reading a TcpDatagramChannel request...");
-        var request = await ReadRequest<UdpChannelRequest>(clientStream, cancellationToken);
-
-        // finding session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-
-        // enable udp
-        session.UseUdpChannel = true;
-
-        if (session.UdpChannel == null)
-            throw new InvalidOperationException("UdpChannel is not initialized.");
-
-        // send OK reply
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new UdpChannelSessionResponse(session.SessionResponse)
-        {
-            UdpKey = session.UdpChannel.Key,
-            UdpPort = session.UdpChannel.LocalPort
-        }, cancellationToken);
-
         await clientStream.DisposeAsync();
     }
 

@@ -8,4 +8,5 @@ public interface IDatagramChannel : IChannel
 {
     event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
     Task SendPacket(IPPacket[] packets);
+    bool IsStream { get; }
 }

@@ -555,7 +555,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var udpChannel = new UdpChannel2(SessionId, _sessionKey, false, _connectorService.ServerProtocolVersion);
+        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, _connectorService.ServerProtocolVersion);
         try
         {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverKey);

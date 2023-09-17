@@ -232,16 +232,6 @@ internal class ClientHost : IAsyncDisposable
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
-            // Dispose ssl stream and replace it with a HeadCryptor
-            //todo perhaps must be deprecated from >= 2.9.371
-            if (proxyClientStream.Stream is not ChunkStream && proxyClientStream is TcpClientStream tcpProxyClientStream)
-            {
-                await proxyClientStream.Stream.DisposeAsync();
-                tcpProxyClientStream.Stream = StreamCryptor.Create(
-                    tcpProxyClientStream.TcpClient.GetStream(),
-                    request.CipherKey, null, request.CipherLength);
-            }
-
             // MaxEncryptChunk
             if (proxyClientStream.Stream is BinaryStream binaryStream)
                 binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;

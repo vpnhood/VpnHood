@@ -57,7 +57,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private int ProtocolVersion { get; }
 
     internal Nat Nat { get; }
-    internal Tunnel Tunnel { get; } 
+    internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
 
     public event EventHandler? StateChanged;
@@ -784,13 +784,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try
         {
-            // send request
-            if (_connectorService.ServerProtocolVersion >= 4) //todo: condition should remove from version 400 or later
-            {
-                await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(GeneralEventId.Session,
-                    new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
-                    cancellationToken);
-            }
+            await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(GeneralEventId.Session,
+                new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
+                cancellationToken);
         }
         catch (Exception ex)
         {

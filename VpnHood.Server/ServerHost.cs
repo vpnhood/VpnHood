@@ -55,7 +55,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public void Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
-        if (IsStarted) throw new Exception($"{nameof(ServerHost)} is already Started!");
+        if (IsStarted) throw new Exception("ServerHost is already Started!");
         if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
         _cancellationTokenSource = new CancellationTokenSource();
@@ -246,12 +246,13 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // check request version
         var streamId = Guid.NewGuid() + ":incoming";
-        var version = buffer[0];
 
-        //todo must be deprecated from >= 2.9.371
+        //todo must be deprecated from >= 416
+        var version = buffer[0];
         if (version == 1)
             return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false,
                 cacheData: new[] { version }, cacheSize: 1), streamId);
+
 
         // Version 2 is HTTP and starts with POST
         try
@@ -284,6 +285,13 @@ internal class ServerHost : IAsyncDisposable, IJob
                     await sslStream.DisposeAsync(); // dispose Ssl
                     return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
                 }
+            }
+
+            // process hello without api key
+            if (authorization == "ApiKey")
+            {
+                await sslStream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
+                return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
             throw new UnauthorizedAccessException();
@@ -410,9 +418,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             // return 401 for ANY non SessionException to keep server's anonymity
-            // Server should always return bad request as error
-            //todo : deprecated from version 400 or upper
-            await clientStream.Stream.WriteAsync(HttpResponses.GetBadRequest(), cancellationToken);
+            await clientStream.Stream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
@@ -571,8 +577,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
-        if (session.SessionExtraData.ProtocolVersion >= 4) //todo: condition should remove from version 400 or later
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
 
         await clientStream.DisposeAsync(false);
     }

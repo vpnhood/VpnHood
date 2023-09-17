@@ -65,6 +65,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
         // compatibility
+        //todo must be deprecated from >= 416
         if (!UseBinaryStream)
             return new TcpClientStream(tcpClient, sslStream, streamId);
 
@@ -82,10 +83,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        // dispose Ssl
         if (string.IsNullOrEmpty(_apiKey))
             return new TcpClientStream(tcpClient, sslStream, streamId);
 
+        // dispose Ssl
         await sslStream.DisposeAsync();
         return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
     }

@@ -329,16 +329,6 @@ public class Session : IAsyncDisposable, IJob
             // send response
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
-            // Dispose ssl stream and replace it with a Head-Cryptor
-            //todo perhaps must be deprecated from >= 2.9.371
-            if (clientStream.Stream is not ChunkStream && clientStream is TcpClientStream tcpClientStream)
-            {
-                await clientStream.Stream.DisposeAsync();
-                tcpClientStream.Stream = StreamCryptor.Create(
-                    tcpClientStream.TcpClient.GetStream(),
-                    request.CipherKey, null, request.CipherLength);
-            }
-
             // MaxEncryptChunk
             if (clientStream.Stream is BinaryStream binaryStream)
                 binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;

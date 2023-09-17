@@ -230,12 +230,14 @@ public class ClientServerTest : TestBase
         // switch to tcp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
+        await VhTestUtil.WaitForValue(false, () => client.Stat.IsUdpMode);
         await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
+        await VhTestUtil.WaitForValue(true, () => client.Stat.IsUdpMode);
         await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
     }

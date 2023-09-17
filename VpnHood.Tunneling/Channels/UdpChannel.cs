@@ -12,7 +12,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling.Channels;
 
-public class UdpChannel2 : IDatagramChannel
+public class UdpChannel : IDatagramChannel
 {
     private IPEndPoint? _lastRemoteEp;
     private readonly byte[] _buffer = new byte[0xFFFF];
@@ -31,7 +31,7 @@ public class UdpChannel2 : IDatagramChannel
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
 
-    public UdpChannel2(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
+    public UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
     {
         _sessionId = sessionId;
         _isServer = isServer;

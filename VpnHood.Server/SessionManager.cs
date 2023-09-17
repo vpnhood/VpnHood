@@ -87,14 +87,14 @@ public class SessionManager : IAsyncDisposable, IJob
     private async Task<Session> CreateSessionInternal(
         SessionResponseEx sessionResponseEx,
         IPEndPointPair ipEndPointPair,
-        HelloRequest? helloRequest)
+        string requestId)
     {
         var extraData = sessionResponseEx.ExtraData != null
             ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData { ProtocolVersion = 3 };
 
         var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory, 
-            SessionOptions, TrackingOptions, extraData, helloRequest);
+            SessionOptions, TrackingOptions, extraData);
 
         // add to sessions
         if (Sessions.TryAdd(session.SessionId, session))
@@ -104,7 +104,7 @@ public class SessionManager : IAsyncDisposable, IJob
         session.SessionResponse.ErrorCode = SessionErrorCode.SessionError;
         await session.DisposeAsync();
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-            session.SessionResponse, helloRequest?.RequestId ?? "recovered");
+            session.SessionResponse, requestId);
 
     }
 
@@ -129,7 +129,7 @@ public class SessionManager : IAsyncDisposable, IJob
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponseEx, helloRequest);
 
         // create the session and add it to list
-        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest);
+        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest.RequestId);
 
         // Anonymous Report to GA
         _ = GaTrackNewSession(helloRequest.ClientInfo);
@@ -184,7 +184,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
             // create the session even if it contains error to prevent many calls
-            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, null);
+            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery");
             VhLogger.Instance.LogInformation(GeneralEventId.Session, "Session has been recovered. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
@@ -202,7 +202,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
                 ErrorMessage = ex.Message,
-            }, ipEndPointPair, null);
+            }, ipEndPointPair, "dead-recovery");
             await session.DisposeAsync();
             throw;
         }

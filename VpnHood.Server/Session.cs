@@ -52,7 +52,7 @@ public class Session : IAsyncDisposable, IJob
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
     public SessionResponseBase SessionResponse { get; private set; }
-    public UdpChannel2? UdpChannel2 => Tunnel.UdpChannel2;
+    public UdpChannel? UdpChannel => Tunnel.UdpChannel;
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; } = new();
@@ -131,7 +131,7 @@ public class Session : IAsyncDisposable, IJob
                 return;
 
             // add new channel
-            var udpChannel = new UdpChannel2(SessionId, SessionKey, true, SessionExtraData.ProtocolVersion);
+            var udpChannel = new UdpChannel(SessionId, SessionKey, true, SessionExtraData.ProtocolVersion);
             try
             {
                 Tunnel.AddChannel(udpChannel);

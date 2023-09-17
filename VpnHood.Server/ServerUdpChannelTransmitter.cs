@@ -23,7 +23,7 @@ public class ServerUdpChannelTransmitter : UdpChannelTransmitter
 
         //make sure UDP channel is added
         session.UseUdpChannel = true;
-        session.UdpChannel2?.SetRemote(this, remoteEndPoint);
-        session.UdpChannel2?.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+        session.UdpChannel?.SetRemote(this, remoteEndPoint);
+        session.UdpChannel?.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
     }
 }

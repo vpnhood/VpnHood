@@ -28,8 +28,6 @@ public class ServerSessionException : SessionException, ISelfLog
     {
         RemoteEndPoint = remoteEndPoint;
         SessionId = session.SessionId;
-        TokenId = session.HelloRequest?.TokenId;
-        ClientId = session.HelloRequest?.ClientInfo.ClientId;
         Session = session;
         RequestId = requestId;
     }
@@ -43,8 +41,6 @@ public class ServerSessionException : SessionException, ISelfLog
         : base(sessionResponseBase)
     {
         RemoteEndPoint = remoteEndPoint;
-        TokenId = session.HelloRequest?.TokenId;
-        ClientId = session.HelloRequest?.ClientInfo.ClientId;
         SessionId = session.SessionId;
         Session = session;
         RequestId = requestId;

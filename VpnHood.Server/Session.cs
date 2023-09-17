@@ -56,7 +56,6 @@ public class Session : IAsyncDisposable, IJob
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; } = new();
-    public HelloRequest? HelloRequest { get; } //todo may not needed
     public SessionExtraData SessionExtraData { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
@@ -67,7 +66,7 @@ public class Session : IAsyncDisposable, IJob
         INetFilter netFilter,
         ISocketFactory socketFactory,
         SessionOptions options, TrackingOptions trackingOptions,
-        SessionExtraData sessionExtraData, HelloRequest? helloRequest)
+        SessionExtraData sessionExtraData)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -97,7 +96,6 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _syncJobSection = new JobSection(options.SyncIntervalValue);
-        HelloRequest = helloRequest;
         SessionExtraData = sessionExtraData;
         SessionResponse = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
@@ -176,7 +174,7 @@ public class Session : IAsyncDisposable, IJob
             return;
 
         using var scope = VhLogger.Instance.BeginScope(
-            $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}, TokenId: {VhLogger.FormatId(HelloRequest?.TokenId)}");
+            $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}");
 
         Traffic traffic;
         lock (_syncLock)

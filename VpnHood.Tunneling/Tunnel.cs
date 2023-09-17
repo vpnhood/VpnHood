@@ -64,13 +64,13 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    public bool IsUdpMode => UdpChannel2 != null;
-    public UdpChannel2? UdpChannel2
+    public bool IsUdpMode => UdpChannel != null;
+    public UdpChannel? UdpChannel
     {
         get
         {
             lock (_channelListLock)
-                return (UdpChannel2?)_datagramChannels.FirstOrDefault(x => x is UdpChannel2);
+                return (UdpChannel?)_datagramChannels.FirstOrDefault(x => x is UdpChannel);
         }
     }
 

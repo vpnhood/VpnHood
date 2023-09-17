@@ -28,24 +28,6 @@ namespace VpnHood.Client;
 
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
-    private class SendingPackets
-    {
-        public readonly List<IPPacket> PassthruPackets = new();
-        public readonly List<IPPacket> ProxyPackets = new();
-        public readonly List<IPPacket> TcpHostPackets = new();
-        public readonly List<IPPacket> TunnelPackets = new();
-        public readonly List<IPPacket> DroppedPackets = new();
-
-        public void Clear()
-        {
-            TunnelPackets.Clear();
-            PassthruPackets.Clear();
-            TcpHostPackets.Clear();
-            ProxyPackets.Clear();
-            DroppedPackets.Clear();
-        }
-    }
-
     private bool _disposed;
     private readonly bool _autoDisposePacketCapture;
     private readonly CancellationTokenSource _cancellationTokenSource;
@@ -70,15 +52,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
     private byte[]? _serverKey;
+    private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
     private int ProtocolVersion { get; }
 
     internal Nat Nat { get; }
-    internal Tunnel Tunnel { get; }
+    internal Tunnel Tunnel { get; } 
     internal ClientSocketFactory SocketFactory { get; }
 
-    public Version? ServerVersion { get; private set; }
     public event EventHandler? StateChanged;
+    public Version? ServerVersion { get; private set; }
     public IPAddress? PublicAddress { get; private set; }
     public bool IsIpV6Supported { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
@@ -89,7 +72,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
     public bool ExcludeLocalNetwork { get; }
-    public bool UseUdpChannel { get; set; }
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
@@ -98,8 +80,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPEndPoint[]? HostTcpEndPoints { get; private set; }
     public IPEndPoint[]? HostUdpEndPoints { get; private set; }
     public bool DropUdpPackets { get; set; }
-
     public ClientStat Stat { get; }
+    public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
+
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -126,6 +109,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ipRangeProvider = options.IpRangeProvider;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
+        _useUdpChannel = options.UseUdpChannel;
         Token = token ?? throw new ArgumentNullException(nameof(token));
         Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
         UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
@@ -133,7 +117,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
-        UseUdpChannel = options.UseUdpChannel;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
         Nat = new Nat(true);
@@ -158,8 +141,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 #endif
     }
 
-    public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized!");
-
     public ClientState State
     {
         get => _state;
@@ -169,6 +150,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _state = value; //must set before raising the event; 
             VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
             StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    public bool UseUdpChannel
+    {
+        get => _useUdpChannel;
+        set
+        {
+            if (_useUdpChannel == value) return;
+            _useUdpChannel = value;
+            _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
     }
 
@@ -217,8 +209,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
             Version, ProtocolVersion, VhLogger.FormatId(ClientId));
 
-
-
         // Starting
         State = ClientState.Connecting;
         SessionStatus = new SessionStatus();
@@ -249,7 +239,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
 
             // disable IncludeIpRanges if it contains all networks
-            if (IncludeIpRanges.ToIpNetworks().IsAll()) IncludeIpRanges = Array.Empty<IpRange>();
+            if (IncludeIpRanges.ToIpNetworks().IsAll())
+                IncludeIpRanges = Array.Empty<IpRange>();
+
             State = ClientState.Connected;
         }
         catch (Exception ex)
@@ -532,7 +524,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 if (!Tunnel.IsUdpMode)
                     await AddUdpChannel();
             }
-            else 
+            else
             {
                 // make sure there is enough DatagramChannel
                 var curStreamChannelCount = Tunnel.DatagramChannelCount;
@@ -844,7 +836,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(false);
@@ -924,6 +915,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     }
 
+    private class SendingPackets
+    {
+        public readonly List<IPPacket> PassthruPackets = new();
+        public readonly List<IPPacket> ProxyPackets = new();
+        public readonly List<IPPacket> TcpHostPackets = new();
+        public readonly List<IPPacket> TunnelPackets = new();
+        public readonly List<IPPacket> DroppedPackets = new();
+
+        public void Clear()
+        {
+            TunnelPackets.Clear();
+            PassthruPackets.Clear();
+            TcpHostPackets.Clear();
+            ProxyPackets.Clear();
+            DroppedPackets.Clear();
+        }
+    }
+
     public class ClientStat
     {
         private readonly VpnHoodClient _client;
@@ -932,6 +941,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public Traffic SessionTraffic => _client.Tunnel.Traffic;
         public Traffic AccountTraffic => _client._helloTraffic + SessionTraffic;
         public int DatagramChannelCount => _client.Tunnel.DatagramChannelCount;
+        public bool IsUdpMode => _client.Tunnel.IsUdpMode;
 
         internal ClientStat(VpnHoodClient vpnHoodClient)
         {

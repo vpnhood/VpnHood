@@ -59,15 +59,6 @@ public class ServerApp : IDisposable
         // load app settings
         var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
-        if (!File.Exists(appSettingsFilePath)) //todo legacy for version 318 and older
-        {
-            var oldSettingsFile = Path.Combine(Path.GetDirectoryName(storagePath)!, "appsettings.json");
-            if (File.Exists(oldSettingsFile))
-            {
-                appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
-                File.Copy(oldSettingsFile, appSettingsFilePath);
-            }
-        }
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         AppSettings = File.Exists(appSettingsFilePath)
             ? VhUtil.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))

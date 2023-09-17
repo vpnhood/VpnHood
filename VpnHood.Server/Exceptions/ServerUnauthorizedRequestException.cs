@@ -33,8 +33,6 @@ public class ServerUnauthorizedAccessException : UnauthorizedAccessException
     {
         IpEndPointPair = ipEndPointPair;
         SessionId = session.SessionId;
-        TokenId = session.HelloRequest?.TokenId;
-        ClientId = session.HelloRequest?.ClientInfo.ClientId;
     }
 
     public virtual void Log()

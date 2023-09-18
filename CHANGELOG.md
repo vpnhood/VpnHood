@@ -4,6 +4,7 @@
  
 ### Server
 * Update: Remove the legacy Protocol Version 3
+* Fix: Collection was modified error which caused connection freeze temporary
 
 # v3.0.416
 ### Client

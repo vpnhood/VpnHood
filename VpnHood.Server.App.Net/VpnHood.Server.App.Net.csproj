@@ -4,7 +4,6 @@
     <TargetFramework>net7.0</TargetFramework>
     <RootNamespace>VpnHood.Server.App</RootNamespace>
     <AssemblyName>VpnHoodServer</AssemblyName>
-    <PackageId>VpnHood.Server.App.Net</PackageId>
     <Company>OmegaHood LLC</Company>
     <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <Product>VpnHood.Server</Product>
@@ -12,8 +11,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Version>3.0.414</Version>
-    <AssemblyVersion>3.0.414</AssemblyVersion>
+    <Version>3.0.418</Version>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

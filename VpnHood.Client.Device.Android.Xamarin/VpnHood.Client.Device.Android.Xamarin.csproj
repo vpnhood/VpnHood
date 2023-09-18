@@ -11,7 +11,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
-    <AssemblyName>VpnHood.Client.Device.Android</AssemblyName>
+    <AssemblyName>VpnHood.Client.Device.Android.Xamarin</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <Deterministic>True</Deterministic>
     <AndroidResgenFile>Resources\Resource.designer.cs</AndroidResgenFile>

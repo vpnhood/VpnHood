@@ -398,10 +398,10 @@ public class Tunnel : IJob, IAsyncDisposable
         // remove disconnected channels
         lock (_channelListLock)
         {
-            foreach (var channel in _streamProxyChannels.Where(x => !x.Connected))
+            foreach (var channel in _streamProxyChannels.Where(x => !x.Connected).ToArray())
                 RemoveChannel(channel);
 
-            foreach (var channel in _datagramChannels.Where(x => !x.Connected))
+            foreach (var channel in _datagramChannels.Where(x => !x.Connected).ToArray())
                 RemoveChannel(channel);
         }
 

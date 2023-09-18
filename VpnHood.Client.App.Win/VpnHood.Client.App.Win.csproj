@@ -14,9 +14,7 @@
 		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<PackageIcon>VpnHood.png</PackageIcon>
-		<PackageId>VpnHood.Client.App.Win</PackageId>
-		<Version>3.0.416</Version>
-		<AssemblyVersion>3.0.416</AssemblyVersion>
+		<Version>3.0.418</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>

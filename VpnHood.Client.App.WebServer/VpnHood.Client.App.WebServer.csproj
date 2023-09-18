@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>VpnHood.Client.App.UI</AssemblyName>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <Company>OmegaHood LLC</Company>
     <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
@@ -10,9 +9,7 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA).</Description>
-    <PackageId>VpnHood.Client.App.UI</PackageId>
-    <Version>3.0.416</Version>
-    <AssemblyVersion>3.0.416</AssemblyVersion>
+    <Version>3.0.418</Version>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

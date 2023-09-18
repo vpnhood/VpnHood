@@ -10,12 +10,10 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageTags></PackageTags>
     <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-    <PackageId>VpnHood.Tunneling</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.Tunneling</Product>
     <Description>Provides tunnelling classes and protocols shared between VpnHood.Client and VpnHood.Server.</Description>
-    <Version>3.0.416</Version>
-    <AssemblyVersion>3.0.416</AssemblyVersion>
+    <Version>3.0.418</Version>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

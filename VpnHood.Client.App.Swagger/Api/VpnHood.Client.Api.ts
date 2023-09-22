@@ -1863,6 +1863,17 @@ export interface IDeviceAppInfo {
     iconPng: string;
 }
 
+function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {
+    if (result !== null && result !== undefined)
+        throw result;
+    else
+        throw new ApiException(message, status, response, headers, null);
+}
+
+function isAxiosError(obj: any | undefined): obj is AxiosError {
+    return obj && obj.isAxiosError === true;
+}
+
 export class ApiException extends Error {
     override message: string;
     status: number;
@@ -1885,15 +1896,4 @@ export class ApiException extends Error {
     static isApiException(obj: any): obj is ApiException {
         return obj.isApiException === true;
     }
-}
-
-function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {
-    if (result !== null && result !== undefined)
-        throw result;
-    else
-        throw new ApiException(message, status, response, headers, null);
-}
-
-function isAxiosError(obj: any | undefined): obj is AxiosError {
-    return obj && obj.isAxiosError === true;
 }

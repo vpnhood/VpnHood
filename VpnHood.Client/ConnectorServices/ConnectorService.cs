@@ -235,7 +235,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             }
         }
 
-        // get or create free connection
+        // create free connection
         clientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
 
         // send request

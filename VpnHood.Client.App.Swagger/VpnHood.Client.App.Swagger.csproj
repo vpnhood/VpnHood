@@ -14,8 +14,4 @@
     <ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
   </ItemGroup>
 
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-	  <Exec Command="powershell -File _recreate-api.ps1" />
-	</Target>
-
 </Project>

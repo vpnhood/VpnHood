@@ -314,15 +314,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 {
                     if (_disposed) return;
                     var isIpV6 = ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6;
+                    var udpPacket = ipPacket.Protocol == ProtocolType.Udp ? ipPacket.Extract<UdpPacket>() : null;
+                    var isDnsPacket = udpPacket?.DestinationPort == 53;
 
                     // DNS packet must go through tunnel even if it is not in range
-                    if (!_packetCapture.IsDnsServersSupported && UpdateDnsRequest(ipPacket, true))
+                    if (isDnsPacket)
                     {
                         // Drop IPv6 if not support
                         if (isIpV6 && !IsIpV6Supported)
+                        {
                             droppedPackets.Add(ipPacket);
+                        }
                         else
+                        {
+                            if (!_packetCapture.IsDnsServersSupported)
+                                UpdateDnsRequest(ipPacket, true);
+
                             tunnelPackets.Add(ipPacket);
+                        }
                     }
 
                     else if (_packetCapture.CanSendPacketToOutbound)
@@ -344,7 +353,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
                             tunnelPackets.Add(ipPacket);
 
-                        else if (ipPacket.Protocol is ProtocolType.Udp)
+                        else if (ipPacket.Protocol is ProtocolType.Udp && !DropUdpPackets)
                             tunnelPackets.Add(ipPacket);
 
                         else
@@ -368,7 +377,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             tunnelPackets.Add(ipPacket);
 
                         // Udp
-                        else if (ipPacket.Protocol == ProtocolType.Udp)
+                        else if (ipPacket.Protocol == ProtocolType.Udp && !DropUdpPackets)
                         {
                             if (IsInIpRange(ipPacket.DestinationAddress))
                                 tunnelPackets.Add(ipPacket);
@@ -381,10 +390,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                     }
                 }
-
-                // drop all UDP packets except DNS
-                if (DropUdpPackets)
-                    tunnelPackets.RemoveAll(x => x.Protocol == ProtocolType.Udp && PacketUtil.ExtractUdp(x).DestinationPort != 53);
 
                 // send packets
                 if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationTokenSource.Token);
@@ -462,6 +467,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return isInRange;
     }
 
+    // ReSharper disable once UnusedMethodReturnValue.Local
     private bool UpdateDnsRequest(IPPacket ipPacket, bool outgoing)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));

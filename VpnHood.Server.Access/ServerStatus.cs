@@ -14,5 +14,5 @@ public class ServerStatus
     public Traffic TunnelSpeed { get; set; } = new();
     public string? ConfigCode { get; set; }
 
-    // todo 22
+    // todo 23
 }

@@ -211,15 +211,5 @@ namespace VpnHood.Client.App.Resources {
                 return ((byte[])(obj));
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] VpnKeyIcon {
-            get {
-                object obj = ResourceManager.GetObject("VpnKeyIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
     }
 }

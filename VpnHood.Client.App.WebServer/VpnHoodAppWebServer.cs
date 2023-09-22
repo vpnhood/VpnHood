@@ -125,10 +125,12 @@ public class VpnHoodAppWebServer : IDisposable
         var server = new EmbedIO.WebServer(o => o
                 .WithUrlPrefixes(urlPrefixes)
                 .WithMode(HttpListenerMode.EmbedIO))
-            .WithCors(
-                "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
-            .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ClientApiController>())
-            .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed));
+            .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
+            .WithWebApi("/api", ResponseSerializerCallback, c => c
+                .WithController<ClientApiController>()
+                .HandleUnhandledException(ExceptionHandler.DataResponseForException))
+            .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))
+            .HandleHttpException(ExceptionHandler.DataResponseForHttpException);
 
         return server;
     }

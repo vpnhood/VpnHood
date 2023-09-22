@@ -8,7 +8,7 @@ namespace VpnHood.Common.Client;
 
 public sealed class ApiException : Exception
 {
-    private class ServerException
+    public class ServerException
     {
         // ReSharper disable once CollectionNeverUpdated.Local
         public Dictionary<string, string?> Data { get; set; } = new();

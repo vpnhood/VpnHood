@@ -129,9 +129,6 @@
 	  <None Update="Resources\Raw\Icons\VpnHoodOrg.ico">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
-	  <None Update="Resources\Raw\Icons\VpnKey.ico">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	</ItemGroup>
 
 </Project>

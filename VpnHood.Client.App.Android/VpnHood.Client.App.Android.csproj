@@ -9,8 +9,15 @@
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
 	</PropertyGroup>
+	<PropertyGroup>
+		<IncludeSymbols>True</IncludeSymbols>
+		<AndroidVersionCode>422</AndroidVersionCode>
+		<Optimize>False</Optimize>
+		<PublishTrimmed>False</PublishTrimmed>
+		<RunAOTCompilation>False</RunAOTCompilation>
+	</PropertyGroup>
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.Essentials" Version="1.8.0" />
+		<PackageReference Include="Xamarin.Essentials" Version="1.8.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
@@ -19,8 +26,8 @@
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <AndroidResource Update="Resources\mipmap-anydpi-v26\appicon.xml">
-		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-	  </AndroidResource>
+		<AndroidResource Update="Resources\mipmap-anydpi-v26\appicon.xml">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</AndroidResource>
 	</ItemGroup>
 </Project>

@@ -22,14 +22,13 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.Android.KeyStoreFile
 $keystorePass = $credentials.Android.KeyStorePass
 $keystoreAlias = $credentials.Android.KeyStoreAlias
-$manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
-$manifestFileAab = Join-Path $projectDir "Properties/AndroidManifest.aab.xml";
+$manifestFile = Join-Path $projectDir "AndroidManifest.xml";
 
 # set android version
 $xmlDoc = [xml](Get-Content $manifestFile)
-$xmlDoc.manifest.versionCode = $version.Build.ToString()
-$xmlDoc.manifest.versionName = $version.ToString(3)
-$xmlDoc.save($manifestFile);
+#$xmlDoc.manifest.versionCode = $version.Build.ToString()
+#$xmlDoc.manifest.versionName = $version.ToString(3)
+#$xmlDoc.save($manifestFile);
 
 # apk
 Write-Host;
@@ -37,9 +36,9 @@ Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor
 
 $packageId = "com.vpnhood.client.droid";
 $signedApk = Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
- & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
-	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk/" /verbosity:$msverbosity; }
+ & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk/" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
+	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:ApplicationId=$packageId `
 	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
 
 # aab
@@ -47,13 +46,9 @@ Write-Host;
 Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
 
 $packageId = "com.vpnhood.client.android";
-$xmlDoc.manifest.package = $packageId;
-$xmlDoc.save($manifestFileAab);
-
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
+#if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
 & $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/property:AndroidManifest="Properties\AndroidManifest.aab.xml" `
+	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:ApplicationId=$packageId `
 	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True
 
 # publish info

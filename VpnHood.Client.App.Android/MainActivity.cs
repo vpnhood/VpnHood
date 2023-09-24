@@ -90,12 +90,17 @@ public class MainActivity : Activity
             var length = inputStream.Read(buffer);
             using var memoryStream = new MemoryStream(buffer, 0, length);
             var streamReader = new StreamReader(memoryStream);
-            var text = streamReader.ReadToEnd();
+            var accessKey = streamReader.ReadToEnd();
 
-            var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(text);
+            var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
+            var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
             _ = VpnHoodApp.Instance.Disconnect(true);
             VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
-            Toast.MakeText(this, string.Format(UiResource.MsgAccessKeyAdded, profile.Name), ToastLength.Long)?.Show();
+
+            var message = accessKeyStatus.ClientProfile != null
+                ? string.Format(UiResource.MsgAccessKeyUpdated, accessKeyStatus.Name)
+                : string.Format(UiResource.MsgAccessKeyAdded, accessKeyStatus.Name);
+            Toast.MakeText(this, message, ToastLength.Long)?.Show();
         }
         catch
         {

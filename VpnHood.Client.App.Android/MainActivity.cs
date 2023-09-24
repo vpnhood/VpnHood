@@ -22,9 +22,12 @@ namespace VpnHood.Client.App.Droid;
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
+[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2 })]
 public class MainActivity : Activity
 {
     private const int RequestVpnPermission = 10;
+    public const string AccessKeyMime1 = "application/vnd.cinderella";
+    public const string AccessKeyMime2 = "application/vhkey";
 
     private AndroidDevice Device =>
         (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
@@ -48,7 +51,58 @@ public class MainActivity : Activity
             VpnHoodAppWebServer.Init(memoryStream);
         }
 
+        // process intent
+        ProcessIntent(Intent);
+
         InitWebUi();
+    }
+
+    protected override void OnNewIntent(Intent? intent)
+    {
+        if (!ProcessIntent(intent))
+            base.OnNewIntent(intent);
+    }
+
+    private bool ProcessIntent(Intent? intent)
+    {
+        if (intent?.Data == null || ContentResolver == null)
+            return false;
+
+        // check mime
+        var uri = intent.Data;
+        var mimeType = ContentResolver.GetType(uri);
+        if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2)
+        {
+            Toast.MakeText(this, UiResource.MsgUnsupportedContent, ToastLength.Long)?.Show();
+            return false;
+        }
+
+        // try to add the access key
+        try
+        {
+            // open stream
+            using var inputStream = ContentResolver.OpenInputStream(uri);
+            if (inputStream == null)
+                return false;
+
+            // read string into buffer maximum 5k
+            var buffer = new byte[5 * 1024];
+            var length = inputStream.Read(buffer);
+            using var memoryStream = new MemoryStream(buffer, 0, length);
+            var streamReader = new StreamReader(memoryStream);
+            var text = streamReader.ReadToEnd();
+
+            var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(text);
+            _ = VpnHoodApp.Instance.Disconnect(true);
+            VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
+            Toast.MakeText(this, string.Format(UiResource.MsgAccessKeyAdded, profile.Name), ToastLength.Long)?.Show();
+        }
+        catch
+        {
+            Toast.MakeText(this, UiResource.MsgCantReadAccessKey, ToastLength.Long)?.Show();
+        }
+
+        return true;
     }
 
     private void Device_OnRequestVpnPermission(object? sender, EventArgs e)
@@ -132,6 +186,3 @@ public class MainActivity : Activity
         return base.OnKeyDown(keyCode, e);
     }
 }
-
-
-

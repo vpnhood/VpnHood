@@ -29,8 +29,6 @@ internal static class ExceptionHandler
 
         var typeFullName = GetExceptionType(ex).FullName;
         var message = ex.Message;
-        if (!string.IsNullOrEmpty(ex.InnerException?.Message))
-            message += $" InnerMessage: {ex.InnerException?.Message}";
 
         // set optional information
         context.Response.ContentType = MediaTypeNames.Application.Json;
@@ -42,11 +40,15 @@ internal static class ExceptionHandler
             Message = message
         };
 
+        // add inner message if exists
+        if (!string.IsNullOrEmpty(ex.InnerException?.Message))
+            error.Data.TryAdd("InnerMessage", ex.InnerException?.Message);
+
         foreach (DictionaryEntry item in ex.Data)
         {
             var key = item.Key.ToString();
             if (key != null)
-                error.Data.Add(key, item.Value?.ToString());
+                error.Data.TryAdd(key, item.Value?.ToString());
         }
 
         throw new HttpException(HttpStatusCode.BadRequest, error.Message, error);

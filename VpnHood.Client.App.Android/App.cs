@@ -27,7 +27,7 @@ namespace VpnHood.Client.App.Droid
             Current = this;
 
             //app init
-            VpnHoodApp.Init(AppProvider);
+            if (!VpnHoodApp.IsInit) VpnHoodApp.Init(AppProvider);
             _notification = new AppNotification(this);
             VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _notification.UpdateNotification();
         }

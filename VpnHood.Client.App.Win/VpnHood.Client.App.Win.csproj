@@ -43,4 +43,8 @@
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<MyStringConstant>Hello, World!</MyStringConstant>
+	</PropertyGroup>
+
 </Project>

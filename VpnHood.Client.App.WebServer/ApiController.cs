@@ -19,8 +19,6 @@ internal class ClientApiController : WebApiController, IClientApi
     [Route(HttpVerbs.Post, "/" + nameof (loadApp))]
     public async Task<LoadAppResponse> loadApp(LoadAppParam loadAppParam)
     {
-        throw new NotSupportedException("ssss"); //todo
-
         loadAppParam = await GetRequestDataAsync<LoadAppParam>();
         var ret = new LoadAppResponse
         {

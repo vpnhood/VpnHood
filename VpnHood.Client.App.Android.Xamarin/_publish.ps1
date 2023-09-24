@@ -40,7 +40,7 @@ $signedApk = Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
  & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
+	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
 
 # aab
 Write-Host;
@@ -53,8 +53,8 @@ $xmlDoc.save($manifestFileAab);
 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
 & $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/property:AndroidManifest="Properties\AndroidManifest.aab.xml" `
-	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True
+	/p:AndroidManifest="Properties\AndroidManifest.aab.xml" /p:DefineConstants=ANDROID_AAB `
+	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
 # publish info
 $json = @{

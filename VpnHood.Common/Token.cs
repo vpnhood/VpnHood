@@ -81,8 +81,8 @@ public class Token : ICloneable
     public static Token FromAccessKey(string base64)
     {
         base64 = base64.Trim().Trim('\"');
-        if (base64.IndexOf("vh://", StringComparison.OrdinalIgnoreCase) == 0)
-            base64 = base64[5..];
+        base64 = base64.Replace("vh://", "");
+        base64 = base64.Replace("vhkey://", "");
         var json = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
         var ret = JsonSerializer.Deserialize<Token>(json) ??
                   throw new FormatException("Could not parse accessKey!");

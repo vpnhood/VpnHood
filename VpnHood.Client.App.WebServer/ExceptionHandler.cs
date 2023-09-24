@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Net;
 using System.Net.Mime;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using EmbedIO;
 using VpnHood.Common.Client;
@@ -31,8 +29,6 @@ internal static class ExceptionHandler
 
         var typeFullName = GetExceptionType(ex).FullName;
         var message = ex.Message;
-        if (!string.IsNullOrEmpty(ex.InnerException?.Message))
-            message += $" InnerMessage: {ex.InnerException?.Message}";
 
         // set optional information
         context.Response.ContentType = MediaTypeNames.Application.Json;
@@ -44,19 +40,28 @@ internal static class ExceptionHandler
             Message = message
         };
 
+        // add inner message if exists
+        if (!string.IsNullOrEmpty(ex.InnerException?.Message))
+            error.Data.TryAdd("InnerMessage", ex.InnerException?.Message);
+
         foreach (DictionaryEntry item in ex.Data)
         {
             var key = item.Key.ToString();
             if (key != null)
-                error.Data.Add(key, item.Value?.ToString());
+                error.Data.TryAdd(key, item.Value?.ToString());
         }
 
         throw new HttpException(HttpStatusCode.BadRequest, error.Message, error);
     }
 
-    public static async Task DataResponseForHttpException(IHttpContext context, IHttpException httpException)
+    public static Task DataResponseForHttpException(IHttpContext context, IHttpException httpException)
     {
-        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-        await ResponseSerializer.Json(context, httpException.DataObject);
+        if (httpException.DataObject is ApiException.ServerException)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return ResponseSerializer.Json(context, httpException.DataObject);
+        }
+
+        return context.SendStandardHtmlAsync(context.Response.StatusCode);
     }
 }

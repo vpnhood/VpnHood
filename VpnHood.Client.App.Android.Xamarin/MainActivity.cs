@@ -193,6 +193,3 @@ public class MainActivity : Activity
         return base.OnKeyDown(keyCode, e);
     }
 }
-
-
-

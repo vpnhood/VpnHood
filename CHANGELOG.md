@@ -1,6 +1,7 @@
 # v3.0.421
 ### Client
 * Update: Remove the legacy Protocol Version 3
+* Android: Support opening Cinderella file (cdy) as VpnHood Key file
  
 ### Server
 * Update: Remove the legacy Protocol Version 3

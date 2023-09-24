@@ -135,6 +135,42 @@ namespace VpnHood.Client.App.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {0} Access key has been added..
+        /// </summary>
+        public static string MsgAccessKeyAdded {
+            get {
+                return ResourceManager.GetString("MsgAccessKeyAdded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} access key has been updated..
+        /// </summary>
+        public static string MsgAccessKeyUpdated {
+            get {
+                return ResourceManager.GetString("MsgAccessKeyUpdated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not read the access key..
+        /// </summary>
+        public static string MsgCantReadAccessKey {
+            get {
+                return ResourceManager.GetString("MsgCantReadAccessKey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unsupported file type..
+        /// </summary>
+        public static string MsgUnsupportedContent {
+            get {
+                return ResourceManager.GetString("MsgUnsupportedContent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         public static byte[] NotificationImage {

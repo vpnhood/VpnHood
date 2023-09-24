@@ -62,7 +62,7 @@ public class ClientProfileStore
         if (token == null) throw new KeyNotFoundException($"{nameof(tokenId)} does not exists. TokenId {tokenId}");
 
         // clone token
-        token = (Token) token.Clone();
+        token = (Token)token.Clone();
 
         if (!withSecret)
             token.Secret = Array.Empty<byte>();
@@ -128,7 +128,7 @@ public class ClientProfileStore
         if (index != -1)
             ClientProfiles[index] = clientProfile;
         else // add
-            ClientProfiles = ClientProfiles.Concat(new[] {clientProfile}).ToArray();
+            ClientProfiles = ClientProfiles.Concat(new[] { clientProfile }).ToArray();
 
         Save();
     }
@@ -159,12 +159,26 @@ public class ClientProfileStore
         }
     }
 
+    public AccessKeyStatus GetAccessKeyStatus(string accessKey)
+    {
+        var token = Token.FromAccessKey(accessKey);
+        var clientProfile = ClientProfiles.FirstOrDefault(x => x.TokenId == token.TokenId);
+        var ret = new AccessKeyStatus
+        {
+            Name = clientProfile?.Name ?? token.Name,
+            SupportId = token.SupportId.ToString(),
+            ClientProfile = clientProfile
+        };
+        
+        return ret;
+    }
+
     public ClientProfile AddAccessKey(string accessKey)
     {
         var token = Token.FromAccessKey(accessKey);
 
         // update tokens
-        _tokens = _tokens.Where(x => x.TokenId != token.TokenId).Concat(new[] {token}).ToArray();
+        _tokens = _tokens.Where(x => x.TokenId != token.TokenId).Concat(new[] { token }).ToArray();
 
         // find Server Node if exists
         var clientProfile = ClientProfiles.FirstOrDefault(x => x.TokenId == token.TokenId);
@@ -175,7 +189,7 @@ public class ClientProfileStore
                 ClientProfileId = Guid.NewGuid(),
                 TokenId = token.TokenId
             };
-            ClientProfiles = ClientProfiles.Concat(new[] {clientProfile}).ToArray();
+            ClientProfiles = ClientProfiles.Concat(new[] { clientProfile }).ToArray();
         }
 
         Save();

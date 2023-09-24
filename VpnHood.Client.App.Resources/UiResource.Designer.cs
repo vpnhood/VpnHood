@@ -144,7 +144,7 @@ namespace VpnHood.Client.App.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to {0} Access key has been updated..
+        ///   Looks up a localized string similar to {0} access key has been updated..
         /// </summary>
         public static string MsgAccessKeyUpdated {
             get {

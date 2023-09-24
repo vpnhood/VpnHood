@@ -14,7 +14,7 @@ namespace VpnHood.Client.App.Droid;
     Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
     MainLauncher = true,
     Exported = true,
-    AlwaysRetainTaskState = true, 
+    AlwaysRetainTaskState = true,
     LaunchMode = LaunchMode.SingleInstance,
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
@@ -34,7 +34,7 @@ public class MainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        
+
         // initialize web view
         InitSplashScreen();
 
@@ -42,8 +42,11 @@ public class MainActivity : Activity
         Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
         // Initialize UI
-        using var memoryStream = new MemoryStream(UiResource.SPA);
-        VpnHoodAppWebServer.Init(memoryStream);
+        if (!VpnHoodAppWebServer.IsInit)
+        {
+            using var memoryStream = new MemoryStream(UiResource.SPA);
+            VpnHoodAppWebServer.Init(memoryStream);
+        }
 
         InitWebUi();
     }

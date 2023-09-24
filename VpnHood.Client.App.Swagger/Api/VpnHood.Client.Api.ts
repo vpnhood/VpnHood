@@ -1885,10 +1885,11 @@ export class ApiException extends Error {
     constructor(
         message: string,
         statusCode: number,
-        response?: string,
+        response?: any,
         headers?: any,
-        innerException?: Error
+        innerException?: Error | null
     ) {
+        if (!(response instanceof String)) response = JSON.stringify(response);
         super(ApiException.buildMessage(message, statusCode, response));
         Object.setPrototypeOf(this, ApiException.prototype);
 
@@ -1896,14 +1897,14 @@ export class ApiException extends Error {
         this.response = response;
         this.headers = headers;
 
-        let serverException: ServerException = ServerException.tryParse(response);
-        if (serverException != null) {
-            Object.keys(serverException.data).forEach((key) => {
-                this[key] = serverException.data[key];
+        let serverException: ServerException | null = ServerException.tryParse(response);
+        if (serverException) {
+            Object.keys(serverException.Data).forEach((key) => {
+                if (serverException)
+                    this.data[key] = serverException.Data[key];
             });
-            this.response = JSON.stringify(serverException, null, 2);
-            this.exceptionTypeName = serverException.typeName;
-            this.exceptionTypeFullName = serverException.typeFullName;
+            this.exceptionTypeName = serverException.TypeName;
+            this.exceptionTypeFullName = serverException.TypeFullName;
         }
 
         if (innerException) {
@@ -1914,11 +1915,11 @@ export class ApiException extends Error {
     private static buildMessage(
         message: string,
         statusCode: number,
-        response: string | null
+        response?: string
     ): string {
         let serverException = ServerException.tryParse(response);
-        if (serverException != null)
-            return serverException.message || '';
+        if (serverException)
+            return serverException.Message || '';
 
         return `${message}\n\nStatus: ${statusCode}\nResponse:\n${response?.substring(0, Math.min(512, response.length))}`;
     }
@@ -1929,18 +1930,18 @@ export class ApiException extends Error {
 }
 
 class ServerException {
-    data!: { [key: string]: string | null };
-    typeName?: string;
-    typeFullName?: string;
-    message?: string;
+    Data!: { [key: string]: string | null };
+    TypeName?: string;
+    TypeFullName?: string;
+    Message?: string;
 
-    public static tryParse(value: string): ServerException | null {
+    public static tryParse(value: string | undefined): ServerException | null {
         if (!value)
             return null;
 
         try {
-            let outServerException: ServerException = JSON.parse(value);
-            return outServerException.typeName != null ? outServerException : null;
+            let serverException: ServerException = JSON.parse(value);
+            return serverException.TypeName ? serverException : null;
         } catch {
             return null;
         }

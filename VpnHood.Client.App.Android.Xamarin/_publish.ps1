@@ -5,7 +5,7 @@ Write-Host "*** Publishing Android ..." -BackgroundColor Blue -ForegroundColor W
 
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-$moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/latest";
+$moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/latest/";
 
 # prepare module folders
 $moduleDir = "$packagesClientDir/android";
@@ -36,26 +36,14 @@ $xmlDoc.save($manifestFile);
 Write-Host;
 Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
 
-$packageId = "com.vpnhood.client.android.web";
-$signedApk = Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
- & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
+$packageId = $xmlDoc.manifest.package;
+$outputPath="bin/ReleaseApk";
+$signedPacakgeFile = Join-Path $projectDir "$outputPath/$packageId-Signed.apk"
+
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
+ & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
-
-# aab
-Write-Host;
-Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
-
-$packageId = "com.vpnhood.client.android";
-$xmlDoc.manifest.package = $packageId;
-$xmlDoc.save($manifestFileAab);
-
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
-& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/p:AndroidManifest="Properties\AndroidManifest.aab.xml" /p:DefineConstants=ANDROID_AAB `
-	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
 # publish info
 $json = @{
@@ -69,13 +57,40 @@ $json = @{
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 
-#####
 # copy to solution ouput
-Copy-Item -path $signedApk -Destination "$moduleDir/$module_packageFileName" -Force
+Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
 if ($isLatest)
 {
 	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
-	Copy-Item -path $moduleGooglePlayLastestDir -Destination "$moduleDirLatest/" -Force -Recurse;
+}
+
+# ------------- aab
+Write-Host;
+Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
+
+$outputPath="bin/ReleaseAab";
+$packageId = "com.vpnhood.client.android";
+$signedPacakgeFile = Join-Path $projectDir "$outputPath/$packageId-Signed.aab"
+$module_packageFile = "$moduleDir/VpnHoodClient-android.aab";
+
+# Calcualted
+$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
+$xmlDoc.manifest.package = $packageId;
+$xmlDoc.save($manifestFileAab);
+
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
+& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
+	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+	/p:AndroidManifest="Properties\AndroidManifest.aab.xml" /p:DefineConstants=ANDROID_AAB `
+	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+
+#####
+# copy to solution ouput
+Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
+if ($isLatest)
+{
+	Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
+	Copy-Item -path "$moduleGooglePlayLastestDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }
 
 # report version

@@ -5,9 +5,9 @@ using VpnHood.Client.App.Resources;
 namespace VpnHood.Client.App.Droid
 {
 #if DEBUG
-    [Application(Debuggable = true)]
+    [Application(Debuggable = true, Banner = "@mipmap/banner")]
 #else
-    [Application(Debuggable = false)]
+    [Application(Debuggable = false, Banner = "@mipmap/banner")]
 #endif
     internal class App : Application
     {

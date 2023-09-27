@@ -48,7 +48,7 @@ export class ApiException extends Error {
         return `${message}\n\nStatus: ${statusCode}\nResponse:\n${response?.substring(0, Math.min(512, response.length))}`;
     }
 
-    toString(): string {
+    override toString(): string {
         return `HTTP Response:\n\n${this.response}\n\n${super.toString()}`;
     }
 }

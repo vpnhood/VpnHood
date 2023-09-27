@@ -5,14 +5,15 @@ Write-Host "*** Publishing Android ..." -BackgroundColor Blue -ForegroundColor W
 
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+$moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/latest";
 
 # prepare module folders
 $moduleDir = "$packagesClientDir/android";
 $moduleDirLatest = "$packagesClientDirLatest/android";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
-$module_infoFile = "$moduleDir/VpnHoodClient-android.json";
-$module_packageFile = "$moduleDir/VpnHoodClient-android.apk";
+$module_infoFile = "$moduleDir/VpnHoodClient-android-web.json";
+$module_packageFile = "$moduleDir/VpnHoodClient-android-web.apk";
 
 # Calcualted Path
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
@@ -35,7 +36,7 @@ $xmlDoc.save($manifestFile);
 Write-Host;
 Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
 
-$packageId = "com.vpnhood.client.droid";
+$packageId = "com.vpnhood.client.android.web";
 $signedApk = Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
  & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
@@ -61,10 +62,10 @@ $json = @{
     Version = $versionParam; 
     UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
     PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client";
+	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
 	ReleaseDate = "$releaseDate";
 	DeprecatedVersion = "$deprecatedVersion";
-	NotificationDelay = "14.00:00:00";
+	NotificationDelay = "03.00:00:00";
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 
@@ -73,7 +74,8 @@ $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 Copy-Item -path $signedApk -Destination "$moduleDir/$module_packageFileName" -Force
 if ($isLatest)
 {
-	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse
+	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	Copy-Item -path $moduleGooglePlayLastestDir -Destination "$moduleDirLatest/" -Force -Recurse;
 }
 
 # report version

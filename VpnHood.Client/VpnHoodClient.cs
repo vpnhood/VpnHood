@@ -392,7 +392,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
 
                 // send packets
-                if (tunnelPackets.Count > 0) _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+                if (tunnelPackets.Count > 0 && ShouldManageDatagramChannels) _ = ManageDatagramChannels(_cancellationTokenSource.Token);
                 if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets).Wait(_cancellationTokenSource.Token);
                 if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                 if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
@@ -516,27 +516,23 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return false;
     }
 
+    private bool ShouldManageDatagramChannels => UseUdpChannel != Tunnel.IsUdpMode || Tunnel.DatagramChannelCount < _maxDatagramChannelCount;
+
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
     {
-        if (!await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken) || _disposed)
+        if (_disposed || !await _datagramChannelsSemaphore.WaitAsync(0, cancellationToken))
             return;
+
+        if (!ShouldManageDatagramChannels)
+            return; 
 
         try
         {
             // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
             if (UseUdpChannel)
-            {
-                // first add the new udp channel
-                if (!Tunnel.IsUdpMode)
-                    await AddUdpChannel();
-            }
+                await AddUdpChannel(); 
             else
-            {
-                // make sure there is enough DatagramChannel
-                var curStreamChannelCount = Tunnel.DatagramChannelCount;
-                if (curStreamChannelCount < Tunnel.MaxDatagramChannelCount || Tunnel.IsUdpMode)
-                    await AddTcpDatagramChannel(cancellationToken);
-            }
+                await AddTcpDatagramChannel(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -572,6 +568,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             udpClient.Dispose();
             await udpChannel.DisposeAsync();
+            UseUdpChannel = false;
             throw;
         }
     }

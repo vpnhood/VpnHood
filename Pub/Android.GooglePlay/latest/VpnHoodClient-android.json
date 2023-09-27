@@ -1,9 +1,9 @@
 {
   "DeprecatedVersion": "3.0.400",
-  "ReleaseDate": "2023-09-27T02:45:12",
+  "ReleaseDate": "2023-09-27T06:38:00",
   "PackageUrl": "https://github.com/vpnhood/VpnHood/releases/download/v3.0.416/VpnHoodClient-android.apk",
   "UpdateInfoUrl": "https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json",
   "NotificationDelay": "14.00:00:00",
-  "InstallationPageUrl": "https://github.com/vpnhood/VpnHood/releases/download/v3.0.416/VpnHoodClient-android.apk",
+  "InstallationPageUrl": "https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client",
   "Version": "3.0.416"
 }

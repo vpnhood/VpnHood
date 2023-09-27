@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 
@@ -14,9 +15,9 @@ public class AppProvider : IAppProvider
         get
         {
 #if ANDROID_AAB
-            return new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
+            return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
 #else
-            return new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-droid.json");
+            return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json");
 #endif
         }
     }

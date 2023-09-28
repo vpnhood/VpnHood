@@ -114,10 +114,10 @@ public class NatItem
         }
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-        var src = (NatItem)obj;
         return
+            obj is NatItem src &&
             Equals(IpVersion, src.IpVersion) &&
             Equals(Protocol, src.Protocol) &&
             Equals(SourceAddress, src.SourceAddress) &&

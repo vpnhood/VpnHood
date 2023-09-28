@@ -20,25 +20,25 @@ Resources/
 In order to get the build system to recognize Android resources, set the build action to
 "AndroidResource".  The native Android APIs do not operate directly with filenames, but 
 instead operate on resource IDs.  When you compile an Android application that uses resources, 
-the build system will package the resources for distribution and generate a class called "R" 
+the build system will package the resources for distribution and generate a class called "Resource" 
 (this is an Android convention) that contains the tokens for each one of the resources 
-included. For example, for the above Resources layout, this is what the R class would expose:
+included. For example, for the above Resources layout, this is what the Resource class would expose:
 
-public class R {
-    public class drawable {
+public class Resource {
+    public class Drawable {
         public const int icon = 0x123;
     }
 
-    public class layout {
+    public class Layout {
         public const int main = 0x456;
     }
 
-    public class strings {
+    public class Strings {
         public const int first_string = 0xabc;
         public const int second_string = 0xbcd;
     }
 }
 
-You would then use R.drawable.icon to reference the drawable/icon.png file, or R.layout.main 
-to reference the layout/main.xml file, or R.strings.first_string to reference the first 
-string in the dictionary file values/strings.xml.
+You would then use Resource.Drawable.icon to reference the drawable/icon.png file, or 
+Resource.Layout.main to reference the layout/main.xml file, or Resource.Strings.first_string 
+to reference the first string in the dictionary file values/strings.xml.

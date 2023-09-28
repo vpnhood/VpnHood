@@ -55,7 +55,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public void Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
-        if (IsStarted) throw new Exception($"{nameof(ServerHost)} is already Started!");
+        if (IsStarted) throw new Exception("ServerHost is already Started!");
         if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
         _cancellationTokenSource = new CancellationTokenSource();
@@ -246,12 +246,13 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // check request version
         var streamId = Guid.NewGuid() + ":incoming";
-        var version = buffer[0];
 
-        //todo must be deprecated from >= 2.9.371
+        //todo must be deprecated from >= 416
+        var version = buffer[0];
         if (version == 1)
             return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false,
                 cacheData: new[] { version }, cacheSize: 1), streamId);
+
 
         // Version 2 is HTTP and starts with POST
         try
@@ -284,6 +285,13 @@ internal class ServerHost : IAsyncDisposable, IJob
                     await sslStream.DisposeAsync(); // dispose Ssl
                     return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
                 }
+            }
+
+            // process hello without api key
+            if (authorization == "ApiKey")
+            {
+                await sslStream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
+                return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
             throw new UnauthorizedAccessException();
@@ -410,9 +418,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             // return 401 for ANY non SessionException to keep server's anonymity
-            // Server should always return bad request as error
-            //todo : deprecated from version 400 or upper
-            await clientStream.Stream.WriteAsync(HttpResponses.GetBadRequest(), cancellationToken);
+            await clientStream.Stream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
@@ -462,10 +468,6 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await ProcessStreamProxyChannel(clientStream, cancellationToken);
                 break;
 
-            case RequestCode.UdpChannel:
-                await ProcessUdpChannel(clientStream, cancellationToken);
-                break;
-
             case RequestCode.Bye:
                 await ProcessBye(clientStream, cancellationToken);
                 break;
@@ -508,10 +510,9 @@ internal class ServerHost : IAsyncDisposable, IJob
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
         var sessionResponse = await _sessionManager.CreateSession(request, ipEndPointPair);
         var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
-        session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2) //todo: must be 3 or upper (4 for BinaryStream); 3 is deprecated by >= 2.9.371
+        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 4)
             throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
 
@@ -546,8 +547,6 @@ internal class ServerHost : IAsyncDisposable, IJob
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
             GaMeasurementId = sessionResponse.GaMeasurementId,
-            UdpKey = request.UseUdpChannel2 ? sessionResponse.SessionKey : session.UdpChannel?.Key,
-            UdpPort = session.UdpChannel?.LocalPort ?? 0,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,
             SuppressedTo = sessionResponse.SuppressedTo,
@@ -567,30 +566,6 @@ internal class ServerHost : IAsyncDisposable, IJob
         await clientStream.DisposeAsync();
     }
 
-    private async Task ProcessUdpChannel(IClientStream clientStream, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, "Reading a TcpDatagramChannel request...");
-        var request = await ReadRequest<UdpChannelRequest>(clientStream, cancellationToken);
-
-        // finding session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-
-        // enable udp
-        session.UseUdpChannel = true;
-
-        if (session.UdpChannel == null)
-            throw new InvalidOperationException("UdpChannel is not initialized.");
-
-        // send OK reply
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new UdpChannelSessionResponse(session.SessionResponse)
-        {
-            UdpKey = session.UdpChannel.Key,
-            UdpPort = session.UdpChannel.LocalPort
-        }, cancellationToken);
-
-        await clientStream.DisposeAsync();
-    }
-
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the Bye request...");
@@ -602,8 +577,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         // Before calling CloseSession session must be validated by GetSession
         await _sessionManager.CloseSession(session.SessionId);
-        if (session.SessionExtraData.ProtocolVersion >= 4) //todo: condition should remove from version 400 or later
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
 
         await clientStream.DisposeAsync(false);
     }

@@ -139,7 +139,6 @@ namespace VpnHood.Samples.SimpleClient.Droid
             [GeneratedEnum] Permission[] grantResults)
         {
             Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-
             base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
         }
 

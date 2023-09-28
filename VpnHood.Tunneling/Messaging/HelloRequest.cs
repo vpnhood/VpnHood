@@ -10,6 +10,7 @@ public class HelloRequest : SessionRequest
     {
     }
 
-    public bool UseUdpChannel { get; set; }
-    public bool UseUdpChannel2 { get; set; }
+    //todo deprecated >= 416
+    [Obsolete("Not needed for server >= 416")]
+    public bool UseUdpChannel2 { get; set; } = true; 
 }

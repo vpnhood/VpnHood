@@ -26,9 +26,10 @@ namespace VpnHood.Client.App.Droid;
 public class MainActivity : Activity
 {
     private const int RequestVpnPermission = 10;
+    // check http://androidxref.com/4.4.4_r1/xref/libcore/luni/src/main/java/libcore/net/MimeUtils.java
     public const string AccessKeyMime1 = "application/vnd.cinderella";
     public const string AccessKeyMime2 = "application/vhkey";
-    public const string AccessKeyMime3 = "application/key";
+    public const string AccessKeyMime3 = "application/pgp-keys";
 
     private AndroidDevice Device =>
         (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");

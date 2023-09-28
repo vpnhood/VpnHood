@@ -468,6 +468,10 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await ProcessStreamProxyChannel(clientStream, cancellationToken);
                 break;
 
+           case RequestCode.UdpPacket:
+                await ProcessUdpPacketRequest(clientStream, cancellationToken);
+                break;
+
             case RequestCode.Bye:
                 await ProcessBye(clientStream, cancellationToken);
                 break;
@@ -582,6 +586,17 @@ internal class ServerHost : IAsyncDisposable, IJob
         await clientStream.DisposeAsync(false);
     }
 
+    private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading a UdpPacket request...");
+        var request = await ReadRequest<UdpPacketRequest>(clientStream, cancellationToken);
+
+        using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
+        await session.ProcessUdpPacketRequest(request, clientStream, cancellationToken);
+    }
+
+
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel, "Reading the TcpDatagramChannelRequest...");
@@ -590,7 +605,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-        await session.ProcessTcpDatagramChannelRequest(clientStream, request, cancellationToken);
+        await session.ProcessTcpDatagramChannelRequest(request, clientStream, cancellationToken);
     }
 
     private async Task ProcessStreamProxyChannel(IClientStream clientStream, CancellationToken cancellationToken)
@@ -601,7 +616,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         // find session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-        await session.ProcessTcpProxyRequest(clientStream, request, cancellationToken);
+        await session.ProcessTcpProxyRequest(request, clientStream, cancellationToken);
     }
 
     public Task RunJob()

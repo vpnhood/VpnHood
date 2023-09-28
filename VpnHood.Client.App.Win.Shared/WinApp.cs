@@ -292,7 +292,7 @@ public class WinApp : IDisposable, IJob
     {
         var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
         var lastExeFile = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
-        var curExePath = Assembly.GetEntryAssembly()?.Location;
+        var curExePath = Process.GetCurrentProcess().MainModule?.FileName;
         if (string.IsNullOrEmpty(curExePath) || lastExeFile == curExePath)
             return;
 

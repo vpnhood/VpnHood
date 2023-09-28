@@ -1,7 +1,7 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
 	[Parameter(Mandatory=$true)][object]$nugets,
-	[Parameter(Mandatory=$true)][object]$client,
+	[Parameter(Mandatory=$true)][object]$winClient,
 	[Parameter(Mandatory=$true)][object]$android, 
 	[Parameter(Mandatory=$true)][object]$server,
 	[Parameter(Mandatory=$true)][object]$distribute
@@ -10,7 +10,7 @@ param(
 $nugets = $nugets -eq "1";
 $android = $android -eq "1";
 $distribute = $distribute -eq "1";
-$client = $client -eq "1";
+$winClient = $winClient -eq "1";
 $server = $server -eq "1";
 
 . "$PSScriptRoot/Common.ps1" -bump $bump
@@ -37,7 +37,7 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 & "$solutionDir/VpnHood.Server.Access/_publish.ps1";
 
 # publish client
-if ($client)
+if ($winClient)
 {
 	& "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
 }

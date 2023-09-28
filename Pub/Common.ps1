@@ -4,7 +4,7 @@ param(
 $ErrorActionPreference = "Stop";
 
 $solutionDir = Split-Path -parent $PSScriptRoot;
-$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
+$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
 $credentials = (Get-Content "$solutionDir/../.user/credentials.json" | Out-String | ConvertFrom-Json);
 $nugetApiKey = $credentials.NugetApiKey;
 $nuget = Join-Path $PSScriptRoot "nuget.exe";

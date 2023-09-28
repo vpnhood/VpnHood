@@ -24,6 +24,8 @@ public partial class MainWindow : Window
         Visibility = WinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
         Width = UiDefaults.WindowSize.Width;
         Height = UiDefaults.WindowSize.Height;
+        ResizeMode = ResizeMode.CanMinimize;
+
         Title = UiResource.AppName;
 
         // initialize MainWebView

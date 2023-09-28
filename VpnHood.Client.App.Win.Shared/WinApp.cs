@@ -292,8 +292,8 @@ public class WinApp : IDisposable, IJob
     {
         var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
         var lastExeFile = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
-        var curExePath = Path.ChangeExtension(typeof(WinApp).Assembly.Location, "exe");
-        if (lastExeFile == curExePath)
+        var curExePath = Assembly.GetEntryAssembly()?.Location;
+        if (string.IsNullOrEmpty(curExePath) || lastExeFile == curExePath)
             return;
 
         VhLogger.Instance.LogInformation("Configuring Windows Defender Firewall...");

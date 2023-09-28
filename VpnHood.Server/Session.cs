@@ -264,7 +264,7 @@ public class Session : IAsyncDisposable, IJob
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    public async Task ProcessTcpDatagramChannelRequest(IClientStream clientStream, TcpDatagramChannelRequest request, CancellationToken cancellationToken)
+    public async Task ProcessTcpDatagramChannelRequest(TcpDatagramChannelRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
         // send OK reply
         await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
@@ -288,8 +288,15 @@ public class Session : IAsyncDisposable, IJob
         }
     }
 
-    public async Task ProcessTcpProxyRequest(IClientStream clientStream, StreamProxyChannelRequest request,
-        CancellationToken cancellationToken)
+    public Task ProcessUdpPacketRequest(UdpPacketRequest request, IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        //var udpClient = new UdpClient();
+        //udpClient.SendAsync();
+        //request.PacketBuffers.
+        throw new NotImplementedException();
+    }
+
+    public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
         var isRequestedEpException = false;
         var isTcpConnectIncreased = false;

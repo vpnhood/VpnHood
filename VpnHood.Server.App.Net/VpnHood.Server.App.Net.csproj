@@ -4,7 +4,6 @@
     <TargetFramework>net7.0</TargetFramework>
     <RootNamespace>VpnHood.Server.App</RootNamespace>
     <AssemblyName>VpnHoodServer</AssemblyName>
-    <PackageId>VpnHood.Server.App.Net</PackageId>
     <Company>OmegaHood LLC</Company>
     <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
     <Product>VpnHood.Server</Product>
@@ -12,8 +11,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Version>3.0.414</Version>
-    <AssemblyVersion>3.0.414</AssemblyVersion>
+    <Version>3.0.418</Version>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -38,11 +36,11 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.2" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-    <PackageReference Include="NLog" Version="5.2.3" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.3" />
+    <PackageReference Include="NLog" Version="5.2.4" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.4" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
   </ItemGroup>
   <ItemGroup>

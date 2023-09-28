@@ -90,6 +90,8 @@ public class FileAccessManagerCommand
         var useDomainOption = cmdApp.Option("-domain", "Use Certificate's domain name for endpoint. Default: Use public IP", CommandOptionType.NoValue);
         var publicEndPointOption = cmdApp.Option("-ep", "PublicEndPoints. Default: Server-Public-IP", CommandOptionType.SingleValue);
         var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
+        var maxTrafficOptions = cmdApp.Option("-maxTraffic", "MaximumTraffic in MB. Default: unlimited", CommandOptionType.SingleValue);
+        var expirationTimeOption = cmdApp.Option("-expire", "ExpirationTime. Default: Never Expire. Format: 2030/01/25", CommandOptionType.SingleValue);
 
         cmdApp.OnExecuteAsync(async _ =>
         {
@@ -125,7 +127,9 @@ public class FileAccessManagerCommand
                 publicEndPoints: publicEndPoints,
                 maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
                 isValidHostName: useDomainOption.HasValue(),
-                hostPort: tcpEndPoints.FirstOrDefault()?.Port ?? 443
+                hostPort: tcpEndPoints.FirstOrDefault()?.Port ?? 443,
+                maxTrafficByteCount: maxTrafficOptions.HasValue() ? int.Parse(maxTrafficOptions.Value()!) * 1_000_000 : 0,
+                expirationTime: expirationTimeOption.HasValue() ? DateTime.Parse(expirationTimeOption.Value()!) : null
                 );
 
             Console.WriteLine("The following token has been generated: ");

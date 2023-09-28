@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
@@ -16,19 +17,23 @@ namespace VpnHood.Client.Device.WinDivert;
 
 public class WinDivertPacketCapture : IPacketCapture
 {
-    private readonly SharpPcap.WinDivert.WinDivertDevice _device;
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr LoadLibrary(string lpFileName);
 
+    private readonly SharpPcap.WinDivert.WinDivertDevice _device;
     private bool _disposed;
     private IpNetwork[]? _includeNetworks;
     private WinDivertHeader? _lastCaptureHeader;
 
     public WinDivertPacketCapture()
     {
-        SetWinDivertDllFolder();
-
         // initialize devices
         _device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
         _device.OnPacketArrival += Device_OnPacketArrival;
+
+        // manage WinDivert file
+        SetWinDivertDllFolder();
+
     }
 
     public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
@@ -139,38 +144,12 @@ public class WinDivertPacketCapture : IPacketCapture
 
     public void Dispose()
     {
-        if (!_disposed)
-        {
-            StopCapture();
-            _device.Dispose();
-            _disposed = true;
-        }
-    }
-
-    private static void SetWinDivertDllFolder()
-    {
-        // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
-        var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice", "2.2.2");
-        var dllFolderPath = Environment.Is64BitOperatingSystem
-            ? Path.Combine(tempLibFolder, "x64")
-            : Path.Combine(tempLibFolder, "x86");
-        var requiredFiles = Environment.Is64BitOperatingSystem
-            ? new[] { "WinDivert.dll", "WinDivert64.sys" }
-            : new[] { "WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys" };
-
-        // extract WinDivert
-        var checkFiles = requiredFiles.Select(x => Path.Combine(dllFolderPath, x));
-        if (checkFiles.Any(x => !File.Exists(x)))
-        {
-            using var memStream = new MemoryStream(Resource.WinDivertLibZip);
-            using var zipArchive = new ZipArchive(memStream);
-            zipArchive.ExtractToDirectory(tempLibFolder, true);
-        }
-
-        // set dll folder
-        var path = Environment.GetEnvironmentVariable("PATH") ?? "";
-        if (path.IndexOf(dllFolderPath + ";", StringComparison.Ordinal) == -1)
-            Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
+        if (_disposed)
+            return;
+         
+        StopCapture();
+        _device.Dispose();
+        _disposed = true;
     }
 
     private void Device_OnPacketArrival(object sender, PacketCapture e)
@@ -205,6 +184,25 @@ public class WinDivertPacketCapture : IPacketCapture
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
         _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+    }
+
+    // Note: System may load WinDivert driver into memory and lock it, so we'd better to copy it into a temporary folder 
+    private static void SetWinDivertDllFolder()
+    {
+        // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
+        var destinationFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice", "2.2.2");
+        var requiredFiles = new[] { "WinDivert.dll", "WinDivert64.sys" };
+
+        // extract WinDivert
+        var checkFiles = requiredFiles.Select(x => Path.Combine(destinationFolder, x));
+        if (checkFiles.Any(x => !File.Exists(x)))
+        {
+            using var memStream = new MemoryStream(Resource.WinDivertLibZip);
+            using var zipArchive = new ZipArchive(memStream);
+            zipArchive.ExtractToDirectory(destinationFolder, true);
+        }
+
+        LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
     #region Applications Filter

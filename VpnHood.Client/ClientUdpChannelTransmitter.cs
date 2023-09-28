@@ -6,9 +6,9 @@ namespace VpnHood.Client;
 
 public class ClientUdpChannelTransmitter : UdpChannelTransmitter
 {
-    private readonly UdpChannel2 _udpChannel;
+    private readonly UdpChannel _udpChannel;
 
-    public ClientUdpChannelTransmitter(UdpChannel2 udpChannel, UdpClient udpClient, byte[] serverKey) 
+    public ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpClient, byte[] serverKey) 
         : base(udpClient, serverKey)
     {
         _udpChannel = udpChannel;

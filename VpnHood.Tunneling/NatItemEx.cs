@@ -16,18 +16,18 @@ public class NatItemEx : NatItem
         switch (ipPacket.Protocol)
         {
             case ProtocolType.Tcp:
-            {
-                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                DestinationPort = tcpPacket.DestinationPort;
-                break;
-            }
+                {
+                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                    DestinationPort = tcpPacket.DestinationPort;
+                    break;
+                }
 
             case ProtocolType.Udp:
-            {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                DestinationPort = udpPacket.DestinationPort;
-                break;
-            }
+                {
+                    var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                    DestinationPort = udpPacket.DestinationPort;
+                    break;
+                }
 
             default:
                 throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");
@@ -37,11 +37,11 @@ public class NatItemEx : NatItem
     public IPAddress DestinationAddress { get; }
     public ushort DestinationPort { get; }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-        var src = (NatItemEx) obj;
         return
-            base.Equals(obj) &&
+            obj is NatItemEx src &&
+            base.Equals(src) &&
             Equals(DestinationAddress, src.DestinationAddress) &&
             Equals(DestinationPort, src.DestinationPort);
     }

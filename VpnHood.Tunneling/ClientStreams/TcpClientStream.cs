@@ -19,7 +19,7 @@ public class TcpClientStream : IClientStream
     public bool Disposed { get; private set; }
     public delegate Task ReuseCallback(IClientStream clientStream);
     public TcpClient TcpClient { get; }
-    public Stream Stream { get; set; } //todo: deprecated from >= 2.9.371
+    public Stream Stream { get; set; }
     public IPEndPointPair IpEndPointPair { get; }
 
     public string ClientStreamId

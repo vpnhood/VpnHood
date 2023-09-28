@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -18,7 +17,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.Device.Android
+namespace VpnHood.Client.Device.Droid
 {
     [Service(Permission = Manifest.Permission.BindVpnService, Exported = false)]
     [IntentFilter(new[] { "android.net.VpnService" })]
@@ -76,7 +75,9 @@ namespace VpnHood.Client.Device.Android
                 .AddAddress("192.168.199.188", 24);
 
             if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+#pragma warning disable CA1416
                 builder.SetMetered(false);
+#pragma warning restore CA1416
 
             if (AddIpV6Address)
                 builder.AddAddress("fd00::1000", 64);

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -31,7 +29,6 @@ public class Session : IAsyncDisposable, IJob
     private readonly IAccessManager _accessManager;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
-    private readonly IPEndPoint _localEndPoint;
     private readonly object _syncLock = new();
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
@@ -55,23 +52,21 @@ public class Session : IAsyncDisposable, IJob
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
     public SessionResponseBase SessionResponse { get; private set; }
-    public UdpChannel? UdpChannel { get; private set; } // todo: deprecated version >= 2.9.362
-    public UdpChannel2? UdpChannel2 { get; private set; }
+    public UdpChannel? UdpChannel => Tunnel.UdpChannel;
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; } = new();
-    public HelloRequest? HelloRequest { get; }
     public SessionExtraData SessionExtraData { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
-    public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
+    public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
     internal Session(IAccessManager accessManager, SessionResponse sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
-        IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions,
-        SessionExtraData sessionExtraData, HelloRequest? helloRequest)
+        SessionOptions options, TrackingOptions trackingOptions,
+        SessionExtraData sessionExtraData)
     {
         var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         var logScope = new LogScope();
@@ -88,7 +83,6 @@ public class Session : IAsyncDisposable, IJob
             UseUdpProxy2 = options.UseUdpProxy2Value,
             LogScope = logScope
         });
-        _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
@@ -102,17 +96,11 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _syncJobSection = new JobSection(options.SyncIntervalValue);
-        HelloRequest = helloRequest;
         SessionExtraData = sessionExtraData;
         SessionResponse = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        var tunnelOptions = new TunnelOptions
-        {
-            MaxDatagramChannelCount = options.MaxDatagramChannelCountValue
-        };
-
-        Tunnel = new Tunnel(tunnelOptions);
+        Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
         // ReSharper disable once MergeIntoPattern
@@ -130,49 +118,25 @@ public class Session : IAsyncDisposable, IJob
 
     public bool UseUdpChannel
     {
-        // ReSharper disable once MergeIntoPattern
-        get => Tunnel.DatagramChannels.Length == 1 && (Tunnel.DatagramChannels[0] is UdpChannel || Tunnel.DatagramChannels[0] is UdpChannel2);
+        get => Tunnel.IsUdpMode;
         set
         {
             if (value == UseUdpChannel)
                 return;
 
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, "Set DatagramMode: {DatagramMode}", 
-                value ? "UdpChannel" : "StreamDatagram");
+            // the udp channel will remove by add stream channel request
+            if (!value)
+                return;
 
-            if (value)
+            // add new channel
+            var udpChannel = new UdpChannel(SessionId, SessionKey, true, SessionExtraData.ProtocolVersion);
+            try
             {
-                // remove tcpDatagram channels
-                foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel && x != UdpChannel2))
-                    Tunnel.RemoveChannel(item);
-
-                // create UdpKey
-                using var aes = Aes.Create();
-                aes.KeySize = 128;
-                aes.GenerateKey();
-
-                // Create the only one UdpChannel
-                //todo: we couldn't recover udp port in previous version if HelloRequest null. let assume new version
-                //deprecated version >= 2.9.362 
-                if (HelloRequest == null || HelloRequest.UseUdpChannel2)
-                {
-                    UdpChannel2 = new UdpChannel2(SessionId, SessionKey, true, SessionExtraData.ProtocolVersion);
-                    try { Tunnel.AddChannel(UdpChannel2); }
-                    catch { UdpChannel2.DisposeAsync(); throw; }
-                }
-                else
-                {
-                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_localEndPoint.AddressFamily), SessionId, aes.Key);
-                    try { Tunnel.AddChannel(UdpChannel); }
-                    catch { UdpChannel.DisposeAsync(); throw; }
-                }
+                Tunnel.AddChannel(udpChannel);
             }
-            else
+            catch
             {
-                // remove udp channels
-                foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel || x == UdpChannel2))
-                    Tunnel.RemoveChannel(item);
-                UdpChannel = null;
+                udpChannel.DisposeAsync();
             }
         }
     }
@@ -210,7 +174,7 @@ public class Session : IAsyncDisposable, IJob
             return;
 
         using var scope = VhLogger.Instance.BeginScope(
-            $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}, TokenId: {VhLogger.FormatId(HelloRequest?.TokenId)}");
+            $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}");
 
         Traffic traffic;
         lock (_syncLock)
@@ -365,19 +329,9 @@ public class Session : IAsyncDisposable, IJob
             // send response
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
-            // Dispose ssl stream and replace it with a Head-Cryptor
-            //todo perhaps must be deprecated from >= 2.9.371
-            if (clientStream.Stream is not ChunkStream && clientStream is TcpClientStream tcpClientStream)
-            {
-                await clientStream.Stream.DisposeAsync();
-                tcpClientStream.Stream = StreamCryptor.Create(
-                    tcpClientStream.TcpClient.GetStream(),
-                    request.CipherKey, null, request.CipherLength);
-            }
-
             // MaxEncryptChunk
             if (clientStream.Stream is BinaryStream binaryStream)
-                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount; 
+                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,

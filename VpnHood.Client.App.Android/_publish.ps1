@@ -22,40 +22,41 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.Android.KeyStoreFile
 $keystorePass = $credentials.Android.KeyStorePass
 $keystoreAlias = $credentials.Android.KeyStoreAlias
-$manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
+$manifestFile = Join-Path $projectDir "AndroidManifest.xml";
 
 # set android version
 $xmlDoc = [xml](Get-Content $manifestFile)
-$xmlDoc.manifest.versionCode = $version.Build.ToString()
-$xmlDoc.manifest.versionName = $version.ToString(3)
-$xmlDoc.save($manifestFile);
-
-$packageId = $xmlDoc.manifest.package;
-$signedApk= Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
+#$xmlDoc.manifest.versionCode = $version.Build.ToString()
+#$xmlDoc.manifest.versionName = $version.ToString(3)
+#$xmlDoc.save($manifestFile);
 
 # apk
 Write-Host;
 Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
 
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
-& $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
-	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
+$packageId = "com.vpnhood.client.droid";
+$signedApk = Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk/" /verbosity:$msverbosity; }
+ & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk/" /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
+	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:ApplicationId=$packageId `
+	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
 
-# apk
+# aab
 Write-Host;
 Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
 
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
+$packageId = "com.vpnhood.client.android";
+#if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:$msverbosity; }
 & $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-	/p:AndroidKeyStore=True /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningKeyPass=$keystorePass /p:AndroidSigningStorePass=$keystorePass 
-
+	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:ApplicationId=$packageId `
+	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True
 
 # publish info
 $json = @{
     Version = $versionParam; 
     UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
     PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/install";
+	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client";
 	ReleaseDate = "$releaseDate";
 	DeprecatedVersion = "$deprecatedVersion";
 	NotificationDelay = "14.00:00:00";

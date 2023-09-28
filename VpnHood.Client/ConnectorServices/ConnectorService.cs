@@ -65,6 +65,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
         // compatibility
+        //todo must be deprecated from >= 416
         if (!UseBinaryStream)
             return new TcpClientStream(tcpClient, sslStream, streamId);
 
@@ -82,10 +83,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        // dispose Ssl
         if (string.IsNullOrEmpty(_apiKey))
             return new TcpClientStream(tcpClient, sslStream, streamId);
 
+        // dispose Ssl
         await sslStream.DisposeAsync();
         return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
     }
@@ -105,19 +106,13 @@ internal class ConnectorService : IAsyncDisposable, IJob
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
-            var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-
             // Establish a TLS connection
+            var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatDns(hostName));
-            var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT &&
-                              Environment.OSVersion.Version.Major < 10
-                ? SslProtocols.Tls12 // windows 7
-                : SslProtocols.None; //auto
-
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = hostName,
-                EnabledSslProtocols = sslProtocol
+                EnabledSslProtocols = SslProtocols.None // auto
             }, cancellationToken);
 
             var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
@@ -240,7 +235,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             }
         }
 
-        // get or create free connection
+        // create free connection
         clientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
 
         // send request

@@ -1,14 +1,17 @@
+# Upcoming
+* Feature: Android: Support opening (key) as VpnHood Key file
+
 # v3.0.423
 ### Client
 * Feature: Android: Support opening Cinderella file (CDY) as VpnHood Key file
 * Feature: Android: Changing file signature for no-google-store APK
 * Update: Remove the legacy Protocol Version 3
-* Update: Improve performance, and battery usage
-* 
+* Update: Improve performance and battery usage
+ 
 ### Server
 * Update: Remove the legacy Protocol Version 3
 * Fix: Collection was modified error, which caused connection freeze temporary
-* 
+ 
 # v3.0.416
 ### Client
 * Feature: Offer Premium if VpnHood Public server selected

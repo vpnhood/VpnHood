@@ -1,3 +1,8 @@
+# v3.0.424
+* Feature: Android: Support opening (key) as VpnHood Key file
+* Update: Windows: Fix Windows Firewall Configuration
+* Update: Windows: Set fixed window size
+
 # v3.0.423
 ### Client
 * Feature: Android: Support opening Cinderella file (CDY) as VpnHood Key file

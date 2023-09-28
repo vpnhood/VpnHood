@@ -44,6 +44,7 @@ New-Item -ItemType Directory -Path $packagesServerDir -Force | Out-Null
 $packagesRootDirLatest = "$PSScriptRoot/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
 $packagesClientDirLatest="$packagesRootDirLatest/Client";
 $packagesServerDirLatest="$packagesRootDirLatest/Server";
+$moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/apk/latest";
 if ($isLatest)
 {
 	New-Item -ItemType Directory -Path $packagesClientDirLatest -Force | Out-Null
@@ -92,4 +93,18 @@ function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 		try { Remove-Item -path $moduleDirLatest -Force -Recurse } catch {}
 		New-Item -ItemType Directory -Path $moduleDirLatest -Force | Out-Null;
 	}
+}
+
+function UpdateRepoVersionInFile()
+{
+	$files = Get-ChildItem -Path @($packagesRootDirLatest, $moduleGooglePlayLastestDir) `
+			-File -Recurse | Where-Object { $_.Extension -eq '.json' -or $_.Extension -eq '.txt' }
+	
+	# Loop through each file and apply the change
+	foreach ($file in $files) 
+	{
+		$fileContent = Get-Content $file.FullName -Raw;
+		$fileContent = $fileContent -replace "/download/v(\d+\.\d+\.\d+)/", "/download/$versionTag/";
+		Set-Content -Path $file.FullName -Value $fileContent
+	}	
 }

@@ -71,8 +71,6 @@ $outputPath="bin/ReleaseAab";
 $packageId = "com.vpnhood.client.android";
 $signedPacakgeFile = Join-Path $projectDir "$outputPath/$packageId-Signed.aab"
 $module_packageFile = "$moduleDir/VpnHoodClient-android.aab";
-$moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/apk/latest";
-
 
 # Calcualted
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
@@ -87,16 +85,12 @@ if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean 
 
 #####
 # copy to solution ouput
-echo "11";
 Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
 if ($isLatest)
 {
-	echo "22";
 	Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
-	echo "33";
 	Copy-Item -path "$moduleGooglePlayLastestDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }
 
 # report version
 ReportVersion
-echo "44";

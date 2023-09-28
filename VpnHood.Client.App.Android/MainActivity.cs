@@ -22,12 +22,13 @@ namespace VpnHood.Client.App.Droid;
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
-[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2 })]
+[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
 public class MainActivity : Activity
 {
     private const int RequestVpnPermission = 10;
     public const string AccessKeyMime1 = "application/vnd.cinderella";
     public const string AccessKeyMime2 = "application/vhkey";
+    public const string AccessKeyMime3 = "application/key";
 
     private AndroidDevice Device =>
         (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
@@ -71,7 +72,7 @@ public class MainActivity : Activity
         // check mime
         var uri = intent.Data;
         var mimeType = ContentResolver.GetType(uri);
-        if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2)
+        if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2 && mimeType != AccessKeyMime1 && mimeType != AccessKeyMime3)
         {
             Toast.MakeText(this, UiResource.MsgUnsupportedContent, ToastLength.Long)?.Show();
             return false;

@@ -4,7 +4,7 @@ An alternative way for circumvention and privacy!
 
 Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewalls and circumvent deep packet inspection. VpnHood has been created entirely from scratch in C#.
 
-## Client Download
+## Get VpnHood!
 It is available for Windows and Android. The iOS client still needs to be ready!
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a>

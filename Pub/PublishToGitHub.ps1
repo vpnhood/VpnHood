@@ -42,12 +42,12 @@ $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootD
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 
+# $releaseClientDir/android/VpnHoodClient-android-web.apk `
+# $releaseClientDir/android/VpnHoodClient-android-web.json `
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
-	$releaseClientDir/android/VpnHoodClient-android-web.apk `
-	$releaseClientDir/android/VpnHoodClient-android-web.json `
 	$releaseClientDir/android/VpnHoodClient-android.apk `
 	$releaseClientDir/android/VpnHoodClient-android.json `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.msi  `

@@ -1,8 +1,6 @@
-﻿#nullable enable
-using Android.App;
-using Android.Content;
+﻿using Android.Content;
 
-namespace VpnHood.Client.App.Android;
+namespace VpnHood.Client.App.Droid;
 
 [BroadcastReceiver(Enabled = true, Exported = false)]
 public class NotificationBroadcastReceiver : BroadcastReceiver

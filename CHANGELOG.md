@@ -1,6 +1,3 @@
-# Upcoming
-* Feature: Android: Support opening (key) as VpnHood Key file
-
 # v3.0.423
 ### Client
 * Feature: Android: Support opening Cinderella file (CDY) as VpnHood Key file

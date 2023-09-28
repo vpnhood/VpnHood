@@ -17,6 +17,10 @@ if ($isLatest)
 	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 }
 
+# replace all final version to current repo
+UpdateRepoVersionInFile;
+
+# Publishing to GitHub
 Push-Location -Path "$solutionDir";
 
 # commit and push git

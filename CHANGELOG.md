@@ -7,6 +7,7 @@
 * Feature: Android: Changing file signature for no-google-store APK
 * Update: Remove the legacy Protocol Version 3
 * Update: Improve performance and battery usage
+* Update: Android: Minimum requirement has been increased to Android 6.0 (Marshmallow)
  
 ### Server
 * Update: Remove the legacy Protocol Version 3

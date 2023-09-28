@@ -1,4 +1,4 @@
-# Upcoming
+# v3.0.423
 ### Client
 * Feature: Android: Support opening Cinderella file (CDY) as VpnHood Key file
 * Feature: Android: Changing file signature for no-google-store APK

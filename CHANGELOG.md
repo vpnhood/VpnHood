@@ -1,4 +1,5 @@
-# v3.0.424
+# v3.0.426
+### Client
 * Feature: Android: Support opening (key) as VpnHood Key file
 * Update: Windows: Fix Windows Firewall Configuration
 * Update: Windows: Set fixed window size

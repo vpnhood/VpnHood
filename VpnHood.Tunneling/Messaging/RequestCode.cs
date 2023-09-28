@@ -1,11 +1,12 @@
 ﻿namespace VpnHood.Tunneling.Messaging;
-// [1B_version][1B_code] 
+// [1B_version][1B_code][4B_jsonLength][json_request]
 
-public enum RequestCode : byte
+public enum RequestCode : byte 
 {
-    Hello = 1, // data: [4B_jsonLength][json_HelloRequest]
-    TcpDatagramChannel = 2, // data: [4B_jsonLength][json_TcpDatagramChannelRequest]
-    StreamProxyChannel = 3, // data: [4B_jsonLength][json_StreamProxyChannelRequest]
-    // SessionStatus = 4, // data: [4B_jsonLength][json_BaseRequest]
-    Bye = 50, // data: [4B_jsonLength][json_BaseRequest]
+    Hello = 1, 
+    TcpDatagramChannel = 2,
+    StreamProxyChannel = 3,
+    // SessionStatus = 4,
+    UdpPacket = 5,
+    Bye = 50,
 }

@@ -125,7 +125,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart="$destinationPath/vhserver"
-ExecStop="$$destinationPath/vhserver" stop
+ExecStop="$destinationPath/vhserver" stop
 TimeoutStartSec=0
 Restart=always
 RestartSec=10

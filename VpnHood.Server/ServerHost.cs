@@ -168,6 +168,27 @@ internal class ServerHost : IAsyncDisposable, IJob
         IsStarted = false;
     }
 
+    public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
+    {
+        // Clear certificate cache
+        _sslCertificateManager.ClearCache();
+
+        // Restart if endPoints has been changed
+        if (IsStarted &&
+            (!TcpEndPoints.SequenceEqual(tcpEndPoints) ||
+             !UdpEndPoints.SequenceEqual(udpEndPoints)))
+        {
+            VhLogger.Instance.LogInformation("EndPoints has been changed. Stopping ServerHost...");
+            await Stop();
+        }
+
+        if (!IsStarted)
+        {
+            VhLogger.Instance.LogInformation("Starting ServerHost...");
+            Start(tcpEndPoints, udpEndPoints);
+        }
+    }
+
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
@@ -643,5 +664,4 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         await Stop();
     }
-
 }

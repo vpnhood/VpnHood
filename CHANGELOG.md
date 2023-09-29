@@ -1,4 +1,4 @@
-# Upcoming
+# v3.0.427
 ### Server
 * Fix: Certificate was not updated immediately by Access Manager
 

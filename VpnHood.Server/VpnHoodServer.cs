@@ -182,20 +182,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
             VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
-            // starting the listeners
-            if (_serverHost.IsStarted &&
-                (!_serverHost.TcpEndPoints.SequenceEqual(serverConfig.TcpEndPointsValue) ||
-                 !_serverHost.UdpEndPoints.SequenceEqual(serverConfig.UdpEndPointsValue)))
-            {
-                VhLogger.Instance.LogInformation("EndPoints has been changed. Stopping ServerHost...");
-                await _serverHost.Stop();
-            }
-
-            if (!_serverHost.IsStarted)
-            {
-                VhLogger.Instance.LogInformation("Starting ServerHost...");
-                _serverHost.Start(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
-            }
+            // Reconfigure
+            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;

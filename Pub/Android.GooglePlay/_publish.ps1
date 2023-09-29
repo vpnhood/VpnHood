@@ -46,9 +46,13 @@ $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 Move-Item -Path $apkFile -Destination $module_packageFile -Force;
 Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 
+# Publishing to GitHub
+Push-Location -Path "$solutionDir";
+
 # apk
 # Write-Host;
 # Write-Host "*** Updating Android apk of GooglePlay to $versionTag ..." -BackgroundColor Blue -ForegroundColor White;
-$latestVersion = (gh release list -R "vpnhood/vpnhood" --limit 1 --exclude-drafts  --exclude-pre-releases | ForEach-Object { $_.Split()[0] });
+# $latestVersion = (gh release list -R "vpnhood/vpnhood" --limit 1 --exclude-drafts  --exclude-pre-releases | ForEach-Object { $_.Split()[0] });
 gh release upload $versionTag $module_infoFile $module_packageFile --clobber
 
+Pop-Location

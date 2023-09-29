@@ -75,12 +75,20 @@ if [ "$packageFile" = "" ]; then
 	echo "Downloading VpnHoodServer...";
 	packageFile="VpnHoodServer-linux.tar.gz";
 	wget -nv -O "$packageFile" "$packageUrl";
+	if [ $? != 0 ]; then
+		echo "Could not download $packageUrl";
+		exit;
+	fi
 fi
 
 # extract
 echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
 tar -xzf "$packageFile" -C "$destinationPath"
+if [ $? != 0 ]; then
+	echo "Could not extract $packageFile";
+	exit;
+fi
 
 # Updating shared files...
 echo "Updating shared files...";

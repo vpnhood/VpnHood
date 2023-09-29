@@ -18,6 +18,6 @@ public interface IClientApi
     void addTestServer();
     Task setUserSettings(UserSettings userSettings);
     Task log();
-    Task<DeviceAppInfo[]> InstalledApps();
-    Task<IpGroup[]> IpGroups();
+    Task<DeviceAppInfo[]> installedApps();
+    Task<IpGroup[]> ipGroups();
 }

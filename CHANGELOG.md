@@ -1,4 +1,8 @@
-# v3.0.426
+# v3.0.427
+### Server
+* Fix: Certificate was not updated immediately by Access Manager
+
+# v3.0.427
 ### Client
 * Feature: Android: Support opening (key) as VpnHood Key file
 * Update: Windows: Fix Windows Firewall Configuration

@@ -1,4 +1,4 @@
-# Upcoming
+# v3.0.429
 # Client
 * Android: Fix not showing apps in AppFilter
 

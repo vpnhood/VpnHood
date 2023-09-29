@@ -1,3 +1,7 @@
+# Upcoming
+# Client
+* Android: Fix not showing apps in AppFilter
+
 # v3.0.428
 ### Server
 * Fix: Certificate was not updated immediately by Access Manager

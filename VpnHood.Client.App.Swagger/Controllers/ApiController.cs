@@ -75,14 +75,14 @@ namespace VpnHood.Client.App.Swagger.Controllers
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(InstalledApps))]
-        public Task<DeviceAppInfo[]> InstalledApps()
+        [HttpPost(nameof(installedApps))]
+        public Task<DeviceAppInfo[]> installedApps()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(IpGroups))]
-        public Task<IpGroup[]> IpGroups()
+        [HttpPost(nameof(ipGroups))]
+        public Task<IpGroup[]> ipGroups()
         {
             throw new NotImplementedException();
         }

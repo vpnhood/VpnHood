@@ -106,14 +106,14 @@ internal class ClientApiController : WebApiController, IClientApi
         await streamWriter.WriteAsync(log);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(InstalledApps))]
-    public Task<DeviceAppInfo[]> InstalledApps()
+    [Route(HttpVerbs.Post, "/" + nameof(installedApps))]
+    public Task<DeviceAppInfo[]> installedApps()
     {
         return Task.FromResult(App.Device.InstalledApps);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(IpGroups))]
-    public Task<IpGroup[]> IpGroups()
+    [Route(HttpVerbs.Post, "/" + nameof(ipGroups))]
+    public Task<IpGroup[]> ipGroups()
     {
         return App.GetIpGroups();
     }

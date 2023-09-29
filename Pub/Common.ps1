@@ -98,13 +98,13 @@ function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 function UpdateRepoVersionInFile()
 {
 	$files = Get-ChildItem -Path @($packagesRootDirLatest, $moduleGooglePlayLastestDir) `
-			-File -Recurse | Where-Object { $_.Extension -eq '.json' -or $_.Extension -eq '.txt' -or $_.Extension -eq '.sh' -or $_.Extension -eq '.ps1'  }
+			-File -Recurse | Where-Object { $_.Extension -eq '.json' -or $_.Extension -eq '.txt' -or $_.Extension -eq '.sh'  }
 	
 	# Loop through each file and apply the change
 	foreach ($file in $files) 
 	{
 		$fileContent = Get-Content $file.FullName -Raw;
 		$fileContent = $fileContent -replace "/download/v(\d+\.\d+\.\d+)/", "/download/$versionTag/";
-		Set-Content -Path $file.FullName -Value $fileContent
+		Set-Content -Path $file.FullName -Value $fileContent -Encoding ASCII -Force -NoNewline
 	}	
 }

@@ -1,6 +1,7 @@
-# v3.0.427
+# v3.0.428
 ### Server
 * Fix: Certificate was not updated immediately by Access Manager
+* Fix: AutoUpdater
 
 # v3.0.427
 ### Client

@@ -98,7 +98,7 @@ function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 function UpdateRepoVersionInFile()
 {
 	$files = Get-ChildItem -Path @($packagesRootDirLatest, $moduleGooglePlayLastestDir) `
-			-File -Recurse | Where-Object { $_.Extension -eq '.json' -or $_.Extension -eq '.txt' }
+			-File -Recurse | Where-Object { $_.Extension -eq '.json' -or $_.Extension -eq '.txt' -or $_.Extension -eq '.sh'  }
 	
 	# Loop through each file and apply the change
 	foreach ($file in $files) 

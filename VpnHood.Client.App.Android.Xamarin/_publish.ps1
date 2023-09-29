@@ -13,6 +13,11 @@ PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 $module_infoFile = "$moduleDir/VpnHoodClient-android-web.json";
 $module_packageFile = "$moduleDir/VpnHoodClient-android-web.apk";
+if ($prerelease)
+{
+	$module_infoFile = "$moduleDir/VpnHoodClient-android.json";
+	$module_packageFile = "$moduleDir/VpnHoodClient-android.apk";
+}
 
 # Calcualted Path
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);

@@ -75,12 +75,20 @@ if [ "$packageFile" = "" ]; then
 	echo "Downloading VpnHoodServer...";
 	packageFile="VpnHoodServer-linux.tar.gz";
 	wget -nv -O "$packageFile" "$packageUrl";
+	if [ $? != 0 ]; then
+		echo "Could not download $packageUrl";
+		exit 1;
+	fi
 fi
 
 # extract
 echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
 tar -xzf "$packageFile" -C "$destinationPath"
+if [ $? != 0 ]; then
+	echo "Could not extract $packageFile";
+	exit 1;
+fi
 
 # Updating shared files...
 echo "Updating shared files...";
@@ -116,8 +124,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart="$binDir/VpnHoodServer"
-ExecStop="$binDir/VpnHoodServer" stop
+ExecStart="$destinationPath/vhserver"
+ExecStop="$destinationPath/vhserver" stop
 TimeoutStartSec=0
 Restart=always
 RestartSec=10

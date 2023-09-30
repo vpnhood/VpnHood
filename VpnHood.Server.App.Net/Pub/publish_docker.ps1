@@ -55,7 +55,7 @@ if ($isLatest)
 	{
 		docker push ${serverDockerImage}:$versionTag;
 		docker push ${serverDockerImage}:latest;
-		if (!$?) {Throw("Could not push the server docker image."); }
+		if (!$?) { Throw("Could not push the server docker image."); }
 		echo "The server docker image has been pushed."
 	}
 	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
@@ -65,7 +65,7 @@ else
 	if ($distribute)
 	{
 		docker push ${serverDockerImage}:$versionTag;
-		if (!$?) {Throw("Could not push the server docker image."); }
+		if (!$?) { Throw("Could not push the server docker image."); }
 		echo "The server docker image has been pushed."
 	}
 }

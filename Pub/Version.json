@@ -1,6 +1,6 @@
 {
   "Version": "3.0.429",
   "BumpTime": "2023-09-29T19:05:30.3412802Z",
-  "Prerelease": false,
+  "Prerelease": true,
   "DeprecatedVersion": "3.0.400"
 }

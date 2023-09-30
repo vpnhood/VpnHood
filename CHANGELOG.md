@@ -1,3 +1,7 @@
+# Upcoming 
+### Client
+Fix: Windows: Restore Windows state to normal when user click on the system tray icon
+
 # v3.0.429
 ### Client
 * Android: Fix not showing apps in AppFilter

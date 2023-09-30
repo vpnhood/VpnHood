@@ -42,8 +42,12 @@ public partial class App : Application
     {
         Dispatcher.Invoke(() =>
         {
-            MainWindow?.Show();
-            MainWindow?.Activate();
+            if (MainWindow == null)
+                return;
+
+            MainWindow.Show();
+            MainWindow.Activate();
+            MainWindow.WindowState = WindowState.Normal;
         });
     }
 

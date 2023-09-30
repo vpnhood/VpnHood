@@ -39,7 +39,6 @@ $packagesServerDir="$packagesRootDir/Server";
 New-Item -ItemType Directory -Path $packagesClientDir -Force | Out-Null
 New-Item -ItemType Directory -Path $packagesServerDir -Force | Out-Null
 
-
 # Prepare the latest folder
 $packagesRootDirLatest = "$PSScriptRoot/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
 $packagesClientDirLatest="$packagesRootDirLatest/Client";
@@ -105,6 +104,6 @@ function UpdateRepoVersionInFile()
 	{
 		$fileContent = Get-Content $file.FullName -Raw;
 		$fileContent = $fileContent -replace "/download/v(\d+\.\d+\.\d+)/", "/download/$versionTag/";
-		Set-Content -Path $file.FullName -Value $fileContent -Encoding ASCII -Force -NoNewline
+		Set-Content -Path $file.FullName -Value $fileContent -Encoding ASCII -Force -NoNewline;
 	}	
 }

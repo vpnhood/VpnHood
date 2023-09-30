@@ -260,9 +260,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             CheckConnectionStateChanged();
             LogService.Start(Settings.UserSettings.Logging, diagnose);
 
-            // dump user settings
-            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
-                JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
+            VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
             // Set ActiveProfile
             ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
@@ -341,12 +339,18 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
         VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
+
+        // it slowdown tests and does not need to be logged in normal situation
         if (_hasDiagnoseStarted)
             VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
 
         // get token
         var token = ClientProfileStore.GetToken(tokenId, true);
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+
+        // dump user settings
+        VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
+            JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
 
         // save settings
         Settings.Save();

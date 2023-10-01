@@ -29,12 +29,19 @@ $keystorePass = $credentials.Android.KeyStorePass
 $keystoreAlias = $credentials.Android.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $manifestFileAab = Join-Path $projectDir "Properties/AndroidManifest.aab.xml";
+$appIconXml = Join-Path $projectDir "Resources\mipmap-anydpi-v26\appicon.xml";
 
 # set android version
-$xmlDoc = [xml](Get-Content $manifestFile)
-$xmlDoc.manifest.versionCode = $version.Build.ToString()
-$xmlDoc.manifest.versionName = $version.ToString(3)
+$xmlDoc = [xml](Get-Content $manifestFile);
+$xmlDoc.manifest.versionCode = $version.Build.ToString();
+$xmlDoc.manifest.versionName = $version.ToString(3);
 $xmlDoc.save($manifestFile);
+
+# set app icon
+$appIconXmlDoc = [xml](Get-Content $appIconXml);
+$appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
+$appIconXmlDoc.save($appIconXml);
 
 # apk
 Write-Host;
@@ -71,6 +78,10 @@ if ($isLatest)
 # ------------- aab
 Write-Host;
 Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
+
+# set app icon
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
+$appIconXmlDoc.save($appIconXml);
 
 $outputPath="bin/ReleaseAab";
 $packageId = "com.vpnhood.client.android";

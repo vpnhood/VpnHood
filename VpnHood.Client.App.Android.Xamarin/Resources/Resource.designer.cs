@@ -756,13 +756,16 @@ namespace VpnHood.Client.App.Droid
 			public const int appicon_background = 2131230721;
 			
 			// aapt resource value: 0x7F080002
-			public const int appicon_foreground = 2131230722;
+			public const int appicon_background_dev = 2131230722;
 			
 			// aapt resource value: 0x7F080003
-			public const int appicon_monochrome = 2131230723;
+			public const int appicon_foreground = 2131230723;
 			
 			// aapt resource value: 0x7F080004
-			public const int banner = 2131230724;
+			public const int appicon_monochrome = 2131230724;
+			
+			// aapt resource value: 0x7F080005
+			public const int banner = 2131230725;
 			
 			static Mipmap()
 			{

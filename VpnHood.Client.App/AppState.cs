@@ -5,6 +5,7 @@ namespace VpnHood.Client.App;
 
 public class AppState
 {
+    public DateTime? ConnectRequestTime { get; internal set; }
     public AppConnectionState ConnectionState { get; internal set; }
     public string? LastError { get; internal set; }
     public Guid? ActiveClientProfileId { get; internal set; }

@@ -118,7 +118,7 @@ public static class PacketUtil
         byte[] payloadData, bool calculateCheckSum = true)
     {
         // create packet for audience
-        var ipPacket = PacketUtil.CreateIpPacket(sourceEndPoint.Address, destinationEndPoint.Address);
+        var ipPacket = CreateIpPacket(sourceEndPoint.Address, destinationEndPoint.Address);
         var udpPacket = new UdpPacket((ushort)sourceEndPoint.Port, (ushort)destinationEndPoint.Port)
         {
             PayloadData = payloadData

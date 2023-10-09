@@ -545,7 +545,7 @@ export class ApiClient {
     }
 
     installedApps( cancelToken?: CancelToken | undefined): Promise<DeviceAppInfo[]> {
-        let url_ = this.baseUrl + "/api/InstalledApps";
+        let url_ = this.baseUrl + "/api/installedApps";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -600,7 +600,7 @@ export class ApiClient {
     }
 
     ipGroups( cancelToken?: CancelToken | undefined): Promise<IpGroup[]> {
-        let url_ = this.baseUrl + "/api/IpGroups";
+        let url_ = this.baseUrl + "/api/ipGroups";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -769,7 +769,6 @@ export interface IAppFeatures {
 export class AppSettings implements IAppSettings {
     userSettings!: UserSettings;
     clientId!: string;
-    testServerToken!: Token;
     lastCountryIpGroupId?: string | null;
     testServerTokenAutoAdded?: string | null;
     testServerAccessKey!: string;
@@ -783,7 +782,6 @@ export class AppSettings implements IAppSettings {
         }
         if (!data) {
             this.userSettings = new UserSettings();
-            this.testServerToken = new Token();
         }
     }
 
@@ -791,7 +789,6 @@ export class AppSettings implements IAppSettings {
         if (_data) {
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
-            this.testServerToken = _data["testServerToken"] ? Token.fromJS(_data["testServerToken"]) : new Token();
             this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
             this.testServerTokenAutoAdded = _data["testServerTokenAutoAdded"] !== undefined ? _data["testServerTokenAutoAdded"] : <any>null;
             this.testServerAccessKey = _data["testServerAccessKey"] !== undefined ? _data["testServerAccessKey"] : <any>null;
@@ -809,7 +806,6 @@ export class AppSettings implements IAppSettings {
         data = typeof data === 'object' ? data : {};
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
-        data["testServerToken"] = this.testServerToken ? this.testServerToken.toJSON() : <any>null;
         data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
         data["testServerTokenAutoAdded"] = this.testServerTokenAutoAdded !== undefined ? this.testServerTokenAutoAdded : <any>null;
         data["testServerAccessKey"] = this.testServerAccessKey !== undefined ? this.testServerAccessKey : <any>null;
@@ -820,7 +816,6 @@ export class AppSettings implements IAppSettings {
 export interface IAppSettings {
     userSettings: UserSettings;
     clientId: string;
-    testServerToken: Token;
     lastCountryIpGroupId?: string | null;
     testServerTokenAutoAdded?: string | null;
     testServerAccessKey: string;
@@ -1039,98 +1034,8 @@ export enum FilterMode {
     Include = "Include",
 }
 
-export class Token implements IToken {
-    name?: string | null;
-    v!: number;
-    sid!: number;
-    tid!: string;
-    sec!: string;
-    isv!: boolean;
-    hname!: string;
-    hport!: number;
-    ch!: string;
-    pb!: boolean;
-    url?: string | null;
-    ep?: string[] | null;
-
-    constructor(data?: IToken) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
-            this.v = _data["v"] !== undefined ? _data["v"] : <any>null;
-            this.sid = _data["sid"] !== undefined ? _data["sid"] : <any>null;
-            this.tid = _data["tid"] !== undefined ? _data["tid"] : <any>null;
-            this.sec = _data["sec"] !== undefined ? _data["sec"] : <any>null;
-            this.isv = _data["isv"] !== undefined ? _data["isv"] : <any>null;
-            this.hname = _data["hname"] !== undefined ? _data["hname"] : <any>null;
-            this.hport = _data["hport"] !== undefined ? _data["hport"] : <any>null;
-            this.ch = _data["ch"] !== undefined ? _data["ch"] : <any>null;
-            this.pb = _data["pb"] !== undefined ? _data["pb"] : <any>null;
-            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
-            if (Array.isArray(_data["ep"])) {
-                this.ep = [] as any;
-                for (let item of _data["ep"])
-                    this.ep!.push(item);
-            }
-            else {
-                this.ep = <any>null;
-            }
-        }
-    }
-
-    static fromJS(data: any): Token {
-        data = typeof data === 'object' ? data : {};
-        let result = new Token();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["name"] = this.name !== undefined ? this.name : <any>null;
-        data["v"] = this.v !== undefined ? this.v : <any>null;
-        data["sid"] = this.sid !== undefined ? this.sid : <any>null;
-        data["tid"] = this.tid !== undefined ? this.tid : <any>null;
-        data["sec"] = this.sec !== undefined ? this.sec : <any>null;
-        data["isv"] = this.isv !== undefined ? this.isv : <any>null;
-        data["hname"] = this.hname !== undefined ? this.hname : <any>null;
-        data["hport"] = this.hport !== undefined ? this.hport : <any>null;
-        data["ch"] = this.ch !== undefined ? this.ch : <any>null;
-        data["pb"] = this.pb !== undefined ? this.pb : <any>null;
-        data["url"] = this.url !== undefined ? this.url : <any>null;
-        if (Array.isArray(this.ep)) {
-            data["ep"] = [];
-            for (let item of this.ep)
-                data["ep"].push(item);
-        }
-        return data;
-    }
-}
-
-export interface IToken {
-    name?: string | null;
-    v: number;
-    sid: number;
-    tid: string;
-    sec: string;
-    isv: boolean;
-    hname: string;
-    hport: number;
-    ch: string;
-    pb: boolean;
-    url?: string | null;
-    ep?: string[] | null;
-}
-
 export class AppState implements IAppState {
+    connectRequestTime?: Date | null;
     connectionState!: AppConnectionState;
     lastError?: string | null;
     activeClientProfileId?: string | null;
@@ -1166,6 +1071,7 @@ export class AppState implements IAppState {
 
     init(_data?: any) {
         if (_data) {
+            this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : <any>null;
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
             this.activeClientProfileId = _data["activeClientProfileId"] !== undefined ? _data["activeClientProfileId"] : <any>null;
@@ -1196,6 +1102,7 @@ export class AppState implements IAppState {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : <any>null;
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
         data["activeClientProfileId"] = this.activeClientProfileId !== undefined ? this.activeClientProfileId : <any>null;
@@ -1219,6 +1126,7 @@ export class AppState implements IAppState {
 }
 
 export interface IAppState {
+    connectRequestTime?: Date | null;
     connectionState: AppConnectionState;
     lastError?: string | null;
     activeClientProfileId?: string | null;
@@ -1624,6 +1532,97 @@ export interface IClientProfile {
     tokenId: string;
 }
 
+export class Token implements IToken {
+    name?: string | null;
+    v!: number;
+    sid!: number;
+    tid!: string;
+    sec!: string;
+    isv!: boolean;
+    hname!: string;
+    hport!: number;
+    ch!: string;
+    pb!: boolean;
+    url?: string | null;
+    ep?: string[] | null;
+
+    constructor(data?: IToken) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
+            this.v = _data["v"] !== undefined ? _data["v"] : <any>null;
+            this.sid = _data["sid"] !== undefined ? _data["sid"] : <any>null;
+            this.tid = _data["tid"] !== undefined ? _data["tid"] : <any>null;
+            this.sec = _data["sec"] !== undefined ? _data["sec"] : <any>null;
+            this.isv = _data["isv"] !== undefined ? _data["isv"] : <any>null;
+            this.hname = _data["hname"] !== undefined ? _data["hname"] : <any>null;
+            this.hport = _data["hport"] !== undefined ? _data["hport"] : <any>null;
+            this.ch = _data["ch"] !== undefined ? _data["ch"] : <any>null;
+            this.pb = _data["pb"] !== undefined ? _data["pb"] : <any>null;
+            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
+            if (Array.isArray(_data["ep"])) {
+                this.ep = [] as any;
+                for (let item of _data["ep"])
+                    this.ep!.push(item);
+            }
+            else {
+                this.ep = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): Token {
+        data = typeof data === 'object' ? data : {};
+        let result = new Token();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name !== undefined ? this.name : <any>null;
+        data["v"] = this.v !== undefined ? this.v : <any>null;
+        data["sid"] = this.sid !== undefined ? this.sid : <any>null;
+        data["tid"] = this.tid !== undefined ? this.tid : <any>null;
+        data["sec"] = this.sec !== undefined ? this.sec : <any>null;
+        data["isv"] = this.isv !== undefined ? this.isv : <any>null;
+        data["hname"] = this.hname !== undefined ? this.hname : <any>null;
+        data["hport"] = this.hport !== undefined ? this.hport : <any>null;
+        data["ch"] = this.ch !== undefined ? this.ch : <any>null;
+        data["pb"] = this.pb !== undefined ? this.pb : <any>null;
+        data["url"] = this.url !== undefined ? this.url : <any>null;
+        if (Array.isArray(this.ep)) {
+            data["ep"] = [];
+            for (let item of this.ep)
+                data["ep"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface IToken {
+    name?: string | null;
+    v: number;
+    sid: number;
+    tid: string;
+    sec: string;
+    isv: boolean;
+    hname: string;
+    hport: number;
+    ch: string;
+    pb: boolean;
+    url?: string | null;
+    ep?: string[] | null;
+}
+
 export class LoadAppParam implements ILoadAppParam {
     withFeatures!: boolean;
     withState!: boolean;
@@ -1880,7 +1879,7 @@ export class ApiException extends Error {
     exceptionTypeName?: string;
     exceptionTypeFullName?: string;
     headers: any;
-    data: any;
+    data: any = {};
 
     constructor(
         message: string,
@@ -1924,7 +1923,7 @@ export class ApiException extends Error {
         return `${message}\n\nStatus: ${statusCode}\nResponse:\n${response?.substring(0, Math.min(512, response.length))}`;
     }
 
-    toString(): string {
+    override toString(): string {
         return `HTTP Response:\n\n${this.response}\n\n${super.toString()}`;
     }
 }

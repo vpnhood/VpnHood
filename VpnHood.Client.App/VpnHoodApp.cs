@@ -109,7 +109,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         }
 
         // Set default ClientId if not exists
-        if (ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == Settings.UserSettings.DefaultClientProfileId))
+        if (ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId != Settings.UserSettings.DefaultClientProfileId))
         {
             Settings.UserSettings.DefaultClientProfileId = ClientProfileStore.ClientProfileItems.FirstOrDefault()?.ClientProfile.ClientProfileId;
             Settings.Save();

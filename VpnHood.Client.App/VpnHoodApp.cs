@@ -218,11 +218,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             return; //can just set in Idle State
 
         _lastException = null;
-        _hasDiagnoseStarted = false;
-        _hasDisconnectedByUser = false;
-        _hasConnectRequested = false;
-        _hasAnyDataArrived = false;
-        _connectRequestTime = null;
     }
 
     public async Task Connect(Guid? clientProfileId = null, bool diagnose = false, string? userAgent = default, bool throwException = true)
@@ -248,6 +243,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // prepare logger
             ClearLastError();
             _isConnecting = true;
+            _hasAnyDataArrived = false;
+            _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
             _hasDiagnoseStarted = diagnose;
             _connectRequestTime = DateTime.Now;

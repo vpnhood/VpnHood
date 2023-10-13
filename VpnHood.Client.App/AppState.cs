@@ -5,23 +5,23 @@ namespace VpnHood.Client.App;
 
 public class AppState
 {
-    public DateTime? ConnectRequestTime { get; internal set; }
-    public AppConnectionState ConnectionState { get; internal set; }
-    public string? LastError { get; internal set; }
-    public Guid? ActiveClientProfileId { get; internal set; }
-    public Guid? DefaultClientProfileId { get; internal set; }
-    public bool IsIdle { get; internal set; }
-    public bool LogExists { get; internal set; }
-    public Guid? LastActiveClientProfileId { get; internal set; }
-    public bool HasDiagnoseStarted { get; internal set; }
-    public bool HasDisconnectedByUser { get; internal set; }
-    public bool HasProblemDetected { get; internal set; }
-    public SessionStatus? SessionStatus { get; internal set; }
-    public Traffic Speed { get; internal set; } = new ();
-    public Traffic SessionTraffic { get; internal set; } = new ();
-    public Traffic AccountTraffic { get; internal set; } = new ();
-    public IpGroup? ClientIpGroup { get; internal set; }
-    public bool IsWaitingForAd { get; internal set; }
-    public VersionStatus VersionStatus { get; internal set; }
-    public PublishInfo? LastPublishInfo { get; internal set; }
+    public required Guid ConfigCode { get; init; }
+    public required DateTime? ConnectRequestTime { get; init; }
+    public required AppConnectionState ConnectionState { get; init; }
+    public required string? LastError { get; init; }
+    public required Guid? ActiveClientProfileId { get; init; }
+    public required bool IsIdle { get; init; }
+    public required bool LogExists { get; init; }
+    public required Guid? LastActiveClientProfileId { get; init; }
+    public required bool HasDiagnoseStarted { get; init; }
+    public required bool HasDisconnectedByUser { get; init; }
+    public required bool HasProblemDetected { get; init; }
+    public required SessionStatus? SessionStatus { get; init; }
+    public required Traffic Speed { get; init; }
+    public required Traffic SessionTraffic { get; init; }
+    public required Traffic AccountTraffic { get; init; } 
+    public required IpGroup? ClientIpGroup { get; init; }
+    public required bool IsWaitingForAd { get; init; }
+    public required VersionStatus VersionStatus { get; init; }
+    public required PublishInfo? LastPublishInfo { get; init; }
 }

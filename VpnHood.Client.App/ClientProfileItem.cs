@@ -11,7 +11,7 @@ public class ClientProfileItem
         Token = token;
     }
 
-    public Guid Id => ClientProfile.ClientProfileId;
+    public Guid ClientProfileId => ClientProfile.ClientProfileId;
     public ClientProfile ClientProfile { get; set; }
     public Token Token { get; set; }
 }

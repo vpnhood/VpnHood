@@ -23,7 +23,7 @@ internal class ClientApiController : WebApiController, IClientApi
             Features = App.Features,
             Settings = App.Settings,
             ClientProfileItems = App.ClientProfileStore.ClientProfileItems,
-            AppState = App.State
+            State = App.State
         };
 
         return Task.FromResult(ret);

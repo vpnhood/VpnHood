@@ -9,14 +9,20 @@ namespace VpnHood.Client.App.Swagger.Controllers
     [Route("api")]
     public class ApiController : ControllerBase, IClientApi
     {
-        [HttpPost(nameof(loadApp))]
-        public Task<LoadAppResponse> loadApp(LoadAppParam loadAppParam)
+        [HttpPost(nameof(addAccessKey))]
+        public Task<ClientProfile> addAccessKey(AddClientProfileParam addClientProfileParam)
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(addAccessKey))]
-        public Task<ClientProfile> addAccessKey(AddClientProfileParam addClientProfileParam)
+        [HttpGet("/app/config")]
+        public Task<AppConfig> GetAppConfig()
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpGet("/app/state")]
+        public Task<AppState> GetAppState()
         {
             throw new NotImplementedException();
         }

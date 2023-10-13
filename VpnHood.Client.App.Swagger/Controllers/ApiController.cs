@@ -6,89 +6,89 @@ using VpnHood.Client.Device;
 namespace VpnHood.Client.App.Swagger.Controllers
 {
     [ApiController]
-    [Route("api")]
+    [Route("api/app")]
     public class ApiController : ControllerBase, IClientApi
     {
-        [HttpPost(nameof(addAccessKey))]
-        public Task<ClientProfile> addAccessKey(AddClientProfileParam addClientProfileParam)
-        {
-            throw new NotImplementedException();
-        }
-
-        [HttpGet("/app/config")]
+        [HttpGet("config")]
         public Task<AppConfig> GetConfig()
         {
             throw new NotImplementedException();
         }
 
-        [HttpGet("/app/state")]
+        [HttpGet("state")]
         public Task<AppState> GetState()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(connect))]
-        public Task connect(ConnectParam connectParam)
+        [HttpPost("connect")]
+        public Task Connect(Guid? clientProfileId)
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(diagnose))]
-        public Task diagnose(ConnectParam connectParam)
+        [HttpPost("diagnose")]
+        public Task Diagnose(Guid? clientProfileId)
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(disconnect))]
-        public Task disconnect()
+        [HttpPost("disconnect")]
+        public Task Disconnect()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(setClientProfile))]
-        public Task setClientProfile(SetClientProfileParam setClientProfileParam)
+        [HttpPost("access-key")]
+        public Task<ClientProfile> AddAccessKey(string accessKey)
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(removeClientProfile))]
-        public Task removeClientProfile(RemoveClientProfileParam removeClientProfileParam)
+        [HttpPost("clear-last-error")]
+        public void ClearLastError()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(clearLastError))]
-        public void clearLastError()
+        [HttpPost("add-test-server")]
+        public void AddTestServer()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(addTestServer))]
-        public void addTestServer()
+        [HttpPut("user-settings")]
+        public Task SetUserSettings(UserSettings userSettings)
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(setUserSettings))]
-        public Task setUserSettings(UserSettings userSettings)
+        [HttpGet("log.txt")]
+        public Task Log()
         {
             throw new NotImplementedException();
         }
 
-        [HttpGet(nameof(log))]
-        public Task log()
+        [HttpGet("installed-apps")]
+        public Task<DeviceAppInfo[]> GetInstalledApps()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(installedApps))]
-        public Task<DeviceAppInfo[]> installedApps()
+        [HttpGet("ip-groups")]
+        public Task<IpGroup[]> GetIpGroups()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost(nameof(ipGroups))]
-        public Task<IpGroup[]> ipGroups()
+        [HttpPatch("client-profiles/{clientProfileId}")]
+        public Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpDelete("client-profiles/{clientProfileId}")]
+        public Task DeleteClientProfile(Guid clientProfileId)
         {
             throw new NotImplementedException();
         }

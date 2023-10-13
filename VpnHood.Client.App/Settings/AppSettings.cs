@@ -10,6 +10,7 @@ public class AppSettings
 {
     [JsonIgnore] public string SettingsFilePath { get; private set; } = null!;
 
+    public Guid ConfigCode { get; set; } = Guid.NewGuid();
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
     public string? LastCountryIpGroupId { get; set; }

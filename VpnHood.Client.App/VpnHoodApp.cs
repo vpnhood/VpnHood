@@ -132,6 +132,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public AppState State => new()
     {
+        ConfigCode = Settings.ConfigCode,
         ConnectionState = ConnectionState,
         IsIdle = IsIdle,
         ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
@@ -224,7 +225,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _connectRequestTime = null;
     }
 
-    public async Task Connect(Guid clientProfileId, bool diagnose = false, string? userAgent = default)
+    public async Task Connect(Guid clientProfileId, bool diagnose = false, string? userAgent = default, bool throwException = true)
     {
         // disconnect if user request diagnosing
         if (ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId ||
@@ -264,6 +265,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // App filters
             if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
                 packetCapture.ExcludeApps = UserSettings.AppFilters;
+
             if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include)
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
@@ -280,7 +282,10 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             }
 
             await Disconnect();
-            throw;
+
+            // _lastException is already set so some client may not need this exception
+            if (throwException)
+                throw;
         }
         finally
         {

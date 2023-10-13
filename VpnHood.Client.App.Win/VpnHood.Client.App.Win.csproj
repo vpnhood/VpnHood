@@ -40,7 +40,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1938.49" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2045.28" />
 	</ItemGroup>
 
 	<PropertyGroup>

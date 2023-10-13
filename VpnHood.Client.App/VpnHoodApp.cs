@@ -225,8 +225,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _connectRequestTime = null;
     }
 
-    public async Task Connect(Guid clientProfileId, bool diagnose = false, string? userAgent = default, bool throwException = true)
+    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false, string? userAgent = default, bool throwException = true)
     {
+        // set default profileId to clientProfileId if not set
+        clientProfileId ??= UserSettings.DefaultClientProfileId;
+
         // disconnect if user request diagnosing
         if (ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId ||
             !IsIdle && diagnose && !_hasDiagnoseStarted)

@@ -25,6 +25,7 @@ public class AppSettings
 
     public void Save()
     {
+        ConfigCode = Guid.NewGuid();
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
         OnSaved?.Invoke(this, EventArgs.Empty);

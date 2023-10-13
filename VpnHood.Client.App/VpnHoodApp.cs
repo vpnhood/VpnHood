@@ -132,7 +132,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public AppState State => new()
     {
-        ConfigCode = Settings.ConfigCode,
+        ConfigTime = Settings.ConfigTime,
         ConnectionState = ConnectionState,
         IsIdle = IsIdle,
         ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,

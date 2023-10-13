@@ -1,7 +1,9 @@
 # Upcoming 
 ### Client
 Update: Windows: Remove from taskbar on minimize
+Feature: Register vh and vhkey intent for importing access key
 Fix: Windows: Restore Windows state to normal when user click on the system tray icon
+Fix: Improve disconnecting speed
 
 # v3.0.429
 ### Client

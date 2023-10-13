@@ -10,7 +10,7 @@ public class AppSettings
 {
     [JsonIgnore] public string SettingsFilePath { get; private set; } = null!;
 
-    public Guid ConfigCode { get; set; } = Guid.NewGuid();
+    public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
     public string? LastCountryIpGroupId { get; set; }
@@ -25,7 +25,7 @@ public class AppSettings
 
     public void Save()
     {
-        ConfigCode = Guid.NewGuid();
+        ConfigTime = DateTime.Now;
         var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
         OnSaved?.Invoke(this, EventArgs.Empty);

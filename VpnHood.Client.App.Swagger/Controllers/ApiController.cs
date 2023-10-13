@@ -22,13 +22,13 @@ namespace VpnHood.Client.App.Swagger.Controllers
         }
 
         [HttpPost("connect")]
-        public Task Connect(Guid? clientProfileId)
+        public Task Connect(Guid? clientProfileId = null)
         {
             throw new NotImplementedException();
         }
 
         [HttpPost("diagnose")]
-        public Task Diagnose(Guid? clientProfileId)
+        public Task Diagnose(Guid? clientProfileId = null)
         {
             throw new NotImplementedException();
         }

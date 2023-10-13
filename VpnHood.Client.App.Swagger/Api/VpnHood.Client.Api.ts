@@ -24,60 +24,8 @@ export class ApiClient {
 
     }
 
-    addAccessKey(addClientProfileParam: AddClientProfileParam, cancelToken?: CancelToken | undefined): Promise<ClientProfile> {
-        let url_ = this.baseUrl + "/api/app/addAccessKey";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(addClientProfileParam);
-
-        let options_: AxiosRequestConfig = {
-            data: content_,
-            method: "POST",
-            url: url_,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processAddAccessKey(_response);
-        });
-    }
-
-    protected processAddAccessKey(response: AxiosResponse): Promise<ClientProfile> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (let k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = ClientProfile.fromJS(resultData200);
-            return Promise.resolve<ClientProfile>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<ClientProfile>(null as any);
-    }
-
     getConfig( cancelToken?: CancelToken | undefined): Promise<AppConfig> {
-        let url_ = this.baseUrl + "/app/config";
+        let url_ = this.baseUrl + "/api/app/config";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -125,7 +73,7 @@ export class ApiClient {
     }
 
     getState( cancelToken?: CancelToken | undefined): Promise<AppState> {
-        let url_ = this.baseUrl + "/app/state";
+        let url_ = this.baseUrl + "/api/app/state";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -173,7 +121,7 @@ export class ApiClient {
     }
 
     connect(clientProfileId: string | null | undefined, cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/connect?";
+        let url_ = this.baseUrl + "/api/app/connect?";
         if (clientProfileId !== undefined && clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
         url_ = url_.replace(/[?&]$/, "");
@@ -308,18 +256,19 @@ export class ApiClient {
         return Promise.resolve<void>(null as any);
     }
 
-    setClientProfile(setClientProfileParam: SetClientProfileParam, cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/setClientProfile";
+    addAccessKey(accessKey: string | undefined, cancelToken?: CancelToken | undefined): Promise<ClientProfile> {
+        let url_ = this.baseUrl + "/api/app/access-key?";
+        if (accessKey === null)
+            throw new Error("The parameter 'accessKey' cannot be null.");
+        else if (accessKey !== undefined)
+            url_ += "accessKey=" + encodeURIComponent("" + accessKey) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(setClientProfileParam);
-
         let options_: AxiosRequestConfig = {
-            data: content_,
             method: "POST",
             url: url_,
             headers: {
-                "Content-Type": "application/json",
+                "Accept": "application/json"
             },
             cancelToken
         };
@@ -331,11 +280,11 @@ export class ApiClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processSetClientProfile(_response);
+            return this.processAddAccessKey(_response);
         });
     }
 
-    protected processSetClientProfile(response: AxiosResponse): Promise<void> {
+    protected processAddAccessKey(response: AxiosResponse): Promise<ClientProfile> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -347,65 +296,20 @@ export class ApiClient {
         }
         if (status === 200) {
             const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientProfile.fromJS(resultData200);
+            return Promise.resolve<ClientProfile>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<void>(null as any);
-    }
-
-    removeClientProfile(removeClientProfileParam: RemoveClientProfileParam, cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/removeClientProfile";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(removeClientProfileParam);
-
-        let options_: AxiosRequestConfig = {
-            data: content_,
-            method: "POST",
-            url: url_,
-            headers: {
-                "Content-Type": "application/json",
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processRemoveClientProfile(_response);
-        });
-    }
-
-    protected processRemoveClientProfile(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (let k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<ClientProfile>(null as any);
     }
 
     clearLastError( cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/clearLastError";
+        let url_ = this.baseUrl + "/api/app/clear-last-error";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -449,7 +353,7 @@ export class ApiClient {
     }
 
     addTestServer( cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/addTestServer";
+        let url_ = this.baseUrl + "/api/app/add-test-server";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -493,14 +397,14 @@ export class ApiClient {
     }
 
     setUserSettings(userSettings: UserSettings, cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/setUserSettings";
+        let url_ = this.baseUrl + "/api/app/user-settings";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(userSettings);
 
         let options_: AxiosRequestConfig = {
             data: content_,
-            method: "POST",
+            method: "PUT",
             url: url_,
             headers: {
                 "Content-Type": "application/json",
@@ -541,7 +445,7 @@ export class ApiClient {
     }
 
     log( cancelToken?: CancelToken | undefined): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/log";
+        let url_ = this.baseUrl + "/api/app/log.txt";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -584,12 +488,12 @@ export class ApiClient {
         return Promise.resolve<void>(null as any);
     }
 
-    installedApps( cancelToken?: CancelToken | undefined): Promise<DeviceAppInfo[]> {
-        let url_ = this.baseUrl + "/api/app/installedApps";
+    getInstalledApps( cancelToken?: CancelToken | undefined): Promise<DeviceAppInfo[]> {
+        let url_ = this.baseUrl + "/api/app/installed-apps";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "POST",
+            method: "GET",
             url: url_,
             headers: {
                 "Accept": "application/json"
@@ -604,11 +508,11 @@ export class ApiClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processInstalledApps(_response);
+            return this.processGetInstalledApps(_response);
         });
     }
 
-    protected processInstalledApps(response: AxiosResponse): Promise<DeviceAppInfo[]> {
+    protected processGetInstalledApps(response: AxiosResponse): Promise<DeviceAppInfo[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -639,12 +543,12 @@ export class ApiClient {
         return Promise.resolve<DeviceAppInfo[]>(null as any);
     }
 
-    ipGroups( cancelToken?: CancelToken | undefined): Promise<IpGroup[]> {
-        let url_ = this.baseUrl + "/api/app/ipGroups";
+    getIpGroups( cancelToken?: CancelToken | undefined): Promise<IpGroup[]> {
+        let url_ = this.baseUrl + "/api/app/ip-groups";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "POST",
+            method: "GET",
             url: url_,
             headers: {
                 "Accept": "application/json"
@@ -659,11 +563,11 @@ export class ApiClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processIpGroups(_response);
+            return this.processGetIpGroups(_response);
         });
     }
 
-    protected processIpGroups(response: AxiosResponse): Promise<IpGroup[]> {
+    protected processGetIpGroups(response: AxiosResponse): Promise<IpGroup[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -693,86 +597,104 @@ export class ApiClient {
         }
         return Promise.resolve<IpGroup[]>(null as any);
     }
-}
 
-export class ClientProfile implements IClientProfile {
-    name?: string | null;
-    clientProfileId!: string;
-    tokenId!: string;
+    updateClientProfile(clientProfileId: string, updateParams: ClientProfileUpdateParams, cancelToken?: CancelToken | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/client-profiles/{clientProfileId}";
+        if (clientProfileId === undefined || clientProfileId === null)
+            throw new Error("The parameter 'clientProfileId' must be defined.");
+        url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));
+        url_ = url_.replace(/[?&]$/, "");
 
-    constructor(data?: IClientProfile) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
+        const content_ = JSON.stringify(updateParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processUpdateClientProfile(_response);
+        });
+    }
+
+    protected processUpdateClientProfile(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
             }
         }
-    }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
 
-    init(_data?: any) {
-        if (_data) {
-            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
-            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
-            this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : <any>null;
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
+        return Promise.resolve<void>(null as any);
     }
 
-    static fromJS(data: any): ClientProfile {
-        data = typeof data === 'object' ? data : {};
-        let result = new ClientProfile();
-        result.init(data);
-        return result;
+    deleteClientProfile(clientProfileId: string, cancelToken?: CancelToken | undefined): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/client-profiles/{clientProfileId}";
+        if (clientProfileId === undefined || clientProfileId === null)
+            throw new Error("The parameter 'clientProfileId' must be defined.");
+        url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteClientProfile(_response);
+        });
     }
 
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["name"] = this.name !== undefined ? this.name : <any>null;
-        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
-        return data;
-    }
-}
-
-export interface IClientProfile {
-    name?: string | null;
-    clientProfileId: string;
-    tokenId: string;
-}
-
-export class AddClientProfileParam implements IAddClientProfileParam {
-    accessKey!: string;
-
-    constructor(data?: IAddClientProfileParam) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
+    protected processDeleteClientProfile(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (let k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
             }
         }
-    }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
 
-    init(_data?: any) {
-        if (_data) {
-            this.accessKey = _data["accessKey"] !== undefined ? _data["accessKey"] : <any>null;
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
+        return Promise.resolve<void>(null as any);
     }
-
-    static fromJS(data: any): AddClientProfileParam {
-        data = typeof data === 'object' ? data : {};
-        let result = new AddClientProfileParam();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["accessKey"] = this.accessKey !== undefined ? this.accessKey : <any>null;
-        return data;
-    }
-}
-
-export interface IAddClientProfileParam {
-    accessKey: string;
 }
 
 export class AppConfig implements IAppConfig {
@@ -1571,7 +1493,7 @@ export interface IPublishInfo {
 }
 
 export class ClientProfileItem implements IClientProfileItem {
-    id!: string;
+    clientProfileId!: string;
     clientProfile!: ClientProfile;
     token!: Token;
 
@@ -1590,7 +1512,7 @@ export class ClientProfileItem implements IClientProfileItem {
 
     init(_data?: any) {
         if (_data) {
-            this.id = _data["id"] !== undefined ? _data["id"] : <any>null;
+            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfile.fromJS(_data["clientProfile"]) : new ClientProfile();
             this.token = _data["token"] ? Token.fromJS(_data["token"]) : new Token();
         }
@@ -1605,7 +1527,7 @@ export class ClientProfileItem implements IClientProfileItem {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["id"] = this.id !== undefined ? this.id : <any>null;
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
         data["token"] = this.token ? this.token.toJSON() : <any>null;
         return data;
@@ -1613,9 +1535,53 @@ export class ClientProfileItem implements IClientProfileItem {
 }
 
 export interface IClientProfileItem {
-    id: string;
+    clientProfileId: string;
     clientProfile: ClientProfile;
     token: Token;
+}
+
+export class ClientProfile implements IClientProfile {
+    name?: string | null;
+    clientProfileId!: string;
+    tokenId!: string;
+
+    constructor(data?: IClientProfile) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
+            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientProfile {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientProfile();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name !== undefined ? this.name : <any>null;
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
+        return data;
+    }
+}
+
+export interface IClientProfile {
+    name?: string | null;
+    clientProfileId: string;
+    tokenId: string;
 }
 
 export class Token implements IToken {
@@ -1709,81 +1675,6 @@ export interface IToken {
     ep?: string[] | null;
 }
 
-export class SetClientProfileParam implements ISetClientProfileParam {
-    clientProfile!: ClientProfile;
-
-    constructor(data?: ISetClientProfileParam) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.clientProfile = new ClientProfile();
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.clientProfile = _data["clientProfile"] ? ClientProfile.fromJS(_data["clientProfile"]) : new ClientProfile();
-        }
-    }
-
-    static fromJS(data: any): SetClientProfileParam {
-        data = typeof data === 'object' ? data : {};
-        let result = new SetClientProfileParam();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
-        return data;
-    }
-}
-
-export interface ISetClientProfileParam {
-    clientProfile: ClientProfile;
-}
-
-export class RemoveClientProfileParam implements IRemoveClientProfileParam {
-    clientProfileId!: string;
-
-    constructor(data?: IRemoveClientProfileParam) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): RemoveClientProfileParam {
-        data = typeof data === 'object' ? data : {};
-        let result = new RemoveClientProfileParam();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        return data;
-    }
-}
-
-export interface IRemoveClientProfileParam {
-    clientProfileId: string;
-}
-
 export class DeviceAppInfo implements IDeviceAppInfo {
     appId!: string;
     appName!: string;
@@ -1826,6 +1717,78 @@ export interface IDeviceAppInfo {
     appId: string;
     appName: string;
     iconPng: string;
+}
+
+export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
+    name?: PatchOfString | null;
+
+    constructor(data?: IClientProfileUpdateParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.name = _data["name"] ? PatchOfString.fromJS(_data["name"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientProfileUpdateParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientProfileUpdateParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["name"] = this.name ? this.name.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IClientProfileUpdateParams {
+    name?: PatchOfString | null;
+}
+
+export class PatchOfString implements IPatchOfString {
+    value!: string;
+
+    constructor(data?: IPatchOfString) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfString {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfString();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfString {
+    value: string;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

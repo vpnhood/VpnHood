@@ -18,12 +18,6 @@
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
-	  <None Remove="Resources\values\strings.xml" />
-	</ItemGroup>
-	<ItemGroup>
-	  <AndroidResource Include="Resources\values\strings.xml" />
-	</ItemGroup>
-	<ItemGroup>
 	  <None Include="..\VpnHood.png">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>

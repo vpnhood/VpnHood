@@ -16,13 +16,13 @@ namespace VpnHood.Client.App.Swagger.Controllers
         }
 
         [HttpGet("/app/config")]
-        public Task<AppConfig> GetAppConfig()
+        public Task<AppConfig> GetConfig()
         {
             throw new NotImplementedException();
         }
 
         [HttpGet("/app/state")]
-        public Task<AppState> GetAppState()
+        public Task<AppState> GetState()
         {
             throw new NotImplementedException();
         }

@@ -30,12 +30,15 @@ namespace VpnHood.Client.App.Droid;
 
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
+[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
 public class MainActivity : Activity
 {
     private const int RequestVpnPermission = 10;
-    public const string AccessKeyMime1 = "application/vnd.cinderella";
-    public const string AccessKeyMime2 = "application/vhkey";
-    public const string AccessKeyMime3 = "application/key";
+    public const string AccessKeyScheme1 = "vh";
+    public const string AccessKeyScheme2 = "vhkey";
+    public const string AccessKeyMime1 = "application/vhkey";
+    public const string AccessKeyMime2 = "application/key";
+    public const string AccessKeyMime3 = "application/vnd.cinderella";
 
     private AndroidDevice Device =>
         (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
@@ -76,22 +79,28 @@ public class MainActivity : Activity
         if (intent?.Data == null || ContentResolver == null)
             return false;
 
-        // check mime
-        var uri = intent.Data;
-        var mimeType = ContentResolver.GetType(uri);
-        if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2 && mimeType != AccessKeyMime1 && mimeType != AccessKeyMime3)
-        {
-            Toast.MakeText(this, UiResource.MsgUnsupportedContent, ToastLength.Long)?.Show();
-            return false;
-        }
-
         // try to add the access key
         try
         {
+            var uri = intent.Data;
+            if (uri.Scheme is AccessKeyScheme1 or AccessKeyScheme2)
+            {
+                ImportAccessKey(uri.ToString()!);
+                return true;
+            }
+
+            // check mime
+            var mimeType = ContentResolver.GetType(uri);
+            if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2 && mimeType != AccessKeyMime1 && mimeType != AccessKeyMime3)
+            {
+                Toast.MakeText(this, UiResource.MsgUnsupportedContent, ToastLength.Long)?.Show();
+                return false;
+            }
+
             // open stream
             using var inputStream = ContentResolver.OpenInputStream(uri);
             if (inputStream == null)
-                return false;
+                throw new Exception("Can not open the intent file stream.");
 
             // read string into buffer maximum 5k
             var buffer = new byte[5 * 1024];
@@ -100,15 +109,7 @@ public class MainActivity : Activity
             var streamReader = new StreamReader(memoryStream);
             var accessKey = streamReader.ReadToEnd();
 
-            var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
-            var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
-            _ = VpnHoodApp.Instance.Disconnect(true);
-            VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
-
-            var message = accessKeyStatus.ClientProfile != null
-                ? string.Format(UiResource.MsgAccessKeyUpdated, accessKeyStatus.Name)
-                : string.Format(UiResource.MsgAccessKeyAdded, accessKeyStatus.Name);
-            Toast.MakeText(this, message, ToastLength.Long)?.Show();
+            ImportAccessKey(accessKey);
         }
         catch
         {
@@ -116,6 +117,20 @@ public class MainActivity : Activity
         }
 
         return true;
+    }
+
+    private void ImportAccessKey(string accessKey)
+    {
+        var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
+        var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
+        _ = VpnHoodApp.Instance.Disconnect(true);
+        VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
+
+        var message = accessKeyStatus.ClientProfile != null
+            ? string.Format(UiResource.MsgAccessKeyUpdated, accessKeyStatus.Name)
+            : string.Format(UiResource.MsgAccessKeyAdded, accessKeyStatus.Name);
+
+        Toast.MakeText(this, message, ToastLength.Long)?.Show();
     }
 
     private void Device_OnRequestVpnPermission(object? sender, EventArgs e)

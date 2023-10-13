@@ -109,7 +109,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         }
 
         // Set default ClientId if not exists
-        if (ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId != Settings.UserSettings.DefaultClientProfileId))
+        if (ClientProfileStore.ClientProfileItems.All(x => x.ClientProfile.ClientProfileId != Settings.UserSettings.DefaultClientProfileId))
         {
             Settings.UserSettings.DefaultClientProfileId = ClientProfileStore.ClientProfileItems.FirstOrDefault()?.ClientProfile.ClientProfileId;
             Settings.Save();
@@ -132,6 +132,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public AppState State => new()
     {
+        ConfigCode = Settings.ConfigCode,
         ConnectionState = ConnectionState,
         IsIdle = IsIdle,
         ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
@@ -224,8 +225,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _connectRequestTime = null;
     }
 
-    public async Task Connect(Guid clientProfileId, bool diagnose = false, string? userAgent = default)
+    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false, string? userAgent = default, bool throwException = true)
     {
+        // set default profileId to clientProfileId if not set
+        clientProfileId ??= UserSettings.DefaultClientProfileId;
+
         // disconnect if user request diagnosing
         if (ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId ||
             !IsIdle && diagnose && !_hasDiagnoseStarted)
@@ -264,6 +268,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // App filters
             if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
                 packetCapture.ExcludeApps = UserSettings.AppFilters;
+
             if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include)
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
@@ -280,7 +285,10 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             }
 
             await Disconnect();
-            throw;
+
+            // _lastException is already set so some client may not need this exception
+            if (throwException)
+                throw;
         }
         finally
         {

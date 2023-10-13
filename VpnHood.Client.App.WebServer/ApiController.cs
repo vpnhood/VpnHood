@@ -16,7 +16,7 @@ internal class ClientApiController : WebApiController, IClientApi
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    [Route(HttpVerbs.Get, "config" )]
+    [Route(HttpVerbs.Get, "/config")]
     public Task<AppConfig> GetConfig()
     {
         var ret = new AppConfig
@@ -30,50 +30,50 @@ internal class ClientApiController : WebApiController, IClientApi
         return Task.FromResult(ret);
     }
 
-    [Route(HttpVerbs.Get, "state")]
+    [Route(HttpVerbs.Get, "/state")]
     public Task<AppState> GetState()
     {
         return Task.FromResult(App.State);
     }
 
-    [Route(HttpVerbs.Post, "connect")]
-    public async Task Connect(Guid? clientProfileId = null)
+    [Route(HttpVerbs.Post, "/connect")]
+    public async Task Connect([QueryField] Guid? clientProfileId = null)
     {
         await App.Connect(clientProfileId, userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
-    [Route(HttpVerbs.Post, "diagnose")]
-    public async Task Diagnose(Guid? clientProfileId = null)
+    [Route(HttpVerbs.Post, "/diagnose")]
+    public async Task Diagnose([QueryField] Guid? clientProfileId = null)
     {
         await App.Connect(clientProfileId, true, HttpContext.Request.UserAgent, throwException: false);
     }
 
-    [Route(HttpVerbs.Post, "disconnect")]
+    [Route(HttpVerbs.Post, "/disconnect")]
     public async Task Disconnect()
     {
         await App.Disconnect(true);
     }
 
-    [Route(HttpVerbs.Put, "access-keys")]
+    [Route(HttpVerbs.Put, "/access-keys")]
     public Task<ClientProfile> AddAccessKey(string accessKey)
     {
         var clientProfile = App.ClientProfileStore.AddAccessKey(accessKey);
         return Task.FromResult(clientProfile);
     }
 
-    [Route(HttpVerbs.Post, "clear-last-error")]
+    [Route(HttpVerbs.Post, "/clear-last-error")]
     public void ClearLastError()
     {
         App.ClearLastError();
     }
 
-    [Route(HttpVerbs.Post, "add-test-server")]
+    [Route(HttpVerbs.Post, "/add-test-server")]
     public void AddTestServer()
     {
         App.ClientProfileStore.AddAccessKey(App.Settings.TestServerAccessKey);
     }
 
-    [Route(HttpVerbs.Put, "user-settings")]
+    [Route(HttpVerbs.Put, "/user-settings")]
     public async Task SetUserSettings(UserSettings userSettings)
     {
         userSettings = await GetRequestDataAsync<UserSettings>();
@@ -81,7 +81,7 @@ internal class ClientApiController : WebApiController, IClientApi
         App.Settings.Save();
     }
 
-    [Route(HttpVerbs.Get, "log.txt")]
+    [Route(HttpVerbs.Get, "/log.txt")]
     public async Task Log()
     {
         Response.ContentType = MimeType.PlainText;
@@ -91,19 +91,19 @@ internal class ClientApiController : WebApiController, IClientApi
         await streamWriter.WriteAsync(log);
     }
 
-    [Route(HttpVerbs.Get, "installed-apps")]
+    [Route(HttpVerbs.Get, "/installed-apps")]
     public Task<DeviceAppInfo[]> GetInstalledApps()
     {
         return Task.FromResult(App.Device.InstalledApps);
     }
 
-    [Route(HttpVerbs.Get, "ip-groups")]
+    [Route(HttpVerbs.Get, "/ip-groups")]
     public Task<IpGroup[]> GetIpGroups()
     {
         return App.GetIpGroups();
     }
 
-    [Route(HttpVerbs.Patch, "client-profiles/{clientProfileId}")]
+    [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
     public async Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>();
@@ -115,7 +115,7 @@ internal class ClientApiController : WebApiController, IClientApi
         App.ClientProfileStore.SetClientProfile(clientProfileItem.ClientProfile);
     }
 
-    [Route(HttpVerbs.Delete, "client-profiles/{clientProfileId}")]
+    [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
         if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
@@ -127,10 +127,10 @@ internal class ClientApiController : WebApiController, IClientApi
     {
         var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
         var res = JsonSerializer.Deserialize<T>(json,
-            new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         if (res == null)
             throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
         return res;
     }
-   
+
 }

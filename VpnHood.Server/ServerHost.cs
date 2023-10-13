@@ -604,8 +604,8 @@ internal class ServerHost : IAsyncDisposable, IJob
         await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
         await clientStream.DisposeAsync(false);
 
-        // must be last. We don't need to wait for its result
-        _ = _sessionManager.CloseSession(session.SessionId);
+        // must be last
+        await _sessionManager.CloseSession(session.SessionId);
     }
 
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)

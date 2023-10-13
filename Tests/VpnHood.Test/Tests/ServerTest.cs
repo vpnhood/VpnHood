@@ -119,7 +119,7 @@ public class ServerTest : TestBase
 
         dateTime = DateTime.Now;
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode); 
 
         CollectionAssert.AreEqual(serverConfig.ServerSecret, server.SessionManager.ServerSecret);
         Assert.IsTrue(testAccessManager.LastConfigureTime > dateTime);

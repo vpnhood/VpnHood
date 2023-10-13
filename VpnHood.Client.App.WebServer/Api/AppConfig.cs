@@ -6,6 +6,6 @@ public class AppConfig
 {
     public required AppFeatures Features { get; init; }
     public required AppSettings Settings { get; init; }
-    public required AppState AppState { get; init; }
+    public required AppState State { get; init; }
     public required ClientProfileItem[] ClientProfileItems { get; init; }
 }

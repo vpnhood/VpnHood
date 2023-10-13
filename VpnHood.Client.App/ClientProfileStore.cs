@@ -109,6 +109,7 @@ public class ClientProfileStore
         if (clientProfile.ClientProfileId == Guid.Empty)
             throw new ArgumentNullException(nameof(clientProfile.ClientProfileId),
                 $@"{nameof(ClientProfile)} does not have {nameof(clientProfile.ClientProfileId)}");
+
         if (clientProfile.TokenId == Guid.Empty)
             throw new ArgumentNullException(nameof(clientProfile.TokenId), @"ClientProfile does not have tokenId");
         var token = GetToken(clientProfile.TokenId); //make sure tokenId is valid

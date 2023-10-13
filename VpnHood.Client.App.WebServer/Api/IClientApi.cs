@@ -7,8 +7,8 @@ namespace VpnHood.Client.App.WebServer.Api;
 
 public interface IClientApi
 {
-    Task<AppConfig> GetAppConfig();
-    Task<AppState> GetAppState();
+    Task<AppConfig> GetConfig();
+    Task<AppState> GetState();
     Task connect(ConnectParam connectParam);
     Task diagnose(ConnectParam connectParam);
     Task disconnect();

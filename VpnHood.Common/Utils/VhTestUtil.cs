@@ -37,7 +37,7 @@ public static  class VhTestUtil
     {
         message ??= "Unexpected Value";
         if (!Equals(expected, actual))
-            throw new Exception($"{message}. Expected: {expected}, Actual: {actual}");
+            throw new Exception($"{message} Expected: {expected}, Actual: {actual}");
     }
 
     public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<TValue?> valueFactory, 

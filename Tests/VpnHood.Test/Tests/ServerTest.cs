@@ -119,7 +119,7 @@ public class ServerTest : TestBase
 
         dateTime = DateTime.Now;
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode); 
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
 
         CollectionAssert.AreEqual(serverConfig.ServerSecret, server.SessionManager.ServerSecret);
         Assert.IsTrue(testAccessManager.LastConfigureTime > dateTime);
@@ -150,6 +150,7 @@ public class ServerTest : TestBase
         await using var client = TestHelper.CreateClient(token);
         Assert.IsTrue(fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
+
         await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
         await VhTestUtil.AssertEqualsWait(false, () => session.IsAlive);
     }
@@ -204,7 +205,7 @@ public class ServerTest : TestBase
         await client.DisposeAsync();
         await server2.DisposeAsync();
     }
-    
+
     [TestMethod]
     public async Task Unauthorized_response_is_expected_for_unknown_request()
     {

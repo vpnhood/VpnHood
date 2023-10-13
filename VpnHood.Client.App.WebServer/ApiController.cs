@@ -16,20 +16,21 @@ internal class ClientApiController : WebApiController, IClientApi
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
     [Route(HttpVerbs.Get, "/app/config" )]
-    public Task<AppConfig> GetAppConfig()
+    public Task<AppConfig> GetConfig()
     {
         var ret = new AppConfig
         {
             Features = App.Features,
             Settings = App.Settings,
-            ClientProfileItems = App.ClientProfileStore.ClientProfileItems
+            ClientProfileItems = App.ClientProfileStore.ClientProfileItems,
+            AppState = App.State
         };
 
         return Task.FromResult(ret);
     }
 
     [Route(HttpVerbs.Get, "/app/state")]
-    public Task<AppState> GetAppState()
+    public Task<AppState> GetState()
     {
         return Task.FromResult(App.State);
     }

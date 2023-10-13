@@ -15,20 +15,23 @@ internal class ClientApiController : WebApiController, IClientApi
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-
-    [Route(HttpVerbs.Post, "/" + nameof (loadApp))]
-    public async Task<LoadAppResponse> loadApp(LoadAppParam loadAppParam)
+    [Route(HttpVerbs.Get, "/app/config" )]
+    public Task<AppConfig> GetAppConfig()
     {
-        loadAppParam = await GetRequestDataAsync<LoadAppParam>();
-        var ret = new LoadAppResponse
+        var ret = new AppConfig
         {
-            Features = loadAppParam.WithFeatures ? App.Features : null,
-            State = loadAppParam.WithState ? App.State : null,
-            Settings = loadAppParam.WithSettings ? App.Settings : null,
-            ClientProfileItems =
-                loadAppParam.WithClientProfileItems ? App.ClientProfileStore.ClientProfileItems : null
+            Features = App.Features,
+            Settings = App.Settings,
+            ClientProfileItems = App.ClientProfileStore.ClientProfileItems
         };
-        return ret;
+
+        return Task.FromResult(ret);
+    }
+
+    [Route(HttpVerbs.Get, "/app/state")]
+    public Task<AppState> GetAppState()
+    {
+        return Task.FromResult(App.State);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]

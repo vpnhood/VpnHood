@@ -10,8 +10,8 @@ public interface IClientApi
 {
     Task<AppConfig> GetConfig();
     Task<AppState> GetState();
-    Task Connect(Guid? clientProfileId);
-    Task Diagnose(Guid? clientProfileId);
+    Task Connect(Guid? clientProfileId = null);
+    Task Diagnose(Guid? clientProfileId = null);
     Task Disconnect();
     Task<ClientProfile> AddAccessKey(string accessKey);
     Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams);

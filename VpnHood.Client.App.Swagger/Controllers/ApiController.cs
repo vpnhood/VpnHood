@@ -39,7 +39,7 @@ namespace VpnHood.Client.App.Swagger.Controllers
             throw new NotImplementedException();
         }
 
-        [HttpPost("access-key")]
+        [HttpPut("access-key")]
         public Task<ClientProfile> AddAccessKey(string accessKey)
         {
             throw new NotImplementedException();

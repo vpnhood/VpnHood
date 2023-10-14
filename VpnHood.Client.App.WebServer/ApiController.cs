@@ -55,7 +55,7 @@ internal class ClientApiController : WebApiController, IClientApi
     }
 
     [Route(HttpVerbs.Put, "/access-keys")]
-    public Task<ClientProfile> AddAccessKey(string accessKey)
+    public Task<ClientProfile> AddAccessKey([QueryField] string accessKey)
     {
         var clientProfile = App.ClientProfileStore.AddAccessKey(accessKey);
         return Task.FromResult(clientProfile);

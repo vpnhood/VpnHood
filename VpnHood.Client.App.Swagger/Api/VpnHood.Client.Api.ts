@@ -257,7 +257,7 @@ export class ApiClient {
     }
 
     addAccessKey(accessKey: string | undefined, cancelToken?: CancelToken | undefined): Promise<ClientProfile> {
-        let url_ = this.baseUrl + "/api/app/access-key?";
+        let url_ = this.baseUrl + "/api/app/access-keys?";
         if (accessKey === null)
             throw new Error("The parameter 'accessKey' cannot be null.");
         else if (accessKey !== undefined)
@@ -265,7 +265,7 @@ export class ApiClient {
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "POST",
+            method: "PUT",
             url: url_,
             headers: {
                 "Accept": "application/json"

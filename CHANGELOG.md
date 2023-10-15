@@ -1,9 +1,16 @@
 # Upcoming 
 ### Client
 Update: Windows: Remove from taskbar on minimize
+Update: Android: Ask for notification permission
+Update: Android: Add compatibility to Android 6 
+Update: Improve UI
 Feature: Register vh and vhkey intent for importing access key
 Fix: Windows: Restore Windows state to normal when user click on the system tray icon
 Fix: Improve disconnecting speed
+
+### Developement
+Client: Update SPA to VUE 3 and TypeScript
+Client: Create Api.ts generated for TypeScript by nswag
 
 # v3.0.429
 ### Client

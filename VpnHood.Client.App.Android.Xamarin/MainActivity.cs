@@ -2,6 +2,7 @@
 #nullable enable
 using System;
 using System.IO;
+using Android;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -33,7 +34,8 @@ namespace VpnHood.Client.App.Droid;
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
 public class MainActivity : Activity
 {
-    private const int RequestVpnPermission = 10;
+    private const int RequestPushNotificationId = 11;
+    private const int RequestVpnPermissionId = 10;
     public const string AccessKeyScheme1 = "vh";
     public const string AccessKeyScheme2 = "vhkey";
     public const string AccessKeyMime1 = "application/vhkey";
@@ -61,6 +63,10 @@ public class MainActivity : Activity
             using var memoryStream = new MemoryStream(UiResource.SPA);
             VpnHoodAppWebServer.Init(memoryStream);
         }
+
+        // ask required permissions
+        if (OperatingSystem.IsAndroidVersionAtLeast(33))// && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
+            RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
 
         // process intent
         ProcessIntent(Intent);
@@ -139,12 +145,12 @@ public class MainActivity : Activity
         if (intent == null)
             Device.VpnPermissionGranted();
         else
-            StartActivityForResult(intent, RequestVpnPermission);
+            StartActivityForResult(intent, RequestVpnPermissionId);
     }
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
-        if (requestCode == RequestVpnPermission && resultCode == Result.Ok)
+        if (requestCode == RequestVpnPermissionId && resultCode == Result.Ok)
             Device.VpnPermissionGranted();
         else
             Device.VpnPermissionRejected();

@@ -64,9 +64,9 @@ public class MainActivity : Activity
             VpnHoodAppWebServer.Init(memoryStream);
         }
 
-        // ask required permissions
-        if (OperatingSystem.IsAndroidVersionAtLeast(33))// && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
-            RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
+        // request for notification
+        if (OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
+                RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
 
         // process intent
         ProcessIntent(Intent);
@@ -168,6 +168,7 @@ public class MainActivity : Activity
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
         [GeneratedEnum] Permission[] grantResults)
     {
+
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 

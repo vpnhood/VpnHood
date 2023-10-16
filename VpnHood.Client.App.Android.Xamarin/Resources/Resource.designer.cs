@@ -767,6 +767,9 @@ namespace VpnHood.Client.App.Droid
 			// aapt resource value: 0x7F080005
 			public const int banner = 2131230725;
 			
+			// aapt resource value: 0x7F080006
+			public const int notification = 2131230726;
+			
 			static Mipmap()
 			{
 				global::Android.Runtime.ResourceIdManager.UpdateIdValues();

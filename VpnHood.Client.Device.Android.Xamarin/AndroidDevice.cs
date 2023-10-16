@@ -117,12 +117,14 @@ namespace VpnHood.Client.Device.Droid
         public void VpnPermissionGranted()
         {
             _permissionGranted = true;
-            _grantPermissionSemaphore.Release();
+            if (_grantPermissionSemaphore.CurrentCount== 0)
+                _grantPermissionSemaphore.Release();
         }
 
         public void VpnPermissionRejected()
         {
-            _grantPermissionSemaphore.Release();
+            if (_grantPermissionSemaphore.CurrentCount== 0)
+                _grantPermissionSemaphore.Release();
         }
 
         internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)

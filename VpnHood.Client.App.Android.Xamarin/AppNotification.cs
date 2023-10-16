@@ -61,7 +61,7 @@ public sealed class AppNotification : IDisposable
 
         // Has problem with samsung android 6
         // _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
-        _notifyBuilder.SetSmallIcon(Resource.Mipmap.appicon_monochrome);
+        _notifyBuilder.SetSmallIcon(Resource.Mipmap.notification);
         _notifyBuilder.SetOngoing(true); // ignored by StartForeground
         _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground
         _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system

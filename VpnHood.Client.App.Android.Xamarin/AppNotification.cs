@@ -19,9 +19,25 @@ public sealed class AppNotification : IDisposable
     public AppNotification(Context context)
     {
         _context = context;
-        
+        _notifyBuilder = CreateNotificationBuilder(context);
+    }
+
+    private static PendingIntent CreatePendingIntent(Context context, string name)
+    {
+        var intent = new Intent(context, typeof(NotificationBroadcastReceiver));
+        intent.SetAction(name);
+        var pendingIntent = PendingIntent.GetBroadcast(context, 0, intent, PendingIntentFlags.Immutable)
+            ?? throw new Exception("Could not acquire Broadcast intent.");
+
+        return pendingIntent;
+    }
+
+    private static Notification.Builder CreateNotificationBuilder(Context context)
+    {
+        Notification.Builder notificationBuilder;
+
         // check notification manager
-        var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService) 
+        var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService)
                                   ?? throw new Exception("Could not acquire NotificationManager.");
 
         // open intent
@@ -41,47 +57,41 @@ public sealed class AppNotification : IDisposable
             channel.LockscreenVisibility = NotificationVisibility.Public;
             channel.Importance = NotificationImportance.Low;
             notificationManager.CreateNotificationChannel(channel);
-            _notifyBuilder = new Notification.Builder(_context, NotificationChannelGeneralId);
+            notificationBuilder = new Notification.Builder(context, NotificationChannelGeneralId);
         }
         else
         {
 #pragma warning disable CS0618
-            _notifyBuilder = new Notification.Builder(_context);
+            notificationBuilder = new Notification.Builder(context);
 #pragma warning restore CS0618
         }
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)
         if (!OperatingSystem.IsAndroidVersionAtLeast(24))
-            _notifyBuilder.SetContentText(UiResource.AppName);
+            notificationBuilder.SetContentText(UiResource.AppName);
 
-        var pendingOpenIntent = PendingIntent.GetActivity(_context, 0, openIntent, PendingIntentFlags.Immutable);
-        _notifyBuilder.SetContentIntent(pendingOpenIntent);
-        _notifyBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Disconnect, CreatePendingIntent("disconnect")).Build());
-        _notifyBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Manage, pendingOpenIntent).Build());
+        var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);
+        notificationBuilder.SetContentIntent(pendingOpenIntent);
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Disconnect, CreatePendingIntent(context, "disconnect")).Build());
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Manage, pendingOpenIntent).Build());
 
         // Has problem with samsung android 6
         // _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
-        _notifyBuilder.SetSmallIcon(Resource.Mipmap.notification);
-        _notifyBuilder.SetOngoing(true); // ignored by StartForeground
-        _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground
-        _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
+        notificationBuilder.SetSmallIcon(Resource.Mipmap.notification);
+        notificationBuilder.SetOngoing(true); // ignored by StartForeground
+        notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
+        notificationBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
+
+        return notificationBuilder;
     }
 
-    private PendingIntent CreatePendingIntent(string name)
-    {
-        var intent = new Intent(_context, typeof(NotificationBroadcastReceiver));
-        intent.SetAction(name);
-        var pendingIntent = PendingIntent.GetBroadcast(_context, 0, intent, PendingIntentFlags.Immutable) ?? throw new Exception("Could not acquire Broadcast intent.");
-        return pendingIntent;
-    }
-
-    public void UpdateNotification()
+    public void Update(bool force = false)
     {
         lock (_stateLock)
         {
             // update only when the state changed
             var connectionState = VpnHoodApp.Instance.ConnectionState;
-            if (_lastNotifyState == connectionState)
+            if (_lastNotifyState == connectionState && !force)
                 return;
 
             // connection status

@@ -1,11 +1,12 @@
 # Upcoming 
 ### Client
-Update: Windows: Remove from taskbar on minimize
+Update: Windows: Remove from the taskbar on minimize
 Update: Android: Ask for notification permission
 Update: Android: Add compatibility to Android 6 
 Update: Improve UI
 Feature: Register vh and vhkey intent for importing access key
-Fix: Windows: Restore Windows state to normal when user click on the system tray icon
+Feature: Android: Add quick settings tile
+Fix: Windows: Restore Windows state to normal when user clicks on the system tray icon
 Fix: Improve disconnecting speed
 
 ### Developement

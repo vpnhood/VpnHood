@@ -32,6 +32,7 @@ namespace VpnHood.Client.App.Droid;
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
+[IntentFilter(new[] { Android.Service.QuickSettings.TileService.ActionQsTilePreferences })]
 public class MainActivity : Activity
 {
     private const int RequestPushNotificationId = 11;

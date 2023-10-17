@@ -14,7 +14,7 @@ namespace VpnHood.Client.App.Droid;
 #endif
 internal class App : Application
 {
-    public AppNotification Notification { get; private set; } = default!;
+    private AppNotification? _notification;
     public IAppProvider AppProvider { get; } = new AppProvider();
     public static App? Current { get; private set; }
     public static Color BackgroundColor => new (UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
@@ -31,8 +31,8 @@ internal class App : Application
 
         //app init
         if (!VpnHoodApp.IsInit) VpnHoodApp.Init(AppProvider);
-        Notification = new AppNotification(this);
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Notification.Update();
+        _notification = new AppNotification(this);
+        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _notification.Update();
     }
 
     protected override void Dispose(bool disposing)
@@ -40,7 +40,7 @@ internal class App : Application
         if (disposing)
         {
             if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
-            Notification?.Dispose();
+            _notification?.Dispose();
         }
 
         base.Dispose(disposing);

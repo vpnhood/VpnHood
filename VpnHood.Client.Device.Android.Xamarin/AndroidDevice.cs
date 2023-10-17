@@ -7,6 +7,7 @@ using Android.App;
 using Android.Content;
 using Android.Graphics;
 using Android.Graphics.Drawables;
+using Android.Net;
 using Android.OS;
 using static Android.Graphics.Bitmap;
 
@@ -14,8 +15,8 @@ namespace VpnHood.Client.Device.Droid
 {
     public class AndroidDevice : IDevice
     {
-        private readonly SemaphoreSlim _grantPermissionSemaphore = new(0, 1);
-        private readonly SemaphoreSlim _startServiceSemaphore = new(0, 1);
+        private SemaphoreSlim _grantPermissionSemaphore = new(0);
+        private SemaphoreSlim _startServiceSemaphore = new(0);
         private IPacketCapture? _packetCapture;
         private bool _permissionGranted;
 
@@ -72,19 +73,22 @@ namespace VpnHood.Client.Device.Droid
         public async Task<IPacketCapture> CreatePacketCapture()
         {
             // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-            if (OnRequestVpnPermission != null)
+            using var prepareIntent = VpnService.Prepare(Application.Context);
+            if (OnRequestVpnPermission != null && prepareIntent != null)
             {
                 _permissionGranted = false;
                 OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
+                _grantPermissionSemaphore = new SemaphoreSlim(0);
                 await _grantPermissionSemaphore.WaitAsync(10000);
                 if (!_permissionGranted)
-                    throw new Exception("Could not grant VPN permission in the given time!");
+                    throw new Exception("Could not grant VPN permission in the given time.");
             }
 
             StartService();
+            _startServiceSemaphore = new SemaphoreSlim(0);
             await _startServiceSemaphore.WaitAsync(10000);
             if (_packetCapture == null)
-                throw new Exception("Could not start VpnService in the given time!");
+                throw new Exception("Could not start VpnService in the given time.");
 
             return _packetCapture;
         }
@@ -102,7 +106,7 @@ namespace VpnHood.Client.Device.Droid
 
         private static Bitmap DrawableToBitmap(Drawable drawable)
         {
-            if (drawable is BitmapDrawable { Bitmap: { } } drawable1)
+            if (drawable is BitmapDrawable { Bitmap: not null } drawable1)
                 return drawable1.Bitmap;
 
             //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
@@ -117,14 +121,12 @@ namespace VpnHood.Client.Device.Droid
         public void VpnPermissionGranted()
         {
             _permissionGranted = true;
-            if (_grantPermissionSemaphore.CurrentCount== 0)
-                _grantPermissionSemaphore.Release();
+            _grantPermissionSemaphore.Release();
         }
 
         public void VpnPermissionRejected()
         {
-            if (_grantPermissionSemaphore.CurrentCount== 0)
-                _grantPermissionSemaphore.Release();
+            _grantPermissionSemaphore.Release();
         }
 
         internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)
@@ -138,8 +140,7 @@ namespace VpnHood.Client.Device.Droid
                 OnStartAsService?.Invoke(this, EventArgs.Empty);
         }
 
-
-        private void StartService()
+        private static void StartService()
         {
             var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
             intent.PutExtra("manual", true);

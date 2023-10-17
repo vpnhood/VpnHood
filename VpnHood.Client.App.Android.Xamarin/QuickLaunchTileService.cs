@@ -1,16 +1,16 @@
 ﻿using System;
+using Android;
 using Android.App;
 using Android.Service.QuickSettings;
 using Android.Widget;
 
 namespace VpnHood.Client.App.Droid;
 
-[Service(Permission = "android.permission.BIND_QUICK_SETTINGS_TILE", Icon = "@mipmap/notification", Label = "@string/app_name",
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@mipmap/notification", Label = "@string/app_name",
     Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter(new[] { ActionQsTile })]
-
 public class QuickLaunchTileService : TileService
 {
     private bool _isConnectByClick;

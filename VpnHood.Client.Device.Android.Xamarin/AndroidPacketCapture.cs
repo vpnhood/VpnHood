@@ -167,40 +167,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         Close();
     }
 
-    private static Notification GetDefaultNotification()
-    {
-        const string channelId = "1000";
-        var context = Application.Context;
-        var notificationManager = (NotificationManager?)context.GetSystemService(Android.Content.Context.NotificationService)
-                                  ?? throw new Exception("Could not resolve NotificationManager.");
-
-        Notification.Builder notificationBuilder;
-        if (OperatingSystem.IsAndroidVersionAtLeast(26))
-        {
-            var channel = new NotificationChannel(channelId, "vpn",
-                NotificationImportance.Low);
-            channel.EnableVibration(false);
-            channel.EnableLights(false);
-            channel.SetShowBadge(false);
-            channel.LockscreenVisibility = NotificationVisibility.Public;
-            notificationManager.CreateNotificationChannel(channel);
-            notificationBuilder = new Notification.Builder(context, channelId);
-        }
-        else
-        {
-#pragma warning disable CS0618
-            notificationBuilder = new Notification.Builder(context);
-#pragma warning restore CS0618
-        }
-
-        var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        return notificationBuilder
-            .SetContentTitle(appInfo.Name)
-            .SetSmallIcon(appInfo.Icon)
-            .SetOngoing(true)
-            .Build();
-    }
-
     [return: GeneratedEnum]
     public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags,
         int startId)

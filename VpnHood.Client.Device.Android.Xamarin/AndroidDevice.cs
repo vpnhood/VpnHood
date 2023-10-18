@@ -23,12 +23,12 @@ namespace VpnHood.Client.Device.Droid
         private SemaphoreSlim _startServiceSemaphore = new(0);
         private IPacketCapture? _packetCapture;
         private bool _permissionGranted;
-        
-
-        public static AndroidDevice? Current { get; private set; }
 
         public event EventHandler? OnStartAsService;
         public event EventHandler? OnRequestVpnPermission;
+        public bool IsExcludeAppsSupported => true;
+        public bool IsIncludeAppsSupported => true;
+        public static AndroidDevice? Current { get; private set; }
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
@@ -109,10 +109,6 @@ namespace VpnHood.Client.Device.Droid
                 return deviceAppInfos.ToArray();
             }
         }
-
-        public bool IsExcludeAppsSupported => true;
-
-        public bool IsIncludeAppsSupported => true;
 
         public async Task<IPacketCapture> CreatePacketCapture()
         {

@@ -43,8 +43,7 @@ public class MainActivity : Activity
     public const string AccessKeyMime2 = "application/key";
     public const string AccessKeyMime3 = "application/vnd.cinderella";
 
-    private AndroidDevice Device =>
-        (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
+    private static AndroidDevice VpnDevice => App.Current?.VpnDevice ?? throw new InvalidOperationException($"{nameof(App)} has not been initialized.");
 
     public WebView? WebView { get; private set; }
 
@@ -56,7 +55,7 @@ public class MainActivity : Activity
         InitSplashScreen();
 
         // manage VpnPermission
-        Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+        VpnDevice.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit)
@@ -66,7 +65,7 @@ public class MainActivity : Activity
         }
 
         // request for notification
-        if (OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
                 RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
 
         // process intent
@@ -144,7 +143,7 @@ public class MainActivity : Activity
     {
         var intent = VpnService.Prepare(this);
         if (intent == null)
-            Device.VpnPermissionGranted();
+            VpnDevice.VpnPermissionGranted();
         else
             StartActivityForResult(intent, RequestVpnPermissionId);
     }
@@ -152,14 +151,14 @@ public class MainActivity : Activity
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
         if (requestCode == RequestVpnPermissionId && resultCode == Result.Ok)
-            Device.VpnPermissionGranted();
+            VpnDevice.VpnPermissionGranted();
         else
-            Device.VpnPermissionRejected();
+            VpnDevice.VpnPermissionRejected();
     }
 
     protected override void OnDestroy()
     {
-        Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
+        VpnDevice.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
         if (VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Dispose();
 

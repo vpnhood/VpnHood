@@ -24,9 +24,11 @@ namespace VpnHood.Client.Device.Droid
         private IPacketCapture? _packetCapture;
         private bool _permissionGranted;
         
+
         public static AndroidDevice? Current { get; private set; }
 
         public event EventHandler? OnStartAsService;
+        public event EventHandler? OnRequestVpnPermission;
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
@@ -129,7 +131,15 @@ namespace VpnHood.Client.Device.Droid
             // start service
             var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
             intent.PutExtra("manual", true);
-            Application.Context.StartForegroundService(intent.SetAction("connect"));
+            if (OperatingSystem.IsAndroidVersionAtLeast(26))
+            {
+                Application.Context.StartForegroundService(intent.SetAction("connect"));
+            }
+            else
+            {
+                Application.Context.StartService(intent.SetAction("connect"));
+            }
+
 
             // check is service started
             _startServiceSemaphore = new SemaphoreSlim(0);
@@ -140,7 +150,20 @@ namespace VpnHood.Client.Device.Droid
             return _packetCapture;
         }
 
-        public event EventHandler? OnRequestVpnPermission;
+        internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
+        {
+            _packetCapture = packetCapture;
+            _startServiceSemaphore.Release();
+
+            // set foreground
+            var notification = _notification ?? GetDefaultNotification();
+            packetCapture.StartForeground(_notificationId, notification);
+
+            // fire AutoCreate for always on
+            var manual = intent?.GetBooleanExtra("manual", false) ?? false;
+            if (!manual)
+                OnStartAsService?.Invoke(this, EventArgs.Empty);
+        }
 
         private static string EncodeToBase64(Drawable drawable, int quality)
         {
@@ -174,21 +197,6 @@ namespace VpnHood.Client.Device.Droid
         public void VpnPermissionRejected()
         {
             _grantPermissionSemaphore.Release();
-        }
-
-        internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
-        {
-            _packetCapture = packetCapture;
-            _startServiceSemaphore.Release();
-
-            // set foreground
-            var notification = _notification ?? GetDefaultNotification();
-            packetCapture.StartForeground(_notificationId, notification);
-
-            // fire AutoCreate for always on
-            var manual = intent?.GetBooleanExtra("manual", false) ?? false;
-            if (!manual)
-                OnStartAsService?.Invoke(this, EventArgs.Empty);
         }
     }
 }

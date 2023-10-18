@@ -1,4 +1,6 @@
-﻿using System;
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -15,23 +17,63 @@ namespace VpnHood.Client.Device.Droid
 {
     public class AndroidDevice : IDevice
     {
+        private readonly int _notificationId;
+        private readonly Notification? _notification;
         private SemaphoreSlim _grantPermissionSemaphore = new(0);
         private SemaphoreSlim _startServiceSemaphore = new(0);
         private IPacketCapture? _packetCapture;
         private bool _permissionGranted;
-
-        public AndroidDevice()
-        {
-            if (Current != null)
-                throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
-            Current = this;
-        }
-
+        
         public static AndroidDevice? Current { get; private set; }
 
         public event EventHandler? OnStartAsService;
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+
+        public AndroidDevice(Notification? notification = null, int notificationId = 3500)
+        {
+            if (Current != null)
+                throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
+
+            _notification = notification;
+            _notificationId = notificationId;
+            Current = this;
+        }
+
+        private static Notification GetDefaultNotification()
+        {
+            const string channelId = "1000";
+            var context = Application.Context;
+            var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService)
+                ?? throw new Exception("Could not resolve NotificationManager.");
+
+            Notification.Builder notificationBuilder;
+            if (OperatingSystem.IsAndroidVersionAtLeast(26))
+            {
+                var channel = new NotificationChannel(channelId, "VPN",
+                    NotificationImportance.Low);
+                channel.EnableVibration(false);
+                channel.EnableLights(false);
+                channel.SetShowBadge(false);
+                channel.LockscreenVisibility = NotificationVisibility.Public;
+                channel.Importance = NotificationImportance.Low;
+                notificationManager.CreateNotificationChannel(channel);
+                notificationBuilder = new Notification.Builder(context, channelId);
+            }
+            else
+            {
+#pragma warning disable CS0618
+                notificationBuilder = new Notification.Builder(context);
+#pragma warning restore CS0618
+            }
+
+            var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
+            return notificationBuilder
+                .SetContentTitle("VpnHood!")
+                .SetSmallIcon(appInfo.Icon)
+                .SetOngoing(true)
+                .Build();
+        }
 
         public DeviceAppInfo[] InstalledApps
         {
@@ -84,7 +126,12 @@ namespace VpnHood.Client.Device.Droid
                     throw new Exception("Could not grant VPN permission in the given time.");
             }
 
-            StartService();
+            // start service
+            var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
+            intent.PutExtra("manual", true);
+            Application.Context.StartForegroundService(intent.SetAction("connect"));
+
+            // check is service started
             _startServiceSemaphore = new SemaphoreSlim(0);
             await _startServiceSemaphore.WaitAsync(10000);
             if (_packetCapture == null)
@@ -129,22 +176,19 @@ namespace VpnHood.Client.Device.Droid
             _grantPermissionSemaphore.Release();
         }
 
-        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)
+        internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
         {
             _packetCapture = packetCapture;
             _startServiceSemaphore.Release();
+
+            // set foreground
+            var notification = _notification ?? GetDefaultNotification();
+            packetCapture.StartForeground(_notificationId, notification);
 
             // fire AutoCreate for always on
             var manual = intent?.GetBooleanExtra("manual", false) ?? false;
             if (!manual)
                 OnStartAsService?.Invoke(this, EventArgs.Empty);
-        }
-
-        private static void StartService()
-        {
-            var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
-            intent.PutExtra("manual", true);
-            Application.Context.StartService(intent.SetAction("connect"));
         }
     }
 }

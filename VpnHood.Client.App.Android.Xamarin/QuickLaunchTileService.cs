@@ -75,7 +75,7 @@ public class QuickLaunchTileService : TileService
         if (QsTile == null)
             return;
 
-        if (OperatingSystem.IsAndroidVersionAtLeast(30))
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(30))
             QsTile.StateDescription = VpnHoodApp.Instance.ConnectionState.ToString();
 
         QsTile.State = VpnHoodApp.Instance.ConnectionState switch

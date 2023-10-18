@@ -1,9 +1,9 @@
 ﻿using Android.OS;
 
-namespace VpnHood.Client.App.Droid;
+namespace VpnHood.Client.Device.Droid;
 
-//todo remove in .NET android
-internal static  class OperatingSystem
+// todo remove in .net android
+public static class OperatingSystem
 {
     public static bool IsAndroidVersionAtLeast(int major)
     {

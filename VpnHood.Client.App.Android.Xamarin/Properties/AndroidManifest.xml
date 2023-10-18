@@ -9,6 +9,8 @@
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 	<uses-permission android:name="android.permission.START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+	<uses-permission android:name="android.permission.BIND_REMOTEVIEWS" />
+	
 	<queries>
 		<intent>
 			<action android:name="android.intent.action.VIEW" />

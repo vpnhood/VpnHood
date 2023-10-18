@@ -93,12 +93,12 @@
     <None Include="Ads\InterstitialAdLoadCallback.cs" />
     <Compile Include="AppNotification.cs" />
     <Compile Include="AppProvider.cs" />
+    <Compile Include="CompilerServices.cs" />
     <Compile Include="MainActivity.cs" />
     <None Include="Ads\VpnHoodInterstitialAdLoadCallback.cs" />
     <Compile Include="AppWebChromeClient.cs" />
     <Compile Include="AppWebViewClient.cs" />
     <Compile Include="NotificationBroadcastReceiver.cs" />
-    <Compile Include="OperatingSystem.cs" />
     <Compile Include="QuickLaunchTileService.cs" />
     <Compile Include="Resources\Resource.designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

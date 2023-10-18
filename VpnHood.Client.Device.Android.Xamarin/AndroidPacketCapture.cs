@@ -308,7 +308,11 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         }
 
         // it must be after _mInterface.Close
-        StopForeground(true);
+        if (OperatingSystem.IsAndroidVersionAtLeast(24))
+            StopForeground(StopForegroundFlags.Remove);
+        else
+            StopForeground(true);
+
         StopSelf();
     }
 

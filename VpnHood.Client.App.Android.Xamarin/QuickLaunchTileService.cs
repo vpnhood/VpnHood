@@ -6,8 +6,7 @@ using Android.Widget;
 
 namespace VpnHood.Client.App.Droid;
 
-[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@mipmap/notification", Label = "@string/app_name",
-    Enabled = true, Exported = true)]
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@mipmap/notification", Label = "@string/app_name", Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter(new[] { ActionQsTile })]

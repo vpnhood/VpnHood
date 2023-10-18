@@ -1,9 +1,11 @@
-﻿#nullable enable
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
 using System;
 using Android.App;
 using Android.Graphics;
 using Android.Runtime;
 using VpnHood.Client.App.Resources;
+using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid;
 
@@ -14,10 +16,11 @@ namespace VpnHood.Client.App.Droid;
 #endif
 internal class App : Application
 {
-    private AppNotification? _notification;
-    public IAppProvider AppProvider { get; } = new AppProvider();
+    private AppNotification _appNotification = default!;
+    public IAppProvider AppProvider { get; private set; } = default!;
     public static App? Current { get; private set; }
     public static Color BackgroundColor => new (UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
+    public AndroidDevice VpnDevice => (AndroidDevice)AppProvider.Device;
 
     public App(IntPtr javaReference, JniHandleOwnership transfer)
         : base(javaReference, transfer)
@@ -30,9 +33,10 @@ internal class App : Application
         Current = this;
 
         //app init
+        _appNotification = new AppNotification(this);
+        AppProvider = new AppProvider { Device = new AndroidDevice(_appNotification.Notification, _appNotification.NotificationId) };
         if (!VpnHoodApp.IsInit) VpnHoodApp.Init(AppProvider);
-        _notification = new AppNotification(this);
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _notification.Update();
+        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
     }
 
     protected override void Dispose(bool disposing)
@@ -40,7 +44,7 @@ internal class App : Application
         if (disposing)
         {
             if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
-            _notification?.Dispose();
+            _appNotification.Dispose();
         }
 
         base.Dispose(disposing);

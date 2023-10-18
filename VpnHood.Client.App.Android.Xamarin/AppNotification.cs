@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
 using System;
 using Android.App;
 using Android.Content;
@@ -8,13 +9,14 @@ namespace VpnHood.Client.App.Droid;
 
 public sealed class AppNotification : IDisposable
 {
-    private const int NotificationId = 1000;
+    public int NotificationId => 1000;
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
     private readonly Context _context;
     private readonly Notification.Builder _notifyBuilder;
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
+    public Notification Notification => _notifyBuilder.Build();
 
     public AppNotification(Context context)
     {
@@ -47,15 +49,14 @@ public sealed class AppNotification : IDisposable
         openIntent.AddCategory(Intent.CategoryLauncher);
 
         //create channel
-        if (OperatingSystem.IsAndroidVersionAtLeast(26))
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(26))
         {
             var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName,
-                NotificationImportance.Low);
+                NotificationImportance.High);
             channel.EnableVibration(false);
             channel.EnableLights(false);
             channel.SetShowBadge(false);
             channel.LockscreenVisibility = NotificationVisibility.Public;
-            channel.Importance = NotificationImportance.Low;
             notificationManager.CreateNotificationChannel(channel);
             notificationBuilder = new Notification.Builder(context, NotificationChannelGeneralId);
         }
@@ -67,7 +68,7 @@ public sealed class AppNotification : IDisposable
         }
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)
-        if (!OperatingSystem.IsAndroidVersionAtLeast(24))
+        if (!Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(24))
             notificationBuilder.SetContentText(UiResource.AppName);
 
         var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);

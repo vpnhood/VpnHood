@@ -588,4 +588,16 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         return CheckNewVersion();
     }
 
+    public ClientProfileItem? GetDefaultClientProfile()
+    {
+        return ClientProfileStore.ClientProfileItems.FirstOrDefault(x => x.ClientProfile.ClientProfileId == Settings.UserSettings.DefaultClientProfileId);
+    }
+
+    public ClientProfileItem? GetActiveClientProfile()
+    {
+        return IsIdle 
+            ? null 
+            : ClientProfileStore.ClientProfileItems.FirstOrDefault(x => x.ClientProfile.ClientProfileId == LastActiveClientProfileId);
+    }
+
 }

@@ -2,6 +2,7 @@
 #nullable enable
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Android;
 using Android.App;
 using Android.Content;
@@ -64,14 +65,28 @@ public class MainActivity : Activity
             VpnHoodAppWebServer.Init(memoryStream);
         }
 
-        // request for notification
-        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
-                RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
-
         // process intent
         ProcessIntent(Intent);
 
         InitWebUi();
+
+        // request features
+        _ =RequestFeatures();
+    }
+
+    private async Task RequestFeatures()
+    {
+        // request for adding tile
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33))// && !VpnHoodApp.Instance.Settings.IsQuickLaunchRequested)
+        {
+            VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
+            VpnHoodApp.Instance.Settings.Save();
+            await QuickLaunchTileService.RequestAddTile(this);
+        }
+
+        // request for notification
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
+            RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
     }
 
     protected override void OnNewIntent(Intent? intent)

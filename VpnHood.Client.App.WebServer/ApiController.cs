@@ -82,13 +82,14 @@ internal class ClientApiController : WebApiController, IClientApi
     }
 
     [Route(HttpVerbs.Get, "/log.txt")]
-    public async Task Log()
+    public async Task<string> Log()
     {
         Response.ContentType = MimeType.PlainText;
         await using var stream = HttpContext.OpenResponseStream();
         await using var streamWriter = new StreamWriter(stream);
         var log = await App.LogService.GetLog();
         await streamWriter.WriteAsync(log);
+        return "";
     }
 
     [Route(HttpVerbs.Get, "/installed-apps")]

@@ -19,7 +19,7 @@ public interface IClientApi
     void ClearLastError();
     void AddTestServer();
     Task SetUserSettings(UserSettings userSettings);
-    Task Log();
+    Task<string> Log();
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task<IpGroup[]> GetIpGroups();
 }

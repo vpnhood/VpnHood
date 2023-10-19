@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
@@ -19,10 +18,9 @@ namespace VpnHood.Client.Device.Droid
     {
         private readonly int _notificationId;
         private readonly Notification? _notification;
-        private SemaphoreSlim _grantPermissionSemaphore = new(0);
-        private SemaphoreSlim _startServiceSemaphore = new(0);
+        private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
+        private TaskCompletionSource<bool> _startServiceTaskSource = new();
         private IPacketCapture? _packetCapture;
-        private bool _permissionGranted;
 
         public event EventHandler? OnStartAsService;
         public event EventHandler? OnRequestVpnPermission;
@@ -116,12 +114,14 @@ namespace VpnHood.Client.Device.Droid
             using var prepareIntent = VpnService.Prepare(Application.Context);
             if (OnRequestVpnPermission != null && prepareIntent != null)
             {
-                _permissionGranted = false;
+                _grantPermissionTaskSource = new TaskCompletionSource<bool>();
                 OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
-                _grantPermissionSemaphore = new SemaphoreSlim(0);
-                await _grantPermissionSemaphore.WaitAsync(10000);
-                if (!_permissionGranted)
+                await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(10000));
+                if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                     throw new Exception("Could not grant VPN permission in the given time.");
+
+                if (!_grantPermissionTaskSource.Task.Result)
+                    throw new Exception("VPN permission has been rejected.");
             }
 
             // start service
@@ -136,10 +136,9 @@ namespace VpnHood.Client.Device.Droid
                 Application.Context.StartService(intent.SetAction("connect"));
             }
 
-
             // check is service started
-            _startServiceSemaphore = new SemaphoreSlim(0);
-            await _startServiceSemaphore.WaitAsync(10000);
+            _startServiceTaskSource = new TaskCompletionSource<bool>();
+            await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(10000));
             if (_packetCapture == null)
                 throw new Exception("Could not start VpnService in the given time.");
 
@@ -149,7 +148,7 @@ namespace VpnHood.Client.Device.Droid
         internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
         {
             _packetCapture = packetCapture;
-            _startServiceSemaphore.Release();
+            _startServiceTaskSource.TrySetResult(true);
 
             // set foreground
             var notification = _notification ?? GetDefaultNotification();
@@ -186,13 +185,12 @@ namespace VpnHood.Client.Device.Droid
 
         public void VpnPermissionGranted()
         {
-            _permissionGranted = true;
-            _grantPermissionSemaphore.Release();
+            _grantPermissionTaskSource.TrySetResult(true);
         }
 
         public void VpnPermissionRejected()
         {
-            _grantPermissionSemaphore.Release();
+            _grantPermissionTaskSource.TrySetResult(false);
         }
     }
 }

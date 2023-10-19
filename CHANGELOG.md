@@ -6,6 +6,7 @@ Update: Android: Ask for notification permission
 Update: Android: Add compatibility to Android 6 & 14
 Feature: Android: Register vh and vhkey intent for importing access key
 Feature: Android: Add quick settings tile
+Fix: Android: Requesting permission for notification
 Fix: Windows: Restore Windows state to normal when user clicks on the system tray icon
 Fix: Improve disconnecting speed
 

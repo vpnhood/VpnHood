@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Mime;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
@@ -64,7 +65,8 @@ namespace VpnHood.Client.App.Swagger.Controllers
         }
 
         [HttpGet("log.txt")]
-        public Task Log()
+        [Produces(MediaTypeNames.Text.Plain)]
+        public Task<string> Log()
         {
             throw new NotImplementedException();
         }

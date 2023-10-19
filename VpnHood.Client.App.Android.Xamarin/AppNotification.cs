@@ -13,15 +13,15 @@ public sealed class AppNotification : IDisposable
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
     private readonly Context _context;
-    private readonly Notification.Builder _notifyBuilder;
+    private readonly Notification.Builder _notificationBuilder;
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
-    public Notification Notification => _notifyBuilder.Build();
+    public Notification Notification => _notificationBuilder.Build();
 
     public AppNotification(Context context)
     {
         _context = context;
-        _notifyBuilder = CreateNotificationBuilder(context);
+        _notificationBuilder = CreateNotificationBuilder(context);
     }
 
     private static PendingIntent CreatePendingIntent(Context context, string name)
@@ -78,6 +78,7 @@ public sealed class AppNotification : IDisposable
 
         // Has problem with samsung android 6
         // _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
+        notificationBuilder.SetColor(App.BackgroundColor);
         notificationBuilder.SetSmallIcon(Resource.Mipmap.notification);
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
@@ -96,15 +97,19 @@ public sealed class AppNotification : IDisposable
                 return;
 
             // connection status
-            _notifyBuilder.SetSubText(connectionState == AppConnectionState.Connected
+            // Set subtitle
+            var activeProfileName = VpnHoodApp.Instance.GetActiveClientProfile()?.Name;
+            _notificationBuilder.SetContentTitle(activeProfileName);
+            _notificationBuilder.SetSubText(connectionState == AppConnectionState.Connected
                 ? $"{connectionState}"
                 : $"{connectionState}...");
 
             // progress
             if (connectionState != AppConnectionState.Connected)
-                _notifyBuilder.SetProgress(100, 0, true);
+                _notificationBuilder.SetProgress(100, 0, true);
             else
-                _notifyBuilder.SetProgress(0, 0, false);
+                _notificationBuilder.SetProgress(0, 0, false);
+
 
             // show or hide
             var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService);
@@ -112,7 +117,7 @@ public sealed class AppNotification : IDisposable
                 return;
 
             if (connectionState != AppConnectionState.None)
-                notificationManager.Notify(NotificationId, _notifyBuilder.Build());
+                notificationManager.Notify(NotificationId, _notificationBuilder.Build());
             else
                 notificationManager.Cancel(NotificationId);
 
@@ -123,6 +128,6 @@ public sealed class AppNotification : IDisposable
 
     public void Dispose()
     {
-        _notifyBuilder.Dispose();
+        _notificationBuilder.Dispose();
     }
 }

@@ -1,8 +1,17 @@
-﻿using System;
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
+using System;
+using System.Threading.Tasks;
 using Android;
 using Android.App;
+using Android.Content;
+using Android.Graphics.Drawables;
 using Android.Service.QuickSettings;
 using Android.Widget;
+using VpnHood.Client.App.Resources;
+using Java.Util.Functions;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid;
 
@@ -59,13 +68,29 @@ public class QuickLaunchTileService : TileService
 
     public override void OnTileAdded()
     {
+        VpnHoodApp.Instance.Settings.IsQuickLaunchAdded = true;
+        VpnHoodApp.Instance.Settings.Save();
         base.OnTileAdded();
         Refresh();
     }
 
+    public override void OnTileRemoved()
+    {
+        VpnHoodApp.Instance.Settings.IsQuickLaunchAdded = false;
+        VpnHoodApp.Instance.Settings.Save();
+        base.OnTileRemoved();
+    }
+
+
     public override void OnStartListening()
     {
         base.OnStartListening();
+        if (VpnHoodApp.Instance.Settings.IsQuickLaunchAdded == false)
+        {
+            VpnHoodApp.Instance.Settings.IsQuickLaunchAdded = true;
+            VpnHoodApp.Instance.Settings.Save();
+        }
+
         Refresh();
     }
 
@@ -77,13 +102,69 @@ public class QuickLaunchTileService : TileService
         if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(30))
             QsTile.StateDescription = VpnHoodApp.Instance.ConnectionState.ToString();
 
-        QsTile.State = VpnHoodApp.Instance.ConnectionState switch
+        var activeProfileName = VpnHoodApp.Instance.GetActiveClientProfile()?.Name;
+        var defaultProfileName = VpnHoodApp.Instance.GetDefaultClientProfile()?.Name;
+
+        if (!string.IsNullOrEmpty(activeProfileName))
         {
-            AppConnectionState.None => TileState.Inactive,
-            AppConnectionState.Connected => TileState.Active,
-            _ => TileState.Unavailable
-        };
+            QsTile.Label = activeProfileName;
+            QsTile.State = VpnHoodApp.Instance.ConnectionState == 
+                AppConnectionState.Connected ? TileState.Active : TileState.Unavailable;
+        }
+        else if (!string.IsNullOrEmpty(defaultProfileName))
+        {
+            QsTile.Label = defaultProfileName;
+            QsTile.State = TileState.Inactive;
+        }
+        else
+        {
+            QsTile.Label = UiResource.AppName;
+            QsTile.State = TileState.Unavailable;
+        }
 
         QsTile.UpdateTile();
+    }
+
+    private class AddTileServiceHandler : Java.Lang.Object, IConsumer
+    {
+        private readonly TaskCompletionSource<int> _task;
+
+        public AddTileServiceHandler(TaskCompletionSource<int> task)
+        {
+            _task = task;
+        }
+
+        public void Accept(Java.Lang.Object? obj)
+        {
+            obj ??= 0;
+            _task.TrySetResult((int)obj);
+        }
+    }
+
+    public static Task<int> RequestAddTile(Context context)
+    {
+        var task = new TaskCompletionSource<int>();
+
+        // get statusBarManager
+        // get statusBarManager
+        if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager)
+        {
+            VhLogger.Instance.LogError("Could not retrieve the StatusBarManager.");
+            return Task.FromResult(0);
+        }
+
+        if (context.MainExecutor == null)
+        {
+            VhLogger.Instance.LogError("Could not retrieve the MainExecutor.");
+            return Task.FromResult(0);
+        }
+
+        statusBarManager.RequestAddTileService(
+            new ComponentName(context, Java.Lang.Class.FromType(typeof(QuickLaunchTileService))),
+            UiResource.AppName, Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length),
+            context.MainExecutor!,
+            new AddTileServiceHandler(task));
+        
+        return task.Task;
     }
 }

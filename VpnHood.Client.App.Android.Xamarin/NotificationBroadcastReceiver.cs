@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
 using Android.App;
 using Android.Content;
 

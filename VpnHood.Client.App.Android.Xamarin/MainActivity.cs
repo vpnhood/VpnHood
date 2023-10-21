@@ -36,6 +36,7 @@ namespace VpnHood.Client.App.Droid;
 [IntentFilter(new[] { Android.Service.QuickSettings.TileService.ActionQsTilePreferences })]
 public class MainActivity : Activity
 {
+    private bool _isWeViewVisible;
     private const int RequestPushNotificationId = 11;
     private const int RequestVpnPermissionId = 10;
     public const string AccessKeyScheme1 = "vh";
@@ -71,7 +72,7 @@ public class MainActivity : Activity
         InitWebUi();
 
         // request features
-        _ =RequestFeatures();
+        _ = RequestFeatures();
     }
 
     private async Task RequestFeatures()
@@ -220,9 +221,11 @@ public class MainActivity : Activity
 
     private void WebViewClient_PageLoaded(object? sender, EventArgs e)
     {
+        if (_isWeViewVisible) return; // prevent double set SetContentView
         if (WebView == null) throw new Exception("WebView has not been loaded yet!");
         SetContentView(WebView);
         Window?.SetStatusBarColor(App.BackgroundColor);
+        _isWeViewVisible = true;
     }
 
     public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

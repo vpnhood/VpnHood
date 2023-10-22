@@ -42,12 +42,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private bool _isConnecting;
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
-    private Exception? _lastException;
+    private string? _lastError;
     private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
-    private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
 
@@ -138,10 +137,10 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
         LastActiveClientProfileId = LastActiveClientProfileId,
         LogExists = IsIdle && File.Exists(LogService.LogFilePath),
-        LastError = LastError,
+        LastError = _lastError,
         HasDiagnoseStarted = _hasDiagnoseStarted,
         HasDisconnectedByUser = _hasDisconnectedByUser,
-        HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
+        HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _lastError != null),
         SessionStatus = LastSessionStatus,
         Speed = Client?.Stat.Speed ?? new Traffic(),
         AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
@@ -217,7 +216,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (!IsIdle)
             return; //can just set in Idle State
 
-        _lastException = null;
+        _lastError = null;
         _hasDiagnoseStarted = false;
         _hasDisconnectedByUser = false;
     }
@@ -280,12 +279,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             if (!_hasDisconnectedByUser)
             {
                 VhLogger.Instance.LogError(ex.Message);
-                _lastException = ex;
+                _lastError = ex.Message;
             }
 
             await Disconnect();
 
-            // _lastException is already set so some client may not need this exception
             if (throwException)
                 throw;
         }
@@ -472,13 +470,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             if (Client != null)
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
-                if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
-                    _lastException = new Exception("No data has arrived!");
+                if (_lastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
+                    _lastError = "No data has arrived!";
             }
 
             // check diagnose
-            if (_hasDiagnoseStarted && LastError == null)
-                _lastException = new Exception("Diagnose has finished and no issue has been detected.");
+            if (_hasDiagnoseStarted && _lastError == null)
+                _lastError = "Diagnose has finished and no issue has been detected.";
 
             // close client
             try
@@ -496,6 +494,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         }
         finally
         {
+            _lastError ??= LastSessionStatus?.ErrorMessage;
             ActiveClientProfile = null;
             _lastSessionStatus = Client?.SessionStatus;
             _isConnecting = false;

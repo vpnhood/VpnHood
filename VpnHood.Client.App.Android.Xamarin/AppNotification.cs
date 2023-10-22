@@ -52,7 +52,7 @@ public sealed class AppNotification : IDisposable
         if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(26))
         {
             var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName,
-                NotificationImportance.High);
+                NotificationImportance.Low);
             channel.EnableVibration(false);
             channel.EnableLights(false);
             channel.SetShowBadge(false);

@@ -111,7 +111,7 @@ internal class ClientApiController : WebApiController, IClientApi
 
         var clientProfileItem = App.ClientProfileStore.ClientProfileItems.Single(x => x.ClientProfileId == clientProfileId);
         if (updateParams.Name != null)
-            clientProfileItem.ClientProfile.Name = updateParams.Name;
+            clientProfileItem.ClientProfile.Name = string.IsNullOrEmpty(updateParams.Name) ? null : updateParams.Name;
 
         App.ClientProfileStore.SetClientProfile(clientProfileItem.ClientProfile);
     }

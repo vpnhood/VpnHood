@@ -1737,7 +1737,7 @@ export interface IDeviceAppInfo {
 }
 
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
-    name?: PatchOfString | null;
+    name?: string | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -1750,7 +1750,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
     init(_data?: any) {
         if (_data) {
-            this.name = _data["name"] ? PatchOfString.fromJS(_data["name"]) : <any>null;
+            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
         }
     }
 
@@ -1763,49 +1763,13 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["name"] = this.name ? this.name.toJSON() : <any>null;
+        data["name"] = this.name !== undefined ? this.name : <any>null;
         return data;
     }
 }
 
 export interface IClientProfileUpdateParams {
-    name?: PatchOfString | null;
-}
-
-export class PatchOfString implements IPatchOfString {
-    value!: string;
-
-    constructor(data?: IPatchOfString) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): PatchOfString {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfString();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value !== undefined ? this.value : <any>null;
-        return data;
-    }
-}
-
-export interface IPatchOfString {
-    value: string;
+    name?: string | null;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

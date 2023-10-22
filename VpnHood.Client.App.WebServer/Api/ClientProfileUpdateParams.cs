@@ -4,5 +4,5 @@ namespace VpnHood.Client.App.WebServer.Api;
 
 public class ClientProfileUpdateParams
 {
-    public Patch<string?>? Name { get; set; }
+    public string? Name { get; set; }
 }

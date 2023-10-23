@@ -1,6 +1,4 @@
-﻿using VpnHood.Common.Utils;
-
-namespace VpnHood.Client.App.WebServer.Api;
+﻿namespace VpnHood.Client.App.WebServer.Api;
 
 public class ClientProfileUpdateParams
 {

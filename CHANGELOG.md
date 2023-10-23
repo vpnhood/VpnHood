@@ -1,4 +1,4 @@
-# Upcoming 
+# v3.1.430 
 ### Client
 Update: Improve UI
 Update: Windows: Remove from the taskbar on minimize

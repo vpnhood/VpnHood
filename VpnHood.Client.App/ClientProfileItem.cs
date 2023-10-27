@@ -5,13 +5,8 @@ namespace VpnHood.Client.App;
 
 public class ClientProfileItem
 {
-    public ClientProfileItem(ClientProfile clientProfile, Token token)
-    {
-        ClientProfile = clientProfile;
-        Token = token;
-    }
-
-    public Guid Id => ClientProfile.ClientProfileId;
-    public ClientProfile ClientProfile { get; set; }
-    public Token Token { get; set; }
+    public Guid ClientProfileId => ClientProfile.ClientProfileId;
+    public required ClientProfile ClientProfile { get; init; }
+    public required Token Token { get; init; }
+    public string? Name => ClientProfile.Name ?? Token.Name;
 }

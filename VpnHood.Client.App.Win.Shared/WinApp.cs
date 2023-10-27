@@ -341,6 +341,9 @@ public class WinApp : IDisposable, IJob
 
     public Uri? RegisterLocalDomain()
     {
+        //todo: remove
+        //return new Uri("http://localhost:9091");
+
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
         try

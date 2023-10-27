@@ -11,8 +11,8 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<RepositoryType></RepositoryType>
 		<RootNamespace>VpnHood.Client.Device</RootNamespace>
-		<Version>3.1.431</Version>
-		<AssemblyVersion>3.1.431</AssemblyVersion>
+		<Version>3.1.432</Version>
+		<AssemblyVersion>3.1.432</AssemblyVersion>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>

@@ -1,4 +1,6 @@
-﻿using Android.App;
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
+using Android.App;
 using Android.Content;
 
 namespace VpnHood.Client.App.Droid;

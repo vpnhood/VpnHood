@@ -19,7 +19,7 @@
     <AndroidUseLatestPlatformSdk>false</AndroidUseLatestPlatformSdk>
     <TargetFrameworkVersion>v12.0</TargetFrameworkVersion>
     <AndroidUseAapt2>true</AndroidUseAapt2>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="AndroidPacketCapture.cs" />
     <Compile Include="AndroidDevice.cs" />
+    <Compile Include="OperatingSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources\Resource.designer.cs" />
   </ItemGroup>

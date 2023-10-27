@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 // ReSharper disable InconsistentNaming
@@ -7,17 +8,18 @@ namespace VpnHood.Client.App.WebServer.Api;
 
 public interface IClientApi
 {
-    Task<LoadAppResponse> loadApp(LoadAppParam loadAppParam);
-    Task connect(ConnectParam connectParam);
-    Task diagnose(ConnectParam connectParam);
-    Task disconnect();
-    Task<ClientProfile> addAccessKey(AddClientProfileParam addClientProfileParam);
-    Task setClientProfile(SetClientProfileParam setClientProfileParam);
-    Task removeClientProfile(RemoveClientProfileParam removeClientProfileParam);
-    void clearLastError();
-    void addTestServer();
-    Task setUserSettings(UserSettings userSettings);
-    Task log();
-    Task<DeviceAppInfo[]> installedApps();
-    Task<IpGroup[]> ipGroups();
+    Task<AppConfig> GetConfig();
+    Task<AppState> GetState();
+    Task Connect(Guid? clientProfileId = null);
+    Task Diagnose(Guid? clientProfileId = null);
+    Task Disconnect();
+    Task<ClientProfile> AddAccessKey(string accessKey);
+    Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams);
+    Task DeleteClientProfile(Guid clientProfileId);
+    void ClearLastError();
+    void AddTestServer();
+    Task SetUserSettings(UserSettings userSettings);
+    Task<string> Log();
+    Task<DeviceAppInfo[]> GetInstalledApps();
+    Task<IpGroup[]> GetIpGroups();
 }

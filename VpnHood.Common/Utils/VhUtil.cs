@@ -279,7 +279,7 @@ public static class VhUtil
 
     public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize, bool? reuseAddress = null)
     {
-        tcpClient.NoDelay = false;
+        tcpClient.NoDelay = true;
         if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
         if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
         if (reuseAddress != null) tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, reuseAddress.Value);

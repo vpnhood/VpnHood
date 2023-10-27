@@ -600,11 +600,12 @@ internal class ServerHost : IAsyncDisposable, IJob
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
 
-        // Before calling CloseSession session must be validated by GetSession
-        await _sessionManager.CloseSession(session.SessionId);
+        // Before calling CloseSession. Session must be validated by GetSession
         await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
-
         await clientStream.DisposeAsync(false);
+
+        // must be last
+        await _sessionManager.CloseSession(session.SessionId);
     }
 
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)

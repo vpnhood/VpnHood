@@ -2,6 +2,8 @@
 #nullable enable
 using System;
 using System.IO;
+using System.Threading.Tasks;
+using Android;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -30,15 +32,20 @@ namespace VpnHood.Client.App.Droid;
 
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
+[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
+[IntentFilter(new[] { Android.Service.QuickSettings.TileService.ActionQsTilePreferences })]
 public class MainActivity : Activity
 {
-    private const int RequestVpnPermission = 10;
-    public const string AccessKeyMime1 = "application/vnd.cinderella";
-    public const string AccessKeyMime2 = "application/vhkey";
-    public const string AccessKeyMime3 = "application/key";
+    private bool _isWeViewVisible;
+    private const int RequestPushNotificationId = 11;
+    private const int RequestVpnPermissionId = 10;
+    public const string AccessKeyScheme1 = "vh";
+    public const string AccessKeyScheme2 = "vhkey";
+    public const string AccessKeyMime1 = "application/vhkey";
+    public const string AccessKeyMime2 = "application/key";
+    public const string AccessKeyMime3 = "application/vnd.cinderella";
 
-    private AndroidDevice Device =>
-        (AndroidDevice?)App.Current?.AppProvider.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
+    private static AndroidDevice VpnDevice => App.Current?.VpnDevice ?? throw new InvalidOperationException($"{nameof(App)} has not been initialized.");
 
     public WebView? WebView { get; private set; }
 
@@ -50,7 +57,7 @@ public class MainActivity : Activity
         InitSplashScreen();
 
         // manage VpnPermission
-        Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+        VpnDevice.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit)
@@ -63,6 +70,24 @@ public class MainActivity : Activity
         ProcessIntent(Intent);
 
         InitWebUi();
+
+        // request features
+        _ = RequestFeatures();
+    }
+
+    private async Task RequestFeatures()
+    {
+        // request for adding tile
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33))// && !VpnHoodApp.Instance.Settings.IsQuickLaunchRequested)
+        {
+            VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
+            VpnHoodApp.Instance.Settings.Save();
+            await QuickLaunchTileService.RequestAddTile(this);
+        }
+
+        // request for notification
+        if (Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
+            RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPushNotificationId);
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -76,22 +101,28 @@ public class MainActivity : Activity
         if (intent?.Data == null || ContentResolver == null)
             return false;
 
-        // check mime
-        var uri = intent.Data;
-        var mimeType = ContentResolver.GetType(uri);
-        if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2 && mimeType != AccessKeyMime1 && mimeType != AccessKeyMime3)
-        {
-            Toast.MakeText(this, UiResource.MsgUnsupportedContent, ToastLength.Long)?.Show();
-            return false;
-        }
-
         // try to add the access key
         try
         {
+            var uri = intent.Data;
+            if (uri.Scheme is AccessKeyScheme1 or AccessKeyScheme2)
+            {
+                ImportAccessKey(uri.ToString()!);
+                return true;
+            }
+
+            // check mime
+            var mimeType = ContentResolver.GetType(uri);
+            if (mimeType != AccessKeyMime1 && mimeType != AccessKeyMime2 && mimeType != AccessKeyMime1 && mimeType != AccessKeyMime3)
+            {
+                Toast.MakeText(this, UiResource.MsgUnsupportedContent, ToastLength.Long)?.Show();
+                return false;
+            }
+
             // open stream
             using var inputStream = ContentResolver.OpenInputStream(uri);
             if (inputStream == null)
-                return false;
+                throw new Exception("Can not open the intent file stream.");
 
             // read string into buffer maximum 5k
             var buffer = new byte[5 * 1024];
@@ -100,15 +131,7 @@ public class MainActivity : Activity
             var streamReader = new StreamReader(memoryStream);
             var accessKey = streamReader.ReadToEnd();
 
-            var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
-            var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
-            _ = VpnHoodApp.Instance.Disconnect(true);
-            VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
-
-            var message = accessKeyStatus.ClientProfile != null
-                ? string.Format(UiResource.MsgAccessKeyUpdated, accessKeyStatus.Name)
-                : string.Format(UiResource.MsgAccessKeyAdded, accessKeyStatus.Name);
-            Toast.MakeText(this, message, ToastLength.Long)?.Show();
+            ImportAccessKey(accessKey);
         }
         catch
         {
@@ -118,26 +141,40 @@ public class MainActivity : Activity
         return true;
     }
 
+    private void ImportAccessKey(string accessKey)
+    {
+        var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
+        var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
+        _ = VpnHoodApp.Instance.Disconnect(true);
+        VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
+
+        var message = accessKeyStatus.ClientProfile != null
+            ? string.Format(UiResource.MsgAccessKeyUpdated, accessKeyStatus.Name)
+            : string.Format(UiResource.MsgAccessKeyAdded, accessKeyStatus.Name);
+
+        Toast.MakeText(this, message, ToastLength.Long)?.Show();
+    }
+
     private void Device_OnRequestVpnPermission(object? sender, EventArgs e)
     {
         var intent = VpnService.Prepare(this);
         if (intent == null)
-            Device.VpnPermissionGranted();
+            VpnDevice.VpnPermissionGranted();
         else
-            StartActivityForResult(intent, RequestVpnPermission);
+            StartActivityForResult(intent, RequestVpnPermissionId);
     }
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
-        if (requestCode == RequestVpnPermission && resultCode == Result.Ok)
-            Device.VpnPermissionGranted();
+        if (requestCode == RequestVpnPermissionId && resultCode == Result.Ok)
+            VpnDevice.VpnPermissionGranted();
         else
-            Device.VpnPermissionRejected();
+            VpnDevice.VpnPermissionRejected();
     }
 
     protected override void OnDestroy()
     {
-        Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
+        VpnDevice.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
         if (VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Dispose();
 
@@ -147,6 +184,7 @@ public class MainActivity : Activity
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
         [GeneratedEnum] Permission[] grantResults)
     {
+
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
@@ -183,9 +221,11 @@ public class MainActivity : Activity
 
     private void WebViewClient_PageLoaded(object? sender, EventArgs e)
     {
+        if (_isWeViewVisible) return; // prevent double set SetContentView
         if (WebView == null) throw new Exception("WebView has not been loaded yet!");
         SetContentView(WebView);
         Window?.SetStatusBarColor(App.BackgroundColor);
+        _isWeViewVisible = true;
     }
 
     public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

@@ -20,13 +20,13 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         // initialize main window
+        Title = UiResource.AppName;
         Background = new SolidColorBrush(Color.FromArgb(UiDefaults.WindowBackgroundColor.A, UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B));
         Visibility = WinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
         Width = UiDefaults.WindowSize.Width;
         Height = UiDefaults.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
-
-        Title = UiResource.AppName;
+        StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) Hide(); };
 
         // initialize MainWebView
         MainWebView.DefaultBackgroundColor = UiDefaults.WindowBackgroundColor;

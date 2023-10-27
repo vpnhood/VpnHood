@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using Android.Webkit;
 using VpnHood.Client.App.Resources;
 using Xamarin.Essentials;

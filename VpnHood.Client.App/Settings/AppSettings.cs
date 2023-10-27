@@ -3,7 +3,6 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using VpnHood.Common;
 
 namespace VpnHood.Client.App.Settings;
 
@@ -11,9 +10,11 @@ public class AppSettings
 {
     [JsonIgnore] public string SettingsFilePath { get; private set; } = null!;
 
+    public bool IsQuickLaunchAdded { get; set; } 
+    public bool IsQuickLaunchRequested { get; set; }
+    public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
-    public Token TestServerToken => Token.FromAccessKey(TestServerAccessKey);
     public string? LastCountryIpGroupId { get; set; }
     public string? TestServerTokenAutoAdded { get; set; }
 
@@ -23,11 +24,17 @@ public class AppSettings
     // ReSharper restore StringLiteralTypo
 
     public event EventHandler? OnSaved;
+    private readonly object _saveLock = new();
 
     public void Save()
     {
-        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
+        lock (_saveLock)
+        {
+            ConfigTime = DateTime.Now;
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
+        }
+
         OnSaved?.Invoke(this, EventArgs.Empty);
     }
 

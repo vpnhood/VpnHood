@@ -1,5 +1,21 @@
+# v3.1.430 
+### Client
+Update: Improve UI
+Update: Windows: Remove from the taskbar on minimize
+Update: Android: Ask for notification permission
+Update: Android: Add compatibility to Android 6 & 14
+Feature: Android: Register vh and vhkey intent for importing access key
+Feature: Android: Add quick settings tile
+Fix: Android: Requesting permission for notification
+Fix: Windows: Restore Windows state to normal when user clicks on the system tray icon
+Fix: Improve disconnecting speed
+
+### Developement
+Client: Update SPA to VUE 3 and TypeScript
+Client: Create Api.ts generated for TypeScript by nswag
+
 # v3.0.429
-# Client
+### Client
 * Android: Fix not showing apps in AppFilter
 
 # v3.0.428

@@ -39,7 +39,7 @@ public class ClientProfileStore
             foreach (var clientProfile in ClientProfiles)
                 try
                 {
-                    ret.Add(new ClientProfileItem(clientProfile, GetToken(clientProfile.TokenId)));
+                    ret.Add(new ClientProfileItem { ClientProfile = clientProfile, Token = GetToken(clientProfile.TokenId) });
                 }
                 catch (Exception ex)
                 {
@@ -109,6 +109,7 @@ public class ClientProfileStore
         if (clientProfile.ClientProfileId == Guid.Empty)
             throw new ArgumentNullException(nameof(clientProfile.ClientProfileId),
                 $@"{nameof(ClientProfile)} does not have {nameof(clientProfile.ClientProfileId)}");
+
         if (clientProfile.TokenId == Guid.Empty)
             throw new ArgumentNullException(nameof(clientProfile.TokenId), @"ClientProfile does not have tokenId");
         var token = GetToken(clientProfile.TokenId); //make sure tokenId is valid
@@ -169,7 +170,7 @@ public class ClientProfileStore
             SupportId = token.SupportId.ToString(),
             ClientProfile = clientProfile
         };
-        
+
         return ret;
     }
 

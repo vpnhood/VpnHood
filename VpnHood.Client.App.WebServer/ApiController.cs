@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using EmbedIO;
@@ -15,81 +16,65 @@ internal class ClientApiController : WebApiController, IClientApi
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-
-    [Route(HttpVerbs.Post, "/" + nameof (loadApp))]
-    public async Task<LoadAppResponse> loadApp(LoadAppParam loadAppParam)
+    [Route(HttpVerbs.Get, "/config")]
+    public Task<AppConfig> GetConfig()
     {
-        loadAppParam = await GetRequestDataAsync<LoadAppParam>();
-        var ret = new LoadAppResponse
+        var ret = new AppConfig
         {
-            Features = loadAppParam.WithFeatures ? App.Features : null,
-            State = loadAppParam.WithState ? App.State : null,
-            Settings = loadAppParam.WithSettings ? App.Settings : null,
-            ClientProfileItems =
-                loadAppParam.WithClientProfileItems ? App.ClientProfileStore.ClientProfileItems : null
+            Features = App.Features,
+            Settings = App.Settings,
+            ClientProfileItems = App.ClientProfileStore.ClientProfileItems,
+            State = App.State
         };
-        return ret;
+
+        return Task.FromResult(ret);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
-    public async Task<ClientProfile> addAccessKey(AddClientProfileParam addClientProfileParam)
+    [Route(HttpVerbs.Get, "/state")]
+    public Task<AppState> GetState()
     {
-        addClientProfileParam = await GetRequestDataAsync<AddClientProfileParam>();
-        var clientProfile = App.ClientProfileStore.AddAccessKey(addClientProfileParam.AccessKey);
-        App.Settings.UserSettings.DefaultClientProfileId = clientProfile.ClientProfileId;
-        return clientProfile;
+        return Task.FromResult(App.State);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(connect))]
-    public async Task connect(ConnectParam connectParam)
+    [Route(HttpVerbs.Post, "/connect")]
+    public async Task Connect([QueryField] Guid? clientProfileId = null)
     {
-        connectParam = await GetRequestDataAsync<ConnectParam>();
-        await App.Connect(connectParam.ClientProfileId, userAgent: HttpContext.Request.UserAgent);
+        await App.Connect(clientProfileId, userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(diagnose))]
-    public async Task diagnose(ConnectParam connectParam)
+    [Route(HttpVerbs.Post, "/diagnose")]
+    public async Task Diagnose([QueryField] Guid? clientProfileId = null)
     {
-        connectParam = await GetRequestDataAsync<ConnectParam>();
-        await App.Connect(connectParam.ClientProfileId, true, HttpContext.Request.UserAgent);
+        await App.Connect(clientProfileId, true, HttpContext.Request.UserAgent, throwException: false);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(disconnect))]
-    public async Task disconnect()
+    [Route(HttpVerbs.Post, "/disconnect")]
+    public async Task Disconnect()
     {
         await App.Disconnect(true);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(removeClientProfile))]
-    public async Task removeClientProfile(RemoveClientProfileParam removeClientProfileParam)
+    [Route(HttpVerbs.Put, "/access-keys")]
+    public Task<ClientProfile> AddAccessKey([QueryField] string accessKey)
     {
-        removeClientProfileParam = await GetRequestDataAsync<RemoveClientProfileParam>();
-        if (removeClientProfileParam.ClientProfileId == App.ActiveClientProfile?.ClientProfileId)
-            await App.Disconnect(true);
-        App.ClientProfileStore.RemoveClientProfile(removeClientProfileParam.ClientProfileId);
+        var clientProfile = App.ClientProfileStore.AddAccessKey(accessKey);
+        return Task.FromResult(clientProfile);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
-    public async Task setClientProfile(SetClientProfileParam setClientProfileParam)
-    {
-        setClientProfileParam = await GetRequestDataAsync<SetClientProfileParam>();
-        App.ClientProfileStore.SetClientProfile(setClientProfileParam.ClientProfile);
-    }
-
-    [Route(HttpVerbs.Post, "/" + nameof(clearLastError))]
-    public void clearLastError()
+    [Route(HttpVerbs.Post, "/clear-last-error")]
+    public void ClearLastError()
     {
         App.ClearLastError();
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(addTestServer))]
-    public void addTestServer()
+    [Route(HttpVerbs.Post, "/add-test-server")]
+    public void AddTestServer()
     {
         App.ClientProfileStore.AddAccessKey(App.Settings.TestServerAccessKey);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(setUserSettings))]
-    public async Task setUserSettings(UserSettings userSettings)
+    [Route(HttpVerbs.Put, "/user-settings")]
+    public async Task SetUserSettings(UserSettings userSettings)
     {
         userSettings = await GetRequestDataAsync<UserSettings>();
         App.Settings.UserSettings = userSettings;
@@ -97,35 +82,56 @@ internal class ClientApiController : WebApiController, IClientApi
     }
 
     [Route(HttpVerbs.Get, "/log.txt")]
-    public async Task log()
+    public async Task<string> Log()
     {
         Response.ContentType = MimeType.PlainText;
         await using var stream = HttpContext.OpenResponseStream();
         await using var streamWriter = new StreamWriter(stream);
         var log = await App.LogService.GetLog();
         await streamWriter.WriteAsync(log);
+        return "";
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(installedApps))]
-    public Task<DeviceAppInfo[]> installedApps()
+    [Route(HttpVerbs.Get, "/installed-apps")]
+    public Task<DeviceAppInfo[]> GetInstalledApps()
     {
         return Task.FromResult(App.Device.InstalledApps);
     }
 
-    [Route(HttpVerbs.Post, "/" + nameof(ipGroups))]
-    public Task<IpGroup[]> ipGroups()
+    [Route(HttpVerbs.Get, "/ip-groups")]
+    public Task<IpGroup[]> GetIpGroups()
     {
         return App.GetIpGroups();
+    }
+
+    [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
+    public async Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    {
+        updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>();
+
+        var clientProfileItem = App.ClientProfileStore.ClientProfileItems.Single(x => x.ClientProfileId == clientProfileId);
+        if (updateParams.Name != null)
+            clientProfileItem.ClientProfile.Name = string.IsNullOrEmpty(updateParams.Name) ? null : updateParams.Name;
+
+        App.ClientProfileStore.SetClientProfile(clientProfileItem.ClientProfile);
+    }
+
+    [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
+    public async Task DeleteClientProfile(Guid clientProfileId)
+    {
+        if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
+            await App.Disconnect(true);
+        App.ClientProfileStore.RemoveClientProfile(clientProfileId);
     }
 
     private async Task<T> GetRequestDataAsync<T>()
     {
         var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
         var res = JsonSerializer.Deserialize<T>(json,
-            new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         if (res == null)
             throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
         return res;
     }
-   
+
 }

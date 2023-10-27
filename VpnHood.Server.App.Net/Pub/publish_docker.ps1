@@ -38,17 +38,25 @@ Copy-Item -path "$template_yamlFile" -Destination "$module_yamlFile" -Force;
 
 # remove old docker containers from local
 $serverDockerImage="vpnhood/vpnhoodserver";
-docker rm -vf $(docker ps -a -q --filter "ancestor=$serverDockerImage");
-docker rmi -f $(docker images -a -q "$serverDockerImage");
+$oldContainers = docker ps -a -q --filter "ancestor=$serverDockerImage";
+$oldImages = docker images -a -q "$serverDockerImage";
+
+echo "removing old docker containers and images..."
+if ($oldContainers) { docker rm -vf $oldContainers; }
+if ($oldImages) { docker rmi -f $oldImages; }
 
 # create name image
 docker build "$solutionDir" --no-cache -f "$projectDir/Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag;
+if (!$?) {Throw("Could not buld the server docker."); }
+
 if ($isLatest)
 {
 	if ($distribute)
 	{
-		docker push ${serverDockerImage}:latest;
 		docker push ${serverDockerImage}:$versionTag;
+		docker push ${serverDockerImage}:latest;
+		if (!$?) { Throw("Could not push the server docker image."); }
+		echo "The server docker image has been pushed."
 	}
 	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }
@@ -57,5 +65,7 @@ else
 	if ($distribute)
 	{
 		docker push ${serverDockerImage}:$versionTag;
+		if (!$?) { Throw("Could not push the server docker image."); }
+		echo "The server docker image has been pushed."
 	}
 }

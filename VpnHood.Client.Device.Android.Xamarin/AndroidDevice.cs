@@ -1,12 +1,14 @@
-﻿using System;
+﻿// ReSharper disable once RedundantNullableDirective
+#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
 using Android.Graphics;
 using Android.Graphics.Drawables;
+using Android.Net;
 using Android.OS;
 using static Android.Graphics.Bitmap;
 
@@ -14,23 +16,64 @@ namespace VpnHood.Client.Device.Droid
 {
     public class AndroidDevice : IDevice
     {
-        private readonly EventWaitHandle _grantPermissionWaitHandle = new(false, EventResetMode.AutoReset);
-        private readonly EventWaitHandle _serviceWaitHandle = new(false, EventResetMode.AutoReset);
+        private readonly int _notificationId;
+        private readonly Notification? _notification;
+        private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
+        private TaskCompletionSource<bool> _startServiceTaskSource = new();
         private IPacketCapture? _packetCapture;
-        private bool _permissionGranted;
 
-        public AndroidDevice()
+        public event EventHandler? OnStartAsService;
+        public event EventHandler? OnRequestVpnPermission;
+        public bool IsExcludeAppsSupported => true;
+        public bool IsIncludeAppsSupported => true;
+        public static AndroidDevice? Current { get; private set; }
+
+        public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+
+        public AndroidDevice(Notification? notification = null, int notificationId = 3500)
         {
             if (Current != null)
                 throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
+
+            _notification = notification;
+            _notificationId = notificationId;
             Current = this;
         }
 
-        public static AndroidDevice? Current { get; private set; }
+        private static Notification GetDefaultNotification()
+        {
+            const string channelId = "1000";
+            var context = Application.Context;
+            var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService)
+                ?? throw new Exception("Could not resolve NotificationManager.");
 
-        public event EventHandler? OnStartAsService;
+            Notification.Builder notificationBuilder;
+            if (OperatingSystem.IsAndroidVersionAtLeast(26))
+            {
+                var channel = new NotificationChannel(channelId, "VPN",
+                    NotificationImportance.Low);
+                channel.EnableVibration(false);
+                channel.EnableLights(false);
+                channel.SetShowBadge(false);
+                channel.LockscreenVisibility = NotificationVisibility.Public;
+                channel.Importance = NotificationImportance.Low;
+                notificationManager.CreateNotificationChannel(channel);
+                notificationBuilder = new Notification.Builder(context, channelId);
+            }
+            else
+            {
+#pragma warning disable CS0618
+                notificationBuilder = new Notification.Builder(context);
+#pragma warning restore CS0618
+            }
 
-        public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+            var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
+            return notificationBuilder
+                .SetContentTitle("VpnHood!")
+                .SetSmallIcon(appInfo.Icon)
+                .SetOngoing(true)
+                .Build();
+        }
 
         public DeviceAppInfo[] InstalledApps
         {
@@ -65,34 +108,57 @@ namespace VpnHood.Client.Device.Droid
             }
         }
 
-        public bool IsExcludeAppsSupported => true;
-
-        public bool IsIncludeAppsSupported => true;
-
-        public Task<IPacketCapture> CreatePacketCapture()
+        public async Task<IPacketCapture> CreatePacketCapture()
         {
-            return Task.Run(() =>
+            // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
+            using var prepareIntent = VpnService.Prepare(Application.Context);
+            if (OnRequestVpnPermission != null && prepareIntent != null)
             {
-                // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-                if (OnRequestVpnPermission != null)
-                {
-                    _permissionGranted = false;
-                    OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
-                    _grantPermissionWaitHandle.WaitOne(10000);
-                    if (!_permissionGranted)
-                        throw new Exception("Could not grant VPN permission in the given time!");
-                }
+                _grantPermissionTaskSource = new TaskCompletionSource<bool>();
+                OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
+                await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(10000));
+                if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
+                    throw new Exception("Could not grant VPN permission in the given time.");
 
-                StartService();
-                _serviceWaitHandle.WaitOne(10000);
-                if (_packetCapture == null)
-                    throw new Exception("Could not start VpnService in the given time!");
+                if (!_grantPermissionTaskSource.Task.Result)
+                    throw new Exception("VPN permission has been rejected.");
+            }
 
-                return Task.FromResult(_packetCapture);
-            });
+            // start service
+            var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
+            intent.PutExtra("manual", true);
+            if (OperatingSystem.IsAndroidVersionAtLeast(26))
+            {
+                Application.Context.StartForegroundService(intent.SetAction("connect"));
+            }
+            else
+            {
+                Application.Context.StartService(intent.SetAction("connect"));
+            }
+
+            // check is service started
+            _startServiceTaskSource = new TaskCompletionSource<bool>();
+            await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(10000));
+            if (_packetCapture == null)
+                throw new Exception("Could not start VpnService in the given time.");
+
+            return _packetCapture;
         }
 
-        public event EventHandler? OnRequestVpnPermission;
+        internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
+        {
+            _packetCapture = packetCapture;
+            _startServiceTaskSource.TrySetResult(true);
+
+            // set foreground
+            var notification = _notification ?? GetDefaultNotification();
+            packetCapture.StartForeground(_notificationId, notification);
+
+            // fire AutoCreate for always on
+            var manual = intent?.GetBooleanExtra("manual", false) ?? false;
+            if (!manual)
+                OnStartAsService?.Invoke(this, EventArgs.Empty);
+        }
 
         private static string EncodeToBase64(Drawable drawable, int quality)
         {
@@ -105,7 +171,7 @@ namespace VpnHood.Client.Device.Droid
 
         private static Bitmap DrawableToBitmap(Drawable drawable)
         {
-            if (drawable is BitmapDrawable {Bitmap: { }} drawable1)
+            if (drawable is BitmapDrawable { Bitmap: not null } drawable1)
                 return drawable1.Bitmap;
 
             //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
@@ -119,32 +185,12 @@ namespace VpnHood.Client.Device.Droid
 
         public void VpnPermissionGranted()
         {
-            _permissionGranted = true;
-            _grantPermissionWaitHandle.Set();
+            _grantPermissionTaskSource.TrySetResult(true);
         }
 
         public void VpnPermissionRejected()
         {
-            _grantPermissionWaitHandle.Set();
-        }
-
-        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)
-        {
-            _packetCapture = packetCapture;
-            _serviceWaitHandle.Set();
-
-            // fire AutoCreate for always on
-            var manual = intent?.GetBooleanExtra("manual", false) ?? false;
-            if (!manual)
-                OnStartAsService?.Invoke(this, EventArgs.Empty);
-        }
-
-
-        private void StartService()
-        {
-            var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
-            intent.PutExtra("manual", true);
-            Application.Context.StartService(intent.SetAction("connect"));
+            _grantPermissionTaskSource.TrySetResult(false);
         }
     }
 }

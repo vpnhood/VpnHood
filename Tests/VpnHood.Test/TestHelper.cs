@@ -298,7 +298,7 @@ internal static class TestHelper
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
             NetFilter = NetFilter,
-            PublicIpDiscovery = true, //it slows down our tests
+            PublicIpDiscovery = false, //it slows down our tests
         };
 
         // Create server

@@ -99,6 +99,12 @@ if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean 
 	/p:AndroidManifest="Properties\AndroidManifest.aab.xml" /p:DefineConstants=ANDROID_AAB `
 	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
+# set app icon
+$appIconXmlDoc = [xml](Get-Content $appIconXml);
+$appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
+$appIconXmlDoc.save($appIconXml);
+
 #####
 # copy to solution ouput
 Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force

@@ -98,10 +98,12 @@ public static class IPAddressUtil
             //    : "https://api6.ipify.org?format=json";
 
             var url = addressFamily == AddressFamily.InterNetwork
-                ? "https://api4.my-ip.io/ip.json"
-                : "https://api6.my-ip.io/ip.json";
+                ? "https://api4.my-ip.io/v2/ip.json"
+                : "https://api6.my-ip.io/v2/ip.json";
 
-            using var httpClient = new HttpClient();
+            var handler = new HttpClientHandler() { AllowAutoRedirect = true };
+            using var httpClient = new HttpClient(handler);
+
             httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
             var json = await httpClient.GetStringAsync(url);
             var document = JsonDocument.Parse(json);

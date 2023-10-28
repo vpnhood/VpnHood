@@ -171,15 +171,10 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags,
         int startId)
     {
-        if (!Started)
-        {
-            if (AndroidDevice.Current == null)
-                throw new Exception($"{nameof(AndroidDevice)} has not been initialized");
+        if (AndroidDevice.Current == null)
+            throw new Exception($"{nameof(AndroidDevice)} has not been initialized");
 
-            AndroidDevice.Current.OnServiceStartCommand(this, intent);
-        }
-
-
+        AndroidDevice.Current.OnServiceStartCommand(this, intent);
         return StartCommandResult.Sticky;
     }
 
@@ -261,7 +256,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}", 
+            VhLogger.Instance.LogError(ex, "Error in processing packet. Packet: {Packet}",
                 VhLogger.FormatIpPacket(ipPacket.ToString()));
         }
     }
@@ -277,8 +272,9 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     private void Close()
     {
-        if (!Started)
-            return;
+        // Started means is established; so we should not leave the service open
+        // if (!Started)
+        //   return; 
 
         VhLogger.Instance.LogTrace("Closing VpnService...");
 

@@ -13,11 +13,6 @@ PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 $module_infoFile = "$moduleDir/VpnHoodClient-android-web.json";
 $module_packageFile = "$moduleDir/VpnHoodClient-android-web.apk";
-if ($prerelease)
-{
-	$module_infoFile = "$moduleDir/VpnHoodClient-android.json";
-	$module_packageFile = "$moduleDir/VpnHoodClient-android.apk";
-}
 
 # Calcualted Path
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
@@ -30,6 +25,8 @@ $keystoreAlias = $credentials.Android.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $manifestFileAab = Join-Path $projectDir "Properties/AndroidManifest.aab.xml";
 $appIconXml = Join-Path $projectDir "Resources\mipmap-anydpi-v26\appicon.xml";
+$appIconXmlDoc = [xml](Get-Content $appIconXml);
+$appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 
 # set android version
 $xmlDoc = [xml](Get-Content $manifestFile);
@@ -38,8 +35,6 @@ $xmlDoc.manifest.versionName = $version.ToString(3);
 $xmlDoc.save($manifestFile);
 
 # set app icon
-$appIconXmlDoc = [xml](Get-Content $appIconXml);
-$appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
 $appIconXmlDoc.save($appIconXml);
 
@@ -100,8 +95,6 @@ if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean 
 	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
 # set app icon
-$appIconXmlDoc = [xml](Get-Content $appIconXml);
-$appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
 $appIconXmlDoc.save($appIconXml);
 

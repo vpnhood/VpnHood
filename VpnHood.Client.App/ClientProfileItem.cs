@@ -8,5 +8,5 @@ public class ClientProfileItem
     public Guid ClientProfileId => ClientProfile.ClientProfileId;
     public required ClientProfile ClientProfile { get; init; }
     public required Token Token { get; init; }
-    public string? Name => ClientProfile.Name ?? Token.Name;
+    public string? Name => string.IsNullOrWhiteSpace(ClientProfile.Name) ? Token.Name : ClientProfile.Name;
 }

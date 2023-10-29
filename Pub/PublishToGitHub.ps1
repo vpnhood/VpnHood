@@ -54,8 +54,8 @@ gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
-	$releaseClientDir/android/VpnHoodClient-android$$anroidStore.apk `
-	$releaseClientDir/android/VpnHoodClient-android$$anroidStore.json `
+	$releaseClientDir/android/VpnHoodClient-android$(anroidStore).apk `
+	$releaseClientDir/android/VpnHoodClient-android$(anroidStore).json `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.msi  `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.txt  `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.json `

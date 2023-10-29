@@ -53,6 +53,7 @@ public class SessionService
             ClientId = device.ClientId.ToString(),
             SessionId = sessionId.ToString(),
             UserId = accessToken.AccessTokenId.ToString(),
+            SessionCount = 1
         };
 
         var ga4Event = new Ga4TagEvent

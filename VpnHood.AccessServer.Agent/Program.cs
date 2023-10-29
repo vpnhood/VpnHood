@@ -1,8 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
-using GrayMint.Authorization.Authentications;
-using GrayMint.Authorization.Authentications.BotAuthentication;
 using GrayMint.Common.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -13,6 +11,8 @@ using NLog.Web;
 using NLog;
 using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
+using GrayMint.Authorization.Authentications;
+using GrayMint.Authorization.Authentications.Utils;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -32,14 +32,14 @@ public class Program
         //Authentication
         builder.Services
              .AddAuthentication()
-             .AddBotAuthentication(builder.Configuration.GetSection("Auth").Get<BotAuthenticationOptions>(),
+             .AddGrayMintAuthentication(builder.Configuration.GetSection("Auth").Get<GrayMintAuthenticationOptions>(),
                  builder.Environment.IsProduction());
 
         // Authorization Policies
         builder.Services.AddAuthorization(options =>
         {
             var policy = new AuthorizationPolicyBuilder()
-                .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme)
+                .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
                 .RequireRole("System")
                 .RequireAuthenticatedUser()
                 .Build();
@@ -47,7 +47,7 @@ public class Program
             options.DefaultPolicy = policy;
 
             policy = new AuthorizationPolicyBuilder()
-                .AddAuthenticationSchemes(BotAuthenticationDefaults.AuthenticationScheme)
+                .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
                 .RequireAuthenticatedUser()
                 .Build();
             options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);

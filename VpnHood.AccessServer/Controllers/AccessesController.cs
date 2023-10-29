@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +23,7 @@ public class AccessesController : ControllerBase
     }
 
     [HttpGet("{accessId:guid}")]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
         var res = await List(projectId, accessId: accessId);
@@ -32,7 +31,7 @@ public class AccessesController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ListResult<AccessData>> List(Guid projectId, Guid? accessTokenId = null, Guid? serverFarmId = null, Guid? accessId = null,
         DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Authorization.Abstractions;
@@ -26,7 +25,7 @@ public class TestAuthorizationProvider : IAuthorizationProvider
         return await original.First(x => x != this).GetAuthorizationCode(principal);
     }
 
-    public async Task<Guid?> GetUserId(ClaimsPrincipal principal)
+    public async Task<string?> GetUserId(ClaimsPrincipal principal)
     {
         await using var scope = _serviceScopeFactory.CreateAsyncScope();
         var original = scope.ServiceProvider.GetServices<IAuthorizationProvider>();

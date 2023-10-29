@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using GrayMint.Authorization.Abstractions;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
-using GrayMint.Authorization.RoleManagement.TeamControllers.Exceptions;
+using GrayMint.Authorization.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
@@ -33,26 +32,25 @@ public class ProjectsController : ControllerBase
     {
         var userId = await _authorizationProvider.GetUserId(User);
         if (userId == null) throw new UnregisteredUser();
-
-        return await _projectService.Create(userId.Value);
+        return await _projectService.Create(Guid.Parse(userId));
     }
 
     [HttpGet("{projectId:guid}")]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Project> Get(Guid projectId)
     {
         return _projectService.Get(projectId);
     }
 
     [HttpPatch("{projectId:guid}")]
-    [AuthorizePermission(Permissions.ProjectWrite)]
+    [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
         return _projectService.Update(projectId, updateParams);
     }
 
     [HttpPatch("{projectId:guid}/usage")]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)
     {
@@ -60,7 +58,7 @@ public class ProjectsController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permissions.ProjectList)]
+    [AuthorizeProjectPermission(Permissions.ProjectList)]
     public Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)
     {
         return _projectService.List(search, recordIndex, recordCount);

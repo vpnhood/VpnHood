@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 
@@ -22,7 +21,7 @@ public class SystemController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permissions.Sync)]
+    [AuthorizeProjectPermission(Permissions.Sync)]
     public async Task Sync()
     {
         await _syncService.Sync();

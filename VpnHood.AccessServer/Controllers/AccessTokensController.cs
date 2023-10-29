@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +39,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permissions.AccessTokenWrite)]
+    [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
         // check user quota
@@ -82,7 +81,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpPatch("{accessTokenId:guid}")]
-    [AuthorizePermission(Permissions.AccessTokenWrite)]
+    [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
     {
         // validate accessTokenModel.ServerFarmId
@@ -118,7 +117,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
-    [AuthorizePermission(Permissions.AccessTokenReadAccessKey)]
+    [AuthorizeProjectPermission(Permissions.AccessTokenReadAccessKey)]
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
@@ -177,7 +176,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpGet("{accessTokenId:guid}")]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
         var items = await List(projectId, accessTokenId: accessTokenId,
@@ -186,7 +185,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ListResult<AccessTokenData>> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
@@ -253,7 +252,7 @@ public class AccessTokensController : ControllerBase
     }
 
     [HttpDelete]
-    [AuthorizePermission(Permissions.AccessTokenWrite)]
+    [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task DeleteMany(Guid projectId, Guid[] accessTokenIds)
     {
         var accessTokens = await _vhContext.AccessTokens
@@ -270,7 +269,7 @@ public class AccessTokensController : ControllerBase
 
 
     [HttpDelete("{accessTokenId:guid}")]
-    [AuthorizePermission(Permissions.AccessTokenWrite)]
+    [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task Delete(Guid projectId, Guid accessTokenId)
     {
         var accessToken = await _vhContext.AccessTokens

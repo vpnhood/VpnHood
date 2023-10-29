@@ -18,8 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\nuget.yml = .github\workflows\nuget.yml
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GrayMint", "GrayMint", "{93345E67-2111-4452-A829-7CBDF764AAC6}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Report", "VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj", "{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DA70AC51-F97F-47CF-B732-3C76D1A27C32}"

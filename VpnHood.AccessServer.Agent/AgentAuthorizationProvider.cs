@@ -21,7 +21,7 @@ public class AgentAuthorizationProvider : IAuthorizationProvider
         if (principal.HasClaim("usage_type", "agent"))
         {
             var id = await GetUserId(principal) ?? throw new Exception("Could not find server id.");
-            var server = await _cacheService.GetServer(id);
+            var server = await _cacheService.GetServer(Guid.Parse(id));
             return server.AuthorizationCode.ToString();
         }
 
@@ -33,13 +33,10 @@ public class AgentAuthorizationProvider : IAuthorizationProvider
         throw new Exception("The access token has invalid usage_type.");
     }
 
-    public Task<Guid?> GetUserId(ClaimsPrincipal principal)
+    public Task<string?> GetUserId(ClaimsPrincipal principal)
     {
         var nameIdentifier = principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
-        if (nameIdentifier!=null && Guid.TryParse(nameIdentifier, out var userId))
-            return Task.FromResult((Guid?)userId);
-
-        return Task.FromResult((Guid?)null);
+        return Task.FromResult(nameIdentifier ?? null);
     }
 
     public Task OnAuthenticated(ClaimsPrincipal principal)

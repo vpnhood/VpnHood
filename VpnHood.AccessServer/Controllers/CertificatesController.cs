@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
@@ -22,7 +21,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpPost("self-signed")]
-    [AuthorizePermission(Permissions.CertificateWrite)]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> CreateBySelfSigned(Guid projectId, CertificateSelfSignedParams? createParams)
     {
         var ret = await _certificateService.CreateSelfSinged(projectId, createParams);
@@ -30,7 +29,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpPut("{certificateId:guid}/self-signed")]
-    [AuthorizePermission(Permissions.CertificateWrite)]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> ReplaceBySelfSigned(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams)
     {
         var ret = await _certificateService.ReplaceBySelfSinged(projectId, certificateId, createParams);
@@ -38,7 +37,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpPost("import")]
-    [AuthorizePermission(Permissions.CertificateWrite)]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> CreateByImport(Guid projectId, CertificateImportParams importParams)
     {
         var ret = await _certificateService.CreateByImport(projectId, importParams);
@@ -46,7 +45,7 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpPost("{certificateId:guid}/import")]
-    [AuthorizePermission(Permissions.CertificateWrite)]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> ReplaceByImport(Guid projectId, Guid certificateId, CertificateImportParams importParams)
     {
         var ret = await _certificateService.ReplaceByImport(projectId, certificateId, importParams);
@@ -54,21 +53,21 @@ public class CertificatesController : ControllerBase
     }
 
     [HttpGet("{certificateId:guid}")]
-    [AuthorizePermission(Permissions.CertificateRead)]
+    [AuthorizeProjectPermission(Permissions.CertificateRead)]
     public Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary)
     {
         return _certificateService.Get(projectId, certificateId, includeSummary);
     }
 
     [HttpDelete("{certificateId:guid}")]
-    [AuthorizePermission(Permissions.CertificateWrite)]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public Task Delete(Guid projectId, Guid certificateId)
     {
         return _certificateService.Delete(projectId, certificateId);
     }
 
     [HttpGet]
-    [AuthorizePermission(Permissions.CertificateRead)]
+    [AuthorizeProjectPermission(Permissions.CertificateRead)]
     public Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 300)
     {

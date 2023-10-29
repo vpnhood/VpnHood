@@ -16,7 +16,7 @@ using VpnHood.Common.Utils;
 using VpnHood.AccessServer.Report.Persistence;
 using System.Net.Http.Headers;
 using GrayMint.Authorization.Abstractions;
-using GrayMint.Authorization.Authentications.BotAuthentication;
+using GrayMint.Authorization.Authentications;
 using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -90,7 +90,7 @@ public class TestInit : IHttpClientFactory, IDisposable
 
         // create new user
         SystemAdminApiKey = await TeamClient.CreateSystemApiKeyAsync();
-        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
+        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse( SystemAdminApiKey.Authorization);
 
         // create default project
         Project = await ProjectsClient.CreateAsync();
@@ -274,7 +274,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         var vhToken = Token.FromAccessKey(accessKey);
 
         var secret = vhToken.Secret;
-        var sessionRequestEx = new SessionRequestEx(string.Empty, 
+        var sessionRequestEx = new SessionRequestEx(string.Empty,
             accessToken.AccessTokenId,
             clientInfo,
             VhUtil.EncryptClientId(clientInfo.ClientId, secret),
@@ -293,7 +293,7 @@ public class TestInit : IHttpClientFactory, IDisposable
 
         var http = AgentApp.CreateClient();
         var options = new Server.Access.Managers.Http.HttpAccessManagerOptions(
-            installManual.AppSettings.HttpAccessManager.BaseUrl, 
+            installManual.AppSettings.HttpAccessManager.BaseUrl,
             installManual.AppSettings.HttpAccessManager.Authorization);
 
         return new AgentClient(http, options);
@@ -326,8 +326,9 @@ public class TestInit : IHttpClientFactory, IDisposable
             claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
             claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
             var scope = AgentApp.Services.CreateScope();
-            var authenticationTokenBuilder = scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
-            var authorization = authenticationTokenBuilder.CreateAuthenticationHeader(claimIdentity).Result;
+            var grayMintAuthentication = scope.ServiceProvider.GetRequiredService<GrayMintAuthentication>();
+            var authorization = grayMintAuthentication.CreateAuthenticationHeader(
+                new CreateTokenParams { ClaimsIdentity = claimIdentity }).Result;
 
             var httpClient = AgentApp.CreateClient();
             httpClient.BaseAddress = AppOptions.AgentUrl;

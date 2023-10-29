@@ -1,6 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using GrayMint.Authorization.Authentications.BotAuthentication;
+using GrayMint.Authorization.Authentications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,11 +12,11 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 [Authorize(AgentPolicy.SystemPolicy)]
 public class SystemController : ControllerBase
 {
-    private readonly BotAuthenticationTokenBuilder _botAuthenticationTokenBuilder;
+    private readonly GrayMintAuthentication _grayMintAuthentication;
 
-    public SystemController(BotAuthenticationTokenBuilder botAuthenticationTokenBuilder)
+    public SystemController(GrayMintAuthentication grayMintAuthentication)
     {
-        _botAuthenticationTokenBuilder = botAuthenticationTokenBuilder;
+        _grayMintAuthentication = grayMintAuthentication;
     }
 
     [HttpGet("servers/{serverId}/agent-authorization")]
@@ -27,8 +27,10 @@ public class SystemController : ControllerBase
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, $"{serverId}@local"));
 
-        var authenticationHeader = await _botAuthenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
+        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(
+            new CreateTokenParams { ClaimsIdentity = claimsIdentity });
+
         return authenticationHeader.ToString();
     }
-    
+
 }

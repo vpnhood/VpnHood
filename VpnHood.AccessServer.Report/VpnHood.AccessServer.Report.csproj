@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.142" />
-    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.142" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.147" />
+    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.147" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.11" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
@@ -24,7 +23,7 @@ public class ServerFarmsController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permissions.ServerFarmWrite)]
+    [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
     public Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams? createParams)
     {
         createParams ??= new ServerFarmCreateParams();
@@ -32,14 +31,14 @@ public class ServerFarmsController : ControllerBase
     }
 
     [HttpPatch("{serverFarmId:guid}")]
-    [AuthorizePermission(Permissions.ServerFarmWrite)]
+    [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
     public Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         return _serverFarmService.Update(projectId, serverFarmId, updateParams);
     }
 
     [HttpGet("{serverFarmId:guid}")]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false)
     {
         var dtos = includeSummary
@@ -50,7 +49,7 @@ public class ServerFarmsController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerFarmData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 101)
     {
@@ -60,7 +59,7 @@ public class ServerFarmsController : ControllerBase
     }
 
     [HttpDelete("{serverFarmId:guid}")]
-    [AuthorizePermission(Permissions.ServerFarmWrite)]
+    [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
     public Task Delete(Guid projectId, Guid serverFarmId)
     {
         return _serverFarmService.Delete(projectId, serverFarmId);

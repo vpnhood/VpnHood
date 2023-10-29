@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using GrayMint.Authorization.RoleManagement.RoleAuthorizations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +26,7 @@ public class IpLocksController : ControllerBase
     }
 
     [HttpPost]
-    [AuthorizePermission(Permissions.IpLockWrite)]
+    [AuthorizeProjectPermission(Permissions.IpLockWrite)]
     public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
     {
         var ipLock = new IpLockModel
@@ -43,7 +42,7 @@ public class IpLocksController : ControllerBase
     }
 
     [HttpPatch("{ip}")]
-    [AuthorizePermission(Permissions.IpLockWrite)]
+    [AuthorizeProjectPermission(Permissions.IpLockWrite)]
     public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
     {
         var ipLock = await _vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
@@ -56,7 +55,7 @@ public class IpLocksController : ControllerBase
     }
 
     [HttpDelete("{ip}")]
-    [AuthorizePermission(Permissions.IpLockWrite)]
+    [AuthorizeProjectPermission(Permissions.IpLockWrite)]
     public async Task Delete(Guid projectId, string ip)
     {
         var ipLock = await _vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
@@ -65,7 +64,7 @@ public class IpLocksController : ControllerBase
     }
 
     [HttpGet("{ip}")]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<IpLock> Get(Guid projectId, string ip)
     {
         var ipLockModel = await _vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
@@ -73,7 +72,7 @@ public class IpLocksController : ControllerBase
     }
 
     [HttpGet]
-    [AuthorizePermission(Permissions.ProjectRead)]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<IpLock[]> List(Guid projectId, string? search = null, int recordIndex = 0, int recordCount = 300)
     {
         var ret = await _vhContext.IpLocks

@@ -47,7 +47,8 @@ $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesC
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 
 $anroidStore = (&{if($prerelease) {"web"} else {""}});
-
+echo $releaseClientDir/android/VpnHoodClient-android($anroidStore).apk;
+exit
 # $releaseClientDir/android/VpnHoodClient-android-web.apk `
 # $releaseClientDir/android/VpnHoodClient-android-web.json `
 gh release create "$versionTag" `

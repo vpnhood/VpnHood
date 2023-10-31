@@ -2863,7 +2863,7 @@ export class TeamClient {
         return Promise.resolve<User>(null as any);
     }
 
-    listRoles(resourceId: string): Promise<TeamRole[]> {
+    listRoles(resourceId: string): Promise<Role[]> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2882,7 +2882,7 @@ export class TeamClient {
         });
     }
 
-    protected processListRoles(response: Response): Promise<TeamRole[]> {
+    protected processListRoles(response: Response): Promise<Role[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -2892,7 +2892,7 @@ export class TeamClient {
             if (Array.isArray(resultData200)) {
                 result200 = [] as any;
                 for (let item of resultData200)
-                    result200!.push(TeamRole.fromJS(item));
+                    result200!.push(Role.fromJS(item));
             }
             else {
                 result200 = <any>null;
@@ -2904,7 +2904,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<TeamRole[]>(null as any);
+        return Promise.resolve<Role[]>(null as any);
     }
 
     listUserRoles(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfTeamUserRole> {
@@ -6365,12 +6365,12 @@ export interface IPatchOfString2 {
     value: string;
 }
 
-export class TeamRole implements ITeamRole {
+export class Role implements IRole {
     roleId!: string;
     roleName!: string;
     description?: string | undefined;
 
-    constructor(data?: ITeamRole) {
+    constructor(data?: IRole) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6387,9 +6387,9 @@ export class TeamRole implements ITeamRole {
         }
     }
 
-    static fromJS(data: any): TeamRole {
+    static fromJS(data: any): Role {
         data = typeof data === 'object' ? data : {};
-        let result = new TeamRole();
+        let result = new Role();
         result.init(data);
         return result;
     }
@@ -6403,7 +6403,7 @@ export class TeamRole implements ITeamRole {
     }
 }
 
-export interface ITeamRole {
+export interface IRole {
     roleId: string;
     roleName: string;
     description?: string | undefined;
@@ -6460,13 +6460,12 @@ export interface IListResultOfTeamUserRole {
     items: TeamUserRole[];
 }
 
-export class TeamUserRole implements ITeamUserRole {
-    user?: User | undefined;
+export class UserRole implements IUserRole {
     resourceId!: string;
     userId!: string;
-    role!: TeamRole;
+    role!: Role;
 
-    constructor(data?: ITeamUserRole) {
+    constructor(data?: IUserRole) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6474,16 +6473,51 @@ export class TeamUserRole implements ITeamUserRole {
             }
         }
         if (!data) {
-            this.role = new TeamRole();
+            this.role = new Role();
         }
     }
 
     init(_data?: any) {
         if (_data) {
-            this.user = _data["user"] ? User.fromJS(_data["user"]) : <any>undefined;
             this.resourceId = _data["resourceId"];
             this.userId = _data["userId"];
-            this.role = _data["role"] ? TeamRole.fromJS(_data["role"]) : new TeamRole();
+            this.role = _data["role"] ? Role.fromJS(_data["role"]) : new Role();
+        }
+    }
+
+    static fromJS(data: any): UserRole {
+        data = typeof data === 'object' ? data : {};
+        let result = new UserRole();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["resourceId"] = this.resourceId;
+        data["userId"] = this.userId;
+        data["role"] = this.role ? this.role.toJSON() : <any>undefined;
+        return data;
+    }
+}
+
+export interface IUserRole {
+    resourceId: string;
+    userId: string;
+    role: Role;
+}
+
+export class TeamUserRole extends UserRole implements ITeamUserRole {
+    user?: User | undefined;
+
+    constructor(data?: ITeamUserRole) {
+        super(data);
+    }
+
+    init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.user = _data["user"] ? User.fromJS(_data["user"]) : <any>undefined;
         }
     }
 
@@ -6497,18 +6531,13 @@ export class TeamUserRole implements ITeamUserRole {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["user"] = this.user ? this.user.toJSON() : <any>undefined;
-        data["resourceId"] = this.resourceId;
-        data["userId"] = this.userId;
-        data["role"] = this.role ? this.role.toJSON() : <any>undefined;
+        super.toJSON(data);
         return data;
     }
 }
 
-export interface ITeamUserRole {
+export interface ITeamUserRole extends IUserRole {
     user?: User | undefined;
-    resourceId: string;
-    userId: string;
-    role: TeamRole;
 }
 
 export class TeamAddBotParam implements ITeamAddBotParam {

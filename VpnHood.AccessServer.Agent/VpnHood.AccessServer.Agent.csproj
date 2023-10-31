@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Authorization" Version="2.0.46" />
+    <PackageReference Include="GrayMint.Authorization" Version="2.0.47" />
     <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.147" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
   </ItemGroup>

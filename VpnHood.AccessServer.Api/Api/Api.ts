@@ -3255,7 +3255,7 @@ export class TeamClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "text/plain"
+                "Accept": "application/json"
             }
         };
 

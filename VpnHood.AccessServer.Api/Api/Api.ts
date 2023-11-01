@@ -6154,9 +6154,10 @@ export interface IServerStatusHistory {
 }
 
 export class UserApiKey implements IUserApiKey {
-    expiration!: Date;
+    accessToken!: string;
+    scheme!: string;
+    expirationTime!: Date;
     userId!: string;
-    authorization!: string;
 
     constructor(data?: IUserApiKey) {
         if (data) {
@@ -6169,9 +6170,10 @@ export class UserApiKey implements IUserApiKey {
 
     init(_data?: any) {
         if (_data) {
-            this.expiration = _data["expiration"] ? new Date(_data["expiration"].toString()) : <any>undefined;
+            this.accessToken = _data["accessToken"];
+            this.scheme = _data["scheme"];
+            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>undefined;
             this.userId = _data["userId"];
-            this.authorization = _data["authorization"];
         }
     }
 
@@ -6184,17 +6186,19 @@ export class UserApiKey implements IUserApiKey {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["expiration"] = this.expiration ? this.expiration.toISOString() : <any>undefined;
+        data["accessToken"] = this.accessToken;
+        data["scheme"] = this.scheme;
+        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>undefined;
         data["userId"] = this.userId;
-        data["authorization"] = this.authorization;
         return data;
     }
 }
 
 export interface IUserApiKey {
-    expiration: Date;
+    accessToken: string;
+    scheme: string;
+    expirationTime: Date;
     userId: string;
-    authorization: string;
 }
 
 export class User implements IUser {

@@ -90,7 +90,7 @@ public class TestInit : IHttpClientFactory, IDisposable
 
         // create new user
         SystemAdminApiKey = await TeamClient.CreateSystemApiKeyAsync();
-        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse( SystemAdminApiKey.Authorization);
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(SystemAdminApiKey.Scheme, SystemAdminApiKey.AccessToken);
 
         // create default project
         Project = await ProjectsClient.CreateAsync();
@@ -174,13 +174,13 @@ public class TestInit : IHttpClientFactory, IDisposable
     public async Task<UserApiKey> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
     {
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
-        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(SystemAdminApiKey.Scheme, SystemAdminApiKey.AccessToken);
 
         var resourceId = simpleRole.IsRoot ? Guid.Empty : Project.ProjectId;
         var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), simpleRole.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
-            ? AuthenticationHeaderValue.Parse(apiKey.Authorization) : oldAuthorization;
+            ? new AuthenticationHeaderValue(apiKey.Scheme, apiKey.AccessToken) : oldAuthorization;
 
         return apiKey;
     }
@@ -258,7 +258,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         return serverInfo;
     }
 
-    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
+    public async Task<SessionRequestEx> CreateSessionRequestEx(Api.AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
         , string? extraData = null)
     {
         var rand = new Random();
@@ -305,7 +305,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             await FlushCache();
 
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
-        HttpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(SystemAdminApiKey.Authorization);
+        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(SystemAdminApiKey.Scheme, SystemAdminApiKey.AccessToken);
         await SystemClient.SyncAsync();
         HttpClient.DefaultRequestHeaders.Authorization = oldAuthorization;
     }

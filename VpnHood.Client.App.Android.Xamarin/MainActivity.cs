@@ -23,6 +23,7 @@ namespace VpnHood.Client.App.Droid;
     Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
     MainLauncher = true,
     Exported = true,
+    WindowSoftInputMode = SoftInput.AdjustResize,
     AlwaysRetainTaskState = true,
     LaunchMode = LaunchMode.SingleInstance,
     ScreenOrientation = ScreenOrientation.Unspecified,
@@ -208,11 +209,12 @@ public class MainActivity : Activity
         WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
         WebView.Settings.SetSupportMultipleWindows(true);
         WebView.SetLayerType(LayerType.Hardware, null);
-
+        
         var webViewClient = new AppWebViewClient();
         webViewClient.PageLoaded += WebViewClient_PageLoaded;
         WebView.SetWebViewClient(webViewClient);
         WebView.SetWebChromeClient(new AppWebChromeClient());
+
 #if DEBUG
         WebView.SetWebContentsDebuggingEnabled(true);
 #endif

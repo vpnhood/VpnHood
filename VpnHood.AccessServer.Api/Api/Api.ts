@@ -6157,6 +6157,7 @@ export class UserApiKey implements IUserApiKey {
     accessToken!: string;
     scheme!: string;
     expirationTime!: Date;
+    issuedTime!: Date;
     userId!: string;
 
     constructor(data?: IUserApiKey) {
@@ -6173,6 +6174,7 @@ export class UserApiKey implements IUserApiKey {
             this.accessToken = _data["accessToken"];
             this.scheme = _data["scheme"];
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>undefined;
+            this.issuedTime = _data["issuedTime"] ? new Date(_data["issuedTime"].toString()) : <any>undefined;
             this.userId = _data["userId"];
         }
     }
@@ -6189,6 +6191,7 @@ export class UserApiKey implements IUserApiKey {
         data["accessToken"] = this.accessToken;
         data["scheme"] = this.scheme;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>undefined;
+        data["issuedTime"] = this.issuedTime ? this.issuedTime.toISOString() : <any>undefined;
         data["userId"] = this.userId;
         return data;
     }
@@ -6198,6 +6201,7 @@ export interface IUserApiKey {
     accessToken: string;
     scheme: string;
     expirationTime: Date;
+    issuedTime: Date;
     userId: string;
 }
 

@@ -10,6 +10,7 @@ using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -214,7 +215,7 @@ public class AccessTokenTest
     public async Task GetAccessKey_ForDomain()
     {
         var testInit = await TestInit.Create();
-        var certificate = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId);
+        var certificate = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId, new CertificateSelfSignedParams());
 
         var farm = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
         {

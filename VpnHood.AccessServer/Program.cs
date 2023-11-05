@@ -45,9 +45,8 @@ public class Program
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
         // Graymint
-        builder.AddGrayMintCommonServices(
-            new GrayMintCommonOptions { AppName = "VpnHood Access Server" },
-            new RegisterServicesOptions());
+        builder.Services.AddGrayMintCommonServices(new GrayMintCommonOptions(), new RegisterServicesOptions());
+        builder.Services.AddGrayMintSwagger("VpnHood Access Manager", true);
 
         // add authentication
         builder.Services
@@ -58,7 +57,6 @@ public class Program
         builder.Services.AddGrayMintSimpleRoleProvider(new SimpleRoleProviderOptions { Roles = SimpleRole.GetAll(typeof(Roles)) }, options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
         builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserProviderOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
         builder.Services.AddGrayMintTeamController(builder.Configuration.GetSection("TeamController").Get<TeamControllerOptions>());
-        builder.Services.AddGrayMintSwagger("VpnHood Access Manager", true);
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);

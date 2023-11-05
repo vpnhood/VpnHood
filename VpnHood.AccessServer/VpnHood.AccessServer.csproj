@@ -55,10 +55,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Authorization" Version="2.0.52" />
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.147" />
-    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.147" />
-    <PackageReference Include="GrayMint.Common.Swagger" Version="2.0.145" />
+    <PackageReference Include="GrayMint.Authorization" Version="3.0.55" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.152" />
+    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.152" />
+    <PackageReference Include="GrayMint.Common.Swagger" Version="2.0.150" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.13">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

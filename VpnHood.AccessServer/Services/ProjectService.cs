@@ -40,7 +40,7 @@ public class ProjectService
         _certificateService = certificateService;
     }
 
-    public async Task<Project> Create(Guid ownerUserId)
+    public async Task<Project> Create(string ownerUserId)
     {
         // Check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");

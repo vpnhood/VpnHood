@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
 using GrayMint.Authorization.RoleManagement.TeamControllers.Security;
 
@@ -10,7 +9,7 @@ public static class Roles
     public static SimpleRole ProjectReader { get; } = new()
     {
         RoleName = nameof(ProjectReader),
-        RoleId = Guid.Parse("{D7808522-5207-45A2-9924-BAA396398100}"),
+        RoleId = "{D7808522-5207-45A2-9924-BAA396398100}",
         IsRoot = false,
         Permissions = new[]
         {
@@ -21,7 +20,7 @@ public static class Roles
     public static SimpleRole ProjectWriter { get; } = new()
     {
         RoleName = nameof(ProjectWriter),
-        RoleId = Guid.Parse("{1EB1F99D-1419-4C29-8303-FA5A507D8AE2}"),
+        RoleId = "{1EB1F99D-1419-4C29-8303-FA5A507D8AE2}",
         IsRoot = false,
         Permissions = new[]
         {
@@ -41,7 +40,7 @@ public static class Roles
     public static SimpleRole ProjectAdmin { get; } = new()
     {
         RoleName = nameof(ProjectAdmin),
-        RoleId = Guid.Parse("{B16607B0-0580-4AE1-A295-85304FDD0F82}"),
+        RoleId = "{B16607B0-0580-4AE1-A295-85304FDD0F82}",
         IsRoot = false,
         Permissions = new[]
         {
@@ -54,7 +53,7 @@ public static class Roles
     public static SimpleRole ProjectOwner { get; } = new()
     {
         RoleName = nameof(ProjectOwner),
-        RoleId = Guid.Parse("{B7E69E64-F722-42F5-95E7-5E8364B9FF58}"),
+        RoleId = "{B7E69E64-F722-42F5-95E7-5E8364B9FF58}",
         IsRoot = false,
         Permissions = new[]
         {
@@ -66,7 +65,7 @@ public static class Roles
     public static SimpleRole SystemAdmin { get; } = new()
     {
         RoleName = nameof(SystemAdmin),
-        RoleId = Guid.Parse("{A1516270-D4D5-4888-820B-1C558006916F}"),
+        RoleId = "{A1516270-D4D5-4888-820B-1C558006916F}",
         IsRoot = true,
         Permissions = new[]
         {

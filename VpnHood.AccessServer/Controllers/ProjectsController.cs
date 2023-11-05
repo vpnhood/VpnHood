@@ -32,7 +32,7 @@ public class ProjectsController : ControllerBase
     {
         var userId = await _authorizationProvider.GetUserId(User);
         if (userId == null) throw new UnregisteredUser();
-        return await _projectService.Create(Guid.Parse(userId));
+        return await _projectService.Create(userId);
     }
 
     [HttpGet("{projectId:guid}")]

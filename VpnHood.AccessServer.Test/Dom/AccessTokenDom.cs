@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;
 

@@ -435,7 +435,7 @@ export class CertificatesClient {
         this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    createBySelfSigned(projectId: string, createParams: CertificateSelfSignedParams | undefined): Promise<Certificate> {
+    createBySelfSigned(projectId: string, createParams: CertificateSelfSignedParams): Promise<Certificate> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/certificates/self-signed";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1449,12 +1449,14 @@ export class ProjectsClient {
         return Promise.resolve<Project>(null as any);
     }
 
-    getUsage(projectId: string, usageBeginTime: Date | null | undefined, usageEndTime: Date | null | undefined, serverFarmId: string | null | undefined, serverId: string | null | undefined): Promise<Usage> {
+    getUsage(projectId: string, usageBeginTime: Date | null, usageEndTime: Date | null | undefined, serverFarmId: string | null | undefined, serverId: string | null | undefined): Promise<Usage> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/usage?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (usageBeginTime !== undefined && usageBeginTime !== null)
+        if (usageBeginTime === undefined)
+            throw new Error("The parameter 'usageBeginTime' must be defined.");
+        else if(usageBeginTime !== null)
             url_ += "usageBeginTime=" + encodeURIComponent(usageBeginTime ? "" + usageBeginTime.toISOString() : "") + "&";
         if (usageEndTime !== undefined && usageEndTime !== null)
             url_ += "usageEndTime=" + encodeURIComponent(usageEndTime ? "" + usageEndTime.toISOString() : "") + "&";
@@ -1505,7 +1507,7 @@ export class ServerFarmsClient {
         this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    create(projectId: string, createParams: ServerFarmCreateParams | undefined): Promise<ServerFarm> {
+    create(projectId: string, createParams: ServerFarmCreateParams): Promise<ServerFarm> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/server-farms";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -2387,12 +2389,14 @@ export class ServersClient {
         return Promise.resolve<ServersStatusSummary>(null as any);
     }
 
-    getStatusHistory(projectId: string, usageBeginTime: Date | null | undefined, usageEndTime: Date | null | undefined, serverId: string | null | undefined): Promise<ServerStatusHistory[]> {
+    getStatusHistory(projectId: string, usageBeginTime: Date | null, usageEndTime: Date | null | undefined, serverId: string | null | undefined): Promise<ServerStatusHistory[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers/status-history?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (usageBeginTime !== undefined && usageBeginTime !== null)
+        if (usageBeginTime === undefined)
+            throw new Error("The parameter 'usageBeginTime' must be defined.");
+        else if(usageBeginTime !== null)
             url_ += "usageBeginTime=" + encodeURIComponent(usageBeginTime ? "" + usageBeginTime.toISOString() : "") + "&";
         if (usageEndTime !== undefined && usageEndTime !== null)
             url_ += "usageEndTime=" + encodeURIComponent(usageEndTime ? "" + usageEndTime.toISOString() : "") + "&";
@@ -2530,176 +2534,6 @@ export class TeamClient {
         return Promise.resolve<Project[]>(null as any);
     }
 
-    signIn(longExpiration: boolean | undefined): Promise<UserApiKey> {
-        let url_ = this.baseUrl + "/api/v1/team/users/current/signin?";
-        if (longExpiration === null)
-            throw new Error("The parameter 'longExpiration' cannot be null.");
-        else if (longExpiration !== undefined)
-            url_ += "longExpiration=" + encodeURIComponent("" + longExpiration) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSignIn(_response);
-        });
-    }
-
-    protected processSignIn(response: Response): Promise<UserApiKey> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserApiKey>(null as any);
-    }
-
-    signUp(): Promise<UserApiKey> {
-        let url_ = this.baseUrl + "/api/v1/team/users/current/signup";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSignUp(_response);
-        });
-    }
-
-    protected processSignUp(response: Response): Promise<UserApiKey> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserApiKey>(null as any);
-    }
-
-    signOutAll(): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/team/users/current/signout-all";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSignOutAll(_response);
-        });
-    }
-
-    protected processSignOutAll(response: Response): Promise<void> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            return;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    getCurrentUser(): Promise<User> {
-        let url_ = this.baseUrl + "/api/v1/team/users/current";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetCurrentUser(_response);
-        });
-    }
-
-    protected processGetCurrentUser(response: Response): Promise<User> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = User.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<User>(null as any);
-    }
-
-    resetCurrentUserApiKey(): Promise<UserApiKey> {
-        let url_ = this.baseUrl + "/api/v1/team/users/current/reset-api-key";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processResetCurrentUserApiKey(_response);
-        });
-    }
-
-    protected processResetCurrentUserApiKey(response: Response): Promise<UserApiKey> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<UserApiKey>(null as any);
-    }
-
     listCurrentUserResources(): Promise<string[]> {
         let url_ = this.baseUrl + "/api/v1/team/users/current/resources";
         url_ = url_.replace(/[?&]$/, "");
@@ -2785,7 +2619,7 @@ export class TeamClient {
         return Promise.resolve<string[]>(null as any);
     }
 
-    resetBotApiKey(userId: string): Promise<UserApiKey> {
+    resetBotApiKey(userId: string): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/users/{userId}/bot/reset-api-key";
         if (userId === undefined || userId === null)
             throw new Error("The parameter 'userId' must be defined.");
@@ -2804,14 +2638,14 @@ export class TeamClient {
         });
     }
 
-    protected processResetBotApiKey(response: Response): Promise<UserApiKey> {
+    protected processResetBotApiKey(response: Response): Promise<ApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
+            result200 = ApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2819,7 +2653,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<UserApiKey>(null as any);
+        return Promise.resolve<ApiKey>(null as any);
     }
 
     updateBot(userId: string, updateParam: TeamUpdateBotParam): Promise<User> {
@@ -2907,7 +2741,7 @@ export class TeamClient {
         return Promise.resolve<Role[]>(null as any);
     }
 
-    listUserRoles(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfTeamUserRole> {
+    listUserRoles(resourceId: string, roleId: string | null | undefined, userId: string | null | undefined, search: string | null | undefined, isBot: boolean | null | undefined, recordIndex: number | undefined, recordCount: number | null | undefined): Promise<ListResultOfUserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/user-roles?";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2940,14 +2774,14 @@ export class TeamClient {
         });
     }
 
-    protected processListUserRoles(response: Response): Promise<ListResultOfTeamUserRole> {
+    protected processListUserRoles(response: Response): Promise<ListResultOfUserRole> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = ListResultOfTeamUserRole.fromJS(resultData200);
+            result200 = ListResultOfUserRole.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2955,10 +2789,10 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ListResultOfTeamUserRole>(null as any);
+        return Promise.resolve<ListResultOfUserRole>(null as any);
     }
 
-    addNewBot(resourceId: string, roleId: string, addParam: TeamAddBotParam): Promise<UserApiKey> {
+    addNewBot(resourceId: string, roleId: string, addParam: TeamAddBotParam): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/bots";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -2984,14 +2818,14 @@ export class TeamClient {
         });
     }
 
-    protected processAddNewBot(response: Response): Promise<UserApiKey> {
+    protected processAddNewBot(response: Response): Promise<ApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
+            result200 = ApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -2999,10 +2833,10 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<UserApiKey>(null as any);
+        return Promise.resolve<ApiKey>(null as any);
     }
 
-    addUserByEmail(resourceId: string, roleId: string, email: string, addParam: TeamAddEmailParam | undefined): Promise<TeamUserRole> {
+    addUserByEmail(resourceId: string, roleId: string, email: string, addParam: TeamAddEmailParam | undefined): Promise<UserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/email:{email}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -3031,14 +2865,14 @@ export class TeamClient {
         });
     }
 
-    protected processAddUserByEmail(response: Response): Promise<TeamUserRole> {
+    protected processAddUserByEmail(response: Response): Promise<UserRole> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = TeamUserRole.fromJS(resultData200);
+            result200 = UserRole.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -3046,10 +2880,10 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<TeamUserRole>(null as any);
+        return Promise.resolve<UserRole>(null as any);
     }
 
-    addUser(resourceId: string, roleId: string, userId: string): Promise<TeamUserRole> {
+    addUser(resourceId: string, roleId: string, userId: string): Promise<UserRole> {
         let url_ = this.baseUrl + "/api/v1/team/resources/{resourceId}/roles/{roleId}/users/{userId}";
         if (resourceId === undefined || resourceId === null)
             throw new Error("The parameter 'resourceId' must be defined.");
@@ -3074,14 +2908,14 @@ export class TeamClient {
         });
     }
 
-    protected processAddUser(response: Response): Promise<TeamUserRole> {
+    protected processAddUser(response: Response): Promise<UserRole> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = TeamUserRole.fromJS(resultData200);
+            result200 = UserRole.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -3089,7 +2923,7 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<TeamUserRole>(null as any);
+        return Promise.resolve<UserRole>(null as any);
     }
 
     removeUser(resourceId: string, roleId: string, userId: string): Promise<void> {
@@ -3131,7 +2965,7 @@ export class TeamClient {
         return Promise.resolve<void>(null as any);
     }
 
-    createSystemApiKey(): Promise<UserApiKey> {
+    createSystemApiKey(): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/system/api-key";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -3147,14 +2981,14 @@ export class TeamClient {
         });
     }
 
-    protected processCreateSystemApiKey(response: Response): Promise<UserApiKey> {
+    protected processCreateSystemApiKey(response: Response): Promise<ApiKey> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = UserApiKey.fromJS(resultData200);
+            result200 = ApiKey.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -3162,15 +2996,22 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<UserApiKey>(null as any);
+        return Promise.resolve<ApiKey>(null as any);
+    }
+}
+
+export class AuthenticationClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    getIdTokenFromCognito(idToken: string | undefined): Promise<string> {
-        let url_ = this.baseUrl + "/api/v1/team/system/external/cognito/id-token?";
-        if (idToken === null)
-            throw new Error("The parameter 'idToken' cannot be null.");
-        else if (idToken !== undefined)
-            url_ += "idToken=" + encodeURIComponent("" + idToken) + "&";
+    getCurrentUser(): Promise<User> {
+        let url_ = this.baseUrl + "/api/v1/authentication/current";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -3181,19 +3022,18 @@ export class TeamClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetIdTokenFromCognito(_response);
+            return this.processGetCurrentUser(_response);
         });
     }
 
-    protected processGetIdTokenFromCognito(response: Response): Promise<string> {
+    protected processGetCurrentUser(response: Response): Promise<User> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
+            result200 = User.fromJS(resultData200);
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -3201,11 +3041,197 @@ export class TeamClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<string>(null as any);
+        return Promise.resolve<User>(null as any);
+    }
+
+    signOutAll(): Promise<void> {
+        let url_ = this.baseUrl + "/api/v1/authentication/current/signout-all";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processSignOutAll(_response);
+        });
+    }
+
+    protected processSignOutAll(response: Response): Promise<void> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    resetCurrentUserApiKey(): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/current/reset-api-key";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processResetCurrentUserApiKey(_response);
+        });
+    }
+
+    protected processResetCurrentUserApiKey(response: Response): Promise<ApiKey> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ApiKey.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ApiKey>(null as any);
+    }
+
+    signIn(idToken: string, longExpiration: boolean | undefined): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/signin?";
+        if (idToken === undefined || idToken === null)
+            throw new Error("The parameter 'idToken' must be defined and cannot be null.");
+        else
+            url_ += "idToken=" + encodeURIComponent("" + idToken) + "&";
+        if (longExpiration === null)
+            throw new Error("The parameter 'longExpiration' cannot be null.");
+        else if (longExpiration !== undefined)
+            url_ += "longExpiration=" + encodeURIComponent("" + longExpiration) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processSignIn(_response);
+        });
+    }
+
+    protected processSignIn(response: Response): Promise<ApiKey> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ApiKey.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ApiKey>(null as any);
+    }
+
+    signUp(idToken: string, longExpiration: boolean | undefined): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/signup?";
+        if (idToken === undefined || idToken === null)
+            throw new Error("The parameter 'idToken' must be defined and cannot be null.");
+        else
+            url_ += "idToken=" + encodeURIComponent("" + idToken) + "&";
+        if (longExpiration === null)
+            throw new Error("The parameter 'longExpiration' cannot be null.");
+        else if (longExpiration !== undefined)
+            url_ += "longExpiration=" + encodeURIComponent("" + longExpiration) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processSignUp(_response);
+        });
+    }
+
+    protected processSignUp(response: Response): Promise<ApiKey> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ApiKey.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ApiKey>(null as any);
+    }
+
+    refreshToken(refreshToken: string): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/refresh-token?";
+        if (refreshToken === undefined || refreshToken === null)
+            throw new Error("The parameter 'refreshToken' must be defined and cannot be null.");
+        else
+            url_ += "refreshToken=" + encodeURIComponent("" + refreshToken) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRefreshToken(_response);
+        });
+    }
+
+    protected processRefreshToken(response: Response): Promise<ApiKey> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = ApiKey.fromJS(resultData200);
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ApiKey>(null as any);
     }
 
     googleSignInHandler(): Promise<FileResponse | null> {
-        let url_ = this.baseUrl + "/api/v1/team/system/external/google/signin-handler";
+        let url_ = this.baseUrl + "/api/v1/authentication/external/google/signin-handler";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -3242,11 +3268,11 @@ export class TeamClient {
         return Promise.resolve<FileResponse | null>(null as any);
     }
 
-    getGoogleSignInUrl(csrfToken: string | undefined, nonce: string | null | undefined): Promise<string> {
-        let url_ = this.baseUrl + "/api/v1/team/system/external/google/signin-url?";
-        if (csrfToken === null)
-            throw new Error("The parameter 'csrfToken' cannot be null.");
-        else if (csrfToken !== undefined)
+    getGoogleSignInUrl(csrfToken: string, nonce: string | null | undefined): Promise<string> {
+        let url_ = this.baseUrl + "/api/v1/authentication/external/google/signin-url?";
+        if (csrfToken === undefined || csrfToken === null)
+            throw new Error("The parameter 'csrfToken' must be defined and cannot be null.");
+        else
             url_ += "csrfToken=" + encodeURIComponent("" + csrfToken) + "&";
         if (nonce !== undefined && nonce !== null)
             url_ += "nonce=" + encodeURIComponent("" + nonce) + "&";
@@ -3265,45 +3291,6 @@ export class TeamClient {
     }
 
     protected processGetGoogleSignInUrl(response: Response): Promise<string> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<string>(null as any);
-    }
-
-    getIdTokenFromGoogle(idToken: string | undefined): Promise<string> {
-        let url_ = this.baseUrl + "/api/v1/team/system/external/google/id-token?";
-        if (idToken === null)
-            throw new Error("The parameter 'idToken' cannot be null.");
-        else if (idToken !== undefined)
-            url_ += "idToken=" + encodeURIComponent("" + idToken) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetIdTokenFromGoogle(_response);
-        });
-    }
-
-    protected processGetIdTokenFromGoogle(response: Response): Promise<string> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -6153,14 +6140,60 @@ export interface IServerStatusHistory {
     serverCount: number;
 }
 
-export class UserApiKey implements IUserApiKey {
-    accessToken!: string;
-    scheme!: string;
-    expirationTime!: Date;
-    issuedTime!: Date;
+export class ApiKey implements IApiKey {
+    accessToken!: Token;
+    refreshToken?: Token | undefined;
     userId!: string;
 
-    constructor(data?: IUserApiKey) {
+    constructor(data?: IApiKey) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.accessToken = new Token();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.accessToken = _data["accessToken"] ? Token.fromJS(_data["accessToken"]) : new Token();
+            this.refreshToken = _data["refreshToken"] ? Token.fromJS(_data["refreshToken"]) : <any>undefined;
+            this.userId = _data["userId"];
+        }
+    }
+
+    static fromJS(data: any): ApiKey {
+        data = typeof data === 'object' ? data : {};
+        let result = new ApiKey();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["accessToken"] = this.accessToken ? this.accessToken.toJSON() : <any>undefined;
+        data["refreshToken"] = this.refreshToken ? this.refreshToken.toJSON() : <any>undefined;
+        data["userId"] = this.userId;
+        return data;
+    }
+}
+
+export interface IApiKey {
+    accessToken: Token;
+    refreshToken?: Token | undefined;
+    userId: string;
+}
+
+export class Token implements IToken {
+    value!: string;
+    expirationTime!: Date;
+    scheme!: string;
+    issuedTime!: Date;
+
+    constructor(data?: IToken) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6171,38 +6204,35 @@ export class UserApiKey implements IUserApiKey {
 
     init(_data?: any) {
         if (_data) {
-            this.accessToken = _data["accessToken"];
-            this.scheme = _data["scheme"];
+            this.value = _data["value"];
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>undefined;
+            this.scheme = _data["scheme"];
             this.issuedTime = _data["issuedTime"] ? new Date(_data["issuedTime"].toString()) : <any>undefined;
-            this.userId = _data["userId"];
         }
     }
 
-    static fromJS(data: any): UserApiKey {
+    static fromJS(data: any): Token {
         data = typeof data === 'object' ? data : {};
-        let result = new UserApiKey();
+        let result = new Token();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["accessToken"] = this.accessToken;
-        data["scheme"] = this.scheme;
+        data["value"] = this.value;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>undefined;
+        data["scheme"] = this.scheme;
         data["issuedTime"] = this.issuedTime ? this.issuedTime.toISOString() : <any>undefined;
-        data["userId"] = this.userId;
         return data;
     }
 }
 
-export interface IUserApiKey {
-    accessToken: string;
-    scheme: string;
+export interface IToken {
+    value: string;
     expirationTime: Date;
+    scheme: string;
     issuedTime: Date;
-    userId: string;
 }
 
 export class User implements IUser {
@@ -6417,11 +6447,11 @@ export interface IRole {
     description?: string | undefined;
 }
 
-export class ListResultOfTeamUserRole implements IListResultOfTeamUserRole {
+export class ListResultOfUserRole implements IListResultOfUserRole {
     totalCount?: number | undefined;
-    items!: TeamUserRole[];
+    items!: UserRole[];
 
-    constructor(data?: IListResultOfTeamUserRole) {
+    constructor(data?: IListResultOfUserRole) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6439,14 +6469,14 @@ export class ListResultOfTeamUserRole implements IListResultOfTeamUserRole {
             if (Array.isArray(_data["items"])) {
                 this.items = [] as any;
                 for (let item of _data["items"])
-                    this.items!.push(TeamUserRole.fromJS(item));
+                    this.items!.push(UserRole.fromJS(item));
             }
         }
     }
 
-    static fromJS(data: any): ListResultOfTeamUserRole {
+    static fromJS(data: any): ListResultOfUserRole {
         data = typeof data === 'object' ? data : {};
-        let result = new ListResultOfTeamUserRole();
+        let result = new ListResultOfUserRole();
         result.init(data);
         return result;
     }
@@ -6463,17 +6493,17 @@ export class ListResultOfTeamUserRole implements IListResultOfTeamUserRole {
     }
 }
 
-export interface IListResultOfTeamUserRole {
+export interface IListResultOfUserRole {
     totalCount?: number | undefined;
-    items: TeamUserRole[];
+    items: UserRole[];
 }
 
-export class UserRole implements IUserRole {
+export class UserRole2 implements IUserRole2 {
     resourceId!: string;
     userId!: string;
     role!: Role;
 
-    constructor(data?: IUserRole) {
+    constructor(data?: IUserRole2) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6493,9 +6523,9 @@ export class UserRole implements IUserRole {
         }
     }
 
-    static fromJS(data: any): UserRole {
+    static fromJS(data: any): UserRole2 {
         data = typeof data === 'object' ? data : {};
-        let result = new UserRole();
+        let result = new UserRole2();
         result.init(data);
         return result;
     }
@@ -6509,16 +6539,16 @@ export class UserRole implements IUserRole {
     }
 }
 
-export interface IUserRole {
+export interface IUserRole2 {
     resourceId: string;
     userId: string;
     role: Role;
 }
 
-export class TeamUserRole extends UserRole implements ITeamUserRole {
+export class UserRole extends UserRole2 implements IUserRole {
     user?: User | undefined;
 
-    constructor(data?: ITeamUserRole) {
+    constructor(data?: IUserRole) {
         super(data);
     }
 
@@ -6529,9 +6559,9 @@ export class TeamUserRole extends UserRole implements ITeamUserRole {
         }
     }
 
-    static fromJS(data: any): TeamUserRole {
+    static fromJS(data: any): UserRole {
         data = typeof data === 'object' ? data : {};
-        let result = new TeamUserRole();
+        let result = new UserRole();
         result.init(data);
         return result;
     }
@@ -6544,7 +6574,7 @@ export class TeamUserRole extends UserRole implements ITeamUserRole {
     }
 }
 
-export interface ITeamUserRole extends IUserRole {
+export interface IUserRole extends IUserRole2 {
     user?: User | undefined;
 }
 

@@ -35,7 +35,7 @@ public class SubscriptionService
         _userProvider = userProvider;
     }
 
-    public async Task AuthorizeCreateProject(Guid userId)
+    public async Task AuthorizeCreateProject(string userId)
     {
         var user = await _userProvider.Get(userId); // make sure the user is registered
         var userRoles = await _roleProvider.GetUserRoles(userId: user.UserId);

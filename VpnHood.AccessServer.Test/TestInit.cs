@@ -28,6 +28,8 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Test.Helper;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
+using ApiKey = VpnHood.AccessServer.Api.ApiKey;
+using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -59,8 +61,9 @@ public class TestInit : IHttpClientFactory, IDisposable
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
 
-    public UserApiKey SystemAdminApiKey { get; private set; } = default!;
-    public UserApiKey ProjectOwnerApiKey { get; private set; } = default!;
+    public ApiKey SystemAdminApiKey { get; private set; } = default!;
+    public AuthenticationHeaderValue SystemAdminAuthorization => new(SystemAdminApiKey.AccessToken.Scheme, SystemAdminApiKey.AccessToken.Value);
+    public ApiKey ProjectOwnerApiKey { get; private set; } = default!;
     public Project Project { get; private set; } = default!;
     public Guid ProjectId => Project.ProjectId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -90,7 +93,7 @@ public class TestInit : IHttpClientFactory, IDisposable
 
         // create new user
         SystemAdminApiKey = await TeamClient.CreateSystemApiKeyAsync();
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(SystemAdminApiKey.Scheme, SystemAdminApiKey.AccessToken);
+        HttpClient.DefaultRequestHeaders.Authorization = SystemAdminAuthorization;
 
         // create default project
         Project = await ProjectsClient.CreateAsync();
@@ -171,16 +174,16 @@ public class TestInit : IHttpClientFactory, IDisposable
         return webApp;
     }
 
-    public async Task<UserApiKey> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
+    public async Task<ApiKey> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
     {
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(SystemAdminApiKey.Scheme, SystemAdminApiKey.AccessToken);
+        HttpClient.DefaultRequestHeaders.Authorization = SystemAdminAuthorization;
 
         var resourceId = simpleRole.IsRoot ? Guid.Empty : Project.ProjectId;
         var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), simpleRole.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
-            ? new AuthenticationHeaderValue(apiKey.Scheme, apiKey.AccessToken) : oldAuthorization;
+            ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : oldAuthorization;
 
         return apiKey;
     }
@@ -305,7 +308,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             await FlushCache();
 
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
-        HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(SystemAdminApiKey.Scheme, SystemAdminApiKey.AccessToken);
+        HttpClient.DefaultRequestHeaders.Authorization = SystemAdminAuthorization;
         await SystemClient.SyncAsync();
         HttpClient.DefaultRequestHeaders.Authorization = oldAuthorization;
     }

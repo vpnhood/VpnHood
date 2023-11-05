@@ -30,7 +30,7 @@ public class CertificatesController : ControllerBase
 
     [HttpPut("{certificateId:guid}/self-signed")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> ReplaceBySelfSigned(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams)
+    public async Task<Certificate> ReplaceBySelfSigned(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams = null)
     {
         var ret = await _certificateService.ReplaceBySelfSinged(projectId, certificateId, createParams);
         return ret;
@@ -54,7 +54,7 @@ public class CertificatesController : ControllerBase
 
     [HttpGet("{certificateId:guid}")]
     [AuthorizeProjectPermission(Permissions.CertificateRead)]
-    public Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary)
+    public Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
     {
         return _certificateService.Get(projectId, certificateId, includeSummary);
     }

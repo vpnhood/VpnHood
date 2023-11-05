@@ -7,6 +7,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using GrayMint.Common.Exceptions;
 using VpnHood.Common;
+using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

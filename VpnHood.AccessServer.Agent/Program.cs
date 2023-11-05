@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Authorization.Authentications.Utils;
+using GrayMint.Common.Swagger;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -25,9 +26,8 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
-        builder.AddGrayMintCommonServices(
-            new GrayMintCommonOptions { AppName = "VpnHood Agent Server" },
-            new RegisterServicesOptions { AddSwaggerVersioning = false });
+        builder.Services.AddGrayMintCommonServices(new GrayMintCommonOptions (), new RegisterServicesOptions());
+        builder.Services.AddGrayMintSwagger("VpnHood Agent Server", true);
 
         //Authentication
         builder.Services
@@ -36,29 +36,30 @@ public class Program
                  builder.Environment.IsProduction());
 
         // Authorization Policies
-        builder.Services.AddAuthorization(options =>
-        {
-            var policy = new AuthorizationPolicyBuilder()
-                .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
-                .RequireRole("System")
-                .RequireAuthenticatedUser()
-                .Build();
-            options.AddPolicy(AgentPolicy.SystemPolicy, policy);
-            options.DefaultPolicy = policy;
+        builder.Services
+            .AddAuthorization(options =>
+            {
+                var policy = new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
+                    .RequireRole("System")
+                    .RequireAuthenticatedUser()
+                    .Build();
+                options.AddPolicy(AgentPolicy.SystemPolicy, policy);
+                options.DefaultPolicy = policy;
 
-            policy = new AuthorizationPolicyBuilder()
-                .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
-                .RequireAuthenticatedUser()
-                .Build();
-            options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);
-        });
+                policy = new AuthorizationPolicyBuilder()
+                    .AddAuthenticationSchemes(GrayMintAuthenticationDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build();
+                options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);
+            });
 
         builder.Services
             .AddDbContextPool<VhContext>(options =>
-        {
-            options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
-            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
-        }, 100);
+            {
+                options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
+            }, 100);
 
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();

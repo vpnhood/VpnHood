@@ -6821,19 +6821,13 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ApiKey> SignInAsync(string idToken, bool? longExpiration = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ApiKey> SignInAsync(SignInRequest signInRequest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (idToken == null)
-                throw new System.ArgumentNullException("idToken");
+            if (signInRequest == null)
+                throw new System.ArgumentNullException("signInRequest");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/authentication/signin?");
-            urlBuilder_.Append(System.Uri.EscapeDataString("idToken") + "=").Append(System.Uri.EscapeDataString(ConvertToString(idToken, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            if (longExpiration != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("longExpiration") + "=").Append(System.Uri.EscapeDataString(ConvertToString(longExpiration, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            urlBuilder_.Length--;
+            urlBuilder_.Append("api/v1/authentication/signin");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6841,7 +6835,10 @@ namespace VpnHood.AccessServer.Api
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
+                    var json_ = System.Text.Json.JsonSerializer.Serialize(signInRequest, _settings.Value);
+                    var content_ = new System.Net.Http.StringContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("POST");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
@@ -6897,19 +6894,13 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ApiKey> SignUpAsync(string idToken, bool? longExpiration = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ApiKey> SignUpAsync(SignUpRequest signUpRequest, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (idToken == null)
-                throw new System.ArgumentNullException("idToken");
+            if (signUpRequest == null)
+                throw new System.ArgumentNullException("signUpRequest");
 
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/v1/authentication/signup?");
-            urlBuilder_.Append(System.Uri.EscapeDataString("idToken") + "=").Append(System.Uri.EscapeDataString(ConvertToString(idToken, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            if (longExpiration != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("longExpiration") + "=").Append(System.Uri.EscapeDataString(ConvertToString(longExpiration, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            urlBuilder_.Length--;
+            urlBuilder_.Append("api/v1/authentication/signup");
 
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6917,7 +6908,10 @@ namespace VpnHood.AccessServer.Api
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
+                    var json_ = System.Text.Json.JsonSerializer.Serialize(signUpRequest, _settings.Value);
+                    var content_ = new System.Net.Http.StringContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("POST");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
@@ -9194,6 +9188,50 @@ namespace VpnHood.AccessServer.Api
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.20.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class TeamAddEmailParam
     {
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.20.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SignInRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("idToken")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IdToken { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("longExpiration")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool LongExpiration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("withRefreshToken")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool WithRefreshToken { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.20.0.0 (NJsonSchema v10.9.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SignUpRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("idToken")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string IdToken { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("longExpiration")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool LongExpiration { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("withRefreshToken")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool WithRefreshToken { get; set; } = default!;
 
     }
 

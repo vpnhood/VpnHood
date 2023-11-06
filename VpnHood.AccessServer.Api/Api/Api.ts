@@ -3108,21 +3108,17 @@ export class AuthenticationClient {
         return Promise.resolve<ApiKey>(null as any);
     }
 
-    signIn(idToken: string, longExpiration: boolean | undefined): Promise<ApiKey> {
-        let url_ = this.baseUrl + "/api/v1/authentication/signin?";
-        if (idToken === undefined || idToken === null)
-            throw new Error("The parameter 'idToken' must be defined and cannot be null.");
-        else
-            url_ += "idToken=" + encodeURIComponent("" + idToken) + "&";
-        if (longExpiration === null)
-            throw new Error("The parameter 'longExpiration' cannot be null.");
-        else if (longExpiration !== undefined)
-            url_ += "longExpiration=" + encodeURIComponent("" + longExpiration) + "&";
+    signIn(signInRequest: SignInRequest): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/signin";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(signInRequest);
+
         let options_: RequestInit = {
+            body: content_,
             method: "POST",
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
@@ -3150,21 +3146,17 @@ export class AuthenticationClient {
         return Promise.resolve<ApiKey>(null as any);
     }
 
-    signUp(idToken: string, longExpiration: boolean | undefined): Promise<ApiKey> {
-        let url_ = this.baseUrl + "/api/v1/authentication/signup?";
-        if (idToken === undefined || idToken === null)
-            throw new Error("The parameter 'idToken' must be defined and cannot be null.");
-        else
-            url_ += "idToken=" + encodeURIComponent("" + idToken) + "&";
-        if (longExpiration === null)
-            throw new Error("The parameter 'longExpiration' cannot be null.");
-        else if (longExpiration !== undefined)
-            url_ += "longExpiration=" + encodeURIComponent("" + longExpiration) + "&";
+    signUp(signUpRequest: SignUpRequest): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/signup";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(signUpRequest);
+
         let options_: RequestInit = {
+            body: content_,
             method: "POST",
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
@@ -6642,6 +6634,94 @@ export class TeamAddEmailParam implements ITeamAddEmailParam {
 }
 
 export interface ITeamAddEmailParam {
+}
+
+export class SignInRequest implements ISignInRequest {
+    idToken!: string;
+    longExpiration!: boolean;
+    withRefreshToken!: boolean;
+
+    constructor(data?: ISignInRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.idToken = _data["idToken"];
+            this.longExpiration = _data["longExpiration"];
+            this.withRefreshToken = _data["withRefreshToken"];
+        }
+    }
+
+    static fromJS(data: any): SignInRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new SignInRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["idToken"] = this.idToken;
+        data["longExpiration"] = this.longExpiration;
+        data["withRefreshToken"] = this.withRefreshToken;
+        return data;
+    }
+}
+
+export interface ISignInRequest {
+    idToken: string;
+    longExpiration: boolean;
+    withRefreshToken: boolean;
+}
+
+export class SignUpRequest implements ISignUpRequest {
+    idToken!: string;
+    longExpiration!: boolean;
+    withRefreshToken!: boolean;
+
+    constructor(data?: ISignUpRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.idToken = _data["idToken"];
+            this.longExpiration = _data["longExpiration"];
+            this.withRefreshToken = _data["withRefreshToken"];
+        }
+    }
+
+    static fromJS(data: any): SignUpRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new SignUpRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["idToken"] = this.idToken;
+        data["longExpiration"] = this.longExpiration;
+        data["withRefreshToken"] = this.withRefreshToken;
+        return data;
+    }
+}
+
+export interface ISignUpRequest {
+    idToken: string;
+    longExpiration: boolean;
+    withRefreshToken: boolean;
 }
 
 export interface FileResponse {

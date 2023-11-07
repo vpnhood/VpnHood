@@ -26,6 +26,7 @@ using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
 using GrayMint.Authorization.RoleManagement.TeamControllers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using GrayMint.Authorization.Authentications;
+using GrayMint.Authorization.Authentications.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using GrayMint.Common.Swagger;
 
@@ -57,6 +58,7 @@ public class Program
         builder.Services.AddGrayMintSimpleRoleProvider(new SimpleRoleProviderOptions { Roles = SimpleRole.GetAll(typeof(Roles)) }, options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
         builder.Services.AddGrayMintSimpleUserProvider(authConfiguration.Get<SimpleUserProviderOptions>(), options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
         builder.Services.AddGrayMintTeamController(builder.Configuration.GetSection("TeamController").Get<TeamControllerOptions>());
+        builder.Services.AddGrayMintAuthenticationController();
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);

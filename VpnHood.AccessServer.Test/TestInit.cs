@@ -17,6 +17,7 @@ using VpnHood.AccessServer.Report.Persistence;
 using System.Net.Http.Headers;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
+using GrayMint.Authorization.Authentications.Dtos;
 using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

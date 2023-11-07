@@ -3108,11 +3108,11 @@ export class AuthenticationClient {
         return Promise.resolve<ApiKey>(null as any);
     }
 
-    signIn(signInRequest: SignInRequest): Promise<ApiKey> {
+    signIn(request: SignInRequest): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/authentication/signin";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(signInRequest);
+        const content_ = JSON.stringify(request);
 
         let options_: RequestInit = {
             body: content_,
@@ -3146,11 +3146,11 @@ export class AuthenticationClient {
         return Promise.resolve<ApiKey>(null as any);
     }
 
-    signUp(signUpRequest: SignUpRequest): Promise<ApiKey> {
+    signUp(request: SignUpRequest): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/authentication/signup";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(signUpRequest);
+        const content_ = JSON.stringify(request);
 
         let options_: RequestInit = {
             body: content_,
@@ -3184,17 +3184,17 @@ export class AuthenticationClient {
         return Promise.resolve<ApiKey>(null as any);
     }
 
-    refreshToken(refreshToken: string): Promise<ApiKey> {
-        let url_ = this.baseUrl + "/api/v1/authentication/refresh-token?";
-        if (refreshToken === undefined || refreshToken === null)
-            throw new Error("The parameter 'refreshToken' must be defined and cannot be null.");
-        else
-            url_ += "refreshToken=" + encodeURIComponent("" + refreshToken) + "&";
+    refreshToken(request: RefreshTokenRequest): Promise<ApiKey> {
+        let url_ = this.baseUrl + "/api/v1/authentication/refresh-token";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(request);
+
         let options_: RequestInit = {
+            body: content_,
             method: "POST",
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
@@ -6638,8 +6638,7 @@ export interface ITeamAddEmailParam {
 
 export class SignInRequest implements ISignInRequest {
     idToken!: string;
-    longExpiration!: boolean;
-    withRefreshToken!: boolean;
+    refreshTokenType!: RefreshTokenType;
 
     constructor(data?: ISignInRequest) {
         if (data) {
@@ -6653,8 +6652,7 @@ export class SignInRequest implements ISignInRequest {
     init(_data?: any) {
         if (_data) {
             this.idToken = _data["idToken"];
-            this.longExpiration = _data["longExpiration"];
-            this.withRefreshToken = _data["withRefreshToken"];
+            this.refreshTokenType = _data["refreshTokenType"];
         }
     }
 
@@ -6668,22 +6666,25 @@ export class SignInRequest implements ISignInRequest {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["idToken"] = this.idToken;
-        data["longExpiration"] = this.longExpiration;
-        data["withRefreshToken"] = this.withRefreshToken;
+        data["refreshTokenType"] = this.refreshTokenType;
         return data;
     }
 }
 
 export interface ISignInRequest {
     idToken: string;
-    longExpiration: boolean;
-    withRefreshToken: boolean;
+    refreshTokenType: RefreshTokenType;
+}
+
+export enum RefreshTokenType {
+    None = 0,
+    Web = 1,
+    App = 2,
 }
 
 export class SignUpRequest implements ISignUpRequest {
     idToken!: string;
-    longExpiration!: boolean;
-    withRefreshToken!: boolean;
+    refreshTokenType!: RefreshTokenType;
 
     constructor(data?: ISignUpRequest) {
         if (data) {
@@ -6697,8 +6698,7 @@ export class SignUpRequest implements ISignUpRequest {
     init(_data?: any) {
         if (_data) {
             this.idToken = _data["idToken"];
-            this.longExpiration = _data["longExpiration"];
-            this.withRefreshToken = _data["withRefreshToken"];
+            this.refreshTokenType = _data["refreshTokenType"];
         }
     }
 
@@ -6712,16 +6712,50 @@ export class SignUpRequest implements ISignUpRequest {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["idToken"] = this.idToken;
-        data["longExpiration"] = this.longExpiration;
-        data["withRefreshToken"] = this.withRefreshToken;
+        data["refreshTokenType"] = this.refreshTokenType;
         return data;
     }
 }
 
 export interface ISignUpRequest {
     idToken: string;
-    longExpiration: boolean;
-    withRefreshToken: boolean;
+    refreshTokenType: RefreshTokenType;
+}
+
+export class RefreshTokenRequest implements IRefreshTokenRequest {
+    refreshToken!: string;
+
+    constructor(data?: IRefreshTokenRequest) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.refreshToken = _data["refreshToken"];
+        }
+    }
+
+    static fromJS(data: any): RefreshTokenRequest {
+        data = typeof data === 'object' ? data : {};
+        let result = new RefreshTokenRequest();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["refreshToken"] = this.refreshToken;
+        return data;
+    }
+}
+
+export interface IRefreshTokenRequest {
+    refreshToken: string;
 }
 
 export interface FileResponse {

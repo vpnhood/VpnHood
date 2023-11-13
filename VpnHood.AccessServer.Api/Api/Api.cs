@@ -9205,6 +9205,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("refreshTokenType")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public RefreshTokenType RefreshTokenType { get; set; } = default!;
 
     }
@@ -9213,10 +9215,13 @@ namespace VpnHood.AccessServer.Api
     public enum RefreshTokenType
     {
 
+        [System.Runtime.Serialization.EnumMember(Value = @"None")]
         None = 0,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"Web")]
         Web = 1,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"App")]
         App = 2,
 
     }
@@ -9234,6 +9239,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("refreshTokenType")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public RefreshTokenType RefreshTokenType { get; set; } = default!;
 
     }

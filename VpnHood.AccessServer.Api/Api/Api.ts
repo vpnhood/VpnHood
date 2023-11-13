@@ -6677,9 +6677,9 @@ export interface ISignInRequest {
 }
 
 export enum RefreshTokenType {
-    None = 0,
-    Web = 1,
-    App = 2,
+    None = "None",
+    Web = "Web",
+    App = "App",
 }
 
 export class SignUpRequest implements ISignUpRequest {

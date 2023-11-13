@@ -118,7 +118,7 @@ public class ProjectService
         await _vhContext.SaveChangesAsync();
 
         // make current user the owner
-        await _roleProvider.AddUser(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);
+        await _roleProvider.AddUserRole(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);
         return project.ToDto();
     }
 

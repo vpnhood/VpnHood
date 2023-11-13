@@ -1,7 +1,6 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using GrayMint.Authorization.Authentications;
-using GrayMint.Authorization.Authentications.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,9 +27,7 @@ public class SystemController : ControllerBase
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, $"{serverId}@local"));
 
-        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(
-            new CreateTokenParams { ClaimsIdentity = claimsIdentity });
-
+        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity );
         return authenticationHeader.ToString();
     }
 

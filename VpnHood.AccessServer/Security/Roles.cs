@@ -1,12 +1,12 @@
 ﻿using System.Linq;
-using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
+using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using GrayMint.Authorization.RoleManagement.TeamControllers.Security;
 
 namespace VpnHood.AccessServer.Security;
 
 public static class Roles
 {
-    public static SimpleRole ProjectReader { get; } = new()
+    public static GmRole ProjectReader { get; } = new()
     {
         RoleName = nameof(ProjectReader),
         RoleId = "{D7808522-5207-45A2-9924-BAA396398100}",
@@ -17,7 +17,7 @@ public static class Roles
         }
     };
 
-    public static SimpleRole ProjectWriter { get; } = new()
+    public static GmRole ProjectWriter { get; } = new()
     {
         RoleName = nameof(ProjectWriter),
         RoleId = "{1EB1F99D-1419-4C29-8303-FA5A507D8AE2}",
@@ -37,7 +37,7 @@ public static class Roles
         }.Concat(ProjectReader.Permissions).ToArray()
     };
 
-    public static SimpleRole ProjectAdmin { get; } = new()
+    public static GmRole ProjectAdmin { get; } = new()
     {
         RoleName = nameof(ProjectAdmin),
         RoleId = "{B16607B0-0580-4AE1-A295-85304FDD0F82}",
@@ -50,7 +50,7 @@ public static class Roles
 
     };
 
-    public static SimpleRole ProjectOwner { get; } = new()
+    public static GmRole ProjectOwner { get; } = new()
     {
         RoleName = nameof(ProjectOwner),
         RoleId = "{B7E69E64-F722-42F5-95E7-5E8364B9FF58}",
@@ -62,7 +62,7 @@ public static class Roles
         }.Concat(ProjectAdmin.Permissions).ToArray()
     };
 
-    public static SimpleRole SystemAdmin { get; } = new()
+    public static GmRole SystemAdmin { get; } = new()
     {
         RoleName = nameof(SystemAdmin),
         RoleId = "{A1516270-D4D5-4888-820B-1C558006916F}",

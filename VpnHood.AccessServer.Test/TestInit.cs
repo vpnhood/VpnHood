@@ -9,7 +9,6 @@ using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Security;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -17,8 +16,7 @@ using VpnHood.AccessServer.Report.Persistence;
 using System.Net.Http.Headers;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
-using GrayMint.Authorization.Authentications.Dtos;
-using GrayMint.Authorization.RoleManagement.SimpleRoleProviders.Dtos;
+using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -175,13 +173,13 @@ public class TestInit : IHttpClientFactory, IDisposable
         return webApp;
     }
 
-    public async Task<ApiKey> AddNewUser(SimpleRole simpleRole, bool setAsCurrent = true)
+    public async Task<ApiKey> AddNewUser(GmRole role, bool setAsCurrent = true)
     {
         var oldAuthorization = HttpClient.DefaultRequestHeaders.Authorization;
         HttpClient.DefaultRequestHeaders.Authorization = SystemAdminAuthorization;
 
-        var resourceId = simpleRole.IsRoot ? Guid.Empty : Project.ProjectId;
-        var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), simpleRole.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
+        var resourceId = role.IsRoot ? Guid.Empty : Project.ProjectId;
+        var apiKey = await TeamClient.AddNewBotAsync(resourceId.ToString(), role.RoleId, new TeamAddBotParam { Name = Guid.NewGuid().ToString() });
 
         HttpClient.DefaultRequestHeaders.Authorization = setAsCurrent
             ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : oldAuthorization;
@@ -262,7 +260,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         return serverInfo;
     }
 
-    public async Task<SessionRequestEx> CreateSessionRequestEx(Api.AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
+    public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
         , string? extraData = null)
     {
         var rand = new Random();
@@ -331,8 +329,7 @@ public class TestInit : IHttpClientFactory, IDisposable
             claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
             var scope = AgentApp.Services.CreateScope();
             var grayMintAuthentication = scope.ServiceProvider.GetRequiredService<GrayMintAuthentication>();
-            var authorization = grayMintAuthentication.CreateAuthenticationHeader(
-                new CreateTokenParams { ClaimsIdentity = claimIdentity }).Result;
+            var authorization = grayMintAuthentication.CreateAuthenticationHeader(claimIdentity).Result;
 
             var httpClient = AgentApp.CreateClient();
             httpClient.BaseAddress = AppOptions.AgentUrl;

@@ -26,13 +26,13 @@ public class Program
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
-        builder.Services.AddGrayMintCommonServices(new GrayMintCommonOptions (), new RegisterServicesOptions());
+        builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
         builder.Services.AddGrayMintSwagger("VpnHood Agent Server", true);
 
         //Authentication
         builder.Services
              .AddAuthentication()
-             .AddGrayMintAuthentication(builder.Configuration.GetSection("Auth").Get<GrayMintAuthenticationOptions>(),
+             .AddGrayMintAuthentication(builder.Configuration.GetSection("Auth").Get<GrayMintAuthenticationOptions>()!,
                  builder.Environment.IsProduction());
 
         // Authorization Policies
@@ -77,6 +77,7 @@ public class Program
         var webApp = builder.Build();
         webApp.UseGrayMintCommonServices(new UseServicesOptions { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
+        webApp.UseGrayMintSwagger(true);
         await webApp.Services.UseGrayMintDatabaseCommand<VhContext>(args);
 
         // Log Configs

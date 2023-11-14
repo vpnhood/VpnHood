@@ -9,9 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.75" />
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.166" />
-    <PackageReference Include="GrayMint.Common.Swagger" Version="2.0.164" />
+    <PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.77" />
+    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.167" />
+    <PackageReference Include="GrayMint.Common.Swagger" Version="2.0.165" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
   </ItemGroup>
 

@@ -31,7 +31,7 @@ public class ProjectsController : ControllerBase
     public async Task<Project> Create()
     {
         var userId = await _authorizationProvider.GetUserId(User);
-        if (userId == null) throw new UnregisteredUser();
+        if (userId == null) throw new UnregisteredUserException();
         return await _projectService.Create(userId);
     }
 

@@ -92,8 +92,8 @@ public class Program
         webApp.UseGrayMintCommonServices(new UseServicesOptions() { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
         webApp.UseGrayMintSwagger(true);
-        await webApp.UseGrayMinCommonAuthorizationForApp();
         await webApp.Services.UseGrayMintDatabaseCommand<VhContext>(args);
+        await webApp.UseGrayMinCommonAuthorizationForApp();
         await webApp.Services.UseVhReportServices(args);
 
 

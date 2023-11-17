@@ -52,7 +52,6 @@ public class CacheService
             .Include(serverStatus => serverStatus.Server!.ServerFarm)
             .Include(serverStatus => serverStatus.Server!.ServerFarm!.ServerProfile)
             .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
-            .AsNoTracking()
             .ToArrayAsync();
 
         // set server status

@@ -41,6 +41,7 @@ public class SyncService
                 .AccessUsages
                 .OrderBy(x => x.AccessUsageId)
                 .Take(BatchCount)
+                .AsNoTracking()
                 .ToArrayAsync();
 
             if (!items.Any())
@@ -50,10 +51,13 @@ public class SyncService
             await _reportWriterService.Write(items);
 
             // remove synced items
-            _logger.LogInformation(AccessEventId.Archive, $"Removing old synced AccessUsages from agent database. Count: {items.Length}");
+            _logger.LogInformation(AccessEventId.Archive, 
+                "Removing old synced AccessUsages from agent database. Count: {Count}", items.Length);
+
             var ids = items.Select(x => x.AccessUsageId);
             await _vhContext.AccessUsages
                 .Where(x => ids.Contains(x.AccessUsageId))
+                .AsNoTracking()
                 .ExecuteDeleteAsync();
 
             // next

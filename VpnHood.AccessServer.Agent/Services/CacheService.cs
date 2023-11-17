@@ -40,6 +40,9 @@ public class CacheService
         if (!force && !Mem.Projects.IsEmpty)
             return;
 
+        // this will just effect current scope
+        _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+
         _logger.LogTrace("Loading the old projects and servers...");
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
         var serverStatuses = await _vhContext.ServerStatuses
@@ -49,6 +52,7 @@ public class CacheService
             .Include(serverStatus => serverStatus.Server!.ServerFarm)
             .Include(serverStatus => serverStatus.Server!.ServerFarm!.ServerProfile)
             .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
+            .AsNoTracking()
             .ToArrayAsync();
 
         // set server status

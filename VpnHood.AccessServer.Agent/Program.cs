@@ -27,7 +27,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
         builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
-        builder.Services.AddGrayMintSwagger("VpnHood Agent Server", true);
+        builder.Services.AddGrayMintSwagger("VpnHood Agent Server", false);
 
         //Authentication
         builder.Services

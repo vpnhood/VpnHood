@@ -1,23 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<Description>VpnHood client device provider for Android.</Description>
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<SupportedOSPlatformVersion>22</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<Product>VpnHood.Client.Device.Android</Product>
-		<RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
-		<Description>VpnHood client device provider for Android.</Description>
 		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
 		<Company>OmegaHood LLC</Company>
 		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.0.418</Version>
+		<Version>3.2.437</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 

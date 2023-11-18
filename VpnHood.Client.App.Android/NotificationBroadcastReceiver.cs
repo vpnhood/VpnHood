@@ -1,4 +1,5 @@
-﻿using Android.Content;
+﻿using Android.App;
+using Android.Content;
 
 namespace VpnHood.Client.App.Droid;
 

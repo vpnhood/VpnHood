@@ -471,7 +471,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
                 if (_lastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
-                    _lastError = "No data has arrived!";
+                    _lastError = "No data has been received.";
             }
 
             // check diagnose

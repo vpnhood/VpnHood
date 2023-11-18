@@ -6,7 +6,9 @@ using VpnHood.Client.App.Resources;
 using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid;
-[Application(Banner = "@mipmap/banner", SupportsRtl = true, AllowBackup = true)]
+[Application(Banner = "@mipmap/banner", SupportsRtl = true, 
+    UsesCleartextTraffic = true, // required to connect using self-signed certificates
+    AllowBackup = true)]
 internal class App : Application
 {
     private AppNotification _appNotification = default!;

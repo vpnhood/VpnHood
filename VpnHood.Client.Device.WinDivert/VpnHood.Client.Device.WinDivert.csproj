@@ -11,7 +11,7 @@
     <Version>3.0.418</Version>
     <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
     <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>12</LangVersion>
   </PropertyGroup>
   
   <ItemGroup>

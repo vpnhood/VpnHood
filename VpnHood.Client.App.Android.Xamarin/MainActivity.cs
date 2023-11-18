@@ -79,7 +79,8 @@ public class MainActivity : Activity
     private async Task RequestFeatures()
     {
         // request for adding tile
-        if (!VpnHoodApp.Instance.Settings.IsQuickLaunchRequested && Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33)))
+        if (!VpnHoodApp.Instance.Settings.IsQuickLaunchRequested && 
+            Device.Droid.OperatingSystem.IsAndroidVersionAtLeast(33))
         {
             VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
             VpnHoodApp.Instance.Settings.Save();

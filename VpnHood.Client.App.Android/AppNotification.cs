@@ -1,24 +1,43 @@
-﻿using Android.Content;
+﻿using System;
+using Android.App;
+using Android.Content;
 using VpnHood.Client.App.Resources;
 
 namespace VpnHood.Client.App.Droid;
 
 public sealed class AppNotification : IDisposable
 {
-    private const int NotificationId = 1000;
+    public int NotificationId => 1000;
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
     private readonly Context _context;
-    private readonly Notification.Builder _notifyBuilder;
+    private readonly Notification.Builder _notificationBuilder;
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
+    public Notification Notification => _notificationBuilder.Build();
 
     public AppNotification(Context context)
     {
         _context = context;
-        
+        _notificationBuilder = CreateNotificationBuilder(context);
+    }
+
+    private static PendingIntent CreatePendingIntent(Context context, string name)
+    {
+        var intent = new Intent(context, typeof(NotificationBroadcastReceiver));
+        intent.SetAction(name);
+        var pendingIntent = PendingIntent.GetBroadcast(context, 0, intent, PendingIntentFlags.Immutable)
+            ?? throw new Exception("Could not acquire Broadcast intent.");
+
+        return pendingIntent;
+    }
+
+    private static Notification.Builder CreateNotificationBuilder(Context context)
+    {
+        Notification.Builder notificationBuilder;
+
         // check notification manager
-        var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService) 
+        var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService)
                                   ?? throw new Exception("Could not acquire NotificationManager.");
 
         // open intent
@@ -36,58 +55,57 @@ public sealed class AppNotification : IDisposable
             channel.EnableLights(false);
             channel.SetShowBadge(false);
             channel.LockscreenVisibility = NotificationVisibility.Public;
-            channel.Importance = NotificationImportance.Low;
             notificationManager.CreateNotificationChannel(channel);
-            _notifyBuilder = new Notification.Builder(_context, NotificationChannelGeneralId);
+            notificationBuilder = new Notification.Builder(context, NotificationChannelGeneralId);
         }
         else
         {
-            _notifyBuilder = new Notification.Builder(_context);
+            notificationBuilder = new Notification.Builder(context);
         }
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)
         if (!OperatingSystem.IsAndroidVersionAtLeast(24))
-            _notifyBuilder.SetContentText(UiResource.AppName);
+            notificationBuilder.SetContentText(UiResource.AppName);
 
-        var pendingOpenIntent = PendingIntent.GetActivity(_context, 0, openIntent, PendingIntentFlags.Immutable);
-        _notifyBuilder.SetContentIntent(pendingOpenIntent);
-        _notifyBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Disconnect, CreatePendingIntent("disconnect")).Build());
-        _notifyBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Manage, pendingOpenIntent).Build());
+        var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);
+        notificationBuilder.SetContentIntent(pendingOpenIntent);
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Disconnect, CreatePendingIntent(context, "disconnect")).Build());
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, UiResource.Manage, pendingOpenIntent).Build());
 
-        // ReSharper disable once AccessToStaticMemberViaDerivedType
-        _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
-        _notifyBuilder.SetOngoing(true); // ignored by StartForeground
-        _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground
-        _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
+        // Has problem with samsung android 6
+        // _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
+        notificationBuilder.SetColor(App.BackgroundColor);
+        notificationBuilder.SetSmallIcon(Resource.Mipmap.notification);
+        notificationBuilder.SetOngoing(true); // ignored by StartForeground
+        notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
+        notificationBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
+
+        return notificationBuilder;
     }
 
-    private PendingIntent CreatePendingIntent(string name)
-    {
-        var intent = new Intent(_context, typeof(NotificationBroadcastReceiver));
-        intent.SetAction(name);
-        var pendingIntent = PendingIntent.GetBroadcast(_context, 0, intent, PendingIntentFlags.Immutable) ?? throw new Exception("Could not acquire Broadcast intent.");
-        return pendingIntent;
-    }
-
-    public void UpdateNotification()
+    public void Update(bool force = false)
     {
         lock (_stateLock)
         {
             // update only when the state changed
             var connectionState = VpnHoodApp.Instance.ConnectionState;
-            if (_lastNotifyState == connectionState)
+            if (_lastNotifyState == connectionState && !force)
                 return;
 
             // connection status
-            _notifyBuilder.SetSubText(connectionState == AppConnectionState.Connected
+            // Set subtitle
+            var activeProfileName = VpnHoodApp.Instance.GetActiveClientProfile()?.Name;
+            _notificationBuilder.SetContentTitle(activeProfileName);
+            _notificationBuilder.SetSubText(connectionState == AppConnectionState.Connected
                 ? $"{connectionState}"
                 : $"{connectionState}...");
 
             // progress
             if (connectionState != AppConnectionState.Connected)
-                _notifyBuilder.SetProgress(100, 0, true);
+                _notificationBuilder.SetProgress(100, 0, true);
             else
-                _notifyBuilder.SetProgress(0, 0, false);
+                _notificationBuilder.SetProgress(0, 0, false);
+
 
             // show or hide
             var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService);
@@ -95,7 +113,7 @@ public sealed class AppNotification : IDisposable
                 return;
 
             if (connectionState != AppConnectionState.None)
-                notificationManager.Notify(NotificationId, _notifyBuilder.Build());
+                notificationManager.Notify(NotificationId, _notificationBuilder.Build());
             else
                 notificationManager.Cancel(NotificationId);
 
@@ -106,6 +124,6 @@ public sealed class AppNotification : IDisposable
 
     public void Dispose()
     {
-        _notifyBuilder.Dispose();
+        _notificationBuilder.Dispose();
     }
 }

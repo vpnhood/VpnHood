@@ -2,14 +2,9 @@
 
 namespace VpnHood.Common.Utils;
 
-public class Patch<T>
+public class Patch<T>(T value)
 {
-    public Patch(T value)
-    {
-        Value = value;
-    }
-
-    public T Value { get; }
+    public T Value { get; } = value;
 
     public override int GetHashCode()
     {

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
-// ReSharper disable InconsistentNaming
 
 namespace VpnHood.Client.App.WebServer.Api;
 

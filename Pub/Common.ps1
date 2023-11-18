@@ -56,15 +56,25 @@ Function UpdateProjectVersion([string] $projectFile)
 	$xml = New-Object XML;
 	$xml.PreserveWhitespace = $true;
 	$xml.Load($projectFile);
-	$assemblyVersion = $xml.SelectSingleNode("Project/PropertyGroup/AssemblyVersion");
 	$fileVersion = $xml.SelectSingleNode("Project/PropertyGroup/FileVersion");
 	$packageVersion = $xml.SelectSingleNode("Project/PropertyGroup/Version");
-	if ($assemblyVersion -and $assemblyVersion.InnerText -ne $versionParam){
-		$assemblyVersion.InnerText = $versionParam;
+	if ($packageVersion -and $packageVersion.InnerText -ne $versionParam){
 		$fileVersion.InnerText = '$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))';
 		$packageVersion.InnerText = $versionParam;
+
+		# Update Android Version
+		$applicationVersion = $xml.SelectSingleNode("Project/PropertyGroup/ApplicationVersion");
+		$applicationDisplayVersion = $xml.SelectSingleNode("Project/PropertyGroup/ApplicationDisplayVersion");
+		if ($applicationVersion)
+		{
+			$applicationVersion.InnerText = $version.Build;
+			$applicationDisplayVersion.InnerText = $versionParam;
+		}
+
+		# Update project file
 		$xml.Save($projectFile);
 	}
+
 }
 
 # ReportVersion

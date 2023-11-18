@@ -412,7 +412,7 @@ public static class PacketUtil
 
     public static string Format(IPPacket ipPacket)
     {
-        return VhLogger.FormatIpPacket(ipPacket.ToString());
+        return VhLogger.FormatIpPacket(ipPacket.ToString()!);
     }
 
     public static IPEndPointPair GetPacketEndPoints(IPPacket ipPacket)

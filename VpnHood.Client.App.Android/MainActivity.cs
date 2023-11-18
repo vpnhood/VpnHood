@@ -54,8 +54,6 @@ public class MainActivity : Activity
 
         // initialize web view
         InitSplashScreen();
-        Window?.SetStatusBarColor(App.BackgroundColor);
-        Window?.SetNavigationBarColor(App.BackgroundColor);
 
         // manage VpnPermission
         VpnDevice.OnRequestVpnPermission += Device_OnRequestVpnPermission;
@@ -199,6 +197,9 @@ public class MainActivity : Activity
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
         imageView.SetBackgroundColor(App.BackgroundColor);
         SetContentView(imageView);
+
+        Window?.SetStatusBarColor(App.BackgroundColor);
+        Window?.SetNavigationBarColor(App.BackgroundColor);
     }
 
     private void InitWebUi()

@@ -305,7 +305,7 @@ public class TunnelTest : TestBase
         Assert.IsTrue(workerTask.IsCompletedSuccessfully);
 
         tcpListener.Stop();
-        cts.Cancel();
+        await cts.CancelAsync();
     }
 
     [TestMethod]
@@ -341,6 +341,6 @@ public class TunnelTest : TestBase
         await binaryStream.DisposeAsync();
 
         tcpListener.Stop();
-        cts.Cancel();
+        await cts.CancelAsync();
     }
 }

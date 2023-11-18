@@ -43,8 +43,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device", "Vp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Samples.SimpleClient.Win", "Samples\VpnHood.Samples.SimpleClient.Win\VpnHood.Samples.SimpleClient.Win.csproj", "{1247900C-916A-426B-8733-D43B17FAA694}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.Android.Xamarin", "VpnHood.Client.Device.Android.Xamarin\VpnHood.Client.Device.Android.Xamarin.csproj", "{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.Android", "VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj", "{CAF87B57-E046-466F-B8C5-32066CF8886B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Android.Xamarin", "VpnHood.Client.App.Android.Xamarin\VpnHood.Client.App.Android.Xamarin.csproj", "{42732310-6A59-4302-9989-532FB5D97260}"
@@ -299,26 +297,6 @@ Global
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|x64.Build.0 = Release|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|x86.ActiveCfg = Release|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|x86.Build.0 = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|ARM.ActiveCfg = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|ARM.Build.0 = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|x64.Build.0 = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Debug|x86.Build.0 = Debug|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|ARM.ActiveCfg = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|ARM.Build.0 = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|ARM64.Build.0 = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|x64.ActiveCfg = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|x64.Build.0 = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|x86.ActiveCfg = Release|Any CPU
-		{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}.Release|x86.Build.0 = Release|Any CPU
 		{CAF87B57-E046-466F-B8C5-32066CF8886B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CAF87B57-E046-466F-B8C5-32066CF8886B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CAF87B57-E046-466F-B8C5-32066CF8886B}.Debug|ARM.ActiveCfg = Debug|Any CPU

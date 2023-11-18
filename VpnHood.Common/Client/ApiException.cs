@@ -42,12 +42,12 @@ public sealed class ApiException : Exception
             : $"{message}\n\nStatus: {statusCode}\nResponse: \n{response?[..Math.Min(512, response.Length)]}";
     }
 
-    public ApiException(string message, int statusCode, string? response, IReadOnlyDictionary<string, IEnumerable<string>> headers, Exception? innerException)
+    public ApiException(string message, int statusCode, string? response, IReadOnlyDictionary<string, IEnumerable<string>>? headers, Exception? innerException)
         : base(BuildMessage(message, statusCode, response), innerException)
     {
         StatusCode = statusCode;
         Response = response;
-        Headers = headers;
+        Headers = headers ?? new Dictionary<string, IEnumerable<string>>();
 
         //try to deserialize response
         if (ServerException.TryParse(response, out var serverException))

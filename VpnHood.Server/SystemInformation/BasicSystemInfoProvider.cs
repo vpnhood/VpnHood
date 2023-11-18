@@ -11,7 +11,13 @@ public class BasicSystemInfoProvider : ISystemInfoProvider
 
     public SystemInfo GetSystemInfo()
     {
-        return new SystemInfo(Environment.OSVersion.ToString(), 
-            null, null, 0, Environment.ProcessorCount);
+        return new SystemInfo
+        {
+            OsInfo = Environment.OSVersion.ToString(),
+            TotalMemory = null,
+            AvailableMemory = null,
+            CpuUsage = null,
+            LogicalCoreCount = Environment.ProcessorCount
+        };
     }
 }

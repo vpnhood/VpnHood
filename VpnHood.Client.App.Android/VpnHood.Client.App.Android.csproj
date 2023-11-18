@@ -25,10 +25,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <AndroidResource Remove="Resources\values\colors.xml" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <Compile Remove="Ads\InterstitialAdLoadCallback.cs" />
 	  <Compile Remove="Ads\VpnHoodAdActivity.cs" />
 	  <Compile Remove="Ads\VpnHoodInterstitialAdLoadCallback.cs" />

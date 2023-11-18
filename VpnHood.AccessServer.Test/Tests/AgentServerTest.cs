@@ -479,7 +479,7 @@ public class AgentServerTest
         var serverDom2 = await farm.AddNewServer();
         var serverDom3 = await farm.AddNewServer(sendStatus: false);
         var serverDom4 = await farm.AddNewServer(configure: false);
-        var serverDom5 = await farm.AddNewServer(sendStatus: false);
+        var serverDom5 = await farm.AddNewServer(configure: false, sendStatus: false);
         var serverDom6 = await farm.AddNewServer();
 
         // configure serverDom5 with ipv6

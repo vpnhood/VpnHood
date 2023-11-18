@@ -80,8 +80,8 @@ public class IpLocksController : ControllerBase
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.IpAddress.Contains(search))
-            .Select(x=>x.ToDto())
-            .OrderBy(x=>x.LockedTime)
+            .OrderBy(x => x.LockedTime)
+            .Select(x => x.ToDto())
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();

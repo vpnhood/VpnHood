@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -249,12 +250,12 @@ public class AgentService
         return serverConfig;
     }
 
-    private static int GetBestUdpPort(IReadOnlyCollection<AccessPointModel> oldAccessPoints, 
+    private static int GetBestUdpPort(IReadOnlyCollection<AccessPointModel> oldAccessPoints,
         IPAddress ipAddress, int udpPortV4, int udpPortV6)
     {
         // find previous value
         var res = oldAccessPoints.FirstOrDefault(x => x.IpAddress.Equals(ipAddress))?.UdpPort;
-        if (res != null && res!=0)
+        if (res != null && res != 0)
             return res.Value;
 
         // find from other previous ip of same family
@@ -272,10 +273,11 @@ public class AgentService
         // find all public accessPoints 
         var farmServers = await _vhContext.Servers
             .Where(server => server.ServerFarmId == farmId && !server.IsDeleted)
+            .AsNoTracking()
             .ToArrayAsync();
 
         // all old PublicInToken AccessPoints in the same farm
-        var oldAccessPoints = farmServers
+        var oldTokenAccessPoints = farmServers
             .SelectMany(serverModel => serverModel.AccessPoints)
             .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
             .ToList();
@@ -290,22 +292,23 @@ public class AgentService
                 IsListen = true,
                 IpAddress = ipAddress,
                 TcpPort = 443,
-                UdpPort = GetBestUdpPort(oldAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
+                UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
             })
             .ToList();
 
         // create public addresses and try to save last publicInToken state
-        accessPoints.AddRange(serverInfo.PublicIpAddresses
+        accessPoints
+            .AddRange(serverInfo.PublicIpAddresses
             .Distinct()
             .Select(ipAddress => new AccessPointModel
             {
-                AccessPointMode = oldAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
+                AccessPointMode = oldTokenAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
                     ? AccessPointMode.PublicInToken // prefer last value
                     : AccessPointMode.Public,
                 IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
                 IpAddress = ipAddress,
                 TcpPort = 443,
-                UdpPort = GetBestUdpPort(oldAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
+                UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
             }));
 
         // has other server in the farm offer any PublicInToken
@@ -320,7 +323,22 @@ public class AgentService
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetworkV6);
         }
 
+        // use old access points if there is no public ipV6
+        var server = farmServers.Single(x => x.ServerId == serverId);
+        if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetwork))
+            RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetwork);
+        
+        if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetworkV6))
+            RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetworkV6);
+
+
         return accessPoints.ToList();
+    }
+
+    private static void RestoreOldAccessPoints(List<AccessPointModel> accessPoints, List<AccessPointModel> oldAccessPoint,  AddressFamily addressFamily)
+    {
+        accessPoints.RemoveAll(x => x.IpAddress.AddressFamily == addressFamily);
+        accessPoints.AddRange(oldAccessPoint.Where(x => x.IpAddress.AddressFamily == addressFamily));
     }
 
     private static void SelectAccessPointAsPublicInToken(ICollection<AccessPointModel> accessPoints, AddressFamily addressFamily)

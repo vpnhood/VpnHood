@@ -21,10 +21,12 @@ public class AgentServerTest
     private async Task<AccessPoint[]> Configure_auto_update_accessPoints_on_internal(ServerDom serverDom)
     {
         var testInit = serverDom.TestInit;
+
         // create serverInfo
         var publicIp = await testInit.NewIpV6();
         var privateIp = await testInit.NewIpV4();
-        serverDom.ServerInfo.PrivateIpAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
+        var iPAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
+        serverDom.ServerInfo.PrivateIpAddresses = iPAddresses;
         serverDom.ServerInfo.PublicIpAddresses = new[] { publicIp, await testInit.NewIpV4(), await testInit.NewIpV6() };
 
         //Configure
@@ -283,6 +285,69 @@ public class AgentServerTest
         Assert.AreEqual(serverStatus.ThreadCount, server.ServerStatus?.ThreadCount);
         Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
     }
+
+    [TestMethod]
+    public async Task AutoConfig_should_not_remove_current_public_in_token_by_null_public_ip_()
+    {
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var testInit = farm.TestInit;
+        var serverDom = await farm.AddNewServer(false, false);
+
+        // create serverInfo
+        var privateIpV4 = await testInit.NewIpV4();
+        var privateIpV6 = await testInit.NewIpV6();
+        var publicIpV4 = await testInit.NewIpV4();
+        var publicIpV6 = await testInit.NewIpV6();
+        serverDom.ServerInfo.PrivateIpAddresses = new[] { privateIpV4, privateIpV6 };
+        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIpV4, publicIpV6 };
+
+        //Configure
+        await serverDom.Configure();
+
+        // make sure new IP has been configured
+        await serverDom.Reload();
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() && !x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() && !x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV4.ToString() && x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV6.ToString() && x.IsListen));
+
+        // --------
+        // Check: remove publicIpV6
+        // --------
+        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIpV4 };
+        await serverDom.Configure();
+        await serverDom.Reload();
+
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() && !x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() && !x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV4.ToString() && x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV6.ToString() && x.IsListen));
+
+        // --------
+        // Check: remove publicIpV4
+        // --------
+        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIpV6 };
+        await serverDom.Configure();
+        await serverDom.Reload();
+
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV4.ToString() && !x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress == publicIpV6.ToString() && !x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV4.ToString() && x.IsListen));
+        Assert.IsTrue(serverDom.Server.AccessPoints.Any(
+            x => x.AccessPointMode == AccessPointMode.Private && x.IpAddress == privateIpV6.ToString() && x.IsListen));
+    }
+
 
     [TestMethod]
     public async Task Reconfig()

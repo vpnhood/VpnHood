@@ -120,7 +120,7 @@ public class Ga4Tracker
         if (ga4Event.DocumentLocation != null) parameters.Add(("dl", ga4Event.DocumentLocation)); // Document Location, Actual page's Pathname. It does not include the hostname, query String or Fragment. document.location.pathname. eg: "https://localhost"
         if (ga4Event.DocumentTitle != null) parameters.Add(("dt", ga4Event.DocumentTitle)); // Document Title, Actual page's Title, document.title. eg: "My page title"
         if (ga4Event.DocumentReferrer!= null) parameters.Add(("dr", ga4Event.DocumentReferrer)); // Document Referrer, Actual page's Referrer, document.referrer. eg: "https://www.google.com"
-        if (ga4Event.IsFirstVisit) parameters.Add(("_fv", 1)); // first visit,  if the "_ga_THYNGSTER" cookie is not set, the first event will have this value present. This will internally create a new "first_visit" event on GA4. If this event is also a conversion the value will be "2" if not, will be "1"
+        if (ga4Event.IsFirstVisit) parameters.Add(("_fv", 1)); // first visit,  if the "_ga_SOMETHING" cookie is not set, the first event will have this value present. This will internally create a new "first_visit" event on GA4. If this event is also a conversion the value will be "2" if not, will be "1"
 
         // It's the total engagement time in milliseconds since the last event.
         // The engagement time is measured only when the current page is visible and active ( ie: the browser window/tab must be active and visible ),

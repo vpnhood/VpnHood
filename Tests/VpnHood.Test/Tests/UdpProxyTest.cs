@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Client;
-using VpnHood.Common.Logging;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling;
 using ProtocolType = PacketDotNet.ProtocolType;

@@ -10,12 +10,10 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<RepositoryType></RepositoryType>
-		<RootNamespace>VpnHood.Client.Device</RootNamespace>
 		<Version>3.1.436</Version>
-		<AssemblyVersion>3.1.436</AssemblyVersion>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<Nullable>enable</Nullable>
-		<LangVersion>latest</LangVersion>
+		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -31,7 +29,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="PacketDotNet" Version="1.4.7" />
-		<PackageReference Include="System.Text.Json" Version="7.0.3" />
+		<PackageReference Include="System.Text.Json" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

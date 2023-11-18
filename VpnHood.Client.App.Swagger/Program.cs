@@ -15,7 +15,8 @@ public class Program
         builder.Services.AddSwaggerDocument(configure =>
         {
             configure.Title = "VpnHood.Client.Api";
-            configure.TypeMappers = new List<ITypeMapper>
+            configure.RequireParametersWithoutDefault = true;
+            configure.SchemaSettings.TypeMappers = new List<ITypeMapper>
             {
                 new PrimitiveTypeMapper(typeof(IPAddress), s => { s.Type = JsonObjectType.String; }),
                 new PrimitiveTypeMapper(typeof(IPEndPoint), s => { s.Type = JsonObjectType.String; }),
@@ -30,7 +31,7 @@ public class Program
         var app = builder.Build();
 
         app.UseOpenApi();
-        app.UseSwaggerUi3();
+        app.UseSwaggerUi();
 
         app.MapControllers();
         app.Run();

@@ -1,31 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>enable</Nullable>
-    <Authors>VpnHood</Authors>
-    <Version>1.1.139</Version>
-    <Description>VpnHood AccessServer API.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <IsPackable>true</IsPackable>
-    <LangVersion>latest</LangVersion>
-    <PackageProjectUrl>https://github.com/VpnHood</PackageProjectUrl>
-    <PackageIcon>VpnHood.AccessServer.png</PackageIcon>
-    <PackageTags>vpn proxy </PackageTags>
-    <Copyright>VpnHood 2022</Copyright>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<Nullable>enable</Nullable>
+		<Authors>VpnHood</Authors>
+		<Version>1.1.139</Version>
+		<Description>VpnHood AccessServer API.</Description>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<IsPackable>true</IsPackable>
+		<LangVersion>latest</LangVersion>
+		<PackageProjectUrl>https://github.com/VpnHood</PackageProjectUrl>
+		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
+		<PackageTags>vpn proxy </PackageTags>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\VpnHood.AccessServer.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\VpnHood.AccessServer.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
-    <PackageReference Include="System.Text.Json" Version="7.0.3" />
-    <PackageReference Include="VpnHood.Common" Version="3.1.434" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+		<PackageReference Include="System.Text.Json" Version="7.0.3" />
+		<PackageReference Include="VpnHood.Common" Version="3.1.434" />
+	</ItemGroup>
 
 </Project>

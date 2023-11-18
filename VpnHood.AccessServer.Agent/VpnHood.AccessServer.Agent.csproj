@@ -1,31 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-    <UserSecretsId>6d43aac0-39ba-4f92-8e1b-742a1203d301</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<LangVersion>latest</LangVersion>
+		<UserSecretsId>6d43aac0-39ba-4f92-8e1b-742a1203d301</UserSecretsId>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.80" />
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.168" />
-    <PackageReference Include="GrayMint.Common.Swagger" Version="2.0.166" />
-    <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.80" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.168" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.166" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="VpnHood.Common">
-      <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="VpnHood.Server.Access">
-      <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
-    </Reference>
-  </ItemGroup>
- 
+	<ItemGroup>
+		<Reference Include="VpnHood.Common">
+			<HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="VpnHood.Server.Access">
+			<HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
 </Project>

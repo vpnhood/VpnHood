@@ -1,114 +1,112 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <UserSecretsId>67757bbf-2268-48cc-a4ce-14c926266081</UserSecretsId>
-    <Company>VpnHood</Company>
-    <Product>VpnHood Access Server</Product>
-    <Authors>VpnHood</Authors>
-    <Copyright>Copyright 2021 VpnHood</Copyright>
-    <PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
-    <PackageId>VpnHood.AccessServer</PackageId>
-    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-    <PackageTags>Vpn AccessServer</PackageTags>
-    <AssemblyName>VpnHood.AccessServer</AssemblyName>
-    <AssemblyVersion>1.0.132.0</AssemblyVersion>
-    <FileVersion>1.0.132.0</FileVersion>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <StartupObject></StartupObject>
-    <Version>2.0.131</Version>
-    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <AnalysisLevel>latest</AnalysisLevel>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<UserSecretsId>67757bbf-2268-48cc-a4ce-14c926266081</UserSecretsId>
+		<Product>VpnHood Access Manager</Product>
+		<Authors>VpnHood</Authors>
+		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
+		<PackageId>VpnHood.AccessServer</PackageId>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
+		<PackageTags>Vpn AccessServer</PackageTags>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<StartupObject></StartupObject>
+		<Version>2.0.131</Version>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<AnalysisLevel>latest</AnalysisLevel>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <ShouldCreateLogs>True</ShouldCreateLogs>
-    <AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
-    <UpdateAssemblyVersion>True</UpdateAssemblyVersion>
-    <UpdateAssemblyFileVersion>False</UpdateAssemblyFileVersion>
-    <UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
-    <AssemblyVersionSettings>None.None.None.None</AssemblyVersionSettings>
-    <UpdatePackageVersion>False</UpdatePackageVersion>
-    <AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
-    <InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
-    <NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
-    <WarningLevel>9999</WarningLevel>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<ShouldCreateLogs>True</ShouldCreateLogs>
+		<AdvancedSettingsExpanded>False</AdvancedSettingsExpanded>
+		<UpdateAssemblyVersion>True</UpdateAssemblyVersion>
+		<UpdateAssemblyFileVersion>False</UpdateAssemblyFileVersion>
+		<UpdateAssemblyInfoVersion>False</UpdateAssemblyInfoVersion>
+		<AssemblyVersionSettings>None.None.None.None</AssemblyVersionSettings>
+		<UpdatePackageVersion>False</UpdatePackageVersion>
+		<AssemblyInfoVersionType>SettingsVersion</AssemblyInfoVersionType>
+		<InheritWinAppVersionFrom>None</InheritWinAppVersionFrom>
+		<NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
+		<WarningLevel>9999</WarningLevel>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
-    <WarningLevel>9999</WarningLevel>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
+		<WarningLevel>9999</WarningLevel>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Diagrams\**" />
-    <Content Remove="Diagrams\**" />
-    <EmbeddedResource Remove="Diagrams\**" />
-    <None Remove="Diagrams\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Diagrams\**" />
+		<Content Remove="Diagrams\**" />
+		<EmbeddedResource Remove="Diagrams\**" />
+		<None Remove="Diagrams\**" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <_WebToolingArtifacts Remove="Properties\PublishProfiles\VhAccessServer2 - ZipDeploy.pubxml" />
-  </ItemGroup>
+	<ItemGroup>
+		<_WebToolingArtifacts Remove="Properties\PublishProfiles\VhAccessServer2 - ZipDeploy.pubxml" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="GrayMint.Authorization" Version="3.0.80" />
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.168" />
-    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.168" />
-    <PackageReference Include="GrayMint.Common.Swagger" Version="2.0.166" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.13">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-    <PackageReference Include="NLog" Version="5.2.5" />
-    <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
-    <PackageReference Include="SSH.NET" Version="2020.0.2" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="GrayMint.Authorization" Version="3.0.80" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.168" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.168" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.166" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.13">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
+		<PackageReference Include="NLog" Version="5.2.5" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
+		<PackageReference Include="SSH.NET" Version="2020.0.2" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
-    <ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
-    <ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
+		<ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="VpnHood.Common">
-      <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="VpnHood.Server.Access">
-      <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<ItemGroup>
+		<Reference Include="VpnHood.Common">
+			<HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="VpnHood.Server.Access">
+			<HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="Resource.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resource.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Update="Resource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resource.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Update="Properties\launchSettings.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<ItemGroup>
+		<Content Update="Properties\launchSettings.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Update="Resource.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Update="Resource.resx">
+			<Generator>PublicResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\VpnHood.AccessServer.Agent\nlog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="..\VpnHood.AccessServer.Agent\nlog.config">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
 </Project>

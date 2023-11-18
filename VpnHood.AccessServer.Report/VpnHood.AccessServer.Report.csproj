@@ -1,20 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>latest</LangVersion>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.168" />
-    <PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.168" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.11" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.168" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.168" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.11" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
+	</ItemGroup>
 
 </Project>

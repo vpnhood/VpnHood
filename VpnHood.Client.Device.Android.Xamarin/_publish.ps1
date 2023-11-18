@@ -5,6 +5,8 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 $publishDir = Join-Path $projectDir "bin/release/publish/"
 $nugetSpec = Join-Path $projectDir "Nuget/nuget.nuspec";
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName
+if (!$assemblyName) {$assemblyName = (Get-Item $projectFile).BaseName};
+
 $packageId = ([string]$packageId).Trim()
 
 # bundle (aab)

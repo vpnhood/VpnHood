@@ -2,7 +2,7 @@
 ### Client
 Update: Improve UI
 Fix: Android: Keyboard cover input fields in the UI
-Fix: Android: Frequently asking for adding the system tile
+Fix: Android: Frequently asking to add the system tile
 
 # v3.1.430 
 ### Client

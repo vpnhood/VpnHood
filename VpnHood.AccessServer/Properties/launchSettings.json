@@ -9,13 +9,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:54001"
-    },
-    "Docker": {
-      "commandName": "Docker",
-      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/zz",
-      "publishAllPorts": true,
-      "useSSL": true
+      "applicationUrl": "https://localhost:53001"
     }
   },
   "$schema": "http://json.schemastore.org/launchsettings.json"

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net7.0-android</TargetFramework>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<SupportedOSPlatformVersion>22</SupportedOSPlatformVersion>
 		<Product>VpnHood.Client.Device.Android</Product>
 		<RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>

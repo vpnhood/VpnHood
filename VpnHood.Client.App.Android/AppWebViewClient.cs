@@ -1,6 +1,7 @@
-﻿using Android.Webkit;
-using VpnHood.Client.App.Resources;
-using Xamarin.Essentials;
+﻿using System;
+using Android.App;
+using Android.Content;
+using Android.Webkit;
 
 namespace VpnHood.Client.App.Droid;
 
@@ -14,20 +15,10 @@ internal class AppWebViewClient : WebViewClient
         if (webView == null || url == null)
             return false;
 
-        // var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
-        // intent.SetFlags(ActivityFlags.NewTask);
-        // Application.Context.StartActivity(intent);
+        var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
+        intent.SetFlags(ActivityFlags.NewTask);
+        Application.Context.StartActivity(intent);
 
-        var options = new BrowserLaunchOptions
-        {
-            TitleMode = BrowserTitleMode.Hide,
-            PreferredToolbarColor = UiDefaults.WindowBackgroundColor,
-            LaunchMode = BrowseLinkInExternalBrowser
-                ? BrowserLaunchMode.External
-                : BrowserLaunchMode.SystemPreferred
-        };
-
-        Browser.OpenAsync(url, options);
         return true;
     }
 

@@ -12,10 +12,9 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>3.0.418</Version>
-		<AssemblyVersion>3.0.418</AssemblyVersion>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<Nullable>enable</Nullable>
-		<LangVersion>latest</LangVersion>
+		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Include="..\VpnHood.png">
@@ -24,7 +23,7 @@
 	  </None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />

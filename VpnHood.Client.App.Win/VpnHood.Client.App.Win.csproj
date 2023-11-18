@@ -2,10 +2,9 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net7.0-windows10.0.22621.0</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>False</UseWindowsForms>
-		<RootNamespace>VpnHood.Client.App.Win</RootNamespace>
 		<AssemblyName>VpnHoodClient</AssemblyName>
 		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
@@ -17,7 +16,7 @@
 		<Version>3.0.418</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<Nullable>enable</Nullable>
-		<LangVersion>latest</LangVersion>
+		<LangVersion>12</LangVersion>
 		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>
@@ -40,7 +39,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2045.28" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2151.40" />
 	</ItemGroup>
 
 	<PropertyGroup>

@@ -1,39 +1,55 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net7.0-android</TargetFramework>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<OutputType>Exe</OutputType>
 		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<ApplicationId>com.vpnhood.client.android</ApplicationId>
+		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
 		<ApplicationVersion>1</ApplicationVersion>
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
-	</PropertyGroup>
-	<PropertyGroup>
+		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 		<IncludeSymbols>True</IncludeSymbols>
-		<AndroidVersionCode>422</AndroidVersionCode>
-		<Optimize>False</Optimize>
-		<PublishTrimmed>False</PublishTrimmed>
-		<RunAOTCompilation>False</RunAOTCompilation>
 	</PropertyGroup>
+
+	<PropertyGroup>
+		<Product>VpnHood.Client.App.Android</Product>
+		<Description>VpnHood Android Client App</Description>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.0.418</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
 	<ItemGroup>
-	  <None Remove="Assets\SPA.zip" />
+	  <AndroidResource Remove="Resources\values\colors.xml" />
 	</ItemGroup>
+
 	<ItemGroup>
-	  <AndroidAsset Include="Assets\SPA.zip" />
+	  <Compile Remove="Ads\InterstitialAdLoadCallback.cs" />
+	  <Compile Remove="Ads\VpnHoodAdActivity.cs" />
+	  <Compile Remove="Ads\VpnHoodInterstitialAdLoadCallback.cs" />
 	</ItemGroup>
+
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Essentials" Version="1.8.0" />
+	  <None Remove="AndroidManifest.aab.xml" />
+	  <None Remove="Resources\values\colors.xml" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="Ads\InterstitialAdLoadCallback.cs" />
+	  <None Include="Ads\VpnHoodAdActivity.cs" />
+	  <None Include="Ads\VpnHoodInterstitialAdLoadCallback.cs" />
+	</ItemGroup>
+	
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-		<AndroidResource Update="Resources\mipmap-anydpi-v26\appicon.xml">
-			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
-		</AndroidResource>
-	</ItemGroup>
+	
 </Project>

@@ -29,10 +29,10 @@ namespace VpnHood.Client.App.Droid;
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
-//[IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
-//[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
-//[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
-//[IntentFilter(new[] { Android.Service.QuickSettings.TileService.ActionQsTilePreferences })]
+[IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
+[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
+[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
+[IntentFilter(new[] { Android.Service.QuickSettings.TileService.ActionQsTilePreferences })]
 public class MainActivity : Activity
 {
     private bool _isWeViewVisible;
@@ -53,10 +53,9 @@ public class MainActivity : Activity
         base.OnCreate(savedInstanceState);
 
         // initialize web view
-        //InitSplashScreen();
-        Window?.SetStatusBarColor(Android.Graphics.Color.Red);
-        Window?.SetNavigationBarColor(Android.Graphics.Color.Red);
-        return;
+        InitSplashScreen();
+        Window?.SetStatusBarColor(App.BackgroundColor);
+        Window?.SetNavigationBarColor(App.BackgroundColor);
 
         // manage VpnPermission
         VpnDevice.OnRequestVpnPermission += Device_OnRequestVpnPermission;
@@ -229,6 +228,8 @@ public class MainActivity : Activity
         if (WebView == null) throw new Exception("WebView has not been loaded yet!");
         SetContentView(WebView);
         _isWeViewVisible = true;
+
+        Window?.SetNavigationBarColor(App.BackgroundBottomColor);
     }
 
     public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

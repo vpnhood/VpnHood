@@ -1,3 +1,15 @@
+# Upcoming 
+### Client
+Improve Prrformance
+Android: Set navigation button background color
+
+### Server
+Improve Prrformance
+
+### Developer
+Upgrade to .NET 8
+Migrate from Xamarin to .NET Android Application
+
 # v3.1.436 
 ### Client
 Update: Improve UI

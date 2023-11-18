@@ -6,18 +6,14 @@ using VpnHood.Client.App.Resources;
 using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid;
-
-#if DEBUG
-[Application(Debuggable = true, Banner = "@mipmap/banner")]
-#else
-    [Application(Debuggable = false, Banner = "@mipmap/banner")]
-#endif
+[Application(Banner = "@mipmap/banner", SupportsRtl = true, AllowBackup = true)]
 internal class App : Application
 {
     private AppNotification _appNotification = default!;
     public IAppProvider AppProvider { get; private set; } = default!;
     public static App? Current { get; private set; }
     public static Color BackgroundColor => new (UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
+    public static Color BackgroundBottomColor => new (UiDefaults.WindowBackgroundBottomColor.R, UiDefaults.WindowBackgroundBottomColor.G, UiDefaults.WindowBackgroundBottomColor.B, UiDefaults.WindowBackgroundBottomColor.A);
     public AndroidDevice VpnDevice => (AndroidDevice)AppProvider.Device;
 
     public App(IntPtr javaReference, JniHandleOwnership transfer)

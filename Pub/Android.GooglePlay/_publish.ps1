@@ -53,7 +53,11 @@ Push-Location -Path "$solutionDir";
 # Write-Host;
 # Write-Host "*** Updating Android apk of GooglePlay to $versionTag ..." -BackgroundColor Blue -ForegroundColor White;
 # $latestVersion = (gh release list -R "vpnhood/vpnhood" --limit 1 --exclude-drafts  --exclude-pre-releases | ForEach-Object { $_.Split()[0] });
-gh release upload $versionTag $module_infoFile $module_packageFile --clobber
-gh release upload "$versionTag-prerelease" $module_packageFile --clobber
+
+echo "Updating the Release ...";
+gh release upload $versionTag $module_infoFile $module_packageFile --clobber;
+
+echo "Updating the Pre-release ...";
+gh release upload "$versionTag-prerelease" $module_packageFile --clobber;
 
 Pop-Location

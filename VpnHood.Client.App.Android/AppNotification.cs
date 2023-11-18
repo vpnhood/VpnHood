@@ -75,6 +75,7 @@ public sealed class AppNotification : IDisposable
         // Has problem with samsung android 6
         // _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
         notificationBuilder.SetColor(App.BackgroundColor);
+        // ReSharper disable once AccessToStaticMemberViaDerivedType
         notificationBuilder.SetSmallIcon(Resource.Mipmap.notification);
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground

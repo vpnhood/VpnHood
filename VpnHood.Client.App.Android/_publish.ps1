@@ -6,6 +6,10 @@ Write-Host "*** Publishing Android ..." -BackgroundColor Blue -ForegroundColor W
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 
+#update project version
+UpdateProjectVersion $projectFile;
+exit
+
 # prepare module folders
 $moduleDir = "$packagesClientDir/android";
 $moduleDirLatest = "$packagesClientDirLatest/android";
@@ -29,7 +33,7 @@ $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 
 # set android version
-$xmlDoc = [xml](Get-Content $manifestFile);
+$xmlDoc = [xml](Get-Content $projectFile);
 $xmlDoc.manifest.versionCode = $version.Build.ToString();
 $xmlDoc.manifest.versionName = $version.ToString(3);
 $xmlDoc.save($manifestFile);

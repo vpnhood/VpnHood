@@ -30,6 +30,11 @@ internal class ClientHost : IAsyncDisposable
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
 
+    private VpnHoodClient Client { get; }
+    public IPAddress CatcherAddressIpV4 { get; }
+    public IPAddress CatcherAddressIpV6 { get; }
+
+
     public ClientHost(
         VpnHoodClient client, 
         IPAddress catcherAddressIpV4, 
@@ -39,10 +44,6 @@ internal class ClientHost : IAsyncDisposable
         CatcherAddressIpV4 = catcherAddressIpV4;
         CatcherAddressIpV6 = catcherAddressIpV6;
     }
-
-    private VpnHoodClient Client { get; }
-    public IPAddress CatcherAddressIpV4 { get; }
-    public IPAddress CatcherAddressIpV6 { get; }
 
     public void Start()
     {

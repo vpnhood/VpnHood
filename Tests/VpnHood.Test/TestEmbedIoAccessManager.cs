@@ -75,14 +75,21 @@ public class TestEmbedIoAccessManager : IDisposable
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 
-    private class ApiController(TestEmbedIoAccessManager embedIoAccessManager) : WebApiController
+    private class ApiController : WebApiController
     {
-        private IAccessManager AccessManager => embedIoAccessManager.FileAccessManager;
+        private readonly TestEmbedIoAccessManager _embedIoAccessManager;
+
+        public ApiController(TestEmbedIoAccessManager embedIoAccessManager)
+        {
+            _embedIoAccessManager = embedIoAccessManager;
+        }
+
+        private IAccessManager AccessManager => _embedIoAccessManager.FileAccessManager;
 
         protected override void OnBeforeHandler()
         {
-            if (embedIoAccessManager.HttpException != null)
-                throw embedIoAccessManager.HttpException;
+            if (_embedIoAccessManager.HttpException != null)
+                throw _embedIoAccessManager.HttpException;
             base.OnBeforeHandler();
         }
 
@@ -112,10 +119,10 @@ public class TestEmbedIoAccessManager : IDisposable
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
-            if (embedIoAccessManager.RedirectHostEndPoint != null &&
-                !sessionRequestEx.HostEndPoint.Equals(embedIoAccessManager.RedirectHostEndPoint))
+            if (_embedIoAccessManager.RedirectHostEndPoint != null &&
+                !sessionRequestEx.HostEndPoint.Equals(_embedIoAccessManager.RedirectHostEndPoint))
             {
-                res.RedirectHostEndPoint = embedIoAccessManager.RedirectHostEndPoint;
+                res.RedirectHostEndPoint = _embedIoAccessManager.RedirectHostEndPoint;
                 res.ErrorCode = SessionErrorCode.RedirectHost;
             }
 

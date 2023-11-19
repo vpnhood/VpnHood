@@ -10,11 +10,13 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class UtilTest : TestBase
 {
-    private class TestEventReporter(
-        ILogger logger, 
-        string message) 
-        : EventReporter(logger, message)
+    private class TestEventReporter : EventReporter
     {
+        public TestEventReporter(ILogger logger, 
+            string message) : base(logger, message)
+        {
+        }
+
         public int ReportedCount { get; private set; }
 
         protected override void Report()

@@ -29,17 +29,20 @@ internal class ClientHost : IAsyncDisposable
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
+
+    public ClientHost(
+        VpnHoodClient client, 
+        IPAddress catcherAddressIpV4, 
+        IPAddress catcherAddressIpV6)
+    {
+        Client = client;
+        CatcherAddressIpV4 = catcherAddressIpV4;
+        CatcherAddressIpV6 = catcherAddressIpV6;
+    }
+
     private VpnHoodClient Client { get; }
     public IPAddress CatcherAddressIpV4 { get; }
     public IPAddress CatcherAddressIpV6 { get; }
-
-    public ClientHost(VpnHoodClient client, IPAddress catcherAddressIpV4, IPAddress catcherAddressIpV6)
-    {
-        Client = client ?? throw new ArgumentNullException(nameof(client));
-        CatcherAddressIpV4 = catcherAddressIpV4 ?? throw new ArgumentNullException(nameof(catcherAddressIpV4));
-        CatcherAddressIpV6 = catcherAddressIpV6 ?? throw new ArgumentNullException(nameof(catcherAddressIpV6));
-    }
-
 
     public void Start()
     {

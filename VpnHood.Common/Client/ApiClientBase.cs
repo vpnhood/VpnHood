@@ -18,20 +18,13 @@ namespace VpnHood.Common.Client;
 
 public class ApiClientBase : ApiClientCommon
 {
-    private class HttpNoResult;
+    private class HttpNoResult { }
 
     protected readonly struct HttpResult<T>
     {
-        public HttpResult(HttpResponseMessage responseMessage, T responseObject, string responseText)
-        {
-            ResponseMessage = responseMessage;
-            Object = responseObject;
-            Text = responseText;
-        }
-
-        public HttpResponseMessage ResponseMessage { get; }
-        public T Object { get; }
-        public string Text { get; }
+        public required HttpResponseMessage ResponseMessage { get; init; }
+        public required T Object { get; init;}
+        public required string Text { get; init; }
     }
 
     protected JsonSerializerOptions JsonSerializerSettings => Settings.Value;
@@ -68,7 +61,7 @@ public class ApiClientBase : ApiClientCommon
             try
             {
                 var typedBody = JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
-                return new HttpResult<T?>(response, typedBody, responseText);
+                return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text= responseText };
             }
             catch (JsonException exception)
             {
@@ -81,7 +74,7 @@ public class ApiClientBase : ApiClientCommon
         {
             await using var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             var typedBody = await JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
-            return new HttpResult<T?>(response, typedBody, string.Empty);
+                return new HttpResult<T?> { ResponseMessage = response, Object = typedBody, Text= string.Empty };
         }
         catch (JsonException exception)
         {
@@ -237,7 +230,7 @@ public class ApiClientBase : ApiClientCommon
         if (status is >= 200 and < 300)
         {
             if (typeof(T) == typeof(HttpNoResult))
-                return new HttpResult<T>(response, default!, string.Empty);
+                return new HttpResult<T> { ResponseMessage = response, Object = default!, Text= string.Empty };
 
             var objectResponse = await ReadObjectResponseAsync<T>(response, headers, cancellationToken).ConfigureAwait(false);
             if (objectResponse.Object == null)

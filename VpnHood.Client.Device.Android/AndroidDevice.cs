@@ -78,8 +78,7 @@ namespace VpnHood.Client.Device.Droid
             get
             {
                 var deviceAppInfos = new List<DeviceAppInfo>();
-                var packageManager = Application.Context.PackageManager ??
-                                     throw new Exception("Could not acquire PackageManager!");
+                var packageManager = Application.Context.PackageManager ?? throw new Exception("Could not acquire PackageManager!");
                 var intent = new Intent(Intent.ActionMain);
                 intent.AddCategory(Intent.CategoryLauncher);
                 var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
@@ -94,11 +93,12 @@ namespace VpnHood.Client.Device.Droid
                     if (appName is "" or null || appId is "" or null || icon == null)
                         continue;
 
-                    var deviceAppInfo = new DeviceAppInfo(
-                        appId,
-                        appName,
-                        EncodeToBase64(icon, 100)
-                    );
+                    var deviceAppInfo = new DeviceAppInfo
+                    {
+                        AppId = appId,
+                        AppName = appName,
+                        IconPng = EncodeToBase64(icon, 100)
+                    };
                     deviceAppInfos.Add(deviceAppInfo);
                 }
 

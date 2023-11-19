@@ -9,7 +9,8 @@ namespace VpnHood.Client.App.Droid;
 [Application(Banner = "@mipmap/banner", SupportsRtl = true, 
     UsesCleartextTraffic = true, // required to connect using self-signed certificates
     AllowBackup = true)]
-internal class App : Application
+internal class App(IntPtr javaReference, JniHandleOwnership transfer) 
+    : Application(javaReference, transfer)
 {
     private AppNotification _appNotification = default!;
     public IAppProvider AppProvider { get; private set; } = default!;
@@ -18,11 +19,6 @@ internal class App : Application
     public static Color BackgroundBottomColor => new (UiDefaults.WindowBackgroundBottomColor.R, UiDefaults.WindowBackgroundBottomColor.G, UiDefaults.WindowBackgroundBottomColor.B, UiDefaults.WindowBackgroundBottomColor.A);
     public AndroidDevice VpnDevice => (AndroidDevice)AppProvider.Device;
 
-    public App(IntPtr javaReference, JniHandleOwnership transfer)
-        : base(javaReference, transfer)
-    {
-    }
-
     public override void OnCreate()
     {
         base.OnCreate();
@@ -30,7 +26,7 @@ internal class App : Application
 
         //app init
         _appNotification = new AppNotification(this);
-        AppProvider = new AppProvider { Device = new AndroidDevice(_appNotification.Notification, _appNotification.NotificationId) };
+        AppProvider = new AppProvider { Device = new AndroidDevice(_appNotification.Notification, AppNotification.NotificationId) };
         if (!VpnHoodApp.IsInit) VpnHoodApp.Init(AppProvider);
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
     }

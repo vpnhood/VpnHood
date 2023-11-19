@@ -15,13 +15,16 @@ public class CheckNewVersionTest : TestBase
         deprecatedVersion ??= new Version(1, 0, 0);
         notificationDelay ??= TimeSpan.Zero;
 
-        var publishInfo = new PublishInfo(version,
-            TestHelper.WebServer.FileHttpUrl1,
-            new Uri("https://localhost/package.msi"),
-            new Uri("https://localhost/page.html"),
-            deprecatedVersion,
-            releaseDate,
-            notificationDelay.Value);
+        var publishInfo = new PublishInfo
+        {
+            Version = version,
+            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            PackageUrl = new Uri("https://localhost/package.msi"),
+            InstallationPageUrl = new Uri("https://localhost/page.html"),
+            DeprecatedVersion = deprecatedVersion,
+            ReleaseDate = releaseDate,
+            NotificationDelay = notificationDelay.Value
+        };
 
         TestHelper.WebServer.FileContent1 = JsonSerializer.Serialize(publishInfo);
     }
@@ -88,7 +91,7 @@ public class CheckNewVersionTest : TestBase
             DateTime.UtcNow, TimeSpan.FromSeconds(2));
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UpdateCheckerInterval= TimeSpan.FromMilliseconds(500);
+        appOptions.UpdateCheckerInterval = TimeSpan.FromMilliseconds(500);
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions, updateInfoUrl: TestHelper.WebServer.FileHttpUrl1);
 
         await VhTestUtil.AssertEqualsWait(VersionStatus.Latest, () => app.VersionStatus);

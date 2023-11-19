@@ -4,9 +4,13 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Test;
 
-internal class TestDevice(TestDeviceOptions? options = default) : IDevice
+internal class TestDevice : IDevice
 {
-    private readonly TestDeviceOptions _options = options ?? new TestDeviceOptions();
+    private readonly TestDeviceOptions _options;
+    public TestDevice(TestDeviceOptions? options = default)
+    {
+        _options = options ?? new TestDeviceOptions();
+    }
 
 #pragma warning disable 0067
     public event EventHandler? OnStartAsService;

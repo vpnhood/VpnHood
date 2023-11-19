@@ -1,3 +1,5 @@
 ﻿namespace VpnHood.Tunneling.DatagramMessaging;
 
-public class CloseDatagramMessage : DatagramBaseMessage;
+public class CloseDatagramMessage : DatagramBaseMessage
+{
+}

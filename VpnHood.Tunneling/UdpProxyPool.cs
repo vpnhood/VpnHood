@@ -14,7 +14,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
 {
     private readonly IPacketProxyReceiver _packetProxyReceiver;
     private readonly ISocketFactory _socketFactory;
-    private readonly TimeoutDictionary<IPEndPoint, UdpProxy> _udpProxies = new();
+    private readonly TimeoutDictionary<IPEndPoint, UdpProxy> _udpProxies;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly int _maxClientCount;
@@ -33,8 +33,8 @@ public class UdpProxyPool : IPacketProxyPool, IJob
         _packetProxyReceiver = packetProxyReceiver;
         _socketFactory = socketFactory;
         _maxClientCount = maxClientCount > 0 ? maxClientCount.Value : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
+        _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(udpTimeout);
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
-        _udpProxies.Timeout = udpTimeout;
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
             "Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: logScope);
 

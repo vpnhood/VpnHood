@@ -4,23 +4,11 @@ namespace VpnHood.Client.App;
 
 public class PublishInfo
 {
-    public PublishInfo(Version version, Uri updateInfoUrl, Uri packageUrl, Uri installationPageUrl,
-        Version deprecatedVersion, DateTime releaseDate, TimeSpan notificationDelay)
-    {
-        Version = version;
-        UpdateInfoUrl = updateInfoUrl;
-        PackageUrl = packageUrl;
-        InstallationPageUrl = installationPageUrl;
-        DeprecatedVersion = deprecatedVersion;
-        ReleaseDate = releaseDate;
-        NotificationDelay = notificationDelay;
-    }
-
-    public Version Version { get; }
-    public Uri UpdateInfoUrl { get; }
-    public Uri PackageUrl { get; }
-    public Uri InstallationPageUrl { get; }
-    public DateTime ReleaseDate { get; }
-    public Version DeprecatedVersion { get; }
-    public TimeSpan NotificationDelay { get; }
+    public required Version Version { get; init;}
+    public required Uri UpdateInfoUrl { get; init; }
+    public required Uri PackageUrl { get; init; }
+    public required Uri InstallationPageUrl { get; init; }
+    public required DateTime ReleaseDate { get; init; }
+    public required Version DeprecatedVersion { get; init; }
+    public required TimeSpan NotificationDelay { get; init; }
 }

@@ -146,7 +146,7 @@ public class WinDivertPacketCapture : IPacketCapture
     {
         if (_disposed)
             return;
-         
+
         StopCapture();
         _device.Dispose();
         _disposed = true;
@@ -166,12 +166,12 @@ public class WinDivertPacketCapture : IPacketCapture
     {
         try
         {
-            var eventArgs = new PacketReceivedEventArgs(new[] { ipPacket }, this);
+            var eventArgs = new PacketReceivedEventArgs { IpPackets = new[] { ipPacket }, PacketCapture = this };
             OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.Log(LogLevel.Error, ex, 
+            VhLogger.Instance.Log(LogLevel.Error, ex,
                 "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()!));
         }
     }

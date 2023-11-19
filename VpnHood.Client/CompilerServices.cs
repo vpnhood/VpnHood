@@ -12,6 +12,9 @@ public class RequiredMemberAttribute : Attribute
 {
 }
 
-public class CompilerFeatureRequiredAttribute(string name) : Attribute
+public class CompilerFeatureRequiredAttribute : Attribute
 {
+    public CompilerFeatureRequiredAttribute(string name)
+    {
+    }
 }

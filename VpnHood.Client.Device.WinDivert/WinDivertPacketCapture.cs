@@ -166,7 +166,7 @@ public class WinDivertPacketCapture : IPacketCapture
     {
         try
         {
-            var eventArgs = new PacketReceivedEventArgs { IpPackets = new[] { ipPacket }, PacketCapture = this };
+            var eventArgs = new PacketReceivedEventArgs(new[] { ipPacket }, this);
             OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
         }
         catch (Exception ex)

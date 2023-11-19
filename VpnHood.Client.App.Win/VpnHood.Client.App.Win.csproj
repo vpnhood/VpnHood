@@ -15,7 +15,7 @@
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<LangVersion>12</LangVersion>
+		<LangVersion>11</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>

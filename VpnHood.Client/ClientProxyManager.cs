@@ -7,13 +7,16 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client;
 
-internal class ClientProxyManager(
-    IPacketCapture packetCapture, 
-    ISocketFactory socketFactory, 
-    ProxyManagerOptions options) 
-    : ProxyManager(socketFactory, options)
+internal class ClientProxyManager : ProxyManager
 {
-        
+    private readonly IPacketCapture _packetCapture;
+
+    public ClientProxyManager(IPacketCapture packetCapture, ISocketFactory socketFactory, 
+        ProxyManagerOptions options) : base(socketFactory, options)
+    {
+        _packetCapture = packetCapture;
+    }
+
     // PacketCapture can not protect Ping so PingProxy does not work
     protected override bool IsPingSupported => false;
 
@@ -22,7 +25,7 @@ internal class ClientProxyManager(
         if (VhLogger.IsDiagnoseMode)
             PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
-        packetCapture.SendPacketToInbound(ipPacket);
+        _packetCapture.SendPacketToInbound(ipPacket);
         return Task.FromResult(0);
     }
 

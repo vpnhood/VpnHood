@@ -5,18 +5,18 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 
-public class TimeoutDictionary<TKey, TValue> : IDisposable
-    where TValue : ITimeoutItem
+public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeoutItem
 {
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
     private DateTime _lastCleanupTime = DateTime.MinValue;
     private bool _disposed;
+
     public bool AutoCleanup { get; set; } = true;
     public TimeSpan? Timeout { get; set; }
 
     public TimeoutDictionary(TimeSpan? timeout = null)
     {
-        _timeout = timeout;
+        Timeout = timeout;
     }
 
     public int Count
@@ -124,9 +124,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable
     }
 
     private readonly object _cleanupLock = new();
-    private readonly TimeSpan? _timeout;
-
-      public void Cleanup(bool force = false)
+    public void Cleanup(bool force = false)
     {
         // do nothing if there is not timeout
         if (Timeout == null)

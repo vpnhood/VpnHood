@@ -250,11 +250,8 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     {
         try
         {
-            OnPacketReceivedFromInbound?.Invoke(this, new PacketReceivedEventArgs
-            {
-                IpPackets = new[] { ipPacket },
-                PacketCapture = this
-            });
+            OnPacketReceivedFromInbound?.Invoke(this, 
+                new PacketReceivedEventArgs(new[] { ipPacket }, this));
         }
         catch (Exception ex)
         {

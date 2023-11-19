@@ -124,19 +124,13 @@ public class QuickLaunchTileService : TileService
         QsTile.UpdateTile();
     }
 
-    private class AddTileServiceHandler : Java.Lang.Object, IConsumer
+    private class AddTileServiceHandler(TaskCompletionSource<int> taskCompletionSource) 
+        : Java.Lang.Object, IConsumer
     {
-        private readonly TaskCompletionSource<int> _task;
-
-        public AddTileServiceHandler(TaskCompletionSource<int> task)
-        {
-            _task = task;
-        }
-
         public void Accept(Java.Lang.Object? obj)
         {
             obj ??= 0;
-            _task.TrySetResult((int)obj);
+            taskCompletionSource.TrySetResult((int)obj);
         }
     }
 

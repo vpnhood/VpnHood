@@ -5,22 +5,15 @@ using VpnHood.Client.App.Resources;
 
 namespace VpnHood.Client.App.Droid;
 
-public sealed class AppNotification : IDisposable
+public sealed class AppNotification(Context context) : IDisposable
 {
-    public int NotificationId => 1000;
+    public static int NotificationId => 1000;
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
-    private readonly Context _context;
-    private readonly Notification.Builder _notificationBuilder;
+    private readonly Notification.Builder _notificationBuilder = CreateNotificationBuilder(context);
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
     public Notification Notification => _notificationBuilder.Build();
-
-    public AppNotification(Context context)
-    {
-        _context = context;
-        _notificationBuilder = CreateNotificationBuilder(context);
-    }
 
     private static PendingIntent CreatePendingIntent(Context context, string name)
     {
@@ -109,7 +102,7 @@ public sealed class AppNotification : IDisposable
 
 
             // show or hide
-            var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService);
+            var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService);
             if (notificationManager == null)
                 return;
 

@@ -9,10 +9,15 @@ namespace VpnHood.Client.App.Droid;
 [Application(Banner = "@mipmap/banner", SupportsRtl = true, 
     UsesCleartextTraffic = true, // required to connect using self-signed certificates
     AllowBackup = true)]
-internal class App(IntPtr javaReference, JniHandleOwnership transfer) 
-    : Application(javaReference, transfer)
+internal class App : Application
 {
     private AppNotification _appNotification = default!;
+
+    public App(IntPtr javaReference, JniHandleOwnership transfer) 
+        : base(javaReference, transfer)
+    {
+    }
+
     public IAppProvider AppProvider { get; private set; } = default!;
     public static App? Current { get; private set; }
     public static Color BackgroundColor => new (UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);

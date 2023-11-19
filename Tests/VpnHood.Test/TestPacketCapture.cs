@@ -6,12 +6,17 @@ using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Test;
 
-internal class TestPacketCapture(TestDeviceOptions deviceOptions) 
-    : WinDivertPacketCapture
+internal class TestPacketCapture : WinDivertPacketCapture
 {
     private IPAddress[]? _dnsServers;
+    private readonly TestDeviceOptions _deviceOptions;
 
-    public override bool IsDnsServersSupported => deviceOptions.IsDnsServerSupported;
+    public TestPacketCapture(TestDeviceOptions deviceOptions)
+    {
+        _deviceOptions = deviceOptions;
+    }
+
+    public override bool IsDnsServersSupported => _deviceOptions.IsDnsServerSupported;
 
     public override IPAddress[]? DnsServers
     {
@@ -25,8 +30,8 @@ internal class TestPacketCapture(TestDeviceOptions deviceOptions)
         }
     }
 
-    public override bool CanSendPacketToOutbound => deviceOptions.CanSendPacketToOutbound;
-    public override bool CanProtectSocket => !deviceOptions.CanSendPacketToOutbound;
+    public override bool CanSendPacketToOutbound => _deviceOptions.CanSendPacketToOutbound;
+    public override bool CanProtectSocket => !_deviceOptions.CanSendPacketToOutbound;
 
     protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
     {
@@ -34,8 +39,8 @@ internal class TestPacketCapture(TestDeviceOptions deviceOptions)
 
         ignore |= 
             ipPacket.Extract<UdpPacket>()?.DestinationPort == 53 &&
-            deviceOptions.CaptureDnsAddresses != null &&
-            deviceOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
+            _deviceOptions.CaptureDnsAddresses != null &&
+            _deviceOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
 
         ignore |= TestSocketProtector.IsProtectedPacket(ipPacket);
             

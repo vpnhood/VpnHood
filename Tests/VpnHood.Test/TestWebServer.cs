@@ -133,15 +133,9 @@ public class TestWebServer : IDisposable
             udpClient.Dispose();
     }
 
-    private class ApiController : WebApiController
+    private class ApiController(TestWebServer testWebServer) 
+        : WebApiController
     {
-        private readonly TestWebServer _testWebServer;
-
-        public ApiController(TestWebServer testWebServer)
-        {
-            _testWebServer = testWebServer;
-        }
-
         // ReSharper disable once UnusedMember.Local
         [Route(HttpVerbs.Get, "/file1")]
         public async Task File1()
@@ -149,7 +143,7 @@ public class TestWebServer : IDisposable
             Response.ContentType = MimeType.PlainText;
             await using var stream = HttpContext.OpenResponseStream();
             await using var streamWriter = new StreamWriter(stream);
-            await streamWriter.WriteAsync(_testWebServer.FileContent1);
+            await streamWriter.WriteAsync(testWebServer.FileContent1);
         }
 
         // ReSharper disable once UnusedMember.Local
@@ -159,7 +153,7 @@ public class TestWebServer : IDisposable
             Response.ContentType = MimeType.PlainText;
             await using var stream = HttpContext.OpenResponseStream();
             await using var streamWriter = new StreamWriter(stream);
-            await streamWriter.WriteAsync(_testWebServer.FileContent2);
+            await streamWriter.WriteAsync(testWebServer.FileContent2);
         }
     }
 }

@@ -13,15 +13,8 @@ using VpnHood.Server.Access.Managers.File;
 
 namespace VpnHood.Server.App;
 
-public class FileAccessManagerCommand
+public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 {
-    private readonly FileAccessManager _fileAccessManager;
-
-    public FileAccessManagerCommand(FileAccessManager fileAccessManager)
-    {
-        _fileAccessManager = fileAccessManager;
-    }
-
     public void AddCommands(CommandLineApplication cmdApp)
     {
         cmdApp.Command("print", PrintToken);
@@ -42,7 +35,7 @@ public class FileAccessManagerCommand
 
     private async Task PrintToken(Guid tokenId)
     {
-        var accessItem = await _fileAccessManager.AccessItem_Read(tokenId);
+        var accessItem = await fileAccessManager.AccessItem_Read(tokenId);
         if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
         var hostName = accessItem.Token.HostName + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
@@ -71,7 +64,7 @@ public class FileAccessManagerCommand
     {
         var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
         var defaultPublicEps = new List<IPEndPoint>();
-        var allListenerPorts = _fileAccessManager.ServerConfig.TcpEndPointsValue
+        var allListenerPorts = fileAccessManager.ServerConfig.TcpEndPointsValue
             .Select(x => x.Port)
             .Distinct();
 
@@ -83,7 +76,7 @@ public class FileAccessManagerCommand
 
     private void GenerateToken(CommandLineApplication cmdApp)
     {
-        var accessManager = _fileAccessManager;
+        var accessManager = fileAccessManager;
 
         cmdApp.Description = "Generate a token";
         var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);

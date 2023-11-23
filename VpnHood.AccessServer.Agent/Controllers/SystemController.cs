@@ -27,7 +27,9 @@ public class SystemController : ControllerBase
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, $"{serverId}@local"));
 
-        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity );
+        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity, 
+            expirationTime: DateTime.UtcNow.AddYears(13));
+
         return authenticationHeader.ToString();
     }
 

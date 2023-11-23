@@ -58,6 +58,7 @@ Function UpdateProjectVersion([string] $projectFile)
 	$xml.Load($projectFile);
 	$fileVersion = $xml.SelectSingleNode("Project/PropertyGroup/FileVersion");
 	$packageVersion = $xml.SelectSingleNode("Project/PropertyGroup/Version");
+
 	if ($packageVersion -and $packageVersion.InnerText -ne $versionParam){
 		$fileVersion.InnerText = '$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))';
 		$packageVersion.InnerText = $versionParam;
@@ -74,7 +75,6 @@ Function UpdateProjectVersion([string] $projectFile)
 		# Update project file
 		$xml.Save($projectFile);
 	}
-
 }
 
 # ReportVersion

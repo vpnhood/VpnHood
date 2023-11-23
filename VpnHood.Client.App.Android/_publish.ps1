@@ -8,7 +8,6 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 
 #update project version
 UpdateProjectVersion $projectFile;
-exit
 
 # prepare module folders
 $moduleDir = "$packagesClientDir/android";
@@ -32,12 +31,6 @@ $appIconXml = Join-Path $projectDir "Resources\mipmap-anydpi-v26\appicon.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 
-# set android version
-$xmlDoc = [xml](Get-Content $projectFile);
-$xmlDoc.manifest.versionCode = $version.Build.ToString();
-$xmlDoc.manifest.versionName = $version.ToString(3);
-$xmlDoc.save($manifestFile);
-
 # set app icon
 $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
 $appIconXmlDoc.save($appIconXml);
@@ -46,13 +39,15 @@ $appIconXmlDoc.save($appIconXml);
 Write-Host;
 Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
 
-$packageId = $xmlDoc.manifest.package;
-$outputPath="bin/ReleaseApk";
-$signedPacakgeFile = Join-Path $projectDir "$outputPath/$packageId-Signed.apk"
+$packageId = "com.vpnhood.client.android.web";
+$outputPath = Join-Path $projectDir "bin/ReleaseApk/";
+$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 
+# todo
 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
  & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+	/p:ApplicationId=$packageId `
 	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
 
 # publish info
@@ -67,7 +62,6 @@ $json = @{
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 
-# copy to solution ouput
 Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
 if ($isLatest)
 {
@@ -82,20 +76,18 @@ Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor
 $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
 $appIconXmlDoc.save($appIconXml);
 
-$outputPath="bin/ReleaseAab";
+# update variables
 $packageId = "com.vpnhood.client.android";
-$signedPacakgeFile = Join-Path $projectDir "$outputPath/$packageId-Signed.aab"
+$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
+$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
 $module_packageFile = "$moduleDir/VpnHoodClient-android.aab";
-
-# Calcualted
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
-$xmlDoc.manifest.package = $packageId;
-$xmlDoc.save($manifestFileAab);
 
 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
 & $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/p:AndroidManifest="Properties\AndroidManifest.aab.xml" /p:DefineConstants=ANDROID_AAB `
+	/p:ApplicationId=$packageId `
+	/p:DefineConstants=ANDROID_AAB `
 	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
 # set app icon

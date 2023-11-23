@@ -27,7 +27,7 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 & "$solutionDir/VpnHood.Tunneling/_publish.ps1";
 
 & "$solutionDir/VpnHood.Client/_publish.ps1";
-& "$solutionDir/VpnHood.Client.Device.Android.Xamarin/_publish.ps1";
+& "$solutionDir/VpnHood.Client.Device.Android/_publish.ps1";
 & "$solutionDir/VpnHood.Client.Device/_publish.ps1";
 & "$solutionDir/VpnHood.Client.Device.WinDivert/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App/_publish.ps1";
@@ -54,7 +54,7 @@ if ($server)
 # publish android
 if ($android)
 {	
-	& "$solutionDir/VpnHood.Client.App.Android.Xamarin/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
 }
 
 # distribute

@@ -4,9 +4,9 @@ param([Parameter(Mandatory=$true)] [String]$projectDir)
 # paths
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName;
-if (!$assemblyName) {$assemblyName = (Get-Item $projectFile).BaseName};
+if ($assemblyName -eq $null) {$assemblyName = (Get-Item $projectFile).BaseName};
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
-if (!$packageId) {$packageId = $assemblyName};
+if ($packageId -eq $null) {$packageId = $assemblyName};
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin\release\publish";
 

@@ -20,7 +20,10 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Client.Device.Droid;
 
 
-[Service(Permission = Manifest.Permission.BindVpnService, Exported = true)]
+[Service(
+    Permission = Manifest.Permission.BindVpnService, 
+    Exported = true, 
+    ForegroundServiceType = Android.Content.PM.ForegroundService.TypeSystemExempted)]
 [IntentFilter(new[] { "android.net.VpnService" })]
 public class AndroidPacketCapture : VpnService, IPacketCapture
 {

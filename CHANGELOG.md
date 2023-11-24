@@ -1,10 +1,10 @@
-# v3.2.439
+# Upcoming
 ### Client
-Improve Prrformance
-Android: Set navigation button background color
+Improve Performance
+Android Set the navigation button background color
 
 ### Server
-Improve Prrformance
+Improve Performance
 
 ### Developer
 Upgrade to .NET 8

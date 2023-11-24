@@ -9,7 +9,6 @@
 		<ApplicationDisplayVersion>3.2.439</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 		<IncludeSymbols>True</IncludeSymbols>
-		<IsTrimmable>False</IsTrimmable>
 	</PropertyGroup>
 
 	<PropertyGroup>

@@ -26,7 +26,6 @@ $keystore = Join-Path "$solutionDir/../.user/" $credentials.Android.KeyStoreFile
 $keystorePass = $credentials.Android.KeyStorePass
 $keystoreAlias = $credentials.Android.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
-$manifestFileAab = Join-Path $projectDir "Properties/AndroidManifest.aab.xml";
 $appIconXml = Join-Path $projectDir "Resources\mipmap-anydpi-v26\appicon.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");

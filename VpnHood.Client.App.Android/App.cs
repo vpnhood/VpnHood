@@ -4,11 +4,10 @@ using Android.Graphics;
 using Android.Runtime;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.Device.Droid;
-
 namespace VpnHood.Client.App.Droid;
-[Application(Banner = "@mipmap/banner", SupportsRtl = true, 
-    UsesCleartextTraffic = true, // required to connect using self-signed certificates
-    AllowBackup = true)]
+[Application(Banner = "@mipmap/banner", Label = "@string/app_name", Icon = "@mipmap/appicon",
+    UsesCleartextTraffic = true, // required for localhost
+    SupportsRtl = true, AllowBackup = true)]
 internal class App : Application
 {
     private AppNotification _appNotification = default!;

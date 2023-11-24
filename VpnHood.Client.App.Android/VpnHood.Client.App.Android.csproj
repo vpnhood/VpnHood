@@ -38,11 +38,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Remove="AndroidManifest.aab.xml" />
-		<None Remove="Resources\values\colors.xml" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="Ads\InterstitialAdLoadCallback.cs" />
 		<None Include="Ads\VpnHoodAdActivity.cs" />
 		<None Include="Ads\VpnHoodInterstitialAdLoadCallback.cs" />

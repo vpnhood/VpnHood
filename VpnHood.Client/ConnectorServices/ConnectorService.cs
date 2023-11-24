@@ -165,6 +165,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain,
         SslPolicyErrors sslPolicyErrors)
     {
+        if (certificate == null!) // for android 6 (API 23)
+            return true;
+
         // check maintenance certificate
         var parts = certificate.Subject.Split(",");
         if (parts.Any(x => x.Trim().Equals("OU=MT", StringComparison.OrdinalIgnoreCase)))

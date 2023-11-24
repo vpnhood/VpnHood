@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Simple VpnHood Client usage</Description>
+    <Description>Simple VpnHood Client usage for Windows</Description>
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
@@ -23,8 +23,8 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="VpnHood.Client" Version="3.1.436" />
-    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.1.436" />
+    <PackageReference Include="VpnHood.Client" Version="3.2.438-prerelease" />
+    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.2.438-prerelease" />
   </ItemGroup>
 
 </Project>

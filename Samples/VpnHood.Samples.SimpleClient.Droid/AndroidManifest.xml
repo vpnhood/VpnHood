@@ -1,12 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1" android:versionName="1.0" package="com.vpnhood.samples.simpleclient.droid" android:installLocation="auto">
-	<uses-sdk android:minSdkVersion="23" android:targetSdkVersion="33" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<application android:label="@string/app_name" android:icon="@mipmap/ic_launcher"/>
 	<uses-feature android:name="android.software.leanback" android:required="false" />
 	<uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-	<application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true"></application>
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+	<uses-permission android:name="android.permission.START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+	<uses-permission android:name="android.permission.BIND_REMOTEVIEWS" />
 	<queries>
 		<intent>
 			<action android:name="android.intent.action.VIEW" />

@@ -60,14 +60,12 @@ namespace VpnHood.Client.Device.Droid
             }
             else
             {
-#pragma warning disable CS0618
                 notificationBuilder = new Notification.Builder(context);
-#pragma warning restore CS0618
             }
 
             var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
+            // var appName = Application.Context.ApplicationInfo.LoadLabel(Application.Context.PackageManager ?? throw new Exception("Could not retrieve PackageManager"));
             return notificationBuilder
-                .SetContentTitle("VpnHood!")
                 .SetSmallIcon(appInfo.Icon)
                 .SetOngoing(true)
                 .Build();

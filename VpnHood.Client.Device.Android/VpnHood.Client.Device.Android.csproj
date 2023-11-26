@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<Description>VpnHood client device provider for Android.</Description>
 		<TargetFramework>net8.0-android34.0</TargetFramework>
-		<SupportedOSPlatformVersion>22</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
 	</PropertyGroup>
 

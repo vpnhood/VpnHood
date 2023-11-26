@@ -2,9 +2,9 @@
 using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 
-namespace VpnHood.Client.App.Droid.Ads;
+namespace VpnHood.Client.App.Droid.Connect.Ads;
 
-internal class VpnHoodInterstitialAdLoadCallback : InterstitialAdLoadCallback
+public class VpnHoodInterstitialAdLoadCallback : InterstitialAdLoadCallback
 {
     private readonly Activity _activity;
     private InterstitialAd? _interstitialAd;

@@ -3,13 +3,12 @@ using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 using Android.OS;
 
-namespace VpnHood.Client.App.Droid.Ads;
-// <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-9339227682123409~1454413514" />
 
-[Activity(Label = "@string/ad")]
+namespace VpnHood.Client.App.Droid.Connect.Ads;
+[Activity(Label = "@string/ads_activity_title")]
 public class VpnHoodAdActivity : Activity
 {
-    private static bool _isInitializedCalled = false;
+    private static bool _isInitializedCalled;
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
@@ -30,7 +29,7 @@ public class VpnHoodAdActivity : Activity
             {
                 VpnHoodApp.Instance.IsWaitingForAd = true;
                 var adRequest = new AdRequest.Builder().Build();
-                InterstitialAd.Load(activity, "ca-app-pub-9339227682123409/2322872125", adRequest,
+                InterstitialAd.Load(activity, "ca-app-pub-8662231806304184/7575717622", adRequest,
                     new VpnHoodInterstitialAdLoadCallback(activity));
             }
         }

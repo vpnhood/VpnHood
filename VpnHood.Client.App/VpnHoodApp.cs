@@ -72,11 +72,13 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
+    public AppResources Resources { get; }
 
     private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatType(this)} is already initialized.");
         options ??= new AppOptions();
+        Resources = options.Resources;
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
 
         _appProvider = appProvider ?? throw new ArgumentNullException(nameof(appProvider));

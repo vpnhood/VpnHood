@@ -98,7 +98,6 @@ public class CheckNewVersionTest : TestBase
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.VersionStatus);
     }
 
-
     [TestMethod]
     public async Task Current_is_old_before_connect_to_vpn()
     {

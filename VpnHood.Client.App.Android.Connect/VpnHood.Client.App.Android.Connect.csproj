@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
-		<Description>VpnHood Android Client App</Description>
+		<Description>VpnHood Android Client Connect App with Ads and memebership</Description>
 		<TargetFramework>net8.0-android34.0</TargetFramework>
-		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
+		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
 		<ApplicationVersion>439</ApplicationVersion>
@@ -32,6 +31,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="122.3.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />

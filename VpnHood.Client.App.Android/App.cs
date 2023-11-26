@@ -29,10 +29,13 @@ internal class App : Application
         Current = this;
 
         //app init
-        _appNotification = new AppNotification(this);
-        AppProvider = new AppProvider { Device = new AndroidDevice(_appNotification.Notification, AppNotification.NotificationId) };
+        var device = new AndroidDevice();
+        AppProvider = new AppProvider { Device = new AndroidDevice() };
         if (!VpnHoodApp.IsInit) VpnHoodApp.Init(AppProvider);
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
+        
+        _appNotification = new AppNotification(this);
+        device.InitNotification(_appNotification.Notification, AppNotification.NotificationId);
     }
 
     protected override void Dispose(bool disposing)

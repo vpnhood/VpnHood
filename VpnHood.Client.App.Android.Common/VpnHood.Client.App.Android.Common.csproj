@@ -1,15 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Description>VpnHood Android Client App</Description>
+		<Description>VpnHood Android Client App Common Library</Description>
 		<TargetFramework>net8.0-android34.0</TargetFramework>
-		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
-		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
-		<ApplicationVersion>439</ApplicationVersion>
-		<ApplicationDisplayVersion>3.2.439</ApplicationDisplayVersion>
-		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
-		<IncludeSymbols>True</IncludeSymbols>
+		<RootNamespace>VpnHood.Client.App.Droid.Common</RootNamespace>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -32,7 +27,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />

@@ -14,8 +14,8 @@ namespace VpnHood.Client.Device.Droid
 {
     public class AndroidDevice : IDevice
     {
-        private readonly int _notificationId;
-        private readonly Notification? _notification;
+        private int _notificationId = 3500;
+        private Notification? _notification;
         private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
         private TaskCompletionSource<bool> _startServiceTaskSource = new();
         private IPacketCapture? _packetCapture;
@@ -28,14 +28,18 @@ namespace VpnHood.Client.Device.Droid
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
-        public AndroidDevice(Notification? notification = null, int notificationId = 3500)
+        public AndroidDevice()
         {
             if (Current != null)
                 throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
 
+            Current = this;
+        }
+
+        public void InitNotification(Notification notification, int notificationId)
+        {
             _notification = notification;
             _notificationId = notificationId;
-            Current = this;
         }
 
         private static Notification GetDefaultNotification()

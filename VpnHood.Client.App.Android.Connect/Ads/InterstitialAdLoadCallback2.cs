@@ -5,7 +5,7 @@ using Android.Runtime;
 namespace VpnHood.Client.App.Droid.Connect.Ads;
 
 // fix google ad library problem
-public class InterstitialAdLoadCallback : Android.Gms.Ads.Interstitial.InterstitialAdLoadCallback
+public class InterstitialAdLoadCallback2 : Android.Gms.Ads.Interstitial.InterstitialAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 
@@ -17,7 +17,7 @@ public class InterstitialAdLoadCallback : Android.Gms.Ads.Interstitial.Interstit
 
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
-        var interstitialAdLoadCallback = GetObject<InterstitialAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+        var interstitialAdLoadCallback = GetObject<InterstitialAdLoadCallback2>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var interstitialAd = GetObject<InterstitialAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (interstitialAd != null)
             interstitialAdLoadCallback?.OnAdLoaded(interstitialAd);

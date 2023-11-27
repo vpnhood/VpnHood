@@ -44,10 +44,9 @@ public sealed class AndroidAppNotification : IDisposable
                                   ?? throw new Exception("Could not acquire NotificationManager.");
 
         // open intent
-        var openIntent = new Intent(context, mainActivity);
-        openIntent.AddFlags(ActivityFlags.NewTask);
-        openIntent.SetAction(Intent.ActionMain);
-        openIntent.AddCategory(Intent.CategoryLauncher);
+        ArgumentNullException.ThrowIfNull(context.PackageManager);
+        ArgumentNullException.ThrowIfNull(context.PackageName);
+        var openIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
 
         //create channel
         if (OperatingSystem.IsAndroidVersionAtLeast(26))
@@ -75,22 +74,17 @@ public sealed class AndroidAppNotification : IDisposable
         notificationBuilder.AddAction(new Notification.Action.Builder(null, appResources.Strings.Disconnect, CreatePendingIntent(context, "disconnect")).Build());
         notificationBuilder.AddAction(new Notification.Action.Builder(null, appResources.Strings.Manage, pendingOpenIntent).Build());
 
-        // Has problem with samsung android 6
-        // todo check android 6
-        // set the required small icon
-        var icon = appResources.Icons.NotificationImage?.ToAndroidIcon();
-        if (icon == null)
-        {
-            ArgumentNullException.ThrowIfNull(context.ApplicationInfo);   
-            icon = Icon.CreateWithResource(context, context.ApplicationInfo.Icon);
-        }
-        notificationBuilder.SetSmallIcon(icon);
-
-        if (appResources.Colors.WindowBackgroundColor != null)
-            notificationBuilder.SetColor(appResources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
         notificationBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
+        if (appResources.Colors.WindowBackgroundColor != null)
+            notificationBuilder.SetColor(appResources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
+
+        // set the required small icon
+        var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
+        var icon = appResources.Icons.NotificationImage?.ToAndroidIcon()
+                   ?? Icon.CreateWithResource(context, appInfo.Icon);
+        notificationBuilder.SetSmallIcon(icon);
 
         return notificationBuilder;
     }

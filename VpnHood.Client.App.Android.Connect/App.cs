@@ -3,6 +3,7 @@ using Android.App;
 using Android.Runtime;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
+using VpnHood.Client.App.Resources;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -19,6 +20,10 @@ public class App : AndroidApp
     {
     }
 
-    protected override AppOptions AppOptions => new() { UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl };
+    protected override AppOptions AppOptions => new()
+    {
+        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
+        Resources = UiDefaults.AppResources,
+    };
 
 }

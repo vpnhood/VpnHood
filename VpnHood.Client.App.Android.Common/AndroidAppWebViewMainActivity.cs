@@ -10,16 +10,10 @@ using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public abstract class WebViewMainActivity : VpnHoodMainActivity
+public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
 {
-    private readonly byte[] _spaZipBuffer;
     private bool _isWeViewVisible;
     
-    protected WebViewMainActivity(byte[] spaZipBuffer)
-    {
-        _spaZipBuffer = spaZipBuffer;
-    }
-
     public WebView? WebView { get; private set; }
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -32,7 +26,8 @@ public abstract class WebViewMainActivity : VpnHoodMainActivity
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit)
         {
-            using var memoryStream = new MemoryStream(_spaZipBuffer);
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
+            using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
             VpnHoodAppWebServer.Init(memoryStream);
         }
 
@@ -81,10 +76,10 @@ public abstract class WebViewMainActivity : VpnHoodMainActivity
         if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor != null) 
             WebView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
 
-        var webViewClient = new AppWebViewClient();
+        var webViewClient = new AndroidAppWebViewClient();
         webViewClient.PageLoaded += WebViewClient_PageLoaded;
         WebView.SetWebViewClient(webViewClient);
-        WebView.SetWebChromeClient(new AppWebChromeClient());
+        WebView.SetWebChromeClient(new AndroidAppWebChromeClient());
 
 #if DEBUG
         WebView.SetWebContentsDebuggingEnabled(true);

@@ -18,25 +18,29 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
 
         // initialize main window
         Title = UiResource.AppName;
-        Background = new SolidColorBrush(Color.FromArgb(UiDefaults.WindowBackgroundColor.A, UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B));
+        if (backgroundColor != null) Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R, backgroundColor.Value.G, backgroundColor.Value.B));
         Visibility = WinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
-        Width = UiDefaults.WindowSize.Width;
-        Height = UiDefaults.WindowSize.Height;
+        Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
+        Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) Hide(); };
 
+        // set window title bar color
+        var hWnd = new WindowInteropHelper(this).EnsureHandle();
+        if (backgroundColor != null) WinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
+
         // initialize MainWebView
-        MainWebView.DefaultBackgroundColor = UiDefaults.WindowBackgroundColor;
         MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
+        if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;
         _ = MainWebView.EnsureCoreWebView2Async(null);
 
-        var hWnd = new WindowInteropHelper(this).EnsureHandle();
-        WinApp.SetWindowTitleBarColor(hWnd, UiDefaults.WindowBackgroundColor);
+        // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
     }
 

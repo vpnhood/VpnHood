@@ -21,6 +21,10 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+	</ItemGroup>
+
 
 	<ItemGroup>
 		<Compile Update="UiResource.Designer.cs">

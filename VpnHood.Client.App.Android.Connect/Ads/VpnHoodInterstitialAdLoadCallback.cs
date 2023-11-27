@@ -1,6 +1,7 @@
 ﻿using Android.App;
 using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
+using Java.Lang;
 
 namespace VpnHood.Client.App.Droid.Connect.Ads;
 
@@ -42,12 +43,17 @@ public class VpnHoodInterstitialAdLoadCallback : InterstitialAdLoadCallback
         _activity = activity;
     }
 
-    public override void OnAdLoaded(InterstitialAd interstitialAd)
-    {
-        _interstitialAd = interstitialAd;
-        _interstitialAd.FullScreenContentCallback = new MyFullScreenContentCallback(this);
-        interstitialAd.Show(_activity);
-    }
+    //public override void OnAdLoaded(Object p0)
+    //{
+    //    base.OnAdLoaded(p0);
+    //}
+
+    //public override void OnAdLoaded(InterstitialAd interstitialAd)
+    //{
+    //    _interstitialAd = interstitialAd;
+    //    _interstitialAd.FullScreenContentCallback = new MyFullScreenContentCallback(this);
+    //    interstitialAd.Show(_activity);
+    //}
 
     public override void OnAdFailedToLoad(LoadAdError addAdError)
     {

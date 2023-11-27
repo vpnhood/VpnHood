@@ -1,11 +1,12 @@
 ﻿using System;
 using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public class AppProvider : IAppProvider
+public class AndroidAppProvider : IAppProvider
 {
-    public required IDevice Device { get; init; } 
+    public IDevice Device { get; }  = new AndroidDevice();
     public bool IsLogToConsoleSupported => false;
     public Uri? AdditionalUiUrl => null;
     public Uri UpdateInfoUrl

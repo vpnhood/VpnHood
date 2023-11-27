@@ -5,7 +5,7 @@ using Android.Webkit;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-internal class AppWebViewClient : WebViewClient
+internal class AndroidAppWebViewClient : WebViewClient
 {
     public bool BrowseLinkInExternalBrowser { get; set; } = false;
     public event EventHandler? PageLoaded;

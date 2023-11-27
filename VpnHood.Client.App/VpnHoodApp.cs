@@ -123,7 +123,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
-            UpdateInfoUrl = appProvider.UpdateInfoUrl,
+            UpdateInfoUrl = options.UpdateInfoUrl,
         };
         _ = CheckNewVersion();
 

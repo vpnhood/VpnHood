@@ -201,6 +201,16 @@ namespace VpnHood.Client.App.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        public static byte[] QuickLaunchTileImage {
+            get {
+                object obj = ResourceManager.GetObject("QuickLaunchTileImage", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         public static byte[] SPA {
             get {
                 object obj = ResourceManager.GetObject("SPA", resourceCulture);

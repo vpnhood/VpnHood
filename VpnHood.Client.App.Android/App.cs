@@ -19,8 +19,8 @@ internal class App : Application
 
     public IAppProvider AppProvider { get; private set; } = default!;
     public static App? Current { get; private set; }
-    public static Color BackgroundColor => new (UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B, UiDefaults.WindowBackgroundColor.A);
-    public static Color BackgroundBottomColor => new (UiDefaults.WindowBackgroundBottomColor.R, UiDefaults.WindowBackgroundBottomColor.G, UiDefaults.WindowBackgroundBottomColor.B, UiDefaults.WindowBackgroundBottomColor.A);
+    public static Color BackgroundColor => new (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.R, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.G, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.B, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.A);
+    public static Color BackgroundBottomColor => new (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.R, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.G, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.B, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.A);
     public AndroidDevice VpnDevice => (AndroidDevice)AppProvider.Device;
 
     public override void OnCreate()

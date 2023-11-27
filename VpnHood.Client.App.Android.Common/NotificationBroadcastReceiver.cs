@@ -13,6 +13,7 @@ public class NotificationBroadcastReceiver : BroadcastReceiver
             case "disconnect":
                 if (VpnHoodApp.IsInit)
                     _ = VpnHoodApp.Instance.Disconnect(true);
+
                 var notificationManager = (NotificationManager?)context?.GetSystemService(Context.NotificationService);
                 notificationManager?.CancelAll();
                 return;

@@ -163,6 +163,9 @@
   <data name="OpenInBrowser" xml:space="preserve">
     <value>Open in Browser</value>
   </data>
+  <data name="QuickLaunchTileImage" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\Images\QuickLaunchTile.png;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
   <data name="SPA" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>resources\spa.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

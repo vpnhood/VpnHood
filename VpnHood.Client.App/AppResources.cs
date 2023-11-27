@@ -4,6 +4,8 @@ namespace VpnHood.Client.App;
 
 public class AppResources
 {
+    public byte[]? SpaZipData { get; set; }
+    public Size WindowSize { get; set; } = new(400, 700);
     public AppStrings Strings { get; set; } = new();
     public AppColors Colors { get; set; } = new();
     public AppIcons Icons { get; set; } = new();
@@ -32,12 +34,24 @@ public class AppResources
 
     public class AppIcons
     {
-        public byte[]? AppIcon { get; set; }
-        public byte[]? BadgeConnectedIcon { get; set; }
-        public byte[]? BadgeConnectingIcon { get; set; }
-        public byte[]? ConnectedIcon { get; set; }
-        public byte[]? ConnectingIcon { get; set; }
-        public byte[]? DisconnectedIcon { get; set; }
-        public byte[]? NotificationImage { get; set; }
+        public IconData? AppIcon { get; set; }
+        public IconData? BadgeConnectedIcon { get; set; }
+        public IconData? BadgeConnectingIcon { get; set; }
+        public IconData? ConnectedIcon { get; set; }
+        public IconData? ConnectingIcon { get; set; }
+        public IconData? DisconnectedIcon { get; set; }
+        public ImageData? NotificationImage { get; set; }
+        public ImageData? QuickLaunchTileImage { get; set; }
     }
+
+    public class IconData(byte[] data)
+    {
+        public byte[] Data { get; } = data;
+    }
+
+    public class ImageData(byte[] data)
+    {
+        public byte[] Data { get; } = data;
+    }
+
 }

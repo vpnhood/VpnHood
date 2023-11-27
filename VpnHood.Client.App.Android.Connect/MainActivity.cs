@@ -3,6 +3,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Gms.Ads;
 using Android.OS;
+using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Resources;
@@ -13,7 +14,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
     MainLauncher = true,
     Exported = true,
-    WindowSoftInputMode = SoftInput.AdjustResize,
+    WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
     AlwaysRetainTaskState = true,
     LaunchMode = LaunchMode.SingleInstance,
     ScreenOrientation = ScreenOrientation.Unspecified,
@@ -22,20 +23,16 @@ namespace VpnHood.Client.App.Droid.Connect;
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
 [IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
-[IntentFilter(new[] { Android.Service.QuickSettings.TileService.ActionQsTilePreferences })]
+[IntentFilter(new[] { TileService.ActionQsTilePreferences })]
 
-public class MainActivity : WebViewMainActivity
+public class MainActivity : AndroidAppWebViewMainActivity
 {
-    public MainActivity() : base(UiResource.SPA)
-    {
-
-    }
-
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
         MobileAds.Initialize(this);
+
+        _ = VpnHoodApp.Instance.Connect();
     }
 
 }

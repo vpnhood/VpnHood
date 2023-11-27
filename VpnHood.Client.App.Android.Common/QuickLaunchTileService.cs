@@ -12,7 +12,7 @@ using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@mipmap/notification", Label = "@string/app_name", Enabled = true, Exported = true)]
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@mipmap/quick_launch_tile", Label = "@string/app_name", Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter(new[] { ActionQsTile })]
@@ -143,7 +143,6 @@ public class QuickLaunchTileService : TileService
         var task = new TaskCompletionSource<int>();
 
         // get statusBarManager
-        // get statusBarManager
         if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager)
         {
             VhLogger.Instance.LogError("Could not retrieve the StatusBarManager.");
@@ -158,9 +157,9 @@ public class QuickLaunchTileService : TileService
 
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
         var appName = appInfo.Name ?? VpnHoodApp.Instance.Resources.Strings.AppName; //todo check
-        var icon = VpnHoodApp.Instance.Resources.Icons.NotificationImage?.ToAndroidIcon()
+        var icon = VpnHoodApp.Instance.Resources.Icons.QuickLaunchTileImage?.ToAndroidIcon()
+            ?? VpnHoodApp.Instance.Resources.Icons.NotificationImage?.ToAndroidIcon()
             ?? Icon.CreateWithResource(context, appInfo.Icon); //todo
-        // context.Resources.GetIdentifier() //todo
 
         statusBarManager.RequestAddTileService(
             new ComponentName(context, Java.Lang.Class.FromType(typeof(QuickLaunchTileService))),

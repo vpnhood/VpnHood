@@ -172,9 +172,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags,
         int startId)
     {
-        if (AndroidDevice.Current == null)
-            throw new Exception($"{nameof(AndroidDevice)} has not been initialized");
-
         AndroidDevice.Current.OnServiceStartCommand(this, intent);
         return StartCommandResult.Sticky;
     }

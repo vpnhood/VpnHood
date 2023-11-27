@@ -14,11 +14,11 @@ using System.Linq;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public abstract class VpnHoodMainActivity : Activity
+public abstract class AndroidAppMainActivity : Activity
 {
     protected const int RequestVpnPermissionId = 10;
     protected const int RequestPostNotificationId = 11;
-    protected AndroidDevice VpnDevice => (Application as VpnHoodAndroidApp)?.VpnDevice ?? throw new InvalidOperationException($"{nameof(VpnHoodAndroidApp)} has not been initialized.");
+    protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     protected string[] AccessKeySchemes { get; set; } = Array.Empty<string>();
     protected string[] AccessKeyMimes { get; set; } = Array.Empty<string>();
 

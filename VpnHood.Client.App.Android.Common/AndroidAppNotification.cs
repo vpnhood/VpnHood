@@ -1,10 +1,11 @@
 ﻿using System;
 using Android.App;
 using Android.Content;
+using Android.Graphics.Drawables;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public sealed class AppNotification : IDisposable
+public sealed class AndroidAppNotification : IDisposable
 {
     public static int NotificationId => 1000;
     private const string NotificationChannelGeneralId = "general";
@@ -15,7 +16,7 @@ public sealed class AppNotification : IDisposable
     private readonly Context _context;
     private readonly VpnHoodApp _vpnHoodApp;
 
-    public AppNotification(Context context, Type mainActivity, VpnHoodApp vpnHoodApp)
+    public AndroidAppNotification(Context context, Type mainActivity, VpnHoodApp vpnHoodApp)
     {
         _context = context;
         _vpnHoodApp = vpnHoodApp;
@@ -75,12 +76,17 @@ public sealed class AppNotification : IDisposable
         notificationBuilder.AddAction(new Notification.Action.Builder(null, appResources.Strings.Manage, pendingOpenIntent).Build());
 
         // Has problem with samsung android 6
-        var icon = appResources.Icons.NotificationImage?.ToAndroidIcon();
-        // _notifyBuilder.SetSmallIcon(Android.Graphics.Drawables.Icon.CreateWithData(UiResource.NotificationImage, 0, UiResource.NotificationImage.Length));
-        // ReSharper disable once AccessToStaticMemberViaDerivedType
         // todo check android 6
+        // set the required small icon
+        var icon = appResources.Icons.NotificationImage?.ToAndroidIcon();
+        if (icon == null)
+        {
+            ArgumentNullException.ThrowIfNull(context.ApplicationInfo);   
+            icon = Icon.CreateWithResource(context, context.ApplicationInfo.Icon);
+        }
         notificationBuilder.SetSmallIcon(icon);
-        if (appResources.Colors.WindowBackgroundColor!=null)
+
+        if (appResources.Colors.WindowBackgroundColor != null)
             notificationBuilder.SetColor(appResources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground

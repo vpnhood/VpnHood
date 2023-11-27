@@ -36,7 +36,8 @@ public abstract class AndroidAppMainActivity : Activity
     protected async Task RequestFeatures()
     {
         // request for adding tile
-        if (!VpnHoodApp.Instance.Settings.IsQuickLaunchRequested &&
+        //todo
+        if (true || !VpnHoodApp.Instance.Settings.IsQuickLaunchRequested &&
             OperatingSystem.IsAndroidVersionAtLeast(33))
         {
             VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
@@ -120,14 +121,6 @@ public abstract class AndroidAppMainActivity : Activity
             VpnDevice.VpnPermissionGranted();
         else
             StartActivityForResult(intent, RequestVpnPermissionId);
-    }
-
-
-    public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
-        [GeneratedEnum] Permission[] grantResults)
-    {
-
-        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)

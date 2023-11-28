@@ -12,18 +12,18 @@ public class AppResources
 
     public class AppStrings
     {
-        public string AppName { get; set; } = "VpnHood!";
-        public string Disconnect { get; set; } = "Disconnect";
-        public string Connect { get; set; } = "Connect";
-        public string Disconnected { get; set; } = "Disconnected";
-        public string Exit { get; set; } = "Exit";
-        public string Manage { get; set; } = "Manage";
-        public string MsgAccessKeyAdded { get; set; } = "{0} Access key has been added.";
-        public string MsgAccessKeyUpdated { get; set; } = "{0} access key has been updated.";
-        public string MsgCantReadAccessKey { get; set; } = "Could not read the access key.";
-        public string MsgUnsupportedContent { get; set; } = "Unsupported file type.";
-        public string Open { get; set; } = "Open";
-        public string OpenInBrowser { get; set; } = "Open in browser";
+        public string AppName { get; set; } = Resource.AppName;
+        public string Disconnect { get; set; } = Resource.Disconnect;
+        public string Connect { get; set; } = Resource.Connect;
+        public string Disconnected { get; set; } = Resource.Disconnected;
+        public string Exit { get; set; } = Resource.Exit;
+        public string Manage { get; set; } = Resource.Manage;
+        public string MsgAccessKeyAdded { get; set; } = Resource.MsgAccessKeyAdded;
+        public string MsgAccessKeyUpdated { get; set; } = Resource.MsgAccessKeyUpdated;
+        public string MsgCantReadAccessKey { get; set; } = Resource.MsgCantReadAccessKey;
+        public string MsgUnsupportedContent { get; set; } = Resource.MsgUnsupportedContent;
+        public string Open { get; set; } = Resource.Open;
+        public string OpenInBrowser { get; set; } = Resource.OpenInBrowser;
     }
 
     public class AppColors
@@ -35,13 +35,11 @@ public class AppResources
     public class AppIcons
     {
         public IconData? AppIcon { get; set; }
-        public IconData? BadgeConnectedIcon { get; set; }
-        public IconData? BadgeConnectingIcon { get; set; }
+        public IconData? BadgeConnectedIcon { get; set; } = new (Resource.BadgeConnectedIcon);
+        public IconData? BadgeConnectingIcon { get; set; } = new(Resource.BadgeConnectingIcon);
         public IconData? ConnectedIcon { get; set; }
         public IconData? ConnectingIcon { get; set; }
         public IconData? DisconnectedIcon { get; set; }
-        public ImageData? NotificationImage { get; set; }
-        public ImageData? QuickLaunchTileImage { get; set; }
     }
 
     public class IconData(byte[] data)

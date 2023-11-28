@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
+using VpnHood.Client.App.Win.Common;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Win;

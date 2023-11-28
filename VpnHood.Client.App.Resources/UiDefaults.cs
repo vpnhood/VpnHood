@@ -15,13 +15,9 @@ public static class UiDefaults
         Icons = new AppResources.AppIcons
         {
             AppIcon = new AppResources.IconData(UiResource.VpnHoodIcon),
-            BadgeConnectedIcon = new AppResources.IconData(UiResource.BadgeVpnConnected),
-            BadgeConnectingIcon = new AppResources.IconData(UiResource.BadgeVpnConnecting),
             ConnectedIcon = new AppResources.IconData(UiResource.VpnConnectedIcon),
             ConnectingIcon = new AppResources.IconData(UiResource.VpnConnectingIcon),
             DisconnectedIcon = new AppResources.IconData(UiResource.VpnDisconnectedIcon),
-            NotificationImage = new AppResources.ImageData(UiResource.NotificationImage),
-            QuickLaunchTileImage = new AppResources.ImageData(UiResource.QuickLaunchTileImage),
         }
     };
 }

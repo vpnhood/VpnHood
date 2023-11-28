@@ -12,7 +12,7 @@ using Android.Widget;
 using System.IO;
 using System.Linq;
 
-namespace VpnHood.Client.App.Droid.Common;
+namespace VpnHood.Client.App.Droid.Common.Activities;
 
 public abstract class AndroidAppMainActivity : Activity
 {
@@ -25,19 +25,19 @@ public abstract class AndroidAppMainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        
+
         // manage VpnPermission
         VpnDevice.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
         // process intent
         ProcessIntent(Intent);
+
     }
 
     protected async Task RequestFeatures()
     {
         // request for adding tile
-        //todo
-        if (true || !VpnHoodApp.Instance.Settings.IsQuickLaunchRequested &&
+        if (!VpnHoodApp.Instance.Settings.IsQuickLaunchRequested &&
             OperatingSystem.IsAndroidVersionAtLeast(33))
         {
             VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
@@ -64,7 +64,7 @@ public abstract class AndroidAppMainActivity : Activity
         try
         {
             var uri = intent.Data;
-            if (AccessKeySchemes.Contains(uri.Scheme))
+            if (AccessKeySchemes.Contains(uri.Scheme, StringComparer.OrdinalIgnoreCase))
             {
                 ImportAccessKey(uri.ToString()!);
                 return true;
@@ -72,7 +72,7 @@ public abstract class AndroidAppMainActivity : Activity
 
             // check mime
             var mimeType = ContentResolver.GetType(uri);
-            if (AccessKeyMimes.Contains(mimeType))
+            if (!AccessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase))
             {
                 Toast.MakeText(this, VpnHoodApp.Instance.Resources.Strings.MsgUnsupportedContent, ToastLength.Long)?.Show();
                 return false;

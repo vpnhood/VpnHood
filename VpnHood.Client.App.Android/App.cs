@@ -1,51 +1,29 @@
 ﻿using System;
 using Android.App;
-using Android.Graphics;
 using Android.Runtime;
+using VpnHood.Client.App.Droid.Common;
+using VpnHood.Client.App.Droid.Properties;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.Device.Droid;
+
 namespace VpnHood.Client.App.Droid;
-[Application(Banner = "@mipmap/banner", Label = "@string/app_name", Icon = "@mipmap/appicon",
+
+[Application(
+    Label = "@string/app_name",
+    Icon = "@mipmap/appicon",
+    Banner = "@mipmap/banner", // for TV
     UsesCleartextTraffic = true, // required for localhost
     SupportsRtl = true, AllowBackup = true)]
-internal class App : Application
+public class App : AndroidApp
 {
-    private AppNotification _appNotification = default!;
-
-    public App(IntPtr javaReference, JniHandleOwnership transfer) 
+    public App(IntPtr javaReference, JniHandleOwnership transfer)
         : base(javaReference, transfer)
     {
     }
 
-    public IAppProvider AppProvider { get; private set; } = default!;
-    public static App? Current { get; private set; }
-    public static Color BackgroundColor => new (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.R, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.G, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.B, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.A);
-    public static Color BackgroundBottomColor => new (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.R, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.G, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.B, VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.A);
-    public AndroidDevice VpnDevice => (AndroidDevice)AppProvider.Device;
-
-    public override void OnCreate()
+    protected override AppOptions AppOptions => new()
     {
-        base.OnCreate();
-        Current = this;
+        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
+        Resources = UiDefaults.AppResources,
+    };
 
-        //app init
-        var device = new AndroidDevice();
-        AppProvider = new AppProvider { Device = new AndroidDevice() };
-        if (!VpnHoodApp.IsInit) VpnHoodApp.Init(AppProvider);
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
-        
-        _appNotification = new AppNotification(this);
-        device.InitNotification(_appNotification.Notification, AppNotification.NotificationId);
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
-            _appNotification.Dispose();
-        }
-
-        base.Dispose(disposing);
-    }
 }

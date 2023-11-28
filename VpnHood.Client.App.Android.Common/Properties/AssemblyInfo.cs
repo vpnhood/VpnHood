@@ -12,5 +12,3 @@ using Android.App;
 [assembly: UsesPermission(Name = Manifest.Permission.ForegroundService)] // required for VPN
 [assembly: UsesPermission(Name = Manifest.Permission.ForegroundServiceSystemExempted)] // required for VPN
 [assembly: UsesPermission(Name = Manifest.Permission.StartForegroundServicesFromBackground)] // required for VPN
-// todo
-// [assembly: UsesPermission(Name = Manifest.Permission.BindRemoteviews)] // forgot why it is here

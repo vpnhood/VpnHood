@@ -8,13 +8,12 @@ namespace VpnHood.Client.App.Droid.Common;
 public class AndroidApp : Application
 {
     private AndroidAppNotification? _appNotification;
+    protected virtual AppOptions AppOptions { get; } = new();
 
     public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
         : base(javaReference, transfer)
     {
     }
-
-    protected virtual AppOptions AppOptions { get; } = new();
 
     public override void OnCreate()
     {
@@ -25,7 +24,7 @@ public class AndroidApp : Application
             VpnHoodApp.Init(new AndroidAppProvider(), AppOptions);
 
         // init notification
-        _appNotification = new AndroidAppNotification(this, typeof(AndroidAppWebViewMainActivity), VpnHoodApp.Instance); //todo WebViewMainActivity must get as parameter
+        _appNotification = new AndroidAppNotification(this, VpnHoodApp.Instance); 
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
         AndroidDevice.Current.InitNotification(_appNotification.Notification, AndroidAppNotification.NotificationId);
     }

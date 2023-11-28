@@ -1,7 +1,9 @@
 ﻿using System;
 using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.Graphics.Drawables;
+using Android.Health.Connect.DataTypes;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -40,19 +42,18 @@ public sealed class AndroidAppNotification : IDisposable
         Notification.Builder notificationBuilder;
 
         // check notification manager
-        var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService)
-                                  ?? throw new Exception("Could not acquire NotificationManager.");
-
-        // open intent
-        ArgumentNullException.ThrowIfNull(context.PackageManager);
+        var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService);
+        ArgumentNullException.ThrowIfNull(notificationManager);
         ArgumentNullException.ThrowIfNull(context.PackageName);
+        ArgumentNullException.ThrowIfNull(context.PackageManager);
+        
+        // open intent
         var openIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
 
         //create channel
         if (OperatingSystem.IsAndroidVersionAtLeast(26))
         {
-            var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName,
-                NotificationImportance.Low);
+            var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName, NotificationImportance.Low);
             channel.EnableVibration(false);
             channel.EnableLights(false);
             channel.SetShowBadge(false);
@@ -67,7 +68,10 @@ public sealed class AndroidAppNotification : IDisposable
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)
         if (!OperatingSystem.IsAndroidVersionAtLeast(24))
-            notificationBuilder.SetContentText(appResources.Strings.AppName);
+        {
+            var appName = context.PackageManager.GetApplicationLabel(context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
+            notificationBuilder.SetContentText(appName);
+        }
 
         var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);
         notificationBuilder.SetContentIntent(pendingOpenIntent);
@@ -81,10 +85,11 @@ public sealed class AndroidAppNotification : IDisposable
             notificationBuilder.SetColor(appResources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
 
         // set the required small icon
-        var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        var icon = appResources.Icons.NotificationImage?.ToAndroidIcon()
-                   ?? Icon.CreateWithResource(context, appInfo.Icon);
-        notificationBuilder.SetSmallIcon(icon);
+        ArgumentNullException.ThrowIfNull(context.ApplicationInfo);
+        ArgumentNullException.ThrowIfNull(context.Resources);
+        var iconId = context.Resources.GetIdentifier("@mipmap/notification", "drawable", context.PackageName);
+        if (iconId == 0) iconId = context.ApplicationInfo.Icon;
+        notificationBuilder.SetSmallIcon(iconId);
 
         return notificationBuilder;
     }

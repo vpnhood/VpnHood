@@ -5,20 +5,19 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Resources;
 using VpnHood.Common;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
-using VpnHood.Client.App.Resources;
 using WinNative;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using VpnHood.Common.JobController;
 
-// ReSharper disable once CheckNamespace
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.Win.Common;
 
 public class WinApp : IDisposable, IJob
 {
@@ -159,14 +158,14 @@ public class WinApp : IDisposable, IJob
 
         // update icon and text
         var stateName = VhApp.State.ConnectionState == AppConnectionState.None
-            ? UiResource.Disconnected
+            ? VhApp.Resources.Strings.Disconnected
             : VhApp.State.ConnectionState.ToString();
 
         var hIcon = _connectingIcon.Handle;
         if (VhApp.State.ConnectionState == AppConnectionState.Connected) hIcon = _connectedIcon.Handle;
         else if (VhApp.IsIdle) hIcon = _disconnectedIcon.Handle;
 
-        _sysTray.Update($@"{UiResource.AppName} - {stateName}", hIcon);
+        _sysTray.Update($@"{VhApp.Resources.Strings.AppName} - {stateName}", hIcon);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VhApp.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VhApp.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId, !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting);
@@ -243,13 +242,13 @@ public class WinApp : IDisposable, IJob
         _sysTray = new SystemTray("VpnHood!", _disconnectedIcon.Handle);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
-        _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Open, (_, _) => OpenMainWindow());
-        _openMainWindowInBrowserMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
+        _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Open, (_, _) => OpenMainWindow());
+        _openMainWindowInBrowserMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
-        _connectMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Connect, (_, _) => ConnectClicked());
-        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(UiResource.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
+        _connectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Connect, (_, _) => ConnectClicked());
+        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
         _sysTray.ContextMenu.AddMenuSeparator();
-        _sysTray.ContextMenu.AddMenuItem(UiResource.Exit, (_, _) => Exit());
+        _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Exit, (_, _) => Exit());
     }
 
     private void ConnectClicked()

@@ -13,12 +13,13 @@ using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = "@mipmap/quick_launch_tile", Enabled = true, Exported = true)]
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter(new[] { ActionQsTile })]
 public class QuickLaunchTileService : TileService
 {
+    private const string IconResourceName = "@mipmap/quick_launch_tile";
     private bool _isConnectByClick;
 
     public override void OnCreate()
@@ -156,13 +157,12 @@ public class QuickLaunchTileService : TileService
             return Task.FromResult(0);
         }
 
-        ArgumentNullException.ThrowIfNull(context.ApplicationInfo);
         ArgumentNullException.ThrowIfNull(context.PackageManager);
         ArgumentNullException.ThrowIfNull(context.PackageName);
+        ArgumentNullException.ThrowIfNull(context.Resources);
         var appName = context.PackageManager.GetApplicationLabel(context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
-        var icon = VpnHoodApp.Instance.Resources.Icons.QuickLaunchTileImage?.ToAndroidIcon()
-            ?? VpnHoodApp.Instance.Resources.Icons.NotificationImage?.ToAndroidIcon()
-            ?? Icon.CreateWithResource(context, context.ApplicationInfo.Icon); 
+        var iconId = context.Resources.GetIdentifier(IconResourceName, "drawable", context.PackageName);
+        var icon = Icon.CreateWithResource(context, iconId);
 
         statusBarManager.RequestAddTileService(
             new ComponentName(context, Java.Lang.Class.FromType(typeof(QuickLaunchTileService))),

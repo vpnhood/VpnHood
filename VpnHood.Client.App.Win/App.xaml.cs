@@ -20,7 +20,7 @@ public partial class App : Application
             WinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            var appProvider = new VpnHoodAppProvider();
+            var appProvider = new WinAppProvider();
             using var spaResource = new MemoryStream(UiResource.SPA);
             VpnHoodApp.Init(appProvider);
             VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);

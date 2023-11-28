@@ -8,12 +8,11 @@ using Android.Webkit;
 using Android.Widget;
 using VpnHood.Client.App.WebServer;
 
-namespace VpnHood.Client.App.Droid.Common;
+namespace VpnHood.Client.App.Droid.Common.Activities;
 
 public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
 {
     private bool _isWeViewVisible;
-    
     public WebView? WebView { get; private set; }
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -47,10 +46,10 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
     {
         var imageView = new ImageView(this);
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        var icon = appInfo.LoadIcon(Application.Context.PackageManager);
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
 
         // set splash screen background color
+        var icon = appInfo.LoadIcon(Application.Context.PackageManager);
         imageView.SetImageDrawable(icon); //todo test
         imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
@@ -73,7 +72,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
         WebView.Settings.SetSupportMultipleWindows(true);
         WebView.SetLayerType(LayerType.Hardware, null);
-        if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor != null) 
+        if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor != null)
             WebView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
 
         var webViewClient = new AndroidAppWebViewClient();

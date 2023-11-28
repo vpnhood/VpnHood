@@ -16,11 +16,11 @@ public sealed class AndroidAppNotification : IDisposable
     private readonly Context _context;
     private readonly VpnHoodApp _vpnHoodApp;
 
-    public AndroidAppNotification(Context context, Type mainActivity, VpnHoodApp vpnHoodApp)
+    public AndroidAppNotification(Context context, VpnHoodApp vpnHoodApp)
     {
         _context = context;
         _vpnHoodApp = vpnHoodApp;
-        _notificationBuilder = CreateNotificationBuilder(context, mainActivity, vpnHoodApp.Resources);
+        _notificationBuilder = CreateNotificationBuilder(context, vpnHoodApp.Resources);
     }
 
     public Notification Notification => _notificationBuilder.Build();
@@ -35,7 +35,7 @@ public sealed class AndroidAppNotification : IDisposable
         return pendingIntent;
     }
 
-    private static Notification.Builder CreateNotificationBuilder(Context context, Type mainActivity, AppResources appResources)
+    private static Notification.Builder CreateNotificationBuilder(Context context, AppResources appResources)
     {
         Notification.Builder notificationBuilder;
 

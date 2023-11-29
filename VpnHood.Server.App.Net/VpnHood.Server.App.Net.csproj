@@ -48,7 +48,7 @@
 		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-		<PackageReference Include="NLog" Version="5.2.6" />
+		<PackageReference Include="NLog" Version="5.2.7" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.5" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
 	</ItemGroup>

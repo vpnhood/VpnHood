@@ -76,10 +76,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatType(this)} is already initialized.");
+        if (IsInit) throw new InvalidOperationException($"VpnHoodApp is already initialized.");
         options ??= new AppOptions();
-        Resources = options.Resources;
+        MigrateUserDataFromXamarin(options.AppDataFolderPath); // Deprecated >= 400
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
+        Resources = options.Resources;
 
         _appProvider = appProvider ?? throw new ArgumentNullException(nameof(appProvider));
         if (_appProvider.Device == null) throw new ArgumentNullException(nameof(_appProvider.Device));
@@ -599,6 +600,21 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         return IsIdle 
             ? null 
             : ClientProfileStore.ClientProfileItems.FirstOrDefault(x => x.ClientProfile.ClientProfileId == LastActiveClientProfileId);
+    }
+
+    // Deprecated >= 400
+    private static void MigrateUserDataFromXamarin(string folderPath)
+    {
+        try
+        {
+            var oldPath = Path.Combine(Path.GetDirectoryName(folderPath)!, ".local", "share", "VpnHood");
+            if (Directory.Exists(oldPath) && !Directory.Exists(folderPath))
+                Directory.Move(oldPath, folderPath);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not migrate user data from Xamarin.");
+        }
     }
 
 }

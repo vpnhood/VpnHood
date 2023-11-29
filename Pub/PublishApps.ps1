@@ -9,11 +9,12 @@ param(
 
 $nugets = $nugets -eq "1";
 $android = $android -eq "1";
+$androidConnect = $androidConnect -eq "1";
 $distribute = $distribute -eq "1";
 $winClient = $winClient -eq "1";
 $server = $server -eq "1";
 
-. "$PSScriptRoot/Common.ps1" -bump $bump
+. "$PSScriptRoot/Core/Common.ps1" -bump $bump
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
@@ -56,6 +57,13 @@ if ($android)
 {	
 	& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
 }
+
+# publish android
+if ($androidConnect)
+{	
+	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish.ps1";
+}
+
 
 # distribute
 if ($distribute)

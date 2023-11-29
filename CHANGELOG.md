@@ -1,6 +1,7 @@
 # v3.2.439
 ### Client
 Improve Performance
+Add the initializing state to the connection state
 Android Set the navigation button background color
 
 ### Server

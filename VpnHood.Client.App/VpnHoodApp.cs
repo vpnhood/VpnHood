@@ -162,7 +162,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         {
             if (_initializingState > 0 ) return AppConnectionState.Initializing;
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
-            if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
             if (Client?.State == ClientState.Connected && IsWaitingForAd) return AppConnectionState.Connecting;

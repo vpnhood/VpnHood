@@ -45,6 +45,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string? _lastError;
     private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
+    private int _initializingState;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
@@ -159,6 +160,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     {
         get
         {
+            if (_initializingState > 0 ) return AppConnectionState.Initializing;
+            if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
@@ -523,10 +526,20 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         // AddFromIp2Location if hash has been changed
         if (_loadCountryIpGroups)
         {
-            await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
-            using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
-            await _ipGroupManager.InitByIp2LocationZipStream(entry);
+            try
+            {
+                _initializingState++;
+                CheckConnectionStateChanged();
+                await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
+                using var zipArchive = new ZipArchive(memZipStream);
+                var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+                await _ipGroupManager.InitByIp2LocationZipStream(entry);
+            }
+            finally
+            {
+                _initializingState--;
+                CheckConnectionStateChanged();
+            }
         }
 
         return _ipGroupManager;
@@ -597,8 +610,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public ClientProfileItem? GetActiveClientProfile()
     {
-        return IsIdle 
-            ? null 
+        return IsIdle
+            ? null
             : ClientProfileStore.ClientProfileItems.FirstOrDefault(x => x.ClientProfile.ClientProfileId == LastActiveClientProfileId);
     }
 

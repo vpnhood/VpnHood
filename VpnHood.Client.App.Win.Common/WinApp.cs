@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Resources;
 using VpnHood.Common;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
@@ -21,8 +20,6 @@ namespace VpnHood.Client.App.Win.Common;
 
 public class WinApp : IDisposable, IJob
 {
-    private const string DefaultLocalHost = "myvpnhood";
-    private readonly IPEndPoint _defaultLocalHostEndPoint = new(IPAddress.Parse("127.10.10.10"), 80);
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
     private SystemTray? _sysTray;
@@ -30,9 +27,10 @@ public class WinApp : IDisposable, IJob
     private readonly CommandListener _commandListener;
     private bool _disposed;
     private readonly string _appLocalDataPath;
-    private readonly Icon _disconnectedIcon;
-    private readonly Icon _connectedIcon;
-    private readonly Icon _connectingIcon;
+    private readonly Icon _appIcon;
+    private Icon? _disconnectedIcon;
+    private Icon? _connectedIcon;
+    private Icon? _connectingIcon;
     private int _connectMenuItemId;
     private int _disconnectMenuItemId;
     private int _openMainWindowMenuItemId;
@@ -53,11 +51,9 @@ public class WinApp : IDisposable, IJob
     private WinApp()
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        _disconnectedIcon = new Icon(new MemoryStream(UiResource.VpnDisconnectedIcon));
-        _connectedIcon = new Icon(new MemoryStream(UiResource.VpnConnectedIcon));
-        _connectingIcon = new Icon(new MemoryStream(UiResource.VpnConnectingIcon));
-
         _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly."))
+            ?? throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(_appLocalDataPath, FileNameAppCommand));
@@ -150,6 +146,29 @@ public class WinApp : IDisposable, IJob
         return true;
     }
 
+    private void InitNotifyIcon()
+    {
+        _sysTray = new SystemTray(VhApp.Resources.Strings.AppName, _appIcon.Handle);
+        _sysTray.Clicked += (_, _) => OpenMainWindow();
+        _sysTray.ContextMenu = new ContextMenu();
+        _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Open, (_, _) => OpenMainWindow());
+        _openMainWindowInBrowserMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
+        _sysTray.ContextMenu.AddMenuSeparator();
+        _connectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Connect, (_, _) => ConnectClicked());
+        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
+        _sysTray.ContextMenu.AddMenuSeparator();
+        _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Exit, (_, _) => Exit());
+
+        // initialize icons
+        if (VhApp.Resources.Icons.SystemTrayConnectingIcon!=null)
+            _connectingIcon = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayConnectingIcon.Data));
+
+        if (VhApp.Resources.Icons.SystemTrayConnectedIcon != null)
+            _connectedIcon  = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayConnectedIcon.Data));
+
+        if (VhApp.Resources.Icons.SystemTrayDisconnectedIcon != null)
+            _disconnectedIcon = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayDisconnectedIcon.Data));
+    }
 
     private void UpdateNotifyIcon()
     {
@@ -161,11 +180,12 @@ public class WinApp : IDisposable, IJob
             ? VhApp.Resources.Strings.Disconnected
             : VhApp.State.ConnectionState.ToString();
 
-        var hIcon = _connectingIcon.Handle;
-        if (VhApp.State.ConnectionState == AppConnectionState.Connected) hIcon = _connectedIcon.Handle;
-        else if (VhApp.IsIdle) hIcon = _disconnectedIcon.Handle;
+        var icon = _connectingIcon;
+        if (VhApp.State.ConnectionState == AppConnectionState.Connected) icon = _connectedIcon;
+        else if (VhApp.IsIdle) icon = _disconnectedIcon;
+        icon ??= _appIcon;
 
-        _sysTray.Update($@"{VhApp.Resources.Strings.AppName} - {stateName}", hIcon);
+        _sysTray.Update($@"{VhApp.Resources.Strings.AppName} - {stateName}", icon.Handle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VhApp.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VhApp.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId, !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting);
@@ -235,20 +255,6 @@ public class WinApp : IDisposable, IJob
     private void Exit()
     {
         ExitRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void InitNotifyIcon()
-    {
-        _sysTray = new SystemTray("VpnHood!", _disconnectedIcon.Handle);
-        _sysTray.Clicked += (_, _) => OpenMainWindow();
-        _sysTray.ContextMenu = new ContextMenu();
-        _openMainWindowMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Open, (_, _) => OpenMainWindow());
-        _openMainWindowInBrowserMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.OpenInBrowser, (_, _) => OpenMainWindowInBrowser());
-        _sysTray.ContextMenu.AddMenuSeparator();
-        _connectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Connect, (_, _) => ConnectClicked());
-        _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Disconnect, (_, _) => _ = VhApp.Disconnect(true));
-        _sysTray.ContextMenu.AddMenuSeparator();
-        _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Exit, (_, _) => Exit());
     }
 
     private void ConnectClicked()
@@ -338,18 +344,18 @@ public class WinApp : IDisposable, IJob
         _sysTray?.Dispose();
     }
 
-    public Uri? RegisterLocalDomain()
+    public static Uri? RegisterLocalDomain(IPEndPoint hostEndPoint, string localHost)
     {
         // check default ip
         IPEndPoint? freeLocalEndPoint = null;
         try
         {
-            freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(_defaultLocalHostEndPoint.Address, _defaultLocalHostEndPoint.Port);
+            freeLocalEndPoint = VhUtil.GetFreeTcpEndPoint(hostEndPoint.Address, hostEndPoint.Port);
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError("Could not find free port local host. LocalIp:{LocalIp}, Message: {Message}",
-                _defaultLocalHostEndPoint.Address, ex.Message);
+                hostEndPoint.Address, ex.Message);
         }
 
         // check 127.0.0.1
@@ -380,7 +386,7 @@ public class WinApp : IDisposable, IJob
                     var isWrongVpnHoodLine =
                         items.Length > 1 &&
                         items[0].Trim() != freeLocalEndPoint.Address.ToString() &&
-                        items[1].Trim().Equals(DefaultLocalHost, StringComparison.OrdinalIgnoreCase);
+                        items[1].Trim().Equals(localHost, StringComparison.OrdinalIgnoreCase);
                     return !isWrongVpnHoodLine;
                 })
                 .ToList();
@@ -393,18 +399,18 @@ public class WinApp : IDisposable, IJob
                     var isVpnHoodLine =
                         items.Length > 1 &&
                         items[0].Trim() == freeLocalEndPoint.Address.ToString() &&
-                        items[1].Trim().Equals(DefaultLocalHost, StringComparison.OrdinalIgnoreCase);
+                        items[1].Trim().Equals(localHost, StringComparison.OrdinalIgnoreCase);
                     return isVpnHoodLine;
                 });
 
             if (!isAlreadyAdded)
-                newHostLines.Add($"{freeLocalEndPoint.Address} {DefaultLocalHost} # Added by VpnHood!");
+                newHostLines.Add($"{freeLocalEndPoint.Address} {localHost} # Added by VpnHood!");
 
             // update if changed
             if (!hostLines.SequenceEqual(newHostLines))
                 File.WriteAllLines(hostsFilePath, newHostLines.ToArray());
 
-            return new Uri($"http://{DefaultLocalHost}:{freeLocalEndPoint.Port}");
+            return new Uri($"http://{localHost}:{freeLocalEndPoint.Port}");
         }
         catch (Exception ex)
         {

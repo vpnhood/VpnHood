@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+	
 	<PropertyGroup>
 		<Description>VpnHood Android Client App</Description>
 		<TargetFramework>net8.0-android34.0</TargetFramework>
@@ -11,10 +12,9 @@
 		<IncludeSymbols>True</IncludeSymbols>
 	</PropertyGroup>
 
-	<!--todo remove-->
 	<PropertyGroup>
-		<PublishTrimmed>False</PublishTrimmed>
-		<RunAOTCompilation>False</RunAOTCompilation>
+		<PublishTrimmed2>False</PublishTrimmed2>
+		<RunAOTCompilation2>False</RunAOTCompilation2>
 	</PropertyGroup>
 
 	<PropertyGroup>

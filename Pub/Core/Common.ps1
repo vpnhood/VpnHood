@@ -3,15 +3,15 @@ param(
 )
 $ErrorActionPreference = "Stop";
 
-$solutionDir = Split-Path -parent $PSScriptRoot;
+$solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
+$pubDir = "$solutionDir/Pub";
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
 $credentials = (Get-Content "$solutionDir/../.user/credentials.json" | Out-String | ConvertFrom-Json);
 $nugetApiKey = $credentials.NugetApiKey;
-$nuget = Join-Path $PSScriptRoot "nuget.exe";
 $msverbosity = "minimal";
 
 # Version
-$versionFile = Join-Path $PSScriptRoot "version.json"
+$versionFile = "$pubDir/version.json";
 $versionJson = (Get-Content $versionFile | Out-String | ConvertFrom-Json);
 $bumpTime = [datetime]::Parse($versionJson.BumpTime);
 $version = [version]::Parse($versionJson.Version);
@@ -25,30 +25,22 @@ if ( $bump -gt 0 )
 	$versionJson | ConvertTo-Json -depth 10 | Out-File $versionFile;
 }
 
-$prerelease=$versionJson.Prerelease;
-$isLatest=$versionJson.Prerelease -eq $false; 
+$prerelease = $versionJson.Prerelease;
+$isLatest = $versionJson.Prerelease -eq $false; 
 $versionParam = $version.ToString(3);
-$versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
+$versionTag = "v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 $releaseDate = Get-Date -asUTC -Format "s";
 $deprecatedVersion = $versionJson.DeprecatedVersion;
 
 # Packages Directory
-$packagesRootDir = "$PSScriptRoot/bin/" + $versionTag;
-$packagesClientDir="$packagesRootDir/Client";
-$packagesServerDir="$packagesRootDir/Server";
-New-Item -ItemType Directory -Path $packagesClientDir -Force | Out-Null
-New-Item -ItemType Directory -Path $packagesServerDir -Force | Out-Null
+$packagesRootDir = "$pubDir/bin/" + $versionTag;
+$packageServerDirName = "VpnHoodServer";
+$packageClientDirName = "VpnHoodClient";
+$packageConnectDirName = "VpnHoodConnect";
 
 # Prepare the latest folder
-$packagesRootDirLatest = "$PSScriptRoot/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
-$packagesClientDirLatest="$packagesRootDirLatest/Client";
-$packagesServerDirLatest="$packagesRootDirLatest/Server";
+$packagesRootDirLatest = "$pubDir/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
 $moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/apk/latest";
-if ($isLatest)
-{
-	New-Item -ItemType Directory -Path $packagesClientDirLatest -Force | Out-Null
-	New-Item -ItemType Directory -Path $packagesServerDirLatest -Force | Out-Null
-}
 
 # UpdateProjectVersion
 Function UpdateProjectVersion([string] $projectFile) 

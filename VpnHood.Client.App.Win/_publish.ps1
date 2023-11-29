@@ -1,4 +1,4 @@
-. "$PSScriptRoot/../Pub/Common.ps1";
+. "$PSScriptRoot/../Pub/Core/Common.ps1";
 
 Write-Host;
 Write-Host "*** Building Client Windows ..." -BackgroundColor Blue -ForegroundColor White;
@@ -17,8 +17,8 @@ $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Targ
 UpdateProjectVersion $projectFile;
 
 # prepare module folders
-$moduleDir = "$packagesClientDir/windows";
-$moduleDirLatest = "$packagesClientDirLatest/windows";
+$moduleDir = "$packagesRootDir/$packageClientDirName/windows";
+$moduleDirLatest = "$packagesRootDirLatest/$packageClientDirName/windows";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # calculated path

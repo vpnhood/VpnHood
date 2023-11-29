@@ -43,33 +43,28 @@ if (!$prerelease)
 
 # publish using github CLI: https://github.com/github/hub
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
-$releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
-$releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
+$androidStore = (&{if($prerelease) {"-web"} else {""}});
 
-$anroidStore = (&{if($prerelease) {"-web"} else {""}});
-
-# $releaseClientDir/android/VpnHoodClient-android-web.apk `
-# $releaseClientDir/android/VpnHoodClient-android-web.json `
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
-	$releaseClientDir/android/VpnHoodClient-android$anroidStore.apk `
-	$releaseClientDir/android/VpnHoodClient-android$anroidStore.json `
-	$releaseClientDir/windows/VpnHoodClient-win-x64.msi  `
-	$releaseClientDir/windows/VpnHoodClient-win-x64.txt  `
-	$releaseClientDir/windows/VpnHoodClient-win-x64.json `
-	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.json `
-	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.sh `
-	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.tar.gz `
-	$releaseServerDir/linux-arm64/VpnHoodServer-linux-arm64.json `
-	$releaseServerDir/linux-arm64/VpnHoodServer-linux-arm64.sh `
-	$releaseServerDir/linux-arm64/VpnHoodServer-linux-arm64.tar.gz `
-	$releaseServerDir/win-x64/VpnHoodServer-win-x64.json `
-	$releaseServerDir/win-x64/VpnHoodServer-win-x64.ps1 `
-	$releaseServerDir/win-x64/VpnHoodServer-win-x64.zip `
-	$releaseServerDir/docker/VpnHoodServer.docker.yml `
-	$releaseServerDir/docker/VpnHoodServer.docker.sh;
+	$releaseRootDir/$packageClientDirName/android/VpnHoodClient-android$androidStore.apk `
+	$releaseRootDir/$packageClientDirName/android/VpnHoodClient-android$androidStore.json `
+	$releaseRootDir/$packageClientDirName/windows/VpnHoodClient-win-x64.msi  `
+	$releaseRootDir/$packageClientDirName/windows/VpnHoodClient-win-x64.txt  `
+	$releaseRootDir/$packageClientDirName/windows/VpnHoodClient-win-x64.json `
+	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.json `
+	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.sh `
+	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.tar.gz `
+	$releaseRootDir/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.json `
+	$releaseRootDir/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.sh `
+	$releaseRootDir/$packageServerDirName/linux-arm64/VpnHoodServer-linux-arm64.tar.gz `
+	$releaseRootDir/$packageServerDirName/win-x64/VpnHoodServer-win-x64.json `
+	$releaseRootDir/$packageServerDirName/win-x64/VpnHoodServer-win-x64.ps1 `
+	$releaseRootDir/$packageServerDirName/win-x64/VpnHoodServer-win-x64.zip `
+	$releaseRootDir/$packageServerDirName/docker/VpnHoodServer.docker.yml `
+	$releaseRootDir/$packageServerDirName/docker/VpnHoodServer.docker.sh;
 
 Pop-Location
 

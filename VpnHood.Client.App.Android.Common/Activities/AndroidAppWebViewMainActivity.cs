@@ -50,7 +50,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
 
         // set splash screen background color
         var icon = appInfo.LoadIcon(Application.Context.PackageManager);
-        imageView.SetImageDrawable(icon); //todo test
+        imageView.SetImageDrawable(icon);
         imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
         if (backgroundColor != null) imageView.SetBackgroundColor(backgroundColor.Value);
@@ -93,8 +93,8 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         SetContentView(WebView);
         _isWeViewVisible = true;
 
-        if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundBottomColor != null)
-            Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundBottomColor.Value.ToAndroidColor());
+        if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
+            Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
 
         // request features after loading the webview, so SPA can update the localize the resources
         _ = RequestFeatures();

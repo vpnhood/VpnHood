@@ -1,4 +1,4 @@
-. "$PSScriptRoot/Common.ps1"
+. "$PSScriptRoot/Core/Common.ps1"
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;

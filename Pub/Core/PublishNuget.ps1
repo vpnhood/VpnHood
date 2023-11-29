@@ -1,5 +1,5 @@
 param([Parameter(Mandatory=$true)] [String]$projectDir)
-. "$PSScriptRoot\Common.ps1"
+. "$PSScriptRoot/Common.ps1"
 
 # paths
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;

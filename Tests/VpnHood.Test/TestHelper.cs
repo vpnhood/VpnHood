@@ -409,13 +409,12 @@ internal static class TestHelper
         return appOptions;
     }
 
-    public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default, 
-        Uri? updateInfoUrl = default)
+    public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default)
     {
         //create app
         appOptions ??= CreateClientAppOptions();
 
-        var testAppProvider = new TestAppProvider(deviceOptions, updateInfoUrl);
+        var testAppProvider = new TestAppProvider(deviceOptions);
         var clientApp = VpnHoodApp.Init(testAppProvider, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;

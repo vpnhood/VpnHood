@@ -2,8 +2,6 @@
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using Android.Graphics.Drawables;
-using Android.Health.Connect.DataTypes;
 
 namespace VpnHood.Client.App.Droid.Common;
 

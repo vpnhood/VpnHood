@@ -11,6 +11,12 @@
 		<IncludeSymbols>True</IncludeSymbols>
 	</PropertyGroup>
 
+	<!--todo remove-->
+	<PropertyGroup>
+		<PublishTrimmed>False</PublishTrimmed>
+		<RunAOTCompilation>False</RunAOTCompilation>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>

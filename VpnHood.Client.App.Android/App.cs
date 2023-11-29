@@ -23,7 +23,7 @@ public class App : AndroidApp
     protected override AppOptions AppOptions => new()
     {
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
-        Resources = UiDefaults.AppResources,
+        Resources = VpnHoodAppResource.Resources,
     };
 
 }

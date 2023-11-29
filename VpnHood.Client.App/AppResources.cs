@@ -28,18 +28,17 @@ public class AppResources
 
     public class AppColors
     {
-        public Color? WindowBackgroundBottomColor { get; set; }
+        public Color? NavigationBarColor { get; set; }
         public Color? WindowBackgroundColor { get; set; }
     }
 
     public class AppIcons
     {
-        public IconData? AppIcon { get; set; }
-        public IconData? BadgeConnectedIcon { get; set; } = new (Resource.BadgeConnectedIcon);
+        public IconData? BadgeConnectedIcon { get; set; } = new(Resource.BadgeConnectedIcon);
         public IconData? BadgeConnectingIcon { get; set; } = new(Resource.BadgeConnectingIcon);
-        public IconData? ConnectedIcon { get; set; }
-        public IconData? ConnectingIcon { get; set; }
-        public IconData? DisconnectedIcon { get; set; }
+        public IconData? SystemTrayConnectedIcon { get; set; } 
+        public IconData? SystemTrayConnectingIcon { get; set; }
+        public IconData? SystemTrayDisconnectedIcon { get; set; }
     }
 
     public class IconData(byte[] data)

@@ -22,24 +22,24 @@ namespace VpnHood.Client.App.Resources {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public class UiResource {
+    internal class Resource {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal UiResource() {
+        internal Resource() {
         }
         
         /// <summary>
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        public static global::System.Resources.ResourceManager ResourceManager {
+        internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.Client.App.Resources.UiResource", typeof(UiResource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("VpnHood.Client.App.Resources.Resource", typeof(Resource).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -51,7 +51,7 @@ namespace VpnHood.Client.App.Resources {
         ///   resource lookups using this strongly typed resource class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        public static global::System.Globalization.CultureInfo Culture {
+        internal static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -63,7 +63,7 @@ namespace VpnHood.Client.App.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        public static byte[] SPA {
+        internal static byte[] SPA {
             get {
                 object obj = ResourceManager.GetObject("SPA", resourceCulture);
                 return ((byte[])(obj));
@@ -73,7 +73,7 @@ namespace VpnHood.Client.App.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        public static byte[] VpnConnectedIcon {
+        internal static byte[] VpnConnectedIcon {
             get {
                 object obj = ResourceManager.GetObject("VpnConnectedIcon", resourceCulture);
                 return ((byte[])(obj));
@@ -83,7 +83,7 @@ namespace VpnHood.Client.App.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        public static byte[] VpnConnectingIcon {
+        internal static byte[] VpnConnectingIcon {
             get {
                 object obj = ResourceManager.GetObject("VpnConnectingIcon", resourceCulture);
                 return ((byte[])(obj));
@@ -93,19 +93,9 @@ namespace VpnHood.Client.App.Resources {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        public static byte[] VpnDisconnectedIcon {
+        internal static byte[] VpnDisconnectedIcon {
             get {
                 object obj = ResourceManager.GetObject("VpnDisconnectedIcon", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] VpnHoodIcon {
-            get {
-                object obj = ResourceManager.GetObject("VpnHoodIcon", resourceCulture);
                 return ((byte[])(obj));
             }
         }

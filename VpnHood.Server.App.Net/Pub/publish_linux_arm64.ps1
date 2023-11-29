@@ -4,14 +4,14 @@ Write-Host "*** Creating Linux Server Module..." -BackgroundColor Blue -Foregrou
 # Init script
 $projectDir = Split-Path $PSScriptRoot -Parent;
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-. "$projectDir/../Pub/Common.ps1";
+. "$projectDir/../Pub/Core/Common.ps1";
 
 #update project version
 UpdateProjectVersion $projectFile;
 
 # prepare module folders
-$moduleDir = "$packagesServerDir/linux-arm64";
-$moduleDirLatest = "$packagesServerDirLatest/linux-arm64";
+$moduleDir = "$packagesRootDir/$packageServerDirName/linux-arm64";
+$moduleDirLatest = "$packagesRootDirLatest/$packageServerDirName/linux-arm64";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # Creating linux package

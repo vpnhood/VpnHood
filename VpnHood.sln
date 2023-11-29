@@ -26,9 +26,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
-		Pub\Common.ps1 = Pub\Common.ps1
 		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
-		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
 		Pub\PublishServerApps.ps1 = Pub\PublishServerApps.ps1
 		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\Version.json = Pub\Version.json
@@ -71,6 +69,13 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Connect", "VpnHood.Client.App.Android.Connect\VpnHood.Client.App.Android.Connect.csproj", "{93CA0868-8D4E-470F-ACEA-253BDAE2EDB7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Common", "VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj", "{D6C362F7-9679-4482-9260-DAEA9F91D51C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{18FA0808-ABCC-481B-A596-F9304363675A}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\Core\Common.ps1 = Pub\Core\Common.ps1
+		Pub\Core\PublishAndroidApp.ps1 = Pub\Core\PublishAndroidApp.ps1
+		Pub\Core\PublishNuget.ps1 = Pub\Core\PublishNuget.ps1
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -575,6 +580,7 @@ Global
 		{57B48D70-685C-4C76-984C-F88527441D7C} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{93CA0868-8D4E-470F-ACEA-253BDAE2EDB7} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{D6C362F7-9679-4482-9260-DAEA9F91D51C} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
+		{18FA0808-ABCC-481B-A596-F9304363675A} = {AD60711B-C6DD-442E-B434-2C44B6A717B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

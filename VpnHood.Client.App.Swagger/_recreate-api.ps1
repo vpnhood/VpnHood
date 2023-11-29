@@ -8,9 +8,9 @@ $outBaseFile = "VpnHood.Client.Api";
 $noBuild = $false;
 
 # run
-$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net70/dotnet-nswag.exe";
+$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net80/dotnet-nswag.exe";
 $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile=$projectFile,nobuid=$noBuild";
-& "$nswagExe" run $nswagFile $variables /runtime:Net70;
+& "$nswagExe" run $nswagFile $variables;
 
 #copy to UI project if exists
 $vhFolder = Split-Path (Split-Path -parent $curDir) -parent;

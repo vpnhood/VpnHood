@@ -1,7 +1,5 @@
-using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using Android.OS;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;

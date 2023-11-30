@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Utils;
 

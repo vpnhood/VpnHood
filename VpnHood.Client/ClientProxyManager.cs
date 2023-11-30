@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using PacketDotNet;
+﻿using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling;

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Server.SystemInformation;
+﻿namespace VpnHood.Server.SystemInformation;
 
 public class BasicSystemInfoProvider : ISystemInfoProvider
 {

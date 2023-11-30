@@ -1,10 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling.Channels;

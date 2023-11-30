@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.Common.Logging;
+﻿using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling.Exceptions;
 

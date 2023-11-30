@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.Server.Access.Configurations;
+﻿using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Managers.Http;
 

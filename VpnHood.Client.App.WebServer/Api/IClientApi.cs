@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using VpnHood.Client.App.Settings;
+﻿using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer.Api;

@@ -1,5 +1,4 @@
-﻿using Android.App;
-using Android.Content;
+﻿using Android.Content;
 using Android.Content.PM;
 using Android.Views;
 using Android.Service.QuickSettings;

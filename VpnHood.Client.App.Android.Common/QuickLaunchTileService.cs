@@ -1,12 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using Android;
-using Android.App;
+﻿using Android;
 using Android.Content;
 using Android.Content.PM;
 using Android.Graphics.Drawables;
 using Android.Service.QuickSettings;
-using Android.Widget;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;

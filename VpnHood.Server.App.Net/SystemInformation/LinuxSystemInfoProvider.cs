@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using VpnHood.Common.Logging;
 using VpnHood.Server.SystemInformation;

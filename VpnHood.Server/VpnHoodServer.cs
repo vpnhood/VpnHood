@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;

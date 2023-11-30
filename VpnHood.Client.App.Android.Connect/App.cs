@@ -1,6 +1,4 @@
-﻿using System;
-using Android.App;
-using Android.Runtime;
+﻿using Android.Runtime;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Resources;

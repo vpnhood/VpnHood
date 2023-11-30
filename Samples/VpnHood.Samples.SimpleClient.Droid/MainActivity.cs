@@ -1,12 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using Android.App;
-using Android.Content;
+﻿using Android.Content;
 using Android.Content.PM;
 using Android.Net;
-using Android.OS;
 using Android.Runtime;
-using Android.Widget;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common;
 

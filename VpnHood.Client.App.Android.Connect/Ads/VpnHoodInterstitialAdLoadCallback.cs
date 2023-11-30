@@ -1,5 +1,4 @@
-﻿using Android.App;
-using Android.Gms.Ads;
+﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 
 namespace VpnHood.Client.App.Droid.Connect.Ads;

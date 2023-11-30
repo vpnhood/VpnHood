@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using VpnHood.Client;
+﻿using VpnHood.Client;
 using VpnHood.Client.Device.WinDivert;
 using VpnHood.Common;
 

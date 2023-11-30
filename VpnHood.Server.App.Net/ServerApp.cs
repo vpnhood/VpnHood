@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 using Ga4.Ga4Tracking;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;

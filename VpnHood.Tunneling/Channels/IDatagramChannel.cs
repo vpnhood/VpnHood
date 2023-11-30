@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using PacketDotNet;
+﻿using PacketDotNet;
 
 namespace VpnHood.Tunneling.Channels;
 

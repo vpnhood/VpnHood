@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Client;
+﻿namespace VpnHood.Client;
 
 public class ConnectOptions
 {

@@ -1,5 +1,4 @@
-﻿using System;
-using PacketDotNet;
+﻿using PacketDotNet;
 
 namespace VpnHood.Client.Device;
 

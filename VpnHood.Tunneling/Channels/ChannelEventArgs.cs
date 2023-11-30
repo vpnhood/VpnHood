@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Tunneling.Channels;
+﻿namespace VpnHood.Tunneling.Channels;
 
 public class ChannelEventArgs : EventArgs
 {

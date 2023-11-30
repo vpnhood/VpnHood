@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using PacketDotNet;
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

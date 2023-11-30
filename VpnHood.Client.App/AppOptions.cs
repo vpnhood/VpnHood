@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using VpnHood.Tunneling.Factory;
+﻿using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 

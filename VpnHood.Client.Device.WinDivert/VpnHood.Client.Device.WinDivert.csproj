@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	
 	<PropertyGroup>
 		<Description>VpnHood client device provider for Windows using WinDivert.</Description>
 		<TargetFramework>netstandard2.1</TargetFramework>
@@ -8,6 +7,8 @@
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 

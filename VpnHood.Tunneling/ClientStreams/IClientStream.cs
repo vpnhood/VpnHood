@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using VpnHood.Common.Net;
+﻿using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.ClientStreams;
 

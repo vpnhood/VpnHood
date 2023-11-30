@@ -1,11 +1,6 @@
-﻿using System;
-using System.IO;
-using Android.App;
-using Android.OS;
-using Android.Runtime;
+﻿using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
-using Android.Widget;
 using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;

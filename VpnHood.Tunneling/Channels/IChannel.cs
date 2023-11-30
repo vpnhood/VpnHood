@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using VpnHood.Common.Messaging;
+﻿using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Channels;
 

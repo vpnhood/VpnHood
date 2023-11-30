@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using VpnHood.Server.SystemInformation;
 using System.Diagnostics;
 using VpnHood.Common.Logging;

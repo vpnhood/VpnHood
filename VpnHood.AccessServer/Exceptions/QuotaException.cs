@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.AccessServer.Exceptions;
+﻿namespace VpnHood.AccessServer.Exceptions;
 
 public sealed class QuotaException : Exception
 {

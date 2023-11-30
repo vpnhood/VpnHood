@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
+﻿using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using GrayMint.Authorization.RoleManagement.TeamControllers.Security;
 
 namespace VpnHood.AccessServer.Security;

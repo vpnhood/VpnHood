@@ -1,9 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
 using Token = VpnHood.Common.Token;

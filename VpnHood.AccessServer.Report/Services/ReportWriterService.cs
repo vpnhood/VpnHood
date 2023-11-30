@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -24,7 +24,7 @@ public class ReportWriterService
     private static bool IsDuplicateKeyException(Exception ex)
     {
         return ex.InnerException is 
-                SqlException { Number: 2627 } or 
+                DbException { ErrorCode: 2627 } or 
                 PostgresException{ SqlState: "23505"  };
     }
 

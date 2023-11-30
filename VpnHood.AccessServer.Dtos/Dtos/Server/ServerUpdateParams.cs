@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.Common.Utils;
+﻿using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Dtos;
 public class ServerUpdateParams

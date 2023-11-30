@@ -1,8 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using System;
 using VpnHood.AccessServer.Security;
-using System.Linq;
 using VpnHood.AccessServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using VpnHood.AccessServer.Dtos;

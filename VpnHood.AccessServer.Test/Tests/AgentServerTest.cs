@@ -1,9 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

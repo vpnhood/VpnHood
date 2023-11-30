@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using GrayMint.Authorization.Abstractions;
+﻿using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

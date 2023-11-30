@@ -1,8 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;

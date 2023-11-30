@@ -1,7 +1,7 @@
-﻿using System;
-using System.Reflection;
+﻿using System.Reflection;
 using Renci.SshNet;
 using Renci.SshNet.Security;
+using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
 namespace VpnHood.AccessServer.SShNet.Hack;
 

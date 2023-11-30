@@ -1,7 +1,5 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Persistence;
 

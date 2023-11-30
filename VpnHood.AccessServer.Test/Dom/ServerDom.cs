@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using VpnHood.AccessServer.Api;
+﻿using VpnHood.AccessServer.Api;
 using System.Net;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;

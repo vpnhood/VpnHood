@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using System.Security.Claims;
 using GrayMint.Authorization.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,57 +1,73 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <IsPackable>false</IsPackable>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>12</LangVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.13" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
-    <PackageReference Include="coverlet.collector" Version="6.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+	<PropertyGroup>
+		<PackageTags>Vpn VpnHood AccessManager</PackageTags>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
+		<Version>3.0.131</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VpnHood.AccessServer.Agent\VpnHood.AccessServer.Agent.csproj" />
-    <ProjectReference Include="..\VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj" />
-    <ProjectReference Include="..\VpnHood.AccessServer\VpnHood.AccessServer.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
+		<PackageReference Include="coverlet.collector" Version="6.0.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="GrayMint.Authorization.Abstractions">
-      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="GrayMint.Authorization.Authentications">
-      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\bin\Debug\net7.0\GrayMint.Authorization.Authentications.dll</HintPath>
-    </Reference>
-    <Reference Include="GrayMint.Authorization.RoleManagement.SimpleRoleProviders">
-      <HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.SimpleRoleProviders\bin\Debug\net7.0\GrayMint.Authorization.RoleManagement.SimpleRoleProviders.dll</HintPath>
-    </Reference>
-    <Reference Include="VpnHood.Server.Access">
-      <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AccessServer.Agent\VpnHood.AccessServer.Agent.csproj" />
+		<ProjectReference Include="..\VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj" />
+		<ProjectReference Include="..\VpnHood.AccessServer\VpnHood.AccessServer.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="TestResource.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>TestResource.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
+	<ItemGroup>
+		<Reference Include="GrayMint.Authorization.Abstractions">
+			<HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Abstractions\bin\Debug\netstandard2.1\GrayMint.Authorization.Abstractions.dll</HintPath>
+		</Reference>
+		<Reference Include="GrayMint.Authorization.Authentications">
+			<HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\bin\Debug\net7.0\GrayMint.Authorization.Authentications.dll</HintPath>
+		</Reference>
+		<Reference Include="GrayMint.Authorization.RoleManagement.SimpleRoleProviders">
+			<HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.SimpleRoleProviders\bin\Debug\net7.0\GrayMint.Authorization.RoleManagement.SimpleRoleProviders.dll</HintPath>
+		</Reference>
+		<Reference Include="VpnHood.Server.Access">
+			<HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Update="TestResource.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>TestResource.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Update="TestResource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>TestResource.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="TestResource.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>TestResource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
 
 </Project>

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.AccessServer;
+﻿namespace VpnHood.AccessServer;
 
 public static class QuotaConstants
 {

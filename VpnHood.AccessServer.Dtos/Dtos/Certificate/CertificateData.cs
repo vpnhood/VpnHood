@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace VpnHood.AccessServer.Dtos;
+﻿namespace VpnHood.AccessServer.Dtos;
 
 public class CertificateData
 {

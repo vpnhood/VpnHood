@@ -8,7 +8,6 @@
 		<ApplicationVersion>438</ApplicationVersion>
 		<ApplicationDisplayVersion>3.2.438</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
-		<IncludeSymbols>True</IncludeSymbols>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,6 +20,8 @@
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
@@ -38,8 +39,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
-	  <ProjectReference Include="..\..\VpnHood.Client\VpnHood.Client.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client\VpnHood.Client.csproj" />
 	</ItemGroup>
 
 </Project>

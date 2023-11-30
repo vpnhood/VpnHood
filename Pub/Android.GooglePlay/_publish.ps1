@@ -1,4 +1,4 @@
-. "$PSScriptRoot/../Common.ps1"
+. "$PSScriptRoot/../Core/Common.ps1"
 
 Write-Host "";
 Write-Host "*** Publishing Android of GooglePlay  ..." -BackgroundColor Blue -ForegroundColor White;
@@ -15,9 +15,10 @@ if ($apkFileData -eq $null)
 }
 $apkFile = $apkFileData.FullName;
 $apkVersionCode = (Get-Item $apkFile).Basename;
-$version = [version]::new($version.Major, $version.Minor, $apkVersionCode);
-$versionParam = $version.ToString(3);
-$versionTag="v$versionParam";
+if ($apkVersionCode -ne $version.Build)
+{
+	throw "The apk version code $apkVersionCode is not equal to the build version $($version.Build)";
+}
 
 # prepare module folders
 $moduleDir = "$projectDir/apk/$versionTag";
@@ -58,6 +59,6 @@ echo "Updating the Release ...";
 gh release upload $versionTag $module_infoFile $module_packageFile --clobber;
 
 echo "Updating the Pre-release ...";
-gh release upload "$versionTag-prerelease" $module_packageFile --clobber;
+gh release upload "$versionTag-prerelease" $module_infoFile $module_packageFile --clobber;
 
 Pop-Location

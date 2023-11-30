@@ -26,6 +26,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Persis
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Dtos", "VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj", "{CAD62004-4357-4754-87F3-47CC82FA3292}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A565454E-615C-4F64-BF82-C6F4976B9D62}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\nuget.yml = .github\workflows\nuget.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

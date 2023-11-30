@@ -22,9 +22,9 @@ public class DiagnoseUtil
         return WhenAnySuccess(tasks.ToArray());
     }
 
-    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, int timeout,  int pingTtl = 128, bool anonymize = false)
+    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, int timeout, bool anonymize = false)
     {
-        var tasks = ipAddresses.Select(x => CheckPing(x, timeout, pingTtl, anonymize));
+        var tasks = ipAddresses.Select(x => CheckPing(x, timeout, anonymize));
         return WhenAnySuccess(tasks.ToArray());
     }
 
@@ -102,23 +102,18 @@ public class DiagnoseUtil
         }
     }
 
-    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout, int pingTtl = 128, bool anonymize = false)
+    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout, bool anonymize = false)
     {
         var logIpAddress = anonymize ? VhLogger.Format(ipAddress) : ipAddress.ToString();
 
         try
         {
             using var ping = new Ping();
-            var pingOptions = new PingOptions { Ttl = pingTtl };
             VhLogger.Instance.LogInformation(
                 "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}, Timeout: {Timeout}...",
                 "Started", logIpAddress, timeout);
 
-            var buf = new byte[40];
-            for (var i = 0; i < buf.Length; i++)
-                buf[i] = 5;
-
-            var pingReply = await ping.SendPingAsync(ipAddress, timeout, buf, pingOptions);
+            var pingReply = await ping.SendPingAsync(ipAddress, timeout);
             if (pingReply.Status != IPStatus.Success)
                 throw new Exception($"Status: {pingReply.Status}");
 

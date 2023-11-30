@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 	<PropertyGroup>
 		<Description>VpnHood Access Agent</Description>
 		<TargetFramework>net8.0</TargetFramework>
@@ -20,7 +20,7 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.131</Version>
+		<Version>3.0.132</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 

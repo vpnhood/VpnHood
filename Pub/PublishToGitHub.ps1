@@ -67,4 +67,3 @@ gh release create "$versionTag" `
 	$releaseRootDir/$packageServerDirName/docker/VpnHoodServer.docker.sh;
 
 Pop-Location
-

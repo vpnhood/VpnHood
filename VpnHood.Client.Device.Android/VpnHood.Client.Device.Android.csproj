@@ -9,6 +9,8 @@
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
@@ -24,10 +26,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="..\VpnHood.png">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
+		<None Include="..\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />

@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <Description>Simple VpnHood Client usage for Windows</Description>
-    <TargetFramework>net8.0</TargetFramework>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
+	<PropertyGroup>
+		<Description>Simple VpnHood Client usage for Windows</Description>
+		<TargetFramework>net8.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
 
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
@@ -22,9 +23,9 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="VpnHood.Client" Version="3.2.438-prerelease" />
-    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.2.438-prerelease" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Client" Version="3.2.438-prerelease" />
+		<PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.2.438-prerelease" />
+	</ItemGroup>
 
 </Project>

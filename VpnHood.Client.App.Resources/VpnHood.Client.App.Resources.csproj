@@ -7,6 +7,8 @@
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
@@ -22,7 +24,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 	</ItemGroup>
 
 

@@ -1,14 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <AssemblyName>udptester</AssemblyName>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
+	<PropertyGroup>
+		<AssemblyName>udptester</AssemblyName>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+	</PropertyGroup>
 
 	<PropertyGroup>
 		<ImplicitUsings>disable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>12</LangVersion>
 	</PropertyGroup>
 
@@ -21,8 +22,8 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="VpnHood.Common" Version="3.2.438-prerelease" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Common" Version="3.2.438-prerelease" />
+	</ItemGroup>
 
 </Project>

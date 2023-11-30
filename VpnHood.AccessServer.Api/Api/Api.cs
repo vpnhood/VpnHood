@@ -2048,7 +2048,7 @@ namespace VpnHood.AccessServer.Api
                     urlBuilder_.Append('/');
                     urlBuilder_.Append("devices");
                     urlBuilder_.Append('/');
-                    urlBuilder_.Append("clientId:{clientId}");
+                    urlBuilder_.Append($"clientId:{System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture))}");
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
 

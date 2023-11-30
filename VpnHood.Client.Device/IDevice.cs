@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace VpnHood.Client.Device;
+﻿namespace VpnHood.Client.Device;
 
 public interface IDevice
 {

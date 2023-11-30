@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
-namespace VpnHood.Client.Device.WinDivert;
+﻿namespace VpnHood.Client.Device.WinDivert;
 
 public class WinDivertDevice : IDevice
 {

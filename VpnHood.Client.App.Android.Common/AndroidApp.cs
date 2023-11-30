@@ -1,6 +1,4 @@
-﻿using System;
-using Android.App;
-using Android.Runtime;
+﻿using Android.Runtime;
 using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid.Common;

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Common.Messaging;
+﻿namespace VpnHood.Common.Messaging;
 
 public class AccessUsage
 {

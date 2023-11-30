@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Common.Utils;
+﻿namespace VpnHood.Common.Utils;
 
 public static class UserAgentParser
 {

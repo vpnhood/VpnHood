@@ -5782,8 +5782,8 @@ export interface IServerData {
 export class ServerInstallBySshUserPasswordParams implements IServerInstallBySshUserPasswordParams {
     hostName!: string;
     hostPort!: number;
-    loginUserName!: string;
-    loginPassword!: string;
+    userName!: string;
+    userPassword!: string;
 
     constructor(data?: IServerInstallBySshUserPasswordParams) {
         if (data) {
@@ -5798,8 +5798,8 @@ export class ServerInstallBySshUserPasswordParams implements IServerInstallBySsh
         if (_data) {
             this.hostName = _data["hostName"];
             this.hostPort = _data["hostPort"];
-            this.loginUserName = _data["loginUserName"];
-            this.loginPassword = _data["loginPassword"];
+            this.userName = _data["userName"];
+            this.userPassword = _data["userPassword"];
         }
     }
 
@@ -5814,8 +5814,8 @@ export class ServerInstallBySshUserPasswordParams implements IServerInstallBySsh
         data = typeof data === 'object' ? data : {};
         data["hostName"] = this.hostName;
         data["hostPort"] = this.hostPort;
-        data["loginUserName"] = this.loginUserName;
-        data["loginPassword"] = this.loginPassword;
+        data["userName"] = this.userName;
+        data["userPassword"] = this.userPassword;
         return data;
     }
 }
@@ -5823,15 +5823,15 @@ export class ServerInstallBySshUserPasswordParams implements IServerInstallBySsh
 export interface IServerInstallBySshUserPasswordParams {
     hostName: string;
     hostPort: number;
-    loginUserName: string;
-    loginPassword: string;
+    userName: string;
+    userPassword: string;
 }
 
 export class ServerInstallBySshUserKeyParams implements IServerInstallBySshUserKeyParams {
     hostName!: string;
     hostPort!: number;
-    loginUserName!: string;
-    loginPassword?: string | undefined;
+    userName!: string;
+    userPassword?: string | undefined;
     userPrivateKey!: string;
     userPrivateKeyPassphrase?: string | undefined;
 
@@ -5848,8 +5848,8 @@ export class ServerInstallBySshUserKeyParams implements IServerInstallBySshUserK
         if (_data) {
             this.hostName = _data["hostName"];
             this.hostPort = _data["hostPort"];
-            this.loginUserName = _data["loginUserName"];
-            this.loginPassword = _data["loginPassword"];
+            this.userName = _data["userName"];
+            this.userPassword = _data["userPassword"];
             this.userPrivateKey = _data["userPrivateKey"];
             this.userPrivateKeyPassphrase = _data["userPrivateKeyPassphrase"];
         }
@@ -5866,8 +5866,8 @@ export class ServerInstallBySshUserKeyParams implements IServerInstallBySshUserK
         data = typeof data === 'object' ? data : {};
         data["hostName"] = this.hostName;
         data["hostPort"] = this.hostPort;
-        data["loginUserName"] = this.loginUserName;
-        data["loginPassword"] = this.loginPassword;
+        data["userName"] = this.userName;
+        data["userPassword"] = this.userPassword;
         data["userPrivateKey"] = this.userPrivateKey;
         data["userPrivateKeyPassphrase"] = this.userPrivateKeyPassphrase;
         return data;
@@ -5877,8 +5877,8 @@ export class ServerInstallBySshUserKeyParams implements IServerInstallBySshUserK
 export interface IServerInstallBySshUserKeyParams {
     hostName: string;
     hostPort: number;
-    loginUserName: string;
-    loginPassword?: string | undefined;
+    userName: string;
+    userPassword?: string | undefined;
     userPrivateKey: string;
     userPrivateKeyPassphrase?: string | undefined;
 }

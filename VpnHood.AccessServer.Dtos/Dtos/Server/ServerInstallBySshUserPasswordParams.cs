@@ -4,6 +4,6 @@ public class ServerInstallBySshUserPasswordParams
 {
     public required string HostName { get; init; }
     public required int HostPort { get; init; } = 22;
-    public required string UserName { get; init; }
-    public required string UserPassword { get; init; }
+    public required string LoginUserName { get; init; }
+    public required string LoginPassword { get; init; }
 }

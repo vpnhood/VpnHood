@@ -9428,17 +9428,17 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int HostPort { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userName")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginUserName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserName { get; set; } = default!;
+        public string LoginUserName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userPassword")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginPassword")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserPassword { get; set; } = default!;
+        public string LoginPassword { get; set; } = default!;
 
     }
 
@@ -9457,16 +9457,16 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int HostPort { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userName")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginUserName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserName { get; set; } = default!;
+        public string LoginUserName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userPassword")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginPassword")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? UserPassword { get; set; } = default!;
+        public string? LoginPassword { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("userPrivateKey")]
 

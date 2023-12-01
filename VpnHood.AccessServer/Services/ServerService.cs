@@ -364,10 +364,10 @@ public class ServerService
     {
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.UserPassword));
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
-        await InstallBySsh(appSettings, connectionInfo, installParams.UserPassword);
+        await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
 
     public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
@@ -375,10 +375,10 @@ public class ServerService
         await using var keyStream = new MemoryStream(installParams.UserPrivateKey);
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase);
 
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
-        await InstallBySsh(appSettings, connectionInfo, installParams.UserPassword);
+        await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
 
     private static async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? loginPassword)

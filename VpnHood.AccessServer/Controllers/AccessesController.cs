@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/accesses")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/accesses")]
 public class AccessesController : ControllerBase
 {
     private readonly VhContext _vhContext;
@@ -19,7 +19,7 @@ public class AccessesController : ControllerBase
         _vhContext = vhContext;
     }
 
-    [HttpGet("{accessId:guid}")]
+    [HttpGet("{accessId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {

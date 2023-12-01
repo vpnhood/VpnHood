@@ -2048,7 +2048,7 @@ namespace VpnHood.AccessServer.Api
                     urlBuilder_.Append('/');
                     urlBuilder_.Append("devices");
                     urlBuilder_.Append('/');
-                    urlBuilder_.Append($"clientId:{System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture))}");
+                    urlBuilder_.Append($"clientId:{clientId}");
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
 
@@ -9428,17 +9428,17 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int HostPort { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userName")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginUserName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserName { get; set; } = default!;
+        public string LoginUserName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("password")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginPassword")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Password { get; set; } = default!;
+        public string LoginPassword { get; set; } = default!;
 
     }
 
@@ -9457,22 +9457,27 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int HostPort { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userName")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginUserName")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string UserName { get; set; } = default!;
+        public string LoginUserName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("userKey")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] UserKey { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("userKeyPassphrase")]
+        [System.Text.Json.Serialization.JsonPropertyName("loginPassword")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? UserKeyPassphrase { get; set; } = default!;
+        public string? LoginPassword { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("userPrivateKey")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] UserPrivateKey { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("userPrivateKeyPassphrase")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? UserPrivateKeyPassphrase { get; set; } = default!;
 
     }
 

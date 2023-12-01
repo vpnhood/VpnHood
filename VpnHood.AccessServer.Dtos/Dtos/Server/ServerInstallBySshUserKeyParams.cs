@@ -2,16 +2,10 @@
 
 public class ServerInstallBySshUserKeyParams
 {
-    public string HostName { get; set; }
-    public int HostPort { get; set; } = 22;
-    public string UserName { get; set; }
-    public byte[] UserKey { get; set; }
-    public string? UserKeyPassphrase { get; set; }
-
-    public ServerInstallBySshUserKeyParams(string hostName, string userName, byte[] userKey)
-    {
-        HostName = hostName;
-        UserName = userName;
-        UserKey = userKey;
-    }
+    public required string HostName { get; init; }
+    public required int HostPort { get; init; } = 22;
+    public required string LoginUserName { get; init; }
+    public string? LoginPassword { get; set; }
+    public required byte[] UserPrivateKey { get; init; }
+    public string? UserPrivateKeyPassphrase { get; init; }
 }

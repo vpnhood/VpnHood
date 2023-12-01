@@ -161,7 +161,7 @@ public class ServerTest
         try
         {
             await farm.DefaultServer.Client.InstallBySshUserPasswordAsync(farm.ProjectId, farm.DefaultServer.ServerId,
-                new ServerInstallBySshUserPasswordParams { HostName = "127.0.0.1", UserName = "user", Password = "pass" });
+                new ServerInstallBySshUserPasswordParams { HostName = "127.0.0.1", LoginUserName = "user", LoginPassword = "pass" });
         }
         catch (ApiException ex)
         {
@@ -172,7 +172,7 @@ public class ServerTest
         try
         {
             await farm.DefaultServer.Client.InstallBySshUserKeyAsync(farm.ProjectId, farm.DefaultServer.ServerId,
-                new ServerInstallBySshUserKeyParams { HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key });
+                new ServerInstallBySshUserKeyParams { HostName = "127.0.0.1", LoginUserName = "user", UserPrivateKey = TestResource.test_ssh_key });
         }
         catch (ApiException ex)
         {

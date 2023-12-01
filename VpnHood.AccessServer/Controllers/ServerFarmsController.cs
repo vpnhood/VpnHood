@@ -8,7 +8,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-farms")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/server-farms")]
 public class ServerFarmsController : ControllerBase
 {
     private readonly ServerFarmService _serverFarmService;
@@ -27,14 +27,14 @@ public class ServerFarmsController : ControllerBase
         return _serverFarmService.Create(projectId, createParams);
     }
 
-    [HttpPatch("{serverFarmId:guid}")]
+    [HttpPatch("{serverFarmId}")]
     [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
     public Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         return _serverFarmService.Update(projectId, serverFarmId, updateParams);
     }
 
-    [HttpGet("{serverFarmId:guid}")]
+    [HttpGet("{serverFarmId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false)
     {
@@ -55,7 +55,7 @@ public class ServerFarmsController : ControllerBase
             : await _serverFarmService.List(projectId, search, null, recordIndex, recordCount);
     }
 
-    [HttpDelete("{serverFarmId:guid}")]
+    [HttpDelete("{serverFarmId}")]
     [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
     public Task Delete(Guid projectId, Guid serverFarmId)
     {

@@ -11,7 +11,7 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/devices")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/devices")]
 [Authorize]
 public class DevicesController : ControllerBase
 {
@@ -29,7 +29,7 @@ public class DevicesController : ControllerBase
         _subscriptionService = subscriptionService;
     }
 
-    [HttpGet("{deviceId:guid}")]
+    [HttpGet("{deviceId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
@@ -49,7 +49,7 @@ public class DevicesController : ControllerBase
         return ret;
     }
 
-    [HttpGet("clientId:{clientId:guid}")]
+    [HttpGet("clientId:{clientId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
     {
@@ -59,7 +59,7 @@ public class DevicesController : ControllerBase
         return deviceModel.ToDto();
     }
 
-    [HttpPatch("{deviceId:guid}")]
+    [HttpPatch("{deviceId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
     {

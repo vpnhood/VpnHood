@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/certificates")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/certificates")]
 [Authorize]
 public class CertificatesController : ControllerBase
 {
@@ -25,7 +25,7 @@ public class CertificatesController : ControllerBase
         return ret;
     }
 
-    [HttpPut("{certificateId:guid}/self-signed")]
+    [HttpPut("{certificateId}/self-signed")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> ReplaceBySelfSigned(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams = null)
     {
@@ -41,7 +41,7 @@ public class CertificatesController : ControllerBase
         return ret;
     }
 
-    [HttpPost("{certificateId:guid}/import")]
+    [HttpPost("{certificateId}/import")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> ReplaceByImport(Guid projectId, Guid certificateId, CertificateImportParams importParams)
     {
@@ -49,14 +49,14 @@ public class CertificatesController : ControllerBase
         return ret;
     }
 
-    [HttpGet("{certificateId:guid}")]
+    [HttpGet("{certificateId}")]
     [AuthorizeProjectPermission(Permissions.CertificateRead)]
     public Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
     {
         return _certificateService.Get(projectId, certificateId, includeSummary);
     }
 
-    [HttpDelete("{certificateId:guid}")]
+    [HttpDelete("{certificateId}")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public Task Delete(Guid projectId, Guid certificateId)
     {

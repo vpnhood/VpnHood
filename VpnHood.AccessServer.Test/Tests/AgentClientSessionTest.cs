@@ -5,11 +5,10 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Client;
-using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using System.Net;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -216,6 +215,7 @@ public class AgentClientSessionTest
     {
         var testInit = await TestInit.Create();
         testInit.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
+        testInit.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
         var sampleFarm1 = await SampleFarm.Create(testInit);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.CloseSession();
@@ -240,20 +240,9 @@ public class AgentClientSessionTest
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(testInit.AgentOptions.SessionPermanentlyTimeout);
+        await Task.Delay(testInit.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
         await testInit.Sync();
-        try
-        {
-            responseBase = await session.AddUsage(0);
-            Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode); //it is temporary
-
-            //todo after fixing VpnHoodServers it must throw 404
-            //Assert.Fail($"{nameof(NotExistsException)} ws expected!"); 
-        }
-        catch (ApiException e)
-        {
-            Assert.AreEqual(nameof(NotExistsException), e.ExceptionTypeName);
-        }
+        await VhTestUtil.AssertNotExistsException(session.AddUsage(0));
     }
 
     [TestMethod]

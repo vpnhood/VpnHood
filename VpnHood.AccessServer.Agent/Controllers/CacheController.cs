@@ -21,7 +21,7 @@ public class CacheController : ControllerBase
         _agentOptions = agentOptions.Value;
     }
 
-    [HttpGet("projects/{projectId:guid}/servers")]
+    [HttpGet("projects/{projectId}/servers")]
     public async Task<VpnServer[]> GetServers(Guid projectId)
     {
         var servers = (await _cacheService.GetServers())
@@ -33,19 +33,19 @@ public class CacheController : ControllerBase
         return servers;
     }
 
-    [HttpPost("projects/{projectId:guid}/invalidate")]
+    [HttpPost("projects/{projectId}/invalidate")]
     public async Task InvalidateProject(Guid projectId)
     {
         await _cacheService.InvalidateProject(projectId);
     }
 
-    [HttpPost("projects/{projectId:guid}/invalidate-servers")]
+    [HttpPost("projects/{projectId}/invalidate-servers")]
     public async Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         await _cacheService.InvalidateProjectServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
     }
 
-    [HttpGet("servers/{serverId:guid}")]
+    [HttpGet("servers/{serverId}")]
     public async Task<VpnServer?> GetServer(Guid serverId)
     {
         var serverModel = await _cacheService.GetServer(serverId);
@@ -53,13 +53,13 @@ public class CacheController : ControllerBase
         return server;
     }
 
-    [HttpPost("servers/{serverId:guid}/invalidate")]
+    [HttpPost("servers/{serverId}/invalidate")]
     public async Task InvalidateServer(Guid serverId)
     {
         await _cacheService.InvalidateServer(serverId);
     }
 
-    [HttpGet("sessions/{sessionId:long}")]
+    [HttpGet("sessions/{sessionId}")]
     public async Task<Session> GetSession(long sessionId)
     {
         var session = await _cacheService.GetSession(null, sessionId);

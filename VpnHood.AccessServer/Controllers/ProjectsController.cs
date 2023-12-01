@@ -33,21 +33,21 @@ public class ProjectsController : ControllerBase
         return await _projectService.Create(userId);
     }
 
-    [HttpGet("{projectId:guid}")]
+    [HttpGet("{projectId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Project> Get(Guid projectId)
     {
         return _projectService.Get(projectId);
     }
 
-    [HttpPatch("{projectId:guid}")]
+    [HttpPatch("{projectId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
         return _projectService.Update(projectId, updateParams);
     }
 
-    [HttpPatch("{projectId:guid}/usage")]
+    [HttpPatch("{projectId}/usage")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)

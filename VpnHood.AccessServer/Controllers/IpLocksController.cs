@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/ip-locks")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/ip-locks")]
 public class IpLocksController : ControllerBase
 {
     private readonly VhContext _vhContext;

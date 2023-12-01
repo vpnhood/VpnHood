@@ -383,20 +383,7 @@ public class SessionService
 
     public async Task<SessionResponseBase> AddUsage(ServerModel server, uint sessionId, Traffic traffic, bool closeSession)
     {
-        // temp for server bug
-        // LogWarning should be reported
-        SessionModel session;
-        try { session = await _cacheService.GetSession(server.ServerId, sessionId); }
-        catch
-        {
-            _logger.LogWarning(AccessEventId.Session,
-                "VpnServer tries to add usage to a session usage that does not exists. SessionId: {SessionId}, ServerId: {ServerId}",
-                sessionId, server.ServerId);
-
-            // todo: temporary for servers less or equal than v2.4.321
-            return new SessionResponseBase(SessionErrorCode.SessionClosed);
-        }
-
+        var session = await _cacheService.GetSession(server.ServerId, sessionId);
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
         var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessTokenModel is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;

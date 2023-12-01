@@ -8,7 +8,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-profiles")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/server-profiles")]
 public class ServerProfilesController 
 {
     private readonly ServerProfileService _serverProfileService;
@@ -26,7 +26,7 @@ public class ServerProfilesController
         return await _serverProfileService.Create(projectId, createParams);
     }
 
-    [HttpGet("{serverProfileId:guid}")]
+    [HttpGet("{serverProfileId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerProfileData> Get(Guid projectId, Guid serverProfileId, bool includeSummary = false)
     {
@@ -34,14 +34,14 @@ public class ServerProfilesController
         return dtos.Single();
     }
 
-    [HttpPatch("{serverProfileId:guid}")]
+    [HttpPatch("{serverProfileId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
     {
         return await _serverProfileService.Update(projectId, serverProfileId, updateParams);
     }
 
-    [HttpDelete("{serverProfileId:guid}")]
+    [HttpDelete("{serverProfileId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public async Task Delete(Guid projectId, Guid serverProfileId)
     {

@@ -1,19 +1,20 @@
-﻿// ReSharper disable once CheckNamespace
-namespace System.Runtime.CompilerServices
+﻿#pragma warning disable CS9113 // Parameter is unread.
+// ReSharper disable RedundantTypeDeclarationBody
+// ReSharper disable UnusedParameter.Local
+// ReSharper disable CheckNamespace
+namespace System.Runtime.CompilerServices;
+
+public static class IsExternalInit
 {
-    public static class IsExternalInit
-    {
-    }
+}
 
-    public class RequiredMemberAttribute : Attribute
-    {
-    }
+public class RequiredMemberAttribute : Attribute
+{
+}
 
-    public class CompilerFeatureRequiredAttribute : Attribute
+public class CompilerFeatureRequiredAttribute : Attribute
+{
+    public CompilerFeatureRequiredAttribute(string name)
     {
-        public CompilerFeatureRequiredAttribute(string name)
-        {
-            _ = name;
-        }
     }
 }

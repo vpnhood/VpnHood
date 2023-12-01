@@ -85,7 +85,7 @@ public class SubscriptionService
     public async Task VerifyAddUser(Guid projectId)
     {
         var userRoles = await _roleProvider.GetUserRoles(new UserRoleCriteria { ResourceId= projectId.ToString() });
-        if (await IsFreePlan(projectId) && userRoles.Count() > QuotaConstants.TeamUserCount)
+        if (await IsFreePlan(projectId) && userRoles.Length > QuotaConstants.TeamUserCount)
             throw new QuotaException("TeamUserCount", QuotaConstants.TeamUserCount);
     }
 }

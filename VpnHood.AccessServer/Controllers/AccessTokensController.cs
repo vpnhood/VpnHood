@@ -18,7 +18,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-tokens")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/access-tokens")]
 public class AccessTokensController : ControllerBase
 {
     private readonly UsageReportService _usageReportService;
@@ -77,7 +77,7 @@ public class AccessTokensController : ControllerBase
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
-    [HttpPatch("{accessTokenId:guid}")]
+    [HttpPatch("{accessTokenId}")]
     [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
     {
@@ -113,7 +113,7 @@ public class AccessTokensController : ControllerBase
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
-    [HttpGet("{accessTokenId:guid}/access-key")]
+    [HttpGet("{accessTokenId}/access-key")]
     [AuthorizeProjectPermission(Permissions.AccessTokenReadAccessKey)]
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
@@ -172,7 +172,7 @@ public class AccessTokensController : ControllerBase
         return token.ToAccessKey();
     }
 
-    [HttpGet("{accessTokenId:guid}")]
+    [HttpGet("{accessTokenId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)
     {
@@ -265,7 +265,7 @@ public class AccessTokensController : ControllerBase
 
 
 
-    [HttpDelete("{accessTokenId:guid}")]
+    [HttpDelete("{accessTokenId}")]
     [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task Delete(Guid projectId, Guid accessTokenId)
     {

@@ -11,6 +11,7 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Server.Access.Managers.Http;
+using Renci.SshNet;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -358,47 +359,35 @@ public class ServerService
         await _agentCacheClient.InvalidateServer(server.ServerId);
     }
 
-    private static async Task<string> ExecuteSshCommand(Renci.SshNet.SshClient sshClient, string command, string? password, TimeSpan timeout)
-    {
-        command += ";echo 'CommandExecuted''!'";
-        if (!string.IsNullOrEmpty(password)) command += $"\r{password}\r";
-        await using var shellStream = sshClient.CreateShellStream("ShellStreamCommand", 0, 0, 0, 0, 2048);
-        shellStream.WriteLine(command);
-        await shellStream.FlushAsync();
-        var res = shellStream.Expect("CommandExecuted!", timeout);
-        return res;
-    }
 
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new Renci.SshNet.PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
-        await InstallBySsh(appSettings, connectionInfo, installParams.Password);
+        await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
 
     public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
-        await using var keyStream = new MemoryStream(installParams.UserKey);
-        using var privateKey = new Renci.SshNet.PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
-        SShNet.Hack.RsaSha256Util.ConvertToKeyWithSha256Signature(privateKey); //todo: remove after SShNet get fixed
+        await using var keyStream = new MemoryStream(installParams.UserPrivateKey);
+        using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase);
 
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new Renci.SshNet.PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
-        await InstallBySsh(appSettings, connectionInfo, null);
+        await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
-    private async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? userPassword)
+
+    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? loginPassword)
     {
-        using var sshClient = new Renci.SshNet.SshClient(connectionInfo);
+        using var sshClient = new SshClient(connectionInfo);
         sshClient.Connect();
 
         var linuxCommand = GetInstallScriptForLinux(appSettings, false);
-
-        var res = await ExecuteSshCommand(sshClient, linuxCommand, userPassword, TimeSpan.FromMinutes(5));
-        res = res.Replace($"\n{userPassword}", "\n********");
+        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword, TimeSpan.FromMinutes(5));
 
         var check = sshClient.RunCommand("dir /opt/VpnHoodServer");
         var checkResult = check.Execute();

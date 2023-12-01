@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/servers")]
+[Route("/api/v{version:apiVersion}/projects/{projectId}/servers")]
 public class ServersController : ControllerBase
 {
     private readonly UsageReportService _usageReportService;
@@ -34,14 +34,14 @@ public class ServersController : ControllerBase
         return _serverService.Create(projectId, createParams);
     }
 
-    [HttpPatch("{serverId:guid}")]
+    [HttpPatch("{serverId}")]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
     public Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         return _serverService.Update(projectId, serverId, updateParams);
     }
 
-    [HttpGet("{serverId:guid}")]
+    [HttpGet("{serverId}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
@@ -49,7 +49,7 @@ public class ServersController : ControllerBase
         return list.Single();
     }
 
-    [HttpDelete("{serverId:guid}")]
+    [HttpDelete("{serverId}")]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
     public Task Delete(Guid projectId, Guid serverId)
     {
@@ -64,28 +64,28 @@ public class ServersController : ControllerBase
         return _serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
     }
 
-    [HttpPost("{serverId:guid}/reconfigure")]
+    [HttpPost("{serverId}/reconfigure")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task Reconfigure(Guid projectId, Guid serverId)
     {
         return _serverService.Reconfigure(projectId, serverId);
     }
     
-    [HttpPost("{serverId:guid}/install-by-ssh-user-password")]
+    [HttpPost("{serverId}/install-by-ssh-user-password")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
         return _serverService.InstallBySshUserPassword(projectId, serverId, installParams);
     }
 
-    [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
+    [HttpPost("{serverId}/install-by-ssh-user-key")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
         return _serverService.InstallBySshUserKey(projectId, serverId, installParams);
     }
     
-    [HttpGet("{serverId:guid}/install/manual")]
+    [HttpGet("{serverId}/install/manual")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
     {

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.Services;
 
-namespace VpnHood.AccessServer.Agent;
+namespace VpnHood.AccessServer.Agent.Services;
 
 public class TimedHostedService : IHostedService, IDisposable
 {

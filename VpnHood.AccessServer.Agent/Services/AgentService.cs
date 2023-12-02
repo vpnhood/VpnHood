@@ -363,7 +363,6 @@ public class AgentService
         });
     }
 
-
     private static void SetServerStatus(ServerModel server, ServerStatus serverStatus, bool isConfigure)
     {
         var serverStatusEx = new ServerStatusModel

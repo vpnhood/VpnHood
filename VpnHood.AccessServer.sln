@@ -27,9 +27,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Dtos", "VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj", "{CAD62004-4357-4754-87F3-47CC82FA3292}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub Actions", "GitHub Actions", "{A565454E-615C-4F64-BF82-C6F4976B9D62}"
-	ProjectSection(SolutionItems) = preProject
-		.github\workflows\nuget.yml = .github\workflows\nuget.yml
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -72,9 +69,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{81B08731-02D3-47C1-B3F0-B60B98EBA580} = {DA70AC51-F97F-47CF-B732-3C76D1A27C32}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {99282B07-6E52-4418-9326-3F0E566C74EE}

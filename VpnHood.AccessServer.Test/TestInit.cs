@@ -320,8 +320,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         {
             var claimIdentity = new ClaimsIdentity();
             claimIdentity.AddClaim(new Claim("usage_type", "system"));
-            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "test@local"));
-            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
+            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "system"));
             claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
             var scope = AgentApp.Services.CreateScope();
             var grayMintAuthentication = scope.ServiceProvider.GetRequiredService<GrayMintAuthentication>();

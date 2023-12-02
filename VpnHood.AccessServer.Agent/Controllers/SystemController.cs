@@ -4,6 +4,7 @@ using GrayMint.Authorization.Authentications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
@@ -19,11 +20,11 @@ public class SystemController : ControllerBase
     private readonly VhContext _vhContext;
 
     public SystemController(
-        GrayMintAuthenticationOptions grayMintAuthenticationOptions,
+        IOptions<GrayMintAuthenticationOptions> grayMintAuthenticationOptions,
         GrayMintAuthentication grayMintAuthentication, 
         VhContext vhContext)
     {
-        _grayMintAuthenticationOptions = grayMintAuthenticationOptions;
+        _grayMintAuthenticationOptions = grayMintAuthenticationOptions.Value;
         _grayMintAuthentication = grayMintAuthentication;
         _vhContext = vhContext;
     }
@@ -50,6 +51,7 @@ public class SystemController : ControllerBase
         var claimsIdentity = new ClaimsIdentity();
         claimsIdentity.AddClaim(new Claim("usage_type", "system"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "system"));
+        claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
         var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
             expirationTime: DateTime.UtcNow.AddYears(13));
 

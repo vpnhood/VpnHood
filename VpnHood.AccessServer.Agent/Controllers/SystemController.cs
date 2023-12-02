@@ -3,6 +3,8 @@ using System.Security.Claims;
 using GrayMint.Authorization.Authentications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
@@ -13,10 +15,14 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 public class SystemController : ControllerBase
 {
     private readonly GrayMintAuthentication _grayMintAuthentication;
+    private readonly VhContext _vhContext;
 
-    public SystemController(GrayMintAuthentication grayMintAuthentication)
+    public SystemController(
+        GrayMintAuthentication grayMintAuthentication, 
+        VhContext vhContext)
     {
         _grayMintAuthentication = grayMintAuthentication;
+        _vhContext = vhContext;
     }
 
     [HttpGet("servers/{serverId}/agent-authorization")]
@@ -25,12 +31,25 @@ public class SystemController : ControllerBase
         var claimsIdentity = new ClaimsIdentity();
         claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
-        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, $"{serverId}@local"));
-
         var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity, 
             expirationTime: DateTime.UtcNow.AddYears(13));
 
         return authenticationHeader.ToString();
     }
 
+    [AllowAnonymous]
+    [HttpGet("/api/agent/server-token")]
+    public async Task<string> GetAgentAuthorization(string managementSecret)
+    {
+        var base64BinaryData = Convert.FromHexString(managementSecret.Replace("0x", ""));
+        var serverId = (await _vhContext.Servers.FirstAsync(x=>x.ManagementSecret.SequenceEqual(base64BinaryData))).ServerId;
+
+        var claimsIdentity = new ClaimsIdentity();
+        claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
+        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
+        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
+            expirationTime: DateTime.UtcNow.AddYears(13));
+
+        return authenticationHeader.ToString();
+    }
 }

@@ -2965,11 +2965,18 @@ export class TeamClient {
         return Promise.resolve<void>(null as any);
     }
 
-    createSystemApiKey(): Promise<ApiKey> {
+    createSystemApiKey(secret: string): Promise<ApiKey> {
         let url_ = this.baseUrl + "/api/v1/team/system/api-key";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = new FormData();
+        if (secret === null || secret === undefined)
+            throw new Error("The parameter 'secret' cannot be null.");
+        else
+            content_.append("secret", secret.toString());
+
         let options_: RequestInit = {
+            body: content_,
             method: "POST",
             headers: {
                 "Accept": "application/json"

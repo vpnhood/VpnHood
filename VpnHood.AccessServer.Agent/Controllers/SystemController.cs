@@ -1,11 +1,10 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using GrayMint.Authorization.Authentications;
+using GrayMint.Authorization.Authentications.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
@@ -17,16 +16,13 @@ public class SystemController : ControllerBase
 {
     private readonly GrayMintAuthenticationOptions _grayMintAuthenticationOptions;
     private readonly GrayMintAuthentication _grayMintAuthentication;
-    private readonly VhContext _vhContext;
 
     public SystemController(
         IOptions<GrayMintAuthenticationOptions> grayMintAuthenticationOptions,
-        GrayMintAuthentication grayMintAuthentication, 
-        VhContext vhContext)
+        GrayMintAuthentication grayMintAuthentication)
     {
         _grayMintAuthenticationOptions = grayMintAuthenticationOptions.Value;
         _grayMintAuthentication = grayMintAuthentication;
-        _vhContext = vhContext;
     }
 
     [HttpGet("servers/{serverId}/agent-authorization")]
@@ -35,15 +31,15 @@ public class SystemController : ControllerBase
         var claimsIdentity = new ClaimsIdentity();
         claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
-        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity, 
+        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
             expirationTime: DateTime.UtcNow.AddYears(13));
 
         return authenticationHeader.ToString();
     }
 
     [AllowAnonymous]
-    [HttpGet("authorization")]
-    public async Task<string> GetSystemAuthorization(string secret)
+    [HttpPost("api-key")] //make sure secret is not exists in url
+    public async Task<ApiKey> GetSystemApiKey([FromForm] string secret)
     {
         if (!Convert.FromBase64String(secret).SequenceEqual((_grayMintAuthenticationOptions.Secret)))
             throw new UnauthorizedAccessException();
@@ -52,25 +48,10 @@ public class SystemController : ControllerBase
         claimsIdentity.AddClaim(new Claim("usage_type", "system"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "system"));
         claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
-        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
-            expirationTime: DateTime.UtcNow.AddYears(13));
-
-        return authenticationHeader.ToString();
-    }
-
-    [AllowAnonymous]
-    [HttpGet("/api/agent/server-token")]
-    public async Task<string> GetAgentAuthorization(string managementSecret)
-    {
-        var base64BinaryData = Convert.FromHexString(managementSecret.Replace("0x", ""));
-        var serverId = (await _vhContext.Servers.FirstAsync(x=>x.ManagementSecret.SequenceEqual(base64BinaryData))).ServerId;
-
-        var claimsIdentity = new ClaimsIdentity();
-        claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
-        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
-        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
-            expirationTime: DateTime.UtcNow.AddYears(13));
-
-        return authenticationHeader.ToString();
+        var apiKey = await _grayMintAuthentication.CreateApiKey(claimsIdentity, new ApiKeyOptions()
+        {
+            AccessTokenExpirationTime = DateTime.UtcNow.AddYears(13)
+        });
+        return apiKey;
     }
 }

@@ -11,6 +11,7 @@ $nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net80/dotnet-nswag.
 $variables="/variables:namespace=$namespace,apiBaseFile=Api,projectFile=$projectFile";
 & "$nswagExe" run $nswagFile $variables;
 
+# todo: remove after nswag get fixed
 # fix beta generated code
 # load the api.cs file 
 $filePath = "$curDir/Api/Api.cs";

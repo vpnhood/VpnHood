@@ -87,7 +87,7 @@ public class TestInit : IHttpClientFactory, IDisposable
         QuotaConstants.TeamUserCount = 0xFFFFFF;
 
         // create new user
-        SystemAdminApiKey = await TeamClient.CreateSystemApiKeyAsync();
+        SystemAdminApiKey = await TeamClient.CreateSystemApiKeyAsync("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         HttpClient.DefaultRequestHeaders.Authorization = SystemAdminAuthorization;
 
         // create default project

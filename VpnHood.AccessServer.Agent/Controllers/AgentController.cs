@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using GrayMint.Authorization.Authentications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Services;
@@ -15,11 +17,15 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 public class AgentController : ControllerBase
 {
     private readonly AgentService _agentService;
+    private readonly GrayMintAuthentication _grayMintAuthentication;
 
     public AgentController(
-        AgentService agentService)
+        AgentService agentService,
+        GrayMintAuthentication grayMintAuthentication
+        )
     {
         _agentService = agentService;
+        _grayMintAuthentication = grayMintAuthentication;
     }
 
     private Guid ServerId
@@ -68,6 +74,19 @@ public class AgentController : ControllerBase
     public  Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         return _agentService.ConfigureServer(ServerId, serverInfo);
+    }
+
+    //todo: temporary for version 442 to upgrade old key
+    [HttpGet("authorization")]
+    public async Task<string> GetAuthorization()
+    {
+        var claimsIdentity = new ClaimsIdentity();
+        claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
+        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, ServerId.ToString()));
+        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
+            expirationTime: DateTime.UtcNow.AddYears(13));
+
+        return authenticationHeader.ToString();
     }
 }
 

@@ -296,9 +296,12 @@ public class ServerApp : IDisposable
 
     private static void UpgradeOldTokens(AppSettings appSettings, string appSettingsFilePath)
     {
-
         try
         {
+            var backupFile = Path.Combine(Path.GetDirectoryName(appSettingsFilePath)!, "appsettings_backup_442.json");
+            if (File.Exists(backupFile))
+                return;
+
             // check json by expiration
             var authPayload = appSettings.HttpAccessManager?.Authorization.Split(" ")[1]!;
             var code = authPayload.Split(".")[1];
@@ -312,6 +315,8 @@ public class ServerApp : IDisposable
             if (iss >= DateTime.Parse("2036-12-05"))
                 return; // nothing to update
 
+            VhLogger.Instance.LogInformation("Updating the HttpAccessManager Authorization...");
+
             //get the new token
             var url = appSettings.HttpAccessManager!.BaseUrl;
             var httpClient = new HttpClient();
@@ -323,7 +328,6 @@ public class ServerApp : IDisposable
             appSettings.HttpAccessManager.BaseUrl = new Uri($"https://{url.Authority}");
 
             // create backup
-            var backupFile = Path.Combine(Path.GetDirectoryName(appSettingsFilePath)!, "appsettings_backup_442.json");
             File.Move(appSettingsFilePath, backupFile);
 
             // overwrite settings file

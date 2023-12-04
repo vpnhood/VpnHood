@@ -6,6 +6,7 @@ Feature: Android Set the navigation button background color
 
 ### Server
 Update: Improve Performance
+Update: Improve error reporting to access manager
 Security: Updating AccessManaget token
 Fix: Server doesn't start when there is no local IpV6
 Fix: Server freezes when default UDP port is not available

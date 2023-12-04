@@ -22,16 +22,16 @@ elif [ "$lastArg" = "-composeUrl" ]; then
 	composeUrl=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-restBaseUrl" ]; then
-	restBaseUrl=$arg;
+elif [ "$lastArg" = "-httpBaseUrl" ]; then
+	httpBaseUrl=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-restAuthorization" ]; then
-	restAuthorization=$arg;
+elif [ "$lastArg" = "-httpAuthorization" ]; then
+	httpAuthorization=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-secret" ]; then
-	secret=$arg;
+elif [ "$lastArg" = "-managementSecret" ]; then
+	managementSecret=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" != "" ]; then
@@ -84,15 +84,15 @@ fi
 
 
 # Write AppSettingss
-if [ "$restBaseUrl" != "" ]; then
+if [ "$httpBaseUrl" != "" ]; then
 	echo "creating the appsettings...";
 
 	appSettings="{
   \"HttpAccessManager\": {
-    \"BaseUrl\": \"$restBaseUrl\",
-    \"Authorization\": \"$restAuthorization\"
+    \"BaseUrl\": \"$httpBaseUrl\",
+    \"Authorization\": \"$httpAuthorization\"
   },
-  \"Secret\": \"$secret\"
+  \"ManagementSecret\": \"$managementSecret\"
 }
 ";
 	mkdir -p $destinationPath/storage;

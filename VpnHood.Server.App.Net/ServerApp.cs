@@ -309,7 +309,7 @@ public class ServerApp : IDisposable
             var authDoc = JsonDocument.Parse(json);
             var exp = authDoc.RootElement.GetProperty("exp").GetInt64();
             var iss = DateTimeOffset.FromUnixTimeSeconds(exp).DateTime;
-            if (iss >= DateTime.Parse("2036-12-03"))
+            if (iss >= DateTime.Parse("2036-12-05"))
                 return; // nothing to update
 
             //get the new token

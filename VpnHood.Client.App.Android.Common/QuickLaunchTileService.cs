@@ -5,6 +5,7 @@ using Android.Graphics.Drawables;
 using Android.Service.QuickSettings;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Droid.Common.Utils;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.Common;
@@ -103,7 +104,7 @@ public class QuickLaunchTileService : TileService
         if (!string.IsNullOrEmpty(activeProfileName))
         {
             QsTile.Label = activeProfileName;
-            QsTile.State = VpnHoodApp.Instance.ConnectionState == 
+            QsTile.State = VpnHoodApp.Instance.ConnectionState ==
                 AppConnectionState.Connected ? TileState.Active : TileState.Unavailable;
         }
         else if (!string.IsNullOrEmpty(defaultProfileName))
@@ -113,7 +114,7 @@ public class QuickLaunchTileService : TileService
         }
         else
         {
-            QsTile.Label = BaseContext?.ApplicationInfo?.Name ?? VpnHoodApp.Instance.Resources.Strings.AppName; //todo check
+            QsTile.Label = AndroidUtil.GetAppName(Application.Context);
             QsTile.State = TileState.Unavailable;
         }
 
@@ -123,7 +124,7 @@ public class QuickLaunchTileService : TileService
     private class AddTileServiceHandler : Java.Lang.Object, IConsumer
     {
         private readonly TaskCompletionSource<int> _taskCompletionSource;
-        
+
         public AddTileServiceHandler(TaskCompletionSource<int> taskCompletionSource)
         {
             _taskCompletionSource = taskCompletionSource;
@@ -165,7 +166,7 @@ public class QuickLaunchTileService : TileService
             appName, icon,
             context.MainExecutor!,
             new AddTileServiceHandler(task));
-        
+
         return task.Task;
     }
 }

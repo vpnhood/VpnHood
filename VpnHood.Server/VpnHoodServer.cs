@@ -13,7 +13,6 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
-using VpnHood.Server.Access.Managers.Http;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Server.Utils;
 using VpnHood.Tunneling;
@@ -26,7 +25,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
-    private string? _lastConfigError;
+    private PortableException? _lastConfigError;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
     private readonly ServerConfig? _config;
@@ -131,7 +130,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
-                LastError = _lastConfigError
+                LastError = _lastConfigError?.ToJson()
             };
 
             var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
@@ -172,7 +171,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             State = ServerState.Waiting;
-            _lastConfigError = ex.Message;
+            _lastConfigError = new PortableException(ex);
+            if (ex is SocketException socketException)
+                _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
+
             _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await _serverHost.Stop();
@@ -359,11 +361,4 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         State = ServerState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
-}
-
-//todo: remove
-public class AppSettings
-{
-    public HttpAccessManagerOptions? HttpAccessManager { get; set; }
-    public string? ManagementSecret { get; set; }
 }

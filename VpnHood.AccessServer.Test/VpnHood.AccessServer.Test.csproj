@@ -48,9 +48,6 @@
 		<Reference Include="GrayMint.Authorization.Authentications">
 			<HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.Authentications\bin\Debug\net7.0\GrayMint.Authorization.Authentications.dll</HintPath>
 		</Reference>
-		<Reference Include="GrayMint.Authorization.RoleManagement.SimpleRoleProviders">
-			<HintPath>..\..\..\GrayMint\GrayMint.Authorization\GrayMint.Authorization.RoleManagement.SimpleRoleProviders\bin\Debug\net7.0\GrayMint.Authorization.RoleManagement.SimpleRoleProviders.dll</HintPath>
-		</Reference>
 		<Reference Include="VpnHood.Server.Access">
 			<HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
 		</Reference>

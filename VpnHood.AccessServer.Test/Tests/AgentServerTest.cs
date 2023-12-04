@@ -187,6 +187,29 @@ public class AgentServerTest
     }
 
     [TestMethod]
+    public async Task AutoConfigure_should_remove_old_access_points_for_socket_error()
+    {
+        // create serverInfo
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var serverDom = await farm.AddNewServer(false);
+
+        // init with ipv6
+        serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
+        serverDom.ServerInfo.PublicIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
+        await serverDom.Configure();
+
+        // remove ipv6
+        serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4() };
+        serverDom.ServerInfo.PublicIpAddresses = new[] { await farm.TestInit.NewIpV4() };
+        serverDom.ServerInfo.LastError = "The requested address is not valid in its context. SocketErrorCode: AddressNotAvailable";
+        await serverDom.Configure();
+
+        Assert.IsFalse(serverDom.ServerConfig.TcpEndPoints!.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6));
+        Assert.IsFalse(serverDom.ServerConfig.UdpEndPoints!.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6));
+    }
+
+
+    [TestMethod]
     public async Task Configure_UDP_for_first_time_only()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
@@ -198,8 +221,8 @@ public class AgentServerTest
         var freeUdpPortV4 = serverInfo.FreeUdpPortV4;
         var freeUdpPortV6 = serverInfo.FreeUdpPortV6;
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
-        serverInfo.PublicIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
+        serverInfo.PrivateIpAddresses = new[] { publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
+        serverInfo.PublicIpAddresses = new[] { publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
@@ -284,7 +307,7 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task AutoConfig_should_not_remove_current_public_in_token_by_null_public_ip_()
+    public async Task AutoConfig_should_not_remove_access_point_in_token_by_empty_address_family()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         var testInit = farm.TestInit;

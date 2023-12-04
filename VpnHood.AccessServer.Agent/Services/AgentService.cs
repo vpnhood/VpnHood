@@ -322,13 +322,16 @@ public class AgentService
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetworkV6);
         }
 
-        // use old access points if there is no public ipV6
-        var server = farmServers.Single(x => x.ServerId == serverId);
-        if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetwork))
-            RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetwork);
-        
-        if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetworkV6))
-            RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetworkV6);
+        // use old access points if there is no address family and there is no AddressNotAvailable error
+        if (serverInfo.LastError == null || !serverInfo.LastError.Contains("SocketErrorCode: AddressNotAvailable", StringComparison.OrdinalIgnoreCase))
+        {
+            var server = farmServers.Single(x => x.ServerId == serverId);
+            if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetwork))
+                RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetwork);
+
+            if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetworkV6))
+                RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetworkV6);
+        }
 
 
         return accessPoints.ToList();

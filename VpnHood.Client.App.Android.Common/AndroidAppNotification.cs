@@ -1,5 +1,5 @@
 ﻿using Android.Content;
-using Android.Content.PM;
+using VpnHood.Client.App.Droid.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -64,10 +64,7 @@ public sealed class AndroidAppNotification : IDisposable
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)
         if (!OperatingSystem.IsAndroidVersionAtLeast(24))
-        {
-            var appName = context.PackageManager.GetApplicationLabel(context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
-            notificationBuilder.SetContentText(appName);
-        }
+            notificationBuilder.SetContentText(AndroidUtil.GetAppName(context));
 
         var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);
         notificationBuilder.SetContentIntent(pendingOpenIntent);

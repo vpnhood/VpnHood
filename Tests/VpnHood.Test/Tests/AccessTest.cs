@@ -15,7 +15,7 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
-    }
+     }
 
     [TestMethod]
     public async Task Server_reject_invalid_requests()

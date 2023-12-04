@@ -1,11 +1,15 @@
 # v3.2.439
 ### Client
-Improve Performance
-Add the initializing state to the connection state
-Android Set the navigation button background color
+Update: Improve Performance
+Feature: Add the initializing state to the connection state
+Feature: Android Set the navigation button background color
 
 ### Server
-Improve Performance
+Update: Improve Performance
+Security: Updating AccessManaget token
+Fix: Server doesn't start when there is no local IpV6
+Fix: Server freezes when default UDP port is not available
+Fix: Send status even if server configuration is not successful
 
 ### Developer
 Upgrade to .NET 8

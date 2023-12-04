@@ -13,7 +13,9 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
+using VpnHood.Server.Access.Managers.Http;
 using VpnHood.Server.SystemInformation;
+using VpnHood.Server.Utils;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Server;
@@ -32,6 +34,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _sendStatusTask = Task.CompletedTask;
     public JobSection JobSection { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
+    public SessionManager SessionManager { get; }
+    public ServerState State { get; private set; } = ServerState.NotStarted;
+    public IAccessManager AccessManager { get; }
+    public ISystemInfoProvider SystemInfoProvider { get; }
 
     public VpnHoodServer(IAccessManager accessManager, ServerOptions options)
     {
@@ -51,34 +57,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
         JobRunner.Default.Add(this);
-    }
-
-    public SessionManager SessionManager { get; }
-    public ServerState State { get; private set; } = ServerState.NotStarted;
-    public IAccessManager AccessManager { get; }
-    public ISystemInfoProvider SystemInfoProvider { get; }
-
-    private static void ConfigMinIoThreads(int? minCompletionPortThreads)
-    {
-        // Configure thread pool size
-        ThreadPool.GetMinThreads(out var minWorkerThreads, out var newMinCompletionPortThreads);
-        minCompletionPortThreads ??= newMinCompletionPortThreads * 30;
-        if (minCompletionPortThreads != 0) newMinCompletionPortThreads = minCompletionPortThreads.Value;
-        ThreadPool.SetMinThreads(minWorkerThreads, newMinCompletionPortThreads);
-        VhLogger.Instance.LogInformation(
-            "MinWorkerThreads: {MinWorkerThreads}, MinCompletionPortThreads: {newMinCompletionPortThreads}",
-            minWorkerThreads, newMinCompletionPortThreads);
-    }
-
-    private static void ConfigMaxIoThreads(int? maxCompletionPortThreads)
-    {
-        ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var newMaxCompletionPortThreads);
-        maxCompletionPortThreads ??= 0xFFFF; // We prefer all IO operations get slow together than be queued
-        if (maxCompletionPortThreads != 0) newMaxCompletionPortThreads = maxCompletionPortThreads.Value;
-        ThreadPool.SetMaxThreads(maxWorkerThreads, newMaxCompletionPortThreads);
-        VhLogger.Instance.LogInformation(
-            "MaxWorkerThreads: {MaxWorkerThreads}, MaxCompletionPortThreads: {newMaxCompletionPortThreads}",
-            maxWorkerThreads, newMaxCompletionPortThreads);
     }
 
     public async Task RunJob()
@@ -134,14 +112,15 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             State = ServerState.Configuring;
 
             // get server info
-            VhLogger.Instance.LogInformation("Configuring by the Access Server...");
+            VhLogger.Instance.LogInformation("Configuring by the Access Manager...");
             var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
-            var freeUdpPortV4 = GetFreeUdpPort(AddressFamily.InterNetwork, null);
-            var freeUdpPortV6 = GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
+            var freeUdpPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, null);
+            var freeUdpPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
+
             var serverInfo = new ServerInfo
             {
                 EnvironmentVersion = Environment.Version,
-                Version = GetType().Assembly.GetName().Version,
+                Version = ServerVersion,
                 PrivateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses(),
                 PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
                 Status = GetStatus(),
@@ -168,8 +147,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
-            ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
-            ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
+            ServerUtil.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
+            ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
@@ -185,6 +164,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
             _lastConfigError = null;
             VhLogger.Instance.LogInformation("Server is ready!");
+
+            // set status after successful configuration
+            if (sendStatus)
+                await SendStatusToAccessManager();
         }
         catch (Exception ex)
         {
@@ -194,9 +177,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await _serverHost.Stop();
         }
-
-        if (sendStatus)
-            await SendStatusToAccessManager();
     }
 
     private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
@@ -317,24 +297,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not send server status.");
+            VhLogger.Instance.LogError(ex, "Could not send the server status.");
         }
-    }
-
-    private static int GetFreeUdpPort(AddressFamily addressFamily, int? start)
-    {
-        start ??= new Random().Next(1024, 9000);
-        for (var port = start.Value; port < start + 1000; start++)
-        {
-            try
-            {
-                using var udpClient = new UdpClient(port, addressFamily);
-                return port;
-            }
-            catch { /* ignore */ }
-        }
-
-        return 0;
     }
 
     private async Task GaTrackStart()
@@ -395,4 +359,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         State = ServerState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
+}
+
+//todo: remove
+public class AppSettings
+{
+    public HttpAccessManagerOptions? HttpAccessManager { get; set; }
+    public string? ManagementSecret { get; set; }
 }

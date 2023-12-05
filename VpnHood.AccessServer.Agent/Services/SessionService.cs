@@ -204,8 +204,7 @@ public class SessionService
         access.LastUsedTime = DateTime.UtcNow;
 
         // check supported version
-        var minSupportedVersion = Version.Parse("2.3.289");
-        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
+        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(ServerUtil.MinClientVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another serverModel if everything was ok

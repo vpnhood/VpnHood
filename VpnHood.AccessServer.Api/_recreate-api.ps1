@@ -17,4 +17,5 @@ $variables="/variables:namespace=$namespace,apiBaseFile=Api,projectFile=$project
 $filePath = "$curDir/Api/Api.cs";
 $fileContent = Get-Content -Path $filePath -Raw;
 $fileContent = $fileContent -replace '"clientId:{clientId}"', '$"clientId:{clientId}"';
+$fileContent = $fileContent -replace '"email:{email}"', '$"email:{email}"';
 $fileContent | Set-Content -Path $filePath -Force;

@@ -41,7 +41,6 @@ public class ServerDom
             PublicIpAddresses = Array.Empty<IPAddress>(),
             MachineName = server.MachineName,
             LogicalCoreCount = server.LogicalCoreCount ?? 0,
-            LastError = server.LastConfigError,
             OsInfo = server.OsInfo,
             TotalMemory = server.TotalMemory,
             Status = new ServerStatus
@@ -57,6 +56,7 @@ public class ServerDom
                     Sent = server.ServerStatus?.TunnelReceiveSpeed ?? 0,
                     Received = server.ServerStatus?.TunnelSendSpeed ?? 0,
                 },
+                ConfigError = server.LastConfigError,
                 UdpConnectionCount = server.ServerStatus?.UdpConnectionCount ?? 0,
                 UsedMemory = server is { TotalMemory: { }, ServerStatus.AvailableMemory: { } }
                     ? server.TotalMemory.Value - server.ServerStatus.AvailableMemory.Value

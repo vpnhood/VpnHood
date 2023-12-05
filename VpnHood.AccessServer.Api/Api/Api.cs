@@ -6815,7 +6815,7 @@ namespace VpnHood.AccessServer.Api
                     urlBuilder_.Append('/');
                     urlBuilder_.Append("users");
                     urlBuilder_.Append('/');
-                    urlBuilder_.Append("email:{email}");
+                    urlBuilder_.Append($"email:{email}");
 
                     await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
 

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -108,14 +109,15 @@ public class AgentService
         SetServerStatus(server, serverStatus, false);
 
         // remove LastConfigCode if server send its status
-        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != null)
+        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != serverStatus.ConfigError)
         {
             _logger.LogInformation(AccessEventId.Server,
                 "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
             // update cache
-            server.LastConfigError = null;
+            server.ConfigureTime = DateTime.UtcNow;
+            server.LastConfigError = serverStatus.ConfigError;
             server.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode) ? Guid.Parse(serverStatus.ConfigCode) : null;
             await _cacheService.UpdateServer(server);
 
@@ -123,6 +125,7 @@ public class AgentService
             var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
             serverUpdate.LastConfigError = server.LastConfigError;
             serverUpdate.LastConfigCode = server.LastConfigCode;
+            serverUpdate.ConfigureTime = server.ConfigureTime;
             await _vhContext.SaveChangesAsync();
         }
 
@@ -134,8 +137,7 @@ public class AgentService
     public async Task<ServerConfig> ConfigureServer(Guid serverId, ServerInfo serverInfo)
     {
         var server = await GetServer(serverId);
-        var saveServer = string.IsNullOrEmpty(serverInfo.LastError) || serverInfo.LastError != server.LastConfigError;
-        _logger.Log(saveServer ? LogLevel.Information : LogLevel.Trace, AccessEventId.Server,
+        _logger.Log(LogLevel.Information, AccessEventId.Server,
             "Configuring a Server. ServerId: {ServerId}, Version: {Version}",
             server.ServerId, serverInfo.Version);
 
@@ -151,27 +153,32 @@ public class AgentService
         server.TotalMemory = serverInfo.TotalMemory ?? 0;
         server.LogicalCoreCount = serverInfo.LogicalCoreCount;
         server.Version = serverInfo.Version.ToString();
-        server.LastConfigError = serverInfo.LastError;
-        SetServerStatus(server, serverInfo.Status, true);
 
-        // Update AccessPoints
+        // update AccessPoints
         if (server.AutoConfigure)
             server.AccessPoints = await CreateServerAccessPoints(server.ServerId, server.ServerFarmId, serverInfo);
 
-        // update db if lastError has been changed; prevent bombing the db
-        if (saveServer)
+        // update cache
+        SetServerStatus(server, serverInfo.Status, true);
+
+        // update db. Use find instead of Single because it uses the cache
+        var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+
+        serverUpdate.Version = server.Version;
+        serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
+        serverUpdate.OsInfo = server.OsInfo;
+        serverUpdate.MachineName = server.MachineName;
+        serverUpdate.LogicalCoreCount = server.LogicalCoreCount;
+        serverUpdate.TotalMemory = server.TotalMemory;
+        serverUpdate.Version = server.Version;
+        serverUpdate.LastConfigError = server.LastConfigError;
+
+        // accessPoints if there is any change
+        if (_vhContext.ChangeTracker.HasChanges() ||
+            JsonSerializer.Serialize(serverUpdate.AccessPoints) != JsonSerializer.Serialize(server.AccessPoints))
         {
-            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
-            serverUpdate.Version = server.Version;
-            serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
-            serverUpdate.OsInfo = server.OsInfo;
-            serverUpdate.MachineName = server.MachineName;
-            serverUpdate.ConfigureTime = server.ConfigureTime;
-            serverUpdate.LogicalCoreCount = server.LogicalCoreCount;
-            serverUpdate.TotalMemory = server.TotalMemory;
-            serverUpdate.Version = server.Version;
-            serverUpdate.LastConfigError = server.LastConfigError;
             serverUpdate.AccessPoints = server.AccessPoints;
+            serverUpdate.ConfigureTime = server.ConfigureTime;
             await _vhContext.SaveChangesAsync();
         }
 
@@ -388,7 +395,7 @@ public class AgentService
             SessionCount = serverStatus.SessionCount,
             ThreadCount = serverStatus.ThreadCount,
             TunnelSendSpeed = serverStatus.TunnelSpeed.Sent,
-            TunnelReceiveSpeed = serverStatus.TunnelSpeed.Received
+            TunnelReceiveSpeed = serverStatus.TunnelSpeed.Received,
         };
         server.ServerStatus = serverStatusEx;
     }

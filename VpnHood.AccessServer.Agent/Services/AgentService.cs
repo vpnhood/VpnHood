@@ -107,7 +107,8 @@ public class AgentService
         await CheckServerVersion(server);
         SetServerStatus(server, serverStatus, false);
 
-        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode)
+        // remove LastConfigCode if server send its status
+        if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != null)
         {
             _logger.LogInformation(AccessEventId.Server,
                 "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
@@ -267,6 +268,20 @@ public class AgentService
         return preferredValue;
     }
 
+    private static IEnumerable<IPAddress> GetMissedServerPublicIps(
+        IEnumerable<AccessPointModel> oldAccessPoints,
+        ServerInfo serverInfo,
+        AddressFamily addressFamily)
+    {
+        if (serverInfo.PrivateIpAddresses.All(x => x.AddressFamily != addressFamily) || // there is no private IP anymore
+            serverInfo.PublicIpAddresses.Any(x => x.AddressFamily == addressFamily)) // there is no problem because server could report its public IP
+            return Array.Empty<IPAddress>();
+
+        return oldAccessPoints
+            .Where(x => x.IsPublic && x.IpAddress.AddressFamily == addressFamily)
+            .Select(x => x.IpAddress);
+    }
+
     private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid serverId, Guid farmId, ServerInfo serverInfo)
     {
         // find all public accessPoints 
@@ -281,10 +296,19 @@ public class AgentService
             .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
             .ToList();
 
+        // server
+        var server = farmServers.Single(x => x.ServerId == serverId);
+
+        // prepare server addresses
+        var privateIpAddresses = serverInfo.PrivateIpAddresses;
+        var publicIpAddresses = serverInfo.PublicIpAddresses.ToList();
+        publicIpAddresses.AddRange(GetMissedServerPublicIps(server.AccessPoints, serverInfo, AddressFamily.InterNetwork));
+        publicIpAddresses.AddRange(GetMissedServerPublicIps(server.AccessPoints, serverInfo, AddressFamily.InterNetworkV6));
+
         // create private addresses
-        var accessPoints = serverInfo.PrivateIpAddresses
+        var accessPoints = privateIpAddresses
             .Distinct()
-            .Where(ipAddress => !serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress)))
+            .Where(ipAddress => !publicIpAddresses.Any(x => x.Equals(ipAddress)))
             .Select(ipAddress => new AccessPointModel
             {
                 AccessPointMode = AccessPointMode.Private,
@@ -297,23 +321,23 @@ public class AgentService
 
         // create public addresses and try to save last publicInToken state
         accessPoints
-            .AddRange(serverInfo.PublicIpAddresses
+            .AddRange(publicIpAddresses
             .Distinct()
             .Select(ipAddress => new AccessPointModel
             {
                 AccessPointMode = oldTokenAccessPoints.Any(x => x.IpAddress.Equals(ipAddress))
                     ? AccessPointMode.PublicInToken // prefer last value
                     : AccessPointMode.Public,
-                IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
+                IsListen = privateIpAddresses.Any(x => x.Equals(ipAddress)),
                 IpAddress = ipAddress,
                 TcpPort = 443,
                 UdpPort = GetBestUdpPort(oldTokenAccessPoints, ipAddress, serverInfo.FreeUdpPortV4, serverInfo.FreeUdpPortV6)
             }));
 
         // has other server in the farm offer any PublicInToken
-        var hasOtherServerOwnPublicToken = farmServers.Any(server =>
-            server.ServerId != serverId &&
-            server.AccessPoints.Any(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken));
+        var hasOtherServerOwnPublicToken = farmServers.Any(x =>
+            x.ServerId != serverId &&
+            x.AccessPoints.Any(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken));
 
         // make sure at least one PublicInToken is selected
         if (!hasOtherServerOwnPublicToken)
@@ -322,27 +346,9 @@ public class AgentService
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetworkV6);
         }
 
-        // use old access points if there is no address family and there is no AddressNotAvailable error
-        if (serverInfo.LastError == null || !serverInfo.LastError.Contains("SocketErrorCode: AddressNotAvailable", StringComparison.OrdinalIgnoreCase))
-        {
-            var server = farmServers.Single(x => x.ServerId == serverId);
-            if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetwork))
-                RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetwork);
-
-            if (serverInfo.PublicIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetworkV6))
-                RestoreOldAccessPoints(accessPoints, server.AccessPoints, AddressFamily.InterNetworkV6);
-        }
-
 
         return accessPoints.ToList();
     }
-
-    private static void RestoreOldAccessPoints(List<AccessPointModel> accessPoints, List<AccessPointModel> oldAccessPoint,  AddressFamily addressFamily)
-    {
-        accessPoints.RemoveAll(x => x.IpAddress.AddressFamily == addressFamily);
-        accessPoints.AddRange(oldAccessPoint.Where(x => x.IpAddress.AddressFamily == addressFamily));
-    }
-
     private static void SelectAccessPointAsPublicInToken(ICollection<AccessPointModel> accessPoints, AddressFamily addressFamily)
     {
         if (accessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken && x.IpAddress.AddressFamily == addressFamily))

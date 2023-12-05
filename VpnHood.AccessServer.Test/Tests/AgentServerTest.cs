@@ -187,29 +187,6 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task AutoConfigure_should_remove_old_access_points_for_socket_error()
-    {
-        // create serverInfo
-        var farm = await ServerFarmDom.Create(serverCount: 0);
-        var serverDom = await farm.AddNewServer(false);
-
-        // init with ipv6
-        serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
-        serverDom.ServerInfo.PublicIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
-        await serverDom.Configure();
-
-        // remove ipv6
-        serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4() };
-        serverDom.ServerInfo.PublicIpAddresses = new[] { await farm.TestInit.NewIpV4() };
-        serverDom.ServerInfo.LastError = "The requested address is not valid in its context. SocketErrorCode: AddressNotAvailable";
-        await serverDom.Configure();
-
-        Assert.IsFalse(serverDom.ServerConfig.TcpEndPoints!.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6));
-        Assert.IsFalse(serverDom.ServerConfig.UdpEndPoints!.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6));
-    }
-
-
-    [TestMethod]
     public async Task Configure_UDP_for_first_time_only()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
@@ -307,7 +284,7 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task AutoConfig_should_not_remove_access_point_in_token_by_empty_address_family()
+    public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         var testInit = farm.TestInit;

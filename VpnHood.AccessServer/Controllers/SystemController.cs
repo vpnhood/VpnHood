@@ -21,8 +21,8 @@ public class SystemController : ControllerBase
 
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.Sync)]
-    public async Task Sync()
+    public Task Sync()
     {
-        await _syncService.Sync();
+        return _syncService.Sync();
     }
 }

@@ -145,6 +145,12 @@ public class AgentService
         server.Version = serverInfo.Version.ToString();
         await CheckServerVersion(server);
 
+        // calculate access points
+        var oldAccessPoints = server.AccessPoints;
+        var accessPoints = server.AutoConfigure
+            ? await CreateServerAccessPoints(server.ServerId, server.ServerFarmId, serverInfo)
+            : server.AccessPoints;
+
         // update cache
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         server.OsInfo = serverInfo.OsInfo;
@@ -153,10 +159,7 @@ public class AgentService
         server.TotalMemory = serverInfo.TotalMemory ?? 0;
         server.LogicalCoreCount = serverInfo.LogicalCoreCount;
         server.Version = serverInfo.Version.ToString();
-
-        // update AccessPoints
-        if (server.AutoConfigure)
-            server.AccessPoints = await CreateServerAccessPoints(server.ServerId, server.ServerFarmId, serverInfo);
+        server.AccessPoints = accessPoints;
 
         // update cache
         SetServerStatus(server, serverInfo.Status, true);
@@ -175,7 +178,7 @@ public class AgentService
 
         // accessPoints if there is any change
         if (_vhContext.ChangeTracker.HasChanges() ||
-            JsonSerializer.Serialize(serverUpdate.AccessPoints) != JsonSerializer.Serialize(server.AccessPoints))
+            JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(oldAccessPoints))
         {
             serverUpdate.AccessPoints = server.AccessPoints;
             serverUpdate.ConfigureTime = server.ConfigureTime;

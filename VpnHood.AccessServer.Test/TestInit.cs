@@ -308,9 +308,9 @@ public class TestInit : IHttpClientFactory, IDisposable
         HttpClient.DefaultRequestHeaders.Authorization = oldAuthorization;
     }
 
-    public async Task FlushCache()
+    public Task FlushCache()
     {
-        await AgentCacheClient.Flush();
+        return AgentCacheClient.Flush();
     }
 
     public HttpClient CreateClient(string name)

@@ -40,7 +40,7 @@ public class CacheService
         if (!force && !Mem.Projects.IsEmpty)
             return;
 
-        // this will just effect current scope
+        // this will just affect current scope
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
         _logger.LogTrace("Loading the old projects and servers...");
@@ -352,7 +352,7 @@ public class CacheService
         var updatedSessions = GetUpdatedSessions().ToArray();
 
         // update sessions
-        // never update archived session, it may not exists on db any more
+        // never update archived session, it may not exist on db anymore
         foreach (var session in updatedSessions)
         {
             var entry = _vhContext.Sessions.Attach(session.Clone());

@@ -20,10 +20,10 @@ public class CertificateService
         _subscriptionService = subscriptionService;
     }
 
-    internal async Task<CertificateModel> CreateSelfSingedInternal(Guid projectId)
+    internal Task<CertificateModel> CreateSelfSingedInternal(Guid projectId)
     {
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(subjectName: null);
-        return await Add(projectId, x509Certificate2);
+        return Add(projectId, x509Certificate2);
     }
 
     public async Task<Certificate> CreateSelfSinged(Guid projectId, CertificateSelfSignedParams? createParams)

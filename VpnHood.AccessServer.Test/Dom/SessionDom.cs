@@ -60,8 +60,8 @@ public class SessionDom
         SessionResponseEx = await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
     }
 
-    public async Task<Session> GetSessionFromCache()
+    public Task<Session> GetSessionFromCache()
     {
-        return await TestInit.AgentCacheClient.GetSession(SessionId);
+        return TestInit.AgentCacheClient.GetSession(SessionId);
     }
 }

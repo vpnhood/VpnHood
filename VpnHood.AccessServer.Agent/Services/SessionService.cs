@@ -36,14 +36,14 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackUsage(ulong sessionId, ServerModel server, AccessTokenModel accessToken, DeviceModel device, Traffic traffic)
+    private static Task TrackUsage(ulong sessionId, ServerModel server, AccessTokenModel accessToken, DeviceModel device, Traffic traffic)
     {
         var project = server.Project;
         if (project == null)
-            return;
+            return Task.CompletedTask;
 
         if (string.IsNullOrEmpty(project.GaMeasurementId) || string.IsNullOrEmpty(project.GaApiSecret))
-            return;
+            return Task.CompletedTask;
 
         var ga4Tracker = new Ga4Tracker
         {
@@ -78,7 +78,7 @@ public class SessionService
         if (!string.IsNullOrEmpty(server.ServerName)) ga4Event.Properties.Add("ServerName", server.ServerName);
         if (!string.IsNullOrEmpty(server.ServerFarm?.ServerFarmName)) ga4Event.Properties.Add("FarmName", server.ServerFarm.ServerFarmName);
 
-        await ga4Tracker.Track(ga4Event);
+        return ga4Tracker.Track(ga4Event);
     }
 
     private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
@@ -177,7 +177,7 @@ public class SessionService
                 ErrorMessage = "Your access has been locked! Please contact the support."
             };
 
-        // multiple requests may queued through lock request until first session is created
+        // multiple requests may be already queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock = await GrayMint.Common.Utils.AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
         var access = await _cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);

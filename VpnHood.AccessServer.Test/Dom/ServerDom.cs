@@ -11,7 +11,7 @@ public class ServerDom
     public ServersClient Client => TestInit.ServersClient;
     public AgentClient AgentClient { get; }
     public VpnServer Server { get; private set; }
-    public List<SessionDom> Sessions { get; } = new();
+    public List<SessionDom> Sessions { get; } = [];
     public ServerInfo ServerInfo { get; set; }
     public ServerStatus ServerStatus => ServerInfo.Status;
     public ServerConfig ServerConfig { get; private set; } = default!;
@@ -110,17 +110,17 @@ public class ServerDom
             await SendStatus(ServerInfo.Status);
     }
 
-    public async Task<ServerCommand> SendStatus(bool overwriteConfigCode = true)
+    public Task<ServerCommand> SendStatus(bool overwriteConfigCode = true)
     {
         if (overwriteConfigCode)
             ServerInfo.Status.ConfigCode = ServerConfig.ConfigCode;
-        return await AgentClient.Server_UpdateStatus(ServerInfo.Status);
+        return AgentClient.Server_UpdateStatus(ServerInfo.Status);
     }
 
-    public async Task<ServerCommand> SendStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
+    public Task<ServerCommand> SendStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
     {
         if (overwriteConfigCode) serverStatus.ConfigCode = ServerConfig.ConfigCode;
-        return await AgentClient.Server_UpdateStatus(serverStatus);
+        return AgentClient.Server_UpdateStatus(serverStatus);
     }
 
     public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null, bool assertError = true)

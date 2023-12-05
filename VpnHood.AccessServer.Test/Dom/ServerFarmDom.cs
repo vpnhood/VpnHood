@@ -7,7 +7,7 @@ public class ServerFarmDom
 {
     public TestInit TestInit { get; }
     public ServerFarm ServerFarm { get; private set; }
-    public List<ServerDom> Servers { get; private set; } = new();
+    public List<ServerDom> Servers { get; private set; } = [];
     public Guid ServerFarmId => ServerFarm.ServerFarmId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
     public Guid ProjectId => TestInit.ProjectId;

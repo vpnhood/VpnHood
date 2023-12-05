@@ -22,9 +22,9 @@ public class AgentServerTest
         // create serverInfo
         var publicIp = await testInit.NewIpV6();
         var privateIp = await testInit.NewIpV4();
-        var iPAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
-        serverDom.ServerInfo.PrivateIpAddresses = iPAddresses;
-        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIp, await testInit.NewIpV4(), await testInit.NewIpV6() };
+        var ipAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
+        serverDom.ServerInfo.PrivateIpAddresses = ipAddresses;
+        serverDom.ServerInfo.PublicIpAddresses = [publicIp, await testInit.NewIpV4(), await testInit.NewIpV6()];
 
         //Configure
         await serverDom.Configure();
@@ -132,13 +132,13 @@ public class AgentServerTest
         // --------
 
         // create serverInfo
-        serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
-        serverDom.ServerInfo.PublicIpAddresses = new[]
-        {
+        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses =
+        [
             await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
             IPAddress.Parse(publicInTokenAccessPoints2[1].IpAddress)
-        };
+        ];
 
         //Configure
         await serverDom.Configure();

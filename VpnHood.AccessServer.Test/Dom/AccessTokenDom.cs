@@ -73,9 +73,9 @@ public class AccessTokenDom
         return accessTokenData;
     }
 
-    public async Task<string> GetAccessKey()
+    public Task<string> GetAccessKey()
     {
-        return await TestInit.AccessTokensClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
+        return TestInit.AccessTokensClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
     }
 
     public async Task<Token> GetToken()

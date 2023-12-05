@@ -11,8 +11,10 @@ public class ApiError
     public string TypeName { get; set; }
     public string? TypeFullName { get; set; }
     public string Message { get; set; }
-    public string? InnerMessage { get; set; }
     public Dictionary<string, string?> Data { get; set; } = new();
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string? InnerMessage { get; set; }
 
     [JsonConstructor]
     public ApiError(string typeName, string message)

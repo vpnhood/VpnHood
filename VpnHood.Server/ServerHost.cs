@@ -103,7 +103,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                     }
                     catch (Exception ex)
                     {
-                        ex.Data.Add("UdpEndPoint", tcpEndPoint);
+                        ex.Data.Add("TcpEndPoint", tcpEndPoint);
                         throw;
                     }
                 }

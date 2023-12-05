@@ -2,10 +2,11 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using VpnHood.Common.Exceptions;
 
-namespace VpnHood.Common.Exceptions;
+namespace VpnHood.Common.Client;
 
-public class PortableException
+public class ApiError
 {
     public string TypeName { get; set; }
     public string? TypeFullName { get; set; }
@@ -14,13 +15,13 @@ public class PortableException
     public Dictionary<string, string?> Data { get; set; } = new();
 
     [JsonConstructor]
-    public PortableException(string typeName, string message)
+    public ApiError(string typeName, string message)
     {
         TypeName = typeName;
         Message = message;
     }
 
-    public PortableException(Exception ex)
+    public ApiError(Exception ex)
     {
         var exceptionType = GetExceptionType(ex);
 
@@ -44,17 +45,17 @@ public class PortableException
         return ex.GetType();
     }
 
-    public static bool TryParse(string value, [NotNullWhen(true)] out PortableException? portableException)
+    public static bool TryParse(string value, [NotNullWhen(true)] out ApiError? apiError)
     {
-        portableException = null;
+        apiError = null;
 
         try
         {
-            var res = JsonSerializer.Deserialize<PortableException>(value);
+            var res = JsonSerializer.Deserialize<ApiError>(value);
             if (res?.TypeName == null)
                 return false;
 
-            portableException = res;
+            apiError = res;
             return true;
         }
         catch
@@ -63,12 +64,12 @@ public class PortableException
         }
     }
 
-    public static PortableException Parse(string value)
+    public static ApiError Parse(string value)
     {
-        if (TryParse(value, out var portableException))
-            return portableException;
+        if (TryParse(value, out var apiError))
+            return apiError;
 
-        throw new FormatException("Invalid PortableException format.");
+        throw new FormatException("Invalid ApiError format.");
     }
 
     public string ToJson(bool writeIndented = false)

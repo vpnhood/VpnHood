@@ -1,5 +1,3 @@
-using VpnHood.Common.Exceptions;
-
 namespace VpnHood.Common.Client;
 
 public sealed class ApiException : Exception
@@ -12,7 +10,7 @@ public sealed class ApiException : Exception
 
     private static string BuildMessage(string message, int statusCode, string? response)
     {
-        return response != null && PortableException.TryParse(response, out var serverException)
+        return response != null && ApiError.TryParse(response, out var serverException)
             ? serverException.Message
             : $"{message}\n\nStatus: {statusCode}\nResponse: \n{response?[..Math.Min(512, response.Length)]}";
     }
@@ -25,13 +23,13 @@ public sealed class ApiException : Exception
         Headers = headers ?? new Dictionary<string, IEnumerable<string>>();
 
         //try to deserialize response
-        if (response != null && PortableException.TryParse(response, out var portableException))
+        if (response != null && ApiError.TryParse(response, out var apiError))
         {
-            foreach (var item in portableException.Data)
+            foreach (var item in apiError.Data)
                 Data.Add(item.Key, item.Value);
 
-            ExceptionTypeName = portableException.TypeName;
-            ExceptionTypeFullName = portableException.TypeFullName;
+            ExceptionTypeName = apiError.TypeName;
+            ExceptionTypeFullName = apiError.TypeFullName;
         }
     }
 

@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
@@ -25,7 +26,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
-    private PortableException? _lastConfigError;
+    private ApiError? _lastConfigError;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
     private readonly ServerConfig? _config;
@@ -171,7 +172,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             State = ServerState.Waiting;
-            _lastConfigError = new PortableException(ex);
+            _lastConfigError = new ApiError(ex);
             if (ex is SocketException socketException)
                 _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
 

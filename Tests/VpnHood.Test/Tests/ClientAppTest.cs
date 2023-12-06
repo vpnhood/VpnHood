@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
-using System.Threading.Tasks;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -218,7 +214,7 @@ public class ClientAppTest : TestBase
         // Test: With diagnose
         _ = app.Connect(clientProfile1.ClientProfileId, true);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected, 10000);
-        app.ClearLastError(); // should not effect
+        app.ClearLastError(); // should not affect
         await app.Disconnect(true);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
 

@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Tunneling;
 
@@ -8,7 +7,7 @@ namespace VpnHood.Test;
 internal static class TestSocketProtector
 {
     private const int ProtectedTtl = 111;
-    private static readonly HashSet<int> TcpProtected = new();
+    private static readonly HashSet<int> TcpProtected = [];
 
     public static void ProtectSocket(Socket socket)
     {

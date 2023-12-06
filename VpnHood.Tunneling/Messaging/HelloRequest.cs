@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.Common.Messaging;
+﻿using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Messaging;
 

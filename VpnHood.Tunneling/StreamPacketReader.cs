@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -12,7 +7,7 @@ namespace VpnHood.Tunneling;
 
 public class StreamPacketReader : IAsyncDisposable
 {
-    private readonly List<IPPacket> _ipPackets = new();
+    private readonly List<IPPacket> _ipPackets = [];
     private readonly ReadCacheStream _stream;
     private byte[] _packetBuffer = new byte[1600];
     private int _packetBufferCount;
@@ -59,7 +54,7 @@ public class StreamPacketReader : IAsyncDisposable
             var packetLength = PacketUtil.ReadPacketLength(_packetBuffer, 0);
             if (_packetBufferCount < packetLength)
             {
-                //not sure we get any packet more than 1600
+                //not sure if we get any packet more than 1600
                 if (packetLength > _packetBuffer.Length)
                 {
                     Array.Resize(ref _packetBuffer, packetLength);

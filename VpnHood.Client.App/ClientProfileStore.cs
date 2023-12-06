@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
@@ -59,7 +53,7 @@ public class ClientProfileStore
     internal Token GetToken(Guid tokenId, bool withSecret)
     {
         var token = _tokens.FirstOrDefault(x => x.TokenId == tokenId);
-        if (token == null) throw new KeyNotFoundException($"{nameof(tokenId)} does not exists. TokenId {tokenId}");
+        if (token == null) throw new KeyNotFoundException($"TokenId does not exist. TokenId: {tokenId}");
 
         // clone token
         token = (Token)token.Clone();

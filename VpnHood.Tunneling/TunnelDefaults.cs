@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Tunneling;
+﻿namespace VpnHood.Tunneling;
 
 public static class TunnelDefaults
 {

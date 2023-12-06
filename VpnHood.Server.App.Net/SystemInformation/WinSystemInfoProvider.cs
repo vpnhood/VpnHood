@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using VpnHood.Server.SystemInformation;
 using System.Diagnostics;
 using VpnHood.Common.Logging;
@@ -24,19 +23,27 @@ public class WinSystemInfoProvider : ISystemInfoProvider
             var availableMemory = availableMemoryCounter.RawValue;
             var totalMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             var usage = _cpuCounter.NextValue();
-            return new SystemInfo(GetOperatingSystemInfo(), 
-                totalMemory, availableMemory, 
-                (int)usage,Environment.ProcessorCount);
-
+            return new SystemInfo
+            {
+                OsInfo = GetOperatingSystemInfo(),
+                TotalMemory = totalMemory,
+                AvailableMemory = availableMemory,
+                CpuUsage = (int)usage,
+                LogicalCoreCount = Environment.ProcessorCount
+            };
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogWarning(ex, "Could not get SystemInfo.");
-            return new SystemInfo(GetOperatingSystemInfo(), 
-                0, 0,
-                0, Environment.ProcessorCount);
+            return new SystemInfo
+            {
+                OsInfo = GetOperatingSystemInfo(),
+                TotalMemory = 0,
+                AvailableMemory = 0,
+                CpuUsage = 0,
+                LogicalCoreCount = Environment.ProcessorCount
+            };
         }
-
     }
 
     public static string GetOperatingSystemInfo()

@@ -61,12 +61,140 @@ namespace VpnHood.Client.App {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to VpnHood!.
+        /// </summary>
+        internal static string AppName {
+            get {
+                return ResourceManager.GetString("AppName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] BadgeConnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("BadgeConnectedIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] BadgeConnectingIcon {
+            get {
+                object obj = ResourceManager.GetObject("BadgeConnectingIcon", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Connect.
+        /// </summary>
+        internal static string Connect {
+            get {
+                return ResourceManager.GetString("Connect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disconnect.
+        /// </summary>
+        internal static string Disconnect {
+            get {
+                return ResourceManager.GetString("Disconnect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Disconnected.
+        /// </summary>
+        internal static string Disconnected {
+            get {
+                return ResourceManager.GetString("Disconnected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Exit.
+        /// </summary>
+        internal static string Exit {
+            get {
+                return ResourceManager.GetString("Exit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] IP2LOCATION_LITE_DB1_IPV6_CSV {
             get {
                 object obj = ResourceManager.GetObject("IP2LOCATION_LITE_DB1_IPV6_CSV", resourceCulture);
                 return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Manage.
+        /// </summary>
+        internal static string Manage {
+            get {
+                return ResourceManager.GetString("Manage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} Access key has been added..
+        /// </summary>
+        internal static string MsgAccessKeyAdded {
+            get {
+                return ResourceManager.GetString("MsgAccessKeyAdded", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to {0} access key has been updated..
+        /// </summary>
+        internal static string MsgAccessKeyUpdated {
+            get {
+                return ResourceManager.GetString("MsgAccessKeyUpdated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not read the access key..
+        /// </summary>
+        internal static string MsgCantReadAccessKey {
+            get {
+                return ResourceManager.GetString("MsgCantReadAccessKey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unsupported file type..
+        /// </summary>
+        internal static string MsgUnsupportedContent {
+            get {
+                return ResourceManager.GetString("MsgUnsupportedContent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open.
+        /// </summary>
+        internal static string Open {
+            get {
+                return ResourceManager.GetString("Open", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Open in Browser.
+        /// </summary>
+        internal static string OpenInBrowser {
+            get {
+                return ResourceManager.GetString("OpenInBrowser", resourceCulture);
             }
         }
     }

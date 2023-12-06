@@ -1,10 +1,11 @@
-﻿using System;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Windows;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
+using VpnHood.Client.App.Win.Common;
 using VpnHood.Common.Logging;
+using System.Net;
 
 namespace VpnHood.Client.App.Win;
 
@@ -20,10 +21,12 @@ public partial class App : Application
             WinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            var appProvider = new VpnHoodAppProvider();
-            using var spaResource = new MemoryStream(UiResource.SPA);
-            VpnHoodApp.Init(appProvider);
-            VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);
+            VpnHoodApp.Init(new WinAppProvider(), new AppOptions { Resources = VpnHoodAppResource.Resources });
+
+            // initialize SPA
+            ArgumentNullException.ThrowIfNull(VpnHoodAppResource.Resources.SpaZipData);
+            using var spaResource = new MemoryStream(VpnHoodAppResource.Resources.SpaZipData);
+            VpnHoodAppWebServer.Init(spaResource, url2: WinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
 
             // initialize Win
             WinApp.Instance.ExitRequested += (_, _) => Shutdown();

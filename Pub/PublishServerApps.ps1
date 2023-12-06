@@ -5,7 +5,7 @@ param(
 
 $distribute = $distribute -eq "1";
 
-. "$PSScriptRoot/Common.ps1" -bump $bump;
+. "$PSScriptRoot/Core/Common.ps1" -bump $bump;
 
 # clean solution
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;

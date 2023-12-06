@@ -1,18 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net.Security;
 using System.Security.Authentication;
-using System;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Threading.Tasks;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
-using System.IO;
 using VpnHood.Tunneling.ClientStreams;
 using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
@@ -165,6 +160,9 @@ internal class ConnectorService : IAsyncDisposable, IJob
     private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain,
         SslPolicyErrors sslPolicyErrors)
     {
+        if (certificate == null!) // for android 6 (API 23)
+            return true;
+
         // check maintenance certificate
         var parts = certificate.Subject.Split(",");
         if (parts.Any(x => x.Trim().Equals("OU=MT", StringComparison.OrdinalIgnoreCase)))
@@ -248,12 +246,12 @@ internal class ConnectorService : IAsyncDisposable, IJob
         };
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         while (_freeClientStreams.TryDequeue(out var queueItem))
             _disposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
 
-        await _disposingTasks.DisposeAsync();
+        return _disposingTasks.DisposeAsync();
     }
 
     private class ClientStreamItem

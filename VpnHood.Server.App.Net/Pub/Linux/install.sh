@@ -19,16 +19,16 @@ elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-restBaseUrl" ]; then
-	restBaseUrl=$arg;
+elif [ "$lastArg" = "-httpBaseUrl" ]; then
+	httpBaseUrl=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-restAuthorization" ]; then
-	restAuthorization=$arg;
+elif [ "$lastArg" = "-httpAuthorization" ]; then
+	httpAuthorization=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-secret" ]; then
-	secret=$arg;
+elif [ "$lastArg" = "-managementSecret" ]; then
+	managementSecret=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-packageUrl" ]; then
@@ -101,13 +101,13 @@ chmod +x "$destinationPath/vhserver";
 chmod +x "$destinationPath/vhupdate";
 
 # Write AppSettingss
-if [ "$restBaseUrl" != "" ]; then
+if [ "$httpBaseUrl" != "" ]; then
 	appSettings="{
   \"HttpAccessManager\": {
-    \"BaseUrl\": \"$restBaseUrl\",
-    \"Authorization\": \"$restAuthorization\"
+    \"BaseUrl\": \"$httpBaseUrl\",
+    \"Authorization\": \"$httpAuthorization\"
   },
-  \"Secret\": \"$secret\"
+  \"ManagementSecret\": \"$managementSecret\"
 }
 ";
 	mkdir -p "$destinationPath/storage";

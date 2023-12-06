@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 
@@ -108,7 +102,7 @@ public class IpGroupManager
         {
             await _sortedIpRangesSemaphore.WaitAsync();
             _ipRangeGroups.Clear();
-            List<IpRange> ipRanges = new();
+            List<IpRange> ipRanges = [];
             foreach (var ipGroup in IpGroups)
             foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId))
             {
@@ -137,6 +131,6 @@ public class IpGroupManager
         {
         }
 
-        public List<IpRange> IpRanges { get; } = new();
+        public List<IpRange> IpRanges { get; } = [];
     }
 }

@@ -1,11 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Collections;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using VpnHood.Tunneling.Factory;
-using System.Linq;
-using System;
 using VpnHood.Tunneling.Exceptions;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
@@ -18,7 +14,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
     private readonly IPacketProxyReceiver _packetProxyReceiver;
     private readonly ISocketFactory _socketFactory;
     private readonly TimeoutDictionary<string, UdpProxyEx> _connectionMap;
-    private readonly List<UdpProxyEx> _udpProxies = new();
+    private readonly List<UdpProxyEx> _udpProxies = [];
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeSpan _udpTimeout;

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Logging;
@@ -17,7 +15,6 @@ public class Diagnoser
         {new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)};
 
     public Uri[] TestHttpUris { get; set; } = { new("https://www.google.com"), new("https://www.quad9.net/"), new("https://www.microsoft.com/") };
-    public int PingTtl { get; set; } = 128;
     public int HttpTimeout { get; set; } = 10 * 1000;
     public int NsTimeout { get; set; } = 10 * 1000;
     public event EventHandler? StateChanged;
@@ -65,11 +62,11 @@ public class Diagnoser
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
             var hostEndPoint = await clientConnect.Client.Token.ResolveHostEndPointAsync();
-            var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout, 128, true);
+            var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout, true);
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");
             else
-                VhLogger.Instance.LogWarning($"Could not ping server! EndPoint: {VhLogger.Format(hostEndPoint)}, Error: {pingRes.Message}");
+                VhLogger.Instance.LogWarning($"Could not ping server! EndPoint: {VhLogger.Format(hostEndPoint.Address)}, Error: {pingRes.Message}");
 
             // VpnConnect
             IsWorking = false;
@@ -90,7 +87,7 @@ public class Diagnoser
     private async Task<bool> NetworkCheck(bool checkPing = true, bool checkUdp = true)
     {
         var taskPing = checkPing
-            ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, PingTtl)
+            ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout)
             : Task.FromResult((Exception?)null);
 
         var taskUdp = checkUdp

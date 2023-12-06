@@ -102,7 +102,7 @@ public class IpGroupManager
         {
             await _sortedIpRangesSemaphore.WaitAsync();
             _ipRangeGroups.Clear();
-            List<IpRange> ipRanges = new();
+            List<IpRange> ipRanges = [];
             foreach (var ipGroup in IpGroups)
             foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId))
             {
@@ -131,6 +131,6 @@ public class IpGroupManager
         {
         }
 
-        public List<IpRange> IpRanges { get; } = new();
+        public List<IpRange> IpRanges { get; } = [];
     }
 }

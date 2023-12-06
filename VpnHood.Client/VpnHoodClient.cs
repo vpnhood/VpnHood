@@ -177,7 +177,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
         await VhUtil.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
-        // create add add channel
+        // create and add the channel
         var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
@@ -367,7 +367,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         else if (ipPacket.Protocol == ProtocolType.Tcp)
                             tcpHostPackets.Add(ipPacket);
 
-                        // ICMP packet must go through tunnel because PingProxy does not supported protect socket
+                        // ICMP packet must go through tunnel because PingProxy does not support protect socket
                         else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
                             tunnelPackets.Add(ipPacket);
 
@@ -743,7 +743,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (response.AccessUsage != null)
                 SessionStatus.AccessUsage = response.AccessUsage;
 
-            // client is disposed mean while
+            // client is disposed meanwhile
             if (_disposed)
                 throw new ObjectDisposedException(VhLogger.FormatType(this));
 
@@ -764,7 +764,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            // set connecting state if could not establish any connection
+            // set connecting state if it could not establish any connection
             if (!_disposed && State == ClientState.Connected)
                 State = ClientState.Connecting;
 
@@ -835,11 +835,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return DisposeAsync(false);
     }
 
-    public async ValueTask DisposeAsync(bool waitForBye)
+    public ValueTask DisposeAsync(bool waitForBye)
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore(waitForBye);
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore(bool waitForBye)
@@ -911,11 +911,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private class SendingPackets
     {
-        public readonly List<IPPacket> PassthruPackets = new();
-        public readonly List<IPPacket> ProxyPackets = new();
-        public readonly List<IPPacket> TcpHostPackets = new();
-        public readonly List<IPPacket> TunnelPackets = new();
-        public readonly List<IPPacket> DroppedPackets = new();
+        public readonly List<IPPacket> PassthruPackets = [];
+        public readonly List<IPPacket> ProxyPackets = [];
+        public readonly List<IPPacket> TcpHostPackets = [];
+        public readonly List<IPPacket> TunnelPackets = [];
+        public readonly List<IPPacket> DroppedPackets = [];
 
         public void Clear()
         {

@@ -386,7 +386,7 @@ public class WinApp : IDisposable, IJob
                 })
                 .ToList();
 
-            // add item if does not exists
+            // add item if it does not exist
             var isAlreadyAdded = newHostLines
                 .Any(x =>
                 {

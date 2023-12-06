@@ -16,7 +16,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
     };
 
     private bool _disposed;
-    private readonly HashSet<IChannel> _channels = new();
+    private readonly HashSet<IChannel> _channels = [];
     private readonly IPacketProxyPool _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
 

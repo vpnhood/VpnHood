@@ -21,7 +21,7 @@ public class UdpChannel : IDatagramChannel
     private readonly BufferCryptor _sessionCryptorReader;
     private bool _disposed;
     private readonly long _cryptorPosBase;
-    private readonly List<IPPacket> _receivedIpPackets = new();
+    private readonly List<IPPacket> _receivedIpPackets = [];
 
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
@@ -57,7 +57,7 @@ public class UdpChannel : IDatagramChannel
     {
         try
         {
-            // this is shared buffer and client so we need to sync
+            // this is shared buffer and client, so we need to sync
             // Using multiple UdpClient will not increase performance
             await _semaphore.WaitAsync();
 

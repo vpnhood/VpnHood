@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-
-namespace VpnHood.Server.App;
+﻿namespace VpnHood.Server.App;
 
 internal class Program
 {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Common.Collections;
+﻿namespace VpnHood.Common.Collections;
 
 public interface ITimeoutItem : IDisposable
 {

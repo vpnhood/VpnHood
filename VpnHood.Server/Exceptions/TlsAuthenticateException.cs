@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Server.Exceptions;
+﻿namespace VpnHood.Server.Exceptions;
 
 internal class TlsAuthenticateException : Exception
 {

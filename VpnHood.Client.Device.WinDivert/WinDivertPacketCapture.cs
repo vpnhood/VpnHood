@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
+﻿using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -146,7 +142,7 @@ public class WinDivertPacketCapture : IPacketCapture
     {
         if (_disposed)
             return;
-         
+
         StopCapture();
         _device.Dispose();
         _disposed = true;
@@ -171,8 +167,8 @@ public class WinDivertPacketCapture : IPacketCapture
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.Log(LogLevel.Error, ex, 
-                "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()));
+            VhLogger.Instance.Log(LogLevel.Error, ex,
+                "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()!));
         }
     }
 

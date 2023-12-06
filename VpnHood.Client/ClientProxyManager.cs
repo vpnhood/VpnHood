@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using PacketDotNet;
+﻿using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
@@ -11,15 +9,15 @@ namespace VpnHood.Client;
 internal class ClientProxyManager : ProxyManager
 {
     private readonly IPacketCapture _packetCapture;
-        
-    // PacketCapture can not protect Ping so PingProxy does not work
-    protected override bool IsPingSupported => false; 
 
-    public ClientProxyManager(IPacketCapture packetCapture, ISocketFactory socketFactory, ProxyManagerOptions options)
-    : base(socketFactory, options)
+    public ClientProxyManager(IPacketCapture packetCapture, ISocketFactory socketFactory, 
+        ProxyManagerOptions options) : base(socketFactory, options)
     {
-        _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
+        _packetCapture = packetCapture;
     }
+
+    // PacketCapture can not protect Ping so PingProxy does not work
+    protected override bool IsPingSupported => false;
 
     public override Task OnPacketReceived(IPPacket ipPacket)
     {

@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
@@ -27,14 +21,14 @@ namespace VpnHood.Server;
 
 internal class ServerHost : IAsyncDisposable, IJob
 {
-    private readonly HashSet<IClientStream> _clientStreams = new();
+    private readonly HashSet<IClientStream> _clientStreams = [];
     private const int ServerProtocolVersion = 4;
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
-    private readonly List<TcpListener> _tcpListeners = new();
-    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = new();
-    private Task? _startTask;
+    private readonly List<TcpListener> _tcpListeners;
+    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
+    private Task? _listenerTask;
     private bool _disposed;
 
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
@@ -48,11 +42,12 @@ internal class ServerHost : IAsyncDisposable, IJob
     public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
+        _tcpListeners = new List<TcpListener>();
         _sessionManager = sessionManager;
         JobRunner.Default.Add(this);
     }
 
-    public void Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
+    public async Task Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (IsStarted) throw new Exception("ServerHost is already Started!");
@@ -73,12 +68,20 @@ internal class ServerHost : IAsyncDisposable, IJob
                     if (udpEndPoint.Port != 0)
                         VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpEndPoint));
 
-                    var udpClient = new UdpClient(udpEndPoint);
-                    var udpChannelTransmitter = new ServerUdpChannelTransmitter(udpClient, _sessionManager);
-                    _udpChannelTransmitters.Add(udpChannelTransmitter);
+                    try
+                    {
+                        var udpClient = new UdpClient(udpEndPoint);
+                        var udpChannelTransmitter = new ServerUdpChannelTransmitter(udpClient, _sessionManager);
+                        _udpChannelTransmitters.Add(udpChannelTransmitter);
 
-                    if (udpEndPoint.Port == 0)
-                        VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
+                        if (udpEndPoint.Port == 0)
+                            VhLogger.Instance.LogInformation("Started listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
+                    }
+                    catch (Exception ex)
+                    {
+                        ex.Data.Add("UdpEndPoint", udpEndPoint);
+                        throw;
+                    }
                 }
 
                 UdpEndPoints = udpEndPoints;
@@ -90,20 +93,28 @@ internal class ServerHost : IAsyncDisposable, IJob
             {
                 foreach (var tcpEndPoint in tcpEndPoints)
                 {
-                    VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpEndPoint));
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var tcpListener = new TcpListener(tcpEndPoint);
-                    tcpListener.Start();
-                    _tcpListeners.Add(tcpListener);
-                    tasks.Add(ListenTask(tcpListener, cancellationToken));
+                    try
+                    {
+                        VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpEndPoint));
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var tcpListener = new TcpListener(tcpEndPoint);
+                        tcpListener.Start();
+                        _tcpListeners.Add(tcpListener);
+                        tasks.Add(ListenTask(tcpListener, cancellationToken));
+                    }
+                    catch (Exception ex)
+                    {
+                        ex.Data.Add("TcpEndPoint", tcpEndPoint);
+                        throw;
+                    }
                 }
             }
             TcpEndPoints = tcpEndPoints;
-            _startTask = Task.WhenAll(tasks);
+            _listenerTask = Task.WhenAll(tasks);
         }
         catch
         {
-            IsStarted = false;
+            await Stop();
             throw;
         }
     }
@@ -156,15 +167,15 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace("Disposing current processing requests...");
         try
         {
-            if (_startTask != null)
-                await _startTask;
+            if (_listenerTask != null)
+                await _listenerTask;
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
         }
 
-        _startTask = null;
+        _listenerTask = null;
         IsStarted = false;
     }
 
@@ -185,7 +196,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         if (!IsStarted)
         {
             VhLogger.Instance.LogInformation("Starting ServerHost...");
-            Start(tcpEndPoints, udpEndPoints);
+            await Start(tcpEndPoints, udpEndPoints);
         }
     }
 
@@ -489,7 +500,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await ProcessStreamProxyChannel(clientStream, cancellationToken);
                 break;
 
-           case RequestCode.UdpPacket:
+            case RequestCode.UdpPacket:
                 await ProcessUdpPacketRequest(clientStream, cancellationToken);
                 break;
 
@@ -651,11 +662,11 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore()

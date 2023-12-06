@@ -10,7 +10,8 @@ public class ClientSocketFactory : ISocketFactory
     private readonly IPacketCapture _packetCapture;
     private readonly ISocketFactory _socketFactory;
 
-    public ClientSocketFactory(IPacketCapture packetCapture, ISocketFactory socketFactory)
+    public ClientSocketFactory(IPacketCapture packetCapture, 
+        ISocketFactory socketFactory)
     {
         _packetCapture = packetCapture;
         _socketFactory = socketFactory;

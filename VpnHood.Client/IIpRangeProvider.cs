@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Threading.Tasks;
 using VpnHood.Common.Net;
 
 namespace VpnHood.Client;

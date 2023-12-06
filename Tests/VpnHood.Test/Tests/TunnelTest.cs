@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
@@ -175,7 +169,6 @@ public class TunnelTest : TestBase
         var sessionKey = VhUtil.GenerateKey();
 
         // Create server
-        // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
@@ -300,12 +293,12 @@ public class TunnelTest : TestBase
         await binaryStream.DisposeAsync();
         tcpClient.Dispose();
 
-        // task must completed after binaryStream.DisposeAsync
+        // task must be completed after binaryStream.DisposeAsync
         await workerTask.WaitAsync(TimeSpan.FromSeconds(2), cts.Token);
         Assert.IsTrue(workerTask.IsCompletedSuccessfully);
 
         tcpListener.Stop();
-        cts.Cancel();
+        await cts.CancelAsync();
     }
 
     [TestMethod]
@@ -341,6 +334,6 @@ public class TunnelTest : TestBase
         await binaryStream.DisposeAsync();
 
         tcpListener.Stop();
-        cts.Cancel();
+        await cts.CancelAsync();
     }
 }

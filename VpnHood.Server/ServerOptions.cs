@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using Ga4.Ga4Tracking;
+﻿using Ga4.Ga4Tracking;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling.Factory;

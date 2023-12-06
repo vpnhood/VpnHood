@@ -1,30 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net7.0-android</TargetFramework>
-		<SupportedOSPlatformVersion>22</SupportedOSPlatformVersion>
-		<Product>VpnHood.Client.Device.Android</Product>
-		<RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
 		<Description>VpnHood client device provider for Android.</Description>
-		<Company>OmegaHood LLC</Company>
-		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
-		<PackageIcon>VpnHood.png</PackageIcon>
-		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.0.418</Version>
-		<AssemblyVersion>3.0.418</AssemblyVersion>
-		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.Client.Device.Droid</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.2.448</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
 	<ItemGroup>
-	  <None Include="..\VpnHood.png">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
+		<None Include="..\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />

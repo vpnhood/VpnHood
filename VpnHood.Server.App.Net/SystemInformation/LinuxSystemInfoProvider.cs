@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using VpnHood.Common.Logging;
 using VpnHood.Server.SystemInformation;
@@ -83,14 +80,14 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
 
     public SystemInfo GetSystemInfo()
     {
-        var ret = new SystemInfo(
-            GetOperatingSystemInfo(),
-            GetMemInfoValue("MemTotal"),
-            GetMemInfoValue("MemAvailable"),
-            GetCpuUsage(),
-            Environment.ProcessorCount
-            );
-        return ret;
+        return new SystemInfo
+        {
+            OsInfo = GetOperatingSystemInfo(),
+            TotalMemory = GetMemInfoValue("MemTotal"),
+            AvailableMemory = GetMemInfoValue("MemAvailable"),
+            CpuUsage = GetCpuUsage(),
+            LogicalCoreCount = Environment.ProcessorCount
+        };
     }
 
     public string GetOperatingSystemInfo()

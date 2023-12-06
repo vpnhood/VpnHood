@@ -1,7 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+using System.Text;
+using System.Text.Json;
 using Ga4.Ga4Tracking;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
@@ -86,6 +86,10 @@ public class ServerApp : IDisposable
         AccessManager = AppSettings.HttpAccessManager != null
             ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
             : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
+
+        //todo for version 443 only
+        if (AppSettings.HttpAccessManager != null)
+            UpgradeOldTokens(AppSettings, appSettingsFilePath); 
     }
 
     private void InitFileLogger()
@@ -210,7 +214,7 @@ public class ServerApp : IDisposable
         {
             // LogAnonymizer is on by default
             VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
-            
+
             // find listener port
             if (IsAnotherInstanceRunning())
                 throw new AnotherInstanceIsRunning();
@@ -288,5 +292,50 @@ public class ServerApp : IDisposable
                 .AddCommands(cmdApp);
 
         await cmdApp.ExecuteAsync(args);
+    }
+
+    private static void UpgradeOldTokens(AppSettings appSettings, string appSettingsFilePath)
+    {
+        try
+        {
+            var backupFile = Path.Combine(Path.GetDirectoryName(appSettingsFilePath)!, "appsettings_backup_442.json");
+            if (File.Exists(backupFile))
+                return;
+
+            // check json by expiration
+            var authPayload = appSettings.HttpAccessManager?.Authorization.Split(" ")[1]!;
+            var code = authPayload.Split(".")[1];
+            var padded = code.PadRight(code.Length + (4 - code.Length % 4) % 4, '=');
+            var base64 = Convert.FromBase64String(padded.Replace('-', '+').Replace('_', '/'));
+            var json = Encoding.UTF8.GetString(base64);
+
+            var authDoc = JsonDocument.Parse(json);
+            var exp = authDoc.RootElement.GetProperty("exp").GetInt64();
+            var iss = DateTimeOffset.FromUnixTimeSeconds(exp).DateTime;
+            if (iss >= DateTime.Parse("2036-12-07"))
+                return; // nothing to update
+
+            VhLogger.Instance.LogInformation("Updating the HttpAccessManager Authorization...");
+
+            //get the new token
+            var url = appSettings.HttpAccessManager!.BaseUrl;
+            var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appSettings.HttpAccessManager.Authorization);
+            var newToken = httpClient.GetStringAsync($"https://{url.Authority}/api/agent/authorization").Result;
+
+            //update appsettings
+            appSettings.HttpAccessManager.Authorization = newToken;
+            appSettings.HttpAccessManager.BaseUrl = new Uri($"https://{url.Authority}");
+
+            // create backup
+            File.Move(appSettingsFilePath, backupFile);
+
+            // overwrite settings file
+            File.WriteAllText(appSettingsFilePath, JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not update token. you may need to reconfigure VpnHoodServer manually!");
+        }
     }
 }

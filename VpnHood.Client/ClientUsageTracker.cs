@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Ga4.Ga4Tracking;
+﻿using Ga4.Ga4Tracking;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;

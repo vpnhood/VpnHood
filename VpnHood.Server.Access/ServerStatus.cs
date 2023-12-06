@@ -13,4 +13,5 @@ public class ServerStatus
     public int ThreadCount { get; set; }
     public Traffic TunnelSpeed { get; set; } = new();
     public string? ConfigCode { get; set; }
+    public string? ConfigError { get; set; }
 }

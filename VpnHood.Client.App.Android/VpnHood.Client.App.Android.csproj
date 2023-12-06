@@ -1,39 +1,47 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net7.0-android</TargetFramework>
-		<OutputType>Exe</OutputType>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<ApplicationId>com.vpnhood.client.android</ApplicationId>
-		<ApplicationVersion>1</ApplicationVersion>
-		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+		<Description>VpnHood Android Client App</Description>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
+		<ApplicationVersion>448</ApplicationVersion>
+		<ApplicationDisplayVersion>3.2.448</ApplicationDisplayVersion>
+		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
+
 	<PropertyGroup>
-		<IncludeSymbols>True</IncludeSymbols>
-		<AndroidVersionCode>422</AndroidVersionCode>
-		<Optimize>False</Optimize>
-		<PublishTrimmed>False</PublishTrimmed>
-		<RunAOTCompilation>False</RunAOTCompilation>
+		<PublishTrimmed2>False</PublishTrimmed2>
+		<RunAOTCompilation2>False</RunAOTCompilation2>
 	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.2.448</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseOutputPath></BaseOutputPath>
+		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
 	<ItemGroup>
-	  <None Remove="Assets\SPA.zip" />
-	</ItemGroup>
-	<ItemGroup>
-	  <AndroidAsset Include="Assets\SPA.zip" />
-	</ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="Xamarin.Essentials" Version="1.8.0" />
-	</ItemGroup>
-	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-		<AndroidResource Update="Resources\mipmap-anydpi-v26\appicon.xml">
-			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
-		</AndroidResource>
-	</ItemGroup>
+
 </Project>

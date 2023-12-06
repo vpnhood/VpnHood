@@ -1,26 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
+		<Description>VpnHood Windows Client App.</Description>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net7.0-windows10.0.22621.0</TargetFramework>
+		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>False</UseWindowsForms>
-		<RootNamespace>VpnHood.Client.App.Win</RootNamespace>
 		<AssemblyName>VpnHoodClient</AssemblyName>
 		<ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
-		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
-		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-		<Company>OmegaHood LLC</Company>
-		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<PackageIcon>VpnHood.png</PackageIcon>
-		<Version>3.0.418</Version>
-		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<Nullable>enable</Nullable>
-		<LangVersion>latest</LangVersion>
 		<EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
 		<SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
 		<ApplicationManifest>Properties/app.manifest</ApplicationManifest>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.2.448</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -34,17 +42,14 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Win.Shared\VpnHood.Client.App.Win.Shared.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Win.Common\VpnHood.Client.App.Win.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2045.28" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2151.40" />
 	</ItemGroup>
 
-	<PropertyGroup>
-		<MyStringConstant>Hello, World!</MyStringConstant>
-	</PropertyGroup>
 
 </Project>

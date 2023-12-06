@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
@@ -349,7 +344,7 @@ public class FileAccessManager : IAccessManager
 
     private class AccessItemUsage
     {
-        public long SentTraffic { get; set; }
-        public long ReceivedTraffic { get; set; }
+        public long SentTraffic { get; init; }
+        public long ReceivedTraffic { get; init; }
     }
 }

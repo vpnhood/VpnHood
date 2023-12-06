@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Tunneling.Messaging;

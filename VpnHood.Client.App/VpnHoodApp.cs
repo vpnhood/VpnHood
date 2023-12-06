@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
+﻿using System.Globalization;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
@@ -45,6 +39,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string? _lastError;
     private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
+    private int _initializingState;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
@@ -72,12 +67,15 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
+    public AppResources Resources { get; }
 
     private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException($"{VhLogger.FormatType(this)} is already initialized.");
+        if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
+        MigrateUserDataFromXamarin(options.AppDataFolderPath); // Deprecated >= 400
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
+        Resources = options.Resources;
 
         _appProvider = appProvider ?? throw new ArgumentNullException(nameof(appProvider));
         if (_appProvider.Device == null) throw new ArgumentNullException(nameof(_appProvider.Device));
@@ -121,7 +119,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
-            UpdateInfoUrl = appProvider.UpdateInfoUrl,
+            UpdateInfoUrl = options.UpdateInfoUrl,
         };
         _ = CheckNewVersion();
 
@@ -156,6 +154,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     {
         get
         {
+            if (_initializingState > 0 ) return AppConnectionState.Initializing;
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
@@ -334,7 +333,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
-        // it slowdown tests and does not need to be logged in normal situation
+        // it slows down tests and does not need to be logged in normal situation
         if (_hasDiagnoseStarted)
             VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
 
@@ -520,10 +519,20 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         // AddFromIp2Location if hash has been changed
         if (_loadCountryIpGroups)
         {
-            await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
-            using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
-            await _ipGroupManager.InitByIp2LocationZipStream(entry);
+            try
+            {
+                _initializingState++;
+                CheckConnectionStateChanged();
+                await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
+                using var zipArchive = new ZipArchive(memZipStream);
+                var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+                await _ipGroupManager.InitByIp2LocationZipStream(entry);
+            }
+            finally
+            {
+                _initializingState--;
+                CheckConnectionStateChanged();
+            }
         }
 
         return _ipGroupManager;
@@ -594,9 +603,24 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public ClientProfileItem? GetActiveClientProfile()
     {
-        return IsIdle 
-            ? null 
+        return IsIdle
+            ? null
             : ClientProfileStore.ClientProfileItems.FirstOrDefault(x => x.ClientProfile.ClientProfileId == LastActiveClientProfileId);
+    }
+
+    // Deprecated >= 400
+    private static void MigrateUserDataFromXamarin(string folderPath)
+    {
+        try
+        {
+            var oldPath = Path.Combine(Path.GetDirectoryName(folderPath)!, ".local", "share", "VpnHood");
+            if (Directory.Exists(oldPath) && !Directory.Exists(folderPath))
+                Directory.Move(oldPath, folderPath);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not migrate user data from Xamarin.");
+        }
     }
 
 }

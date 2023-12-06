@@ -8,8 +8,8 @@ public class ClientUdpChannelTransmitter : UdpChannelTransmitter
 {
     private readonly UdpChannel _udpChannel;
 
-    public ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpClient, byte[] serverKey) 
-        : base(udpClient, serverKey)
+    public ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpClient, byte[] serverKey) : 
+        base(udpClient, serverKey)
     {
         _udpChannel = udpChannel;
     }

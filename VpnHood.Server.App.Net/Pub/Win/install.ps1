@@ -20,16 +20,16 @@ for ($i = 0; $i -lt $args.length; $i++) {
 		$lastArg = ""; continue;
 	}
 
-	elseif ($lastArg -eq "-restBaseUrl") {
-		$restBaseUrl = $arg;
+	elseif ($lastArg -eq "-httpBaseUrl") {
+		$httpBaseUrl = $arg;
 		$lastArg = ""; continue;
 	}
-	elseif ($lastArg -eq "-restAuthorization") {
-		$restAuthorization = $arg;
+	elseif ($lastArg -eq "-httpAuthorization") {
+		$httpAuthorization = $arg;
 		$lastArg = ""; continue;
 	}
-	elseif ($lastArg -eq "-secret") {
-		$secret = $arg;
+	elseif ($lastArg -eq "-managementSecret") {
+		$managementSecret = $arg;
 		$lastArg = ""; continue;
 	}
 	elseif ($lastArg -eq "-packageFile") {
@@ -99,14 +99,14 @@ Copy-Item -path "$infoDir/vhserver.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
 
 # Write AppSettings
-if ("$restBaseUrl" -ne "") {
+if ("$httpBaseUrl" -ne "") {
 	# publish info
 	$appSettings = @{
 		HttpAccessManager = @{
-			BaseUrl       = $restBaseUrl;
-			Authorization = $restAuthorization;
+			BaseUrl       = $httpBaseUrl;
+			Authorization = $httpAuthorization;
 		};
-		Secret = $secret;
+		managementSecret = $managementSecret;
 	};
 	
 	# publish info

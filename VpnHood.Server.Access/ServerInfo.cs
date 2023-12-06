@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
@@ -23,7 +22,6 @@ public class ServerInfo
     public string? OsVersion { get; set; }
     public long? TotalMemory { get; set; }
     public string? MachineName { get; set; }
-    public string? LastError { get; set; }
     public int LogicalCoreCount { get; set; }
     public int FreeUdpPortV4 { get; set; }
     public int FreeUdpPortV6 { get; set; }

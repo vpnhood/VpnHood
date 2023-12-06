@@ -1,5 +1,5 @@
 {
-  "runtime": "Net70",
+  "runtime": "Net80",
   "defaultVariables": null,
   "documentGenerator": {
     "aspNetCoreToOpenApi": {
@@ -77,7 +77,7 @@
       "nullValue": "Null",
       "generateClientClasses": true,
       "generateClientInterfaces": false,
-      "generateOptionalParameters": false,
+      "generateOptionalParameters": true,
       "exportTypes": true,
       "wrapDtoExceptions": false,
       "exceptionClass": "ApiException",

@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace VpnHood.Common.JobController;
+﻿namespace VpnHood.Common.JobController;
 
 public interface IJob
 {

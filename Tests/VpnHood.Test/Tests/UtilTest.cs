@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Threading.Tasks;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 
@@ -12,12 +10,12 @@ public class UtilTest : TestBase
 {
     private class TestEventReporter : EventReporter
     {
-        public int ReportedCount { get; private set; }
-
-        public TestEventReporter(ILogger logger, string message)
-            : base(logger, message)
+        public TestEventReporter(ILogger logger, 
+            string message) : base(logger, message)
         {
         }
+
+        public int ReportedCount { get; private set; }
 
         protected override void Report()
         {

@@ -4,14 +4,14 @@ Write-Host "*** Creating Windows Server Module..." -BackgroundColor Blue -Foregr
 # Init script
 $projectDir = Split-Path $PSScriptRoot -Parent;
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-. "$projectDir/../Pub/Common.ps1";
+. "$projectDir/../Pub/Core/Common.ps1";
 
 #update project version
 UpdateProjectVersion $projectFile;
 
 # prepare module folders
-$moduleDir = "$packagesServerDir/win-x64";
-$moduleDirLatest = "$packagesServerDirLatest/win-x64";
+$moduleDir = "$packagesRootDir/$packageServerDirName/win-x64";
+$moduleDirLatest = "$packagesRootDirLatest/$packageServerDirName/win-x64";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # Creating linux package

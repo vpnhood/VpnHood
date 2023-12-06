@@ -72,7 +72,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         if (State == ServerState.Ready && _sendStatusTask.IsCompleted)
         {
-            _sendStatusTask = SendStatusToAccessManager();
+            _sendStatusTask = SendStatusToAccessManager(true);
             await _sendStatusTask;
         }
     }
@@ -105,7 +105,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         await RunJob();
     }
 
-    private async Task Configure(bool sendStatus = true)
+    private async Task Configure()
     {
         try
         {
@@ -130,8 +130,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 TotalMemory = providerSystemInfo.TotalMemory,
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
-                FreeUdpPortV6 = freeUdpPortV6,
-                LastError = _lastConfigError?.ToJson()
+                FreeUdpPortV6 = freeUdpPortV6
             };
 
             var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
@@ -167,8 +166,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogInformation("Server is ready!");
 
             // set status after successful configuration
-            if (sendStatus)
-                await SendStatusToAccessManager();
+            await SendStatusToAccessManager(false);
         }
         catch (Exception ex)
         {
@@ -180,6 +178,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await _serverHost.Stop();
+            await SendStatusToAccessManager(false);
         }
     }
 
@@ -279,12 +278,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 Sent = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Sent),
                 Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received),
             },
-            ConfigCode = _lastConfigCode
+            ConfigCode = _lastConfigCode,
+            ConfigError = _lastConfigError?.ToJson()
         };
         return serverStatus;
     }
 
-    private async Task SendStatusToAccessManager()
+    private async Task SendStatusToAccessManager(bool allowConfigure)
     {
         try
         {
@@ -293,10 +293,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             var res = await AccessManager.Server_UpdateStatus(status);
 
             // reconfigure
-            if (res.ConfigCode != _lastConfigCode || !_serverHost.IsStarted)
+            if (allowConfigure && (res.ConfigCode != _lastConfigCode))
             {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
-                await Configure(false);
+                await Configure();
             }
         }
         catch (Exception ex)

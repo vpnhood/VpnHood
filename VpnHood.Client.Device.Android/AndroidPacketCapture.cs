@@ -258,7 +258,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public override void OnDestroy()
     {
         VhLogger.Instance.LogTrace("VpnService has been destroyed!");
-        base.OnDestroy(); // must called first
+        base.OnDestroy(); // must be called first
 
         Close();
         OnStopped?.Invoke(this, EventArgs.Empty);

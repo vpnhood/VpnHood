@@ -142,7 +142,7 @@ public class IpGroupManager
         if (_ipGroups != null)
             return _ipGroups;
 
-        // no countries if there is not import
+        // no countries if there is no import
         if (!File.Exists(IpGroupsFilePath))
             return Array.Empty<IpGroup>();
 
@@ -188,7 +188,7 @@ public class IpGroupManager
 
     private class IpGroupNetwork : IpGroup
     {
-        public List<IpRange> IpRanges { get; set; } = new();
+        public List<IpRange> IpRanges { get; set; } = [];
     }
 
 }

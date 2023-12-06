@@ -105,11 +105,11 @@ public class VpnHoodConnect : IAsyncDisposable
         return DisposeAsync(true);
     }
 
-    public async ValueTask DisposeAsync(bool waitForBye)
+    public ValueTask DisposeAsync(bool waitForBye)
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore(waitForBye);
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore(bool waitForBye)

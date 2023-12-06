@@ -8,8 +8,8 @@ internal class ConnectorRequestResult<T> : IAsyncDisposable where T : SessionRes
     public required IClientStream ClientStream { get; init; }
     public required T Response { get; init; }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        await ClientStream.DisposeAsync();
+        return ClientStream.DisposeAsync();
     }
 }

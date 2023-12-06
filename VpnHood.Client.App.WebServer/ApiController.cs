@@ -33,21 +33,21 @@ internal class ClientApiController : WebApiController, IClientApi
     }
 
     [Route(HttpVerbs.Post, "/connect")]
-    public async Task Connect([QueryField] Guid? clientProfileId = null)
+    public Task Connect([QueryField] Guid? clientProfileId = null)
     {
-        await App.Connect(clientProfileId, userAgent: HttpContext.Request.UserAgent, throwException: false);
+        return App.Connect(clientProfileId, userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public async Task Diagnose([QueryField] Guid? clientProfileId = null)
+    public Task Diagnose([QueryField] Guid? clientProfileId = null)
     {
-        await App.Connect(clientProfileId, true, HttpContext.Request.UserAgent, throwException: false);
+        return App.Connect(clientProfileId, true, HttpContext.Request.UserAgent, throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/disconnect")]
-    public async Task Disconnect()
+    public Task Disconnect()
     {
-        await App.Disconnect(true);
+        return App.Disconnect(true);
     }
 
     [Route(HttpVerbs.Put, "/access-keys")]

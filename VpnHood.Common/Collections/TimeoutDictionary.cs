@@ -124,7 +124,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     private readonly object _cleanupLock = new();
     public void Cleanup(bool force = false)
     {
-        // do nothing if there is not timeout
+        // do nothing if there is no timeout
         if (Timeout == null)
             return;
 

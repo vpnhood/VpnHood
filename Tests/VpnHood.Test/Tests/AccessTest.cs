@@ -12,10 +12,10 @@ namespace VpnHood.Test.Tests;
 public class AccessTest : TestBase
 {
     [TestMethod]
-    public async Task Foo()
+    public Task Foo()
     {
-        await Task.Delay(0);
-     }
+        return Task.Delay(0);
+    }
 
     [TestMethod]
     public async Task Server_reject_invalid_requests()
@@ -82,7 +82,7 @@ public class AccessTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
-        // create an short expiring token
+        // create a short expiring token
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddMilliseconds(500));
 
         // connect and download
@@ -102,7 +102,7 @@ public class AccessTest : TestBase
     {
         await using var server = TestHelper.CreateServer();
 
-        // create an fast expiring token
+        // create a fast expiring token
         var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
 
         // ----------

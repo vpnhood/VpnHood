@@ -312,7 +312,7 @@ public class ServerApp : IDisposable
             var authDoc = JsonDocument.Parse(json);
             var exp = authDoc.RootElement.GetProperty("exp").GetInt64();
             var iss = DateTimeOffset.FromUnixTimeSeconds(exp).DateTime;
-            if (iss >= DateTime.Parse("2036-12-05"))
+            if (iss >= DateTime.Parse("2036-12-07"))
                 return; // nothing to update
 
             VhLogger.Instance.LogInformation("Updating the HttpAccessManager Authorization...");

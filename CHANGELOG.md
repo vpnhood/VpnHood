@@ -1,8 +1,28 @@
+# v3.2.439
+### Client
+Update: Improve Performance
+Feature: Add the initializing state to the connection state
+Feature: Android Set the navigation button background color
+
+### Server
+Update: Improve Performance
+Update: Improve error reporting to access manager
+Update: Improve reporting state to access manager
+Fix: Server doesn't start when there is no local IpV6
+Fix: Server freezes when default UDP port is not available
+Fix: Send status even if server configuration is not successful
+Security: Updating AccessManaget token
+
+### Developer
+Upgrade to .NET 8
+Android: Migrate from Xamarin to .NET Android Application
+Android: Upgrade to Android API 34
+
 # v3.1.436 
 ### Client
 Update: Improve UI
 Fix: Android: Keyboard cover input fields in the UI
-Fix: Android: Frequently asking for adding the system tile
+Fix: Android: Frequently asking to add the system tile
 
 # v3.1.430 
 ### Client

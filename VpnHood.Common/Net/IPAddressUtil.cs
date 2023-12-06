@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace VpnHood.Common.Net;
 
@@ -29,23 +25,31 @@ public static class IPAddressUtil
 
     public static async Task<bool> IsIpv6Supported()
     {
-        var ping = new Ping();
-        var ping1 = ping.SendPingAsync("2001:4860:4860::8888");
-        var ping2 = ping.SendPingAsync("2001:4860:4860::8844");
         try
         {
-            if ((await ping1).Status == IPStatus.Success)
-                return true;
-        }
-        catch
-        {
-            //ignore
-        }
+            // it may throw error if IPv6 is not supported before creating task
+            var ping = new Ping();
+            var ping1 = ping.SendPingAsync("2001:4860:4860::8888");
+            var ping2 = ping.SendPingAsync("2001:4860:4860::8844");
+            try
+            {
+                if ((await ping1).Status == IPStatus.Success)
+                    return true;
+            }
+            catch
+            {
+                //ignore
+            }
 
-        try
-        {
-            if ((await ping2).Status == IPStatus.Success)
-                return true;
+            try
+            {
+                if ((await ping2).Status == IPStatus.Success)
+                    return true;
+            }
+            catch
+            {
+                // ignore
+            }
         }
         catch
         {

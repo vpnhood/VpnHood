@@ -1,15 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -147,7 +142,7 @@ public class IpGroupManager
         if (_ipGroups != null)
             return _ipGroups;
 
-        // no countries if there is not import
+        // no countries if there is no import
         if (!File.Exists(IpGroupsFilePath))
             return Array.Empty<IpGroup>();
 
@@ -193,7 +188,7 @@ public class IpGroupManager
 
     private class IpGroupNetwork : IpGroup
     {
-        public List<IpRange> IpRanges { get; set; } = new();
+        public List<IpRange> IpRanges { get; set; } = [];
     }
 
 }

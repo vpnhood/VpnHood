@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace VpnHood.Common.Utils;
+﻿namespace VpnHood.Common.Utils;
 
 public class AsyncStreamDecorator<T> : Stream where T : Stream
 {
@@ -12,8 +7,8 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
 
     public AsyncStreamDecorator(T sourceStream, bool leaveOpen)
     {
-        SourceStream = sourceStream;
         _leaveOpen = leaveOpen;
+        SourceStream = sourceStream;
     }
 
     public override bool CanRead => SourceStream.CanRead;
@@ -167,7 +162,7 @@ public class AsyncStreamDecorator<T> : Stream where T : Stream
 
 public class AsyncStreamDecorator : AsyncStreamDecorator<Stream>
 {
-    public AsyncStreamDecorator(Stream sourceStream, bool leaveOpen)
+    public AsyncStreamDecorator(Stream sourceStream, bool leaveOpen) 
         : base(sourceStream, leaveOpen)
     {
     }

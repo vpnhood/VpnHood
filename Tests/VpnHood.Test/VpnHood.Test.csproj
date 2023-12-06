@@ -1,46 +1,55 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
 
-    <IsPackable>false</IsPackable>
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
 
-    <RootNamespace>VpnHood.Test</RootNamespace>
+	<ItemGroup>
+		<PackageReference Include="EmbedIO" Version="3.5.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
+		<PackageReference Include="coverlet.collector" Version="6.0.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Unosquare.Swan.Lite" Version="3.1.0" />
+	</ItemGroup>
 
-    <StartupObject></StartupObject>
+	<ItemGroup>
+		<ProjectReference Include="..\..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Server\VpnHood.Server.csproj" />
+	</ItemGroup>
 
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="EmbedIO" Version="3.5.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
-    <PackageReference Include="coverlet.collector" Version="6.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Unosquare.Swan.Lite" Version="3.1.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-    <ProjectReference Include="..\..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
-    <ProjectReference Include="..\..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
-    <ProjectReference Include="..\..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
-    <ProjectReference Include="..\..\VpnHood.Server\VpnHood.Server.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Assets\VpnHood.UnitTest.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="WinDivert.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="Assets\VpnHood.UnitTest.pfx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="WinDivert.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

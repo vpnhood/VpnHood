@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -7,8 +6,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
+using VpnHood.Client.App.Win.Common;
 
 namespace VpnHood.Client.App.Win;
 
@@ -18,25 +17,29 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
 
         // initialize main window
-        Title = UiResource.AppName;
-        Background = new SolidColorBrush(Color.FromArgb(UiDefaults.WindowBackgroundColor.A, UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B));
+        Title = VpnHoodApp.Instance.Resources.Strings.AppName;
+        if (backgroundColor != null) Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R, backgroundColor.Value.G, backgroundColor.Value.B));
         Visibility = WinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
-        Width = UiDefaults.WindowSize.Width;
-        Height = UiDefaults.WindowSize.Height;
+        Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
+        Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) Hide(); };
 
+        // set window title bar color
+        var hWnd = new WindowInteropHelper(this).EnsureHandle();
+        if (backgroundColor != null) WinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
+
         // initialize MainWebView
-        MainWebView.DefaultBackgroundColor = UiDefaults.WindowBackgroundColor;
         MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
+        if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;
         _ = MainWebView.EnsureCoreWebView2Async(null);
 
-        var hWnd = new WindowInteropHelper(this).EnsureHandle();
-        WinApp.SetWindowTitleBarColor(hWnd, UiDefaults.WindowBackgroundColor);
+        // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
     }
 
@@ -73,9 +76,9 @@ public partial class MainWindow : Window
         // update icon and text
         var icon = VpnHoodApp.Instance.State.ConnectionState switch
         {
-            AppConnectionState.Connected => UiResource.BadgeVpnConnected,
+            AppConnectionState.Connected => VpnHoodApp.Instance.Resources.Icons.BadgeConnectedIcon,
             AppConnectionState.None => null,
-            _ => UiResource.BadgeVpnConnecting
+            _ => VpnHoodApp.Instance.Resources.Icons.BadgeConnectingIcon
         };
 
         // remove overlay
@@ -86,7 +89,7 @@ public partial class MainWindow : Window
         }
 
         // set overlay
-        using var memStream = new MemoryStream(icon);
+        using var memStream = new MemoryStream(icon.Data);
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.StreamSource = memStream;

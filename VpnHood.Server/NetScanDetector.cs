@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Common.Collections;
 
@@ -16,7 +15,7 @@ public class NetScanDetector
         _networkIpAddresses = new TimeoutDictionary<IPAddress, NetworkIpAddressItem>(itemTimeout);
     }
 
-    private IPAddress GetNetworkIpAddress(IPEndPoint ipEndPoint)
+    private static IPAddress GetNetworkIpAddress(IPEndPoint ipEndPoint)
     {
         var bytes = ipEndPoint.Address.GetAddressBytes();
         bytes[3] = 0;

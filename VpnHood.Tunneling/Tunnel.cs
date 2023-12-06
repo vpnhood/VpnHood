@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
@@ -23,8 +18,8 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly Queue<IPPacket> _packetQueue = new();
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
-    private readonly HashSet<StreamProxyChannel> _streamProxyChannels = new();
-    private readonly List<IDatagramChannel> _datagramChannels = new();
+    private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
+    private readonly List<IDatagramChannel> _datagramChannels = [];
     private readonly Timer _speedMonitorTimer;
     private bool _disposed;
     private int _maxDatagramChannelCount;
@@ -165,7 +160,7 @@ public class Tunnel : IJob, IAsyncDisposable
                 RemoveChannel(channel);
         }
 
-        //  SendPacketTask after starting the channel and outside of the lock
+        //  SendPacketTask after starting the channel and must be outside the lock
         _ = SendPacketTask(datagramChannel);
     }
 
@@ -253,14 +248,14 @@ public class Tunnel : IJob, IAsyncDisposable
         var dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
 
-        // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
+        // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to deadlock
         // ReSharper disable once InconsistentlySynchronizedField
         while (_packetQueue.Count > MaxQueueLength)
         {
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there is some packet
-            await _packetSentEvent.WaitAsync(1000); //Wait 1000 to prevent dead lock.
+            await _packetSentEvent.WaitAsync(1000); //Wait 1000 to prevent deadlock.
             if (_disposed) return;
 
             // check timeout
@@ -328,7 +323,7 @@ public class Tunnel : IJob, IAsyncDisposable
                         }
 
                         // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
-                        // packets should be empty to decrease the chance of loosing the other packets by this packet
+                        // packets should be empty to decrease the chance of missing the other packets by this packet
                         if (packetSize > MtuNoFragment && !packets.Any() && _packetQueue.TryDequeue(out ipPacket))
                         {
                             packets.Add(ipPacket);
@@ -411,11 +406,11 @@ public class Tunnel : IJob, IAsyncDisposable
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore()

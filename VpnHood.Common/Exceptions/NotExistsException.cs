@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace VpnHood.Common.Exceptions;
+﻿namespace VpnHood.Common.Exceptions;
 
 public class NotExistsException : Exception
 {

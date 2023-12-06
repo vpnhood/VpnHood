@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.JobController;
@@ -138,14 +134,14 @@ public class SessionManager : IAsyncDisposable, IJob
         return sessionResponseEx;
     }
 
-    private async Task GaTrackNewSession(ClientInfo clientInfo)
+    private Task GaTrackNewSession(ClientInfo clientInfo)
     {
         if (GaTracker == null)
-            return;
+            return Task.CompletedTask;
 
         // track new session
         var serverVersion = ServerVersion.ToString(3);
-        await GaTracker.Track(new Ga4TagEvent
+        return GaTracker.Track(new Ga4TagEvent
         {
             EventName = Ga4TagEvents.PageView,
             Properties = new Dictionary<string, object>()
@@ -179,7 +175,7 @@ public class SessionManager : IAsyncDisposable, IJob
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
                 throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
 
-            // session is authorized so we can pass any error to client
+            // session is authorized, so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
@@ -291,11 +287,11 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore()

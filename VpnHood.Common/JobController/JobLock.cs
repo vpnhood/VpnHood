@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Common.JobController;
+﻿namespace VpnHood.Common.JobController;
 
 public class JobLock : IDisposable
 {

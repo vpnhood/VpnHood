@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -293,7 +287,7 @@ public class ClientServerTest : TestBase
         // *** TEST ***: TCP (TLS) by quad9
         await TestHelper.Test_Https();
 
-        // check there is send data
+        // check some data has been sent
         Assert.AreNotEqual(oldClientSentByteCount, client.Stat.SessionTraffic.Sent, 100,
             "Not enough data has been sent through the client.");
         Assert.AreNotEqual(oldClientReceivedByteCount, client.Stat.SessionTraffic.Received, 2000,
@@ -608,8 +602,9 @@ public class ClientServerTest : TestBase
         Assert.AreEqual(1, clientConnect.AttemptCount);
         await TestTunnel(server, clientConnect.Client);
 
-        // ************
-        // *** TEST ***: dispose after second try (2st time)
+        // -----------
+        // Check: dispose after second try (2nd time)
+        // -----------
         Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
         await server.SessionManager.CloseSession(clientConnect.Client.SessionId);
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>

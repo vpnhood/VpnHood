@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -12,7 +8,7 @@ namespace VpnHood.Tunneling;
 
 public class PacketSender
 {
-    private readonly List<IPPacket> _packets = new();
+    private readonly List<IPPacket> _packets = [];
     private readonly SessionProxyManager _sessionProxyManager;
     private readonly AsyncLock _sendLock = new();
     private readonly SemaphoreSlim _packetArrivalSignal = new(1, 1);

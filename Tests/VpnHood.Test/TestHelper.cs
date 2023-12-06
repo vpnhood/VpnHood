@@ -76,14 +76,14 @@ internal static class TestHelper
         }
     }
 
-    public static async Task WaitForClientStateAsync(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
+    public static Task WaitForClientStateAsync(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
     {
-        await VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState, "App state didn't reach the expected value.", timeout);
+        return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState, "App state didn't reach the expected value.", timeout);
     }
 
-    public static async Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
+    public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
     {
-        await VhTestUtil.AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
+        return VhTestUtil.AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
     }
 
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = DefaultTimeout)
@@ -135,9 +135,9 @@ internal static class TestHelper
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }
 
-    public static async Task Test_Udp(int timeout = DefaultTimeout)
+    public static Task Test_Udp(int timeout = DefaultTimeout)
     {
-        await Test_Udp(TEST_UdpV4EndPoint1, timeout);
+        return Test_Udp(TEST_UdpV4EndPoint1, timeout);
     }
 
     public static async Task Test_Udp(IPEndPoint udpEndPoint, int timeout = DefaultTimeout)

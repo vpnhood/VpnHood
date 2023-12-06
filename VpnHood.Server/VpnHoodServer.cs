@@ -305,10 +305,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         }
     }
 
-    private async Task GaTrackStart()
+    private Task GaTrackStart()
     {
         if (SessionManager.GaTracker == null)
-            return;
+            return Task.CompletedTask;
 
         // track
         var useProperties = new Dictionary<string, object>
@@ -317,7 +317,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             { "access_manager", AccessManager.GetType().Name },
         };
 
-        await SessionManager.GaTracker.Track(new Ga4TagEvent
+        return SessionManager.GaTracker.Track(new Ga4TagEvent
         {
             EventName = Ga4TagEvents.SessionStart,
             Properties = new Dictionary<string, object>()
@@ -336,11 +336,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore()

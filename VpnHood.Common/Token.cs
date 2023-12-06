@@ -19,7 +19,7 @@ public class Token : ICloneable
     {
         if (VhUtil.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
         if (VhUtil.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
-        // after 2.2.276, hostName must exists; //remark for compatibility
+        // after 2.2.276, hostName must exist; //remark for compatibility
         // if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
         Secret = secret;

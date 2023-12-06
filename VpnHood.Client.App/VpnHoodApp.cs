@@ -71,7 +71,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException($"VpnHoodApp is already initialized.");
+        if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
         MigrateUserDataFromXamarin(options.AppDataFolderPath); // Deprecated >= 400
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
@@ -333,7 +333,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
-        // it slowdown tests and does not need to be logged in normal situation
+        // it slows down tests and does not need to be logged in normal situation
         if (_hasDiagnoseStarted)
             VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
 

@@ -3,10 +3,14 @@ using Android.Gms.Ads.Interstitial;
 
 namespace VpnHood.Client.App.Droid.Connect.Ads;
 
+// todo
+// ReSharper disable All
+
+
 public class VpnHoodInterstitialAdLoadCallback : InterstitialAdLoadCallback
 {
     private readonly Activity _activity;
-    private InterstitialAd? _interstitialAd;
+    //private InterstitialAd? _interstitialAd;
 
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {

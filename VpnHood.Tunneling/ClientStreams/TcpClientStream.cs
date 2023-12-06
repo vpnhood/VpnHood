@@ -66,11 +66,11 @@ public class TcpClientStream : IClientStream
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync(bool graceful)
+    public ValueTask DisposeAsync(bool graceful)
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore(graceful);
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore(bool graceful)

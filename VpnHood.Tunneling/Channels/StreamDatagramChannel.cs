@@ -138,7 +138,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 foreach (var ipPacket in ipPackets)
                     if (ProcessMessage(ipPacket))
                     {
-                        processedPackets ??= new List<IPPacket>();
+                        processedPackets ??= [];
                         processedPackets.Add(ipPacket);
                     }
 
@@ -206,7 +206,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    public async Task RunJob()
+    public Task RunJob()
     {
         if (Connected && FastDateTime.Now > _lifeTime)
         {
@@ -214,8 +214,10 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 "StreamDatagramChannel lifetime ended. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
-            await SendClose();
+            return SendClose();
         }
+
+        return Task.CompletedTask;
     }
 
     private readonly AsyncLock _disposeLock = new();

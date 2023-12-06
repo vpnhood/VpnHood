@@ -74,7 +74,7 @@ public class Ga4Tracker
             ("v", 2), // MeasurementId
             ("tid", MeasurementId), // MeasurementId
             ("gtm", Environment.TickCount), // GTM Hash
-            ("_p", Environment.TickCount + 10), // finger print, a random number 
+            ("_p", Environment.TickCount + 10), // fingerprint, a random number 
             ("cid", ClientId), // Client Id
 
             // client device info, user agent info
@@ -94,7 +94,7 @@ public class Ga4Tracker
 
                                   
             // session
-            ("sid", SessionId), // GA4 Session Id. This comes from the GA4 Cookie. It may be different for each Stream ID Configured on the site
+            ("sid", SessionId), // GA4 Session id. This comes from the GA4 Cookie. It may be different for each Stream ID Configured on the site
             ("sct", SessionCount), //Count of sessions. This value increases by one each time a new session is detected ( when the session expires )
             ("seg", 1), // Required.  Session Engagement. If the current user is engaged in any way, this value will be 1
             ("_s", 1), // Hit Counter. Current hits counter for the current page load

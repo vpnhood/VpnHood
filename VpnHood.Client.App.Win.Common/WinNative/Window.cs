@@ -52,7 +52,7 @@ public class Window : IDisposable
         var hInstance = Process.GetCurrentProcess().Handle;
         var className = Guid.NewGuid().ToString();
 
-        //must keep reference to it and prevent it from release. Otherwise exception will occur in message pump
+        //must keep reference to it and prevent it from release. Otherwise, exception will occur in message pump
         _windowClass = new WNDCLASSEX
         {
             lpfnWndProc = wndProc,

@@ -7,8 +7,8 @@ public class JobRunner
 {
     public ILogger Logger { get; set; } = NullLogger.Instance;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly LinkedList<WeakReference<IJob>> _jobRefs = new();
-    private readonly List<WeakReference<IJob>> _deadJobs = new();
+    private readonly LinkedList<WeakReference<IJob>> _jobRefs = [];
+    private readonly List<WeakReference<IJob>> _deadJobs = [];
     private Timer? _timer;
     private TimeSpan _interval = TimeSpan.FromSeconds(5);
     public bool IsStarted => _timer != null;

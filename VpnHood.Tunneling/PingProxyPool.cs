@@ -9,7 +9,7 @@ namespace VpnHood.Tunneling;
 public class PingProxyPool : IPacketProxyPool, IJob
 {
     private readonly IPacketProxyReceiver _packetProxyReceiver;
-    private readonly List<PingProxy> _pingProxies = new();
+    private readonly List<PingProxy> _pingProxies = [];
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);

@@ -21,13 +21,13 @@ namespace VpnHood.Server;
 
 internal class ServerHost : IAsyncDisposable, IJob
 {
-    private readonly HashSet<IClientStream> _clientStreams = new();
+    private readonly HashSet<IClientStream> _clientStreams = [];
     private const int ServerProtocolVersion = 4;
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
-    private readonly List<TcpListener> _tcpListeners = new();
-    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = new();
+    private readonly List<TcpListener> _tcpListeners;
+    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
     private Task? _listenerTask;
     private bool _disposed;
 
@@ -42,6 +42,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
+        _tcpListeners = new List<TcpListener>();
         _sessionManager = sessionManager;
         JobRunner.Default.Add(this);
     }
@@ -661,11 +662,11 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         lock (_disposeLock)
             _disposeTask ??= DisposeAsyncCore();
-        await _disposeTask.Value;
+        return _disposeTask.Value;
     }
 
     private async ValueTask DisposeAsyncCore()

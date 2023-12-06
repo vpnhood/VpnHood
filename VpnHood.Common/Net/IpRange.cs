@@ -47,7 +47,7 @@ public class IpRange
 
     private static IOrderedEnumerable<IpRange> Unify(IEnumerable<IpRange> sortedIpRanges)
     {
-        List<IpRange> res = new();
+        List<IpRange> res = [];
         foreach (var ipRange in sortedIpRanges)
         {
             if (res.Count > 0 &&
@@ -99,7 +99,7 @@ public class IpRange
         var ipRangesSorted = Sort(ipRanges).ToArray();
 
         // extract
-        List<IpRange> res = new();
+        List<IpRange> res = [];
         for (var i = 0; i < ipRangesSorted.Length; i++)
         {
             var ipRange = ipRangesSorted[i];

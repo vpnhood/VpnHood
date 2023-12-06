@@ -246,12 +246,12 @@ internal class ConnectorService : IAsyncDisposable, IJob
         };
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         while (_freeClientStreams.TryDequeue(out var queueItem))
             _disposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
 
-        await _disposingTasks.DisposeAsync();
+        return _disposingTasks.DisposeAsync();
     }
 
     private class ClientStreamItem

@@ -109,7 +109,7 @@ public class FileAccessManagerCommand
                     item.Port = bestEp?.Port ?? 443;
                 }
 
-                // throw error if could not find any public endpoint
+                // throw error if there is no any public endpoint
                 if (publicEndPoints.Length == 0)
                 {
                     VhLogger.Instance.LogError(

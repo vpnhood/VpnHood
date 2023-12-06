@@ -45,8 +45,8 @@ public abstract class UdpChannelTransmitter : IDisposable
             BitConverter.GetBytes(sessionId).CopyTo(buffer, 16);
             BitConverter.GetBytes(sessionCryptoPosition).CopyTo(buffer, 24);
 
-            // encrypt session info part. It encrypt the session number and counter by server key and perform bitwise XOR on head.
-            // the data is not important but it remove the signature of our packet by obfuscating the packet head. Also, the counter of session 
+            // encrypt session info part. It encrypts the session number and counter by server key and perform bitwise XOR on head.
+            // the data is not important, but it removes the signature of our packet by obfuscating the packet head. Also, the counter of session 
             // never repeats so ECB generate a new key each time. It is just for the head obfuscation and the reset of data will encrypt
             // by session key and that counter
             Array.Clear(_sendHeadKeyBuffer, 0, _sendHeadKeyBuffer.Length);

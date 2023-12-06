@@ -30,9 +30,7 @@ public class TestNetFilter : NetFilter
         if (ipEndPoint == null)
             return null;
 
-        return NetMap.TryGetValue(Tuple.Create(protocol, requestEndPoint), out var newDestinationEp)
-            ? newDestinationEp
-            : requestEndPoint;
+        return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);
     }
 
 

@@ -19,7 +19,7 @@ internal class ClientHost : IAsyncDisposable
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly List<IPPacket> _ipPackets = new();
+    private readonly List<IPPacket> _ipPackets = [];
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
@@ -164,7 +164,7 @@ internal class ClientHost : IAsyncDisposable
             }
         }
 
-        return ret.ToArray(); //it is shared buffer; too array is necessary
+        return ret.ToArray(); //it is a shared buffer; sto ToArray is necessary
     }
 
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)

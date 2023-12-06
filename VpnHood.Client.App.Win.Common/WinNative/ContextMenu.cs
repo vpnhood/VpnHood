@@ -78,7 +78,7 @@ public class ContextMenu : IDisposable
         TrackPopupMenuEx(Handle, flag, x, y, _window.Handle, IntPtr.Zero);
     }
 
-    private readonly List<EventHandler> _eventHandlers = new();
+    private readonly List<EventHandler> _eventHandlers = [];
     public int AddMenuItem(string text, EventHandler onClick)
     {
         _eventHandlers.Add(onClick);

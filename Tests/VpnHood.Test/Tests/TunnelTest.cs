@@ -169,7 +169,6 @@ public class TunnelTest : TestBase
         var sessionKey = VhUtil.GenerateKey();
 
         // Create server
-        // Create server
         using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
         var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint
                              ?? throw new Exception("Server connection is not established");
@@ -294,7 +293,7 @@ public class TunnelTest : TestBase
         await binaryStream.DisposeAsync();
         tcpClient.Dispose();
 
-        // task must completed after binaryStream.DisposeAsync
+        // task must be completed after binaryStream.DisposeAsync
         await workerTask.WaitAsync(TimeSpan.FromSeconds(2), cts.Token);
         Assert.IsTrue(workerTask.IsCompletedSuccessfully);
 

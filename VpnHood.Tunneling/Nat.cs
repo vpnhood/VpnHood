@@ -156,7 +156,7 @@ public class Nat : IDisposable
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(Nat));
                 _map.Add((natItem.IpVersion, natItem.Protocol, natItem.NatId), natItem);
-                _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
+                _mapR.Add(natItem, natItem); //sounds crazy! because GetHashCode and Equals don't include all members
             }
         }
         catch (ArgumentException) when (overwrite)
@@ -166,7 +166,7 @@ public class Nat : IDisposable
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(Nat));
                 _map.Add((natItem.IpVersion, natItem.Protocol, natItem.NatId), natItem);
-                _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
+                _mapR.Add(natItem, natItem); //sounds crazy! because GetHashCode and Equals don't include all members
             }
         }
 

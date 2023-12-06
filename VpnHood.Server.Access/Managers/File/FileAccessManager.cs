@@ -344,7 +344,7 @@ public class FileAccessManager : IAccessManager
 
     private class AccessItemUsage
     {
-        public long SentTraffic { get; set; }
-        public long ReceivedTraffic { get; set; }
+        public long SentTraffic { get; init; }
+        public long ReceivedTraffic { get; init; }
     }
 }

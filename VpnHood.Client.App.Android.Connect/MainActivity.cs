@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Content.PM;
+using Android.Gms.Ads;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
@@ -26,7 +27,7 @@ public class MainActivity : AndroidAppWebViewMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        //MobileAds.Initialize(this);
+        MobileAds.Initialize(this);
     }
 
 }

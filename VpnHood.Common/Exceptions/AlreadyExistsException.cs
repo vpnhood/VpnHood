@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Common.Exceptions;
+﻿namespace VpnHood.Common.Exceptions;
 
 public class AlreadyExistsException : Exception
 {

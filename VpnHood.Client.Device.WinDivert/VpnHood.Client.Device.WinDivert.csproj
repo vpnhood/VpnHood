@@ -1,63 +1,72 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Company>OmegaHood LLC</Company>
-    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-    <PackageIcon>VpnHood.png</PackageIcon>
-    <Description>VpnHood client device provider for Windows using WinDivert.</Description>
-    <Version>3.0.418</Version>
-    <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-  
-  <ItemGroup>
-    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-  </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="SharpPcap" Version="6.2.5" />
-  </ItemGroup>
+	<PropertyGroup>
+		<Description>VpnHood client device provider for Windows using WinDivert.</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Reference Include="SharpPcap">
-      <HintPath>SharpPcap.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
-    <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
-  </ItemGroup>
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.2.448</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Update="Resource.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resource.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Update="Resource.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="SharpPcap" Version="6.2.5" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="WinDivert.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="WinDivert64.sys">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  
+	<ItemGroup>
+		<Reference Include="SharpPcap">
+			<HintPath>SharpPcap.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
+		<ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Update="Resource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resource.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="Resource.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="WinDivert.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="WinDivert64.sys">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
 </Project>

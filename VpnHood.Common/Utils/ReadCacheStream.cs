@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace VpnHood.Common.Utils;
+﻿namespace VpnHood.Common.Utils;
 
 /// <summary>
 /// Add cache to ReadAsync operations when caller request small amount of data.
@@ -37,7 +32,7 @@ public class ReadCacheStream : AsyncStreamDecorator
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
-        // read directly to user buffer if there is not buffer and it is larger than cache
+        // read directly to user buffer if there is no buffer, and it is larger than cache
         if (_cacheRemain == 0 && count > _cache.Length)
             return await base.ReadAsync(buffer, offset, count, cancellationToken);
 

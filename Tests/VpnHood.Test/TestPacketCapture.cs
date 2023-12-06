@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Client.Device.WinDivert;
@@ -8,8 +7,8 @@ namespace VpnHood.Test;
 
 internal class TestPacketCapture : WinDivertPacketCapture
 {
-    private readonly TestDeviceOptions _deviceOptions;
     private IPAddress[]? _dnsServers;
+    private readonly TestDeviceOptions _deviceOptions;
 
     public TestPacketCapture(TestDeviceOptions deviceOptions)
     {

@@ -9,11 +9,12 @@ param(
 
 $nugets = $nugets -eq "1";
 $android = $android -eq "1";
+$androidConnect = $androidConnect -eq "1";
 $distribute = $distribute -eq "1";
 $winClient = $winClient -eq "1";
 $server = $server -eq "1";
 
-. "$PSScriptRoot/Common.ps1" -bump $bump
+. "$PSScriptRoot/Core/Common.ps1" -bump $bump
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
@@ -27,7 +28,7 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 & "$solutionDir/VpnHood.Tunneling/_publish.ps1";
 
 & "$solutionDir/VpnHood.Client/_publish.ps1";
-& "$solutionDir/VpnHood.Client.Device.Android.Xamarin/_publish.ps1";
+& "$solutionDir/VpnHood.Client.Device.Android/_publish.ps1";
 & "$solutionDir/VpnHood.Client.Device/_publish.ps1";
 & "$solutionDir/VpnHood.Client.Device.WinDivert/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App/_publish.ps1";
@@ -54,8 +55,15 @@ if ($server)
 # publish android
 if ($android)
 {	
-	& "$solutionDir/VpnHood.Client.App.Android.Xamarin/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
 }
+
+# publish android
+if ($androidConnect)
+{	
+	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish.ps1";
+}
+
 
 # distribute
 if ($distribute)

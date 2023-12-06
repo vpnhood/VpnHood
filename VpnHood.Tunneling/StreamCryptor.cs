@@ -1,8 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using VpnHood.Common.Utils;
+﻿using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -85,18 +81,18 @@ public class StreamCryptor : AsyncStreamDecorator
         return readCount;
     }
 
-    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
         if (_encryptInGivenBuffer)
         {
             Encrypt(buffer, offset, count);
-            await _stream.WriteAsync(buffer, offset, count, cancellationToken);
+            return _stream.WriteAsync(buffer, offset, count, cancellationToken);
         }
         else
         {
             var copyBuffer = buffer[offset..count];
             Encrypt(copyBuffer, 0, copyBuffer.Length);
-            await _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
+            return _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
         }
     }
 

@@ -1,1 +1,1 @@
-& "$PSScriptRoot\..\Pub\PublishNuget.ps1" $PSScriptRoot
+& "$PSScriptRoot/../Pub/Core/PublishNuget.ps1" $PSScriptRoot

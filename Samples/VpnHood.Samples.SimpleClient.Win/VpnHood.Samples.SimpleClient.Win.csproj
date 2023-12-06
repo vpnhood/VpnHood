@@ -1,18 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Simple VpnHood Client usage for Windows</Description>
+		<TargetFramework>net8.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <Description>Simple VpnHood Client usage</Description>
-    <Product>VpnHood Samples</Product>
-    <Company>OmegaHood LLC</Company>
-    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-  </PropertyGroup>
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="VpnHood.Client" Version="3.0.429" />
-    <PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.0.429" />
-  </ItemGroup>
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Client" Version="3.2.438-prerelease" />
+		<PackageReference Include="VpnHood.Client.Device.WinDivert" Version="3.2.438-prerelease" />
+	</ItemGroup>
 
 </Project>

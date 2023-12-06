@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood Android Client Connect App with Ads and memebership</Description>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
+		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<ApplicationId>com.vpnhood.connect.android.web</ApplicationId>
+		<ApplicationVersion>439</ApplicationVersion>
+		<ApplicationDisplayVersion>3.2.439</ApplicationDisplayVersion>
+		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PublishTrimmed2>False</PublishTrimmed2>
+		<RunAOTCompilation2>False</RunAOTCompilation2>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.2.439</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseOutputPath></BaseOutputPath>
+		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="Ads\InterstitialAdLoadCallback2.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="122.3.0.1" />
+	</ItemGroup>
+
+</Project>

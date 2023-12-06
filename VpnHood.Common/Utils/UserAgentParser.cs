@@ -1,14 +1,12 @@
-﻿using System;
-
-namespace VpnHood.Common.Utils;
+﻿namespace VpnHood.Common.Utils;
 
 public static class UserAgentParser
 {
-    /// <summary>
-    /// Extracts human readable Operating system name.
-    /// </summary>
-    /// <param name="userAgent">User Agent string from Request.</param>
-    /// <returns>Human readable Operating system name.</returns>
+    // <summary>
+    // Extracts human-readable Operating system name.
+    // </summary>
+    // <param name="userAgent">User Agent string from Request.</param>
+    // <returns>Human-readable Operating system name.</returns>
     public static string GetOperatingSystem(string? userAgent)
     {
         userAgent ??= string.Empty;

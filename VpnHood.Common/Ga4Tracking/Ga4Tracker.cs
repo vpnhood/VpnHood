@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Net.Http;
+﻿using System.Globalization;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Ga4Tracking;
@@ -79,7 +74,7 @@ public class Ga4Tracker
             ("v", 2), // MeasurementId
             ("tid", MeasurementId), // MeasurementId
             ("gtm", Environment.TickCount), // GTM Hash
-            ("_p", Environment.TickCount + 10), // finger print, a random number 
+            ("_p", Environment.TickCount + 10), // fingerprint, a random number 
             ("cid", ClientId), // Client Id
 
             // client device info, user agent info
@@ -95,11 +90,11 @@ public class Ga4Tracker
 
             // "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.199|Google%20Chrome;114.0.5735.199" 
             // "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.201|Microsoft%20Edge;114.0.1823.67"
+            // ReSharper disable once CommentTypo
             // ("uafvl", "Not.A%2FBrand;8.0.0.0|Chromium;114.0.5735.201|Microsoft%20Edge;114.0.1823.67"),  *Finalized  // User Agent Full Version List
-
                                   
             // session
-            ("sid", SessionId), // GA4 Session Id. This comes from the GA4 Cookie. It may be different for each Stream ID Configured on the site
+            ("sid", SessionId), // GA4 Session id. This comes from the GA4 Cookie. It may be different for each Stream ID Configured on the site
             ("sct", SessionCount), //Count of sessions. This value increases by one each time a new session is detected ( when the session expires )
             ("seg", 1), // Required.  Session Engagement. If the current user is engaged in any way, this value will be 1
             ("_s", 1), // Hit Counter. Current hits counter for the current page load

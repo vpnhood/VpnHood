@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using PacketDotNet;
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -31,9 +30,7 @@ public class TestNetFilter : NetFilter
         if (ipEndPoint == null)
             return null;
 
-        return NetMap.TryGetValue(Tuple.Create(protocol, requestEndPoint), out var newDestinationEp)
-            ? newDestinationEp
-            : requestEndPoint;
+        return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);
     }
 
 

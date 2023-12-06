@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood Android Client App Common Library</Description>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.Client.App.Droid.Common</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>3.2.439</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseOutputPath></BaseOutputPath>
+		<BaseIntermediateOutputPath />
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -412,7 +409,7 @@ public static class PacketUtil
 
     public static string Format(IPPacket ipPacket)
     {
-        return VhLogger.FormatIpPacket(ipPacket.ToString());
+        return VhLogger.FormatIpPacket(ipPacket.ToString()!);
     }
 
     public static IPEndPointPair GetPacketEndPoints(IPPacket ipPacket)

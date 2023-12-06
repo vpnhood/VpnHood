@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.ConnectorServices;
@@ -23,23 +19,27 @@ internal class ClientHost : IAsyncDisposable
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly List<IPPacket> _ipPackets = new();
+    private readonly List<IPPacket> _ipPackets = [];
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
     private IPEndPoint? _localEndpointIpV4;
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
+
     private VpnHoodClient Client { get; }
     public IPAddress CatcherAddressIpV4 { get; }
     public IPAddress CatcherAddressIpV6 { get; }
 
-    public ClientHost(VpnHoodClient client, IPAddress catcherAddressIpV4, IPAddress catcherAddressIpV6)
-    {
-        Client = client ?? throw new ArgumentNullException(nameof(client));
-        CatcherAddressIpV4 = catcherAddressIpV4 ?? throw new ArgumentNullException(nameof(catcherAddressIpV4));
-        CatcherAddressIpV6 = catcherAddressIpV6 ?? throw new ArgumentNullException(nameof(catcherAddressIpV6));
-    }
 
+    public ClientHost(
+        VpnHoodClient client, 
+        IPAddress catcherAddressIpV4, 
+        IPAddress catcherAddressIpV6)
+    {
+        Client = client;
+        CatcherAddressIpV4 = catcherAddressIpV4;
+        CatcherAddressIpV6 = catcherAddressIpV6;
+    }
 
     public void Start()
     {
@@ -164,7 +164,7 @@ internal class ClientHost : IAsyncDisposable
             }
         }
 
-        return ret.ToArray(); //it is shared buffer; too array is necessary
+        return ret.ToArray(); //it is a shared buffer; sto ToArray is necessary
     }
 
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)

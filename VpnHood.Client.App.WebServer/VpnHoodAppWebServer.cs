@@ -1,12 +1,8 @@
-﻿using System;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
+﻿using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using EmbedIO;
 using EmbedIO.Files;
 using EmbedIO.WebApi;

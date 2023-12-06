@@ -106,7 +106,7 @@ if ("$httpBaseUrl" -ne "") {
 			BaseUrl       = $httpBaseUrl;
 			Authorization = $httpAuthorization;
 		};
-		managementSecret = $managementSecret;
+		ManagementSecret = $managementSecret;
 	};
 	
 	# publish info

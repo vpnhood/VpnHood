@@ -7,22 +7,29 @@ public class JobSection
     private readonly object _lockObject = new();
     private bool _runnerEntered;
     private bool _normalEntered;
-    
     private bool ShouldEnter => Elapsed > Interval && !_normalEntered;
-    private bool ShouldRunnerEnter => Elapsed > Interval && !_normalEntered && !_runnerEntered;
-
-    public static TimeSpan DefaultInterval { get; set; }  = TimeSpan.FromSeconds(30);
+    private bool ShouldRunnerEnterInternal => Elapsed > Interval && !_normalEntered && !_runnerEntered;
     public TimeSpan Elapsed => FastDateTime.Now - LastDoneTime;
+    public static TimeSpan DefaultInterval { get; set; } = TimeSpan.FromSeconds(30);
     public TimeSpan Interval { get; set; } = DefaultInterval;
     public DateTime LastDoneTime { get; private set; } = FastDateTime.Now;
+    public string? Name { get; init; }
 
     public JobSection()
     {
     }
 
-    public JobSection(TimeSpan interval)
+    public JobSection(TimeSpan interval, string? name = null)
     {
         Interval = interval;
+        Name = name;
+    }
+
+    public JobSection(JobConfig jobConfig)
+        : this(jobConfig.Interval, jobConfig.Name)
+    {
+        if (jobConfig.DueTime != null)
+            LastDoneTime = FastDateTime.Now - jobConfig.Interval + jobConfig.DueTime.Value;
     }
 
     public JobLock Enter()
@@ -37,11 +44,20 @@ public class JobSection
         }
     }
 
+    internal bool ShouldRunnerEnter
+    {
+        get
+        {
+            lock (_lockObject)
+                return ShouldRunnerEnterInternal;
+        }
+    }
+
     internal bool EnterRunner()
     {
         lock (_lockObject)
         {
-            if (!ShouldRunnerEnter)
+            if (!ShouldRunnerEnterInternal)
                 return false;
 
             _runnerEntered = true;

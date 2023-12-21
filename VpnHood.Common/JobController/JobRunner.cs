@@ -71,7 +71,8 @@ public class JobRunner
             _deadJobs.Clear();
         }
 
-        _ = RunJobs(jobs);
+        if (jobs.Length > 0)
+            _ = RunJobs(jobs);
     }
 
     private async Task RunJobs(IEnumerable<IJob> jobs)

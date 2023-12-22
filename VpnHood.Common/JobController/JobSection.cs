@@ -25,11 +25,11 @@ public class JobSection
         Name = name;
     }
 
-    public JobSection(JobConfig jobConfig)
-        : this(jobConfig.Interval, jobConfig.Name)
+    public JobSection(JobOptions jobOptions)
+        : this(jobOptions.Interval, jobOptions.Name)
     {
-        if (jobConfig.DueTime != null)
-            LastDoneTime = FastDateTime.Now - jobConfig.Interval + jobConfig.DueTime.Value;
+        if (jobOptions.DueTime != null)
+            LastDoneTime = FastDateTime.Now - jobOptions.Interval + jobOptions.DueTime.Value;
     }
 
     public JobLock Enter()

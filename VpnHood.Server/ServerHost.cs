@@ -328,11 +328,12 @@ internal class ServerHost : IAsyncDisposable, IJob
 
             throw new UnauthorizedAccessException();
         }
-        catch
+        catch (Exception ex)
         {
             //always return BadRequest 
             if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
-            await sslStream.WriteAsync(HttpResponses.GetBadRequest(), cancellationToken);
+            var response = ex is UnauthorizedAccessException ? HttpResponses.GetUnauthorized() : HttpResponses.GetBadRequest();
+            await sslStream.WriteAsync(response, cancellationToken);
             throw new Exception("Bad request.");
         }
     }

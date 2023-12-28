@@ -12,6 +12,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.File;
+using VpnHood.Test.Utils;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
@@ -209,16 +210,13 @@ public class ServerTest : TestBase
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        var tcpClient = new TcpClient();
-        await tcpClient.ConnectAsync(token.HostEndPoints!.First());
-        var ssl = new SslStream(tcpClient.GetStream(), false, TestHelper.IgnoreCertificateValidationCallback);
-        await ssl.AuthenticateAsClientAsync(token.HostName);
-        await ssl.WriteAsync("Foo1 Foo2 Foo3\r\n\r\n"u8.ToArray());
-
-        var readBuffer = new byte[1000];
-        _ = await ssl.ReadAsync(readBuffer);
-        var response = Encoding.UTF8.GetString(readBuffer);
-        Assert.AreEqual(0, response.IndexOf("HTTP/1.1 400 Bad Request", StringComparison.OrdinalIgnoreCase));
+        var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        var client = new HttpClient(handler);
+        var url = $"https://{token.HostEndPoints!.First()}";
+        
+        var ex = await Assert.ThrowsExceptionAsync<HttpRequestException>(()=>client.GetStringAsync(url));
+        Assert.AreEqual(ex.StatusCode, HttpStatusCode.Unauthorized);
     }
 
     [TestMethod]

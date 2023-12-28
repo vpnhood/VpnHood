@@ -6,7 +6,7 @@ namespace VpnHood.Common.Utils;
 
 public static class VhTestUtil
 {
-    public class AssertException : Exception
+    private class AssertException : Exception
     {
         public AssertException(string? message = null)
             : base(message)

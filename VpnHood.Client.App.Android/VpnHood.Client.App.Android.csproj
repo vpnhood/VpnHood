@@ -4,15 +4,15 @@
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
-		<ApplicationVersion>448</ApplicationVersion>
-		<ApplicationDisplayVersion>3.2.448</ApplicationDisplayVersion>
+		<ApplicationId>com.vpnhood.client.android</ApplicationId>
+		<ApplicationVersion>440</ApplicationVersion>
+		<ApplicationDisplayVersion>3.2.400</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<PublishTrimmed2>False</PublishTrimmed2>
-		<RunAOTCompilation2>False</RunAOTCompilation2>
+		<PublishTrimmed>False</PublishTrimmed>
+		<RunAOTCompilation>False</RunAOTCompilation>
 	</PropertyGroup>
 
 	<PropertyGroup>

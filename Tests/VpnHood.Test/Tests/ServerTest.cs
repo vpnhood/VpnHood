@@ -1,7 +1,5 @@
 ﻿using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,7 +10,6 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.File;
-using VpnHood.Test.Utils;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;

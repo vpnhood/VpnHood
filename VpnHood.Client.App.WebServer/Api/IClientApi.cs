@@ -19,4 +19,6 @@ public interface IClientApi
     Task<string> Log();
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task<IpGroup[]> GetIpGroups();
+    Task VersionCheck();
+    void VersionCheckPostpone();
 }

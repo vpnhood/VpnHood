@@ -7,8 +7,6 @@ public class JobSection
     private readonly object _lockObject = new();
     private bool _runnerEntered;
     private bool _normalEntered;
-    private bool ShouldEnter => Elapsed > Interval && !_normalEntered;
-    private bool ShouldRunnerEnterInternal => Elapsed > Interval && !_normalEntered && !_runnerEntered;
     public TimeSpan Elapsed => FastDateTime.Now - LastDoneTime;
     public static TimeSpan DefaultInterval { get; set; } = TimeSpan.FromSeconds(30);
     public TimeSpan Interval { get; set; } = DefaultInterval;
@@ -32,11 +30,36 @@ public class JobSection
             LastDoneTime = FastDateTime.Now - jobOptions.Interval + jobOptions.DueTime.Value;
     }
 
-    public JobLock Enter()
+    public bool ShouldEnter(bool force = false)
+    {
+        return (force || Elapsed > Interval) && !_normalEntered;
+    }
+
+    private bool ShouldRunnerEnterInternal()
+    {
+        return Elapsed > Interval && !_normalEntered && !_runnerEntered;
+    }
+
+    /// <returns>true if job is done; false if skipped</returns>
+    public async Task<bool> Enter(Func<Task> action, bool force = false)
+    {
+        // fast return;
+        if (!ShouldEnter(force))
+            return false;
+
+        using var jobLock = Enter(force);
+        if (!jobLock.IsEntered)
+            return false;
+
+        await action();
+        return true;
+    }
+
+    public JobLock Enter(bool force = false)
     {
         lock (_lockObject)
         {
-            if (!ShouldEnter)
+            if (!ShouldEnter(force))
                 return new JobLock(this, false);
 
             _normalEntered = true;
@@ -49,7 +72,7 @@ public class JobSection
         get
         {
             lock (_lockObject)
-                return ShouldRunnerEnterInternal;
+                return ShouldRunnerEnterInternal();
         }
     }
 
@@ -57,7 +80,7 @@ public class JobSection
     {
         lock (_lockObject)
         {
-            if (!ShouldRunnerEnterInternal)
+            if (!ShouldRunnerEnterInternal())
                 return false;
 
             _runnerEntered = true;
@@ -67,8 +90,17 @@ public class JobSection
 
     public void Leave()
     {
-        LastDoneTime = FastDateTime.Now;
-        _runnerEntered = false;
-        _normalEntered = false;
+        lock (_lockObject)
+        {
+            LastDoneTime = FastDateTime.Now;
+            _runnerEntered = false;
+            _normalEntered = false;
+        }
+    }
+
+    public void Reschedule()
+    {
+        lock (_lockObject)
+            LastDoneTime = FastDateTime.Now;
     }
 }

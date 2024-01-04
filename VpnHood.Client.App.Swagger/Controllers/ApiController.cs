@@ -83,6 +83,18 @@ namespace VpnHood.Client.App.Swagger.Controllers
             throw new NotImplementedException();
         }
 
+        [HttpPost("check-new-version")]
+        public Task VersionCheck()
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost("postpone-update")]
+        public void VersionCheckPostpone()
+        {
+            throw new NotImplementedException();
+        }
+
         [HttpPatch("client-profiles/{clientProfileId}")]
         public Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
         {

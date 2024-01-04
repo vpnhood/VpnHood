@@ -28,6 +28,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.9" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />

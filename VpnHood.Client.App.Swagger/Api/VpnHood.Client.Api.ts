@@ -603,6 +603,94 @@ export class ApiClient {
         return Promise.resolve<IpGroup[]>(null as any);
     }
 
+    versionCheck( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/check-new-version";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processVersionCheck(_response);
+        });
+    }
+
+    protected processVersionCheck(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    versionCheckPostpone( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/postpone-update";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processVersionCheckPostpone(_response);
+        });
+    }
+
+    protected processVersionCheckPostpone(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     updateClientProfile(clientProfileId: string, updateParams: ClientProfileUpdateParams, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/client-profiles/{clientProfileId}";
         if (clientProfileId === undefined || clientProfileId === null)
@@ -827,7 +915,7 @@ export class AppSettings implements IAppSettings {
     clientId!: string;
     lastCountryIpGroupId?: string | null;
     testServerTokenAutoAdded?: string | null;
-    testServerAccessKey!: string;
+    lastUpdateCheckTime?: Date | null;
 
     constructor(data?: IAppSettings) {
         if (data) {
@@ -850,7 +938,7 @@ export class AppSettings implements IAppSettings {
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
             this.testServerTokenAutoAdded = _data["testServerTokenAutoAdded"] !== undefined ? _data["testServerTokenAutoAdded"] : <any>null;
-            this.testServerAccessKey = _data["testServerAccessKey"] !== undefined ? _data["testServerAccessKey"] : <any>null;
+            this.lastUpdateCheckTime = _data["lastUpdateCheckTime"] ? new Date(_data["lastUpdateCheckTime"].toString()) : <any>null;
         }
     }
 
@@ -870,7 +958,7 @@ export class AppSettings implements IAppSettings {
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
         data["testServerTokenAutoAdded"] = this.testServerTokenAutoAdded !== undefined ? this.testServerTokenAutoAdded : <any>null;
-        data["testServerAccessKey"] = this.testServerAccessKey !== undefined ? this.testServerAccessKey : <any>null;
+        data["lastUpdateCheckTime"] = this.lastUpdateCheckTime ? this.lastUpdateCheckTime.toISOString() : <any>null;
         return data;
     }
 }
@@ -883,7 +971,7 @@ export interface IAppSettings {
     clientId: string;
     lastCountryIpGroupId?: string | null;
     testServerTokenAutoAdded?: string | null;
-    testServerAccessKey: string;
+    lastUpdateCheckTime?: Date | null;
 }
 
 export class UserSettings implements IUserSettings {
@@ -1450,6 +1538,7 @@ export class PublishInfo implements IPublishInfo {
     version!: string;
     updateInfoUrl!: string;
     packageUrl!: string;
+    googlePlayUrl?: string | null;
     installationPageUrl!: string;
     releaseDate!: Date;
     deprecatedVersion!: string;
@@ -1469,6 +1558,7 @@ export class PublishInfo implements IPublishInfo {
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
             this.packageUrl = _data["packageUrl"] !== undefined ? _data["packageUrl"] : <any>null;
+            this.googlePlayUrl = _data["googlePlayUrl"] !== undefined ? _data["googlePlayUrl"] : <any>null;
             this.installationPageUrl = _data["installationPageUrl"] !== undefined ? _data["installationPageUrl"] : <any>null;
             this.releaseDate = _data["releaseDate"] ? new Date(_data["releaseDate"].toString()) : <any>null;
             this.deprecatedVersion = _data["deprecatedVersion"] !== undefined ? _data["deprecatedVersion"] : <any>null;
@@ -1488,6 +1578,7 @@ export class PublishInfo implements IPublishInfo {
         data["version"] = this.version !== undefined ? this.version : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
         data["packageUrl"] = this.packageUrl !== undefined ? this.packageUrl : <any>null;
+        data["googlePlayUrl"] = this.googlePlayUrl !== undefined ? this.googlePlayUrl : <any>null;
         data["installationPageUrl"] = this.installationPageUrl !== undefined ? this.installationPageUrl : <any>null;
         data["releaseDate"] = this.releaseDate ? this.releaseDate.toISOString() : <any>null;
         data["deprecatedVersion"] = this.deprecatedVersion !== undefined ? this.deprecatedVersion : <any>null;
@@ -1500,6 +1591,7 @@ export interface IPublishInfo {
     version: string;
     updateInfoUrl: string;
     packageUrl: string;
+    googlePlayUrl?: string | null;
     installationPageUrl: string;
     releaseDate: Date;
     deprecatedVersion: string;

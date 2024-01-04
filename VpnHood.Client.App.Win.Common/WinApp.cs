@@ -129,7 +129,7 @@ public class WinApp : IDisposable, IJob
             _ = VhApp.Connect(VhApp.UserSettings.DefaultClientProfileId.Value);
 
         // check for update
-        CheckForUpdate();
+        _ = CheckForUpdate();
 
         // create notification icon
         InitNotifyIcon();
@@ -188,14 +188,15 @@ public class WinApp : IDisposable, IJob
         _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowInBrowserMenuItemId, true);
     }
 
-    private void CheckForUpdate()
+    // return true if there is a new update (maybe cancelled by user)
+    private async Task<bool> CheckForUpdate()
     {
         // read last check
         var lastCheckFilePath = Path.Combine(VhApp.AppDataFolderPath, "lastCheckUpdate");
         if (_lastUpdateTime == DateTime.MinValue && File.Exists(lastCheckFilePath))
             try
             {
-                _lastUpdateTime = JsonSerializer.Deserialize<DateTime>(File.ReadAllText(lastCheckFilePath));
+                _lastUpdateTime = JsonSerializer.Deserialize<DateTime>(await File.ReadAllTextAsync(lastCheckFilePath));
             }
             catch
             {
@@ -204,25 +205,31 @@ public class WinApp : IDisposable, IJob
 
         // check last update time
         if (FastDateTime.Now - _lastUpdateTime < CheckUpdateInterval)
-            return;
+            return false;
 
         // set updateTime before checking filename
         _lastUpdateTime = FastDateTime.Now;
 
         // launch updater if exists
-        var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
-                               throw new Exception("Could not get the parent of Assembly location!");
+        var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ?? 
+            throw new Exception("Could not get the parent of Assembly location!");
+
         var updaterFilePath = Path.Combine(assemblyLocation, "updater.exe");
         if (!File.Exists(updaterFilePath))
         {
             VhLogger.Instance.LogWarning($"Could not find updater: {updaterFilePath}");
-            return;
+            return false;
         }
 
         try
         {
             VhLogger.Instance.LogInformation("Checking for new updates...");
-            Process.Start(updaterFilePath, "/silent");
+            var process = Process.Start(updaterFilePath, "/silent");
+            while(process is { HasExited: false })
+            {
+                await Task.Delay(500);
+                return process.ExitCode == 0; // there is an update or user has been cancelled it
+            }
         }
         catch (Exception ex)
         {
@@ -230,8 +237,10 @@ public class WinApp : IDisposable, IJob
         }
         finally
         {
-            File.WriteAllText(lastCheckFilePath, JsonSerializer.Serialize(_lastUpdateTime));
+            await File.WriteAllTextAsync(lastCheckFilePath, JsonSerializer.Serialize(_lastUpdateTime));
         }
+
+        return false;
     }
 
     private void OpenMainWindow()
@@ -416,7 +425,7 @@ public class WinApp : IDisposable, IJob
 
     public Task RunJob()
     {
-        CheckForUpdate();
+        _ = CheckForUpdate();
         return Task.CompletedTask;
     }
 

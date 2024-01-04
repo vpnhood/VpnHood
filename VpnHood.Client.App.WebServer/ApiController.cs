@@ -49,6 +49,18 @@ internal class ClientApiController : WebApiController, IClientApi
     {
         return App.Disconnect(true);
     }
+    
+    [Route(HttpVerbs.Post, "/version-check")]
+    public Task VersionCheck()
+    {
+        return App.VersionCheck(true);
+    }
+
+    [Route(HttpVerbs.Post, "/version-check-postpone")]
+    public void VersionCheckPostpone()
+    {
+        App.VersionCheckPostpone();
+    }
 
     [Route(HttpVerbs.Put, "/access-keys")]
     public Task<ClientProfile> AddAccessKey([QueryField] string accessKey)
@@ -99,7 +111,7 @@ internal class ClientApiController : WebApiController, IClientApi
     {
         return App.GetIpGroups();
     }
-
+     
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
     public async Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {

@@ -139,7 +139,7 @@ public class QuickLaunchTileService : TileService
 
     public static Task<int> RequestAddTile(Context context)
     {
-        var task = new TaskCompletionSource<int>();
+        var taskCompletionSource = new TaskCompletionSource<int>();
 
         // get statusBarManager
         if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager)
@@ -165,8 +165,8 @@ public class QuickLaunchTileService : TileService
             new ComponentName(context, Java.Lang.Class.FromType(typeof(QuickLaunchTileService))),
             appName, icon,
             context.MainExecutor!,
-            new AddTileServiceHandler(task));
+            new AddTileServiceHandler(taskCompletionSource));
 
-        return task.Task;
+        return taskCompletionSource.Task;
     }
 }

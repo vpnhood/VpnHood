@@ -1,3 +1,7 @@
+# Upcoming
+### Client
+Update: Prompt for update by google play if possilbe
+
 # v3.2.439
 ### Client
 Update: Improve Performance

@@ -212,13 +212,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // Init hostEndPoint
+            HostTcpEndPoint = await ServerTokenHelper.ResolveHostEndPoint(Token.ServerToken);
             _connectorService.EndPointInfo = new ConnectorEndPointInfo
             {
-                HostName = Token.HostName,
-                TcpEndPoint = await Token.ResolveHostEndPointAsync(),
-                CertificateHash = Token.CertificateHash
+                HostName = Token.ServerToken.HostName,
+                TcpEndPoint = HostTcpEndPoint,
+                CertificateHash = Token.ServerToken.CertificateHash
             };
-            HostTcpEndPoint = await Token.ResolveHostEndPointAsync();
 
             // Establish first connection and create a session
             await ConnectInternal(_cancellationTokenSource.Token);

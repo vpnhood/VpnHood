@@ -118,7 +118,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId.Value);
+        var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
@@ -148,7 +148,7 @@ public class FileAccessManager : IAccessManager
             return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId.Value);
+        var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
             return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
@@ -174,12 +174,12 @@ public class FileAccessManager : IAccessManager
         SessionController.Dispose();
     }
 
-    private string GetAccessItemFileName(Guid tokenId)
+    private string GetAccessItemFileName(string tokenId)
     {
         return Path.Combine(StoragePath, tokenId + FileExtToken);
     }
 
-    private string GetUsageFileName(Guid tokenId)
+    private string GetUsageFileName(string tokenId)
     {
         return Path.Combine(StoragePath, tokenId + FileExtUsage);
     }
@@ -199,11 +199,25 @@ public class FileAccessManager : IAccessManager
         return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
     }
 
-    public AccessItem[] AccessItem_LoadAll()
+    public async Task<AccessItem[]> AccessItem_LoadAll()
     {
         var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
-        return files.Select(x => AccessItem_Read(Guid.Parse(Path.GetFileNameWithoutExtension(x))).Result!)
-            .ToArray();
+        var accessItems = new List<AccessItem>();
+
+        foreach (var file in files)
+        {
+            var accessItem = await AccessItem_Read(Path.GetFileNameWithoutExtension(file));
+            if (accessItem != null)
+                accessItems.Add(accessItem);
+        }
+
+        return accessItems.ToArray();
+    }
+
+    public int AccessItem_Count()
+    {
+        var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
+        return files.Length;
     }
 
     public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
@@ -225,17 +239,24 @@ public class FileAccessManager : IAccessManager
             MaxTraffic = maxTrafficByteCount,
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
-            Token = new Token(aes.Key,
-                DefaultCert.GetCertHash(),
-                DefaultCert.GetNameInfo(X509NameType.DnsName, false) ??
-                throw new Exception("Certificate must have a subject!"))
+            Token = new Token
             {
+                TokenId = Guid.NewGuid().ToString(),
+                Secret = aes.Key,
                 Name = tokenName,
-                HostPort = hostPort,
-                HostEndPoints = publicEndPoints,
-                TokenId = Guid.NewGuid(),
                 SupportId = 0,
-                IsValidHostName = isValidHostName
+                ServerToken = new ServerToken
+                {
+                    CertificateHash = DefaultCert.GetCertHash(),
+                    HostPort = hostPort,
+                    HostEndPoints = publicEndPoints,
+                    HostName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
+                    IsValidHostName = false,
+                    Secret = ServerConfig.ServerSecret,
+                    Url = null,
+                    CreatedTime = DateTime.UtcNow
+                }
+
             }
         };
 
@@ -251,7 +272,7 @@ public class FileAccessManager : IAccessManager
         return accessItem;
     }
 
-    public async Task AccessItem_Delete(Guid tokenId)
+    public async Task AccessItem_Delete(string tokenId)
     {
         // remove index
         _ = await AccessItem_Read(tokenId)
@@ -264,7 +285,7 @@ public class FileAccessManager : IAccessManager
             System.IO.File.Delete(GetAccessItemFileName(tokenId));
     }
 
-    public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
+    public async Task<AccessItem?> AccessItem_Read(string tokenId)
     {
         // read access item
         var fileName = GetAccessItemFileName(tokenId);

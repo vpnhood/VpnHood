@@ -108,7 +108,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
-        RemoveClientProfileByTokenId(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); // old one; deprecated in version v2.0.261 and upper
+        RemoveClientProfileByTokenId("1047359c-a107-4e49-8425-c004c41ffb8f"); // old one; deprecated in version v2.0.261 and upper
         if (Settings.TestServerTokenAutoAdded != Settings.TestServerAccessKey)
         {
             ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
@@ -201,9 +201,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         return new VpnHoodApp(clientAppProvider, options);
     }
 
-    private void RemoveClientProfileByTokenId(Guid guid)
+    private void RemoveClientProfileByTokenId(string tokenId)
     {
-        var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
+        var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == tokenId);
         if (clientProfile == null) return;
         ClientProfileStore.RemoveClientProfile(clientProfile.ClientProfileId);
     }
@@ -331,7 +331,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         }
     }
 
-    private async Task ConnectInternal(IPacketCapture packetCapture, Guid tokenId, string? userAgent)
+    private async Task ConnectInternal(IPacketCapture packetCapture, string tokenId, string? userAgent)
     {
         packetCapture.OnStopped += PacketCapture_OnStopped;
 
@@ -346,7 +346,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
 
         // get token
-        var token = ClientProfileStore.GetToken(tokenId, true);
+        var token = ClientProfileStore.GetToken(tokenId);
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
         // dump user settings

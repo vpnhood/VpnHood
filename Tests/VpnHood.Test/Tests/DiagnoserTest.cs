@@ -12,7 +12,7 @@ public class DiagnoserTest : TestBase
         // create server
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        token.HostEndPoints = new[] { TestHelper.TEST_InvalidEp };
+        token.ServerToken.HostEndPoints = new[] { TestHelper.TEST_InvalidEp };
 
         // create client
         await using var clientApp = TestHelper.CreateClientApp();

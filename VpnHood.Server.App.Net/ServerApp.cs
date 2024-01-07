@@ -179,7 +179,6 @@ public class ServerApp : IDisposable
             _vpnHoodServer?.Dispose();
         }
     }
-
     private void StopServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
@@ -220,7 +219,7 @@ public class ServerApp : IDisposable
                 throw new AnotherInstanceIsRunning();
 
             // check FileAccessManager
-            if (FileAccessManager != null && FileAccessManager.AccessItem_LoadAll().Length == 0)
+            if (FileAccessManager != null && FileAccessManager.AccessItem_Count() == 0)
                 VhLogger.Instance.LogWarning(
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");

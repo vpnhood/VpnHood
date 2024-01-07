@@ -45,47 +45,40 @@ public class ClientProfileStore
         }
     }
 
-    public Token GetToken(Guid tokenId)
-    {
-        return GetToken(tokenId, false);
-    }
-
-    internal Token GetToken(Guid tokenId, bool withSecret)
+    public Token GetToken(string tokenId)
     {
         var token = _tokens.FirstOrDefault(x => x.TokenId == tokenId);
         if (token == null) throw new KeyNotFoundException($"TokenId does not exist. TokenId: {tokenId}");
-
-        // clone token
-        token = (Token)token.Clone();
-
-        if (!withSecret)
-            token.Secret = Array.Empty<byte>();
         return token;
     }
 
     public async Task<Token> UpdateTokenFromUrl(Token token)
     {
-        if (string.IsNullOrEmpty(token.Url))
+        if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
             return token;
 
         // update token
-        VhLogger.Instance.LogInformation("Trying to get new token from token url, Url: {Url}", token.Url);
+        VhLogger.Instance.LogInformation("Trying to get new server token from url. Url: {Url}", VhLogger.FormatDns(token.ServerToken.Url));
         try
         {
             using var client = new HttpClient();
-            var accessKey = await VhUtil.RunTask(client.GetStringAsync(token.Url), TimeSpan.FromSeconds(20));
-            var newToken = Token.FromAccessKey(accessKey);
-            if (newToken.TokenId != token.TokenId)
-                throw new InvalidOperationException($"Could not updated Token because the tokenId has been changed! TokenId: {VhLogger.FormatId(token.TokenId)}");
+            var encryptedServerToken = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20));
+            var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
+            if (token.ServerToken.CreatedTime >= newServerToken.CreatedTime)
+            {
+                VhLogger.Instance.LogInformation("ServerToken has not been updated.");
+                return token;
+            }
 
             //update store
-            AddAccessKey(accessKey);
-            VhLogger.Instance.LogInformation("Token has been updated. TokenId: {TokenId}, SupportId: {SupportId}",
-                VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
+            token = VhUtil.JsonClone<Token>(token);
+            token.ServerToken = newServerToken;
+            AddAccessToken(token); 
+            VhLogger.Instance.LogInformation("ServerToken has been updated.");
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not update token from token url.");
+            VhLogger.Instance.LogError(ex, "Could not update ServerToken from url.");
         }
 
         return token;
@@ -104,8 +97,9 @@ public class ClientProfileStore
             throw new ArgumentNullException(nameof(clientProfile.ClientProfileId),
                 $@"{nameof(ClientProfile)} does not have {nameof(clientProfile.ClientProfileId)}");
 
-        if (clientProfile.TokenId == Guid.Empty)
+        if (string.IsNullOrEmpty(clientProfile.TokenId))
             throw new ArgumentNullException(nameof(clientProfile.TokenId), @"ClientProfile does not have tokenId");
+
         var token = GetToken(clientProfile.TokenId); //make sure tokenId is valid
 
         // fix name
@@ -171,7 +165,11 @@ public class ClientProfileStore
     public ClientProfile AddAccessKey(string accessKey)
     {
         var token = Token.FromAccessKey(accessKey);
+        return AddAccessToken(token);
+    }
 
+    public ClientProfile AddAccessToken(Token token)
+    {
         // update tokens
         _tokens = _tokens.Where(x => x.TokenId != token.TokenId).Concat(new[] { token }).ToArray();
 

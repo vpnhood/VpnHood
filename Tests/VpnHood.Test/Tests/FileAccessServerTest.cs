@@ -48,7 +48,7 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: get all tokensId
-        var accessItems = accessManager1.AccessItem_LoadAll();
+        var accessItems = await accessManager1.AccessItem_LoadAll();
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
@@ -68,7 +68,7 @@ public class FileAccessManagerTest : TestBase
         // ************
         // *** TEST ***: Removing token
         accessManager1.AccessItem_Delete(accessItem1.Token.TokenId).Wait();
-        accessItems = accessManager1.AccessItem_LoadAll();
+        accessItems = await accessManager1.AccessItem_LoadAll();
         Assert.IsFalse(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
@@ -80,7 +80,7 @@ public class FileAccessManagerTest : TestBase
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
         var accessManager2 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
-        accessItems = accessManager2.AccessItem_LoadAll();
+        accessItems = await accessManager2.AccessItem_LoadAll();
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
         Assert.AreEqual(2, accessItems.Length);
@@ -94,7 +94,7 @@ public class FileAccessManagerTest : TestBase
         // *** TEST ***: token must be retrieved after reloading
         accessManager1.AccessItem_Create(hostEndPoints);
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
-        accessItems = accessManager3.AccessItem_LoadAll();
+        accessItems = await accessManager3.AccessItem_LoadAll();
         Assert.AreEqual(3, accessItems.Length);
         Assert.AreEqual(SessionErrorCode.Ok, accessManager3.Session_Create(sessionRequestEx2).Result.ErrorCode,
             "access has not been retrieved");

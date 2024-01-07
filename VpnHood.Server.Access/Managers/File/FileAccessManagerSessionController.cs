@@ -42,7 +42,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             Sessions.TryRemove(item.Key, out _);
     }
 
-    public Guid? TokenIdFromSessionId(ulong sessionId)
+    public string? TokenIdFromSessionId(ulong sessionId)
     {
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
@@ -191,7 +191,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
     public class Session
     {
         public uint SessionId { get; internal set; }
-        public Guid TokenId { get; internal set; }
+        public required string TokenId { get; init; }
         public ClientInfo ClientInfo { get; internal set; } = null!;
         public byte[] SessionKey { get; internal set; } = null!;
         public DateTime CreatedTime { get; internal set; } = FastDateTime.Now;

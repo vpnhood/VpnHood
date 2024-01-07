@@ -210,7 +210,7 @@ public class ServerTest : TestBase
         var handler = new HttpClientHandler();
         handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         var client = new HttpClient(handler);
-        var url = $"https://{token.HostEndPoints!.First()}";
+        var url = $"https://{token.ServerToken.HostEndPoints!.First()}";
         
         var ex = await Assert.ThrowsExceptionAsync<HttpRequestException>(()=>client.GetStringAsync(url));
         Assert.AreEqual(ex.StatusCode, HttpStatusCode.Unauthorized);

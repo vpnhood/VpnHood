@@ -11,7 +11,7 @@ namespace VpnHood.Server.Exceptions;
 public class ServerSessionException : SessionException, ISelfLog
 {
     public IPEndPoint RemoteEndPoint { get; }
-    public Guid? TokenId { get; }
+    public string? TokenId { get; }
     public ulong? SessionId { get; set; }
     public Session? Session { get; }
     public string RequestId { get; }

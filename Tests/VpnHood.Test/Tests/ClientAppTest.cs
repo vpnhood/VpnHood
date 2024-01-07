@@ -21,16 +21,25 @@ public class ClientAppTest : TestBase
     private Token CreateToken()
     {
         var randomId = Guid.NewGuid();
-        return new Token(randomId.ToByteArray(),
-            randomId.ToByteArray(),
-            randomId.ToString())
+        var token = new Token
         {
             Name = "Default Test Server",
             SupportId = _lastSupportId++,
-            HostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") },
-            HostPort = 443,
-            TokenId = randomId
+            TokenId = randomId.ToString(),
+            Secret = randomId.ToByteArray(),
+            ServerToken = new ServerToken
+            {
+                HostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") },
+                CertificateHash = randomId.ToByteArray(),
+                HostName = randomId.ToString(),
+                HostPort = 443,
+                Secret = randomId.ToByteArray(),
+                CreatedTime = DateTime.UtcNow,
+                IsValidHostName = false,
+            }
         };
+
+        return token;
     }
 
     [TestMethod]
@@ -90,7 +99,7 @@ public class ClientAppTest : TestBase
             {
                 Name = "Hi",
                 ClientProfileId = Guid.NewGuid(),
-                TokenId = Guid.NewGuid()
+                TokenId = Guid.NewGuid().ToString()
             });
             Assert.Fail("KeyNotFoundException exception was expected!");
         }
@@ -250,7 +259,7 @@ public class ClientAppTest : TestBase
         // create server
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        token.HostEndPoints = new[] { IPEndPoint.Parse("10.10.10.99:443") };
+        token.ServerToken.HostEndPoints = new[] { IPEndPoint.Parse("10.10.10.99:443") };
 
         // create app
         await using var app = TestHelper.CreateClientApp();
@@ -511,38 +520,49 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public async Task Get_token_from_tokenLink()
+    public async Task Get_server_token_from_tokenLink()
     {
-        // create server
+        // create server1
         using var fileAccessManager = TestHelper.CreateFileAccessManager();
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server1 = TestHelper.CreateServer(testAccessManager);
+        var token1 = TestHelper.CreateAccessToken(server1);
+        await server1.DisposeAsync();
 
-        var token1 = TestHelper.CreateAccessToken(server);
-        var token2 = TestHelper.CreateAccessToken(server);
+        // create server 2
+        await Task.Delay(500);
+        fileAccessManager.ServerConfig.TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)];
+        await using var server2 = TestHelper.CreateServer(testAccessManager);
+        var token2 = TestHelper.CreateAccessToken(server2);
 
         //create web server and set token url to it
         var endPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         using var webServer = new WebServer(endPoint.Port);
-        token1.Url = $"http://{endPoint}/accesskey";
+        token1.ServerToken.Url = $"http://{endPoint}/accesskey";
 
         // update token1 in web server
         var isTokenRetrieved = false;
         webServer.WithAction("/accesskey", HttpVerbs.Get, context =>
         {
             isTokenRetrieved = true;
-            return context.SendStringAsync(token2.ToAccessKey(), "text/json", Encoding.UTF8);
+            return context.SendStringAsync(token2.ServerToken.Encrypt(), "text/plain", Encoding.UTF8);
         });
         webServer.Start();
 
         // connect
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-        app.ClientProfileStore.UpdateTokenFromUrl(token1).Wait();
         _ = app.Connect(clientProfile.ClientProfileId);
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
-        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
+
+        await VhTestUtil.AssertEqualsWait(token2.ServerToken.CreatedTime, () => app.ClientProfileStore.GetToken(token1.TokenId).ServerToken.CreatedTime);
+        Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
+        Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileStore.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.IsTrue(isTokenRetrieved);
+        Assert.AreNotEqual(AppConnectionState.Connected, app.State.ConnectionState);
+
+        // connect
+        await app.Connect(clientProfile.ClientProfileId);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
     }
 
     [TestMethod]

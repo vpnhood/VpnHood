@@ -8,7 +8,7 @@ namespace VpnHood.Server.Access.Messaging;
 public class SessionRequestEx : SessionRequest
 {
     [JsonConstructor]
-    public SessionRequestEx(string requestId, Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
+    public SessionRequestEx(string requestId, string tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
         : base(0, requestId, tokenId, clientInfo, encryptedClientId)
     {
         HostEndPoint = hostEndPoint;

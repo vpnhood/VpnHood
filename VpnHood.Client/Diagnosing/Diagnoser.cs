@@ -61,7 +61,7 @@ public class Diagnoser
 
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoint = await clientConnect.Client.Token.ResolveHostEndPointAsync();
+            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(clientConnect.Client.Token.ServerToken);
             var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout, true);
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");

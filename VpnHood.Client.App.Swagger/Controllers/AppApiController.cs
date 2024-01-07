@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.Swagger.Controllers
 {
     [ApiController]
     [Route("api/app")]
-    public class ApiController : ControllerBase, IClientApi
+    public class AppApiController : ControllerBase, IClientAppApi
     {
         [HttpGet("config")]
         public Task<AppConfig> GetConfig()

@@ -65,7 +65,7 @@ public class ClientServerTest : TestBase
 
         // check HostEndPoint in server
         fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session);
-        Assert.IsTrue(token.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
 
         // check UserAgent in server
         Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);

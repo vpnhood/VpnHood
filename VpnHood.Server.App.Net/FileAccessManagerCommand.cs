@@ -31,29 +31,27 @@ public class FileAccessManagerCommand
         var tokenIdArg = cmdApp.Argument("tokenId", "tokenId to print");
         cmdApp.OnExecuteAsync(async _ =>
         {
-            await PrintToken(Guid.Parse(tokenIdArg.Value!));
+            await PrintToken(tokenIdArg.Value!);
             return 0;
         });
     }
 
-    private async Task PrintToken(Guid tokenId)
+    private async Task PrintToken(string tokenId)
     {
         var accessItem = await _fileAccessManager.AccessItem_Read(tokenId);
         if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
-
-        var hostName = accessItem.Token.HostName + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
-        var endPoints = accessItem.Token.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
+        var hostName = accessItem.Token.ServerToken.HostName + (accessItem.Token.ServerToken.IsValidHostName ? "" : " (Fake)");
+        var endPoints = accessItem.Token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
 
         Console.WriteLine();
         Console.WriteLine("Access Details:");
-        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage,
-            new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions { WriteIndented = true }));
         Console.WriteLine();
         Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
-        Console.WriteLine($"{nameof(Token.HostEndPoints)}: {string.Join(",", endPoints)}");
-        Console.WriteLine($"{nameof(Token.HostName)}: {hostName}");
-        Console.WriteLine($"{nameof(Token.HostPort)}: {accessItem.Token.HostPort}");
-        Console.WriteLine($"TokenUpdateUrl: {accessItem.Token.Url}");
+        Console.WriteLine($"{nameof(ServerToken.HostEndPoints)}: {string.Join(",", endPoints)}");
+        Console.WriteLine($"{nameof(ServerToken.HostName)}: {hostName}");
+        Console.WriteLine($"{nameof(ServerToken.HostPort)}: {accessItem.Token.ServerToken.HostPort}");
+        Console.WriteLine($"TokenUpdateUrl: {accessItem.Token.ServerToken.Url}");
         Console.WriteLine("---");
 
         Console.WriteLine();
@@ -98,7 +96,7 @@ public class FileAccessManagerCommand
             var tcpEndPoints = accessManager.ServerConfig.TcpEndPointsValue;
             if (!useDomainOption.HasValue())
             {
-                publicEndPoints  = publicEndPointOption.HasValue()
+                publicEndPoints = publicEndPointOption.HasValue()
                     ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
                     : GetDefaultPublicEndPoints();
 
@@ -130,7 +128,7 @@ public class FileAccessManagerCommand
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessItem.Token.TokenId);
-            Console.WriteLine($"Store Token Count: {accessManager.AccessItem_LoadAll().Length}");
+            Console.WriteLine($"Store Token Count: {accessManager.AccessItem_Count()}");
             return 0;
         });
     }

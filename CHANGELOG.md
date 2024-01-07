@@ -1,6 +1,7 @@
 # Upcoming
 ### Client
-Update: Prompt for update by google play if possilbe
+Feature: Prompt for update by google play if possilbe
+Feature: Enable updating server endpoints by Url
 
 # v3.2.439
 ### Client

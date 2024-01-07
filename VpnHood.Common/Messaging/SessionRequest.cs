@@ -5,7 +5,7 @@ namespace VpnHood.Common.Messaging;
 public abstract class SessionRequest : ClientRequest
 {
     [JsonConstructor]
-    protected SessionRequest(byte requestCode, string requestId, Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId)
+    protected SessionRequest(byte requestCode, string requestId, string tokenId, ClientInfo clientInfo, byte[] encryptedClientId)
         : base(requestCode, requestId)
     {
         TokenId = tokenId;
@@ -21,7 +21,7 @@ public abstract class SessionRequest : ClientRequest
         EncryptedClientId = obj.EncryptedClientId;
     }
 
-    public Guid TokenId { get; init; }
+    public string TokenId { get; init; }
     public ClientInfo ClientInfo { get; init; }
     public byte[] EncryptedClientId { get; init; }
 }

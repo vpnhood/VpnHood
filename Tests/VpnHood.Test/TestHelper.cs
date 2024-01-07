@@ -241,8 +241,8 @@ internal static class TestHelper
     {
         var options = new FileAccessManagerOptions
         {
-            TcpEndPoints = new[] { VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback) },
-            UdpEndPoints = new[] { new IPEndPoint(IPAddress.Loopback, 0) },
+            TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
+            UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,
@@ -426,11 +426,11 @@ internal static class TestHelper
         return new SessionRequestEx("access:" + Guid.NewGuid(),
             token.TokenId,
             new ClientInfo { ClientId = clientId.Value },
-            hostEndPoint: token.HostEndPoints!.First(),
+            hostEndPoint: token.ServerToken.HostEndPoints!.First(),
             encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
     }
 
-    public static bool IgnoreCertificateValidationCallback(object sender, 
+    public static bool IgnoreCertificateValidationCallback(object sender,
         X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
     {
         _ = sender;

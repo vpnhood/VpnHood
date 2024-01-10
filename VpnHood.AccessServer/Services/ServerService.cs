@@ -323,12 +323,14 @@ public class ServerService
         return usageSummary;
     }
 
-    public async Task ReconfigServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public async Task ReconfigServers(Guid projectId, Guid? serverFarmId = null,
+        Guid? serverProfileId = null, Guid? certificateId = null)
     {
         var servers = await _vhContext.Servers.Where(server =>
             server.ProjectId == projectId &&
             (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-            (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId))
+            (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId) &&
+            (certificateId == null || server.ServerFarm!.CertificateId == certificateId))
             .ToArrayAsync();
 
         foreach (var server in servers)

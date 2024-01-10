@@ -9,17 +9,11 @@ using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Services;
 
-public class CertificateService
+public class CertificateService(
+    VhContext vhContext, 
+    SubscriptionService subscriptionService,
+    ServerService serverService)
 {
-    private readonly VhContext _vhContext;
-    private readonly SubscriptionService _subscriptionService;
-
-    public CertificateService(VhContext vhContext, SubscriptionService subscriptionService)
-    {
-        _vhContext = vhContext;
-        _subscriptionService = subscriptionService;
-    }
-
     internal Task<CertificateModel> CreateSelfSingedInternal(Guid projectId)
     {
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(subjectName: null);
@@ -30,12 +24,12 @@ public class CertificateService
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        await _subscriptionService.AuthorizeAddCertificate(projectId);
+        await subscriptionService.AuthorizeAddCertificate(projectId);
 
         createParams ??= new CertificateSelfSignedParams();
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName, createParams.ExpirationTime);
         var certificateModel = await Add(projectId, x509Certificate2);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
     }
 
@@ -44,7 +38,7 @@ public class CertificateService
         createParams ??= new CertificateSelfSignedParams();
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(createParams.SubjectName, createParams.ExpirationTime);
         var certificateModel = await Update(projectId, certificateId, x509Certificate2);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
     }
 
@@ -52,11 +46,11 @@ public class CertificateService
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        await _subscriptionService.AuthorizeAddCertificate(projectId);
+        await subscriptionService.AuthorizeAddCertificate(projectId);
 
         var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
         var certificateModel = await Add(projectId, x509Certificate2);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
     }
 
@@ -64,14 +58,14 @@ public class CertificateService
     {
         var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
         var certificateModel = await Update(projectId, certificateId, x509Certificate2);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
         return certificateModel.ToDto(true);
     }
 
     private async Task<CertificateModel> Update(Guid projectId, Guid certificateId, X509Certificate2 x509Certificate2)
     {
-        var certificate = await _vhContext
-            .Certificates
+        var certificate = await vhContext.Certificates
+            .Include(x => x.ServerFarms)
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
         // read old common name
@@ -89,6 +83,9 @@ public class CertificateService
         certificate.ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime();
         certificate.IsVerified = x509Certificate2.Verify();
         certificate.CreatedTime = DateTime.UtcNow;
+
+        // update all servers using this certificate
+        await serverService.ReconfigServers(projectId, certificateId: certificateId);
         return certificate;
     }
 
@@ -110,7 +107,7 @@ public class CertificateService
         if (certificate.CommonName.Contains('*'))
             throw new NotSupportedException("Wildcard certificates are currently not supported.");
 
-        await _vhContext.Certificates.AddAsync(certificate);
+        await vhContext.Certificates.AddAsync(certificate);
 
         return certificate;
     }
@@ -123,7 +120,7 @@ public class CertificateService
 
     public async Task Delete(Guid projectId, Guid certificateId)
     {
-        var serverFarmCount = await _vhContext.ServerFarms
+        var serverFarmCount = await vhContext.ServerFarms
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.CertificateId == certificateId)
             .CountAsync();
@@ -131,19 +128,19 @@ public class CertificateService
         if (serverFarmCount > 0)
             throw new InvalidOperationException($"The certificate is in use by {serverFarmCount} server farms.");
 
-        var certificate = await _vhContext.Certificates
+        var certificate = await vhContext.Certificates
             .Where(x => x.ProjectId == projectId && x.CertificateId == certificateId && !x.IsDeleted)
             .SingleAsync();
 
         certificate.IsDeleted = true;
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
     }
 
     public async Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null,
         Guid? certificateId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
-        var query = _vhContext.Certificates
+        var query = vhContext.Certificates
             .Include(x => x.ServerFarms!.Where(y => !y.IsDeleted).OrderBy(y => y.ServerFarmName).Take(5))
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => certificateId == null || x.CertificateId == certificateId)

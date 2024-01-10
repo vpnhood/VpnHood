@@ -608,7 +608,6 @@ public class AgentServerTest
             CertificateId = certificate2.CertificateId
         });
 
-
         //-----------
         // check: get certificate by publicIp
         //-----------
@@ -625,7 +624,26 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task Reconfig_all_servers_after_farm_cert_changes()
+    public async Task Reconfig_all_servers_after_certificate_replaced()
+    {
+        var farm = await ServerFarmDom.Create( serverCount: 0);
+        var server1 = await farm.AddNewServer();
+        var server2 = await farm.AddNewServer();
+
+        var cert = await farm.TestInit.CertificatesClient.GetAsync(farm.TestInit.ProjectId, farm.ServerFarm.CertificateId);
+        await farm.TestInit.CertificatesClient.ReplaceBySelfSignedAsync(farm.TestInit.ProjectId, cert.Certificate.CertificateId, new CertificateSelfSignedParams
+        {
+            SubjectName = "CN=" + cert.Certificate.CommonName
+        });
+
+        var command1 = await server1.SendStatus();
+        var command2 = await server2.SendStatus();
+        Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
+        Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
+    }
+
+    [TestMethod]
+    public async Task Reconfig_all_servers_after_farm_certificate_changed()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         var server1 = await farm.AddNewServer();

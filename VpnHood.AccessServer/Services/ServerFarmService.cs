@@ -80,30 +80,36 @@ public class ServerFarmService
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerFarmId == serverFarmId);
 
-        // check createParams.CertificateId access
-        var certificate = updateParams.CertificateId != null
-            ? await _vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == updateParams.CertificateId)
-            : null;
+        var reconfigure = false;
 
         // change other properties
         if (updateParams.ServerFarmName != null)
             serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
 
-        if (certificate != null)
+        if (updateParams.CertificateId != null && serverFarm.CertificateId != updateParams.CertificateId)
+        {
+            // makes sure that the certificate belongs to this project
+            var certificate = await _vhContext.Certificates
+                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+                .SingleAsync(x => x.CertificateId == updateParams.CertificateId);
+            
             serverFarm.CertificateId = certificate.CertificateId;
+            reconfigure = true;
+        }
 
         if (updateParams.UseHostName != null)
             serverFarm.UseHostName = updateParams.UseHostName;
 
         // Set ServerProfileId
-        var isServerProfileChanged = updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId;
-        if (isServerProfileChanged)
+        if (updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId)
         {
+            // makes sure that the serverProfile belongs to this project
             var serverProfile = await _vhContext.ServerProfiles
                 .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .SingleAsync(x => x.ServerProfileId == updateParams.ServerProfileId!);
 
             serverFarm.ServerProfileId = serverProfile.ServerProfileId;
+            reconfigure = true;
         }
 
         // update
@@ -111,7 +117,7 @@ public class ServerFarmService
         await _vhContext.SaveChangesAsync();
 
         // update cache after save
-        if (isServerProfileChanged)
+        if (reconfigure)
             await _serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
 
         var ret = (await List(projectId, serverFarmId: serverFarmId)).Single();

@@ -135,7 +135,8 @@ public class AgentServerTest
         serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
         serverDom.ServerInfo.PublicIpAddresses =
         [
-            await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6(),
+            await farm.TestInit.NewIpV4(),
+            await farm.TestInit.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
             IPAddress.Parse(publicInTokenAccessPoints2[1].IpAddress)
         ];
@@ -622,6 +623,28 @@ public class AgentServerTest
         certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(dnsName2, certificate.GetNameInfo(X509NameType.DnsName, false));
     }
+
+    [TestMethod]
+    public async Task Reconfig_all_servers_after_farm_cert_changes()
+    {
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var server1 = await farm.AddNewServer();
+        var server2 = await farm.AddNewServer();
+
+        var cert = await farm.TestInit.CertificatesClient.CreateBySelfSignedAsync(farm.TestInit.ProjectId,
+            new CertificateSelfSignedParams { SubjectName = $"CN={Guid.NewGuid()}.com" });
+
+        await farm.Update(new ServerFarmUpdateParams
+        {
+            CertificateId = new PatchOfGuid { Value = cert.CertificateId }
+        });
+
+        var command1 = await server1.SendStatus();
+        var command2 = await server2.SendStatus();
+        Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
+        Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
+    }
+
 
     [TestMethod]
     public async Task Server_UpdateStatus()

@@ -25,11 +25,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.84" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.176" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.176" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
-		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
+		<PackageReference Include="GrayMint.Authorization.Authentications" Version="3.0.96" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.180" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.180" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.1" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.8" />
 	</ItemGroup>
 
 	<ItemGroup>

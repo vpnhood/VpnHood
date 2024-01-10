@@ -98,18 +98,18 @@ public class QuickLaunchTileService : TileService
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
             QsTile.StateDescription = VpnHoodApp.Instance.ConnectionState.ToString();
 
-        var activeProfileName = VpnHoodApp.Instance.GetActiveClientProfile()?.Name;
-        var defaultProfileName = VpnHoodApp.Instance.GetDefaultClientProfile()?.Name;
+        var activeProfileInfo = VpnHoodApp.Instance.GetActiveClientProfile()?.ToInfo();
+        var defaultProfileInfo = VpnHoodApp.Instance.GetDefaultClientProfile()?.ToInfo();
 
-        if (!string.IsNullOrEmpty(activeProfileName))
+        if (activeProfileInfo!=null)
         {
-            QsTile.Label = activeProfileName;
+            QsTile.Label = activeProfileInfo.ClientProfileName;
             QsTile.State = VpnHoodApp.Instance.ConnectionState ==
                 AppConnectionState.Connected ? TileState.Active : TileState.Unavailable;
         }
-        else if (!string.IsNullOrEmpty(defaultProfileName))
+        else if (defaultProfileInfo != null)
         {
-            QsTile.Label = defaultProfileName;
+            QsTile.Label = defaultProfileInfo.ClientProfileName;
             QsTile.State = TileState.Inactive;
         }
         else

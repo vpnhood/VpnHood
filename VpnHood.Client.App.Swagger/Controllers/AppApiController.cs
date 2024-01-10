@@ -83,13 +83,13 @@ namespace VpnHood.Client.App.Swagger.Controllers
             throw new NotImplementedException();
         }
 
-        [HttpPost("check-new-version")]
+        [HttpPost("version-check")]
         public Task VersionCheck()
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost("postpone-update")]
+        [HttpPost("version-check-postpone")]
         public void VersionCheckPostpone()
         {
             throw new NotImplementedException();

@@ -40,9 +40,12 @@ public class CacheController : ControllerBase
     }
 
     [HttpPost("projects/{projectId}/invalidate-servers")]
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
     {
-        return _cacheService.InvalidateProjectServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
+        return _cacheService.InvalidateProjectServers(projectId: projectId, 
+            serverFarmId: serverFarmId, 
+            serverProfileId: serverProfileId,
+            certificateId: certificateId);
     }
 
     [HttpGet("servers/{serverId}")]

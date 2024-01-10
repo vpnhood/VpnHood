@@ -337,7 +337,10 @@ public class ServerService
             server.ConfigCode = Guid.NewGuid();
 
         await _vhContext.SaveChangesAsync();
-        await _agentCacheClient.InvalidateProjectServers(projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
+        await _agentCacheClient.InvalidateProjectServers(projectId, 
+            serverFarmId: serverFarmId, 
+            serverProfileId: serverProfileId, 
+            certificateId: certificateId);
     }
 
     public async Task Delete(Guid projectId, Guid serverId)

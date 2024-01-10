@@ -229,12 +229,14 @@ public class CacheService
             server.Project = project;
     }
 
-    public async Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public async Task InvalidateProjectServers(Guid projectId, 
+        Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
     {
         var servers = Mem.Servers.Values.Where(server =>
                 server.ProjectId == projectId &&
                 (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-                (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId));
+                (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId) &&
+                (certificateId == null || server.ServerFarm!.CertificateId == certificateId));
 
         foreach (var server in servers)
         {

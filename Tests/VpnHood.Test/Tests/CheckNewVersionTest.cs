@@ -132,7 +132,7 @@ public class CheckNewVersionTest : TestBase
         var appOptions = TestHelper.CreateClientAppOptions();
         appOptions.UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         await Task.Delay(1000);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Unknown, () => app.State.VersionStatus);

@@ -16,7 +16,7 @@ public class DiagnoserTest : TestBase
 
         // create client
         await using var clientApp = TestHelper.CreateClientApp();
-        var clientProfile = clientApp.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+        var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************
         // NoInternetException

@@ -98,7 +98,7 @@ public sealed class AndroidAppNotification : IDisposable
 
             // connection status
             // Set subtitle
-            var activeProfileName = _vpnHoodApp.GetActiveClientProfile()?.Name;
+            var activeProfileName = _vpnHoodApp.GetActiveClientProfile()?.ToInfo().ClientProfileName;
             _notificationBuilder.SetContentTitle(activeProfileName);
             _notificationBuilder.SetSubText(connectionState == AppConnectionState.Connected
                 ? $"{connectionState}"

@@ -244,7 +244,7 @@ public class FileAccessManager : IAccessManager
                 TokenId = Guid.NewGuid().ToString(),
                 Secret = aes.Key,
                 Name = tokenName,
-                SupportId = 0,
+                SupportId = null,
                 ServerToken = new ServerToken
                 {
                     CertificateHash = DefaultCert.GetCertHash(),

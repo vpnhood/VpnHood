@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using VpnHood.Common.TokenLegacy;
 
 namespace VpnHood.Common.Utils;
 
@@ -194,6 +195,19 @@ public static class VhUtil
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(value));
         return BitConverter.ToString(hash).Replace("-", "");
+    }
+
+    public static string RedactHostName(string hostName)
+    {
+        return hostName.Length <= 8 
+            ? "***" + hostName[^4..] 
+            : hostName[..2] + "***" + hostName[^4..];
+    }
+
+
+    public static string RedactEndPoint(IPEndPoint ipEndPoint)
+    {
+        return RedactIpAddress(ipEndPoint.Address) + ":" + ipEndPoint.Port;
     }
 
     public static string RedactIpAddress(IPAddress ipAddress)

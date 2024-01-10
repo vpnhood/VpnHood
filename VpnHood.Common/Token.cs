@@ -51,7 +51,9 @@ public class Token
 
         return tokenVersion.Version switch
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             0 or 1 or 2 or 3 => VhUtil.JsonDeserialize<TokenV3>(json).ToToken(),
+#pragma warning restore CS0618 // Type or member is obsolete
             4 => VhUtil.JsonDeserialize<Token>(json),
             _ => throw new NotSupportedException($"Token version {tokenVersion.Version} is not supported!")
         };

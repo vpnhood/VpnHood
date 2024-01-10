@@ -11,7 +11,7 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelToken } from 'axios';
 
-export class ApiClient {
+export class AppApiClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
@@ -256,7 +256,7 @@ export class ApiClient {
         return Promise.resolve<void>(null as any);
     }
 
-    addAccessKey(accessKey: string, cancelToken?: CancelToken): Promise<ClientProfile> {
+    addAccessKey(accessKey: string, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
         let url_ = this.baseUrl + "/api/app/access-keys?";
         if (accessKey === undefined || accessKey === null)
             throw new Error("The parameter 'accessKey' must be defined and cannot be null.");
@@ -284,7 +284,7 @@ export class ApiClient {
         });
     }
 
-    protected processAddAccessKey(response: AxiosResponse): Promise<ClientProfile> {
+    protected processAddAccessKey(response: AxiosResponse): Promise<ClientProfileInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -298,14 +298,14 @@ export class ApiClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = ClientProfile.fromJS(resultData200);
-            return Promise.resolve<ClientProfile>(result200);
+            result200 = ClientProfileInfo.fromJS(resultData200);
+            return Promise.resolve<ClientProfileInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<ClientProfile>(null as any);
+        return Promise.resolve<ClientProfileInfo>(null as any);
     }
 
     clearLastError( cancelToken?: CancelToken): Promise<void> {
@@ -794,7 +794,7 @@ export class AppConfig implements IAppConfig {
     features!: AppFeatures;
     settings!: AppSettings;
     state!: AppState;
-    clientProfileItems!: ClientProfileItem[];
+    clientProfileInfos!: ClientProfileInfo[];
 
     constructor(data?: IAppConfig) {
         if (data) {
@@ -807,7 +807,7 @@ export class AppConfig implements IAppConfig {
             this.features = new AppFeatures();
             this.settings = new AppSettings();
             this.state = new AppState();
-            this.clientProfileItems = [];
+            this.clientProfileInfos = [];
         }
     }
 
@@ -816,13 +816,13 @@ export class AppConfig implements IAppConfig {
             this.features = _data["features"] ? AppFeatures.fromJS(_data["features"]) : new AppFeatures();
             this.settings = _data["settings"] ? AppSettings.fromJS(_data["settings"]) : new AppSettings();
             this.state = _data["state"] ? AppState.fromJS(_data["state"]) : new AppState();
-            if (Array.isArray(_data["clientProfileItems"])) {
-                this.clientProfileItems = [] as any;
-                for (let item of _data["clientProfileItems"])
-                    this.clientProfileItems!.push(ClientProfileItem.fromJS(item));
+            if (Array.isArray(_data["clientProfileInfos"])) {
+                this.clientProfileInfos = [] as any;
+                for (let item of _data["clientProfileInfos"])
+                    this.clientProfileInfos!.push(ClientProfileInfo.fromJS(item));
             }
             else {
-                this.clientProfileItems = <any>null;
+                this.clientProfileInfos = <any>null;
             }
         }
     }
@@ -839,10 +839,10 @@ export class AppConfig implements IAppConfig {
         data["features"] = this.features ? this.features.toJSON() : <any>null;
         data["settings"] = this.settings ? this.settings.toJSON() : <any>null;
         data["state"] = this.state ? this.state.toJSON() : <any>null;
-        if (Array.isArray(this.clientProfileItems)) {
-            data["clientProfileItems"] = [];
-            for (let item of this.clientProfileItems)
-                data["clientProfileItems"].push(item.toJSON());
+        if (Array.isArray(this.clientProfileInfos)) {
+            data["clientProfileInfos"] = [];
+            for (let item of this.clientProfileInfos)
+                data["clientProfileInfos"].push(item.toJSON());
         }
         return data;
     }
@@ -852,7 +852,7 @@ export interface IAppConfig {
     features: AppFeatures;
     settings: AppSettings;
     state: AppState;
-    clientProfileItems: ClientProfileItem[];
+    clientProfileInfos: ClientProfileInfo[];
 }
 
 export class AppFeatures implements IAppFeatures {
@@ -1598,13 +1598,15 @@ export interface IPublishInfo {
     notificationDelay: string;
 }
 
-export class ClientProfileItem implements IClientProfileItem {
+export class ClientProfileInfo implements IClientProfileInfo {
     clientProfileId!: string;
-    clientProfile!: ClientProfile;
-    token!: Token;
-    name?: string | null;
+    clientProfileName!: string;
+    tokenId!: string;
+    supportId?: string | null;
+    hostNames!: string[];
+    isValidHostName!: boolean;
 
-    constructor(data?: IClientProfileItem) {
+    constructor(data?: IClientProfileInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -1612,177 +1614,58 @@ export class ClientProfileItem implements IClientProfileItem {
             }
         }
         if (!data) {
-            this.clientProfile = new ClientProfile();
-            this.token = new Token();
+            this.hostNames = [];
         }
     }
 
     init(_data?: any) {
         if (_data) {
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
-            this.clientProfile = _data["clientProfile"] ? ClientProfile.fromJS(_data["clientProfile"]) : new ClientProfile();
-            this.token = _data["token"] ? Token.fromJS(_data["token"]) : new Token();
-            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): ClientProfileItem {
-        data = typeof data === 'object' ? data : {};
-        let result = new ClientProfileItem();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
-        data["token"] = this.token ? this.token.toJSON() : <any>null;
-        data["name"] = this.name !== undefined ? this.name : <any>null;
-        return data;
-    }
-}
-
-export interface IClientProfileItem {
-    clientProfileId: string;
-    clientProfile: ClientProfile;
-    token: Token;
-    name?: string | null;
-}
-
-export class ClientProfile implements IClientProfile {
-    name?: string | null;
-    clientProfileId!: string;
-    tokenId!: string;
-
-    constructor(data?: IClientProfile) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
-            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
             this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): ClientProfile {
-        data = typeof data === 'object' ? data : {};
-        let result = new ClientProfile();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["name"] = this.name !== undefined ? this.name : <any>null;
-        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
-        return data;
-    }
-}
-
-export interface IClientProfile {
-    name?: string | null;
-    clientProfileId: string;
-    tokenId: string;
-}
-
-export class Token implements IToken {
-    name?: string | null;
-    v!: number;
-    sid!: number;
-    tid!: string;
-    sec!: string;
-    isv!: boolean;
-    hname!: string;
-    hport!: number;
-    ch!: string;
-    pb!: boolean;
-    url?: string | null;
-    ep?: string[] | null;
-
-    constructor(data?: IToken) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
-            this.v = _data["v"] !== undefined ? _data["v"] : <any>null;
-            this.sid = _data["sid"] !== undefined ? _data["sid"] : <any>null;
-            this.tid = _data["tid"] !== undefined ? _data["tid"] : <any>null;
-            this.sec = _data["sec"] !== undefined ? _data["sec"] : <any>null;
-            this.isv = _data["isv"] !== undefined ? _data["isv"] : <any>null;
-            this.hname = _data["hname"] !== undefined ? _data["hname"] : <any>null;
-            this.hport = _data["hport"] !== undefined ? _data["hport"] : <any>null;
-            this.ch = _data["ch"] !== undefined ? _data["ch"] : <any>null;
-            this.pb = _data["pb"] !== undefined ? _data["pb"] : <any>null;
-            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
-            if (Array.isArray(_data["ep"])) {
-                this.ep = [] as any;
-                for (let item of _data["ep"])
-                    this.ep!.push(item);
+            this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
+            if (Array.isArray(_data["hostNames"])) {
+                this.hostNames = [] as any;
+                for (let item of _data["hostNames"])
+                    this.hostNames!.push(item);
             }
             else {
-                this.ep = <any>null;
+                this.hostNames = <any>null;
             }
+            this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
         }
     }
 
-    static fromJS(data: any): Token {
+    static fromJS(data: any): ClientProfileInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new Token();
+        let result = new ClientProfileInfo();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["name"] = this.name !== undefined ? this.name : <any>null;
-        data["v"] = this.v !== undefined ? this.v : <any>null;
-        data["sid"] = this.sid !== undefined ? this.sid : <any>null;
-        data["tid"] = this.tid !== undefined ? this.tid : <any>null;
-        data["sec"] = this.sec !== undefined ? this.sec : <any>null;
-        data["isv"] = this.isv !== undefined ? this.isv : <any>null;
-        data["hname"] = this.hname !== undefined ? this.hname : <any>null;
-        data["hport"] = this.hport !== undefined ? this.hport : <any>null;
-        data["ch"] = this.ch !== undefined ? this.ch : <any>null;
-        data["pb"] = this.pb !== undefined ? this.pb : <any>null;
-        data["url"] = this.url !== undefined ? this.url : <any>null;
-        if (Array.isArray(this.ep)) {
-            data["ep"] = [];
-            for (let item of this.ep)
-                data["ep"].push(item);
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
+        data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
+        data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
+        if (Array.isArray(this.hostNames)) {
+            data["hostNames"] = [];
+            for (let item of this.hostNames)
+                data["hostNames"].push(item);
         }
+        data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
         return data;
     }
 }
 
-export interface IToken {
-    name?: string | null;
-    v: number;
-    sid: number;
-    tid: string;
-    sec: string;
-    isv: boolean;
-    hname: string;
-    hport: number;
-    ch: string;
-    pb: boolean;
-    url?: string | null;
-    ep?: string[] | null;
+export interface IClientProfileInfo {
+    clientProfileId: string;
+    clientProfileName: string;
+    tokenId: string;
+    supportId?: string | null;
+    hostNames: string[];
+    isValidHostName: boolean;
 }
 
 export class DeviceAppInfo implements IDeviceAppInfo {

@@ -4,8 +4,9 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Common.TokenLegacy;
 
-// deprecated in version 3.3.450 or upper
-internal class TokenV3
+
+[Obsolete("deprecated in version 3.3.450 or upper")]
+public class TokenV3
 {
     [JsonPropertyName("name")]
     public string? Name { get; set; }
@@ -14,7 +15,7 @@ internal class TokenV3
     public int Version { get; set; } = 3;
 
     [JsonPropertyName("sid")]
-    public int SupportId { get; set; }
+    public int SupportId { get; set; } 
 
     [JsonPropertyName("tid")]
     public required string TokenId { get; set; }
@@ -49,7 +50,7 @@ internal class TokenV3
         var token = new Token
         {
             Name = Name,
-            SupportId = SupportId,
+            SupportId = SupportId.ToString(),
             TokenId = TokenId,
             Secret = Secret,
             IsNewVersion = true,

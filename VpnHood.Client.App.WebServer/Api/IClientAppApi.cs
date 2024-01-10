@@ -10,7 +10,7 @@ public interface IClientAppApi
     Task Connect(Guid? clientProfileId = null);
     Task Diagnose(Guid? clientProfileId = null);
     Task Disconnect();
-    Task<ClientProfile> AddAccessKey(string accessKey);
+    Task<ClientProfileInfo> AddAccessKey(string accessKey);
     Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams);
     Task DeleteClientProfile(Guid clientProfileId);
     void ClearLastError();

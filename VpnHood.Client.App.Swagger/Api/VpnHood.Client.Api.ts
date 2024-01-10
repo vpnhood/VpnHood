@@ -604,7 +604,7 @@ export class AppApiClient {
     }
 
     versionCheck( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/check-new-version";
+        let url_ = this.baseUrl + "/api/app/version-check";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -648,7 +648,7 @@ export class AppApiClient {
     }
 
     versionCheckPostpone( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/postpone-update";
+        let url_ = this.baseUrl + "/api/app/version-check-postpone";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {

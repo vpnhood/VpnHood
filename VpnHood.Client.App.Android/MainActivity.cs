@@ -24,11 +24,12 @@ namespace VpnHood.Client.App.Droid;
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
 public class MainActivity : AndroidAppWebViewMainActivity
 {
+    // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
     public const string AccessKeyScheme1 = "vh";
     public const string AccessKeyScheme2 = "vhkey";
-    public const string AccessKeyMime1 = "application/vhkey";
-    public const string AccessKeyMime2 = "application/key";
-    public const string AccessKeyMime3 = "application/vnd.cinderella";
+    public const string AccessKeyMime1 = "application/vhkey"; 
+    public const string AccessKeyMime2 = "application/pgp-keys"; //.key
+    public const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
 
     public MainActivity()
     {

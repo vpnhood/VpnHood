@@ -138,14 +138,15 @@ public abstract class AndroidAppMainActivity : Activity
 
     protected void ImportAccessKey(string accessKey)
     {
-        var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
-        var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
+        var profiles = VpnHoodApp.Instance.ClientProfileService.List();
+        var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
         _ = VpnHoodApp.Instance.Disconnect(true);
         VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
 
-        var message = accessKeyStatus.ClientProfile != null
-            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, accessKeyStatus.Name)
-            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, accessKeyStatus.Name);
+        var isNew = profiles.Any(x => x.ClientProfileId == profile.ClientProfileId);
+        var message = isNew
+            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profile.ClientProfileName)
+            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profile.ClientProfileName);
 
         Toast.MakeText(this, message, ToastLength.Long)?.Show();
     }

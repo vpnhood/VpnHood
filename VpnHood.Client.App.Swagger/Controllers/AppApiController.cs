@@ -41,7 +41,7 @@ namespace VpnHood.Client.App.Swagger.Controllers
         }
 
         [HttpPut("access-keys")]
-        public Task<ClientProfile> AddAccessKey(string accessKey)
+        public Task<ClientProfileInfo> AddAccessKey(string accessKey)
         {
             throw new NotImplementedException();
         }

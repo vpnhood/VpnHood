@@ -17,7 +17,7 @@ public class Token
     public required string? Name { get; set; }
 
     [JsonPropertyName("sid")]
-    public required int SupportId { get; set; }
+    public required string? SupportId { get; set; }
 
     [JsonPropertyName("tid")]
     public required string TokenId { get; set; }
@@ -36,8 +36,6 @@ public class Token
         var json = JsonSerializer.Serialize(this);
         return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }
-
-    // ReSharper disable once ClassNeverInstantiated.Local
 
     public static Token FromAccessKey(string base64)
     {

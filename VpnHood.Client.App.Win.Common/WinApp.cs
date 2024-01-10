@@ -117,11 +117,9 @@ public class WinApp : IDisposable
     public bool Start()
     {
         // auto connect
-        if (ConnectAfterStart &&
-            VhApp.UserSettings.DefaultClientProfileId != null &&
-            VhApp.ClientProfileStore.ClientProfileItems.Any(x =>
-                x.ClientProfile.ClientProfileId == VhApp.UserSettings.DefaultClientProfileId))
-            _ = VhApp.Connect(VhApp.UserSettings.DefaultClientProfileId.Value);
+        var defaultClientProfile = VhApp.GetDefaultClientProfile();
+        if (ConnectAfterStart && defaultClientProfile != null)
+            _ = VhApp.Connect(defaultClientProfile.ClientProfileId);
 
         // create notification icon
         InitNotifyIcon();

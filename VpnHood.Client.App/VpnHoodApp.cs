@@ -572,7 +572,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             }
         }
 
-        // app container should check version if possible regardless of the result of NewVersionCheckByUpdateInfo
+        // app container should check version if possible regardless of the result of VersionCheckByUpdateInfo
         VersionCheckRequired = true;
 
         // check version by update info

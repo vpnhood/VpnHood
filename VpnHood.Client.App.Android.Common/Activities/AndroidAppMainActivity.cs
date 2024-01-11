@@ -64,19 +64,19 @@ public abstract class AndroidAppMainActivity : Activity
         {
             var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
             var updateAvailability = appUpdateInfo.UpdateAvailability();
-            var ret = updateAvailability == UpdateAvailability.UpdateNotAvailable;
 
             // postpone check if check succeeded
             if (updateAvailability == UpdateAvailability.UpdateAvailable &&
                 appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
             {
-                ret = true;
                 appUpdateManager.StartUpdateFlowForResult(
                 appUpdateInfo, this, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build(), 0);
+                return true;
             }
 
-            // return true if check is done
-            return ret;
+            // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
+            // So we return false if there is UpdateNotAvailable to let the alternative way works
+            return false;
         }
         catch (Exception ex)
         {

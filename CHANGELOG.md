@@ -1,9 +1,9 @@
 # Upcoming
 ### Client
-* Feature: Prompt for update by google play if possilbe
 * Feature: Enable updating server endpoints by Url
+* Feature: Android: Prompt for update by google play if possilbe
 * Feature: Android: Support opening (KEY) as VpnHood Key file
-* Update: Redact host name in client
+* Update: New Access Token format
 
 # v3.2.439
 ### Client

@@ -189,15 +189,24 @@ public class WinApp : IDisposable
         if (!File.Exists(updaterFilePath))
             throw new Exception($"Could not find updater: {updaterFilePath}.");
 
+        // check for update
         VhLogger.Instance.LogInformation("Checking for new updates...");
-        var process = Process.Start(updaterFilePath, "/silent");
+        var process = Process.Start(updaterFilePath, "/justcheck");
+        if (process == null) return false;
         while (process is { HasExited: false })
-        {
             await Task.Delay(500);
-            return process.ExitCode == 0; // there is an update or user has been cancelled it
+
+        // install update
+        if (process.ExitCode == 0)
+        {
+            process = Process.Start(updaterFilePath);
+            if (process == null) return false;
+            while (process is { HasExited: false })
+                await Task.Delay(500);
         }
 
-        return false;
+        // https://www.advancedinstaller.com/user-guide/updater.html#updater-return-codes
+        return process.ExitCode is 0 or -536870895;
     }
 
     private void OpenMainWindow()

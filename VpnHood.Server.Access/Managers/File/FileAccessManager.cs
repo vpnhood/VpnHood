@@ -45,6 +45,12 @@ public class FileAccessManager : IAccessManager
 
         // get or create server secret
         ServerConfig.ServerSecret ??= LoadServerSecret();
+
+        //Migrate old tokens
+#pragma warning disable CS0618 // Type or member is obsolete
+        FileAccessManagerLegacyV3.MigrateLegacyTokensV3(storagePath);
+#pragma warning restore CS0618 // Type or member is obsolete
+
     }
 
     public byte[] LoadServerSecret()
@@ -360,7 +366,8 @@ public class FileAccessManager : IAccessManager
         public long MaxTraffic { get; set; }
         public Token Token { get; set; } = null!;
 
-        [JsonIgnore] public AccessUsage AccessUsage { get; set; } = new();
+        [JsonIgnore] 
+        public AccessUsage AccessUsage { get; set; } = new();
     }
 
     private class AccessItemUsage

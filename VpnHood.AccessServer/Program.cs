@@ -88,11 +88,10 @@ public class Program
         await webApp.UseGrayMinCommonAuthorizationForApp();
         await webApp.Services.UseVhReportServices(args);
 
-
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
-        logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, new[] { nameof(AppOptions.AgentSystemAuthorization) }));
+        logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();

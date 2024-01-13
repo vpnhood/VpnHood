@@ -7,6 +7,9 @@
 * Fix: Windows: Freeze network after auto reconnect with muti-server
 * Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
+### Server
+* Update: Return 401 instead of 400 for invalid request
+
 # v3.2.439
 ### Client
 * Update: Improve Performance

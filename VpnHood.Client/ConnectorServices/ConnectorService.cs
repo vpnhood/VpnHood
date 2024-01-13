@@ -32,7 +32,6 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; }
-    public bool UseBinaryStream { get; private set; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
@@ -51,7 +50,6 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, TimeSpan tcpReuseTimeout, byte[]? serverSecret)
     {
         ServerProtocolVersion = serverProtocolVersion;
-        UseBinaryStream = serverProtocolVersion >= 4;
         RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
         _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : "";
@@ -59,11 +57,6 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        // compatibility
-        //todo must be deprecated from >= 416
-        if (!UseBinaryStream)
-            return new TcpClientStream(tcpClient, sslStream, streamId);
-
         var streamSecret = VhUtil.GenerateKey(128);
 
         // write HTTP request
@@ -99,6 +92,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         {
             // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
+
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
             // Establish a TLS connection
@@ -192,7 +186,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken);
 
         // log the response
-        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", 
+        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.",
             ret.Response.ErrorCode);
 
         lock (Stat) Stat.RequestCount++;

@@ -88,7 +88,7 @@ public class WinDivertPacketCapture : IPacketCapture
         }
     }
 
-    private string Ip(IpRange ipRange)
+    private static string Ip(IpRange ipRange)
     {
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }

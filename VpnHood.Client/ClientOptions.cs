@@ -22,7 +22,7 @@ public class ClientOptions
     };
 
     public bool AutoDisposePacketCapture { get; set; } = true;
-    public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromSeconds(2);
+    public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; } 

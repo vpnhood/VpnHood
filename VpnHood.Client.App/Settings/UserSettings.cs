@@ -9,7 +9,7 @@ public class UserSettings
     public AppLogSettings Logging { get; set; } = new();
     public string CultureName { get; set; } = "en";
     public Guid? DefaultClientProfileId { get; set; }
-    public int MaxReconnectCount { get; set; } = 3;
+    public int MaxReconnectCount { get; set; } = int.MaxValue;
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;
     public bool TunnelClientCountry { get; set; } = true;
     public string[]? IpGroupFilters { get; set; }

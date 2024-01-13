@@ -22,8 +22,8 @@ public class ClientOptions
     };
 
     public bool AutoDisposePacketCapture { get; set; } = true;
-    public TimeSpan SessionTimeout { get; set; } = TimeSpan.MaxValue;
-    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
+    public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromSeconds(2);
+    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; } 
     public bool ExcludeLocalNetwork { get; set; } = true;

@@ -42,6 +42,7 @@ public partial class App : Application
         {
             VhLogger.Instance.LogError(ex, "Could not run the app.");
             Shutdown();
+            throw;
         }
     }
 

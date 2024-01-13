@@ -8,6 +8,6 @@ public class PublishInfo
     public Uri? GooglePlayUrl { get; init; }
     public required Uri InstallationPageUrl { get; init; }
     public required DateTime ReleaseDate { get; init; }
-    public required Version DeprecatedVersion { get; init; }
-    public required TimeSpan NotificationDelay { get; init; }
+    public Version DeprecatedVersion { get; init; } = new (0, 0, 0, 0) ;
+    public TimeSpan NotificationDelay { get; init; } = TimeSpan.Zero;
 }

@@ -269,22 +269,8 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, CancellationToken cancellationToken)
     {
-        // read version
-        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
-        var buffer = new byte[16];
-        var res = await sslStream.ReadAsync(buffer, 0, 1, cancellationToken);
-        if (res == 0)
-            throw new Exception("Connection has been closed before receiving any request.");
-
         // check request version
         var streamId = Guid.NewGuid() + ":incoming";
-
-        //todo must be deprecated from >= 416
-        var version = buffer[0];
-        if (version == 1)
-            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false,
-                cacheData: new[] { version }, cacheSize: 1), streamId);
-
 
         // Version 2 is HTTP and starts with POST
         try
@@ -334,7 +320,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
             var response = ex is UnauthorizedAccessException ? HttpResponses.GetUnauthorized() : HttpResponses.GetBadRequest();
             await sslStream.WriteAsync(response, cancellationToken);
-            throw new Exception("Bad request.");
+            throw;
         }
     }
 

@@ -19,8 +19,8 @@ namespace VpnHood.Client.App.Droid.Connect;
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
-[IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
-[IntentFilter(new[] { TileService.ActionQsTilePreferences })]
+[IntentFilter([Intent.ActionMain], Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
+[IntentFilter([TileService.ActionQsTilePreferences])]
 
 public class MainActivity : AndroidAppWebViewMainActivity
 {

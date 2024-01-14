@@ -233,8 +233,10 @@ internal class ClientHost : IAsyncDisposable
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
             // MaxEncryptChunk
-            if (proxyClientStream.Stream is BinaryStream binaryStream)
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (proxyClientStream.Stream is CryptoBinaryStream binaryStream)
                 binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
+#pragma warning restore CS0618 // Type or member is obsolete
 
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             Client.Tunnel.AddChannel(channel);

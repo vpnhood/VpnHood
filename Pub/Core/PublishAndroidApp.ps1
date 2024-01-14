@@ -25,7 +25,9 @@ $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android
-$keystore = Join-Path "$solutionDir/../.user/" $credentials.Android.KeyStoreFile
+$nodeName = "Android.VpnHoodConnect";
+$keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
+
 $keystorePass = $credentials.Android.KeyStorePass
 $keystoreAlias = $credentials.Android.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";

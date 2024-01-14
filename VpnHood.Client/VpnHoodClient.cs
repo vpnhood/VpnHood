@@ -45,10 +45,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
 
-    private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
-    private byte[]? _serverKey;
+    private byte[]? _serverSecret;
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
     private int ProtocolVersion { get; }
@@ -547,7 +546,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddUdpChannel()
     {
         if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
-        if (VhUtil.IsNullOrEmpty(_serverKey)) throw new Exception("ServerSecret has not been set.");
+        if (VhUtil.IsNullOrEmpty(_serverSecret)) throw new Exception("ServerSecret has not been set.");
         if (VhUtil.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (HostUdpEndPoint == null)
         {
@@ -559,7 +558,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, _connectorService.ServerProtocolVersion);
         try
         {
-            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverKey);
+            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverSecret);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);
         }
@@ -645,7 +644,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // get session id
             SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
             _sessionKey = sessionResponse.SessionKey;
-            _serverKey = sessionResponse.ServerSecret;
+            _serverSecret = sessionResponse.ServerSecret;
             _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
@@ -715,7 +714,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // find timespan
-            var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan) && IsTcpDatagramLifespanSupported
+            var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan) 
                 ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds, (int)_maxTcpDatagramLifespan.TotalSeconds))
                 : Timeout.InfiniteTimeSpan;
 

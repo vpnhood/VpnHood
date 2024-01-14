@@ -76,7 +76,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     {
         if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
+#pragma warning disable CS0618 // Type or member is obsolete
         MigrateUserDataFromXamarin(options.AppDataFolderPath); // Deprecated >= 400
+#pragma warning restore CS0618 // Type or member is obsolete
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
         Resources = options.Resources;
 
@@ -668,7 +670,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             : ClientProfileService.FindById(LastActiveClientProfileId);
     }
 
-    // Deprecated >= 400
+    [Obsolete("Deprecated >= 400", false)]
     private static void MigrateUserDataFromXamarin(string folderPath)
     {
         try

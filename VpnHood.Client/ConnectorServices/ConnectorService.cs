@@ -2,6 +2,9 @@
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Collections.Concurrent;
+using System.Net.Sockets;
+using System.Text;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -9,15 +12,12 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
 using VpnHood.Tunneling.ClientStreams;
-using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling.Messaging;
 using VpnHood.Common.Collections;
 using VpnHood.Tunneling.Channels.Streams;
-using System.Text;
 using VpnHood.Tunneling.Utils;
-using System.Net.Sockets;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -52,31 +52,44 @@ internal class ConnectorService : IAsyncDisposable, IJob
         ServerProtocolVersion = serverProtocolVersion;
         RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
-        _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : "";
+        _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : string.Empty;
     }
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        var streamSecret = VhUtil.GenerateKey(128);
+        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 450 and upper
+        var version = ServerProtocolVersion >= 5 ? 3 : 2;
+        var useBinaryStream = version >= 3 && !string.IsNullOrEmpty(_apiKey);
 
         // write HTTP request
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
             $"Authorization: ApiKey {_apiKey}\r\n" +
-            $"X-Version: 2\r\n" +
+            $"X-Version: {version}\r\n" +
             $"X-Secret: {Convert.ToBase64String(streamSecret)}\r\n" +
+            $"X-BinaryStream: {useBinaryStream}\r\n" +
             "\r\n";
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        if (string.IsNullOrEmpty(_apiKey))
-            return new TcpClientStream(tcpClient, sslStream, streamId);
+        // deprecated legacy by version >= 450
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (version == 2)
+        {
+            if (string.IsNullOrEmpty(_apiKey))
+                return new TcpClientStream(tcpClient, sslStream, streamId);
 
-        // dispose Ssl
-        await sslStream.DisposeAsync();
-        return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
+            // dispose Ssl
+            await sslStream.DisposeAsync();
+            return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
+        }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        return useBinaryStream
+            ? new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId), streamId, ReuseStreamClient)
+            : new TcpClientStream(tcpClient, sslStream, streamId);
     }
 
     private async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)

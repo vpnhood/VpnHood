@@ -1,4 +1,4 @@
-param([switch]$noapk)
+param([switch]$apk)
 
-& "$PSScriptRoot/../Pub/Core/PublishAndroidApp.ps1" $PSScriptRoot "VpnHoodConnect" -noapk:$noapk
+& "$PSScriptRoot/../Pub/Core/PublishAndroidApp.ps1" $PSScriptRoot "VpnHoodConnect" -apk
 

@@ -5,9 +5,11 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling.Channels.Streams;
 
-public class BinaryStream : ChunkStream
+// this was used for .NET 6 or earlier as .net didn't use hardware acceleration for encryption in android and SslStream was very slow
+[Obsolete("Use BinaryStream instead. Deprecated by 3.2.440 or upper.")]
+public class CryptoBinaryStream : ChunkStream
 {
-    private const int ChunkHeaderLength = 4;
+    private const int ChunkHeaderLength = 5;
     private int _remainingChunkBytes;
     private bool _disposed;
     private bool _finished;
@@ -17,21 +19,25 @@ public class BinaryStream : ChunkStream
     private Task<int> _readTask = Task.FromResult(0);
     private Task _writeTask = Task.CompletedTask;
     private bool _isConnectionClosed;
+    private bool _isCurrentReadingChunkEncrypted;
+    private readonly StreamCryptor _streamCryptor;
     private readonly byte[] _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private byte[] _writeBuffer = Array.Empty<byte>();
 
+    public long MaxEncryptChunk { get; set; } = long.MaxValue;
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
-    public BinaryStream(Stream sourceStream, string streamId)
+    public CryptoBinaryStream(Stream sourceStream, string streamId, byte[] secret)
         : base(new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize), streamId)
     {
+        _streamCryptor = StreamCryptor.Create(SourceStream, secret, leaveOpen: true, encryptInGivenBuffer: true);
     }
 
-    private BinaryStream(Stream sourceStream, string streamId, int reusedCount)
+    private CryptoBinaryStream(Stream sourceStream, string streamId, StreamCryptor streamCryptor, int reusedCount)
         : base(sourceStream, streamId, reusedCount)
     {
+        _streamCryptor = streamCryptor;
     }
-
 
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {
@@ -64,7 +70,8 @@ public class BinaryStream : ChunkStream
             }
 
             var bytesToRead = Math.Min(_remainingChunkBytes, count);
-            var bytesRead = await SourceStream.ReadAsync(buffer, offset, bytesToRead, cancellationToken);
+            var stream = _isCurrentReadingChunkEncrypted ? _streamCryptor : SourceStream;
+            var bytesRead = await stream.ReadAsync(buffer, offset, bytesToRead, cancellationToken);
             if (bytesRead == 0 && count != 0) // count zero is used for checking the connection
                 throw new Exception("BinaryStream has been closed unexpectedly.");
 
@@ -92,7 +99,7 @@ public class BinaryStream : ChunkStream
     private async Task<int> ReadChunkHeaderAsync(CancellationToken cancellationToken)
     {
         // read chunk header by cryptor
-        if (!await StreamUtil.ReadWaitForFillAsync(SourceStream, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length, cancellationToken))
+        if (!await StreamUtil.ReadWaitForFillAsync(_streamCryptor, _readChunkHeaderBuffer, 0, _readChunkHeaderBuffer.Length, cancellationToken))
         {
             if (!_finished && ReadChunkCount > 0)
                 VhLogger.Instance.LogWarning(GeneralEventId.TcpLife, "BinaryStream has been closed unexpectedly.");
@@ -102,6 +109,7 @@ public class BinaryStream : ChunkStream
 
         // get chunk size
         var chunkSize = BitConverter.ToInt32(_readChunkHeaderBuffer);
+        _isCurrentReadingChunkEncrypted = _readChunkHeaderBuffer[4] == 1;
         return chunkSize;
 
     }
@@ -137,10 +145,19 @@ public class BinaryStream : ChunkStream
     {
         try
         {
+            var encryptChunk = MaxEncryptChunk > 0;
+
             if (PreserveWriteBuffer)
             {
-                // create the chunk header
+                // create the chunk header and encrypt it
                 BitConverter.GetBytes(count).CopyTo(buffer, offset - ChunkHeaderLength);
+                buffer[4] = encryptChunk ? (byte)1 : (byte)0;
+                _streamCryptor.Encrypt(buffer, 0, ChunkHeaderLength); //header should always be encrypted
+
+                // encrypt chunk
+                if (encryptChunk)
+                    _streamCryptor.Encrypt(buffer, offset, count);
+
                 await SourceStream.WriteAsync(buffer, offset - ChunkHeaderLength, ChunkHeaderLength + count, cancellationToken);
             }
             else
@@ -149,11 +166,15 @@ public class BinaryStream : ChunkStream
                 if (size > _writeBuffer.Length)
                     Array.Resize(ref _writeBuffer, size);
 
-                // create the chunk header
+                // create the chunk header and encrypt it
                 BitConverter.GetBytes(count).CopyTo(_writeBuffer, 0);
+                _writeBuffer[4] = encryptChunk ? (byte)1 : (byte)0;
+                _streamCryptor.Encrypt(_writeBuffer, 0, ChunkHeaderLength); //header should always be encrypted
 
-                // prepend the buffer to chunk
+                // add buffer to chunk and encrypt
                 Buffer.BlockCopy(buffer, offset, _writeBuffer, ChunkHeaderLength, count);
+                if (encryptChunk)
+                    _streamCryptor.Encrypt(_writeBuffer, ChunkHeaderLength, count);
 
                 // Copy write buffer to output
                 await SourceStream.WriteAsync(_writeBuffer, 0, size, cancellationToken);
@@ -162,6 +183,7 @@ public class BinaryStream : ChunkStream
             // make sure chunk is sent
             await SourceStream.FlushAsync(cancellationToken);
             WroteChunkCount++;
+            if (MaxEncryptChunk > 0) MaxEncryptChunk--;
         }
         catch (Exception ex)
         {
@@ -189,7 +211,7 @@ public class BinaryStream : ChunkStream
 
         // reuse if the stream has been closed gracefully
         if (_finished && !_hasError)
-            return new BinaryStream(SourceStream, StreamId, ReusedCount + 1);
+            return new CryptoBinaryStream(SourceStream, StreamId, _streamCryptor, ReusedCount + 1);
 
         // dispose and throw the ungraceful BinaryStream
         await base.DisposeAsync();

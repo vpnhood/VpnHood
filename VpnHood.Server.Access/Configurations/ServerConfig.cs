@@ -29,6 +29,7 @@ public class ServerConfig
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
+    public int? ServerTokenJson { get; set; }
 
     // Inherit
     [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };

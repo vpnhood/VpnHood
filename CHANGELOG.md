@@ -1,7 +1,9 @@
 # Upcoming
 ### Client
 * Update: New Access Token format
+* Update: Use OS encryption for TLS
 * Feature: Enable updating server endpoints by Url
+* Feature: Dispaly token expiration if exists
 * Feature: Android: Prompt for update by google play if possilbe
 * Feature: Android: Support opening (KEY) as VpnHood Key file
 * Fix: Windows: Freeze network after auto reconnect with muti-server
@@ -9,6 +11,8 @@
 
 ### Server
 * Update: Return 401 instead of 400 for invalid request
+* Update: Use OS encryption for TLS
+* Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
 # v3.2.439
 ### Client

@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using VpnHood.Common.TokenLegacy;
 
 namespace VpnHood.Common.Utils;
@@ -312,5 +313,16 @@ public static class VhUtil
             // An error occurred while checking the TcpClient
             return false;
         }
+    }
+
+    public static string RedactJsonValue(string json, string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
+            json = Regex.Replace(json, pattern, " \"***\"");
+        }
+
+        return json;
     }
 }

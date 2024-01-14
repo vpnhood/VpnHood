@@ -22,7 +22,7 @@ namespace VpnHood.Server;
 internal class ServerHost : IAsyncDisposable, IJob
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
-    private const int ServerProtocolVersion = 4;
+    private const int ServerProtocolVersion = 5;
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
@@ -267,6 +267,16 @@ internal class ServerHost : IAsyncDisposable, IJob
         }
     }
 
+    private bool CheckApiKeyAuthorization(string authorization)
+    {
+        var parts = authorization.Split(' ');
+        return
+            parts.Length >= 2 &&
+            parts[0].Equals("ApiKey", StringComparison.OrdinalIgnoreCase) &&
+            parts[1].Equals(_sessionManager.ApiKey, StringComparison.OrdinalIgnoreCase) &&
+            parts[1] == _sessionManager.ApiKey;
+    }
+
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, CancellationToken cancellationToken)
     {
         // check request version
@@ -279,40 +289,41 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken)
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
+            int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
+            bool.TryParse(headers.GetValueOrDefault("X-BinaryStream", "false"), out var useBinaryStream);
+            var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
+
             // read api key
-            var hasPassChecked = false;
-            if (headers.TryGetValue("Authorization", out var authorization))
+            if (!CheckApiKeyAuthorization(authorization))
             {
-                var parts = authorization.Split(' ');
-                if (parts.Length >= 2 &&
-                    parts[0].Equals("ApiKey", StringComparison.OrdinalIgnoreCase) &&
-                    parts[1].Equals(_sessionManager.ApiKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    var apiKey = parts[1];
-                    hasPassChecked = apiKey == _sessionManager.ApiKey;
-                }
-            }
+                // process hello without api key
+                if (authorization != "ApiKey")
+                    throw new UnauthorizedAccessException();
 
-            if (hasPassChecked)
-            {
-                if (headers.TryGetValue("X-Version", out var xVersion) && int.Parse(xVersion) == 2 &&
-                    headers.TryGetValue("X-Secret", out var xSecret))
-                {
-                    await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
-                    var secret = Convert.FromBase64String(xSecret);
-                    await sslStream.DisposeAsync(); // dispose Ssl
-                    return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
-                }
-            }
-
-            // process hello without api key
-            if (authorization == "ApiKey")
-            {
                 await sslStream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
-            throw new UnauthorizedAccessException();
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (xVersion == 2)
+            {
+                if (headers.TryGetValue("X-Secret", out var xSecret) && !string.IsNullOrEmpty(xSecret))
+                {
+                    await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
+                    var secret = Convert.FromBase64String(xSecret);
+                    await sslStream.DisposeAsync(); // dispose Ssl
+                    return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
+                }
+
+                return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, Convert.FromBase64String(xSecret)), streamId, ReuseClientStream);
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            // use binary stream only for authenticated clients
+            await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
+            return useBinaryStream
+                ? new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId), streamId, ReuseClientStream)
+                : new TcpClientStream(tcpClient, sslStream, streamId);
         }
         catch (Exception ex)
         {

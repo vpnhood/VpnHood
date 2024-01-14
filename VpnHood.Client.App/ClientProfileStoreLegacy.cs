@@ -1,13 +1,12 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.TokenLegacy;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App;
 
-// deprecated for version 3.3.450 or upper
+// deprecated by version 3.2.440 or upper
 internal static class ClientProfileStoreLegacy
 {
     // ReSharper disable once ClassNeverInstantiated.Local

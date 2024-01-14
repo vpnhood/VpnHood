@@ -11,8 +11,8 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<PublishTrimmed2>False</PublishTrimmed2>
-		<RunAOTCompilation2>False</RunAOTCompilation2>
+		<PublishTrimmed>False</PublishTrimmed>
+		<RunAOTCompilation>False</RunAOTCompilation>
 	</PropertyGroup>
 
 	<PropertyGroup>

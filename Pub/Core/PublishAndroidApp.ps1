@@ -1,6 +1,7 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir, 
-	[Parameter(Mandatory=$true)] [String]$packageFileTitle)
+	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
+	[switch]$noapk)
 
 . "$PSScriptRoot/Common.ps1"
 
@@ -27,9 +28,8 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 # android
 $nodeName = "Android.VpnHoodConnect";
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
-
-$keystorePass = $credentials.Android.KeyStorePass
-$keystoreAlias = $credentials.Android.KeyStoreAlias
+$keystorePass = $credentials.$nodeName.KeyStorePass
+$keystoreAlias = $credentials.$nodeName.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $appIconXml = Join-Path $projectDir "Resources\mipmap-anydpi-v26\appicon.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
@@ -41,36 +41,38 @@ $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev
 $appIconXmlDoc.save($appIconXml);
 
 # apk
-Write-Host;
-Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
-
-$outputPath = Join-Path $projectDir "bin/ReleaseApk/";
-$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
-
-# todo
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
- & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
-	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/p:ApplicationId=$packageId `
-	/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
-
-# publish info
-$json = @{
-    Version = $versionParam; 
-    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
-    PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-	GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
-	ReleaseDate = "$releaseDate";
-	DeprecatedVersion = "$deprecatedVersion";
-	NotificationDelay = "03.00:00:00";
-};
-$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
-
-Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
-if ($isLatest)
+if ($noapk -eq $false)
 {
-	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	Write-Host;
+	Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
+
+	$outputPath = Join-Path $projectDir "bin/ReleaseApk/";
+	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
+
+	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
+	 & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
+		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+		/p:ApplicationId=$packageId `
+		/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
+
+	# publish info
+	$json = @{
+		Version = $versionParam; 
+		UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
+		PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+		InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+		GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
+		ReleaseDate = "$releaseDate";
+		DeprecatedVersion = "$deprecatedVersion";
+		NotificationDelay = "03.00:00:00";
+	};
+	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
+
+	Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
+	if ($isLatest)
+	{
+		Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	}
 }
 
 # ------------- aab

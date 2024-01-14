@@ -61,7 +61,7 @@ if ($android)
 # publish android
 if ($androidConnect)
 {	
-	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish.ps1";
+	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish.ps1" -apk;
 }
 
 

@@ -32,8 +32,8 @@ public class ServerConfig
     public int? ServerTokenJson { get; set; }
 
     // Inherit
-    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
-    [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 0), new(IPAddress.IPv6Any, 0) };
+    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? [new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443)];
+    [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? [new(IPAddress.Any, 0), new(IPAddress.IPv6Any, 0)];
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
     [JsonIgnore] public byte[]? ServerSecretValue => ServerSecret;

@@ -70,7 +70,7 @@ public class ServerTest : TestBase
         // change tcp end points
         var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Changing access server UdpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
-        fileAccessManager.ServerConfig.TcpEndPoints = new[] { newTcpEndPoint };
+        fileAccessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
@@ -80,7 +80,7 @@ public class ServerTest : TestBase
         // change udp end points
         var newUdpEndPoint = VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
-        fileAccessManager.ServerConfig.UdpEndPoints = new[] { newUdpEndPoint };
+        fileAccessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
@@ -92,7 +92,7 @@ public class ServerTest : TestBase
     public async Task Reconfigure()
     {
         var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions = new FileAccessManagerOptions { TcpEndPoints = new[] { serverEndPoint } };
+        var fileAccessManagerOptions = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint] };
         using var fileAccessManager = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
         var serverConfig = fileAccessManager.ServerConfig;
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);
@@ -255,14 +255,14 @@ public class ServerTest : TestBase
             NetFilterOptions = new NetFilterOptions
             {
                 BlockIpV6 = true,
-                ExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.2") },
-                IncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.3") },
-                PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.4") },
-                PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.5") },
+                ExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.2")],
+                IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
+                PacketCaptureExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
+                PacketCaptureIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
                 IncludeLocalNetwork = false,
             },
-            TcpEndPoints = new[] { IPEndPoint.Parse("2.2.2.2:4433") },
-            UdpEndPoints = new[] { IPEndPoint.Parse("3.3.3.3:5533") },
+            TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
+            UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

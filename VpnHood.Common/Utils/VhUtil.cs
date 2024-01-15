@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using VpnHood.Common.TokenLegacy;
 
 namespace VpnHood.Common.Utils;
 

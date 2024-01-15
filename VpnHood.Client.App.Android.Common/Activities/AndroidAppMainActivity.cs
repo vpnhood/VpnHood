@@ -46,8 +46,8 @@ public abstract class AndroidAppMainActivity : Activity
         // request for notification
         if (OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
         {
-            _requestPostNotificationsCompletionTask = new();
-            RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPostNotificationId);
+            _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
+            RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
             await _requestPostNotificationsCompletionTask.Task;
         }
 

@@ -210,11 +210,10 @@ internal static class TestHelper
         }
     }
 
-    public static Token CreateAccessToken(FileAccessManager fileAccessManager, IPEndPoint[]? hostEndPoints = null,
+    public static Token CreateAccessToken(FileAccessManager fileAccessManager,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
         return fileAccessManager.AccessItem_Create(
-            hostEndPoints ?? fileAccessManager.ServerConfig.TcpEndPointsValue,
             tokenName: $"Test Server {++_accessItemIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
@@ -227,7 +226,7 @@ internal static class TestHelper
     {
         var testAccessManager = (TestAccessManager)server.AccessManager;
         var fileAccessManager = (FileAccessManager)testAccessManager.BaseAccessManager;
-        return CreateAccessToken(fileAccessManager, null, maxClientCount, maxTrafficByteCount, expirationTime);
+        return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime);
     }
 
     public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null)
@@ -239,10 +238,12 @@ internal static class TestHelper
 
     public static FileAccessManagerOptions CreateFileAccessManagerOptions()
     {
+        var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var options = new FileAccessManagerOptions
         {
-            TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
+            TcpEndPoints = [tcpEndPoint],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
+            PublicEndPoints = [tcpEndPoint],
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,
@@ -255,7 +256,7 @@ internal static class TestHelper
                 SyncCacheSize = 50,
                 SyncInterval = TimeSpan.FromMilliseconds(100)
             },
-            LogAnonymizer = false
+            LogAnonymizer = false,
         };
         return options;
     }
@@ -453,8 +454,7 @@ internal static class TestHelper
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
-        NetFilter.Init(new[]
-        {
+        NetFilter.Init([
             Tuple.Create(ProtocolType.Tcp, TEST_TcpEndPoint1, WebServer.HttpV4EndPoint1),
             Tuple.Create(ProtocolType.Tcp, TEST_TcpEndPoint2, WebServer.HttpV4EndPoint2),
             Tuple.Create(ProtocolType.Tcp, TEST_HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
@@ -465,8 +465,8 @@ internal static class TestHelper
             Tuple.Create(ProtocolType.Udp, TEST_UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
             Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TEST_PingV4Address1, 0), IPEndPoint.Parse("127.0.0.1:0")),
             Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TEST_PingV4Address2, 0), IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TEST_PingV6Address1, 0), IPEndPoint.Parse("[::1]:0")),
-        });
+            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TEST_PingV6Address1, 0), IPEndPoint.Parse("[::1]:0"))
+        ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);

@@ -2,9 +2,7 @@ using Android.BillingClient.Api;
 using Android.Content;
 using Android.Content.PM;
 using Android.Gms.Ads;
-using Android.Gms.Auth.Api;
 using Android.Gms.Auth.Api.SignIn;
-using Android.Gms.Common.Apis;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
@@ -25,13 +23,13 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 [IntentFilter([Intent.ActionMain], Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 [IntentFilter([TileService.ActionQsTilePreferences])]
-[Obsolete("Obsolete")]
+
 public class MainActivity : AndroidAppWebViewMainActivity
 {
     private GoogleSignInOptions _googleSignInOptions = default!;
-    private GoogleApiClient _googleApiClient = default!;
+    //private GoogleApiClient _googleApiClient = default!;
     private BillingClient _billingClient = default!;
-    [Obsolete("Obsolete")]
+    
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
@@ -50,13 +48,14 @@ public class MainActivity : AndroidAppWebViewMainActivity
         SetContentView(linearLayout);*/
 
         // Signin with Google
-        _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
+        /*_googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
             .RequestIdToken("147087744118-asq131v41mqrt777frtghbv66u5u4d2d.apps.googleusercontent.com")
             .RequestEmail()
             .Build();
         _googleApiClient = new GoogleApiClient.Builder(this)
             .AddApi(Auth.GOOGLE_SIGN_IN_API, _googleSignInOptions).Build();
-        _googleApiClient.Connect();
+        _googleApiClient.Connect();*/
+
 
         // Google play billing
         var billingBuilder = BillingClient.NewBuilder(this);

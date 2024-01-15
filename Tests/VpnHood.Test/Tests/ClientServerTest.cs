@@ -52,6 +52,8 @@ public class ClientServerTest : TestBase
         var serverEp = VhUtil.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.TcpEndPoints = [serverEp];
+        fileAccessManagerOptions.PublicEndPoints = [serverEp];
+
         using var fileAccessManager = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
         using var testAccessManager = new TestAccessManager(fileAccessManager);
         await using var server = TestHelper.CreateServer(testAccessManager);

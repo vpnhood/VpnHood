@@ -33,6 +33,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
     public Ga4Tracker? GaTracker { get; }
+    public string? ServerTokenUrl { get; set; }
 
     public byte[] ServerSecret
     {

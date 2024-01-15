@@ -578,6 +578,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
+            ServerTokenUrl = _sessionManager.ServerTokenUrl,
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
             GaMeasurementId = sessionResponse.GaMeasurementId,

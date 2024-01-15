@@ -39,5 +39,5 @@ public class HelloSessionResponse : SessionResponse
     public string? GaMeasurementId { get; init;}
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
-    public string? ServerTokenJson { get; set; }
+    public string? ServerTokenUrl { get; set; }
 }

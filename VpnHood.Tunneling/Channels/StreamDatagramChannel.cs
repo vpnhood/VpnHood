@@ -191,7 +191,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 "StreamDatagramChannel sending the close message to the remote. ChannelId: {ChannelId}, Lifetime: {Lifetime}",
                 ChannelId, _lifeTime);
 
-            return SendPacket(new[] { ipPacket }, true);
+            return SendPacket([ipPacket], true);
         }
         catch (Exception ex)
         {

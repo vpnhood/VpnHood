@@ -12,7 +12,7 @@ public class ServerNetFilterConfigTest : TestBase
     public async Task PacketCapture_Include()
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("230.0.0.100-230.0.0.250") };
+        serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
 
         // Create Server
         await using var server = TestHelper.CreateServer(serverOptions);
@@ -22,10 +22,10 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client =
             new VpnHoodClient(TestHelper.CreatePacketCapture(), Guid.NewGuid(), token, new ClientOptions
             {
-                PacketCaptureIncludeIpRanges = new[]
-                {
+                PacketCaptureIncludeIpRanges =
+                [
                     IpRange.Parse("230.0.0.0-230.0.0.200")
-                }
+                ]
             });
 
         await client.Connect();
@@ -44,7 +44,7 @@ public class ServerNetFilterConfigTest : TestBase
     public async Task PacketCapture_Exclude()
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100-230.0.0.250") };
+        serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
 
         // Create Server
         await using var server = TestHelper.CreateServer(serverOptions);
@@ -54,10 +54,10 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client =
             new VpnHoodClient(TestHelper.CreatePacketCapture(), Guid.NewGuid(), token, new ClientOptions
             {
-                PacketCaptureIncludeIpRanges = new[]
-                {
+                PacketCaptureIncludeIpRanges =
+                [
                     IpRange.Parse("230.0.0.0-230.0.0.200")
-                }
+                ]
             });
 
         await client.Connect();
@@ -78,8 +78,8 @@ public class ServerNetFilterConfigTest : TestBase
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.NetFilterOptions.IncludeLocalNetwork = false;
-        serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("000.0.0.000 - 230.0.0.220") };
-        serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100 - 230.0.0.250") };
+        serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = [IpRange.Parse("000.0.0.000 - 230.0.0.220")];
+        serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = [IpRange.Parse("230.0.0.100 - 230.0.0.250")];
 
         // Create Server
         await using var server = TestHelper.CreateServer(serverOptions);
@@ -105,8 +105,8 @@ public class ServerNetFilterConfigTest : TestBase
     public async Task IpRange_Include_Exclude()
     {
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
-        serverOptions.NetFilterOptions.IncludeIpRanges = new[] { IpRange.Parse("000.0.0.000 - 230.0.0.220") };
-        serverOptions.NetFilterOptions.ExcludeIpRanges = new[] { IpRange.Parse("230.0.0.100 - 230.0.0.250") };
+        serverOptions.NetFilterOptions.IncludeIpRanges = [IpRange.Parse("000.0.0.000 - 230.0.0.220")];
+        serverOptions.NetFilterOptions.ExcludeIpRanges = [IpRange.Parse("230.0.0.100 - 230.0.0.250")];
 
         // Create Server
         await using var server = TestHelper.CreateServer(serverOptions);

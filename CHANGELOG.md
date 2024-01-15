@@ -10,6 +10,7 @@
 * Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
 ### Server
+* Update: Move some File Access Manager options from gen commmand to config
 * Update: Return 401 instead of 400 for invalid request
 * Update: Use OS encryption for TLS
 * Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported

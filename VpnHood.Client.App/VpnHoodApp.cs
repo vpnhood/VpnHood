@@ -634,7 +634,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
         // use TunnelMyCountry
         if (!UserSettings.TunnelClientCountry)
-            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, new[] { _lastCountryIpGroup.IpGroupId }) : null;
+            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, [_lastCountryIpGroup.IpGroupId]) : null;
 
         // use advanced options
         return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);

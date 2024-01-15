@@ -1,7 +1,7 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir, 
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
-	[switch]$noapk)
+	[switch]$apk)
 
 . "$PSScriptRoot/Common.ps1"
 
@@ -41,7 +41,7 @@ $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev
 $appIconXmlDoc.save($appIconXml);
 
 # apk
-if ($noapk -eq $false)
+if ($apk)
 {
 	Write-Host;
 	Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;

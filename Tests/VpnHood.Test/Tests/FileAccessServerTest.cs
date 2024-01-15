@@ -11,6 +11,22 @@ namespace VpnHood.Test.Tests;
 public class FileAccessManagerTest : TestBase
 {
     [TestMethod]
+    public async Task Create_access_token_with_valid_domain()
+    {
+        var options = TestHelper.CreateFileAccessManagerOptions();
+        options.IsValidHostName = true;
+
+        var fileAccessManager = TestHelper.CreateFileAccessManager(options);
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        await using var server = TestHelper.CreateServer(testAccessManager);
+
+        var accessItem = fileAccessManager.AccessItem_Create();
+        Assert.AreEqual(accessItem.Token.ServerToken.HostPort, fileAccessManager.ServerConfig.TcpEndPointsValue.First().Port);
+        Assert.AreEqual(accessItem.Token.ServerToken.IsValidHostName, fileAccessManager.ServerConfig.IsValidHostName);
+        Assert.IsNull(accessItem.Token.ServerToken.CertificateHash);
+    }
+
+    [TestMethod]
     public void GetSslCertificateData()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());

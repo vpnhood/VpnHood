@@ -143,8 +143,7 @@ public class DiagnoseUtil
         //About the dns message:http://www.ietf.org/rfc/rfc1035.txt
 
         //Write message header.
-        ms.Write(new byte[]
-        {
+        ms.Write([
             (byte) rnd.Next(0, 0xFF), (byte) rnd.Next(0, 0xFF),
             0x01,
             0x00,
@@ -152,7 +151,7 @@ public class DiagnoseUtil
             0x00, 0x00,
             0x00, 0x00,
             0x00, 0x00
-        }, 0, 12);
+        ], 0, 12);
 
         //Write the host to query.
         foreach (var block in host.Split('.'))

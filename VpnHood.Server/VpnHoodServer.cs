@@ -145,6 +145,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
+            SessionManager.ServerTokenUrl = serverConfig.ServerTokenUrl;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             ServerUtil.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
@@ -215,20 +216,26 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         var serverConfig = await ReadConfigImpl(serverInfo);
         serverConfig.SessionOptions.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
         serverConfig.ApplyDefaults();
-        VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}",
-            JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true }));
+        VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
 
         if (_config != null)
         {
             _config.ConfigCode = serverConfig.ConfigCode;
             serverConfig.Merge(_config);
             VhLogger.Instance.LogWarning("Remote configuration has been overwritten by the local settings.");
-            VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}",
-                JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true }));
+            VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
         }
 
         // override defaults
         return serverConfig;
+    }
+
+    private static string GetServerConfigReport(ServerConfig serverConfig)
+    {
+        var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
+        return VhLogger.IsAnonymousMode
+            ? VhUtil.RedactJsonValue(json, [nameof(ServerConfig.ServerTokenUrl), nameof(ServerConfig.ServerSecret)])
+            : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
     }
 
     private async Task<ServerConfig> ReadConfigImpl(ServerInfo serverInfo)

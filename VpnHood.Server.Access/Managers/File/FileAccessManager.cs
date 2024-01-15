@@ -19,7 +19,7 @@ public class FileAccessManager : IAccessManager
     private const string FileExtToken = ".token";
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
-    public ServerConfig ServerConfig { get; }
+    public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
     public FileAccessManagerSessionController SessionController { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
@@ -82,7 +82,7 @@ public class FileAccessManager : IAccessManager
         }
         ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
 
-        return Task.FromResult(ServerConfig);
+        return Task.FromResult((ServerConfig)ServerConfig);
     }
 
     public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
@@ -100,7 +100,7 @@ public class FileAccessManager : IAccessManager
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
         // set endpoints
-        ret.TcpEndPoints = new[] { sessionRequestEx.HostEndPoint };
+        ret.TcpEndPoints = [sessionRequestEx.HostEndPoint];
         ret.UdpEndPoints = ServerConfig.UdpEndPointsValue
             .Where(x => x.AddressFamily == sessionRequestEx.HostEndPoint.AddressFamily)
             .Select(x => new IPEndPoint(sessionRequestEx.HostEndPoint.Address, x.Port))
@@ -226,13 +226,11 @@ public class FileAccessManager : IAccessManager
         return files.Length;
     }
 
-    public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
+    public AccessItem AccessItem_Create(
         int maxClientCount = 1,
         string? tokenName = null,
         int maxTrafficByteCount = 0,
-        DateTime? expirationTime = null,
-        bool isValidHostName = false,
-        int hostPort = 443)
+        DateTime? expirationTime = null)
     {
         // generate key
         var aes = Aes.Create();
@@ -254,15 +252,14 @@ public class FileAccessManager : IAccessManager
                 ServerToken = new ServerToken
                 {
                     CertificateHash = DefaultCert.GetCertHash(),
-                    HostPort = hostPort,
-                    HostEndPoints = publicEndPoints,
+                    HostPort = ServerConfig.HostPort ?? ServerConfig.PublicEndPoints?.FirstOrDefault()?.Port ?? 443,
+                    HostEndPoints = ServerConfig.PublicEndPoints,
                     HostName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
-                    IsValidHostName = false,
+                    IsValidHostName = ServerConfig.UseDomain,
                     Secret = ServerConfig.ServerSecret,
                     Url = null,
                     CreatedTime = DateTime.UtcNow
                 }
-
             }
         };
 
@@ -366,7 +363,7 @@ public class FileAccessManager : IAccessManager
         public long MaxTraffic { get; set; }
         public Token Token { get; set; } = null!;
 
-        [JsonIgnore] 
+        [JsonIgnore]
         public AccessUsage AccessUsage { get; set; } = new();
     }
 

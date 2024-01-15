@@ -16,7 +16,7 @@ public class UdpEchoServer
         _udpClient = new UdpClient(serverEp);
        
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            _udpClient.Client.IOControl(-1744830452, new byte[] { 0 }, new byte[] { 0 });
+            _udpClient.Client.IOControl(-1744830452, [0], [0]);
 
     }
 

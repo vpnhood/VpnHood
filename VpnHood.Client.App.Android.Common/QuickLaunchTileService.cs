@@ -13,7 +13,7 @@ namespace VpnHood.Client.App.Droid.Common;
 [Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
-[IntentFilter(new[] { ActionQsTile })]
+[IntentFilter([ActionQsTile])]
 public class QuickLaunchTileService : TileService
 {
     private const string IconResourceName = "@mipmap/quick_launch_tile";

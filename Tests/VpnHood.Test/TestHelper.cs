@@ -241,9 +241,9 @@ internal static class TestHelper
         var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var options = new FileAccessManagerOptions
         {
+            PublicEndPoints = [tcpEndPoint],
             TcpEndPoints = [tcpEndPoint],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
-            PublicEndPoints = [tcpEndPoint],
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

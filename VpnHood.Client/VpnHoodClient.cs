@@ -78,6 +78,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool DropUdpPackets { get; set; }
     public ClientStat Stat { get; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
+    public string? ServerTokenUrl { get; private set; }
 
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
@@ -106,27 +107,30 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         _useUdpChannel = options.UseUdpChannel;
-        Token = token ?? throw new ArgumentNullException(nameof(token));
-        Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
-        UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
+        Token = token;
+        Version = options.Version;
+        UserAgent = options.UserAgent;
         ProtocolVersion = 4;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
+        ServerTokenUrl = token.ServerToken.Url;
+        
+        // NAT
         Nat = new Nat(true);
+
+        // Tunnel
+        Tunnel = new Tunnel();
+        Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+        
+        // create proxy host
+        _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // init packetCapture cancellation
         packetCapture.OnStopped += PacketCapture_OnStopped;
         packetCapture.OnPacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
-
-        // create tunnel
-        Tunnel = new Tunnel();
-        Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-
-        // create proxy host
-        _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -607,6 +611,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ServerVersion: {sessionResponse.ServerVersion}, " +
                 $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
+
+            // update server token
+            ServerTokenUrl = sessionResponse.ServerTokenUrl;
 
             // usage tracker
             if (_allowAnonymousTracker)

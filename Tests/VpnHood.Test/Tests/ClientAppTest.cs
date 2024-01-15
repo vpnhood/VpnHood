@@ -458,17 +458,27 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public async Task update_server_token_from_server()
+    public async Task update_server_token_url_from_server()
     {
-        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        //todo
-
-        // create server1
+        // create Access Manager and token
         using var fileAccessManager = TestHelper.CreateFileAccessManager();
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server1 = TestHelper.CreateServer(testAccessManager);
-        var token1 = TestHelper.CreateAccessToken(server1);
-        throw new NotImplementedException();
+        var token = TestHelper.CreateAccessToken(fileAccessManager);
+
+        // Update ServerTokenUrl after token creation
+        const string newTokenUrl = "http://127.0.0.100:6000";
+        fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+
+        // create server and app
+        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var app = TestHelper.CreateClientApp();
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // wait for connect
+        await app.Connect(clientProfile1.ClientProfileId);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
+
+        Assert.AreEqual(newTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
     }
 
     [TestMethod]

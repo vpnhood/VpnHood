@@ -22,7 +22,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
-    private const string FolderNameProfileStore = "profiles";
+    private const string FolderNameProfiles = "profiles";
     private static VpnHoodApp? _instance;
     private readonly IAppProvider _appProvider;
     private readonly SocketFactory? _socketFactory;
@@ -89,7 +89,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.OnSaved += Settings_OnSaved;
-        ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfileStore));
+        ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
@@ -172,13 +172,29 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     private void CheckConnectionStateChanged()
     {
+        // check changed state
         var connectionState = ConnectionState;
         if (connectionState == _lastConnectionState)
             return;
-
-        // Check new version after connection
         _lastConnectionState = connectionState;
-        _ = VersionCheck();
+
+        if (connectionState == AppConnectionState.Connected)
+        {
+            // Update ServerTokenUrl if ut has changed
+            var clientProfile = ClientProfileService.FindByTokenId(Client?.Token.TokenId ?? string.Empty);
+            if (clientProfile != null && Client != null && Client.ServerTokenUrl != clientProfile.Token.ServerToken.Url)
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.Session,
+                    "Updating ServerToken Url. ServerTokenUrl: {ServerTokenUrl}",
+                    VhLogger.FormatHostName(Client.ServerTokenUrl));
+
+                clientProfile.Token.ServerToken.Url = Client.ServerTokenUrl;
+                ClientProfileService.Update(clientProfile);
+            }
+
+            // Check new version after connection
+            _ = VersionCheck();
+        }
 
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -634,7 +650,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
         // use TunnelMyCountry
         if (!UserSettings.TunnelClientCountry)
-            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, new[] { _lastCountryIpGroup.IpGroupId }) : null;
+            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, [_lastCountryIpGroup.IpGroupId]) : null;
 
         // use advanced options
         return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);

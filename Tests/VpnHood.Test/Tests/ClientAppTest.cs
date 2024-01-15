@@ -30,7 +30,7 @@ public class ClientAppTest : TestBase
             Secret = randomId.ToByteArray(),
             ServerToken = new ServerToken
             {
-                HostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") },
+                HostEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
                 CertificateHash = randomId.ToByteArray(),
                 HostName = randomId.ToString(),
                 HostPort = 443,
@@ -197,7 +197,7 @@ public class ClientAppTest : TestBase
         // create server
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        token.ServerToken.HostEndPoints = new[] { IPEndPoint.Parse("10.10.10.99:443") };
+        token.ServerToken.HostEndPoints = [IPEndPoint.Parse("10.10.10.99:443")];
 
         // create app
         await using var app = TestHelper.CreateClientApp();
@@ -273,7 +273,7 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: Test Include ip filter
         app.UserSettings.CustomIpRanges = ipList.ToArray();
-        app.UserSettings.IpGroupFilters = new[] { "custom" };
+        app.UserSettings.IpGroupFilters = ["custom"];
         app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
@@ -458,7 +458,31 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public async Task Get_server_token_from_tokenLink()
+    public async Task update_server_token_url_from_server()
+    {
+        // create Access Manager and token
+        using var fileAccessManager = TestHelper.CreateFileAccessManager();
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        var token = TestHelper.CreateAccessToken(fileAccessManager);
+
+        // Update ServerTokenUrl after token creation
+        const string newTokenUrl = "http://127.0.0.100:6000";
+        fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+
+        // create server and app
+        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var app = TestHelper.CreateClientApp();
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // wait for connect
+        await app.Connect(clientProfile1.ClientProfileId);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
+
+        Assert.AreEqual(newTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+    }
+
+    [TestMethod]
+    public async Task update_server_token_from_server_token_url()
     {
         // create server1
         using var fileAccessManager = TestHelper.CreateFileAccessManager();

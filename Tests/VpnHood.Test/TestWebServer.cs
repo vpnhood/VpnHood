@@ -10,29 +10,31 @@ namespace VpnHood.Test;
 public class TestWebServer : IDisposable
 {
     private readonly WebServer _webServer;
-    public IPEndPoint[] HttpsV4EndPoints { get; } = {
+    public IPEndPoint[] HttpsV4EndPoints { get; } =
+    [
         IPEndPoint.Parse("127.10.1.1:15001"),
         IPEndPoint.Parse("127.10.1.1:15002"),
         IPEndPoint.Parse("127.10.1.1:15003"),
-        IPEndPoint.Parse("127.10.1.1:15004"),
-    };
+        IPEndPoint.Parse("127.10.1.1:15004")
+    ];
 
-    public IPEndPoint[] HttpV4EndPoints { get; } = {
+    public IPEndPoint[] HttpV4EndPoints { get; } =
+    [
         IPEndPoint.Parse("127.10.1.1:15005"),
         IPEndPoint.Parse("127.10.1.1:15006"),
         IPEndPoint.Parse("127.10.1.1:15007"),
-        IPEndPoint.Parse("127.10.1.1:15008"),
-    };
+        IPEndPoint.Parse("127.10.1.1:15008")
+    ];
     
-    public IPEndPoint[] UdpEndPoints { get;  } = 
-    {
+    public IPEndPoint[] UdpEndPoints { get;  } =
+    [
         IPEndPoint.Parse("127.10.1.1:20101"),
         IPEndPoint.Parse("127.10.1.1:20102"),
         IPEndPoint.Parse("127.10.1.1:20103"),
         IPEndPoint.Parse("[::1]:20101"),
         IPEndPoint.Parse("[::1]:20102"),
         IPEndPoint.Parse("[::1]:20103")
-    };
+    ];
 
     public IPEndPoint HttpsV4EndPoint1 => HttpsV4EndPoints[0];
     public IPEndPoint HttpsV4EndPoint2 => HttpsV4EndPoints[1];
@@ -106,7 +108,7 @@ public class TestWebServer : IDisposable
     {
         foreach (var udpClient in UdpClients)
         {
-            udpClient.Client.IOControl(-1744830452, new byte[] { 0 }, new byte[] { 0 });
+            udpClient.Client.IOControl(-1744830452, [0], [0]);
             _ = StartUdpEchoServer(udpClient);
         }
     }

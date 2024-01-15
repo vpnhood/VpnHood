@@ -16,7 +16,7 @@ public class ServerTokenHelper
         {
             try
             {
-                VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...", VhLogger.FormatDns(serverToken.HostName));
+                VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...", VhLogger.FormatHostName(serverToken.HostName));
                 var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName);
                 if (!VhUtil.IsNullOrEmpty(hostEntities.AddressList))
                 {

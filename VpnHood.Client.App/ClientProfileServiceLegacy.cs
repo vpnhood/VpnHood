@@ -7,7 +7,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Client.App;
 
 // deprecated by version 3.2.440 or upper
-internal static class ClientProfileStoreLegacy
+internal static class ClientProfileServiceLegacy
 {
     // ReSharper disable once ClassNeverInstantiated.Local
     // ReSharper disable UnusedAutoPropertyAccessor.Local

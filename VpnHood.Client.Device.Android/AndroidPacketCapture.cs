@@ -19,11 +19,11 @@ namespace VpnHood.Client.Device.Droid;
     Permission = Manifest.Permission.BindVpnService, 
     Exported = true, 
     ForegroundServiceType = Android.Content.PM.ForegroundService.TypeSystemExempted)]
-[IntentFilter(new[] { "android.net.VpnService" })]
+[IntentFilter(["android.net.VpnService"])]
 public class AndroidPacketCapture : VpnService, IPacketCapture
 {
     public const string VpnServiceName = "VhSession";
-    private IPAddress[]? _dnsServers = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
+    private IPAddress[]? _dnsServers = [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4")];
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
     private int _mtu;
@@ -246,7 +246,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         try
         {
             OnPacketReceivedFromInbound?.Invoke(this, 
-                new PacketReceivedEventArgs(new[] { ipPacket }, this));
+                new PacketReceivedEventArgs([ipPacket], this));
         }
         catch (Exception ex)
         {

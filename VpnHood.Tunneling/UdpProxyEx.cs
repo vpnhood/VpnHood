@@ -33,7 +33,7 @@ internal class UdpProxyEx : ITimeoutItem
         // prevent raise exception when there is no listener
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            udpClient.Client.IOControl(-1744830452, new byte[] { 0 }, new byte[] { 0 });
+            udpClient.Client.IOControl(-1744830452, [0], [0]);
         }
 
         _ = Listen();

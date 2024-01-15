@@ -18,7 +18,7 @@ public class ClientProfileService
     public ClientProfileService(string folderPath)
     {
         _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
-        ClientProfileStoreLegacy.Migrate(folderPath, ClientProfilesFilePath);
+        ClientProfileServiceLegacy.Migrate(folderPath, ClientProfilesFilePath);
         _clientProfiles = Load().ToList();
     }
 
@@ -106,7 +106,7 @@ public class ClientProfileService
             return token;
 
         // update token
-        VhLogger.Instance.LogInformation("Trying to get new server token from url. Url: {Url}", VhLogger.FormatDns(token.ServerToken.Url));
+        VhLogger.Instance.LogInformation("Trying to get new server token from url. Url: {Url}", VhLogger.FormatHostName(token.ServerToken.Url));
         try
         {
             using var client = new HttpClient();

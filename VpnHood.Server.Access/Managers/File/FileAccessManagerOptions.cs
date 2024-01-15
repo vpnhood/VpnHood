@@ -12,6 +12,6 @@ public class FileAccessManagerOptions : ServerConfig
 
     public string? SslCertificatesPassword { get; set; }
     public string? ServerTokenUrl { get; set; }
-    public bool UseDomain { get; set; }
     public int? HostPort { get; set; }
+    public bool IsValidHostName { get; set; }
 }

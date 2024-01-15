@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
@@ -12,6 +11,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Tunneling;
+using EmbedIO;
 
 namespace VpnHood.Test.Tests;
 
@@ -21,15 +21,14 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Redirect_Server()
     {
-        var serverEndPoint1 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions1 = new FileAccessManagerOptions { TcpEndPoints = new[] { serverEndPoint1 } };
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
         using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
         await using var server1 = TestHelper.CreateServer(testAccessManager1);
 
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions2 = new FileAccessManagerOptions { TcpEndPoints = new[] { serverEndPoint2 } };
+        var fileAccessManagerOptions2 = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint2] };
         using var fileAccessManager2 =
             TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
@@ -39,7 +38,7 @@ public class ClientServerTest : TestBase
         testAccessManager1.EmbedIoAccessManager.RedirectHostEndPoint = serverEndPoint2;
 
         // Create Client
-        var token1 = TestHelper.CreateAccessToken(fileAccessManager1, new[] { serverEndPoint1 });
+        var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
         await using var client = TestHelper.CreateClient(token1);
         await TestHelper.Test_Https();
 
@@ -52,7 +51,7 @@ public class ClientServerTest : TestBase
         // Create Server
         var serverEp = VhUtil.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        fileAccessManagerOptions.TcpEndPoints = new[] { serverEp };
+        fileAccessManagerOptions.TcpEndPoints = [serverEp];
         using var fileAccessManager = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
         using var testAccessManager = new TestAccessManager(fileAccessManager);
         await using var server = TestHelper.CreateServer(testAccessManager);

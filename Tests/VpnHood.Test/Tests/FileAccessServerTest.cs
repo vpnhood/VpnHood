@@ -15,15 +15,13 @@ public class FileAccessManagerTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         var fileAccessManager = TestHelper.CreateFileAccessManager(storagePath: storagePath);
-        var publicEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") };
 
         // Create accessManager
         using TestEmbedIoAccessManager testHttpAccessManager = new(fileAccessManager);
         var accessManager = new HttpAccessManager(new HttpAccessManagerOptions(testHttpAccessManager.BaseUri, "Bearer xxx"));
 
         // ************
-        // *** TEST ***: default cert must be used when there is no InternalEndPoint
-        fileAccessManager.AccessItem_Create(publicEndPoints);
+        // *** TEST ***: default cert must be used
         var cert1 = new X509Certificate2(accessManager.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
         Assert.AreEqual(cert1.Thumbprint, fileAccessManager.DefaultCert.Thumbprint);
     }
@@ -31,20 +29,23 @@ public class FileAccessManagerTest : TestBase
     [TestMethod]
     public async Task Crud()
     {
-        var hostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:8000") };
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var fileAccessManagerOptions = new FileAccessManagerOptions { TcpEndPoints = new[] { new IPEndPoint(IPAddress.Any, 8000) } };
+        var fileAccessManagerOptions = new FileAccessManagerOptions
+        {
+            TcpEndPoints = [new IPEndPoint(IPAddress.Any, 8000)],
+            PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")]
+        };
         var accessManager1 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
         //add two tokens
-        var accessItem1 = accessManager1.AccessItem_Create(hostEndPoints);
+        var accessItem1 = accessManager1.AccessItem_Create();
         var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
         sessionRequestEx1.ExtraData = "1234";
 
-        var accessItem2 = accessManager1.AccessItem_Create(hostEndPoints);
+        var accessItem2 = accessManager1.AccessItem_Create();
         var sessionRequestEx2 = TestHelper.CreateSessionRequestEx(accessItem2.Token);
 
-        var accessItem3 = accessManager1.AccessItem_Create(hostEndPoints);
+        var accessItem3 = accessManager1.AccessItem_Create();
 
         // ************
         // *** TEST ***: get all tokensId
@@ -92,7 +93,7 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved after reloading
-        accessManager1.AccessItem_Create(hostEndPoints);
+        accessManager1.AccessItem_Create();
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
         accessItems = await accessManager3.AccessItem_LoadAll();
         Assert.AreEqual(3, accessItems.Length);
@@ -105,10 +106,9 @@ public class FileAccessManagerTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         var accessManager1 = TestHelper.CreateFileAccessManager(storagePath: storagePath);
-        var hostEndPoints = new[] { IPEndPoint.Parse("1.1.1.1:443") };
 
         //add token
-        var accessItem1 = accessManager1.AccessItem_Create(hostEndPoints);
+        var accessItem1 = accessManager1.AccessItem_Create();
         var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
 
         // create a session
@@ -117,13 +117,13 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: add sent and receive bytes
-        var response = accessManager1.Session_AddUsage(sessionResponse.SessionId, 
+        var response = accessManager1.Session_AddUsage(sessionResponse.SessionId,
             new Traffic { Sent = 20, Received = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(20, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
 
-        response = accessManager1.Session_AddUsage(sessionResponse.SessionId, 
+        response = accessManager1.Session_AddUsage(sessionResponse.SessionId,
             new Traffic { Sent = 20, Received = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
@@ -136,8 +136,8 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
 
         // close session
-        response = accessManager1.Session_Close(sessionResponse.SessionId, 
-            new Traffic {Sent = 20, Received = 10 }).Result;
+        response = accessManager1.Session_Close(sessionResponse.SessionId,
+            new Traffic { Sent = 20, Received = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
@@ -150,7 +150,7 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
 
         // check restore
-        var accessManager2 = TestHelper.CreateFileAccessManager(storagePath : storagePath);
+        var accessManager2 = TestHelper.CreateFileAccessManager(storagePath: storagePath);
         response = accessManager2.Session_Create(sessionRequestEx1).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);

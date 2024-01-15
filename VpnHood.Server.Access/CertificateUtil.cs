@@ -9,11 +9,11 @@ public static class CertificateUtil
     {
         var random = new Random();
         string[] consonants =
-        {
+        [
             "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w",
             "x"
-        };
-        string[] vowels = {"a", "e", "i", "o", "u", "ae", "y"};
+        ];
+        string[] vowels = ["a", "e", "i", "o", "u", "ae", "y"];
         var name = "";
         for (var i = 0; i < length; i += 2)
         {

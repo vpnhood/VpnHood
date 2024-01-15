@@ -232,13 +232,15 @@ public class FileAccessManager : IAccessManager
         int maxTrafficByteCount = 0,
         DateTime? expirationTime = null)
     {
-        if (!ServerConfig.IsValidHostName && VhUtil.IsNullOrEmpty(ServerConfig.PublicEndPoints))
-            throw new InvalidOperationException("PublicEndPoints or UseDomain must be configured.");
-
         // generate key
         var aes = Aes.Create();
         aes.KeySize = 128;
         aes.GenerateKey();
+
+        // PublicEndPoints
+        var publicEndPoints = ServerConfig.PublicEndPoints ?? ServerConfig.TcpEndPointsValue;
+        if (publicEndPoints.Any(x=>x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+            throw new Exception("PublicEndPoints must has not been configured.");
 
         // create AccessItem
         var accessItem = new AccessItem
@@ -255,8 +257,8 @@ public class FileAccessManager : IAccessManager
                 ServerToken = new ServerToken
                 {
                     CertificateHash = ServerConfig.IsValidHostName ? null : DefaultCert.GetCertHash(),
-                    HostPort = ServerConfig.HostPort ?? ServerConfig.PublicEndPoints?.FirstOrDefault()?.Port ?? 443,
-                    HostEndPoints = ServerConfig.PublicEndPoints,
+                    HostPort = ServerConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
+                    HostEndPoints = publicEndPoints,
                     HostName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
                     IsValidHostName = ServerConfig.IsValidHostName,
                     Secret = ServerConfig.ServerSecret,

@@ -238,11 +238,10 @@ internal static class TestHelper
 
     public static FileAccessManagerOptions CreateFileAccessManagerOptions()
     {
-        var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var options = new FileAccessManagerOptions
         {
-            PublicEndPoints = [tcpEndPoint],
-            TcpEndPoints = [tcpEndPoint],
+            PublicEndPoints = null, // use TcpEndPoints
+            TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions
             {

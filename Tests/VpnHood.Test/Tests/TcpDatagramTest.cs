@@ -59,7 +59,7 @@ public class TcpDatagramChannelTest : TestBase
         // -------
         // Check sending packet to server
         // ------
-        var testPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), new byte[] { 1, 2, 3 });
+        var testPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
         await clientTunnel.SendPacket(testPacket);
         await VhTestUtil.AssertEqualsWait(testPacket.ToString(), () => lastServerReceivedPacket?.ToString());
         await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.DatagramChannelCount);

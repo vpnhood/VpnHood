@@ -110,7 +110,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
             // Establish a TLS connection
             var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatDns(hostName));
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatHostName(hostName));
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = hostName,

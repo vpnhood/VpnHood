@@ -42,7 +42,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
-        _tcpListeners = new List<TcpListener>();
+        _tcpListeners = [];
         _sessionManager = sessionManager;
         JobRunner.Default.Add(this);
     }
@@ -315,7 +315,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                     return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
                 }
 
-                return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, Convert.FromBase64String(xSecret)), streamId, ReuseClientStream);
+                throw new UnauthorizedAccessException();
             }
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -578,6 +578,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
+            ServerTokenUrl = _sessionManager.ServerTokenUrl,
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
             GaMeasurementId = sessionResponse.GaMeasurementId,

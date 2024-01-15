@@ -468,7 +468,7 @@ public class ClientAppTest : TestBase
         using var testAccessManager = new TestAccessManager(fileAccessManager);
         await using var server1 = TestHelper.CreateServer(testAccessManager);
         var token1 = TestHelper.CreateAccessToken(server1);
-
+        throw new NotImplementedException();
     }
 
     [TestMethod]

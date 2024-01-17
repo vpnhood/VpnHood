@@ -7,7 +7,7 @@ using VpnHood.Common.Converters;
 namespace VpnHood.Common.TokenLegacy;
 
 
-[Obsolete("deprecated in version 3.3.450 or upper")]
+[Obsolete("deprecated in version 3.3.451 or upper")]
 public class TokenV3
 {
     [JsonPropertyName("name")]

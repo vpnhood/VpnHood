@@ -53,7 +53,7 @@ public class FileAccessManagerCommand
 
 #pragma warning disable CS0618 // Type or member is obsolete
         Console.WriteLine();
-        Console.WriteLine("AccessKey (OldVersion Version 3.3.450 or lower):");
+        Console.WriteLine("AccessKey (OldVersion 3.3.449 or lower):");
         Console.WriteLine();
         Console.WriteLine(TokenV3.FromToken(accessItem.Token).ToAccessKey());
         Console.WriteLine("---");

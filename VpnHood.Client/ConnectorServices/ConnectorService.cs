@@ -57,7 +57,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 450 and upper
+        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 451 and upper
         var version = ServerProtocolVersion >= 5 ? 3 : 2;
         var useBinaryStream = version >= 3 && !string.IsNullOrEmpty(_apiKey);
 
@@ -74,7 +74,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        // deprecated legacy by version >= 450
+        // deprecated legacy by version >= 451
 #pragma warning disable CS0618 // Type or member is obsolete
         if (version == 2)
         {

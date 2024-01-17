@@ -5,7 +5,7 @@ using VpnHood.Common.TokenLegacy;
 
 namespace VpnHood.Server.Access.Managers.File;
 
-[Obsolete("deprecated in version 3.3.450 or upper")]
+[Obsolete("deprecated in version 3.3.451 or upper")]
 internal class FileAccessManagerLegacyV3
 {
     public class AccessItemV3

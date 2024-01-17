@@ -1,4 +1,4 @@
-# v3.3.451
+# v3.3.452
 ### Client
 * Update: New Access Token format
 * Update: Use OS encryption for TLS

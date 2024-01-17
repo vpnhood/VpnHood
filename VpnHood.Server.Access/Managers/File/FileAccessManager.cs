@@ -263,7 +263,7 @@ public class FileAccessManager : IAccessManager
                     IsValidHostName = ServerConfig.IsValidHostName,
                     Secret = ServerConfig.ServerSecret,
                     Url = null,
-                    CreatedTime = DateTime.UtcNow
+                    CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
                 }
             }
         };

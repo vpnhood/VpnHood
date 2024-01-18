@@ -91,11 +91,13 @@ public static class VhLogger
         return id?.ToString() ?? "<null>";
     }
 
-    public static string FormatDns(string dnsName)
+    public static string FormatHostName(string? dnsName)
     {
+        if (dnsName == null) return "<null>";
+
         return IPEndPointConverter.TryParse(dnsName, out var ipEndPoint) 
             ? Format(ipEndPoint) 
-            : FormatId(dnsName);
+            : VhUtil.RedactHostName(dnsName);
     }
 
     public static string FormatIpPacket(string ipPacketText)

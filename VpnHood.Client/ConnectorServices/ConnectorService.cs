@@ -2,6 +2,9 @@
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Collections.Concurrent;
+using System.Net.Sockets;
+using System.Text;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -9,15 +12,12 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
 using VpnHood.Tunneling.ClientStreams;
-using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling.Messaging;
 using VpnHood.Common.Collections;
 using VpnHood.Tunneling.Channels.Streams;
-using System.Text;
 using VpnHood.Tunneling.Utils;
-using System.Net.Sockets;
 
 namespace VpnHood.Client.ConnectorServices;
 
@@ -32,10 +32,10 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public ConnectorEndPointInfo? EndPointInfo { get; set; }
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; }
-    public bool UseBinaryStream { get; private set; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
+    public BinaryStreamType BinaryStreamType { get; set; } = BinaryStreamType.Standard;  //todo temporary
 
     public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
@@ -51,39 +51,49 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, TimeSpan tcpReuseTimeout, byte[]? serverSecret)
     {
         ServerProtocolVersion = serverProtocolVersion;
-        UseBinaryStream = serverProtocolVersion >= 4;
         RequestTimeout = tcpRequestTimeout;
         TcpReuseTimeout = tcpReuseTimeout;
-        _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : "";
+        _apiKey = serverSecret != null ? HttpUtil.GetApiKey(serverSecret, TunnelDefaults.HttpPassCheck) : string.Empty;
     }
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        // compatibility
-        //todo must be deprecated from >= 416
-        if (!UseBinaryStream)
-            return new TcpClientStream(tcpClient, sslStream, streamId);
-
-        var streamSecret = VhUtil.GenerateKey(128);
+        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 451 and upper
+        var binaryStreamType = BinaryStreamType;
+        const bool useBuffer = true;
+        var version = ServerProtocolVersion < 5 ? 2 : 3;
+        if (version <= 2)
+            binaryStreamType = string.IsNullOrEmpty(_apiKey) ? BinaryStreamType.None : BinaryStreamType.Custom;
 
         // write HTTP request
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
             $"Authorization: ApiKey {_apiKey}\r\n" +
-            $"X-Version: 2\r\n" +
+            $"X-Version: {version}\r\n" +
             $"X-Secret: {Convert.ToBase64String(streamSecret)}\r\n" +
+            $"X-BinaryStream: {binaryStreamType}\r\n" +
+            $"X-Buffered: {useBuffer}\r\n" +
             "\r\n";
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        if (string.IsNullOrEmpty(_apiKey))
-            return new TcpClientStream(tcpClient, sslStream, streamId);
+        switch (binaryStreamType)
+        {
+            case BinaryStreamType.None:
+                return new TcpClientStream(tcpClient, sslStream, streamId);
 
-        // dispose Ssl
-        await sslStream.DisposeAsync();
-        return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
+            case BinaryStreamType.Custom:
+                await sslStream.DisposeAsync();
+                return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, streamSecret, useBuffer), streamId, ReuseStreamClient);
+
+            case BinaryStreamType.Standard:
+                return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
+
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
     private async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)
@@ -99,11 +109,12 @@ internal class ConnectorService : IAsyncDisposable, IJob
         {
             // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
+
             await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
             // Establish a TLS connection
             var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatDns(hostName));
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatHostName(hostName));
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
                 TargetHost = hostName,
@@ -192,7 +203,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
         var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken);
 
         // log the response
-        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", 
+        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.",
             ret.Response.ErrorCode);
 
         lock (Stat) Stat.RequestCount++;

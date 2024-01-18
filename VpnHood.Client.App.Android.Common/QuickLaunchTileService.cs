@@ -13,7 +13,7 @@ namespace VpnHood.Client.App.Droid.Common;
 [Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true, Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
-[IntentFilter(new[] { ActionQsTile })]
+[IntentFilter([ActionQsTile])]
 public class QuickLaunchTileService : TileService
 {
     private const string IconResourceName = "@mipmap/quick_launch_tile";
@@ -98,18 +98,18 @@ public class QuickLaunchTileService : TileService
         if (OperatingSystem.IsAndroidVersionAtLeast(30))
             QsTile.StateDescription = VpnHoodApp.Instance.ConnectionState.ToString();
 
-        var activeProfileName = VpnHoodApp.Instance.GetActiveClientProfile()?.Name;
-        var defaultProfileName = VpnHoodApp.Instance.GetDefaultClientProfile()?.Name;
+        var activeProfileInfo = VpnHoodApp.Instance.GetActiveClientProfile()?.ToInfo();
+        var defaultProfileInfo = VpnHoodApp.Instance.GetDefaultClientProfile()?.ToInfo();
 
-        if (!string.IsNullOrEmpty(activeProfileName))
+        if (activeProfileInfo!=null)
         {
-            QsTile.Label = activeProfileName;
+            QsTile.Label = activeProfileInfo.ClientProfileName;
             QsTile.State = VpnHoodApp.Instance.ConnectionState ==
                 AppConnectionState.Connected ? TileState.Active : TileState.Unavailable;
         }
-        else if (!string.IsNullOrEmpty(defaultProfileName))
+        else if (defaultProfileInfo != null)
         {
-            QsTile.Label = defaultProfileName;
+            QsTile.Label = defaultProfileInfo.ClientProfileName;
             QsTile.State = TileState.Inactive;
         }
         else
@@ -139,7 +139,7 @@ public class QuickLaunchTileService : TileService
 
     public static Task<int> RequestAddTile(Context context)
     {
-        var task = new TaskCompletionSource<int>();
+        var taskCompletionSource = new TaskCompletionSource<int>();
 
         // get statusBarManager
         if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager)
@@ -165,8 +165,8 @@ public class QuickLaunchTileService : TileService
             new ComponentName(context, Java.Lang.Class.FromType(typeof(QuickLaunchTileService))),
             appName, icon,
             context.MainExecutor!,
-            new AddTileServiceHandler(task));
+            new AddTileServiceHandler(taskCompletionSource));
 
-        return task.Task;
+        return taskCompletionSource.Task;
     }
 }

@@ -123,7 +123,7 @@ public class VpnHoodAppWebServer : IDisposable
                 .WithMode(HttpListenerMode.EmbedIO))
             .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
-                .WithController<ClientApiController>()
+                .WithController<ClientAppApiController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))
             .HandleHttpException(ExceptionHandler.DataResponseForHttpException);

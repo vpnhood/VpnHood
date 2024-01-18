@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
@@ -21,16 +22,25 @@ public class ClientAppTest : TestBase
     private Token CreateToken()
     {
         var randomId = Guid.NewGuid();
-        return new Token(randomId.ToByteArray(),
-            randomId.ToByteArray(),
-            randomId.ToString())
+        var token = new Token
         {
             Name = "Default Test Server",
-            SupportId = _lastSupportId++,
-            HostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") },
-            HostPort = 443,
-            TokenId = randomId
+            SupportId = _lastSupportId++.ToString(),
+            TokenId = randomId.ToString(),
+            Secret = randomId.ToByteArray(),
+            ServerToken = new ServerToken
+            {
+                HostEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
+                CertificateHash = randomId.ToByteArray(),
+                HostName = randomId.ToString(),
+                HostPort = 443,
+                Secret = randomId.ToByteArray(),
+                CreatedTime = DateTime.UtcNow,
+                IsValidHostName = false,
+            }
         };
+
+        return token;
     }
 
     [TestMethod]
@@ -40,7 +50,7 @@ public class ClientAppTest : TestBase
         // *** TEST ***: 
         await using var app1 = TestHelper.CreateClientApp();
         var ipGroups = await app1.GetIpGroups();
-        Assert.IsFalse(ipGroups.Any(x=>x.IpGroupId=="us"), 
+        Assert.IsFalse(ipGroups.Any(x => x.IpGroupId == "us"),
             "Countries should not be extracted in test due to performance.");
         await app1.DisposeAsync();
 
@@ -63,113 +73,52 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
-        var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-        Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token1.TokenId),
-            "ClientProfile is not added");
-        Assert.AreEqual(token1.TokenId, clientProfile1.TokenId,
-            "invalid tokenId has been assigned to clientProfile");
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
+        Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");
 
         // ************
         // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
         var token2 = CreateToken();
-        app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
-        Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token2.TokenId),
-            "ClientProfile is not added");
+        app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
+        Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
 
         // ************
         // *** TEST ***: AddAccessKey by same accessKey should just update token
+        var profileCount = app.ClientProfileService.List().Length;
         token1.Name = "Token 1000";
-        app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-        Assert.AreEqual(token1.Name, app.ClientProfileStore.GetToken(token1.TokenId).Name);
+        app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        Assert.AreEqual(token1.Name, app.ClientProfileService.GetToken(token1.TokenId).Name);
+        Assert.AreEqual(profileCount, app.ClientProfileService.List().Length);
 
         // ************
-        // *** TEST ***: SetClientProfile throw KeyNotFoundException exception if tokenId does not exist
-        try
+        // *** TEST ***: Update throw NotExistsException exception if tokenId does not exist
+        Assert.ThrowsException<NotExistsException>(() =>
         {
-            app.ClientProfileStore.SetClientProfile(new ClientProfile
+            // ReSharper disable once AccessToDisposedClosure
+            app.ClientProfileService.Update(new ClientProfile
             {
-                Name = "Hi",
+                Token = CreateToken(),
+                ClientProfileName = "Hi",
                 ClientProfileId = Guid.NewGuid(),
-                TokenId = Guid.NewGuid()
             });
-            Assert.Fail("KeyNotFoundException exception was expected!");
-        }
-        catch (KeyNotFoundException)
-        {
-        }
+
+        });
 
         // ************
-        // *** TEST ***: SetClientProfile should update the old node if ClientProfileId already exists
-        app.ClientProfileStore.SetClientProfile(new ClientProfile
+        // *** TEST ***: Update should update the old node if ClientProfileId already exists
+        app.ClientProfileService.Update(new ClientProfile
         {
-            Name = "Hi2",
+            ClientProfileName = "Hi2",
             ClientProfileId = clientProfile1.ClientProfileId,
-            TokenId = clientProfile1.TokenId
+            Token = clientProfile1.Token
         });
-        Assert.AreEqual("Hi2",
-            app.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId)
-                .Name);
+        Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
 
         // ************
-        // *** TEST ***: SetClientProfile should add new ClientProfile if ClientProfileId is new even with used tokenId
-        var clientProfiles = app.ClientProfileStore.ClientProfiles;
-        var clientProfileId3 = Guid.NewGuid();
-        app.ClientProfileStore.SetClientProfile(new ClientProfile
-        {
-            Name = "Test-03",
-            ClientProfileId = clientProfileId3,
-            TokenId = clientProfile1.TokenId
-        });
-        Assert.AreEqual(clientProfiles.Length + 1, app.ClientProfileStore.ClientProfiles.Length,
-            "ClientProfile has not been added!");
-
-        // ************
-        // *** TEST ***: RemoveClientProfile should not remove token when other clientProfile still use the token
-        app.ClientProfileStore.RemoveClientProfile(clientProfileId3);
-        Assert.AreEqual(clientProfiles.Length, app.ClientProfileStore.ClientProfiles.Length,
-            "ClientProfile has not been removed!");
-        Assert.IsNotNull(app.ClientProfileStore.GetToken(clientProfile1.TokenId));
-
-        // ************
-        // *** TEST ***: RemoveClientProfile should remove token when no clientProfile using it
-        clientProfiles = app.ClientProfileStore.ClientProfiles;
-        app.ClientProfileStore.RemoveClientProfile(clientProfile1.ClientProfileId);
-        Assert.AreEqual(clientProfiles.Length - 1, app.ClientProfileStore.ClientProfiles.Length,
-            "ClientProfile has not been removed!");
-        try
-        {
-            app.ClientProfileStore.GetToken(clientProfile1.TokenId);
-            Assert.Fail("KeyNotFoundException exception was expected!");
-        }
-        catch (KeyNotFoundException)
-        {
-        }
-
-        // ************
-        // *** TEST ***: ClientProfileItems
-        Assert.AreEqual(app.ClientProfileStore.ClientProfiles.Length,
-            app.ClientProfileStore.ClientProfileItems.Length, "ClientProfileItems has invalid length!");
-    }
-
-    [TestMethod]
-    public async Task Token_secret_should_not_be_extracted()
-    {
-        await using var app = TestHelper.CreateClientApp();
-
-        // ************
-        // *** TEST ***: AddClientProfile should not return then secret
-        var token = CreateToken();
-        var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
-
-        // ************
-        // *** TEST ***: GetToken should not return then secret
-        var token2 = app.ClientProfileStore.GetToken(clientProfile.TokenId);
-        Assert.IsTrue(VhUtil.IsNullOrEmpty(token2.Secret), "token should not have secret");
-
-        // ************
-        // *** TEST ***: ClientProfileItems should not return then secret
-        var clientProfiles = app.ClientProfileStore.ClientProfileItems;
-        Assert.IsTrue(clientProfiles.All(x => VhUtil.IsNullOrEmpty(x.Token.Secret)), "token should not have secret");
+        // *** TEST ***: RemoveClientProfile
+        app.ClientProfileService.Remove(clientProfile1.ClientProfileId);
+        Assert.IsNull(app.ClientProfileService.FindById(clientProfile1.ClientProfileId), "ClientProfile has not been removed!");
     }
 
     [TestMethod]
@@ -178,25 +127,23 @@ public class ClientAppTest : TestBase
         await using var app = TestHelper.CreateClientApp();
 
         var token1 = CreateToken();
-        var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
 
         var token2 = CreateToken();
-        var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
+        var clientProfile2 = app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
 
-        var clientProfiles = app.ClientProfileStore.ClientProfiles;
+        var clientProfiles = app.ClientProfileService.List();
         await app.DisposeAsync();
 
         var appOptions = TestHelper.CreateClientAppOptions();
         appOptions.AppDataFolderPath = app.AppDataFolderPath;
+
         await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
-        Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length,
-            "ClientProfiles count are not same!");
-        Assert.IsNotNull(
-            app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId));
-        Assert.IsNotNull(
-            app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile2.ClientProfileId));
-        Assert.IsNotNull(app2.ClientProfileStore.GetToken(token1.TokenId));
-        Assert.IsNotNull(app2.ClientProfileStore.GetToken(token2.TokenId));
+        Assert.AreEqual(clientProfiles.Length, app2.ClientProfileService.List().Length, "ClientProfiles count are not same!");
+        Assert.IsNotNull(app2.ClientProfileService.FindById(clientProfile1.ClientProfileId));
+        Assert.IsNotNull(app2.ClientProfileService.FindById(clientProfile2.ClientProfileId));
+        Assert.IsNotNull(app2.ClientProfileService.GetToken(token1.TokenId));
+        Assert.IsNotNull(app2.ClientProfileService.GetToken(token2.TokenId));
     }
 
     [TestMethod]
@@ -208,7 +155,7 @@ public class ClientAppTest : TestBase
 
         // create app
         await using var app = TestHelper.CreateClientApp();
-        var clientProfile1 = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************
         // Test: With diagnose
@@ -250,11 +197,11 @@ public class ClientAppTest : TestBase
         // create server
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        token.HostEndPoints = new[] { IPEndPoint.Parse("10.10.10.99:443") };
+        token.ServerToken.HostEndPoints = [IPEndPoint.Parse("10.10.10.99:443")];
 
         // create app
         await using var app = TestHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         try
         {
@@ -312,7 +259,7 @@ public class ClientAppTest : TestBase
         };
 
         await using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
-        var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var ipList = (await Dns.GetHostAddressesAsync(TestHelper.TEST_HttpsUri1.Host))
             .Select(x => new IpRange(x))
             .Concat(new[]
@@ -326,7 +273,7 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: Test Include ip filter
         app.UserSettings.CustomIpRanges = ipList.ToArray();
-        app.UserSettings.IpGroupFilters = new[] { "custom" };
+        app.UserSettings.IpGroupFilters = ["custom"];
         app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
@@ -491,7 +438,7 @@ public class ClientAppTest : TestBase
 
         // create app
         await using var app = TestHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         _ = app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
@@ -511,38 +458,75 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public async Task Get_token_from_tokenLink()
+    public async Task update_server_token_url_from_server()
     {
-        // create server
+        // create Access Manager and token
         using var fileAccessManager = TestHelper.CreateFileAccessManager();
         using var testAccessManager = new TestAccessManager(fileAccessManager);
+        var token = TestHelper.CreateAccessToken(fileAccessManager);
+
+        // Update ServerTokenUrl after token creation
+        const string newTokenUrl = "http://127.0.0.100:6000";
+        fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+
+        // create server and app
         await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var app = TestHelper.CreateClientApp();
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
-        var token1 = TestHelper.CreateAccessToken(server);
-        var token2 = TestHelper.CreateAccessToken(server);
+        // wait for connect
+        await app.Connect(clientProfile1.ClientProfileId);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
-        //create web server and set token url to it
+        Assert.AreEqual(newTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+    }
+
+    [TestMethod]
+    public async Task update_server_token_from_server_token_url()
+    {
+        // create update webserver
         var endPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         using var webServer = new WebServer(endPoint.Port);
-        token1.Url = $"http://{endPoint}/accesskey";
 
-        // update token1 in web server
+        // create server1
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions1.ServerTokenUrl = $"http://{endPoint}/accesskey";
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
+        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
+        await using var server1 = TestHelper.CreateServer(testAccessManager1);
+        var token1 = TestHelper.CreateAccessToken(server1);
+        await server1.DisposeAsync();
+
+        // create server 2
+        await Task.Delay(1100); // wait for new CreatedTime
+        var fileAccessManager2 = TestHelper.CreateFileAccessManager(storagePath: fileAccessManager1.StoragePath);
+        using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
+        await using var server2 = TestHelper.CreateServer(testAccessManager2);
+        var token2 = TestHelper.CreateAccessToken(server2);
+
+        //update web server enc_server_token
         var isTokenRetrieved = false;
         webServer.WithAction("/accesskey", HttpVerbs.Get, context =>
         {
             isTokenRetrieved = true;
-            return context.SendStringAsync(token2.ToAccessKey(), "text/json", Encoding.UTF8);
+            return context.SendStringAsync(token2.ServerToken.Encrypt(), "text/plain", Encoding.UTF8);
         });
         webServer.Start();
 
         // connect
         await using var app = TestHelper.CreateClientApp();
-        var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-        app.ClientProfileStore.UpdateTokenFromUrl(token1).Wait();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         _ = app.Connect(clientProfile.ClientProfileId);
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
-        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
+
+        await VhTestUtil.AssertEqualsWait(token2.ServerToken.CreatedTime, () => app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.IsTrue(isTokenRetrieved);
+        Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
+        Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
+        Assert.AreNotEqual(AppConnectionState.Connected, app.State.ConnectionState);
+
+        // connect
+        await app.Connect(clientProfile.ClientProfileId);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
     }
 
     [TestMethod]
@@ -556,8 +540,8 @@ public class ClientAppTest : TestBase
 
         // connect
         await using var app = TestHelper.CreateClientApp();
-        var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-        var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
+        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        var clientProfile2 = app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
 
         await app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);

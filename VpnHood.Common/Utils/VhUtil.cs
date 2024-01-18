@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace VpnHood.Common.Utils;
 
@@ -196,6 +197,19 @@ public static class VhUtil
         return BitConverter.ToString(hash).Replace("-", "");
     }
 
+    public static string RedactHostName(string hostName)
+    {
+        return hostName.Length <= 8 
+            ? "***" + hostName[^4..] 
+            : hostName[..2] + "***" + hostName[^4..];
+    }
+
+
+    public static string RedactEndPoint(IPEndPoint ipEndPoint)
+    {
+        return RedactIpAddress(ipEndPoint.Address) + ":" + ipEndPoint.Port;
+    }
+
     public static string RedactIpAddress(IPAddress ipAddress)
     {
         var addressBytes = ipAddress.GetAddressBytes();
@@ -299,4 +313,21 @@ public static class VhUtil
             return false;
         }
     }
+
+    public static string RedactJsonValue(string json, string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
+            json = Regex.Replace(json, pattern, " \"***\"");
+        }
+
+        return json;
+    }
+
+    public static DateTime RemoveMilliseconds(DateTime dateTime)
+    {
+        return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Kind);
+    }
+
 }

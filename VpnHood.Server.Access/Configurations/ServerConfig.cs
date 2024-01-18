@@ -29,13 +29,15 @@ public class ServerConfig
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
+    public string? ServerTokenUrl { get; set; }
 
     // Inherit
-    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
-    [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? new IPEndPoint[] { new(IPAddress.Any, 0), new(IPAddress.IPv6Any, 0) };
+    [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? [new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443)];
+    [JsonIgnore] public IPEndPoint[] UdpEndPointsValue => UdpEndPoints ?? [new(IPAddress.Any, 0), new(IPAddress.IPv6Any, 0)];
     [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
     [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
     [JsonIgnore] public byte[]? ServerSecretValue => ServerSecret;
+    [JsonIgnore] public string? ServerTokenUrlValue => ServerTokenUrl;
 
     public void Merge(ServerConfig obj)
     {
@@ -47,6 +49,7 @@ public class ServerConfig
         if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
         if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;
         if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
+        if (obj.ServerTokenUrl != null) ServerTokenUrl = obj.ServerTokenUrl;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
     }
@@ -61,5 +64,6 @@ public class ServerConfig
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
         ServerSecret = ServerSecretValue;
+        ServerTokenUrl = ServerTokenUrlValue;
     }
 }

@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.Swagger.Controllers
 {
     [ApiController]
     [Route("api/app")]
-    public class ApiController : ControllerBase, IClientApi
+    public class AppApiController : ControllerBase, IClientAppApi
     {
         [HttpGet("config")]
         public Task<AppConfig> GetConfig()
@@ -41,7 +41,7 @@ namespace VpnHood.Client.App.Swagger.Controllers
         }
 
         [HttpPut("access-keys")]
-        public Task<ClientProfile> AddAccessKey(string accessKey)
+        public Task<ClientProfileInfo> AddAccessKey(string accessKey)
         {
             throw new NotImplementedException();
         }
@@ -79,6 +79,18 @@ namespace VpnHood.Client.App.Swagger.Controllers
 
         [HttpGet("ip-groups")]
         public Task<IpGroup[]> GetIpGroups()
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost("version-check")]
+        public Task VersionCheck()
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost("version-check-postpone")]
+        public void VersionCheckPostpone()
         {
             throw new NotImplementedException();
         }

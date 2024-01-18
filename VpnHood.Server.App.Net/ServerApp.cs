@@ -1,7 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Json;
 using Ga4.Ga4Tracking;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
@@ -10,6 +8,7 @@ using NLog.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.File;
@@ -70,7 +69,7 @@ public class ServerApp : IDisposable
         _commandListener.CommandReceived += CommandListener_CommandReceived;
 
         // tracker
-        var anonyClientId = GetServerId(InternalStoragePath).ToString();
+        var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
         _gaTracker = new Ga4Tracker
         {
             // ReSharper disable once StringLiteralTypo
@@ -86,10 +85,6 @@ public class ServerApp : IDisposable
         AccessManager = AppSettings.HttpAccessManager != null
             ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
             : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
-
-        //todo for version 443 only
-        if (AppSettings.HttpAccessManager != null)
-            UpgradeOldTokens(AppSettings, appSettingsFilePath); 
     }
 
     private void InitFileLogger()
@@ -123,9 +118,8 @@ public class ServerApp : IDisposable
         }
     }
 
-    public static Guid GetServerId(string storagePath)
+    public static Guid GetServerId(string serverIdFile)
     {
-        var serverIdFile = Path.Combine(storagePath, "server-id");
         if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
             return serverId;
 
@@ -153,10 +147,27 @@ public class ServerApp : IDisposable
 
     private static FileAccessManager CreateFileAccessManager(string storageFolderPath, FileAccessManagerOptions? options)
     {
+        options ??= new FileAccessManagerOptions();
+        options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue);
+
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
         VhLogger.Instance.LogInformation($"Using FileAccessManager. AccessFolder: {accessManagerFolder}");
-        var ret = new FileAccessManager(accessManagerFolder, options ?? new FileAccessManagerOptions());
+        var ret = new FileAccessManager(accessManagerFolder, options);
         return ret;
+    }
+
+    private static IPEndPoint[] GetDefaultPublicEndPoints(IEnumerable<IPEndPoint> tcpEndPoints)
+    {
+        var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
+        var defaultPublicEps = new List<IPEndPoint>();
+        var allListenerPorts = tcpEndPoints
+            .Select(x => x.Port)
+            .Distinct();
+
+        foreach (var port in allListenerPorts)
+            defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
+
+        return defaultPublicEps.ToArray();
     }
 
     private static HttpAccessManager CreateHttpAccessManager(HttpAccessManagerOptions options)
@@ -179,7 +190,6 @@ public class ServerApp : IDisposable
             _vpnHoodServer?.Dispose();
         }
     }
-
     private void StopServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
@@ -220,7 +230,7 @@ public class ServerApp : IDisposable
                 throw new AnotherInstanceIsRunning();
 
             // check FileAccessManager
-            if (FileAccessManager != null && FileAccessManager.AccessItem_LoadAll().Length == 0)
+            if (FileAccessManager != null && FileAccessManager.AccessItem_Count() == 0)
                 VhLogger.Instance.LogWarning(
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");
@@ -272,7 +282,7 @@ public class ServerApp : IDisposable
                 args[i] = "-?";
 
         // set default
-        if (args.Length == 0) args = new[] { "start" };
+        if (args.Length == 0) args = ["start"];
         var cmdApp = new CommandLineApplication
         {
             AllowArgumentSeparator = true,
@@ -292,50 +302,5 @@ public class ServerApp : IDisposable
                 .AddCommands(cmdApp);
 
         await cmdApp.ExecuteAsync(args);
-    }
-
-    private static void UpgradeOldTokens(AppSettings appSettings, string appSettingsFilePath)
-    {
-        try
-        {
-            var backupFile = Path.Combine(Path.GetDirectoryName(appSettingsFilePath)!, "appsettings_backup_442.json");
-            if (File.Exists(backupFile))
-                return;
-
-            // check json by expiration
-            var authPayload = appSettings.HttpAccessManager?.Authorization.Split(" ")[1]!;
-            var code = authPayload.Split(".")[1];
-            var padded = code.PadRight(code.Length + (4 - code.Length % 4) % 4, '=');
-            var base64 = Convert.FromBase64String(padded.Replace('-', '+').Replace('_', '/'));
-            var json = Encoding.UTF8.GetString(base64);
-
-            var authDoc = JsonDocument.Parse(json);
-            var exp = authDoc.RootElement.GetProperty("exp").GetInt64();
-            var iss = DateTimeOffset.FromUnixTimeSeconds(exp).DateTime;
-            if (iss >= DateTime.Parse("2036-12-07"))
-                return; // nothing to update
-
-            VhLogger.Instance.LogInformation("Updating the HttpAccessManager Authorization...");
-
-            //get the new token
-            var url = appSettings.HttpAccessManager!.BaseUrl;
-            var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appSettings.HttpAccessManager.Authorization);
-            var newToken = httpClient.GetStringAsync($"https://{url.Authority}/api/agent/authorization").Result;
-
-            //update appsettings
-            appSettings.HttpAccessManager.Authorization = newToken;
-            appSettings.HttpAccessManager.BaseUrl = new Uri($"https://{url.Authority}");
-
-            // create backup
-            File.Move(appSettingsFilePath, backupFile);
-
-            // overwrite settings file
-            File.WriteAllText(appSettingsFilePath, JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true }));
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogWarning(ex, "Could not update token. you may need to reconfigure VpnHoodServer manually!");
-        }
     }
 }

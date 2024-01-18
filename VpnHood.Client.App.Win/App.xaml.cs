@@ -21,7 +21,11 @@ public partial class App : Application
             WinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinAppProvider(), new AppOptions { Resources = VpnHoodAppResource.Resources });
+            VpnHoodApp.Init(new WinAppProvider(), new AppOptions
+            {
+                Resources = VpnHoodAppResource.Resources,
+                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
+            });
 
             // initialize SPA
             ArgumentNullException.ThrowIfNull(VpnHoodAppResource.Resources.SpaZipData);
@@ -38,6 +42,7 @@ public partial class App : Application
         {
             VhLogger.Instance.LogError(ex, "Could not run the app.");
             Shutdown();
+            throw;
         }
     }
 

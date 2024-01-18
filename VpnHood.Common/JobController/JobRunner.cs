@@ -5,13 +5,18 @@ namespace VpnHood.Common.JobController;
 
 public class JobRunner
 {
-    public ILogger Logger { get; set; } = NullLogger.Instance;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    public ILogger Logger { get; set; }
+    private int _currentMaxDegreeOfParallelism;
+    private SemaphoreSlim _semaphore;
     private readonly LinkedList<WeakReference<IJob>> _jobRefs = [];
     private readonly List<WeakReference<IJob>> _deadJobs = [];
+    private readonly List<IJob> _jobs = [];
     private Timer? _timer;
     private TimeSpan _interval = TimeSpan.FromSeconds(5);
     public bool IsStarted => _timer != null;
+    public int MaxDegreeOfParallelism { get; set; } = 100;
+    public static JobRunner Default => DefaultLazy.Value;
+    private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
 
     public TimeSpan Interval
     {
@@ -25,23 +30,21 @@ public class JobRunner
         }
     }
 
-    public static JobRunner Default => DefaultLazy.Value;
-    private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
-
-    public JobRunner(bool start = true)
+    public JobRunner(bool start = true, ILogger? logger = null)
     {
+        _currentMaxDegreeOfParallelism = MaxDegreeOfParallelism;
+        _semaphore = new SemaphoreSlim(MaxDegreeOfParallelism);
+        Logger = logger ?? NullLogger.Instance;
         if (start)
             Start();
     }
 
-    public void TimerProc(object? _)
+    private void RunJobs()
     {
-        if (!_semaphore.Wait(50))
-            return;
-
-        try
+        IJob[] jobs;
+        lock (_jobRefs)
         {
-            // run each watch dog
+            // find jobs to run
             foreach (var jobRef in _jobRefs)
             {
                 // the WatchDog object is dead
@@ -52,62 +55,97 @@ public class JobRunner
                 }
 
                 // The watch dog is busy
-                if (!job.JobSection.EnterRunner())
-                    continue;
-
-                try
-                {
-                    job
-                        .RunJob()
-                        .ContinueWith(_ =>
-                        {
-                            job.JobSection.Leave();
-                        });
-                }
-                catch (ObjectDisposedException)
-                {
-                    _deadJobs.Add(jobRef);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Could not run a job.");
-                }
+                if (job.JobSection.ShouldRunnerEnter)
+                    _jobs.Add(job);
             }
 
             // clear dead watch dogs
             foreach (var item in _deadJobs)
                 _jobRefs.Remove(item);
 
+            // collect jobs from temporary list
+            jobs = _jobs.ToArray();
+
+            // clear temporary lists
+            _jobs.Clear();
             _deadJobs.Clear();
+        }
+
+        if (jobs.Length > 0)
+            _ = RunJobs(jobs);
+    }
+
+    private async Task RunJobs(IEnumerable<IJob> jobs)
+    {
+        // update MaxDegreeOfParallelism
+        if (_currentMaxDegreeOfParallelism != MaxDegreeOfParallelism && _semaphore.CurrentCount == _currentMaxDegreeOfParallelism)
+        {
+            _currentMaxDegreeOfParallelism = MaxDegreeOfParallelism;
+            _semaphore = new SemaphoreSlim(MaxDegreeOfParallelism);
+        }
+
+        // run jobs
+        foreach (var job in jobs)
+        {
+            await _semaphore.WaitAsync();
+            _ = RunJob(job);
+        }
+    }
+
+    private async Task RunJob(IJob job)
+    {
+        // The watch dog is busy
+        if (!job.JobSection.EnterRunner())
+        {
+            _semaphore.Release();
+            return;
+        }
+
+        // run the job
+        try
+        {
+            await job.RunJob();
+        }
+        catch (ObjectDisposedException)
+        {
+            // remove from jobs
+            lock (_jobRefs)
+            {
+                var jobRef = _jobRefs.FirstOrDefault(x => x.TryGetTarget(out var target) && target == job);
+                _jobRefs.Remove(jobRef);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not run a job. JobName: {JobName}", job.JobSection.Name ?? "NoName");
         }
         finally
         {
+            job.JobSection.Leave();
             _semaphore.Release();
         }
     }
 
     public void Add(IJob job)
     {
-        _ = AddInternal(job);
+        lock (_jobRefs)
+            _jobRefs.AddLast(new WeakReference<IJob>(job));
     }
 
-    private async Task AddInternal(IJob job)
+    public void Remove(IJob job)
     {
-        try
+        lock (_jobRefs)
         {
-            await _semaphore.WaitAsync();
-            _jobRefs.AddLast(new WeakReference<IJob>(job));
-        }
-        finally
-        {
-            _semaphore.Release();
+            var item = _jobRefs.FirstOrDefault(x => x.TryGetTarget(out var target) && target == job);
+            if (item != null)
+                _jobRefs.Remove(item);
         }
     }
 
     public void Start()
     {
         _timer?.Dispose();
-        _timer = new Timer(TimerProc, null, Interval, Interval);
+        _timer = new Timer(_ => RunJobs(), null, TimeSpan.Zero, Interval);
     }
 
     public void Stop()

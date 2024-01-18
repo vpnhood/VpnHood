@@ -18,21 +18,22 @@ namespace VpnHood.Client.App.Droid;
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
-[IntentFilter(new[] { TileService.ActionQsTilePreferences })]
-[IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
-[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault }, DataScheme = "content", DataMimeTypes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 })]
-[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable }, DataSchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 })]
+[IntentFilter([TileService.ActionQsTilePreferences])]
+[IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
+[IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault], DataScheme = "content", DataMimeTypes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3])]
+[IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable], DataSchemes = [AccessKeyScheme1, AccessKeyScheme2])]
 public class MainActivity : AndroidAppWebViewMainActivity
 {
+    // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
     public const string AccessKeyScheme1 = "vh";
     public const string AccessKeyScheme2 = "vhkey";
-    public const string AccessKeyMime1 = "application/vhkey";
-    public const string AccessKeyMime2 = "application/key";
-    public const string AccessKeyMime3 = "application/vnd.cinderella";
+    public const string AccessKeyMime1 = "application/vhkey"; 
+    public const string AccessKeyMime2 = "application/pgp-keys"; //.key
+    public const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
 
     public MainActivity()
     {
-        AccessKeySchemes = new[] { AccessKeyScheme1, AccessKeyScheme2 };
-        AccessKeyMimes = new[] { AccessKeyMime1, AccessKeyMime2, AccessKeyMime3 };
+        AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2];
+        AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3];
     }
 }

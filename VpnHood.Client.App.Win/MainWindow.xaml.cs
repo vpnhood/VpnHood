@@ -41,7 +41,16 @@ public partial class MainWindow : Window
 
         // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
+        VpnHoodApp.Instance.VersionCheckProc = WinApp.VersionCheckProc;
+
+        if (VpnHoodApp.Instance.VersionCheckRequired)
+            WinApp.VersionCheckProc().ContinueWith(res =>
+            {
+                if (res.Result)
+                    VpnHoodApp.Instance.VersionCheckPostpone();
+            });
     }
+
 
     private static void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {

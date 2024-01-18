@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="21.0.1" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="21.2.2" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="ActSyncAppComponent;CPLAppletComponent;AppXAppDetailsComponent;FixupComponent;AppXCapabilitiesComponent;AppXDependenciesComponent;AppXProductDetailsComponent;AppXVisualAssetsComponent;AppXAppDeclarationsComponent;AppXUriRulesComponent;MsiXDiffComponent;MsixManifestEditorComponent"/>
   </COMPONENT>
@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{DD75EC4B-8CC4-4E4E-B170-506C2596A34B} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{6ACB5FFA-8CFE-4CB0-9326-BBD74DB20AA8} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="3.0.423" Options="20"/>
+    <ROW Property="ProductVersion" Value="3.3.450" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
@@ -71,7 +71,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{4F87649B-8D59-470B-AD29-F7E1A668ACC0}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{5ABDA4F6-5BF7-4EBB-A6AC-664B1C79402A}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -515,8 +515,8 @@
     <ROW Component="UIAutomationTypes.resources.dll_9" ComponentId="{1C010A2B-5A5D-4953-A8B5-4099B60715E1}" Directory_="ru_Dir" Attributes="0" KeyPath="UIAutomationTypes.resources.dll_9"/>
     <ROW Component="Version" ComponentId="{029AE9DA-065B-44EB-91C6-9FB1CC756628}" Directory_="APPDIR" Attributes="260" KeyPath="Version_2"/>
     <ROW Component="VpnHood.Client.App.Resources.dll" ComponentId="{1422BE00-ECAF-4B53-8DD2-A884EC736349}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.Resources.dll"/>
-    <ROW Component="VpnHood.Client.App.UI.dll" ComponentId="{F11A2B94-E0D5-4D47-B9EA-D72FD79C4C9A}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.UI.dll"/>
-    <ROW Component="VpnHood.Client.App.Win.Shared.dll" ComponentId="{E7A7CCFB-728D-4495-8410-06C8FD2103D8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.Win.Shared.dll"/>
+    <ROW Component="VpnHood.Client.App.WebServer.dll" ComponentId="{C88E7AFF-275A-4FCD-9727-9313F855EB0F}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.WebServer.dll"/>
+    <ROW Component="VpnHood.Client.App.Win.Common.dll" ComponentId="{B7710795-48DC-49F4-89BC-D27026D7DF0A}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.Win.Common.dll"/>
     <ROW Component="VpnHood.Client.App.dll" ComponentId="{E7CA2ED7-174A-437E-9FA2-F00FBBF29ECF}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.dll"/>
     <ROW Component="VpnHood.Client.Device.WinDivert.dll" ComponentId="{3B6BBF27-5067-4C93-99B7-DB3A6FF0C771}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.Device.WinDivert.dll"/>
     <ROW Component="VpnHood.Client.Device.dll" ComponentId="{A3BC0042-39B5-4D85-9A28-6F7623989599}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.Device.dll"/>
@@ -569,7 +569,9 @@
     <ROW Component="hostfxr.dll" ComponentId="{BC0967F4-7DF4-4A37-8C80-3C76828B0F66}" Directory_="APPDIR" Attributes="256" KeyPath="hostfxr.dll"/>
     <ROW Component="hostpolicy.dll" ComponentId="{37A1012B-C8BE-498A-9BD7-2CD78581BB7B}" Directory_="APPDIR" Attributes="256" KeyPath="hostpolicy.dll"/>
     <ROW Component="mscordaccore.dll" ComponentId="{EA8A69E4-1B6B-4AAD-A48D-9EB59FA6AB15}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore.dll"/>
-    <ROW Component="mscordaccore_amd64_amd64_7.0.1123.42427.dll" ComponentId="{906931E0-E1BB-46CC-A7A0-B3D31E8E445F}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_7.0.1123.42427.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_7.0.1323.51816.dll" ComponentId="{9220812D-54E2-4B96-87E1-37142AF8D0DF}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_7.0.1323.51816.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_7.0.1423.51910.dll" ComponentId="{45E273D1-B008-4363-ADE9-5E9B32831267}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_7.0.1423.51910.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_8.0.23.53103.dll" ComponentId="{06587B6C-5BFE-43A3-9FD5-EEFB0BCE407D}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_8.0.23.53103.dll"/>
     <ROW Component="mscordbi.dll" ComponentId="{EBA3A2AB-FBCE-495D-8012-0465D47E5B42}" Directory_="APPDIR" Attributes="256" KeyPath="mscordbi.dll"/>
     <ROW Component="mscorlib.dll" ComponentId="{5E6D16B7-22DA-4FCB-AC28-AD3A361BF6C5}" Directory_="APPDIR" Attributes="0" KeyPath="mscorlib.dll"/>
     <ROW Component="mscorrc.dll" ComponentId="{F98E0E0B-1EC3-41F4-8FC2-528E33EF3A9A}" Directory_="APPDIR" Attributes="256" KeyPath="mscorrc.dll"/>
@@ -610,8 +612,6 @@
     <ROW File="Swan.Lite.dll" Component_="Swan.Lite.dll" FileName="SWANLI~1.DLL|Swan.Lite.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\Swan.Lite.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.dll" Component_="VpnHood.Client.App.dll" FileName="VPNHOO~1.DLL|VpnHood.Client.App.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.pdb" Component_="VpnHood.Client.App.dll" FileName="VPNHOO~1.PDB|VpnHood.Client.App.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.UI.dll" Component_="VpnHood.Client.App.UI.dll" FileName="VPNHOO~2.DLL|VpnHood.Client.App.UI.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.UI.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.UI.pdb" Component_="VpnHood.Client.App.UI.dll" FileName="VPNHOO~2.PDB|VpnHood.Client.App.UI.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.UI.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Client.Device.dll" Component_="VpnHood.Client.Device.dll" FileName="VPNHOO~3.DLL|VpnHood.Client.Device.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.Device.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.Device.pdb" Component_="VpnHood.Client.Device.dll" FileName="VPNHOO~3.PDB|VpnHood.Client.Device.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.Device.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Client.Device.WinDivert.dll" Component_="VpnHood.Client.Device.WinDivert.dll" FileName="VPNHOO~4.DLL|VpnHood.Client.Device.WinDivert.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.Device.WinDivert.dll" SelfReg="false"/>
@@ -1087,12 +1087,16 @@
     <ROW File="WindowsBase.resources.dll_12" Component_="WindowsBase.resources.dll_12" FileName="WINDOW~1.DLL|WindowsBase.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\zh-Hant\WindowsBase.resources.dll" SelfReg="false"/>
     <ROW File="WindowsFormsIntegration.resources.dll_12" Component_="WindowsFormsIntegration.resources.dll_12" FileName="WINDOW~2.DLL|WindowsFormsIntegration.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\zh-Hant\WindowsFormsIntegration.resources.dll" SelfReg="false"/>
     <ROW File="Microsoft.Windows.SDK.NET.dll" Component_="Microsoft.Windows.SDK.NET.dll" FileName="MICRO~16.DLL|Microsoft.Windows.SDK.NET.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\Microsoft.Windows.SDK.NET.dll" SelfReg="false"/>
-    <ROW File="mscordaccore_amd64_amd64_7.0.1123.42427.dll" Component_="mscordaccore_amd64_amd64_7.0.1123.42427.dll" FileName="MSCORD~2.DLL|mscordaccore_amd64_amd64_7.0.1123.42427.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\mscordaccore_amd64_amd64_7.0.1123.42427.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.Resources.dll" Component_="VpnHood.Client.App.Resources.dll" FileName="VPNHOO~9.DLL|VpnHood.Client.App.Resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.Resources.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.Resources.pdb" Component_="VpnHood.Client.App.Resources.dll" FileName="VPNHOO~9.PDB|VpnHood.Client.App.Resources.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.Resources.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.Win.Shared.dll" Component_="VpnHood.Client.App.Win.Shared.dll" FileName="VPNHO~10.DLL|VpnHood.Client.App.Win.Shared.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.Win.Shared.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.Win.Shared.pdb" Component_="VpnHood.Client.App.Win.Shared.dll" FileName="VPNHO~10.PDB|VpnHood.Client.App.Win.Shared.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.Win.Shared.pdb" SelfReg="false"/>
     <ROW File="WinRT.Runtime.dll" Component_="WinRT.Runtime.dll" FileName="WINRTR~1.DLL|WinRT.Runtime.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinRT.Runtime.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_7.0.1323.51816.dll" Component_="mscordaccore_amd64_amd64_7.0.1323.51816.dll" FileName="MSCORD~3.DLL|mscordaccore_amd64_amd64_7.0.1323.51816.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\mscordaccore_amd64_amd64_7.0.1323.51816.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_7.0.1423.51910.dll" Component_="mscordaccore_amd64_amd64_7.0.1423.51910.dll" FileName="MSCORD~4.DLL|mscordaccore_amd64_amd64_7.0.1423.51910.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\mscordaccore_amd64_amd64_7.0.1423.51910.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_8.0.23.53103.dll" Component_="mscordaccore_amd64_amd64_8.0.23.53103.dll" FileName="MSCORD~5.DLL|mscordaccore_amd64_amd64_8.0.23.53103.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\mscordaccore_amd64_amd64_8.0.23.53103.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.WebServer.dll" Component_="VpnHood.Client.App.WebServer.dll" FileName="VPNHO~11.DLL|VpnHood.Client.App.WebServer.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.WebServer.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.WebServer.pdb" Component_="VpnHood.Client.App.WebServer.dll" FileName="VPNHO~11.PDB|VpnHood.Client.App.WebServer.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.WebServer.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.Win.Common.dll" Component_="VpnHood.Client.App.Win.Common.dll" FileName="VPNHO~12.DLL|VpnHood.Client.App.Win.Common.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.Win.Common.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.Win.Common.pdb" Component_="VpnHood.Client.App.Win.Common.dll" FileName="VPNHO~12.PDB|VpnHood.Client.App.Win.Common.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.Win.Common.pdb" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -1108,6 +1112,7 @@
     <ROW Action="AI_InstallPrePrerequisite" Condition="AI_BOOTSTRAPPER AND (NOT AI_PrereqsFulfilled)" Sequence="649"/>
     <ROW Action="AI_VerifyPrePrereq" Condition="AI_BOOTSTRAPPER AND (NOT AI_PrereqsFulfilled)" Sequence="651"/>
     <ROW Action="AI_CleanPrePrereq" Condition="AI_BOOTSTRAPPER AND (NOT AI_PrereqsFulfilled)" Sequence="652"/>
+    <ROW Action="AI_AppSearchEx" Condition="AI_BOOTSTRAPPER" Sequence="251"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
     <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="Release" PackageFileName="VpnHoodClient-win-x64" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true" MsiPackageType="x64" UACExecutionLevel="2"/>
@@ -1118,7 +1123,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
-    <ROW Property="ProductVersion" Type="3" SourcePath="..\Pub\Version.json" PathInSource="Root\Version"/>
+    <ROW Property="ProductVersion" Type="3" SourcePath="..\Pub\PubVersion.json" PathInSource="Root\Version"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -1301,7 +1306,6 @@
     <ROW Feature_="MainFeature" Component_="SharpPcap.dll"/>
     <ROW Feature_="MainFeature" Component_="Swan.Lite.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.UI.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.WinDivert.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.dll"/>
@@ -1772,11 +1776,14 @@
     <ROW Feature_="MainFeature" Component_="AI_CustomARPName"/>
     <ROW Feature_="MainFeature" Component_="AI_DisableModify"/>
     <ROW Feature_="MainFeature" Component_="Microsoft.Windows.SDK.NET.dll"/>
-    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_7.0.1123.42427.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.Resources.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.Win.Shared.dll"/>
     <ROW Feature_="MainFeature" Component_="WinRT.Runtime.dll"/>
     <ROW Feature_="D09784F374E3A9F5FB0AFDC657291" Component_="D09784F374E3A9F5FB0AFDC657291"/>
+    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_7.0.1323.51816.dll"/>
+    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_7.0.1423.51910.dll"/>
+    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_8.0.23.53103.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.WebServer.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.Win.Common.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>

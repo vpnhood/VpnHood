@@ -80,7 +80,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public string? ServerTokenUrl { get; private set; }
 
-
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
@@ -107,6 +106,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         _useUdpChannel = options.UseUdpChannel;
+        // todo remove
+        //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
+
         Token = token;
         Version = options.Version;
         UserAgent = options.UserAgent;
@@ -160,6 +162,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             if (_useUdpChannel == value) return;
             _useUdpChannel = value;
+            // todo remove
+            //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
             _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
     }

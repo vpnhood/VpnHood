@@ -1,17 +1,18 @@
-# Upcoming
+# v3.3.454
 ### Client
 * Update: New Access Token format
 * Update: Use OS encryption for TLS
 * Feature: Enable updating server endpoints by Url
 * Feature: Display token expiration if it exists
-* Feature: Update server token URL from server
-* Feature: Android: Prompt for update by Google Play if possilbe
+* Feature: Update server token URL from the server
+* Feature: Android: Prompt for the update by Google Play if possible
 * Feature: Android: Support opening (KEY) as VpnHood Key file
 * Fix: Windows: Freeze network after auto-reconnect with muti-server
 * Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
 ### Server
-* Update: Move some File Access Manager options from gen commmand to config
+* Feature: Generate encrypted server token to client update server endpoint from a URL
+* Update: Move some File Access Manager options from the gen command to config
 * Update: Return 401 instead of 400 for invalid request
 * Update: Use OS encryption for TLS
 * Update: Redact more data in server logs

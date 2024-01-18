@@ -279,8 +279,21 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, CancellationToken cancellationToken)
     {
-        // check request version
+        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
         var streamId = Guid.NewGuid() + ":incoming";
+
+        // todo: deprecated on >= 451 {
+        #region Deprecated on >= 451
+        var buffer = new byte[16];
+        var res = await sslStream.ReadAsync(buffer, 0, 1, cancellationToken);
+        if (res == 0)
+            throw new Exception("Connection has been closed before receiving any request.");
+
+        // check request version
+        var version = buffer[0];
+        if (version == 1)
+            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false, cacheData: [version], cacheSize: 1), streamId);
+        #endregion
 
         // Version 2 is HTTP and starts with POST
         try
@@ -290,8 +303,10 @@ internal class ServerHost : IAsyncDisposable, IJob
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
             int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
-            bool.TryParse(headers.GetValueOrDefault("X-BinaryStream", "false"), out var useBinaryStream);
+            Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
+            bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
+            if (xVersion==2) binaryStreamType = BinaryStreamType.Custom;
 
             // read api key
             if (!CheckApiKeyAuthorization(authorization))
@@ -304,26 +319,29 @@ internal class ServerHost : IAsyncDisposable, IJob
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (xVersion == 2)
-            {
-                if (headers.TryGetValue("X-Secret", out var xSecret) && !string.IsNullOrEmpty(xSecret))
-                {
-                    await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
-                    var secret = Convert.FromBase64String(xSecret);
-                    await sslStream.DisposeAsync(); // dispose Ssl
-                    return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
-                }
-
-                throw new UnauthorizedAccessException();
-            }
-#pragma warning restore CS0618 // Type or member is obsolete
-
             // use binary stream only for authenticated clients
             await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
-            return useBinaryStream
-                ? new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId), streamId, ReuseClientStream)
-                : new TcpClientStream(tcpClient, sslStream, streamId);
+
+            switch (binaryStreamType)
+            {
+                case BinaryStreamType.Custom:
+                {
+                    await sslStream.DisposeAsync(); // dispose Ssl
+                    var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
+                    var secret = Convert.FromBase64String(xSecret);
+                    return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
+                }
+                
+                case BinaryStreamType.Standard:
+                    return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseClientStream);
+                
+                case BinaryStreamType.None:
+                    return new TcpClientStream(tcpClient, sslStream, streamId);
+
+                case BinaryStreamType.Unknown:
+                default:
+                    throw new NotSupportedException("Unknown BinaryStreamType");
+            }
         }
         catch (Exception ex)
         {

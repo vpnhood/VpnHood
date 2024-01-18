@@ -35,7 +35,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
-    public BinaryStreamType BinaryStreamType { get; set; } //todo temporary
+    public BinaryStreamType BinaryStreamType { get; set; } = BinaryStreamType.Standard;  //todo temporary
 
     public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {

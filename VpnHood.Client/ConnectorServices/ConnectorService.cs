@@ -35,6 +35,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
+    public BinaryStreamType BinaryStreamType { get; set; } = BinaryStreamType.Standard;  //todo temporary
 
     public ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
@@ -57,9 +58,12 @@ internal class ConnectorService : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 450 and upper
-        var version = ServerProtocolVersion >= 5 ? 3 : 2;
-        var useBinaryStream = version >= 3 && !string.IsNullOrEmpty(_apiKey);
+        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 451 and upper
+        var binaryStreamType = BinaryStreamType;
+        const bool useBuffer = true;
+        var version = ServerProtocolVersion < 5 ? 2 : 3;
+        if (version <= 2)
+            binaryStreamType = string.IsNullOrEmpty(_apiKey) ? BinaryStreamType.None : BinaryStreamType.Custom;
 
         // write HTTP request
         var header =
@@ -67,29 +71,29 @@ internal class ConnectorService : IAsyncDisposable, IJob
             $"Authorization: ApiKey {_apiKey}\r\n" +
             $"X-Version: {version}\r\n" +
             $"X-Secret: {Convert.ToBase64String(streamSecret)}\r\n" +
-            $"X-BinaryStream: {useBinaryStream}\r\n" +
+            $"X-BinaryStream: {binaryStreamType}\r\n" +
+            $"X-Buffered: {useBuffer}\r\n" +
             "\r\n";
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
 
-        // deprecated legacy by version >= 450
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (version == 2)
+        switch (binaryStreamType)
         {
-            if (string.IsNullOrEmpty(_apiKey))
+            case BinaryStreamType.None:
                 return new TcpClientStream(tcpClient, sslStream, streamId);
 
-            // dispose Ssl
-            await sslStream.DisposeAsync();
-            return new TcpClientStream(tcpClient, new CryptoBinaryStream(tcpClient.GetStream(), streamId, streamSecret), streamId, ReuseStreamClient);
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
+            case BinaryStreamType.Custom:
+                await sslStream.DisposeAsync();
+                return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, streamSecret, useBuffer), streamId, ReuseStreamClient);
 
-        return useBinaryStream
-            ? new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId), streamId, ReuseStreamClient)
-            : new TcpClientStream(tcpClient, sslStream, streamId);
+            case BinaryStreamType.Standard:
+                return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
+
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
     private async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)

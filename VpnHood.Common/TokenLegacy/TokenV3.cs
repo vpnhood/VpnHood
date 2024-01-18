@@ -1,11 +1,13 @@
 ﻿using System.Net;
+using System.Text.Json;
+using System.Text;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
 namespace VpnHood.Common.TokenLegacy;
 
 
-[Obsolete("deprecated in version 3.3.450 or upper")]
+[Obsolete("deprecated in version 3.3.451 or upper")]
 public class TokenV3
 {
     [JsonPropertyName("name")]
@@ -68,5 +70,33 @@ public class TokenV3
         };
 
         return token;
+    }
+
+    public string ToAccessKey()
+    {
+        var json = JsonSerializer.Serialize(this);
+        return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+    }
+
+    public static TokenV3 FromToken(Token token)
+    {
+        // convert token to token v3
+        var tokenV3 = new TokenV3
+        {
+            Name = token.Name,
+            SupportId = token.SupportId != null ? int.Parse(token.SupportId) : 0,
+            TokenId = token.TokenId,
+            Secret = token.Secret,
+            IsValidHostName = token.ServerToken.IsValidHostName,
+            HostName = token.ServerToken.HostName,
+            HostPort = token.ServerToken.HostPort,
+            CertificateHash = token.ServerToken.CertificateHash,
+            Url = null,
+            HostEndPoints = token.ServerToken.HostEndPoints,
+            Version = 3,
+            IsPublic = false
+        };
+
+        return tokenV3;
     }
 }

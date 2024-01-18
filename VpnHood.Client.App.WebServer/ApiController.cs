@@ -8,7 +8,7 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer;
 
-internal class ClientApiController : WebApiController, IClientApi
+internal class ClientAppApiController : WebApiController, IClientAppApi
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
@@ -19,7 +19,7 @@ internal class ClientApiController : WebApiController, IClientApi
         {
             Features = App.Features,
             Settings = App.Settings,
-            ClientProfileItems = App.ClientProfileStore.ClientProfileItems,
+            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State
         };
 
@@ -50,11 +50,23 @@ internal class ClientApiController : WebApiController, IClientApi
         return App.Disconnect(true);
     }
 
-    [Route(HttpVerbs.Put, "/access-keys")]
-    public Task<ClientProfile> AddAccessKey([QueryField] string accessKey)
+    [Route(HttpVerbs.Post, "/version-check")]
+    public Task VersionCheck()
     {
-        var clientProfile = App.ClientProfileStore.AddAccessKey(accessKey);
-        return Task.FromResult(clientProfile);
+        return App.VersionCheck(true);
+    }
+
+    [Route(HttpVerbs.Post, "/version-check-postpone")]
+    public void VersionCheckPostpone()
+    {
+        App.VersionCheckPostpone();
+    }
+
+    [Route(HttpVerbs.Put, "/access-keys")]
+    public Task<ClientProfileInfo> AddAccessKey([QueryField] string accessKey)
+    {
+        var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
+        return Task.FromResult(clientProfile.ToInfo());
     }
 
     [Route(HttpVerbs.Post, "/clear-last-error")]
@@ -66,7 +78,7 @@ internal class ClientApiController : WebApiController, IClientApi
     [Route(HttpVerbs.Post, "/add-test-server")]
     public void AddTestServer()
     {
-        App.ClientProfileStore.AddAccessKey(App.Settings.TestServerAccessKey);
+        App.ClientProfileService.ImportAccessKey(App.Settings.TestServerAccessKey);
     }
 
     [Route(HttpVerbs.Put, "/user-settings")]
@@ -105,11 +117,11 @@ internal class ClientApiController : WebApiController, IClientApi
     {
         updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>();
 
-        var clientProfileItem = App.ClientProfileStore.ClientProfileItems.Single(x => x.ClientProfileId == clientProfileId);
+        var clientProfile = App.ClientProfileService.Get(clientProfileId);
         if (updateParams.Name != null)
-            clientProfileItem.ClientProfile.Name = string.IsNullOrEmpty(updateParams.Name) ? null : updateParams.Name;
+            clientProfile.ClientProfileName = updateParams.Name;
 
-        App.ClientProfileStore.SetClientProfile(clientProfileItem.ClientProfile);
+        App.ClientProfileService.Update(clientProfile);
     }
 
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
@@ -117,7 +129,7 @@ internal class ClientApiController : WebApiController, IClientApi
     {
         if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
             await App.Disconnect(true);
-        App.ClientProfileStore.RemoveClientProfile(clientProfileId);
+        App.ClientProfileService.Remove(clientProfileId);
     }
 
     private async Task<T> GetRequestDataAsync<T>()

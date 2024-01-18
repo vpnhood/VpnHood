@@ -318,7 +318,7 @@ public class Tunnel : IJob, IAsyncDisposable
                             VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
                             _packetQueue.TryDequeue(out ipPacket);
                             var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, MtuNoFragment);
-                            OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] { replyPacket }, channel));
+                            OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));
                             continue;
                         }
 

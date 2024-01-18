@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.JobController;
@@ -13,12 +12,11 @@ using WinNative;
 
 namespace VpnHood.Client.App.Win.Common;
 
-public class WinApp : IDisposable, IJob
+public class WinApp : IDisposable
 {
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
     private SystemTray? _sysTray;
-    private DateTime _lastUpdateTime = DateTime.MinValue;
     private readonly CommandListener _commandListener;
     private bool _disposed;
     private readonly string _appLocalDataPath;
@@ -53,9 +51,6 @@ public class WinApp : IDisposable, IJob
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(_appLocalDataPath, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
-
-        // add to job runner
-        JobRunner.Default.Add(this);
     }
 
     [DllImport("DwmApi")]
@@ -122,14 +117,9 @@ public class WinApp : IDisposable, IJob
     public bool Start()
     {
         // auto connect
-        if (ConnectAfterStart &&
-            VhApp.UserSettings.DefaultClientProfileId != null &&
-            VhApp.ClientProfileStore.ClientProfileItems.Any(x =>
-                x.ClientProfile.ClientProfileId == VhApp.UserSettings.DefaultClientProfileId))
-            _ = VhApp.Connect(VhApp.UserSettings.DefaultClientProfileId.Value);
-
-        // check for update
-        CheckForUpdate();
+        var defaultClientProfile = VhApp.GetDefaultClientProfile();
+        if (ConnectAfterStart && defaultClientProfile != null)
+            _ = VhApp.Connect(defaultClientProfile.ClientProfileId);
 
         // create notification icon
         InitNotifyIcon();
@@ -155,11 +145,11 @@ public class WinApp : IDisposable, IJob
         _sysTray.ContextMenu.AddMenuItem(VhApp.Resources.Strings.Exit, (_, _) => Exit());
 
         // initialize icons
-        if (VhApp.Resources.Icons.SystemTrayConnectingIcon!=null)
+        if (VhApp.Resources.Icons.SystemTrayConnectingIcon != null)
             _connectingIcon = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayConnectingIcon.Data));
 
         if (VhApp.Resources.Icons.SystemTrayConnectedIcon != null)
-            _connectedIcon  = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayConnectedIcon.Data));
+            _connectedIcon = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayConnectedIcon.Data));
 
         if (VhApp.Resources.Icons.SystemTrayDisconnectedIcon != null)
             _disconnectedIcon = new Icon(new MemoryStream(VhApp.Resources.Icons.SystemTrayDisconnectedIcon.Data));
@@ -188,50 +178,35 @@ public class WinApp : IDisposable, IJob
         _sysTray.ContextMenu?.EnableMenuItem(_openMainWindowInBrowserMenuItemId, true);
     }
 
-    private void CheckForUpdate()
+    // return false if the app update system does not work
+    public static async Task<bool> VersionCheckProc()
     {
-        // read last check
-        var lastCheckFilePath = Path.Combine(VhApp.AppDataFolderPath, "lastCheckUpdate");
-        if (_lastUpdateTime == DateTime.MinValue && File.Exists(lastCheckFilePath))
-            try
-            {
-                _lastUpdateTime = JsonSerializer.Deserialize<DateTime>(File.ReadAllText(lastCheckFilePath));
-            }
-            catch
-            {
-                /*Ignored*/
-            }
-
-        // check last update time
-        if (FastDateTime.Now - _lastUpdateTime < CheckUpdateInterval)
-            return;
-
-        // set updateTime before checking filename
-        _lastUpdateTime = FastDateTime.Now;
-
         // launch updater if exists
         var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
-                               throw new Exception("Could not get the parent of Assembly location!");
+            throw new Exception("Could not get the parent of Assembly location.");
+
         var updaterFilePath = Path.Combine(assemblyLocation, "updater.exe");
         if (!File.Exists(updaterFilePath))
+            throw new Exception($"Could not find updater: {updaterFilePath}.");
+
+        // check for update
+        VhLogger.Instance.LogInformation("Checking for new updates...");
+        var process = Process.Start(updaterFilePath, "/justcheck");
+        if (process == null) return false;
+        while (process is { HasExited: false })
+            await Task.Delay(500);
+
+        // install update
+        if (process.ExitCode == 0)
         {
-            VhLogger.Instance.LogWarning($"Could not find updater: {updaterFilePath}");
-            return;
+            process = Process.Start(updaterFilePath);
+            if (process == null) return false;
+            while (process is { HasExited: false })
+                await Task.Delay(500);
         }
 
-        try
-        {
-            VhLogger.Instance.LogInformation("Checking for new updates...");
-            Process.Start(updaterFilePath, "/silent");
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex.Message);
-        }
-        finally
-        {
-            File.WriteAllText(lastCheckFilePath, JsonSerializer.Serialize(_lastUpdateTime));
-        }
+        // https://www.advancedinstaller.com/user-guide/updater.html#updater-return-codes
+        return process.ExitCode is 0 or -536870895;
     }
 
     private void OpenMainWindow()
@@ -412,12 +387,6 @@ public class WinApp : IDisposable, IJob
             VhLogger.Instance.LogError(ex, "Could not register local domain.");
             return null;
         }
-    }
-
-    public Task RunJob()
-    {
-        CheckForUpdate();
-        return Task.CompletedTask;
     }
 
 }

@@ -3,14 +3,14 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer.Api;
 
-public interface IClientApi
+public interface IClientAppApi
 {
     Task<AppConfig> GetConfig();
     Task<AppState> GetState();
     Task Connect(Guid? clientProfileId = null);
     Task Diagnose(Guid? clientProfileId = null);
     Task Disconnect();
-    Task<ClientProfile> AddAccessKey(string accessKey);
+    Task<ClientProfileInfo> AddAccessKey(string accessKey);
     Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams);
     Task DeleteClientProfile(Guid clientProfileId);
     void ClearLastError();
@@ -19,4 +19,6 @@ public interface IClientApi
     Task<string> Log();
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task<IpGroup[]> GetIpGroups();
+    Task VersionCheck();
+    void VersionCheckPostpone();
 }

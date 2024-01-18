@@ -9,12 +9,12 @@ public class Diagnoser
 {
     private bool _isWorking;
 
-    public IPAddress[] TestPingIpAddresses { get; set; } = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1") };
+    public IPAddress[] TestPingIpAddresses { get; set; } = [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1")];
 
     public IPEndPoint[] TestNsIpEndPoints { get; set; } =
-        {new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)};
+        [new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)];
 
-    public Uri[] TestHttpUris { get; set; } = { new("https://www.google.com"), new("https://www.quad9.net/"), new("https://www.microsoft.com/") };
+    public Uri[] TestHttpUris { get; set; } = [new("https://www.google.com"), new("https://www.quad9.net/"), new("https://www.microsoft.com/")];
     public int HttpTimeout { get; set; } = 10 * 1000;
     public int NsTimeout { get; set; } = 10 * 1000;
     public event EventHandler? StateChanged;
@@ -61,8 +61,8 @@ public class Diagnoser
 
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoint = await clientConnect.Client.Token.ResolveHostEndPointAsync();
-            var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout, true);
+            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(clientConnect.Client.Token.ServerToken);
+            var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, true);
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");
             else

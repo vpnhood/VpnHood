@@ -42,20 +42,20 @@ public class IpNetwork
 
     public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
     public static IpNetwork[] LocalNetworksV4 { get; } =
-    {
+    [
         Parse("10.0.0.0/8"),
         Parse("172.16.0.0/12"),
         Parse("192.168.0.0/16"),
         Parse("169.254.0.0/16")
-    };
+    ];
 
-    public static IpNetwork[] LoopbackNetworksV4 { get; } = { Parse("127.0.0.0/8") };
-    public static IpNetwork[] LoopbackNetworksV6 { get; } = { Parse("::1/128") };
+    public static IpNetwork[] LoopbackNetworksV4 { get; } = [Parse("127.0.0.0/8")];
+    public static IpNetwork[] LoopbackNetworksV6 { get; } = [Parse("::1/128")];
     public static IpNetwork AllV6 { get; } = Parse("::/0");
     public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
     public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert().ToArray();
     public static IpNetwork[] LocalNetworks { get; } = LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
-    public static IpNetwork[] All { get; } = { AllV4, AllV6 };
+    public static IpNetwork[] All { get; } = [AllV4, AllV6];
     public static IpNetwork[] None { get; } = Array.Empty<IpNetwork>();
 
     public static bool IsAll(IOrderedEnumerable<IpNetwork> ipNetworks)

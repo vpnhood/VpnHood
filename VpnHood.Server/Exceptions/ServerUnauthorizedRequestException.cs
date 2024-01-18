@@ -8,7 +8,7 @@ namespace VpnHood.Server.Exceptions;
 public class ServerUnauthorizedAccessException : UnauthorizedAccessException
 {
     public IPEndPointPair IpEndPointPair { get; }
-    public Guid? TokenId { get; }
+    public string? TokenId { get; }
     public ulong? SessionId { get; }
     public Guid? ClientId { get; }
 

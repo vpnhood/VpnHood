@@ -1,7 +1,5 @@
 ﻿using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -72,7 +70,7 @@ public class ServerTest : TestBase
         // change tcp end points
         var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Changing access server UdpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
-        fileAccessManager.ServerConfig.TcpEndPoints = new[] { newTcpEndPoint };
+        fileAccessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
@@ -82,7 +80,7 @@ public class ServerTest : TestBase
         // change udp end points
         var newUdpEndPoint = VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
-        fileAccessManager.ServerConfig.UdpEndPoints = new[] { newUdpEndPoint };
+        fileAccessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
@@ -94,7 +92,7 @@ public class ServerTest : TestBase
     public async Task Reconfigure()
     {
         var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions = new FileAccessManagerOptions { TcpEndPoints = new[] { serverEndPoint } };
+        var fileAccessManagerOptions = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint] };
         using var fileAccessManager = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
         var serverConfig = fileAccessManager.ServerConfig;
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);
@@ -209,16 +207,13 @@ public class ServerTest : TestBase
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        var tcpClient = new TcpClient();
-        await tcpClient.ConnectAsync(token.HostEndPoints!.First());
-        var ssl = new SslStream(tcpClient.GetStream(), false, TestHelper.IgnoreCertificateValidationCallback);
-        await ssl.AuthenticateAsClientAsync(token.HostName);
-        await ssl.WriteAsync("Foo1 Foo2 Foo3\r\n\r\n"u8.ToArray());
-
-        var readBuffer = new byte[1000];
-        _ = await ssl.ReadAsync(readBuffer);
-        var response = Encoding.UTF8.GetString(readBuffer);
-        Assert.AreEqual(0, response.IndexOf("HTTP/1.1 400 Bad Request", StringComparison.OrdinalIgnoreCase));
+        var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        var client = new HttpClient(handler);
+        var url = $"https://{token.ServerToken.HostEndPoints!.First()}";
+        
+        var ex = await Assert.ThrowsExceptionAsync<HttpRequestException>(()=>client.GetStringAsync(url));
+        Assert.AreEqual(ex.StatusCode, HttpStatusCode.Unauthorized);
     }
 
     [TestMethod]
@@ -260,14 +255,14 @@ public class ServerTest : TestBase
             NetFilterOptions = new NetFilterOptions
             {
                 BlockIpV6 = true,
-                ExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.2") },
-                IncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.3") },
-                PacketCaptureExcludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.4") },
-                PacketCaptureIncludeIpRanges = new[] { IpRange.Parse("1.1.1.1-1.1.1.5") },
+                ExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.2")],
+                IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
+                PacketCaptureExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
+                PacketCaptureIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
                 IncludeLocalNetwork = false,
             },
-            TcpEndPoints = new[] { IPEndPoint.Parse("2.2.2.2:4433") },
-            UdpEndPoints = new[] { IPEndPoint.Parse("3.3.3.3:5533") },
+            TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
+            UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,

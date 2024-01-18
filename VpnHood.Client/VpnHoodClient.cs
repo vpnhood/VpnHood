@@ -43,10 +43,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly string? _appGa4MeasurementId;
     private Traffic _helloTraffic = new();
     private ClientUsageTracker? _clientUsageTracker;
-    private bool IsTcpDatagramLifespanSupported => ServerVersion?.Build >= 345; //will be deprecated
+    private DateTime? _initConnectedTime;
+
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
-    private byte[]? _serverKey;
+    private byte[]? _serverSecret;
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
     private int ProtocolVersion { get; }
@@ -70,14 +71,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
-    public IPEndPoint? HostTcpEndPoint { get; private set; }
+    public IPEndPoint? HostTcpEndPoint => _connectorService.EndPointInfo?.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
     public IPEndPoint[]? HostTcpEndPoints { get; private set; }
     public IPEndPoint[]? HostUdpEndPoints { get; private set; }
     public bool DropUdpPackets { get; set; }
     public ClientStat Stat { get; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
-
+    public string? ServerTokenUrl { get; private set; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -105,27 +106,33 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         _useUdpChannel = options.UseUdpChannel;
-        Token = token ?? throw new ArgumentNullException(nameof(token));
-        Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
-        UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
+        // todo remove
+        //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
+
+        Token = token;
+        Version = options.Version;
+        UserAgent = options.UserAgent;
         ProtocolVersion = 4;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
+        ServerTokenUrl = token.ServerToken.Url;
+        
+        // NAT
         Nat = new Nat(true);
+
+        // Tunnel
+        Tunnel = new Tunnel();
+        Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+        
+        // create proxy host
+        _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // init packetCapture cancellation
         packetCapture.OnStopped += PacketCapture_OnStopped;
         packetCapture.OnPacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
-
-        // create tunnel
-        Tunnel = new Tunnel();
-        Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-
-        // create proxy host
-        _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -155,6 +162,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             if (_useUdpChannel == value) return;
             _useUdpChannel = value;
+            // todo remove
+            //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
             _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
     }
@@ -187,7 +196,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async Task Connect()
     {
-        using var scope = VhLogger.Instance.BeginScope("Client");
+        using var scope = VhLogger.Instance.BeginScope("Client2");
         if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
         if (State != ClientState.None)
@@ -214,11 +223,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Init hostEndPoint
             _connectorService.EndPointInfo = new ConnectorEndPointInfo
             {
-                HostName = Token.HostName,
-                TcpEndPoint = await Token.ResolveHostEndPointAsync(),
-                CertificateHash = Token.CertificateHash
+                HostName = Token.ServerToken.HostName,
+                TcpEndPoint = await ServerTokenHelper.ResolveHostEndPoint(Token.ServerToken),
+                CertificateHash = Token.ServerToken.CertificateHash
             };
-            HostTcpEndPoint = await Token.ResolveHostEndPointAsync();
+            SetHostEndPoint(_connectorService.EndPointInfo.TcpEndPoint);
 
             // Establish first connection and create a session
             await ConnectInternal(_cancellationTokenSource.Token);
@@ -229,7 +238,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Preparing device;
             if (!_packetCapture.Started) //make sure it is not a shared packet capture
             {
-                ConfigPacketFilter(HostTcpEndPoint);
+                ConfigPacketFilter(_connectorService.EndPointInfo.TcpEndPoint.Address);
                 _packetCapture.StartCapture();
             }
 
@@ -238,15 +247,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeIpRanges = Array.Empty<IpRange>();
 
             State = ClientState.Connected;
+            _initConnectedTime = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
+            scope?.Dispose(); // clear before start new async task
             _ = DisposeAsync(ex);
             throw;
         }
     }
 
-    private void ConfigPacketFilter(IPEndPoint hostEndPoint)
+    private void ConfigPacketFilter(IPAddress hostIpAddress)
     {
         // DnsServer
         if (_packetCapture.IsDnsServersSupported)
@@ -261,7 +272,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // exclude server if ProtectSocket is not supported to prevent loop
         if (!_packetCapture.CanProtectSocket)
-            includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostEndPoint.Address) });
+            includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostIpAddress) });
 
         // exclude local networks
         if (ExcludeLocalNetwork)
@@ -292,7 +303,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     // WARNING: Performance Critical!
     private void PacketCapture_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
     {
-        if (_disposed)
+        if (_disposed || _initConnectedTime is null)
             return;
 
         try
@@ -396,7 +407,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not process packet the capture packets.");
+            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");
         }
     }
 
@@ -519,13 +530,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return;
 
         if (!ShouldManageDatagramChannels)
-            return; 
+            return;
 
         try
         {
             // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
             if (UseUdpChannel)
-                await AddUdpChannel(); 
+                await AddUdpChannel();
             else
                 await AddTcpDatagramChannel(cancellationToken);
         }
@@ -543,7 +554,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddUdpChannel()
     {
         if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
-        if (VhUtil.IsNullOrEmpty(_serverKey)) throw new Exception("ServerSecret has not been set.");
+        if (VhUtil.IsNullOrEmpty(_serverSecret)) throw new Exception("ServerSecret has not been set.");
         if (VhUtil.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (HostUdpEndPoint == null)
         {
@@ -555,7 +566,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, _connectorService.ServerProtocolVersion);
         try
         {
-            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverKey);
+            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverSecret);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);
         }
@@ -605,6 +616,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
 
+            // update server token
+            ServerTokenUrl = sessionResponse.ServerTokenUrl;
+
             // usage tracker
             if (_allowAnonymousTracker)
             {
@@ -641,7 +655,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // get session id
             SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
             _sessionKey = sessionResponse.SessionKey;
-            _serverKey = sessionResponse.ServerSecret;
+            _serverSecret = sessionResponse.ServerSecret;
             _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
@@ -683,13 +697,23 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (RedirectHostException ex) when (!redirecting)
         {
-            if (_connectorService.EndPointInfo == null)
-                throw new InvalidOperationException($"{nameof(ConnectorService.EndPointInfo)} is not initialized.");
-
-            _connectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
-            HostTcpEndPoint = ex.RedirectHostEndPoint;
+            SetHostEndPoint(ex.RedirectHostEndPoint);
             await ConnectInternal(_cancellationTokenSource.Token, true);
         }
+    }
+
+    private void SetHostEndPoint(IPEndPoint ipEndPoint)
+    {
+        if (_connectorService.EndPointInfo == null)
+            throw new InvalidOperationException($"{nameof(ConnectorService.EndPointInfo)} is not initialized.");
+
+        // update _connectorService
+        _connectorService.EndPointInfo.TcpEndPoint = ipEndPoint;
+
+        // Restart the packet capture if it captures Host IpAddress
+        if (_packetCapture is { Started: true, CanProtectSocket: false, IncludeNetworks: not null } &&
+            IpRange.IsInSortedRanges(_packetCapture.IncludeNetworks.ToIpRanges().ToArray(), ipEndPoint.Address))
+            _packetCapture.StopCapture();
     }
 
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
@@ -701,7 +725,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // find timespan
-            var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan) && IsTcpDatagramLifespanSupported
+            var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan) 
                 ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds, (int)_maxTcpDatagramLifespan.TotalSeconds))
                 : Timeout.InfiniteTimeSpan;
 

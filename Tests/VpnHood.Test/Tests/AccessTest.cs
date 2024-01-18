@@ -25,7 +25,7 @@ public class AccessTest : TestBase
         // ************
         // *** TEST ***: request with invalid tokenId
         var token = TestHelper.CreateAccessToken(server);
-        token.TokenId = Guid.NewGuid(); //set invalid tokenId
+        token.TokenId = Guid.NewGuid().ToString(); //set invalid tokenId
 
         try
         {

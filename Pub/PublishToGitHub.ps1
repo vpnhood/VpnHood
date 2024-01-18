@@ -2,8 +2,14 @@
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
-# if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find # Upcoming phrase in CHANGELOG" };
-$changeLog = $text -replace "# Upcoming", "# v$versionParam";
+
+# find top version
+$vStart = $text.IndexOf("#");
+$vEnd = $text.IndexOf("`n", $vStart) - 1;
+$topVersion = $text.SubString($vStart, $vEnd - $vStart);
+
+# change top version
+$changeLog = $text -replace $topVersion, "# v$versionParam";
 $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
 
 # create release note

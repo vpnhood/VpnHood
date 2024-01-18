@@ -5,7 +5,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling.Channels.Streams;
 
-public class BinaryStream : ChunkStream
+public class BinaryStreamStandard : ChunkStream
 {
     private const int ChunkHeaderLength = 4;
     private int _remainingChunkBytes;
@@ -22,12 +22,12 @@ public class BinaryStream : ChunkStream
 
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
-    public BinaryStream(Stream sourceStream, string streamId)
-        : base(new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize), streamId)
+    public BinaryStreamStandard(Stream sourceStream, string streamId, bool useBuffer)
+        : base(useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream, streamId)
     {
     }
 
-    private BinaryStream(Stream sourceStream, string streamId, int reusedCount)
+    private BinaryStreamStandard(Stream sourceStream, string streamId, int reusedCount)
         : base(sourceStream, streamId, reusedCount)
     {
     }
@@ -189,7 +189,7 @@ public class BinaryStream : ChunkStream
 
         // reuse if the stream has been closed gracefully
         if (_finished && !_hasError)
-            return new BinaryStream(SourceStream, StreamId, ReusedCount + 1);
+            return new BinaryStreamStandard(SourceStream, StreamId, ReusedCount + 1);
 
         // dispose and throw the ungraceful BinaryStream
         await base.DisposeAsync();

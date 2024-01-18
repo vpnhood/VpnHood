@@ -2,13 +2,19 @@
 using Android.Content.PM;
 using Android.Runtime;
 using Android;
-using VpnHood.Client.Device.Droid;
 using Android.Net;
+using Xamarin.Google.Android.Play.Core.AppUpdate;
+using Xamarin.Google.Android.Play.Core.Install.Model;
+using VpnHood.Client.Device.Droid;
+using VpnHood.Client.App.Droid.Common.Utils;
+using VpnHood.Common.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
 public abstract class AndroidAppMainActivity : Activity
 {
+    private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
     protected const int RequestVpnPermissionId = 10;
     protected const int RequestPostNotificationId = 11;
     protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
@@ -24,7 +30,6 @@ public abstract class AndroidAppMainActivity : Activity
 
         // process intent
         ProcessIntent(Intent);
-
     }
 
     protected async Task RequestFeatures()
@@ -40,7 +45,44 @@ public abstract class AndroidAppMainActivity : Activity
 
         // request for notification
         if (OperatingSystem.IsAndroidVersionAtLeast(33) && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
-            RequestPermissions(new[] { Manifest.Permission.PostNotifications }, RequestPostNotificationId);
+        {
+            _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
+            RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
+            await _requestPostNotificationsCompletionTask.Task;
+        }
+
+        // Check for update
+        VpnHoodApp.Instance.VersionCheckProc = VersionCheckProc;
+        if (VpnHoodApp.Instance.VersionCheckRequired && await VersionCheckProc())
+            VpnHoodApp.Instance.VersionCheckPostpone(); // postpone check if check succeeded
+    }
+
+    private async Task<bool> VersionCheckProc()
+    {
+        var appUpdateManager = AppUpdateManagerFactory.Create(this);
+        try
+        {
+            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
+            var updateAvailability = appUpdateInfo.UpdateAvailability();
+
+            // postpone check if check succeeded
+            if (updateAvailability == UpdateAvailability.UpdateAvailable &&
+                appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
+            {
+                appUpdateManager.StartUpdateFlowForResult(
+                appUpdateInfo, this, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build(), 0);
+                return true;
+            }
+
+            // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
+            // So we return false if there is UpdateNotAvailable to let the alternative way works
+            return false;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not check for new version.");
+            return false;
+        }
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -48,6 +90,7 @@ public abstract class AndroidAppMainActivity : Activity
         if (!ProcessIntent(intent))
             base.OnNewIntent(intent);
     }
+
     private bool ProcessIntent(Intent? intent)
     {
         if (intent?.Data == null || ContentResolver == null)
@@ -95,14 +138,15 @@ public abstract class AndroidAppMainActivity : Activity
 
     protected void ImportAccessKey(string accessKey)
     {
-        var accessKeyStatus = VpnHoodApp.Instance.ClientProfileStore.GetAccessKeyStatus(accessKey);
-        var profile = VpnHoodApp.Instance.ClientProfileStore.AddAccessKey(accessKey);
+        var profiles = VpnHoodApp.Instance.ClientProfileService.List();
+        var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
         _ = VpnHoodApp.Instance.Disconnect(true);
         VpnHoodApp.Instance.UserSettings.DefaultClientProfileId = profile.ClientProfileId;
 
-        var message = accessKeyStatus.ClientProfile != null
-            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, accessKeyStatus.Name)
-            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, accessKeyStatus.Name);
+        var isNew = profiles.Any(x => x.ClientProfileId == profile.ClientProfileId);
+        var message = isNew
+            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profile.ClientProfileName)
+            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profile.ClientProfileName);
 
         Toast.MakeText(this, message, ToastLength.Long)?.Show();
     }
@@ -116,6 +160,15 @@ public abstract class AndroidAppMainActivity : Activity
             StartActivityForResult(intent, RequestVpnPermissionId);
     }
 
+    public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
+    {
+        var postNotificationsIndex = Array.IndexOf(permissions, Manifest.Permission.PostNotifications);
+        if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
+            _requestPostNotificationsCompletionTask.TrySetResult(grantResults[postNotificationsIndex]);
+
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
         if (requestCode == RequestVpnPermissionId && resultCode == Result.Ok)
@@ -127,8 +180,8 @@ public abstract class AndroidAppMainActivity : Activity
     protected override void OnDestroy()
     {
         VpnDevice.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
+        VpnHoodApp.Instance.VersionCheckProc = null;
 
         base.OnDestroy();
     }
-
 }

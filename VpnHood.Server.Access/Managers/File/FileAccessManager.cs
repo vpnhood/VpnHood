@@ -19,7 +19,8 @@ public class FileAccessManager : IAccessManager
     private const string FileExtToken = ".token";
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
-    public ServerConfig ServerConfig { get; }
+    private readonly ServerToken _serverToken;
+    public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
     public FileAccessManagerSessionController SessionController { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
@@ -45,6 +46,52 @@ public class FileAccessManager : IAccessManager
 
         // get or create server secret
         ServerConfig.ServerSecret ??= LoadServerSecret();
+
+        // get server token
+        _serverToken = GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
+
+        //Migrate old tokens
+#pragma warning disable CS0618 // Type or member is obsolete
+        FileAccessManagerLegacyV3.MigrateLegacyTokensV3(storagePath);
+#pragma warning restore CS0618 // Type or member is obsolete
+
+    }
+
+    private static ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
+    {
+        // PublicEndPoints
+        var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
+        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+            throw new Exception("PublicEndPoints must has not been configured.");
+
+        var serverToken = new ServerToken
+        {
+            CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
+            HostPort = serverConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
+            HostEndPoints = publicEndPoints,
+            HostName = certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
+            IsValidHostName = serverConfig.IsValidHostName,
+            Secret = serverConfig.ServerSecretValue,
+            Url = serverConfig.ServerTokenUrlValue,
+            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
+        };
+
+        // write encrypted server token
+        if (System.IO.File.Exists(encServerTokenFilePath))
+            try
+            {
+                var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16], System.IO.File.ReadAllText(encServerTokenFilePath));
+                if (serverToken.CompareTo(oldServerToken) <= 0)
+                    return oldServerToken;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogWarning(ex, "Error in reading enc-server-token.");
+            }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(encServerTokenFilePath)!);
+        System.IO.File.WriteAllText(encServerTokenFilePath, serverToken.Encrypt());
+        return serverToken;
     }
 
     public byte[] LoadServerSecret()
@@ -76,7 +123,7 @@ public class FileAccessManager : IAccessManager
         }
         ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
 
-        return Task.FromResult(ServerConfig);
+        return Task.FromResult((ServerConfig)ServerConfig);
     }
 
     public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
@@ -94,7 +141,7 @@ public class FileAccessManager : IAccessManager
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
         // set endpoints
-        ret.TcpEndPoints = new[] { sessionRequestEx.HostEndPoint };
+        ret.TcpEndPoints = [sessionRequestEx.HostEndPoint];
         ret.UdpEndPoints = ServerConfig.UdpEndPointsValue
             .Where(x => x.AddressFamily == sessionRequestEx.HostEndPoint.AddressFamily)
             .Select(x => new IPEndPoint(sessionRequestEx.HostEndPoint.Address, x.Port))
@@ -118,7 +165,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId.Value);
+        var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
@@ -148,7 +195,7 @@ public class FileAccessManager : IAccessManager
             return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId.Value);
+        var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
             return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
@@ -174,12 +221,12 @@ public class FileAccessManager : IAccessManager
         SessionController.Dispose();
     }
 
-    private string GetAccessItemFileName(Guid tokenId)
+    private string GetAccessItemFileName(string tokenId)
     {
         return Path.Combine(StoragePath, tokenId + FileExtToken);
     }
 
-    private string GetUsageFileName(Guid tokenId)
+    private string GetUsageFileName(string tokenId)
     {
         return Path.Combine(StoragePath, tokenId + FileExtUsage);
     }
@@ -199,25 +246,42 @@ public class FileAccessManager : IAccessManager
         return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
     }
 
-    public AccessItem[] AccessItem_LoadAll()
+    public async Task<AccessItem[]> AccessItem_LoadAll()
     {
         var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
-        return files.Select(x => AccessItem_Read(Guid.Parse(Path.GetFileNameWithoutExtension(x))).Result!)
-            .ToArray();
+        var accessItems = new List<AccessItem>();
+
+        foreach (var file in files)
+        {
+            var accessItem = await AccessItem_Read(Path.GetFileNameWithoutExtension(file));
+            if (accessItem != null)
+                accessItems.Add(accessItem);
+        }
+
+        return accessItems.ToArray();
     }
 
-    public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
+    public int AccessItem_Count()
+    {
+        var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
+        return files.Length;
+    }
+
+    public AccessItem AccessItem_Create(
         int maxClientCount = 1,
         string? tokenName = null,
         int maxTrafficByteCount = 0,
-        DateTime? expirationTime = null,
-        bool isValidHostName = false,
-        int hostPort = 443)
+        DateTime? expirationTime = null)
     {
         // generate key
         var aes = Aes.Create();
         aes.KeySize = 128;
         aes.GenerateKey();
+
+        // PublicEndPoints
+        var publicEndPoints = ServerConfig.PublicEndPoints ?? ServerConfig.TcpEndPointsValue;
+        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+            throw new Exception("PublicEndPoints must has not been configured.");
 
         // create AccessItem
         var accessItem = new AccessItem
@@ -225,17 +289,13 @@ public class FileAccessManager : IAccessManager
             MaxTraffic = maxTrafficByteCount,
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
-            Token = new Token(aes.Key,
-                DefaultCert.GetCertHash(),
-                DefaultCert.GetNameInfo(X509NameType.DnsName, false) ??
-                throw new Exception("Certificate must have a subject!"))
+            Token = new Token
             {
+                TokenId = Guid.NewGuid().ToString(),
+                Secret = aes.Key,
                 Name = tokenName,
-                HostPort = hostPort,
-                HostEndPoints = publicEndPoints,
-                TokenId = Guid.NewGuid(),
-                SupportId = 0,
-                IsValidHostName = isValidHostName
+                SupportId = null,
+                ServerToken = _serverToken
             }
         };
 
@@ -251,7 +311,7 @@ public class FileAccessManager : IAccessManager
         return accessItem;
     }
 
-    public async Task AccessItem_Delete(Guid tokenId)
+    public async Task AccessItem_Delete(string tokenId)
     {
         // remove index
         _ = await AccessItem_Read(tokenId)
@@ -264,7 +324,7 @@ public class FileAccessManager : IAccessManager
             System.IO.File.Delete(GetAccessItemFileName(tokenId));
     }
 
-    public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
+    public async Task<AccessItem?> AccessItem_Read(string tokenId)
     {
         // read access item
         var fileName = GetAccessItemFileName(tokenId);
@@ -339,7 +399,8 @@ public class FileAccessManager : IAccessManager
         public long MaxTraffic { get; set; }
         public Token Token { get; set; } = null!;
 
-        [JsonIgnore] public AccessUsage AccessUsage { get; set; } = new();
+        [JsonIgnore]
+        public AccessUsage AccessUsage { get; set; } = new();
     }
 
     private class AccessItemUsage

@@ -11,7 +11,7 @@ $nugetApiKey = $credentials.NugetApiKey;
 $msverbosity = "minimal";
 
 # Version
-$versionFile = "$pubDir/version.json";
+$versionFile = "$pubDir/PubVersion.json";
 $versionJson = (Get-Content $versionFile | Out-String | ConvertFrom-Json);
 $bumpTime = [datetime]::Parse($versionJson.BumpTime);
 $version = [version]::Parse($versionJson.Version);

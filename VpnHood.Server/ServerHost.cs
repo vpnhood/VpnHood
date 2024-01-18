@@ -22,7 +22,7 @@ namespace VpnHood.Server;
 internal class ServerHost : IAsyncDisposable, IJob
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
-    private const int ServerProtocolVersion = 4;
+    private const int ServerProtocolVersion = 5;
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly SslCertificateManager _sslCertificateManager;
@@ -42,7 +42,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
-        _tcpListeners = new List<TcpListener>();
+        _tcpListeners = [];
         _sessionManager = sessionManager;
         JobRunner.Default.Add(this);
     }
@@ -267,24 +267,33 @@ internal class ServerHost : IAsyncDisposable, IJob
         }
     }
 
+    private bool CheckApiKeyAuthorization(string authorization)
+    {
+        var parts = authorization.Split(' ');
+        return
+            parts.Length >= 2 &&
+            parts[0].Equals("ApiKey", StringComparison.OrdinalIgnoreCase) &&
+            parts[1].Equals(_sessionManager.ApiKey, StringComparison.OrdinalIgnoreCase) &&
+            parts[1] == _sessionManager.ApiKey;
+    }
+
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, CancellationToken cancellationToken)
     {
-        // read version
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
+        var streamId = Guid.NewGuid() + ":incoming";
+
+        // todo: deprecated on >= 451 {
+        #region Deprecated on >= 451
         var buffer = new byte[16];
         var res = await sslStream.ReadAsync(buffer, 0, 1, cancellationToken);
         if (res == 0)
             throw new Exception("Connection has been closed before receiving any request.");
 
         // check request version
-        var streamId = Guid.NewGuid() + ":incoming";
-
-        //todo must be deprecated from >= 416
         var version = buffer[0];
         if (version == 1)
-            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false,
-                cacheData: new[] { version }, cacheSize: 1), streamId);
-
+            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false, cacheData: [version], cacheSize: 1), streamId);
+        #endregion
 
         // Version 2 is HTTP and starts with POST
         try
@@ -293,47 +302,54 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken)
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
+            int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
+            Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
+            bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
+            var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
+            if (xVersion==2) binaryStreamType = BinaryStreamType.Custom;
+
             // read api key
-            var hasPassChecked = false;
-            if (headers.TryGetValue("Authorization", out var authorization))
+            if (!CheckApiKeyAuthorization(authorization))
             {
-                var parts = authorization.Split(' ');
-                if (parts.Length >= 2 &&
-                    parts[0].Equals("ApiKey", StringComparison.OrdinalIgnoreCase) &&
-                    parts[1].Equals(_sessionManager.ApiKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    var apiKey = parts[1];
-                    hasPassChecked = apiKey == _sessionManager.ApiKey;
-                }
-            }
+                // process hello without api key
+                if (authorization != "ApiKey")
+                    throw new UnauthorizedAccessException();
 
-            if (hasPassChecked)
-            {
-                if (headers.TryGetValue("X-Version", out var xVersion) && int.Parse(xVersion) == 2 &&
-                    headers.TryGetValue("X-Secret", out var xSecret))
-                {
-                    await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
-                    var secret = Convert.FromBase64String(xSecret);
-                    await sslStream.DisposeAsync(); // dispose Ssl
-                    return new TcpClientStream(tcpClient, new BinaryStream(tcpClient.GetStream(), streamId, secret), streamId, ReuseClientStream);
-                }
-            }
-
-            // process hello without api key
-            if (authorization == "ApiKey")
-            {
                 await sslStream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
-            throw new UnauthorizedAccessException();
+            // use binary stream only for authenticated clients
+            await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
+
+            switch (binaryStreamType)
+            {
+                case BinaryStreamType.Custom:
+                {
+                    await sslStream.DisposeAsync(); // dispose Ssl
+                    var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
+                    var secret = Convert.FromBase64String(xSecret);
+                    return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
+                }
+                
+                case BinaryStreamType.Standard:
+                    return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseClientStream);
+                
+                case BinaryStreamType.None:
+                    return new TcpClientStream(tcpClient, sslStream, streamId);
+
+                case BinaryStreamType.Unknown:
+                default:
+                    throw new NotSupportedException("Unknown BinaryStreamType");
+            }
         }
-        catch
+        catch (Exception ex)
         {
             //always return BadRequest 
             if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
-            await sslStream.WriteAsync(HttpResponses.GetBadRequest(), cancellationToken);
-            throw new Exception("Bad request.");
+            var response = ex is UnauthorizedAccessException ? HttpResponses.GetUnauthorized() : HttpResponses.GetBadRequest();
+            await sslStream.WriteAsync(response, cancellationToken);
+            throw;
         }
     }
 
@@ -580,6 +596,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
+            ServerTokenUrl = _sessionManager.ServerTokenUrl,
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
             GaMeasurementId = sessionResponse.GaMeasurementId,

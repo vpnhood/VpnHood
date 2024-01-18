@@ -1,44 +1,64 @@
-# v3.2.439
+# v3.3.454
 ### Client
-Update: Improve Performance
-Feature: Add the initializing state to the connection state
-Feature: Android Set the navigation button background color
+* Update: New Access Token format
+* Update: Use OS encryption for TLS
+* Feature: Enable updating server endpoints by Url
+* Feature: Display token expiration if it exists
+* Feature: Update server token URL from the server
+* Feature: Android: Prompt for the update by Google Play if possible
+* Feature: Android: Support opening (KEY) as VpnHood Key file
+* Fix: Windows: Freeze network after auto-reconnect with muti-server
+* Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
 ### Server
-Update: Improve Performance
-Update: Improve error reporting to access manager
-Update: Improve reporting state to access manager
-Fix: Server doesn't start when there is no local IpV6
-Fix: Server freezes when default UDP port is not available
-Fix: Send status even if server configuration is not successful
-Security: Updating AccessManaget token
+* Feature: Generate encrypted server token to client update server endpoint from a URL
+* Update: Move some File Access Manager options from the gen command to config
+* Update: Return 401 instead of 400 for invalid request
+* Update: Use OS encryption for TLS
+* Update: Redact more data in server logs
+* Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
+
+# v3.2.439
+### Client
+* Update: Improve Performance
+* Feature: Add the initializing state to the connection state
+* Feature: Android Set the navigation button background color
+
+### Server
+* Update: Improve Performance
+* Update: Improve error reporting to access manager
+* Update: Improve reporting state to access manager
+* Fix: Server doesn't start when there is no local IpV6
+* Fix: Server freezes when default UDP port is not available
+* Fix: Send status even if server configuration is not successful
+* Security: Updating AccessManaget token
 
 ### Developer
-Upgrade to .NET 8
-Android: Migrate from Xamarin to .NET Android Application
-Android: Upgrade to Android API 34
+* Upgrade to .NET 8
+* Android: Migrate from Xamarin to .NET Android Application
+* Android: Upgrade to Android API 34
 
 # v3.1.436 
 ### Client
-Update: Improve UI
-Fix: Android: Keyboard cover input fields in the UI
-Fix: Android: Frequently asking to add the system tile
+* Update: Improve UI
+* Fix: Android: Keyboard cover input fields in the UI
+* Fix: Android: Frequently asking to add the system tile
 
 # v3.1.430 
 ### Client
-Update: Improve UI
-Update: Windows: Remove from the taskbar on minimize
-Update: Android: Ask for notification permission
-Update: Android: Add compatibility to Android 6 & 14
-Feature: Android: Register vh and vhkey intent for importing access key
-Feature: Android: Add quick settings tile
-Fix: Android: Requesting permission for notification
-Fix: Windows: Restore Windows state to normal when user clicks on the system tray icon
-Fix: Improve disconnecting speed
+* Update: Improve UI
+* Update: Windows: Remove from the taskbar on minimize
+* Update: Android: Ask for notification permission
+* Update: Android: Add compatibility to Android 6 & 14
+* Feature: Android: Register vh and vhkey intent for importing access key
+* Feature: Android: Add quick settings tile
+* Fix: Android: Requesting permission for notification
+* Fix: Windows: Restore Windows state to normal when user clicks on the system tray icon
+* Fix: Improve disconnecting speed
 
 ### Developement
-Client: Update SPA to VUE 3 and TypeScript
-Client: Create Api.ts generated for TypeScript by nswag
+* Client: Update SPA to VUE 3 and TypeScript
+* Client: Create Api.ts generated for TypeScript by nswag
 
 # v3.0.429
 ### Client

@@ -334,7 +334,7 @@ public class Session : IAsyncDisposable, IJob
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
             // MaxEncryptChunk
-            if (clientStream.Stream is BinaryStream binaryStream)
+            if (clientStream.Stream is BinaryStreamCustom binaryStream)
                 binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
 
             // add the connection

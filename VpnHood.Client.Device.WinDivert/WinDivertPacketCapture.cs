@@ -88,7 +88,7 @@ public class WinDivertPacketCapture : IPacketCapture
         }
     }
 
-    private string Ip(IpRange ipRange)
+    private static string Ip(IpRange ipRange)
     {
         return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
     }
@@ -162,7 +162,7 @@ public class WinDivertPacketCapture : IPacketCapture
     {
         try
         {
-            var eventArgs = new PacketReceivedEventArgs(new[] { ipPacket }, this);
+            var eventArgs = new PacketReceivedEventArgs([ipPacket], this);
             OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
         }
         catch (Exception ex)

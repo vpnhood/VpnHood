@@ -4,13 +4,13 @@
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.client.android</ApplicationId>
+		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
 		<ApplicationVersion>452</ApplicationVersion>
 		<ApplicationDisplayVersion>3.3.452</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
 	</PropertyGroup>

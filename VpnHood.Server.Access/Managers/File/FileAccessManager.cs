@@ -19,6 +19,7 @@ public class FileAccessManager : IAccessManager
     private const string FileExtToken = ".token";
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
+    private readonly ServerToken _serverToken;
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
     public FileAccessManagerSessionController SessionController { get; }
@@ -46,11 +47,51 @@ public class FileAccessManager : IAccessManager
         // get or create server secret
         ServerConfig.ServerSecret ??= LoadServerSecret();
 
+        // get server token
+        _serverToken = GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
+
         //Migrate old tokens
 #pragma warning disable CS0618 // Type or member is obsolete
         FileAccessManagerLegacyV3.MigrateLegacyTokensV3(storagePath);
 #pragma warning restore CS0618 // Type or member is obsolete
 
+    }
+
+    private static ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
+    {
+        // PublicEndPoints
+        var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
+        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+            throw new Exception("PublicEndPoints must has not been configured.");
+
+        var serverToken = new ServerToken
+        {
+            CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
+            HostPort = serverConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
+            HostEndPoints = publicEndPoints,
+            HostName = certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
+            IsValidHostName = serverConfig.IsValidHostName,
+            Secret = serverConfig.ServerSecretValue,
+            Url = serverConfig.ServerTokenUrlValue,
+            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
+        };
+
+        // write encrypted server token
+        if (System.IO.File.Exists(encServerTokenFilePath))
+            try
+            {
+                var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16], System.IO.File.ReadAllText(encServerTokenFilePath));
+                if (serverToken.CompareTo(oldServerToken) <= 0)
+                    return oldServerToken;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogWarning(ex, "Error in reading enc-server-token.");
+            }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(encServerTokenFilePath)!);
+        System.IO.File.WriteAllText(encServerTokenFilePath, serverToken.Encrypt());
+        return serverToken;
     }
 
     public byte[] LoadServerSecret()
@@ -239,7 +280,7 @@ public class FileAccessManager : IAccessManager
 
         // PublicEndPoints
         var publicEndPoints = ServerConfig.PublicEndPoints ?? ServerConfig.TcpEndPointsValue;
-        if (publicEndPoints.Any(x=>x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
             throw new Exception("PublicEndPoints must has not been configured.");
 
         // create AccessItem
@@ -254,17 +295,7 @@ public class FileAccessManager : IAccessManager
                 Secret = aes.Key,
                 Name = tokenName,
                 SupportId = null,
-                ServerToken = new ServerToken
-                {
-                    CertificateHash = ServerConfig.IsValidHostName ? null : DefaultCert.GetCertHash(),
-                    HostPort = ServerConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
-                    HostEndPoints = publicEndPoints,
-                    HostName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
-                    IsValidHostName = ServerConfig.IsValidHostName,
-                    Secret = ServerConfig.ServerSecret,
-                    Url = null,
-                    CreatedTime = DateTime.UtcNow
-                }
+                ServerToken = _serverToken
             }
         };
 

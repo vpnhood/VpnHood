@@ -7,7 +7,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common;
 
-public class ServerToken
+public class ServerToken : IComparable<ServerToken>
 {
     [JsonPropertyName("ct")]
     public required DateTime CreatedTime { get; set; }
@@ -89,5 +89,22 @@ public class ServerToken
         var json = streamReader.ReadToEnd();
         var serverToken = VhUtil.JsonDeserialize<ServerToken>(json);
         return serverToken;
+    }
+
+    public int CompareTo(ServerToken other)
+    {
+        // create first server token by removing its created time
+        var serverToken1 = VhUtil.JsonClone<ServerToken>(this);
+        serverToken1.CreatedTime = DateTime.MinValue;
+
+        // create second server token by removing its created time
+        var serverToken2 = VhUtil.JsonClone<ServerToken>(other);
+        serverToken2.CreatedTime = DateTime.MinValue;
+
+        // compare
+        if (JsonSerializer.Serialize(serverToken1) == JsonSerializer.Serialize(serverToken2))
+            return 0;
+
+        return CreatedTime.CompareTo(other.CreatedTime);
     }
 }

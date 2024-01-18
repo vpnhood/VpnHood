@@ -26,12 +26,12 @@ $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android
-$nodeName = "Android.VpnHoodConnect";
+$nodeName = "Android.$packageFileTitle";
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
 $keystorePass = $credentials.$nodeName.KeyStorePass
 $keystoreAlias = $credentials.$nodeName.KeyStoreAlias
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
-$appIconXml = Join-Path $projectDir "Resources\mipmap-anydpi-v26\appicon.xml";
+$appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/appicon.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 $packageId = ([xml](Get-Content $projectFile)).SelectSingleNode("Project/PropertyGroup/ApplicationId").InnerText;

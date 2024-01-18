@@ -69,7 +69,7 @@ public class ServerApp : IDisposable
         _commandListener.CommandReceived += CommandListener_CommandReceived;
 
         // tracker
-        var anonyClientId = GetServerId(InternalStoragePath).ToString();
+        var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
         _gaTracker = new Ga4Tracker
         {
             // ReSharper disable once StringLiteralTypo
@@ -118,9 +118,8 @@ public class ServerApp : IDisposable
         }
     }
 
-    public static Guid GetServerId(string storagePath)
+    public static Guid GetServerId(string serverIdFile)
     {
-        var serverIdFile = Path.Combine(storagePath, "server-id");
         if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
             return serverId;
 

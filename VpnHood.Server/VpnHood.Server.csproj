@@ -19,7 +19,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.2.448</Version>
+		<Version>3.3.454</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -27,7 +27,7 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="PacketDotNet" Version="1.4.7" />
-		<PackageReference Include="System.Text.Json" Version="8.0.0" />
+		<PackageReference Include="System.Text.Json" Version="8.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

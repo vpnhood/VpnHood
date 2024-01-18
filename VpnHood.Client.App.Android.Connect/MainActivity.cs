@@ -23,7 +23,7 @@ namespace VpnHood.Client.App.Droid.Connect;
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
 
-public class MainActivity2 : AndroidAppWebViewMainActivity, IAccountService
+public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
 {
     public bool IsGoogleSignInSupported => true;
 

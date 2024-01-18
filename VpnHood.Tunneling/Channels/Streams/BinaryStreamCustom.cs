@@ -6,8 +6,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Tunneling.Channels.Streams;
 
 // this was used for .NET 6 or earlier as .net didn't use hardware acceleration for encryption in android and SslStream was very slow
-[Obsolete("Use BinaryStream instead. Deprecated by 3.2.440 or upper.")]
-public class CryptoBinaryStream : ChunkStream
+public class BinaryStreamCustom : ChunkStream
 {
     private const int ChunkHeaderLength = 5;
     private int _remainingChunkBytes;
@@ -27,13 +26,13 @@ public class CryptoBinaryStream : ChunkStream
     public long MaxEncryptChunk { get; set; } = long.MaxValue;
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
-    public CryptoBinaryStream(Stream sourceStream, string streamId, byte[] secret)
-        : base(new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize), streamId)
+    public BinaryStreamCustom(Stream sourceStream, string streamId, byte[] secret, bool useBuffer)
+        : base(useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream, streamId)
     {
         _streamCryptor = StreamCryptor.Create(SourceStream, secret, leaveOpen: true, encryptInGivenBuffer: true);
     }
 
-    private CryptoBinaryStream(Stream sourceStream, string streamId, StreamCryptor streamCryptor, int reusedCount)
+    private BinaryStreamCustom(Stream sourceStream, string streamId, StreamCryptor streamCryptor, int reusedCount)
         : base(sourceStream, streamId, reusedCount)
     {
         _streamCryptor = streamCryptor;
@@ -211,7 +210,7 @@ public class CryptoBinaryStream : ChunkStream
 
         // reuse if the stream has been closed gracefully
         if (_finished && !_hasError)
-            return new CryptoBinaryStream(SourceStream, StreamId, _streamCryptor, ReusedCount + 1);
+            return new BinaryStreamCustom(SourceStream, StreamId, _streamCryptor, ReusedCount + 1);
 
         // dispose and throw the ungraceful BinaryStream
         await base.DisposeAsync();

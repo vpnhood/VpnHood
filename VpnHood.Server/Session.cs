@@ -334,10 +334,8 @@ public class Session : IAsyncDisposable, IJob
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
             // MaxEncryptChunk
-#pragma warning disable CS0618 // Type or member is obsolete
-            if (clientStream.Stream is CryptoBinaryStream binaryStream)
+            if (clientStream.Stream is BinaryStreamCustom binaryStream)
                 binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
-#pragma warning restore CS0618 // Type or member is obsolete
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,

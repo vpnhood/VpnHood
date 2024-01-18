@@ -4,15 +4,15 @@
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.client.android</ApplicationId>
-		<ApplicationVersion>440</ApplicationVersion>
-		<ApplicationDisplayVersion>3.2.400</ApplicationDisplayVersion>
+		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
+		<ApplicationVersion>454</ApplicationVersion>
+		<ApplicationDisplayVersion>3.3.454</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<PublishTrimmed>False</PublishTrimmed>
-		<RunAOTCompilation>False</RunAOTCompilation>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<PublishTrimmed>True</PublishTrimmed>
+		<RunAOTCompilation>True</RunAOTCompilation>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.2.448</Version>
+		<Version>3.3.454</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />

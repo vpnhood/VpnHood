@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.Common;
+using VpnHood.Common.TokenLegacy;
 using VpnHood.Server.Access.Managers.File;
 
 namespace VpnHood.Server.App;
@@ -50,8 +51,17 @@ public class FileAccessManagerCommand
         Console.WriteLine($"TokenUpdateUrl: {accessItem.Token.ServerToken.Url}");
         Console.WriteLine("---");
 
+#pragma warning disable CS0618 // Type or member is obsolete
         Console.WriteLine();
-        Console.WriteLine("AccessKey:");
+        Console.WriteLine("AccessKey (OldVersion 3.3.450 or lower):");
+        Console.WriteLine();
+        Console.WriteLine(TokenV3.FromToken(accessItem.Token).ToAccessKey());
+        Console.WriteLine("---");
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        Console.WriteLine();
+        Console.WriteLine("AccessKey (NewVersion 3.3.451 or upper):");
+        Console.WriteLine();
         Console.WriteLine(accessItem.Token.ToAccessKey());
         Console.WriteLine("---");
         Console.WriteLine();

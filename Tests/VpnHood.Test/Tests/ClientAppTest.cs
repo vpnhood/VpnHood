@@ -484,25 +484,27 @@ public class ClientAppTest : TestBase
     [TestMethod]
     public async Task update_server_token_from_server_token_url()
     {
+        // create update webserver
+        var endPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        using var webServer = new WebServer(endPoint.Port);
+
         // create server1
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server1 = TestHelper.CreateServer(testAccessManager);
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions1.ServerTokenUrl = $"http://{endPoint}/accesskey";
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
+        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
+        await using var server1 = TestHelper.CreateServer(testAccessManager1);
         var token1 = TestHelper.CreateAccessToken(server1);
         await server1.DisposeAsync();
 
         // create server 2
-        await Task.Delay(500);
-        fileAccessManager.ServerConfig.TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)];
-        await using var server2 = TestHelper.CreateServer(testAccessManager);
+        await Task.Delay(1100); // wait for new CreatedTime
+        var fileAccessManager2 = TestHelper.CreateFileAccessManager(storagePath: fileAccessManager1.StoragePath);
+        using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
+        await using var server2 = TestHelper.CreateServer(testAccessManager2);
         var token2 = TestHelper.CreateAccessToken(server2);
 
-        //create web server and set token url to it
-        var endPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        using var webServer = new WebServer(endPoint.Port);
-        token1.ServerToken.Url = $"http://{endPoint}/accesskey";
-
-        // update token1 in web server
+        //update web server enc_server_token
         var isTokenRetrieved = false;
         webServer.WithAction("/accesskey", HttpVerbs.Get, context =>
         {
@@ -517,9 +519,9 @@ public class ClientAppTest : TestBase
         _ = app.Connect(clientProfile.ClientProfileId);
 
         await VhTestUtil.AssertEqualsWait(token2.ServerToken.CreatedTime, () => app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
+        Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
         Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
-        Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(AppConnectionState.Connected, app.State.ConnectionState);
 
         // connect

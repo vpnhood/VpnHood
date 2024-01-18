@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Accounts;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -71,6 +72,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
     public AppResources Resources { get; }
+    public IAccountService? AccountService { get; set; }
 
     private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {

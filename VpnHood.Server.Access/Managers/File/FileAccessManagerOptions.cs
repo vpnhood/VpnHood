@@ -11,7 +11,6 @@ public class FileAccessManagerOptions : ServerConfig
     public IPEndPoint[]? PublicEndPoints { get; set; }
 
     public string? SslCertificatesPassword { get; set; }
-    public string? ServerTokenUrl { get; set; }
     public int? HostPort { get; set; }
     public bool IsValidHostName { get; set; }
 }

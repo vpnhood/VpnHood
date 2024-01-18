@@ -7,6 +7,7 @@ using EmbedIO;
 using EmbedIO.Files;
 using EmbedIO.WebApi;
 using Swan.Logging;
+using VpnHood.Client.App.WebServer.Controllers;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.WebServer;
@@ -123,7 +124,10 @@ public class VpnHoodAppWebServer : IDisposable
                 .WithMode(HttpListenerMode.EmbedIO))
             .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
-                .WithController<ClientAppApiController>()
+                .WithController<AppController>()
+                .HandleUnhandledException(ExceptionHandler.DataResponseForException))
+            .WithWebApi("/api/login", ResponseSerializerCallback, c => c
+                .WithController<AccountController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))
             .HandleHttpException(ExceptionHandler.DataResponseForHttpException);
@@ -132,7 +136,7 @@ public class VpnHoodAppWebServer : IDisposable
     }
 
 
-    private async Task ResponseSerializerCallback(IHttpContext context, object? data)
+    private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
         if (data is null) throw new ArgumentNullException(nameof(data));
 

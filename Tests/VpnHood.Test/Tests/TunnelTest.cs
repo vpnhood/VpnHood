@@ -209,7 +209,7 @@ public class TunnelTest : TestBase
         using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken);
         
         // Create a memory stream to store the incoming data
-        ChunkStream binaryStream = new BinaryStream(client.GetStream(), Guid.NewGuid().ToString());
+        ChunkStream binaryStream = new BinaryStreamStandard(client.GetStream(), Guid.NewGuid().ToString(), true);
         while (true)
         {
             using var memoryStream = new MemoryStream();
@@ -267,7 +267,7 @@ public class TunnelTest : TestBase
         };
 
         // first stream
-        ChunkStream binaryStream = new BinaryStream(stream, Guid.NewGuid().ToString());
+        ChunkStream binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
         await binaryStream.WriteAsync(BitConverter.GetBytes(chunks.Sum(x => x.Length)), cts.Token);
         foreach (var chunk in chunks)
             await binaryStream.WriteAsync(Encoding.UTF8.GetBytes(chunk).ToArray(), cts.Token);
@@ -321,7 +321,7 @@ public class TunnelTest : TestBase
         random.NextBytes(writeBuffer);
 
         // write stream
-        ChunkStream binaryStream = new BinaryStream(stream, Guid.NewGuid().ToString());
+        ChunkStream binaryStream = new BinaryStreamStandard(stream, Guid.NewGuid().ToString(), true);
         await binaryStream.WriteAsync(BitConverter.GetBytes(writeBuffer.Length), cts.Token);
         await binaryStream.WriteAsync((byte[])writeBuffer.Clone(), cts.Token);
 

@@ -8,6 +8,7 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Accounts;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -31,6 +32,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
     private GoogleSignInOptions _googleSignInOptions = default!;
     private GoogleSignInClient _googleSignInClient = default!;
     private BillingClient _billingClient = default!;
+    private AuthenticationClient _authenticationClient = default!;
     public bool IsGoogleSignInSupported => true;
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -52,14 +54,26 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
         billingBuilder.EnablePendingPurchases();
         _billingClient = billingBuilder.Build();
         StartConnection();
-        SignInWithGoogle();
     }
 
-    public Task SignInWithGoogle()
+    private TaskCompletionSource<GoogleSignInAccount>? _signInWithGoogleTaskCompletionSource;
+    public async Task<ApiKey> SignInWithGoogle()
     {
         var intent = _googleSignInClient.SignInIntent;
+        _signInWithGoogleTaskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
         StartActivityForResult(intent, 1);
-        return Task.CompletedTask;
+        var account = await _signInWithGoogleTaskCompletionSource.Task;
+
+        if (account.IdToken == null)
+            throw new Exception("Can not get IdToken from Google");
+
+        _authenticationClient = new AuthenticationClient(new HttpClient());
+        var apiKey = await _authenticationClient.SignInAsync(new SignInRequest
+        {
+            IdToken = account.IdToken,
+            RefreshTokenType = RefreshTokenType.None
+        });
+        return apiKey;
     }
 
     public Task<Account> GetAccount()
@@ -201,12 +215,16 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
 
         if (requestCode == 1)
         {
-            var account = await GoogleSignIn.GetSignedInAccountFromIntentAsync(data);
-
-            if (account.IdToken != null)
+            try
             {
-                throw new NotImplementedException();
+                var account = await GoogleSignIn.GetSignedInAccountFromIntentAsync(data);
+                _signInWithGoogleTaskCompletionSource?.TrySetResult(account);
             }
+            catch (Exception e)
+            {
+                _signInWithGoogleTaskCompletionSource?.TrySetException(e);
+            }
+
         }
     }
 

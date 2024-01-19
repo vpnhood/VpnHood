@@ -34,15 +34,18 @@ public class CacheController : ControllerBase
     }
 
     [HttpPost("projects/{projectId}/invalidate")]
-    public async Task InvalidateProject(Guid projectId)
+    public Task InvalidateProject(Guid projectId)
     {
-        await _cacheService.InvalidateProject(projectId);
+        return _cacheService.InvalidateProject(projectId);
     }
 
     [HttpPost("projects/{projectId}/invalidate-servers")]
-    public async Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
     {
-        await _cacheService.InvalidateProjectServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
+        return _cacheService.InvalidateProjectServers(projectId: projectId, 
+            serverFarmId: serverFarmId, 
+            serverProfileId: serverProfileId,
+            certificateId: certificateId);
     }
 
     [HttpGet("servers/{serverId}")]
@@ -54,9 +57,9 @@ public class CacheController : ControllerBase
     }
 
     [HttpPost("servers/{serverId}/invalidate")]
-    public async Task InvalidateServer(Guid serverId)
+    public Task InvalidateServer(Guid serverId)
     {
-        await _cacheService.InvalidateServer(serverId);
+        return _cacheService.InvalidateServer(serverId);
     }
 
     [HttpGet("sessions/{sessionId}")]
@@ -75,8 +78,8 @@ public class CacheController : ControllerBase
 
 
     [HttpPost("flush")]
-    public async Task Flush()
+    public Task Flush()
     {
-        await _cacheService.SaveChanges();
+        return _cacheService.SaveChanges();
     }
 }

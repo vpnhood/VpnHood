@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <xs:schema id="NLog" targetNamespace="http://www.nlog-project.org/schemas/NLog.xsd" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://www.nlog-project.org/schemas/NLog.xsd">
   <xs:element name="nlog" type="NLogConfiguration" />
   <xs:complexType name="NLogConfiguration">
@@ -6,6 +6,7 @@
       <xs:element name="extensions" type="NLogExtensions" />
       <xs:element name="include" type="NLogInclude" />
       <xs:element name="variable" type="NLogVariable" />
+      <xs:element name="variables" type="NLogVariables" />
       <xs:element name="targets" type="NLogTargets" />
       <xs:element name="rules" type="NLogRules" />
       <xs:element name="time" type="TimeSource" />
@@ -231,6 +232,11 @@
           <xs:documentation>Variable value. Note, the 'value' attribute has precedence over this one.</xs:documentation>
         </xs:annotation>
       </xs:element>
+      <xs:element name="layout" minOccurs="0" maxOccurs="1" type="Layout">
+        <xs:annotation>
+          <xs:documentation>Layout type variable value. Note, the 'value' attribute has precedence over this one.</xs:documentation>
+        </xs:annotation>
+      </xs:element>
     </xs:choice>
     <xs:attribute name="name" type="xs:string" use="required">
       <xs:annotation>
@@ -242,6 +248,11 @@
         <xs:documentation>Variable value.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="NLogVariables">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="variable" type="NLogVariable" />
+    </xs:sequence>
   </xs:complexType>
   <xs:simpleType name="NLogTargetIDList">
     <xs:restriction base="xs:string">
@@ -1243,7 +1254,7 @@
           <xs:element name="log" type="xs:string" minOccurs="0" maxOccurs="1" default="Application" />
           <xs:element name="machineName" type="xs:string" minOccurs="0" maxOccurs="1" default="." />
           <xs:element name="maxKilobytes" type="xs:long" minOccurs="0" maxOccurs="1" />
-          <xs:element name="maxMessageLength" type="xs:integer" minOccurs="0" maxOccurs="1" default="16384" />
+          <xs:element name="maxMessageLength" type="xs:integer" minOccurs="0" maxOccurs="1" default="30000" />
           <xs:element name="source" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="onOverflow" type="NLog.Targets.EventLogTargetOverflowAction" minOccurs="0" maxOccurs="1" default="Truncate" />
         </xs:choice>
@@ -1679,85 +1690,6 @@
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
-  <xs:complexType name="ImpersonatingWrapper">
-    <xs:complexContent>
-      <xs:extension base="WrapperTargetBase">
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-          <xs:element name="name" type="xs:string" minOccurs="0" maxOccurs="1" />
-          <xs:element name="domain" type="xs:string" minOccurs="0" maxOccurs="1" default="." />
-          <xs:element name="impersonationLevel" type="NLog.Targets.Wrappers.SecurityImpersonationLevel" minOccurs="0" maxOccurs="1" default="Impersonation" />
-          <xs:element name="logOnProvider" type="NLog.Targets.Wrappers.LogOnProviderType" minOccurs="0" maxOccurs="1" default="Default" />
-          <xs:element name="logOnType" type="NLog.Targets.Wrappers.SecurityLogOnType" minOccurs="0" maxOccurs="1" default="Interactive" />
-          <xs:element name="password" type="xs:string" minOccurs="0" maxOccurs="1" />
-          <xs:element name="revertToSelf" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
-          <xs:element name="userName" type="xs:string" minOccurs="0" maxOccurs="1" />
-        </xs:choice>
-        <xs:attribute name="name" type="xs:string">
-          <xs:annotation>
-            <xs:documentation>Name of the target.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="domain" type="xs:string">
-          <xs:annotation>
-            <xs:documentation>Windows domain name to change context to.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="impersonationLevel" type="NLog.Targets.Wrappers.SecurityImpersonationLevel">
-          <xs:annotation>
-            <xs:documentation>Required impersonation level.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="logOnProvider" type="NLog.Targets.Wrappers.LogOnProviderType">
-          <xs:annotation>
-            <xs:documentation>Type of the logon provider.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="logOnType" type="NLog.Targets.Wrappers.SecurityLogOnType">
-          <xs:annotation>
-            <xs:documentation>Logon Type.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="password" type="xs:string">
-          <xs:annotation>
-            <xs:documentation>User account password.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="revertToSelf" type="xs:boolean">
-          <xs:annotation>
-            <xs:documentation>Indicates whether to revert to the credentials of the process instead of impersonating another user.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="userName" type="xs:string">
-          <xs:annotation>
-            <xs:documentation>Username to change context to.</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-  <xs:simpleType name="NLog.Targets.Wrappers.SecurityImpersonationLevel">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="Anonymous" />
-      <xs:enumeration value="Identification" />
-      <xs:enumeration value="Impersonation" />
-      <xs:enumeration value="Delegation" />
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:simpleType name="NLog.Targets.Wrappers.LogOnProviderType">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="Default" />
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:simpleType name="NLog.Targets.Wrappers.SecurityLogOnType">
-    <xs:restriction base="xs:string">
-      <xs:enumeration value="Interactive" />
-      <xs:enumeration value="Network" />
-      <xs:enumeration value="Batch" />
-      <xs:enumeration value="Service" />
-      <xs:enumeration value="NetworkClearText" />
-      <xs:enumeration value="NewCredentials" />
-    </xs:restriction>
-  </xs:simpleType>
   <xs:complexType name="LimitingWrapper">
     <xs:complexContent>
       <xs:extension base="WrapperTargetBase">
@@ -1794,15 +1726,16 @@
           <xs:element name="footer" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="replaceNewlineWithBrTagInHtml" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="priority" type="Layout" minOccurs="0" maxOccurs="1" />
+          <xs:element name="mailheader" minOccurs="0" maxOccurs="unbounded" type="NLog.Targets.MethodCallParameter" />
           <xs:element name="encoding" type="xs:string" minOccurs="0" maxOccurs="1" default="utf-8" />
           <xs:element name="bcc" type="Layout" minOccurs="0" maxOccurs="1" />
-          <xs:element name="cc" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="addNewLines" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
+          <xs:element name="to" type="Layout" minOccurs="1" maxOccurs="1" />
           <xs:element name="html" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="from" type="Layout" minOccurs="1" maxOccurs="1" />
           <xs:element name="body" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="subject" type="Layout" minOccurs="0" maxOccurs="1" />
-          <xs:element name="to" type="Layout" minOccurs="1" maxOccurs="1" />
+          <xs:element name="cc" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="deliveryMethod" type="System.Net.Mail.SmtpDeliveryMethod" minOccurs="0" maxOccurs="1" default="Network" />
           <xs:element name="smtpServer" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="smtpAuthentication" type="NLog.Targets.SmtpAuthenticationMode" minOccurs="0" maxOccurs="1" default="None" />
@@ -1854,14 +1787,14 @@
             <xs:documentation>BCC email addresses separated by semicolons (e.g. john@domain.com;jane@domain.com).</xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="cc" type="SimpleLayoutAttribute">
-          <xs:annotation>
-            <xs:documentation>CC email addresses separated by semicolons (e.g. john@domain.com;jane@domain.com).</xs:documentation>
-          </xs:annotation>
-        </xs:attribute>
         <xs:attribute name="addNewLines" type="xs:boolean">
           <xs:annotation>
             <xs:documentation>Indicates whether to add new lines between log entries.</xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="to" type="SimpleLayoutAttribute">
+          <xs:annotation>
+            <xs:documentation>Recipients' email addresses separated by semicolons (e.g. john@domain.com;jane@domain.com).</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="html" type="xs:boolean">
@@ -1884,9 +1817,9 @@
             <xs:documentation>Mail subject.</xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="to" type="SimpleLayoutAttribute">
+        <xs:attribute name="cc" type="SimpleLayoutAttribute">
           <xs:annotation>
-            <xs:documentation>Recipients' email addresses separated by semicolons (e.g. john@domain.com;jane@domain.com).</xs:documentation>
+            <xs:documentation>CC email addresses separated by semicolons (e.g. john@domain.com;jane@domain.com).</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="deliveryMethod" type="System.Net.Mail.SmtpDeliveryMethod">
@@ -1956,6 +1889,34 @@
       <xs:enumeration value="Ntlm" />
     </xs:restriction>
   </xs:simpleType>
+  <xs:complexType name="NLog.Targets.MethodCallParameter">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="name" type="xs:string" minOccurs="0" maxOccurs="1" />
+      <xs:element name="layout" type="Layout" minOccurs="1" maxOccurs="1" />
+      <xs:element name="defaultValue" type="Layout" minOccurs="0" maxOccurs="1" />
+      <xs:element name="parameterType" type="xs:string" minOccurs="0" maxOccurs="1" default="System.String" />
+    </xs:choice>
+    <xs:attribute name="name" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>Name of the parameter.</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="layout" type="SimpleLayoutAttribute">
+      <xs:annotation>
+        <xs:documentation>Layout that should be use to calculate the value for the parameter.</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="defaultValue" type="SimpleLayoutAttribute">
+      <xs:annotation>
+        <xs:documentation>Fallback value when result value is not available</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="parameterType" type="xs:string">
+      <xs:annotation>
+        <xs:documentation>Type of the parameter.</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
   <xs:complexType name="Memory">
     <xs:complexContent>
       <xs:extension base="Target">
@@ -2020,34 +1981,6 @@
         </xs:attribute>
       </xs:extension>
     </xs:complexContent>
-  </xs:complexType>
-  <xs:complexType name="NLog.Targets.MethodCallParameter">
-    <xs:choice minOccurs="0" maxOccurs="unbounded">
-      <xs:element name="name" type="xs:string" minOccurs="0" maxOccurs="1" />
-      <xs:element name="layout" type="Layout" minOccurs="1" maxOccurs="1" />
-      <xs:element name="defaultValue" type="Layout" minOccurs="0" maxOccurs="1" />
-      <xs:element name="parameterType" type="xs:string" minOccurs="0" maxOccurs="1" default="System.String" />
-    </xs:choice>
-    <xs:attribute name="name" type="xs:string">
-      <xs:annotation>
-        <xs:documentation>Name of the parameter.</xs:documentation>
-      </xs:annotation>
-    </xs:attribute>
-    <xs:attribute name="layout" type="SimpleLayoutAttribute">
-      <xs:annotation>
-        <xs:documentation>Layout that should be use to calculate the value for the parameter.</xs:documentation>
-      </xs:annotation>
-    </xs:attribute>
-    <xs:attribute name="defaultValue" type="SimpleLayoutAttribute">
-      <xs:annotation>
-        <xs:documentation>Fallback value when result value is not available</xs:documentation>
-      </xs:annotation>
-    </xs:attribute>
-    <xs:attribute name="parameterType" type="xs:string">
-      <xs:annotation>
-        <xs:documentation>Type of the parameter.</xs:documentation>
-      </xs:annotation>
-    </xs:attribute>
   </xs:complexType>
   <xs:complexType name="Network">
     <xs:complexContent>
@@ -2559,7 +2492,7 @@
           <xs:element name="escapeDataRfc3986" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="escapeDataNLogLegacy" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="userAgent" type="Layout" minOccurs="0" maxOccurs="1" />
-          <xs:element name="url" type="Layout" minOccurs="0" maxOccurs="1" />
+          <xs:element name="url" type="Layout" minOccurs="1" maxOccurs="1" />
           <xs:element name="proxyType" type="NLog.Targets.WebServiceProxyType" minOccurs="0" maxOccurs="1" default="DefaultWebProxy" />
           <xs:element name="proxyAddress" type="Layout" minOccurs="0" maxOccurs="1" />
           <xs:element name="protocol" type="NLog.Targets.WebServiceProtocol" minOccurs="0" maxOccurs="1" default="Soap11" />
@@ -2808,6 +2741,7 @@
           <xs:element name="escapeForwardSlash" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="excludeEmptyProperties" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="excludeProperties" type="xs:string" minOccurs="0" maxOccurs="1" />
+          <xs:element name="indentJson" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
           <xs:element name="maxRecursionLimit" type="xs:integer" minOccurs="0" maxOccurs="1" default="1" />
           <xs:element name="renderEmptyObject" type="xs:boolean" minOccurs="0" maxOccurs="1" default="true" />
           <xs:element name="suppressSpaces" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
@@ -2840,6 +2774,11 @@
         <xs:attribute name="excludeProperties" type="xs:string">
           <xs:annotation>
             <xs:documentation>List of property names to exclude when P:NLog.Layouts.JsonLayout.IncludeAllProperties is true</xs:documentation>
+          </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="indentJson" type="xs:boolean">
+          <xs:annotation>
+            <xs:documentation>Auto indent and create new lines</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="maxRecursionLimit" type="xs:integer">
@@ -2888,7 +2827,7 @@
     </xs:attribute>
     <xs:attribute name="encode" type="xs:boolean">
       <xs:annotation>
-        <xs:documentation>Determines whether or not this attribute will be Json encoded.</xs:documentation>
+        <xs:documentation>Whether output should be encoded as Json-String-Property, or be treated as valid json.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="escapeForwardSlash" type="xs:boolean">
@@ -3129,7 +3068,7 @@
     </xs:attribute>
     <xs:attribute name="encode" type="xs:boolean">
       <xs:annotation>
-        <xs:documentation>Determines whether or not this attribute will be Xml encoded.</xs:documentation>
+        <xs:documentation>Whether output should be encoded with Xml-string escaping, or be treated as valid xml-attribute-value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="includeEmptyValue" type="xs:boolean">
@@ -3149,6 +3088,7 @@
       <xs:element name="attribute" minOccurs="0" maxOccurs="unbounded" type="NLog.Layouts.XmlAttribute" />
       <xs:element name="element" minOccurs="0" maxOccurs="unbounded" type="NLog.Layouts.XmlElement" />
       <xs:element name="includeScopeProperties" type="xs:boolean" minOccurs="0" maxOccurs="1" default="false" />
+      <xs:element name="layout" type="Layout" minOccurs="0" maxOccurs="1" />
       <xs:element name="value" type="Layout" minOccurs="0" maxOccurs="1" />
       <xs:element name="encode" type="xs:boolean" minOccurs="0" maxOccurs="1" default="true" />
       <xs:element name="excludeProperties" type="xs:string" minOccurs="0" maxOccurs="1" />
@@ -3171,6 +3111,11 @@
         <xs:documentation>Whether to include the contents of the T:NLog.ScopeContext dictionary.</xs:documentation>
       </xs:annotation>
     </xs:attribute>
+    <xs:attribute name="layout" type="SimpleLayoutAttribute">
+      <xs:annotation>
+        <xs:documentation>Value inside the element</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
     <xs:attribute name="value" type="SimpleLayoutAttribute">
       <xs:annotation>
         <xs:documentation>Value inside the element</xs:documentation>
@@ -3178,7 +3123,7 @@
     </xs:attribute>
     <xs:attribute name="encode" type="xs:boolean">
       <xs:annotation>
-        <xs:documentation>Determines whether or not this attribute will be Xml encoded.</xs:documentation>
+        <xs:documentation>Whether output should be encoded with Xml-string escaping, or be treated as valid xml-element-value</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="excludeProperties" type="xs:string">

@@ -22,9 +22,9 @@ public class AgentServerTest
         // create serverInfo
         var publicIp = await testInit.NewIpV6();
         var privateIp = await testInit.NewIpV4();
-        var iPAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
-        serverDom.ServerInfo.PrivateIpAddresses = iPAddresses;
-        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIp, await testInit.NewIpV4(), await testInit.NewIpV6() };
+        var ipAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
+        serverDom.ServerInfo.PrivateIpAddresses = ipAddresses;
+        serverDom.ServerInfo.PublicIpAddresses = [publicIp, await testInit.NewIpV4(), await testInit.NewIpV6()];
 
         //Configure
         await serverDom.Configure();
@@ -132,13 +132,14 @@ public class AgentServerTest
         // --------
 
         // create serverInfo
-        serverDom.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
-        serverDom.ServerInfo.PublicIpAddresses = new[]
-        {
-            await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6(),
+        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses =
+        [
+            await farm.TestInit.NewIpV4(),
+            await farm.TestInit.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
             IPAddress.Parse(publicInTokenAccessPoints2[1].IpAddress)
-        };
+        ];
 
         //Configure
         await serverDom.Configure();
@@ -198,8 +199,8 @@ public class AgentServerTest
         var freeUdpPortV4 = serverInfo.FreeUdpPortV4;
         var freeUdpPortV6 = serverInfo.FreeUdpPortV6;
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
-        serverInfo.PublicIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
+        serverInfo.PrivateIpAddresses = new[] { publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
+        serverInfo.PublicIpAddresses = new[] { publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
@@ -284,7 +285,7 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task AutoConfig_should_not_remove_current_public_in_token_by_null_public_ip_()
+    public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         var testInit = farm.TestInit;
@@ -607,7 +608,6 @@ public class AgentServerTest
             CertificateId = certificate2.CertificateId
         });
 
-
         //-----------
         // check: get certificate by publicIp
         //-----------
@@ -622,6 +622,47 @@ public class AgentServerTest
         certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(dnsName2, certificate.GetNameInfo(X509NameType.DnsName, false));
     }
+
+    [TestMethod]
+    public async Task Reconfig_all_servers_after_certificate_replaced()
+    {
+        var farm = await ServerFarmDom.Create( serverCount: 0);
+        var server1 = await farm.AddNewServer();
+        var server2 = await farm.AddNewServer();
+
+        var cert = await farm.TestInit.CertificatesClient.GetAsync(farm.TestInit.ProjectId, farm.ServerFarm.CertificateId);
+        await farm.TestInit.CertificatesClient.ReplaceBySelfSignedAsync(farm.TestInit.ProjectId, cert.Certificate.CertificateId, new CertificateSelfSignedParams
+        {
+            SubjectName = "CN=" + cert.Certificate.CommonName
+        });
+
+        var command1 = await server1.SendStatus();
+        var command2 = await server2.SendStatus();
+        Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
+        Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
+    }
+
+    [TestMethod]
+    public async Task Reconfig_all_servers_after_farm_certificate_changed()
+    {
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var server1 = await farm.AddNewServer();
+        var server2 = await farm.AddNewServer();
+
+        var cert = await farm.TestInit.CertificatesClient.CreateBySelfSignedAsync(farm.TestInit.ProjectId,
+            new CertificateSelfSignedParams { SubjectName = $"CN={Guid.NewGuid()}.com" });
+
+        await farm.Update(new ServerFarmUpdateParams
+        {
+            CertificateId = new PatchOfGuid { Value = cert.CertificateId }
+        });
+
+        var command1 = await server1.SendStatus();
+        var command2 = await server2.SendStatus();
+        Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
+        Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
+    }
+
 
     [TestMethod]
     public async Task Server_UpdateStatus()

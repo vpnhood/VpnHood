@@ -18,13 +18,13 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.136</Version>
+		<Version>3.0.140</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Common" Version="3.1.436" />
-		<PackageReference Include="VpnHood.Server.Access" Version="3.1.436" />
+		<PackageReference Include="VpnHood.Common" Version="3.2.448" />
+		<PackageReference Include="VpnHood.Server.Access" Version="3.2.448" />
 	</ItemGroup>
 
 </Project>

@@ -20,7 +20,7 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.136</Version>
+		<Version>3.0.140</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -41,18 +41,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Authorization" Version="3.0.82" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.174" />
-		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.174" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.174" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+		<PackageReference Include="GrayMint.Authorization" Version="3.0.99" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.181" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.181" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.181" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
-		<PackageReference Include="NLog" Version="5.2.7" />
-		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
-		<PackageReference Include="SSH.NET" Version="2023.0.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
+		<PackageReference Include="NLog" Version="5.2.8" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.8" />
+		<PackageReference Include="SSH.NET" Version="2023.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

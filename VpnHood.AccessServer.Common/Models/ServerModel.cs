@@ -23,7 +23,7 @@ public class ServerModel
     public string? LastConfigError { get; set; }
     public bool AutoConfigure { get; set; }
     public bool IsDeleted { get; set; } = false;
-    public List<AccessPointModel> AccessPoints { get; set; } = new();
+    public List<AccessPointModel> AccessPoints { get; set; } = [];
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }

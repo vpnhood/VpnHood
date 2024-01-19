@@ -17,13 +17,15 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
     }
 
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
     {
         var parameters = new Dictionary<string, object?>
         {
             [nameof(serverFarmId)] = serverFarmId,
+            [nameof(certificateId)] = certificateId,
             [nameof(serverProfileId)] = serverProfileId,
         };
+
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", parameters, null);
     }
 

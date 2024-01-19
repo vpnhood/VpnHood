@@ -21,9 +21,9 @@ public class ServerProfilesController
 
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public async Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
+    public Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
     {
-        return await _serverProfileService.Create(projectId, createParams);
+        return _serverProfileService.Create(projectId, createParams);
     }
 
     [HttpGet("{serverProfileId}")]
@@ -36,24 +36,24 @@ public class ServerProfilesController
 
     [HttpPatch("{serverProfileId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
+    public Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
     {
-        return await _serverProfileService.Update(projectId, serverProfileId, updateParams);
+        return _serverProfileService.Update(projectId, serverProfileId, updateParams);
     }
 
     [HttpDelete("{serverProfileId}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public async Task Delete(Guid projectId, Guid serverProfileId)
+    public Task Delete(Guid projectId, Guid serverProfileId)
     {
-        await _serverProfileService.Delete(projectId, serverProfileId);
+        return _serverProfileService.Delete(projectId, serverProfileId);
     }
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
+    public Task<ServerProfileData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
         int recordIndex = 0, int recordCount = 101)
     {
-        return await _serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, 
+        return _serverProfileService.ListWithSummary(projectId, search, includeSummary: includeSummary, 
             recordIndex: recordIndex, recordCount: recordCount);
     }
 }

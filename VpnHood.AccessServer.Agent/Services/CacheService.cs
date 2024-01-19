@@ -40,7 +40,7 @@ public class CacheService
         if (!force && !Mem.Projects.IsEmpty)
             return;
 
-        // this will just effect current scope
+        // this will just affect current scope
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
         _logger.LogTrace("Loading the old projects and servers...");
@@ -229,12 +229,14 @@ public class CacheService
             server.Project = project;
     }
 
-    public async Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public async Task InvalidateProjectServers(Guid projectId, 
+        Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
     {
         var servers = Mem.Servers.Values.Where(server =>
                 server.ProjectId == projectId &&
                 (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-                (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId));
+                (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId) &&
+                (certificateId == null || server.ServerFarm!.CertificateId == certificateId));
 
         foreach (var server in servers)
         {
@@ -352,7 +354,7 @@ public class CacheService
         var updatedSessions = GetUpdatedSessions().ToArray();
 
         // update sessions
-        // never update archived session, it may not exists on db any more
+        // never update archived session, it may not exist on db anymore
         foreach (var session in updatedSessions)
         {
             var entry = _vhContext.Sessions.Attach(session.Clone());

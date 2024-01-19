@@ -1,21 +1,20 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json;
-using GrayMint.Common.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Services;
-using GrayMint.Common.Utils;
-using VpnHood.AccessServer.Report;
-using VpnHood.AccessServer.Security;
 using NLog;
 using NLog.Web;
-using VpnHood.AccessServer.Report.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using GrayMint.Common.AspNetCore;
 using GrayMint.Common.Swagger;
 using GrayMint.Authorization;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
+using GrayMint.Common.Utils;
+using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Services;
+using VpnHood.AccessServer.Report;
+using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Report.Services;
 
 namespace VpnHood.AccessServer;
 
@@ -52,8 +51,7 @@ public class Program
                 GrayMintApp.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
 
             httpClient.BaseAddress = appOptions.AgentUrlPrivate ?? appOptions.AgentUrl;
-            httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentSystemAuthorization);
+            httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
         });
 
         builder.Services.AddHostedService<TimedHostedService>();
@@ -90,11 +88,10 @@ public class Program
         await webApp.UseGrayMinCommonAuthorizationForApp();
         await webApp.Services.UseVhReportServices(args);
 
-
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
-        logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, new[] { nameof(AppOptions.AgentSystemAuthorization) }));
+        logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();

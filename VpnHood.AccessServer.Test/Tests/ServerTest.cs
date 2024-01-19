@@ -246,7 +246,7 @@ public class ServerTest
         accessToken = await farm.CreateAccessToken();
         token = await accessToken.GetToken();
         
-        // both server AccessPoint must exists
+        // both server AccessPoint must exist
         Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
         Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server2TokenIp.IpAddress));
 

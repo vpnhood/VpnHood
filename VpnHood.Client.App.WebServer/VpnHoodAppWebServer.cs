@@ -126,7 +126,7 @@ public class VpnHoodAppWebServer : IDisposable
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
                 .WithController<AppController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
-            .WithWebApi("/api/login", ResponseSerializerCallback, c => c
+            .WithWebApi("/api/account", ResponseSerializerCallback, c => c
                 .WithController<AccountController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))

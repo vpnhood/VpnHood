@@ -6,5 +6,5 @@ namespace VpnHood.Client.App.Droid.Common;
 
 public class AndroidAppService : IAppService
 {
-    public IDevice Device { get; }  = new AndroidDevice();
+    public IDevice Device { get; } = new AndroidDevice();
 }

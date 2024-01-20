@@ -1,8 +1,8 @@
 ﻿using VpnHood.Client.Device;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.Abstractions;
 
-public interface IAppProvider
+public interface IAppService
 {
     IDevice Device { get; }
     bool IsLogToConsoleSupported { get; }

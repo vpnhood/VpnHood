@@ -3,8 +3,8 @@ using Android.Content.PM;
 using Android.Runtime;
 using Android;
 using Android.Net;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.App.Accounts;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 

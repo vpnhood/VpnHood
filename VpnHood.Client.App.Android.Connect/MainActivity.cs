@@ -5,6 +5,7 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Accounts;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Client.App.Droid.GooglePlay;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -26,6 +27,11 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
 {
     public bool IsGoogleSignInSupported => true;
+
+    protected override IAppUpdaterService CreateAppUpdaterService()
+    {
+        return new GooglePlayAppUpdaterService(this);
+    }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {

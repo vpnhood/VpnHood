@@ -11,6 +11,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+// ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
 
@@ -260,14 +261,14 @@ public class ClientAppTest : TestBase
 
         await using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var ipList = (await Dns.GetHostAddressesAsync(TestHelper.TEST_HttpsUri1.Host))
+        var ipList = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
             .Select(x => new IpRange(x))
             .Concat(new[]
             {
-                new IpRange(TestHelper.TEST_PingV4Address1),
-                new IpRange(TestHelper.TEST_NsEndPoint1.Address),
-                new IpRange(TestHelper.TEST_UdpV4EndPoint1.Address),
-                new IpRange(TestHelper.TEST_UdpV6EndPoint1.Address),
+                new IpRange(TestConstants.PingV4Address1),
+                new IpRange(TestConstants.NsEndPoint1.Address),
+                new IpRange(TestConstants.UdpV4EndPoint1.Address),
+                new IpRange(TestConstants.UdpV6EndPoint1.Address),
             });
 
         // ************
@@ -277,7 +278,7 @@ public class ClientAppTest : TestBase
         app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
-        await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+        await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
         await IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
         await app.Disconnect();
@@ -295,26 +296,26 @@ public class ClientAppTest : TestBase
     {
         // TCP
         var oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         if (testPing)
         {
             // ping
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
             // ping
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             try
             {
-                await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2, timeout: 1000);
+                await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
             catch (Exception ex)
@@ -329,14 +330,14 @@ public class ClientAppTest : TestBase
         {
             // UDP
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
+            await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
             // UDP
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             try
             {
-                await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint2, timeout: 1000);
+                await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
             catch (Exception ex)
@@ -351,11 +352,11 @@ public class ClientAppTest : TestBase
         if (testDns)
         {
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint1);
+            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint2);
+            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
     }
@@ -364,12 +365,12 @@ public class ClientAppTest : TestBase
     {
         // TCP
         var oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
         Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         // TCP
         oldReceivedByteCount = app.State.SessionTraffic.Received;
-        await TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
         Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
         if (testPing)
@@ -378,7 +379,7 @@ public class ClientAppTest : TestBase
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             try
             {
-                await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1, timeout: 1000);
+                await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
             catch (Exception ex)
@@ -389,7 +390,7 @@ public class ClientAppTest : TestBase
 
             // ping
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address2);
+            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
 
@@ -400,7 +401,7 @@ public class ClientAppTest : TestBase
             oldReceivedByteCount = app.State.SessionTraffic.Received;
             try
             {
-                await TestHelper.Test_Udp(udpEndPoint: TestHelper.TEST_UdpV4EndPoint1, timeout: 1000);
+                await TestHelper.Test_Udp(udpEndPoint: TestConstants.UdpV4EndPoint1, timeout: 1000);
                 Assert.Fail("Exception expected as server should not exists.");
             }
             catch (Exception ex)
@@ -412,7 +413,7 @@ public class ClientAppTest : TestBase
             // UDP
             VhLogger.Instance.LogTrace("Testing UDP exclude...");
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint2);
+            await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
 
@@ -420,11 +421,11 @@ public class ClientAppTest : TestBase
         if (testDns)
         {
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint1);
+            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint1);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
 
             oldReceivedByteCount = app.State.SessionTraffic.Received;
-            TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint2);
+            TestHelper.Test_Dns(nsEndPoint: TestConstants.NsEndPoint2);
             Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
         }
     }

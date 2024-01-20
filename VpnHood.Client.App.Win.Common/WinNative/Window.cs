@@ -11,7 +11,7 @@ public class Window : IDisposable
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
     [SuppressMessage("ReSharper", "IdentifierTypo")]
     [StructLayout(LayoutKind.Sequential)]
-    private struct WNDCLASSEX
+    private struct WndClassEx
     {
         [MarshalAs(UnmanagedType.U4)]
         public uint cbSize;
@@ -32,7 +32,7 @@ public class Window : IDisposable
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.U2)]
-    private static extern short RegisterClassEx([In] ref WNDCLASSEX wndClassEx);
+    private static extern short RegisterClassEx([In] ref WndClassEx wndClassEx);
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr CreateWindowEx(uint dwExStyle, [MarshalAs(UnmanagedType.LPStr)] string lpClassName, [MarshalAs(UnmanagedType.LPStr)] string lpWindowName, uint dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
     [DllImport("user32.dll")]
@@ -43,7 +43,7 @@ public class Window : IDisposable
     public static extern IntPtr DefWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
     public delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
-    private readonly WNDCLASSEX _windowClass;
+    private readonly WndClassEx _windowClass;
 
     public IntPtr Handle { get; }
 
@@ -53,7 +53,7 @@ public class Window : IDisposable
         var className = Guid.NewGuid().ToString();
 
         //must keep reference to it and prevent it from release. Otherwise, exception will occur in message pump
-        _windowClass = new WNDCLASSEX
+        _windowClass = new WndClassEx
         {
             lpfnWndProc = wndProc,
             cbClsExtra = 0,
@@ -65,7 +65,7 @@ public class Window : IDisposable
             lpszMenuName = null,
             lpszClassName = className,
             style = 0,
-            cbSize = (uint)Marshal.SizeOf(typeof(WNDCLASSEX))
+            cbSize = (uint)Marshal.SizeOf(typeof(WndClassEx))
         };
 
         RegisterClassEx(ref _windowClass);
@@ -84,7 +84,6 @@ public class Window : IDisposable
             IntPtr.Zero); // creation parameters
     }
 
-    #region IDisposable Support
     private bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
@@ -114,5 +113,4 @@ public class Window : IDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-    #endregion
 }

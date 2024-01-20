@@ -48,8 +48,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
     private VersionStatus _versionStatus = VersionStatus.Unknown;
-
-    public Func<Task<bool>>? VersionCheckProc { get; set; }
+    
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
     public bool IsWaitingForAd { get; set; }
@@ -73,7 +72,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public AppLogService LogService { get; }
     public AppResources Resources { get; }
     public IAccountService? AccountService { get; set; }
-
+    public IAppUpdaterService? AppUpdaterService { get; set; }
     private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
@@ -496,7 +495,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
             // check diagnose
             if (_hasDiagnoseStarted && _lastError == null)
-                _lastError = "Diagnose has finished and no issue has been detected.";
+                _lastError = "Diagnoser has finished and no issue has been detected.";
 
             // close client
             try
@@ -573,11 +572,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             return;
 
         // check version by app container
-        if (VersionCheckProc != null)
+        if (AppUpdaterService != null)
         {
             try
             {
-                if (await VersionCheckProc())
+                if (await AppUpdaterService.Update())
                 {
                     _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
                     VersionCheckRequired = false;

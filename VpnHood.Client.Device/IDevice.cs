@@ -6,6 +6,8 @@ public interface IDevice
     DeviceAppInfo[] InstalledApps { get; }
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
+    bool IsLogToConsoleSupported { get; }
     event EventHandler OnStartAsService;
     Task<IPacketCapture> CreatePacketCapture();
+    
 }

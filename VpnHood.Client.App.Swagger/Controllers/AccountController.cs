@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.WebServer.Api;
 
 namespace VpnHood.Client.App.Swagger.Controllers;
@@ -21,7 +21,7 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpGet("account")]
-    public Task<Account> GetAccount()
+    public Task<AppAccount> GetAccount()
     {
         throw new NotImplementedException();
     }

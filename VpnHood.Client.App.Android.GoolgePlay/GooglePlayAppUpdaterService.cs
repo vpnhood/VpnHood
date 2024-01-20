@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install.Model;

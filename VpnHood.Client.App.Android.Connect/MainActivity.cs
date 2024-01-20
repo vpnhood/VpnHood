@@ -3,7 +3,7 @@ using Android.Content.PM;
 using Android.Gms.Ads;
 using Android.Service.QuickSettings;
 using Android.Views;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.GooglePlay;
 
@@ -24,7 +24,7 @@ namespace VpnHood.Client.App.Droid.Connect;
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
 
-public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
+public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 {
     public bool IsGoogleSignInSupported => true;
 
@@ -45,7 +45,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
         throw new NotImplementedException();
     }
 
-    public Task<Account> GetAccount()
+    public Task<AppAccount> GetAccount()
     {
         throw new NotImplementedException();
     }

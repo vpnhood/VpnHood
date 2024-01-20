@@ -6,7 +6,7 @@ public class WinDivertDevice : IDevice
     public event EventHandler? OnStartAsService;
 #pragma warning restore 0067
 
-    public string OperatingSystemInfo =>
+    public string OsInfo =>
         Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
     public bool IsExcludeAppsSupported => IsDebugMode;

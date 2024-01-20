@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
@@ -17,7 +17,7 @@ public class TokenV3
     public int Version { get; set; } = 3;
 
     [JsonPropertyName("sid")]
-    public int SupportId { get; set; } 
+    public int SupportId { get; set; }
 
     [JsonPropertyName("tid")]
     public required string TokenId { get; set; }
@@ -91,7 +91,7 @@ public class TokenV3
             HostName = token.ServerToken.HostName,
             HostPort = token.ServerToken.HostPort,
             CertificateHash = token.ServerToken.CertificateHash,
-            Url = null,
+            Url = token.ServerToken.Url,
             HostEndPoints = token.ServerToken.HostEndPoints,
             Version = 3,
             IsPublic = false

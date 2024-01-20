@@ -6,7 +6,7 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 
 [ApiController]
 [Route("api/account")]
-public class AccountController : ControllerBase, IAccountApi
+public class AccountController : ControllerBase, IAccountController
 {
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()

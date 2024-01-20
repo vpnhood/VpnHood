@@ -2,7 +2,7 @@
 
 namespace VpnHood.Client.App.WebServer.Api;
 
-internal interface IAccountController
+public interface IAccountController
 {
     bool IsSigninWithGoogleSupported();
     Task SignInWithGoogle();

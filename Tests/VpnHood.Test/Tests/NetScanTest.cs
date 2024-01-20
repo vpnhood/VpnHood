@@ -24,7 +24,7 @@ public class NetScanTest : TestBase
         await using var client = TestHelper.CreateClient(token);
 
         var tcpClient1 = new TcpClient();
-        await tcpClient1.ConnectAsync(TestHelper.TEST_TcpEndPoint1);
+        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);
         try
         {
             await VhUtil.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
@@ -36,7 +36,7 @@ public class NetScanTest : TestBase
 
         // NetScan error
         var tcpClient2 = new TcpClient();
-        await tcpClient2.ConnectAsync(TestHelper.TEST_TcpEndPoint2);
+        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint2);
         var res = await tcpClient2.GetStream().ReadAsync(new byte[100]);
         Assert.AreEqual(0, res, "NetScan should close this request.");
     }

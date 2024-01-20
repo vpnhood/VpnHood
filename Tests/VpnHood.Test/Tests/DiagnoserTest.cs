@@ -12,7 +12,7 @@ public class DiagnoserTest : TestBase
         // create server
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        token.ServerToken.HostEndPoints = [TestHelper.TEST_InvalidEp];
+        token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
 
         // create client
         await using var clientApp = TestHelper.CreateClientApp();
@@ -20,9 +20,9 @@ public class DiagnoserTest : TestBase
 
         // ************
         // NoInternetException
-        clientApp.Diagnoser.TestHttpUris = [TestHelper.TEST_InvalidUri];
-        clientApp.Diagnoser.TestNsIpEndPoints = [TestHelper.TEST_InvalidEp];
-        clientApp.Diagnoser.TestPingIpAddresses = [TestHelper.TEST_InvalidIp];
+        clientApp.Diagnoser.TestHttpUris = [TestConstants.InvalidUri];
+        clientApp.Diagnoser.TestNsIpEndPoints = [TestConstants.InvalidEp];
+        clientApp.Diagnoser.TestPingIpAddresses = [TestConstants.InvalidIp];
 
         try
         {

@@ -2,8 +2,8 @@
 using Android.Content.PM;
 using Android.Views;
 using Android.Service.QuickSettings;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
-using VpnHood.Client.App.Accounts;
 
 namespace VpnHood.Client.App.Droid;
 

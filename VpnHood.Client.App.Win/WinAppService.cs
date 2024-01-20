@@ -1,9 +1,10 @@
-﻿using VpnHood.Client.Device;
+﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
 using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Win;
 
-internal class WinAppProvider : IAppProvider
+internal class WinAppService : IAppService
 {
     public IDevice Device { get; } = new WinDivertDevice();
     public bool IsLogToConsoleSupported => true;

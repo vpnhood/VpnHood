@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Client.App.Accounts
+﻿namespace VpnHood.Client.App.Abstractions
 {
     public interface IAppUpdaterService
     {

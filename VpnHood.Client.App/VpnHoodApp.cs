@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -25,7 +25,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private const string FileNameSettings = "settings.json";
     private const string FolderNameProfiles = "profiles";
     private static VpnHoodApp? _instance;
-    private readonly IAppProvider _appProvider;
+    private readonly IAppService _appService;
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
     private readonly string? _appGa4MeasurementId;
@@ -65,15 +65,15 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
-    public IDevice Device => _appProvider.Device;
+    public IDevice Device => _appService.Device;
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
     public AppResources Resources { get; }
-    public IAccountService? AccountService { get; set; }
+    public IAppAccountService? AccountService { get; set; }
     public IAppUpdaterService? AppUpdaterService { get; set; }
-    private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
+    private VpnHoodApp(IAppService appService, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
@@ -83,8 +83,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
         Resources = options.Resources;
 
-        _appProvider = appProvider ?? throw new ArgumentNullException(nameof(appProvider));
-        if (_appProvider.Device == null) throw new ArgumentNullException(nameof(_appProvider.Device));
+        _appService = appService ?? throw new ArgumentNullException(nameof(appService));
+        if (_appService.Device == null) throw new ArgumentNullException(nameof(_appService.Device));
         Device.OnStartAsService += Device_OnStartAsService;
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
@@ -108,7 +108,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         });
 
         // create start up logger
-        if (!appProvider.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
+        if (!appService.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
@@ -209,7 +209,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public event EventHandler? ClientConnectCreated;
 
-    public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
+    public static VpnHoodApp Init(IAppService clientAppProvider, AppOptions? options = default)
     {
         return new VpnHoodApp(clientAppProvider, options);
     }
@@ -351,7 +351,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         // log general info
         VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
         VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
-        VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
+        VhLogger.Instance.LogInformation($"OS: {Device.OsInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
         // it slows down tests and does not need to be logged in normal situation

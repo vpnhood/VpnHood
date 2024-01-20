@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Win.Common

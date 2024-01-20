@@ -2,13 +2,9 @@
 
 namespace VpnHood.Test;
 
-internal class TestDevice : IDevice
+internal class TestDevice(TestDeviceOptions? options = default) : IDevice
 {
-    private readonly TestDeviceOptions _options;
-    public TestDevice(TestDeviceOptions? options = default)
-    {
-        _options = options ?? new TestDeviceOptions();
-    }
+    private readonly TestDeviceOptions _options = options ?? new TestDeviceOptions();
 
 #pragma warning disable 0067
     public event EventHandler? OnStartAsService;
@@ -20,6 +16,7 @@ internal class TestDevice : IDevice
     public bool IsExcludeAppsSupported => false;
 
     public bool IsIncludeAppsSupported => false;
+    public bool IsLogToConsoleSupported => true;
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 

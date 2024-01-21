@@ -147,16 +147,15 @@ public class AccessTokenTest
 
         var accessKey = await farm2.TestInit.AccessTokensClient.GetAccessKeyAsync(testInit.ProjectId, accessToken2B.AccessTokenId);
         var token = Token.FromAccessKey(accessKey);
-        Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.HostName);
-        Assert.AreEqual(true, token.IsPublic);
+        Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.ServerToken.HostName);
         Assert.AreEqual(accessToken2B.AccessTokenName, token.Name);
         Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()),
-            Convert.ToBase64String(token.CertificateHash));
+            Convert.ToBase64String(token.ServerToken.CertificateHash!));
 
         Assert.AreEqual(Convert.ToBase64String(secret2B), Convert.ToBase64String(token.Secret));
-        Assert.IsFalse(token.HostEndPoints?.Any(x => x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPointsValue.First())));
-        Assert.IsTrue(token.HostEndPoints?.Any(x => x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
-        Assert.AreEqual(accessToken2B.SupportCode, token.SupportId);
+        Assert.IsFalse(token.ServerToken.HostEndPoints?.Any(x => x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPointsValue.First())));
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
+        Assert.AreEqual(accessToken2B.SupportCode.ToString(), token.SupportId);
 
         //-----------
         // Check: Delete
@@ -197,14 +196,14 @@ public class AccessTokenTest
 
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
-        Assert.IsFalse(token.IsValidHostName);
-        Assert.IsTrue(token.HostEndPoints!.Any());
+        Assert.IsFalse(token.ServerToken.IsValidHostName);
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any());
 
 
         await farm.Update(new ServerFarmUpdateParams { UseHostName = new PatchOfBoolean { Value = true } });
         token = await accessToken.GetToken();
-        Assert.IsTrue(token.IsValidHostName);
-        Assert.IsTrue(token.HostEndPoints!.Any());
+        Assert.IsTrue(token.ServerToken.IsValidHostName);
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any());
     }
 
     [TestMethod]
@@ -222,14 +221,14 @@ public class AccessTokenTest
 
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
-        Assert.IsTrue(token.IsValidHostName);
-        Assert.IsTrue(token.HostEndPoints!.Any());
+        Assert.IsTrue(token.ServerToken.IsValidHostName);
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any());
 
 
         await farm.Update(new ServerFarmUpdateParams { UseHostName = new PatchOfBoolean { Value = false } });
         token = await accessToken.GetToken();
-        Assert.IsFalse(token.IsValidHostName);
-        Assert.IsTrue(token.HostEndPoints!.Any());
+        Assert.IsFalse(token.ServerToken.IsValidHostName);
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any());
     }
 
 

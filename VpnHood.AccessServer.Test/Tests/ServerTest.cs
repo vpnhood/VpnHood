@@ -235,7 +235,7 @@ public class ServerTest
         // check server access point in token
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
-        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
 
         // add another server
         var server2Dom = await farm.AddNewServer(new ServerCreateParams
@@ -247,12 +247,12 @@ public class ServerTest
         token = await accessToken.GetToken();
         
         // both server AccessPoint must exist
-        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
-        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server2TokenIp.IpAddress));
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server2TokenIp.IpAddress));
 
         // delete server 1 and check that its token should not exist in access-token anymore
         await server1Dom.Delete();
-        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
     }
 
 
@@ -369,5 +369,10 @@ public class ServerTest
         Assert.AreEqual(accessPoint3.UdpPort, accessPoint3B.UdpPort);
         Assert.AreEqual(accessPoint3.AccessPointMode, accessPoint3B.AccessPointMode); // first group must be default
         Assert.AreEqual(accessPoint3.IsListen, accessPoint3B.IsListen); // first group must be default
+
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x=> x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
+            "AccessPoints have not been updated in HostToken.");
     }
 }

@@ -27,7 +27,7 @@ public class ServerModel
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }
-    public virtual ServerStatusModel? ServerStatus { get; set; }
+    public virtual ServerStatusModel? ServerStatus { get; set; } // ignored
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
 }

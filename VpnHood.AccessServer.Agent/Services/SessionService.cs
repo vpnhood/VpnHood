@@ -105,7 +105,7 @@ public class SessionService
         var accessToken = await _vhContext.AccessTokens
             .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId);
+            .SingleAsync(x => x.AccessTokenId == Guid.Parse(sessionRequestEx.TokenId));
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
@@ -207,7 +207,7 @@ public class SessionService
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(ServerUtil.MinClientVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
-        // Check Redirect to another serverModel if everything was ok
+        // Check Redirect to another server if everything was ok
         var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
         if (bestTcpEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };

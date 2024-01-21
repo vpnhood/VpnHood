@@ -5,29 +5,21 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
-public class ServerFarmService
+public class ServerFarmService(
+    VhContext vhContext,
+    ServerService serverService,
+    VhRepo vhRepo,
+    CertificateService certificateService)
 {
-    private readonly VhContext _vhContext;
-    private readonly ServerService _serverService;
-    private readonly CertificateService _certificateService;
-
-    public ServerFarmService(
-        VhContext vhContext,
-        ServerService serverService,
-        CertificateService certificateService)
-    {
-        _vhContext = vhContext;
-        _serverService = serverService;
-        _certificateService = certificateService;
-    }
     public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
         // check user quota
-        if (_vhContext.ServerFarms.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerFarmCount)
+        if (vhContext.ServerFarms.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerFarmCount)
             throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
 
         if (createParams.CertificateId == null && createParams.UseHostName)
@@ -38,23 +30,23 @@ public class ServerFarmService
         if (string.IsNullOrWhiteSpace(createParams.ServerFarmName)) createParams.ServerFarmName = Resource.NewServerFarmTemplate;
         if (createParams.ServerFarmName.Contains("##"))
         {
-            var names = await _vhContext.ServerFarms
+            var names = await vhContext.ServerFarms
                 .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .Select(x => x.ServerFarmName)
                 .ToArrayAsync();
 
-            createParams.ServerFarmName = AccessServerUtil.FindUniqueName(createParams.ServerFarmName, names);
+            createParams.ServerFarmName = AccessUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
 
         // Set ServerProfileId
-        var serverProfile = await _vhContext.ServerProfiles
+        var serverProfile = await vhContext.ServerProfiles
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => (createParams.ServerProfileId == null && x.IsDefault) || x.ServerProfileId == createParams.ServerProfileId);
 
         // create a certificate if it is not given
         var certificate = createParams.CertificateId != null
-            ? (await _certificateService.Get(projectId, createParams.CertificateId.Value)).Certificate
-            : (await _certificateService.CreateSelfSingedInternal(projectId)).ToDto();
+            ? (await certificateService.Get(projectId, createParams.CertificateId.Value)).Certificate
+            : (await certificateService.CreateSelfSingedInternal(projectId)).ToDto();
 
         var ret = new ServerFarmModel
         {
@@ -68,17 +60,14 @@ public class ServerFarmService
             Secret = VhUtil.GenerateKey()
         };
 
-        await _vhContext.ServerFarms.AddAsync(ret);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.ServerFarms.AddAsync(ret);
+        await vhContext.SaveChangesAsync();
         return ret.ToDto(serverProfile.ServerProfileName);
     }
 
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
-        var serverFarm = await _vhContext.ServerFarms
-            .Include(x => x.ServerProfile)
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.ServerFarmId == serverFarmId);
+        var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId, true, true);
 
         var reconfigure = false;
 
@@ -86,39 +75,35 @@ public class ServerFarmService
         if (updateParams.ServerFarmName != null)
             serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
 
+        if (updateParams.UseHostName != null)
+            serverFarm.UseHostName = updateParams.UseHostName;
+
         if (updateParams.CertificateId != null && serverFarm.CertificateId != updateParams.CertificateId)
         {
             // makes sure that the certificate belongs to this project
-            var certificate = await _vhContext.Certificates
-                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-                .SingleAsync(x => x.CertificateId == updateParams.CertificateId);
-            
+            var certificate = await vhRepo.GetCertificate(projectId, updateParams.CertificateId.Value);
             serverFarm.CertificateId = certificate.CertificateId;
             reconfigure = true;
         }
-
-        if (updateParams.UseHostName != null)
-            serverFarm.UseHostName = updateParams.UseHostName;
 
         // Set ServerProfileId
         if (updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId)
         {
             // makes sure that the serverProfile belongs to this project
-            var serverProfile = await _vhContext.ServerProfiles
-                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-                .SingleAsync(x => x.ServerProfileId == updateParams.ServerProfileId!);
-
+            var serverProfile = await vhRepo.GetServerProfile(projectId, updateParams.ServerProfileId);
             serverFarm.ServerProfileId = serverProfile.ServerProfileId;
             reconfigure = true;
         }
 
+        // update host token
+        AccessUtil.HostTokenUpdateIfChanged(serverFarm);
+
         // update
-        _vhContext.ServerFarms.Update(serverFarm);
-        await _vhContext.SaveChangesAsync();
+        await vhRepo.SaveChangesAsync();
 
         // update cache after save
         if (reconfigure)
-            await _serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
+            await serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
 
         var ret = (await List(projectId, serverFarmId: serverFarmId)).Single();
         return ret;
@@ -128,7 +113,7 @@ public class ServerFarmService
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = _vhContext.ServerFarms
+        var query = vhContext.ServerFarms
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
@@ -167,7 +152,7 @@ public class ServerFarmService
 
     public async Task<ServerFarmAccessPoint[]> GetPublicInTokenAccessPoints(IEnumerable<Guid> farmIds)
     {
-        var query = _vhContext.Servers
+        var query = vhContext.Servers
             .Where(x => farmIds.Contains(x.ServerFarmId))
             .AsNoTracking()
             .Select(x => new
@@ -202,7 +187,7 @@ public class ServerFarmService
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = _vhContext.ServerFarms
+        var query = vhContext.ServerFarms
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .Where(x =>
@@ -255,7 +240,7 @@ public class ServerFarmService
 
     public async Task Delete(Guid projectId, Guid serverFarmId)
     {
-        var serverFarm = await _vhContext.ServerFarms
+        var serverFarm = await vhContext.ServerFarms
             .Include(x => x.Servers!.Where(y => !y.IsDeleted))
             .Include(x => x.AccessTokens)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
@@ -268,6 +253,6 @@ public class ServerFarmService
         foreach (var accessToken in serverFarm.AccessTokens!)
             accessToken.IsDeleted = true;
 
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
     }
 }

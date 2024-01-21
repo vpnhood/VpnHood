@@ -13,11 +13,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Agent"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Api", "VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj", "{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{73D254D7-E390-461B-BAD1-9C496C3BAF73}"
-	ProjectSection(SolutionItems) = preProject
-		.github\workflows\nuget.yml = .github\workflows\nuget.yml
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Report", "VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj", "{B8AB43A5-BF17-4B31-B566-BF01CF6062F0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DA70AC51-F97F-47CF-B732-3C76D1A27C32}"
@@ -25,6 +20,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Persistence", "VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj", "{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Dtos", "VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj", "{CAD62004-4357-4754-87F3-47CC82FA3292}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6BD0DD0E-2032-47E0-BEF9-7C145F942CEF}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

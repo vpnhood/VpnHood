@@ -61,8 +61,8 @@ public class ServerFarmTest
         var accessTokenDom = await farm1.CreateAccessToken(true);
         var accessKey = await accessTokenDom.GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
-        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.Equals(publicIp1)));
-        Assert.IsTrue(token.HostEndPoints!.Any(x => x.Address.Equals(publicIp2)));
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.Equals(publicIp1)));
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.Equals(publicIp2)));
 
         //-----------
         // check: update 

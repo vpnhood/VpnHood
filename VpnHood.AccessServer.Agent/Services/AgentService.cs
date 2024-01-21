@@ -17,62 +17,50 @@ using SessionOptions = VpnHood.Server.Access.Configurations.SessionOptions;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
-public class AgentService
+public class AgentService(
+    ILogger<AgentService> logger,
+    IOptions<AgentOptions> agentOptions,
+    CacheService cacheService,
+    SessionService sessionService,
+    VhRepo vhRepo,
+    VhContext vhContext)
 {
-    private readonly CacheService _cacheService;
-    private readonly SessionService _sessionService;
-    private readonly ILogger<SessionService> _logger;
-    private readonly VhContext _vhContext;
-    private readonly AgentOptions _agentOptions;
-
-    public AgentService(
-        ILogger<SessionService> logger,
-        IOptions<AgentOptions> agentOptions,
-        CacheService cacheService,
-        SessionService sessionService,
-        VhContext vhContext)
-    {
-        _cacheService = cacheService;
-        _sessionService = sessionService;
-        _logger = logger;
-        _vhContext = vhContext;
-        _agentOptions = agentOptions.Value;
-    }
+    private readonly AgentOptions _agentOptions = agentOptions.Value;
 
     public async Task<ServerModel> GetServer(Guid serverId)
     {
-        var server = await _cacheService.GetServer(serverId) ?? throw new Exception("Could not find server.");
+        var server = await cacheService.GetServer(serverId) ?? throw new Exception("Could not find server.");
         return server;
     }
 
     public async Task<SessionResponseEx> CreateSession(Guid serverId, SessionRequestEx sessionRequestEx)
     {
         var server = await GetServer(serverId);
-        return await _sessionService.CreateSession(server, sessionRequestEx);
+        return await sessionService.CreateSession(server, sessionRequestEx);
     }
 
     [HttpGet("sessions/{sessionId}")]
     public async Task<SessionResponseEx> GetSession(Guid serverId, uint sessionId, string hostEndPoint, string? clientIp)
     {
         var server = await GetServer(serverId);
-        return await _sessionService.GetSession(server, sessionId, hostEndPoint, clientIp);
+        return await sessionService.GetSession(server, sessionId, hostEndPoint, clientIp);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
     public async Task<SessionResponseBase> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, Traffic traffic)
     {
         var server = await GetServer(serverId);
-        return await _sessionService.AddUsage(server, sessionId, traffic, closeSession);
+        return await sessionService.AddUsage(server, sessionId, traffic, closeSession);
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
     public async Task<byte[]> GetCertificate(Guid serverId, string hostEndPoint)
     {
         var server = await GetServer(serverId);
-        _logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
+        logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
             server.ServerId, hostEndPoint);
 
-        var serverFarm = await _vhContext.ServerFarms
+        var serverFarm = await vhContext.ServerFarms
             .Include(serverFarm => serverFarm.Certificate)
             .Where(serverFarm => !serverFarm.IsDeleted)
             .SingleAsync(serverFarm => serverFarm.ServerFarmId == server.ServerFarmId);
@@ -90,12 +78,12 @@ public class AgentService
         {
             // update cache
             server.LastConfigError = errorMessage;
-            await _cacheService.UpdateServer(server);
+            await cacheService.UpdateServer(server);
 
             // update db
-            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            var serverUpdate = await vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
             serverUpdate.LastConfigError = server.LastConfigError;
-            await _vhContext.SaveChangesAsync();
+            await vhContext.SaveChangesAsync();
 
         }
         throw new NotSupportedException(errorMessage);
@@ -111,7 +99,7 @@ public class AgentService
         // remove LastConfigCode if server send its status
         if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != serverStatus.ConfigError)
         {
-            _logger.LogInformation(AccessEventId.Server,
+            logger.LogInformation(AccessEventId.Server,
                 "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
@@ -119,14 +107,14 @@ public class AgentService
             server.ConfigureTime = DateTime.UtcNow;
             server.LastConfigError = serverStatus.ConfigError;
             server.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode) ? Guid.Parse(serverStatus.ConfigCode) : null;
-            await _cacheService.UpdateServer(server);
+            await cacheService.UpdateServer(server);
 
             // update db
-            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            var serverUpdate = await vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
             serverUpdate.LastConfigError = server.LastConfigError;
             serverUpdate.LastConfigCode = server.LastConfigCode;
             serverUpdate.ConfigureTime = server.ConfigureTime;
-            await _vhContext.SaveChangesAsync();
+            await vhContext.SaveChangesAsync();
         }
 
         var ret = new ServerCommand(server.ConfigCode.ToString());
@@ -136,20 +124,18 @@ public class AgentService
     [HttpPost("configure")]
     public async Task<ServerConfig> ConfigureServer(Guid serverId, ServerInfo serverInfo)
     {
+        // first use cache make sure not use db for old versions
         var server = await GetServer(serverId);
-        _logger.Log(LogLevel.Information, AccessEventId.Server,
+        logger.Log(LogLevel.Information, AccessEventId.Server,
             "Configuring a Server. ServerId: {ServerId}, Version: {Version}",
             server.ServerId, serverInfo.Version);
 
-        // must after assigning version 
+        // check version
         server.Version = serverInfo.Version.ToString();
-        await CheckServerVersion(server);
+        await CheckServerVersion(server); // must after assigning version 
 
-        // calculate access points
-        var oldAccessPoints = server.AccessPoints;
-        var accessPoints = server.AutoConfigure
-            ? await CreateServerAccessPoints(server.ServerId, server.ServerFarmId, serverInfo)
-            : server.AccessPoints;
+        // ready for update
+        server = await vhRepo.GetServer(server.ProjectId, serverId);
 
         // update cache
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -159,39 +145,42 @@ public class AgentService
         server.TotalMemory = serverInfo.TotalMemory ?? 0;
         server.LogicalCoreCount = serverInfo.LogicalCoreCount;
         server.Version = serverInfo.Version.ToString();
-        server.AccessPoints = accessPoints;
+        server.LastConfigError = server.LastConfigError;
+        server.ConfigureTime = server.ConfigureTime;
 
-        // update cache
-        SetServerStatus(server, serverInfo.Status, true);
-
-        // update db. Use find instead of Single because it uses the cache
-        var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
-
-        serverUpdate.Version = server.Version;
-        serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
-        serverUpdate.OsInfo = server.OsInfo;
-        serverUpdate.MachineName = server.MachineName;
-        serverUpdate.LogicalCoreCount = server.LogicalCoreCount;
-        serverUpdate.TotalMemory = server.TotalMemory;
-        serverUpdate.Version = server.Version;
-        serverUpdate.LastConfigError = server.LastConfigError;
-
-        // accessPoints if there is any change
-        if (_vhContext.ChangeTracker.HasChanges() ||
-            JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(oldAccessPoints))
+        // calculate access points
+        if (server.AutoConfigure)
         {
-            serverUpdate.AccessPoints = server.AccessPoints;
-            serverUpdate.ConfigureTime = server.ConfigureTime;
-            await _vhContext.SaveChangesAsync();
+            var serverFarm = await vhRepo.GetServerFarm(server.ProjectId, server.ServerFarmId, true, true);
+            var accessPoints = BuildServerAccessPoints(server.ServerId, serverFarm.Servers!, serverInfo);
+
+            // check if access points has been changed, then update host token and access points
+            if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(server.AccessPoints))
+            {
+                server.AccessPoints = accessPoints;
+                AccessUtil.HostTokenUpdateIfChanged(serverFarm);
+            }
         }
 
+        // update if there is any change
+        await vhRepo.SaveChangesAsync();
+
+        // update cache
+        await cacheService.InvalidateServer(server.ServerId);
+
+        // get object from cache and update it
+        server = await GetServer(serverId);
+        SetServerStatus(server, serverInfo.Status, true);
+
+        // return configuration
         var serverConfig = GetServerConfig(server);
         return serverConfig;
     }
 
     private ServerConfig GetServerConfig(ServerModel server)
     {
-        if (server.ServerFarm == null) throw new Exception("ServerFarm has not been fetched.");
+        if (server.ServerFarm == null)
+            throw new Exception("ServerFarm has not been fetched.");
 
         var tcpEndPoints = server.AccessPoints
             .Where(accessPoint => accessPoint.IsListen)
@@ -234,7 +223,7 @@ public class AgentService
             }
             catch (Exception ex)
             {
-                _logger.LogError(AccessEventId.Server, ex, "Could not deserialize ServerProfile's ServerConfig.");
+                logger.LogError(AccessEventId.Server, ex, "Could not deserialize ServerProfile's ServerConfig.");
             }
         }
 
@@ -292,14 +281,8 @@ public class AgentService
             .Select(x => x.IpAddress);
     }
 
-    private async Task<List<AccessPointModel>> CreateServerAccessPoints(Guid serverId, Guid farmId, ServerInfo serverInfo)
+    private static List<AccessPointModel> BuildServerAccessPoints(Guid serverId, ICollection<ServerModel> farmServers, ServerInfo serverInfo)
     {
-        // find all public accessPoints 
-        var farmServers = await _vhContext.Servers
-            .Where(server => server.ServerFarmId == farmId && !server.IsDeleted)
-            .AsNoTracking()
-            .ToArrayAsync();
-
         // all old PublicInToken AccessPoints in the same farm
         var oldTokenAccessPoints = farmServers
             .SelectMany(serverModel => serverModel.AccessPoints)
@@ -355,7 +338,6 @@ public class AgentService
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetwork);
             SelectAccessPointAsPublicInToken(accessPoints, AddressFamily.InterNetworkV6);
         }
-
 
         return accessPoints.ToList();
     }

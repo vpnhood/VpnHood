@@ -41,10 +41,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Authorization" Version="3.0.99" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.181" />
-		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.181" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.181" />
+		<PackageReference Include="GrayMint.Authorization" Version="3.0.101" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.182" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.182" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.182" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

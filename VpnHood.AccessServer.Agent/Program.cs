@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text.Json;
 using GrayMint.Common.AspNetCore;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +10,6 @@ using NLog;
 using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
-using GrayMint.Authorization.Authentications.Utils;
 using GrayMint.Common.Swagger;
 
 namespace VpnHood.AccessServer.Agent;
@@ -55,6 +52,7 @@ public class Program
             });
 
         builder.Services
+            .AddScoped<VhRepo>()
             .AddDbContextPool<VhContext>(options =>
             {
                 options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
@@ -68,8 +66,9 @@ public class Program
         builder.Services.AddHostedService<TimedHostedService>();
 
         // NLog: Setup NLog for Dependency injection
-        builder.Logging.ClearProviders();
-        builder.Host.UseNLog();
+        //todo
+        //builder.Logging.ClearProviders();
+        //builder.Host.UseNLog();
 
         //---------------------
         // Create App
@@ -95,25 +94,5 @@ public class Program
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();
     }
-
-    public static string CreateSystemToken(byte[] key, string authorizationCode)
-    {
-        var claims = new Claim[]
-        {
-            new("usage_type", "system"),
-            new("authorization_code", authorizationCode),
-            new(JwtRegisteredClaimNames.Sub, "system"),
-            new(JwtRegisteredClaimNames.Email, "system@local"),
-        };
-
-        var ret = JwtUtil.CreateSymmetricJwt(key,
-            "auth.vpnhood.com",
-            "access.vpnhood.com",
-            null,
-            null,
-            claims,
-            new[] { "System" });
-
-        return ret;
-    }
+   
 }

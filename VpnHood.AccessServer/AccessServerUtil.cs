@@ -1,42 +1,10 @@
-﻿using System.Net;
-using System.Text;
+﻿using System.Text;
 using Renci.SshNet;
 
 namespace VpnHood.AccessServer;
 
 public static class AccessServerUtil
 {
-    public static string ValidateIpEndPoint(string ipEndPoint)
-    {
-        return IPEndPoint.Parse(ipEndPoint).ToString();
-    }
-        
-    public static string ValidateIpAddress(string ipAddress)
-    {
-        return IPAddress.Parse(ipAddress).ToString();
-    }
-    public static string FindUniqueName(string template, string?[] names)
-    {
-        for (var i = 2; ; i++)
-        {
-            var name = template.Replace("##", i.ToString());
-            if (names.All(x => x != name))
-                return name;
-        }
-    }
-
-    public static string? GenerateCacheKey(string keyBase, DateTime? beginTime, DateTime? endTime, out TimeSpan? cacheExpiration)
-    {
-        cacheExpiration = null;
-        if (endTime != null && DateTime.UtcNow - endTime >= TimeSpan.FromMinutes(5)) 
-            return null;
-
-        var duration = (endTime ?? DateTime.UtcNow) - (beginTime ?? DateTime.UtcNow.AddYears(-2));
-        var threshold = (long) (duration.TotalMinutes / 30);
-        var cacheKey = $"{keyBase}_{threshold}";
-        cacheExpiration = TimeSpan.FromMinutes(Math.Min(60 * 24, duration.TotalMinutes / 30));
-        return cacheKey;
-    }
 
     public static async Task<string> ExecuteSshCommand(SshClient sshClient,
         string command, string? loginPassword, TimeSpan timeout)

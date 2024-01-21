@@ -10,6 +10,8 @@ public class ServerFarmModel
     public DateTime CreatedTime { get; set; }
     public bool UseHostName { get; set; }
     public byte[] Secret { get; set; } = default!;
+    public string? HostTokenJson { get; set; }
+    public string? HostTokenUrl { get; set; }
     public bool IsDeleted { get; set; } = false;
 
     public virtual ServerProfileModel? ServerProfile { get; set; }

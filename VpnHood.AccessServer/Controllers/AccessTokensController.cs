@@ -1,6 +1,4 @@
-﻿using System.Net;
-using System.Net.Mime;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +10,7 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common;
+using VpnHood.Common.TokenLegacy;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -19,35 +18,25 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/access-tokens")]
-public class AccessTokensController : ControllerBase
+public class AccessTokensController(
+    UsageReportService usageReportService,
+    SubscriptionService subscriptionService,
+    VhContext vhContext)
+    : ControllerBase
 {
-    private readonly UsageReportService _usageReportService;
-    private readonly SubscriptionService _subscriptionService;
-    private readonly VhContext _vhContext;
-
-    public AccessTokensController(
-        UsageReportService usageReportService,
-        SubscriptionService subscriptionService,
-        VhContext vhContext)
-    {
-        _usageReportService = usageReportService;
-        _subscriptionService = subscriptionService;
-        _vhContext = vhContext;
-    }
-
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateAccessTokens");
-        await _subscriptionService.AuthorizeCreateAccessToken(projectId);
+        await subscriptionService.AuthorizeCreateAccessToken(projectId);
 
-        var serverFarm = await _vhContext.ServerFarms
+        var serverFarm = await vhContext.ServerFarms
             .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == createParams.ServerFarmId);
 
         // create support id
-        var supportCode = await _vhContext.AccessTokens
+        var supportCode = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId)
             .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
         supportCode++;
@@ -71,8 +60,8 @@ public class AccessTokensController : ControllerBase
             IsEnabled = true
         };
 
-        await _vhContext.AccessTokens.AddAsync(accessToken);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.AccessTokens.AddAsync(accessToken);
+        await vhContext.SaveChangesAsync();
 
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
@@ -83,13 +72,13 @@ public class AccessTokensController : ControllerBase
     {
         // validate accessTokenModel.ServerFarmId
         var serverFarm = (updateParams.ServerFarmId != null)
-            ? await _vhContext.ServerFarms.SingleAsync(x =>
+            ? await vhContext.ServerFarms.SingleAsync(x =>
                 x.ProjectId == projectId &&
                 x.ServerFarmId == updateParams.ServerFarmId)
             : null;
 
         // update
-        var accessToken = await _vhContext.AccessTokens
+        var accessToken = await vhContext.AccessTokens
             .Include(x => x.ServerFarm)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.AccessTokenId == accessTokenId);
@@ -106,70 +95,42 @@ public class AccessTokensController : ControllerBase
             accessToken.ServerFarm = serverFarm;
         }
 
-        if (_vhContext.ChangeTracker.HasChanges())
+        if (vhContext.ChangeTracker.HasChanges())
             accessToken.ModifiedTime = DateTime.UtcNow;
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
 
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
-    [HttpGet("{accessTokenId}/access-key")]
+   
+
+    [HttpGet("{accessTokenId:guid}/access-key")]
     [AuthorizeProjectPermission(Permissions.AccessTokenReadAccessKey)]
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
-        var accessToken = await _vhContext
-            .AccessTokens
+        var accessToken = await vhContext.AccessTokens
             .Include(x => x.ServerFarm)
-            .Include(x => x.ServerFarm!.Certificate)
+            .Where(x => x.ProjectId == projectId)
             .Where(x => x.AccessTokenId == accessTokenId)
             .SingleAsync();
 
-        var certificate = accessToken.ServerFarm!.Certificate!;
-        var x509Certificate = new X509Certificate2(certificate.RawData);
-
-        // find all public accessPoints 
-        var farmServers = await _vhContext.Servers
-            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Where(server => server.ServerFarmId == accessToken.ServerFarmId)
-            .ToArrayAsync();
-
-        var tokenAccessPoints = farmServers
-            .SelectMany(server => server.AccessPoints)
-            .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
-            .ToArray();
-
-
-        if (VhUtil.IsNullOrEmpty(tokenAccessPoints))
-            throw new InvalidOperationException("Could not find any public access point for the ServerFarm. Please configure a server for this AccessToken.");
-
-        // find all token tcp port
-        var hostPort = 0;
-        if (accessToken.ServerFarm.UseHostName)
-        {
-            var hostPorts = tokenAccessPoints.DistinctBy(x => x.TcpPort).ToArray();
-            if (hostPorts.Length > 1)
-                throw new Exception(
-                    $"More than one TCP port has been found in PublicInTokens. It is ambiguous as to which port should be used for the hostname. " +
-                    $"EndPoints: {string.Join(',', hostPorts.Select(x => x.ToString()))}");
-            hostPort = hostPorts.Single().TcpPort;
-        }
+        if (string.IsNullOrEmpty(accessToken.ServerFarm!.HostTokenJson))
+            throw new InvalidOperationException("The Farm has not been configured or it does not have at least a server with a PublicInToken access points.");
 
         // create token
-        var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
+        var token = new Token
         {
-            Version = 1,
-            TokenId = accessToken.AccessTokenId,
+            ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm.HostTokenJson),
+            Secret = accessToken.Secret,
+            TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,
-            SupportId = accessToken.SupportCode,
-            HostEndPoints = tokenAccessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
-            HostPort = hostPort,
-            IsValidHostName = accessToken.ServerFarm.UseHostName,
-            IsPublic = accessToken.IsPublic,
-            Url = accessToken.Url
+            SupportId = accessToken.SupportCode.ToString()
         };
 
-        return token.ToAccessKey();
+#pragma warning disable CS0618 // Type or member is obsolete
+        return TokenV3.FromToken(token).ToAccessKey();
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     [HttpGet("{accessTokenId}")]
@@ -188,19 +149,19 @@ public class AccessTokensController : ControllerBase
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
     {
-        await _subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
+        await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
         // no lock
-        await using var trans = await _vhContext.WithNoLockTransaction();
+        await using var trans = await vhContext.WithNoLockTransaction();
 
         if (!Guid.TryParse(search, out var searchGuid)) searchGuid = Guid.Empty;
         if (!int.TryParse(search, out var searchInt)) searchInt = -1;
 
         // find access tokens
         var baseQuery =
-            from accessToken in _vhContext.AccessTokens
-            join serverFarm in _vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
-            join access in _vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
+            from accessToken in vhContext.AccessTokens
+            join serverFarm in vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
+            join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
@@ -232,7 +193,7 @@ public class AccessTokensController : ControllerBase
         if (usageBeginTime != null)
         {
             var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId).ToArray();
-            var usages = await _usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageBeginTime, usageEndTime);
+            var usages = await usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageBeginTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.accessTokenData.AccessToken.AccessTokenId, out var usage))
@@ -252,7 +213,7 @@ public class AccessTokensController : ControllerBase
     [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task DeleteMany(Guid projectId, Guid[] accessTokenIds)
     {
-        var accessTokens = await _vhContext.AccessTokens
+        var accessTokens = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => accessTokenIds.Contains(x.AccessTokenId))
             .ToListAsync();
@@ -260,7 +221,7 @@ public class AccessTokensController : ControllerBase
         foreach (var accessToken in accessTokens)
             accessToken.IsDeleted = true;
 
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
     }
 
 
@@ -269,11 +230,11 @@ public class AccessTokensController : ControllerBase
     [AuthorizeProjectPermission(Permissions.AccessTokenWrite)]
     public async Task Delete(Guid projectId, Guid accessTokenId)
     {
-        var accessToken = await _vhContext.AccessTokens
+        var accessToken = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.AccessTokenId == accessTokenId);
 
         accessToken.IsDeleted = true;
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
     }
 }

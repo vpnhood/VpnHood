@@ -8,5 +8,5 @@ $nswagFile = "$curDir/Api/Api.nswag";
 
 # run
 $nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net80/dotnet-nswag.exe";
-$variables="/variables:namespace=$namespace,apiBaseFile=Api,projectFile=$projectFile";
+$variables="/variables:namespace=$namespace,apiBaseFile=$namespace,projectFile=$projectFile";
 & "$nswagExe" run $nswagFile $variables;

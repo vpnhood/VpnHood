@@ -5,25 +5,17 @@ using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class ServerDom
+public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInfo)
 {
-    public TestInit TestInit { get; }
+    public TestInit TestInit { get; } = testInit;
     public ServersClient Client => TestInit.ServersClient;
-    public AgentClient AgentClient { get; }
-    public VpnServer Server { get; private set; }
+    public AgentClient AgentClient { get; } = testInit.CreateAgentClient(server.ServerId);
+    public VpnServer Server { get; private set; } = server;
     public List<SessionDom> Sessions { get; } = [];
-    public ServerInfo ServerInfo { get; set; }
+    public ServerInfo ServerInfo { get; set; } = serverInfo;
     public ServerStatus ServerStatus => ServerInfo.Status;
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
-
-    public ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInfo)
-    {
-        TestInit = testInit;
-        Server = server;
-        ServerInfo = serverInfo;
-        AgentClient = testInit.CreateAgentClient(server.ServerId);
-    }
 
     public static async Task<ServerDom> Attach(TestInit testInit, Guid serverId)
     {

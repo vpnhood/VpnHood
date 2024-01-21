@@ -25,7 +25,7 @@ public class AccessTokenDom
         // get server ip
         var accessKey = await GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
-        var serverEndPoint = token.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
+        var serverEndPoint = token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
         return await CreateSession(serverEndPoint, clientId, clientIp, assertError, autoRedirect);
     }
 

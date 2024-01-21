@@ -9,7 +9,6 @@ using VpnHood.Client.App;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
-using VpnHood.Common.Converters;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -29,39 +28,12 @@ namespace VpnHood.Test;
 
 internal static class TestHelper
 {
-    private const int DefaultTimeout = 30000;
-    public static readonly Uri TEST_HttpsUri1 = new("https://www.quad9.net/");
-    public static readonly Uri TEST_HttpsUri2 = new("https://www.google.com/");
-    public static readonly IPEndPoint TEST_NsEndPoint1 = IPEndPoint.Parse("1.1.1.1:53");
-    public static readonly IPEndPoint TEST_NsEndPoint2 = IPEndPoint.Parse("1.0.0.1:53");
-    public static readonly IPEndPoint TEST_TcpEndPoint1 = IPEndPoint.Parse("198.18.0.1:80");
-    public static readonly IPEndPoint TEST_TcpEndPoint2 = IPEndPoint.Parse("198.18.0.2:80");
-    public static readonly IPEndPoint TEST_HttpsEndPoint1 = IPEndPoint.Parse("198.18.0.1:3030");
-    public static readonly IPEndPoint TEST_HttpsEndPoint2 = IPEndPoint.Parse("198.18.0.2:3030");
-    public static readonly IPEndPoint TEST_UdpV4EndPoint1 = IPEndPoint.Parse("198.18.10.1:63100");
-    public static readonly IPEndPoint TEST_UdpV4EndPoint2 = IPEndPoint.Parse("198.18.10.2:63101");
-    public static readonly IPEndPoint TEST_UdpV6EndPoint1 = IPEndPoint.Parse("[2001:4860:4866::2223]:63100");
-    public static readonly IPEndPoint TEST_UdpV6EndPoint2 = IPEndPoint.Parse("[2001:4860:4866::2223]:63101");
-    public static readonly IPAddress TEST_PingV4Address1 = IPAddress.Parse("198.18.20.1");
-    public static readonly IPAddress TEST_PingV4Address2 = IPAddress.Parse("198.18.20.2");
-    public static readonly IPAddress TEST_PingV6Address1 = IPAddress.Parse("2001:4860:4866::2200");
-
-    public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
-    public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("198.18.255.1");
-    public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("198.18.255.2:9999");
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
 
     private static int _accessItemIndex;
 
     public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
-
-    public static string CreateNewFolder(string namePart)
-    {
-        var folder = Path.Combine(WorkingPath, $"{namePart}_{Guid.NewGuid()}");
-        Directory.CreateDirectory(folder);
-        return folder;
-    }
 
     internal static void Cleanup()
     {
@@ -86,19 +58,19 @@ internal static class TestHelper
         return VhTestUtil.AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
     }
 
-    private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = DefaultTimeout)
+    private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = TestConstants.DefaultTimeout)
     {
         using var pingT = new Ping();
         ping ??= pingT;
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
-        return ping.SendPingAsync(ipAddress ?? TEST_PingV4Address1, timeout, buffer);
+        return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout, buffer);
     }
 
     private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default,
-        int timeout = DefaultTimeout)
+        int timeout = TestConstants.DefaultTimeout)
     {
-        uri ??= TEST_HttpsUri1;
+        uri ??= TestConstants.HttpsUri1;
 
         using var httpClientT = new HttpClient(new HttpClientHandler
         {
@@ -120,7 +92,7 @@ internal static class TestHelper
         return res.Length > 100;
     }
 
-    public static async Task Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = DefaultTimeout)
+    public static async Task Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = TestConstants.DefaultTimeout)
     {
         var pingReply = await SendPing(ping, ipAddress, timeout);
         if (pingReply.Status != IPStatus.Success)
@@ -130,17 +102,17 @@ internal static class TestHelper
     public static void Test_Dns(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
     {
         var hostEntry = DiagnoseUtil
-            .GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
+            .GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1, udpClient, timeout).Result;
         Assert.IsNotNull(hostEntry);
         Assert.IsTrue(hostEntry.AddressList.Length > 0);
     }
 
-    public static Task Test_Udp(int timeout = DefaultTimeout)
+    public static Task Test_Udp(int timeout = TestConstants.DefaultTimeout)
     {
-        return Test_Udp(TEST_UdpV4EndPoint1, timeout);
+        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
     }
 
-    public static async Task Test_Udp(IPEndPoint udpEndPoint, int timeout = DefaultTimeout)
+    public static async Task Test_Udp(IPEndPoint udpEndPoint, int timeout = TestConstants.DefaultTimeout)
     {
         if (udpEndPoint.AddressFamily == AddressFamily.InterNetwork)
         {
@@ -155,7 +127,7 @@ internal static class TestHelper
         }
     }
 
-    public static async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, int timeout = DefaultTimeout)
+    public static async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, int timeout = TestConstants.DefaultTimeout)
     {
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
@@ -167,7 +139,7 @@ internal static class TestHelper
     }
 
     public static async Task<bool> Test_Https(HttpClient? httpClient = default, Uri? uri = default,
-        int timeout = DefaultTimeout, bool throwError = true)
+        int timeout = TestConstants.DefaultTimeout, bool throwError = true)
     {
         if (throwError)
         {
@@ -192,20 +164,20 @@ internal static class TestHelper
         {
             var addresses = new List<IPAddress>
             {
-                TEST_NsEndPoint1.Address,
-                TEST_NsEndPoint2.Address,
-                TEST_PingV4Address1,
-                TEST_PingV4Address2,
-                TEST_PingV6Address1,
-                TEST_TcpEndPoint1.Address,
-                TEST_TcpEndPoint2.Address,
-                TEST_InvalidIp,
-                TEST_UdpV4EndPoint1.Address,
-                TEST_UdpV4EndPoint2.Address,
+                TestConstants.NsEndPoint1.Address,
+                TestConstants.NsEndPoint2.Address,
+                TestConstants.PingV4Address1,
+                TestConstants.PingV4Address2,
+                TestConstants.PingV6Address1,
+                TestConstants.TcpEndPoint1.Address,
+                TestConstants.TcpEndPoint2.Address,
+                TestConstants.InvalidIp,
+                TestConstants.UdpV4EndPoint1.Address,
+                TestConstants.UdpV4EndPoint2.Address,
                 new ClientOptions().TcpProxyCatcherAddressIpV4
             };
-            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri1.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri2.Host));
+            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri1.Host));
+            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
             return addresses.ToArray();
         }
     }
@@ -407,7 +379,7 @@ internal static class TestHelper
         //create app
         appOptions ??= CreateClientAppOptions();
 
-        var testAppProvider = new TestAppProvider(deviceOptions);
+        var testAppProvider = new TestAppService(deviceOptions);
         var clientApp = VpnHoodApp.Init(testAppProvider, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
@@ -454,17 +426,17 @@ internal static class TestHelper
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
         NetFilter.Init([
-            Tuple.Create(ProtocolType.Tcp, TEST_TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TEST_TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(ProtocolType.Tcp, TEST_HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(ProtocolType.Tcp, TEST_HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(ProtocolType.Udp, TEST_UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TEST_UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(ProtocolType.Udp, TEST_UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(ProtocolType.Udp, TEST_UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TEST_PingV4Address1, 0), IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TEST_PingV4Address2, 0), IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TEST_PingV6Address1, 0), IPEndPoint.Parse("[::1]:0"))
+            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+            Tuple.Create(ProtocolType.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+            Tuple.Create(ProtocolType.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+            Tuple.Create(ProtocolType.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address1, 0), IPEndPoint.Parse("127.0.0.1:0")),
+            Tuple.Create(ProtocolType.Icmp, new IPEndPoint(TestConstants.PingV4Address2, 0), IPEndPoint.Parse("127.0.0.2:0")),
+            Tuple.Create(ProtocolType.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0), IPEndPoint.Parse("[::1]:0"))
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);

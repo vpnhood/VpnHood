@@ -8,7 +8,7 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer.Controllers;
 
-internal class AppController : WebApiController, IAppApi
+internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 

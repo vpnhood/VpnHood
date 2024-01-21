@@ -1,10 +1,10 @@
-﻿using VpnHood.Client.App.Accounts;
+﻿using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.WebServer.Api;
 
-internal interface IAccountController
+public interface IAccountController
 {
     bool IsSigninWithGoogleSupported();
     Task SignInWithGoogle();
-    Task<Account> GetAccount();
+    Task<AppAccount> GetAccount();
 }

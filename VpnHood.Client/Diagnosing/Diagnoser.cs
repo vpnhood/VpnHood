@@ -12,9 +12,9 @@ public class Diagnoser
     public IPAddress[] TestPingIpAddresses { get; set; } = [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1")];
 
     public IPEndPoint[] TestNsIpEndPoints { get; set; } =
-        [new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)];
+        [new IPEndPoint(IPAddress.Parse("8.8.8.8"), 53), new IPEndPoint(IPAddress.Parse("1.1.1.1"), 53)];
 
-    public Uri[] TestHttpUris { get; set; } = [new("https://www.google.com"), new("https://www.quad9.net/"), new("https://www.microsoft.com/")];
+    public Uri[] TestHttpUris { get; set; } = [new Uri("https://www.google.com"), new Uri("https://www.quad9.net/"), new Uri("https://www.microsoft.com/")];
     public int HttpTimeout { get; set; } = 10 * 1000;
     public int NsTimeout { get; set; } = 10 * 1000;
     public event EventHandler? StateChanged;

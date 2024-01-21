@@ -91,20 +91,21 @@ public class ServerToken : IComparable<ServerToken>
         return serverToken;
     }
 
-    public int CompareTo(ServerToken other)
+    public bool IsTokenUpdated(ServerToken newServerToken)
     {
         // create first server token by removing its created time
         var serverToken1 = VhUtil.JsonClone<ServerToken>(this);
         serverToken1.CreatedTime = DateTime.MinValue;
 
         // create second server token by removing its created time
-        var serverToken2 = VhUtil.JsonClone<ServerToken>(other);
+        var serverToken2 = VhUtil.JsonClone<ServerToken>(newServerToken);
         serverToken2.CreatedTime = DateTime.MinValue;
 
         // compare
         if (JsonSerializer.Serialize(serverToken1) == JsonSerializer.Serialize(serverToken2))
-            return 0;
+            return false;
 
-        return CreatedTime.CompareTo(other.CreatedTime);
+        // if both token are same then compare created time
+        return newServerToken.CreatedTime > CreatedTime;
     }
 }

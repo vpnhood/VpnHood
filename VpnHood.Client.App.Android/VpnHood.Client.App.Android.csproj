@@ -36,12 +36,20 @@
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>$(DefineConstants);GOOGLE_PLAY</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup Condition="$(DefineConstants.Contains('GOOGLE_PLAY'))">
+		<ProjectReference Include="..\VpnHood.Client.App.Android.GoolgePlay\VpnHood.Client.App.Android.GoolgePlay.csproj" />
+	</ItemGroup>
+
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 	</ItemGroup>
 
 </Project>

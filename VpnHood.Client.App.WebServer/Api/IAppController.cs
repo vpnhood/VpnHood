@@ -3,7 +3,7 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer.Api;
 
-public interface IAppApi
+public interface IAppController
 {
     Task<AppConfig> GetConfig();
     Task<AppState> GetState();

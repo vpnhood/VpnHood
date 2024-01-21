@@ -2,6 +2,7 @@
 using Android.Content.PM;
 using Android.Views;
 using Android.Service.QuickSettings;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 
 namespace VpnHood.Client.App.Droid;
@@ -35,5 +36,17 @@ public class MainActivity : AndroidAppWebViewMainActivity
     {
         AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2];
         AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3];
+    }
+
+
+    // ReSharper disable once ReturnTypeCanBeNotNullable
+    protected override IAppUpdaterService? CreateAppUpdaterService()
+    {
+#if  GOOGLE_PLAY
+        // ReSharper disable once RedundantNameQualifier
+        return new VpnHood.Client.App.Droid.GooglePlay.GooglePlayAppUpdaterService(this);
+#else
+        return null;
+#endif
     }
 }

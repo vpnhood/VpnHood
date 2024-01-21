@@ -6,8 +6,9 @@ using Android.Gms.Auth.Api.SignIn;
 using Android.Runtime;
 using Android.Service.QuickSettings;
 using Android.Views;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Droid.Connect;
@@ -27,13 +28,18 @@ namespace VpnHood.Client.App.Droid.Connect;
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
 
-public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
+public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 {
     private GoogleSignInOptions _googleSignInOptions = default!;
     private GoogleSignInClient _googleSignInClient = default!;
     private BillingClient _billingClient = default!;
     private AuthenticationClient _authenticationClient = default!;
     public bool IsGoogleSignInSupported => true;
+
+    protected override IAppUpdaterService CreateAppUpdaterService()
+    {
+        return new GooglePlayAppUpdaterService(this);
+    }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -194,6 +200,10 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAccountService
             default:
                 throw new ArgumentOutOfRangeException();
         }
+    }
+    public Task<AppAccount> GetAccount()
+    {
+        throw new NotImplementedException();
     }
 
     private void OnBillingServiceDisconnected()

@@ -21,7 +21,7 @@ public partial class App : Application
             WinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinAppProvider(), new AppOptions
+            VpnHoodApp.Init(new WinAppService(), new AppOptions
             {
                 Resources = VpnHoodAppResource.Resources,
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")

@@ -176,7 +176,7 @@ public class UdpProxyTest : TestBase
         {
             var udpClient = new UdpClient(AddressFamily.InterNetwork);
             udpClients.Add(udpClient);
-            tasks.Add(TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1, timeout: 2000));
+            tasks.Add(TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1, timeout: 2000));
         }
 
         foreach (var task in tasks)

@@ -7,7 +7,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common;
 
-public class ServerToken : IComparable<ServerToken>
+public class ServerToken 
 {
     [JsonPropertyName("ct")]
     public required DateTime CreatedTime { get; set; }

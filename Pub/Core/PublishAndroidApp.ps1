@@ -1,7 +1,7 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir, 
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
-	[switch]$apk)
+	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
 
@@ -36,15 +36,15 @@ $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 $packageId = ([xml](Get-Content $projectFile)).SelectSingleNode("Project/PropertyGroup/ApplicationId").InnerText;
 
-# set app icon
-$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
-$appIconXmlDoc.save($appIconXml);
-
-# apk
+# ------------- apk
 if ($apk)
 {
 	Write-Host;
 	Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
+
+	# set app icon
+	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
+	$appIconXmlDoc.save($appIconXml);
 
 	$outputPath = Join-Path $projectDir "bin/ReleaseApk/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
@@ -76,39 +76,41 @@ if ($apk)
 }
 
 # ------------- aab
-Write-Host;
-Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
-
-# set app icon
-$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
-$appIconXmlDoc.save($appIconXml);
-
-# update variables
-$packageId = $packageId.replace(".web", "");
-$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
-$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
-$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
-$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
-
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
-& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-	/p:ApplicationId=$packageId `
-	/p:DefineConstants=ANDROID_AAB `
-	/p:DefineConstants=GOOGLE_PLAY `
-	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
-
-# set app icon
-$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
-$appIconXmlDoc.save($appIconXml);
-
-#####
-# copy to solution ouput
-Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
-if ($isLatest)
+if ($aab)
 {
-	Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
-	Copy-Item -path "$moduleGooglePlayLastestDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	Write-Host;
+	Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
+
+	# set app icon
+	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
+	$appIconXmlDoc.save($appIconXml);
+
+	# update variables
+	$packageId = $packageId.replace(".web", "");
+	$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
+	$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
+	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
+	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
+
+	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
+	& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
+		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+		/p:ApplicationId=$packageId `
+		/p:DefineConstants=GOOGLE_PLAY `
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+
+	# restore apk icon
+	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
+	$appIconXmlDoc.save($appIconXml);
+
+	#####
+	# copy to solution ouput
+	Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
+	if ($isLatest)
+	{
+		Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
+		Copy-Item -path "$moduleGooglePlayLastestDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	}
 }
 
 # report version

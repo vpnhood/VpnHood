@@ -1,14 +1,14 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.WebServer.Api;
 
 namespace VpnHood.Client.App.WebServer.Controllers;
 
 internal class AccountController : WebApiController, IAccountController
 {
-    public IAccountService AccountService => VpnHoodApp.Instance.AccountService
+    public IAppAccountService AccountService => VpnHoodApp.Instance.AccountService
         ?? throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
@@ -27,7 +27,7 @@ internal class AccountController : WebApiController, IAccountController
     }
 
     [Route(HttpVerbs.Get, "/account")]
-    public Task<Account> GetAccount()
+    public Task<AppAccount> GetAccount()
     {
         return AccountService.GetAccount();
     }

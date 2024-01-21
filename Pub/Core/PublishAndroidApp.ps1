@@ -95,6 +95,7 @@ if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean 
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 	/p:ApplicationId=$packageId `
 	/p:DefineConstants=ANDROID_AAB `
+	/p:DefineConstants=GOOGLE_PLAY `
 	/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
 # set app icon

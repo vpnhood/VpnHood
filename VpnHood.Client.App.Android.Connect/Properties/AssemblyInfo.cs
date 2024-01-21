@@ -23,4 +23,41 @@ public static class AssemblyInfo
 #endif
         }
     }
+
+    public static Uri StoreBaseUri
+    {
+        get
+        {
+#if DEBUG
+            return new Uri("https://192.168.0.67:7077");
+#else
+            return new Uri("https://store-api.vpnhood.com");
+#endif
+        }
+    } 
+    public static string StoreAppId
+    {
+        get
+        {
+#if DEBUG
+            return "3B5543E4-EBAD-4E73-A3CB-4CF26608BC29";
+#else
+            return "3B5543E4-EBAD-4E73-A3CB-4CF26608BC29"; // TODO must change
+#endif
+        }
+    } 
+    public static HttpClientHandler StoreHttpClientHandler
+    {
+        get
+        {
+#if DEBUG
+            var handler = new HttpClientHandler();
+            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+            return handler;
+#else
+            var handler = new HttpClientHandler();
+            return handler // TODO Check
+#endif
+        }
+    }
 }

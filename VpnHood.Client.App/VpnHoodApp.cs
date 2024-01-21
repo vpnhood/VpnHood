@@ -25,7 +25,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private const string FileNameSettings = "settings.json";
     private const string FolderNameProfiles = "profiles";
     private static VpnHoodApp? _instance;
-    private readonly IAppService _appService;
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
     private readonly string? _appGa4MeasurementId;
@@ -65,7 +64,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
-    public IDevice Device => _appService.Device;
+    public IDevice Device { get; }
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
@@ -73,7 +72,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public AppResources Resources { get; }
     public IAppAccountService? AccountService { get; set; }
     public IAppUpdaterService? AppUpdaterService { get; set; }
-    private VpnHoodApp(IAppService appService, AppOptions? options = default)
+    private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
@@ -83,9 +82,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
         Resources = options.Resources;
 
-        _appService = appService ?? throw new ArgumentNullException(nameof(appService));
-        if (_appService.Device == null) throw new ArgumentNullException(nameof(_appService.Device));
-        Device.OnStartAsService += Device_OnStartAsService;
+        Device = device;
+        device.OnStartAsService += Device_OnStartAsService;
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
@@ -108,7 +106,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         });
 
         // create start up logger
-        if (!appService.Device.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
+        if (!device.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
@@ -209,9 +207,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public event EventHandler? ClientConnectCreated;
 
-    public static VpnHoodApp Init(IAppService clientAppProvider, AppOptions? options = default)
+    public static VpnHoodApp Init(IDevice device, AppOptions? options = default)
     {
-        return new VpnHoodApp(clientAppProvider, options);
+        return new VpnHoodApp(device, options);
     }
 
     private void RemoveClientProfileByTokenId(string tokenId)

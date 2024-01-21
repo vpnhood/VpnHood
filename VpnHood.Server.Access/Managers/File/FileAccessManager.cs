@@ -81,7 +81,7 @@ public class FileAccessManager : IAccessManager
             try
             {
                 var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16], System.IO.File.ReadAllText(encServerTokenFilePath));
-                if (serverToken.CompareTo(oldServerToken) <= 0)
+                if (oldServerToken.IsTokenUpdated(serverToken))
                     return oldServerToken;
             }
             catch (Exception ex)

@@ -6,6 +6,7 @@ using VpnHood.Client.App.WebServer;
 using VpnHood.Client.App.Win.Common;
 using VpnHood.Common.Logging;
 using System.Net;
+using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Win;
 
@@ -21,7 +22,7 @@ public partial class App : Application
             WinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinAppService(), new AppOptions
+            VpnHoodApp.Init(new WinDivertDevice(), new AppOptions
             {
                 Resources = VpnHoodAppResource.Resources,
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")

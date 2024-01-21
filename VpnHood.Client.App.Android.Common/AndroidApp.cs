@@ -19,7 +19,7 @@ public class AndroidApp : Application
 
         //app init
         if (!VpnHoodApp.IsInit) 
-            VpnHoodApp.Init(new AndroidAppService(), AppOptions);
+            VpnHoodApp.Init(new AndroidDevice(), AppOptions);
 
         // init notification
         _appNotification = new AndroidAppNotification(this, VpnHoodApp.Instance); 

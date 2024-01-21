@@ -8,7 +8,9 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
+using VpnHood.Common.Client;
 using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Droid.Connect;
@@ -30,10 +32,10 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 {
+    private readonly HttpClient _storeHttpClient = new(AssemblyInfo.StoreHttpClientHandler) { BaseAddress = AssemblyInfo.StoreBaseUri };
     private GoogleSignInOptions _googleSignInOptions = default!;
     private GoogleSignInClient _googleSignInClient = default!;
     private BillingClient _billingClient = default!;
-    private AuthenticationClient _authenticationClient = default!;
     public bool IsGoogleSignInSupported => true;
 
     protected override IAppUpdaterService CreateAppUpdaterService()
@@ -49,7 +51,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 
         // Signin with Google
         _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-            .RequestIdToken("147087744118-asq131v41mqrt777frtghbv66u5u4d2d.apps.googleusercontent.com")
+            .RequestIdToken("216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com")
             .RequestEmail()
             .Build();
         _googleSignInClient = GoogleSignIn.GetClient(this, _googleSignInOptions);
@@ -63,7 +65,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     }
 
     private TaskCompletionSource<GoogleSignInAccount>? _signInWithGoogleTaskCompletionSource;
-    public async Task<ApiKey> SignInWithGoogle()
+    public async Task SignInWithGoogle()
     {
         var intent = _googleSignInClient.SignInIntent;
         _signInWithGoogleTaskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
@@ -71,18 +73,51 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         var account = await _signInWithGoogleTaskCompletionSource.Task;
 
         if (account.IdToken == null)
-            throw new Exception("Can not get IdToken from Google");
+            throw new ArgumentNullException(account.IdToken);
 
-        _authenticationClient = new AuthenticationClient(new HttpClient());
-        var apiKey = await _authenticationClient.SignInAsync(new SignInRequest
-        {
-            IdToken = account.IdToken,
-            RefreshTokenType = RefreshTokenType.None
-        });
-        return apiKey;
+        await SignInToServer(account.IdToken);
+
     }
 
-    public Task<Account> GetAccount()
+    private async Task SignInToServer(string idToken)
+    {
+
+        var authenticationClient = new AuthenticationClient(_storeHttpClient);
+        try
+        {
+            var apiKey = await authenticationClient.SignInAsync(new SignInRequest
+            {
+                IdToken = idToken,
+                RefreshTokenType = RefreshTokenType.None
+            });
+            await OnSignIn(apiKey);
+        }
+        catch (ApiException ex)
+        {
+            if (ex.ExceptionTypeName == "UnregisteredUserException")
+            {
+                await SignUpToServer(idToken);
+            }
+        }
+    }
+
+    private async Task SignUpToServer(string idToken)
+    {
+        var authenticationClient = new AuthenticationClient(_storeHttpClient);
+        var apiKey = await authenticationClient.SignUpAsync(new SignUpRequest()
+        {
+            IdToken = idToken,
+            RefreshTokenType = RefreshTokenType.None
+        });
+        await OnSignIn(apiKey);
+    }
+
+    private async Task OnSignIn(ApiKey apiKey)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<AppAccount> GetAccount()
     {
         throw new NotImplementedException();
     }
@@ -200,10 +235,6 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
             default:
                 throw new ArgumentOutOfRangeException();
         }
-    }
-    public Task<AppAccount> GetAccount()
-    {
-        throw new NotImplementedException();
     }
 
     private void OnBillingServiceDisconnected()

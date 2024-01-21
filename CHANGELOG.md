@@ -7,7 +7,7 @@
 * Feature: Update server token URL from the server
 * Feature: Android: Prompt for the update by Google Play if possible
 * Feature: Android: Support opening (KEY) as VpnHood Key file
-* Fix: Windows: Freeze network after auto-reconnect with muti-server
+* Fix: Windows: Freeze network after auto-reconnect redirects to a new server
 * Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
 ### Server

@@ -3,12 +3,8 @@ using Android.Content.PM;
 using Android.Runtime;
 using Android;
 using Android.Net;
-using Xamarin.Google.Android.Play.Core.AppUpdate;
-using Xamarin.Google.Android.Play.Core.Install.Model;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.App.Droid.Common.Utils;
-using VpnHood.Common.Logging;
-using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
@@ -20,6 +16,7 @@ public abstract class AndroidAppMainActivity : Activity
     protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     protected string[] AccessKeySchemes { get; set; } = Array.Empty<string>();
     protected string[] AccessKeyMimes { get; set; } = Array.Empty<string>();
+    protected abstract IAppUpdaterService? CreateAppUpdaterService();
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -52,37 +49,10 @@ public abstract class AndroidAppMainActivity : Activity
         }
 
         // Check for update
-        VpnHoodApp.Instance.VersionCheckProc = VersionCheckProc;
-        if (VpnHoodApp.Instance.VersionCheckRequired && await VersionCheckProc())
+        var appUpdaterService = CreateAppUpdaterService();
+        VpnHoodApp.Instance.AppUpdaterService = appUpdaterService;
+        if (VpnHoodApp.Instance.VersionCheckRequired && appUpdaterService != null && await appUpdaterService.Update())
             VpnHoodApp.Instance.VersionCheckPostpone(); // postpone check if check succeeded
-    }
-
-    private async Task<bool> VersionCheckProc()
-    {
-        var appUpdateManager = AppUpdateManagerFactory.Create(this);
-        try
-        {
-            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
-            var updateAvailability = appUpdateInfo.UpdateAvailability();
-
-            // postpone check if check succeeded
-            if (updateAvailability == UpdateAvailability.UpdateAvailable &&
-                appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
-            {
-                appUpdateManager.StartUpdateFlowForResult(
-                appUpdateInfo, this, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build(), 0);
-                return true;
-            }
-
-            // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
-            // So we return false if there is UpdateNotAvailable to let the alternative way works
-            return false;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogWarning(ex, "Could not check for new version.");
-            return false;
-        }
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -180,7 +150,7 @@ public abstract class AndroidAppMainActivity : Activity
     protected override void OnDestroy()
     {
         VpnDevice.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
-        VpnHoodApp.Instance.VersionCheckProc = null;
+        VpnHoodApp.Instance.AppUpdaterService = null;
 
         base.OnDestroy();
     }

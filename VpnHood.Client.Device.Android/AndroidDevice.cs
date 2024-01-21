@@ -15,12 +15,14 @@ public class AndroidDevice : IDevice
     private IPacketCapture? _packetCapture;
     private static AndroidDevice? _current;
 
+
     public event EventHandler? OnStartAsService;
     public event EventHandler? OnRequestVpnPermission;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
+    public bool IsLogToConsoleSupported => false;
     public static AndroidDevice Current => _current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
-    public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+    public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
     public AndroidDevice()
     {

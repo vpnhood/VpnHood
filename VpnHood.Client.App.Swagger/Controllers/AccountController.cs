@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.Client.App.Accounts;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.WebServer.Api;
 
 namespace VpnHood.Client.App.Swagger.Controllers;
 
 [ApiController]
 [Route("api/account")]
-public class AccountController : ControllerBase, IAccountApi
+public class AccountController : ControllerBase, IAccountController
 {
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
@@ -21,7 +21,7 @@ public class AccountController : ControllerBase, IAccountApi
     }
 
     [HttpGet("account")]
-    public Task<Account> GetAccount()
+    public Task<AppAccount> GetAccount()
     {
         throw new NotImplementedException();
     }

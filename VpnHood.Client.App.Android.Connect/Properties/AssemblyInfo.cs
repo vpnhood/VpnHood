@@ -60,4 +60,5 @@ public static class AssemblyInfo
 #endif
         }
     }
+    public static Uri UpdateInfoUrl => new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json");
 }

@@ -379,8 +379,8 @@ internal static class TestHelper
         //create app
         appOptions ??= CreateClientAppOptions();
 
-        var testAppProvider = new TestAppService(deviceOptions);
-        var clientApp = VpnHoodApp.Init(testAppProvider, appOptions);
+        var device = CreateDevice(deviceOptions);
+        var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();

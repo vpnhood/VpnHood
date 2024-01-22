@@ -54,7 +54,6 @@ public class FileAccessManager : IAccessManager
 #pragma warning disable CS0618 // Type or member is obsolete
         FileAccessManagerLegacyV3.MigrateLegacyTokensV3(storagePath);
 #pragma warning restore CS0618 // Type or member is obsolete
-
     }
 
     private static ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
@@ -81,7 +80,7 @@ public class FileAccessManager : IAccessManager
             try
             {
                 var oldServerToken = ServerToken.Decrypt(serverConfig.ServerSecret ?? new byte[16], System.IO.File.ReadAllText(encServerTokenFilePath));
-                if (serverToken.CompareTo(oldServerToken) <= 0)
+                if (!oldServerToken.IsTokenUpdated(serverToken))
                     return oldServerToken;
             }
             catch (Exception ex)

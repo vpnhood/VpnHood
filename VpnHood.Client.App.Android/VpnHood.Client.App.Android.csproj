@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
-		<ApplicationVersion>454</ApplicationVersion>
-		<ApplicationDisplayVersion>3.3.454</ApplicationDisplayVersion>
+		<ApplicationVersion>457</ApplicationVersion>
+		<ApplicationDisplayVersion>3.3.457</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.454</Version>
+		<Version>3.3.457</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
@@ -41,7 +41,7 @@
 	</PropertyGroup>
 
 	<ItemGroup Condition="$(DefineConstants.Contains('GOOGLE_PLAY'))">
-		<ProjectReference Include="..\VpnHood.Client.App.Android.GoolgePlay\VpnHood.Client.App.Android.GoolgePlay.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -595,7 +595,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var request = new HelloRequest(Guid.NewGuid() + ":client", Token.TokenId, clientInfo,
                 VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret));
 
-            await using var requestResult = await SendRequest<HelloSessionResponse>(request, cancellationToken);
+            await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken);
             if (requestResult.Response.ServerProtocolVersion < 4)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 

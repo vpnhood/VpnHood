@@ -469,6 +469,7 @@ public class ClientAppTest : TestBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+        fileAccessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
 
         // create server and app
         await using var server = TestHelper.CreateServer(testAccessManager);
@@ -479,7 +480,8 @@ public class ClientAppTest : TestBase
         await app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
-        Assert.AreEqual(newTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+        Assert.AreEqual(fileAccessManager.ServerConfig.ServerTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+        CollectionAssert.AreEqual(fileAccessManager.ServerConfig.ServerSecret, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
     }
 
     [TestMethod]

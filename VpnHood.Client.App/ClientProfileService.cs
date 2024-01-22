@@ -4,6 +4,7 @@ using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Client.App;
 
@@ -61,7 +62,7 @@ public class ClientProfileService
         var index = _clientProfiles.FindIndex(x => x.ClientProfileId == clientProfile.ClientProfileId);
         if (index == -1)
             throw new NotExistsException($"ClientProfile does not exist. ClientProfileId: {clientProfile.ClientProfileId}");
-            
+
         _clientProfiles[index] = clientProfile;
 
         // fix name
@@ -70,6 +71,36 @@ public class ClientProfileService
             clientProfile.ClientProfileName = null;
 
         Save();
+    }
+
+    public bool UpdateServerToken(string tokenId, string? serverTokenUrl, byte[]? serverTokenSecret)
+    {
+        // find client profile
+        var clientProfile = FindByTokenId(tokenId);
+        if (clientProfile == null || VhUtil.IsNullOrEmpty(serverTokenSecret))
+            return false;
+
+        // return if url not secret is changed
+        var serverToken = clientProfile.Token.ServerToken;
+        if (serverToken.Url == serverTokenUrl && serverTokenSecret.SequenceEqual(serverToken.Secret ?? []))
+            return false;
+
+        if (!Uri.TryCreate(serverTokenUrl, UriKind.Absolute, out _))
+        {
+            VhLogger.Instance.LogWarning(GeneralEventId.Session, "Could not update ServerToken Url because it is not valid. ServerTokenUrl: {ServerTokenUrl}",
+                VhLogger.FormatHostName(serverTokenUrl));
+            return false;
+        }
+
+        // log
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "Updating ServerToken Url. ServerTokenUrl: {ServerTokenUrl}",
+            VhLogger.FormatHostName(serverTokenUrl));
+
+        // update client profile
+        clientProfile.Token.ServerToken.Url = serverTokenUrl;
+        clientProfile.Token.ServerToken.Secret = serverTokenSecret;
+        Update(clientProfile);
+        return true;
     }
 
     public ClientProfile ImportAccessKey(string accessKey)
@@ -112,7 +143,9 @@ public class ClientProfileService
             using var client = new HttpClient();
             var encryptedServerToken = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20));
             var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
-            if (token.ServerToken.CreatedTime >= newServerToken.CreatedTime)
+
+            // return older only if token body is same and created time is newer
+            if (!token.ServerToken.IsTokenUpdated(newServerToken))
             {
                 VhLogger.Instance.LogInformation("ServerToken has not been updated.");
                 return token;
@@ -138,7 +171,7 @@ public class ClientProfileService
         File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(_clientProfiles));
     }
 
-    private ClientProfile[] Load()
+    private IEnumerable<ClientProfile> Load()
     {
         try
         {
@@ -150,4 +183,5 @@ public class ClientProfileService
             return [];
         }
     }
+
 }

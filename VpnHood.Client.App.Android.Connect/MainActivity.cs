@@ -1,5 +1,6 @@
 using Android.BillingClient.Api;
 using System.Net;
+using System.Text.Json;
 using Android.Content;
 using Android.Content.PM;
 using Android.Gms.Ads;
@@ -37,6 +38,8 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     private GoogleSignInOptions _googleSignInOptions = default!;
     private GoogleSignInClient _googleSignInClient = default!;
     private BillingClient _billingClient = default!;
+    private string _accountFilePath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
+    private string _productsFilePath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "products.json");
     public bool IsGoogleSignInSupported => true;
 
     protected override IAppUpdaterService CreateAppUpdaterService()
@@ -115,10 +118,22 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 
     private async Task OnSignIn(ApiKey apiKey)
     {
-        throw new NotImplementedException();
+        var authenticationClient = new AuthenticationClient(_storeHttpClient);
+        var currentUser = await authenticationClient.GetCurrentUserAsync();
+        var localAccountFile = new LocalAccountFile()
+        {
+            ApiKey = apiKey,
+            User = currentUser
+        };
+        await File.WriteAllTextAsync(_accountFilePath, JsonSerializer.Serialize(localAccountFile));
     }
 
     public Task<AppAccount> GetAccount()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<AppProduct[]> GetProducts()
     {
         throw new NotImplementedException();
     }
@@ -190,15 +205,32 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         }
     }
 
-    private void OnProductDetailsResponse(BillingResult billingResult, IList<ProductDetails> productDetailsList)
+    private async void OnProductDetailsResponse(BillingResult billingResult, IList<ProductDetails> productDetailsList)
     {
+        if (billingResult.ResponseCode != BillingResponseCode.Ok || productDetailsList.Count == 0)
+            throw new Exception($"Could not get products from google or product list is empty. BillingResponseCode: {billingResult.ResponseCode}, ProductList: {productDetailsList}");
 
-        var isDeviceSupportSubscription = _billingClient.IsFeatureSupported("subscriptions");
-        if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
-            throw new NotImplementedException();
+        var plans = productDetailsList[0].GetSubscriptionOfferDetails();
 
-        Console.WriteLine(productDetailsList);
-        Console.WriteLine(billingResult);
+        AppProductPlan[] productPlans = [];
+        for (var i = 0; i < plans.Count; i++)
+        {
+            productPlans[i] = new AppProductPlan()
+            {
+                PlanId = plans[i].BasePlanId,
+                PriceAmount = plans[i].PricingPhases.PricingPhaseList[0].PriceAmountMicros,
+                PriceCurrency = plans[i].PricingPhases.PricingPhaseList[0].PriceCurrencyCode
+            };
+        }
+
+        var appProduct = new AppProduct()
+        {
+            ProductId = productDetailsList[0].ProductId,
+            ProductName = productDetailsList[0].Name,
+            Plans = productPlans,
+        };
+
+        await File.WriteAllTextAsync(_productsFilePath, JsonSerializer.Serialize(appProduct));
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -270,4 +302,9 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         }
     }
 
+    private class LocalAccountFile
+    {
+        public required ApiKey ApiKey { get; set; }
+        public required User User { get; set; }
+    }
 }

@@ -96,7 +96,7 @@ public class ServerFarmService(
         }
 
         // update host token
-        AccessUtil.HostTokenUpdateIfChanged(serverFarm);
+        AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
 
         // update
         await vhRepo.SaveChangesAsync();

@@ -56,9 +56,9 @@ public class ServerService(
             AutoConfigure = createParams.AccessPoints == null,
         };
 
-        // add server and update HostToken
+        // add server and update FarmToken
         serverFarm.Servers!.Add(server);
-        AccessUtil.HostTokenUpdateIfChanged(serverFarm);
+        AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
 
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
@@ -99,11 +99,11 @@ public class ServerService(
 
         await vhRepo.SaveChangesAsync();
 
-        // update HostToken if config has been changed
+        // update FarmToken if config has been changed
         if (oldConfigCode != server.ConfigCode)
         {
             var serverFarm = await vhRepo.GetServerFarm(projectId, server.ServerFarmId, true, true);
-            AccessUtil.HostTokenUpdateIfChanged(serverFarm);
+            AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
             await vhRepo.SaveChangesAsync();
         }
 

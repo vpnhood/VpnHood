@@ -3,15 +3,15 @@
 public class ServerFarmModel
 {
     public Guid ServerFarmId { get; set; }
-    public string ServerFarmName { get; set; } = default!;
+    public required string ServerFarmName { get; set; }
     public Guid ProjectId { get; set; }
     public Guid CertificateId { get; set; }
     public Guid ServerProfileId { get; set; }
     public DateTime CreatedTime { get; set; }
     public bool UseHostName { get; set; }
-    public byte[] Secret { get; set; } = default!;
-    public string? HostTokenJson { get; set; }
-    public string? HostTokenUrl { get; set; }
+    public required byte[] Secret { get; set; } 
+    public string? FarmTokenJson { get; set; }
+    public string? FarmTokenUrl { get; set; }
     public bool IsDeleted { get; set; } = false;
 
     public virtual ServerProfileModel? ServerProfile { get; set; }

@@ -373,6 +373,6 @@ public class ServerTest
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x=> x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
-            "AccessPoints have not been updated in HostToken.");
+            "AccessPoints have not been updated in FarmToken.");
     }
 }

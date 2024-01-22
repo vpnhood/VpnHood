@@ -43,25 +43,25 @@ public static class AccessUtil
         return cacheKey;
     }
 
-    public static bool HostTokenUpdateIfChanged(ServerFarmModel serverFarm)
+    public static bool FarmTokenUpdateIfChanged(ServerFarmModel serverFarm)
     {
         // build new host token
-        var hostTokenNew = HostTokenBuild(serverFarm);
+        var farmTokenNew = FarmTokenBuild(serverFarm);
 
         // check for change
-        if (!string.IsNullOrEmpty(serverFarm.HostTokenJson))
+        if (!string.IsNullOrEmpty(serverFarm.FarmTokenJson))
         {
-            var hostTokenOld = JsonSerializer.Deserialize<ServerToken>(serverFarm.HostTokenJson);
-            if (hostTokenOld != null && !hostTokenOld.IsTokenUpdated(hostTokenNew))
+            var farmTokenOld = JsonSerializer.Deserialize<ServerToken>(serverFarm.FarmTokenJson);
+            if (farmTokenOld != null && !farmTokenOld.IsTokenUpdated(farmTokenNew))
                 return false;
         }
 
         // update host token
-        serverFarm.HostTokenJson = JsonSerializer.Serialize(hostTokenNew);
+        serverFarm.FarmTokenJson = JsonSerializer.Serialize(farmTokenNew);
         return true;
     }
 
-    public static ServerToken HostTokenBuild(ServerFarmModel serverFarm)
+    public static ServerToken FarmTokenBuild(ServerFarmModel serverFarm)
     {
         ArgumentNullException.ThrowIfNull(serverFarm.Servers);
         ArgumentNullException.ThrowIfNull(serverFarm.CertificateId);
@@ -94,7 +94,7 @@ public static class AccessUtil
             Secret = serverFarm.Secret,
             HostPort = hostPort,
             IsValidHostName = serverFarm.UseHostName,
-            Url = serverFarm.HostTokenUrl,
+            Url = serverFarm.FarmTokenUrl,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
         };
 

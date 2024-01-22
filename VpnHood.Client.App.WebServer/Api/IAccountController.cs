@@ -7,4 +7,6 @@ public interface IAccountController
     bool IsSigninWithGoogleSupported();
     Task SignInWithGoogle();
     Task<AppAccount> GetAccount();
+    Task<AppProduct[]> GetProducts();
+    
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using Android.Content;
 using Android.Content.PM;
 using Android.Gms.Ads;
@@ -54,5 +55,9 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     {
         VpnHoodApp.Instance.AccountService = null;
         base.OnDestroy();
+
+        ServicePointManager.ServerCertificateValidationCallback
+        var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
     }
 }

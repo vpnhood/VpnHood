@@ -469,6 +469,7 @@ public class ClientAppTest : TestBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+        fileAccessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
 
         // create server and app
         await using var server = TestHelper.CreateServer(testAccessManager);
@@ -479,7 +480,8 @@ public class ClientAppTest : TestBase
         await app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 
-        Assert.AreEqual(newTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+        Assert.AreEqual(fileAccessManager.ServerConfig.ServerTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+        CollectionAssert.AreEqual(fileAccessManager.ServerConfig.ServerSecret, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
     }
 
     [TestMethod]
@@ -490,7 +492,9 @@ public class ClientAppTest : TestBase
         using var webServer = new WebServer(endPoint.Port);
 
         // create server1
+        var tcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
         fileAccessManagerOptions1.ServerTokenUrl = $"http://{endPoint}/accesskey";
         using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
         using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
@@ -500,7 +504,8 @@ public class ClientAppTest : TestBase
 
         // create server 2
         await Task.Delay(1100); // wait for new CreatedTime
-        var fileAccessManager2 = TestHelper.CreateFileAccessManager(storagePath: fileAccessManager1.StoragePath);
+        fileAccessManagerOptions1.TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, tcpEndPoint.Port + 1)];
+        var fileAccessManager2 = TestHelper.CreateFileAccessManager(storagePath: fileAccessManager1.StoragePath, options: fileAccessManagerOptions1);
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
         await using var server2 = TestHelper.CreateServer(testAccessManager2);
         var token2 = TestHelper.CreateAccessToken(server2);
@@ -519,8 +524,7 @@ public class ClientAppTest : TestBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         _ = app.Connect(clientProfile.ClientProfileId);
 
-        await VhTestUtil.AssertEqualsWait(token2.ServerToken.CreatedTime, () => app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
-        Assert.IsTrue(isTokenRetrieved);
+        await VhTestUtil.AssertEqualsWait(true, () => isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
         Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
         Assert.AreNotEqual(AppConnectionState.Connected, app.State.ConnectionState);

@@ -1,3 +1,11 @@
+# Upcoming
+### Client
+* Fix: Updating ServerTokenUrl from the server
+
+* ### Server
+* Fix: Updating ServerTokenUrl & ServerSecret from the server
+
+
 # v3.3.454
 ### Client
 * Update: New Access Token format

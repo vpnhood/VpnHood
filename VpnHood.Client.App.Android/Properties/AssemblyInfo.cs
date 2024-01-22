@@ -7,3 +7,20 @@
 
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
+
+
+namespace VpnHood.Client.App.Droid.Properties;
+public static class AssemblyInfo
+{
+    public static Uri UpdateInfoUrl
+    {
+        get
+        {
+#if GOOGLE_PLAY
+            return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
+#else
+            return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json");
+#endif
+        }
+    }
+}

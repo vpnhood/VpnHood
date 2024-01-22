@@ -21,6 +21,8 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
+
+
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private bool _disposed;
@@ -47,7 +49,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
-    private byte[]? _serverSecret;
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
     private int ProtocolVersion { get; }
@@ -79,6 +80,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ClientStat Stat { get; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public string? ServerTokenUrl { get; private set; }
+    public byte[]? ServerSecret { get; private set; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -251,7 +253,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            scope?.Dispose(); // clear before start new async task
+            // ReSharper disable once DisposeOnUsingVariable
+            // clear before start new async task
+            scope?.Dispose(); 
             _ = DisposeAsync(ex);
             throw;
         }
@@ -554,7 +558,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddUdpChannel()
     {
         if (HostTcpEndPoint == null) throw new InvalidOperationException($"{nameof(HostTcpEndPoint)} is not initialized!");
-        if (VhUtil.IsNullOrEmpty(_serverSecret)) throw new Exception("ServerSecret has not been set.");
+        if (VhUtil.IsNullOrEmpty(ServerSecret)) throw new Exception("ServerSecret has not been set.");
         if (VhUtil.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (HostUdpEndPoint == null)
         {
@@ -566,7 +570,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var udpChannel = new UdpChannel(SessionId, _sessionKey, false, _connectorService.ServerProtocolVersion);
         try
         {
-            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, _serverSecret);
+            var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
             udpChannel.SetRemote(udpChannelTransmitter, HostUdpEndPoint);
             Tunnel.AddChannel(udpChannel);
         }
@@ -596,17 +600,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret));
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken);
-            if (requestResult.Response.ServerProtocolVersion < 4)
+            var sessionResponse = requestResult.Response;
+            if (sessionResponse.ServerProtocolVersion < 4)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
             // initialize the connector
             _connectorService.Init(
-                requestResult.Response.ServerProtocolVersion,
-                requestResult.Response.RequestTimeout,
-                requestResult.Response.TcpReuseTimeout,
-                requestResult.Response.ServerSecret);
-
-            var sessionResponse = requestResult.Response;
+                sessionResponse.ServerProtocolVersion,
+                sessionResponse.RequestTimeout,
+                sessionResponse.TcpReuseTimeout,
+                sessionResponse.ServerSecret);
 
             // log response
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -615,9 +618,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ServerVersion: {sessionResponse.ServerVersion}, " +
                 $"ServerProtocolVersion: {sessionResponse.ServerProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
-
-            // update server token
-            ServerTokenUrl = sessionResponse.ServerTokenUrl;
 
             // usage tracker
             if (_allowAnonymousTracker)
@@ -655,8 +655,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // get session id
             SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
             _sessionKey = sessionResponse.SessionKey;
-            _serverSecret = sessionResponse.ServerSecret;
             _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
+            ServerSecret = sessionResponse.ServerSecret;
+            ServerTokenUrl = sessionResponse.ServerTokenUrl;
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);

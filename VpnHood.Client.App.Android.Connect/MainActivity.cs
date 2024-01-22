@@ -55,9 +55,5 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     {
         VpnHoodApp.Instance.AccountService = null;
         base.OnDestroy();
-
-        ServicePointManager.ServerCertificateValidationCallback
-        var handler = new HttpClientHandler();
-        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
     }
 }

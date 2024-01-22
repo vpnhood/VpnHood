@@ -180,16 +180,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (connectionState == AppConnectionState.Connected)
         {
             // Update ServerTokenUrl if ut has changed
-            var clientProfile = ClientProfileService.FindByTokenId(Client?.Token.TokenId ?? string.Empty);
-            if (clientProfile != null && Client != null && Client.ServerTokenUrl != clientProfile.Token.ServerToken.Url)
-            {
-                VhLogger.Instance.LogInformation(GeneralEventId.Session,
-                    "Updating ServerToken Url. ServerTokenUrl: {ServerTokenUrl}",
-                    VhLogger.FormatHostName(Client.ServerTokenUrl));
-
-                clientProfile.Token.ServerToken.Url = Client.ServerTokenUrl;
-                ClientProfileService.Update(clientProfile);
-            }
+            if (Client != null)
+                ClientProfileService.UpdateServerToken(Client.Token.TokenId, Client.ServerTokenUrl, Client.ServerSecret);
 
             // Check new version after connection
             _ = VersionCheck();

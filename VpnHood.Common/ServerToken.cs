@@ -105,7 +105,8 @@ public class ServerToken
         if (JsonSerializer.Serialize(serverToken1) == JsonSerializer.Serialize(serverToken2))
             return false;
 
-        // if both token are same then compare created time
-        return newServerToken.CreatedTime > CreatedTime;
+        // if token are not equal, check if new token CreatedTime is newer or equal.
+        // If created time is equal assume new token is updated because there is change in token.
+        return newServerToken.CreatedTime >= CreatedTime;
     }
 }

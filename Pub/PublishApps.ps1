@@ -57,13 +57,14 @@ if ($server)
 # publish android
 if ($android)
 {	
-	& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1" -apk;
+	& "$solutionDir/VpnHood.Client.App.Android/_publish_aab.ps1";
+	& "$solutionDir/VpnHood.Client.App.Android/_publish_apk.ps1";
 }
 
 # publish android
 if ($androidConnect)
 {	
-	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish.ps1" -apk;
+	& "$solutionDir/VpnHood.Client.App.Android.connect/_publish_aab.ps1";
 }
 
 

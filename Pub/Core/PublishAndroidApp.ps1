@@ -1,6 +1,9 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir, 
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
+	[Parameter(Mandatory=$true)] [String]$packageId,
+	[Parameter(Mandatory=$true)] [String]$distribution,
+	[Parameter(Mandatory=$true)] [String]$background,
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
@@ -14,12 +17,13 @@ Write-Host "*** Publishing $projectFile ..." -BackgroundColor Blue -ForegroundCo
 UpdateProjectVersion $projectFile;
 
 # prepare module folders
-$moduleDir = "$packagesRootDir/$packageFileTitle/android";
-$moduleDirLatest = "$packagesRootDirLatest/$packageFileTitle/android";
+$moduleDir = "$packagesRootDir/$packageFileTitle/android-$distribution";
+$moduleDirLatest = "$packagesRootDirLatest/$packageFileTitle/android-$distribution";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
-$module_infoFile = "$moduleDir/$packageFileTitle-android-web.json";
-$module_packageFile = "$moduleDir/$packageFileTitle-android-web.apk";
+$packageExt = if ($apk) { "apk" } else { "aab" };
+$module_infoFile = "$moduleDir/$packageFileTitle-android-$distribution.json";
+$module_packageFile = "$moduleDir/$packageFileTitle-android-$distribution.$packageExt";
 
 # Calcualted Path
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
@@ -34,19 +38,18 @@ $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/appicon.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
-$packageId = ([xml](Get-Content $projectFile)).SelectSingleNode("Project/PropertyGroup/ApplicationId").InnerText;
 
-# ------------- apk
+Write-Host;
+Write-Host "*** Creating $module_packageFileName ..." -BackgroundColor Blue -ForegroundColor White;
+
+# set app icon
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/$background");
+$appIconXmlDoc.save($appIconXml);
+
+# ------------- aab
 if ($apk)
 {
-	Write-Host;
-	Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White;
-
-	# set app icon
-	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
-	$appIconXmlDoc.save($appIconXml);
-
-	$outputPath = Join-Path $projectDir "bin/ReleaseApk/";
+	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 
 	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
@@ -67,26 +70,16 @@ if ($apk)
 		NotificationDelay = "03.00:00:00";
 	};
 	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
-
-	Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
-	if ($isLatest)
-	{
-		Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
-	}
 }
 
 # ------------- aab
-if ($aab)
+else
 {
-	Write-Host;
-	Write-Host "*** Creating Android AAB ..." -BackgroundColor Blue -ForegroundColor White;
-
 	# set app icon
 	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
 	$appIconXmlDoc.save($appIconXml);
 
 	# update variables
-	$packageId = $packageId.replace(".web", "");
 	$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
 	$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
 	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
@@ -99,18 +92,18 @@ if ($aab)
 		/p:DefineConstants=GOOGLE_PLAY `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 
-	# restore apk icon
-	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
-	$appIconXmlDoc.save($appIconXml);
 
-	#####
-	# copy to solution ouput
-	Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
-	if ($isLatest)
-	{
-		Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
-		Copy-Item -path "$moduleGooglePlayLastestDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
-	}
+}
+
+# restore standard icon
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
+$appIconXmlDoc.save($appIconXml);
+
+# copy to solution ouput
+Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
+if ($isLatest)
+{
+	Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
 }
 
 # report version

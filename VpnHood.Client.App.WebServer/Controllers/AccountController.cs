@@ -31,4 +31,10 @@ internal class AccountController : WebApiController, IAccountController
     {
         return AccountService.GetAccount();
     }
+
+    [Route(HttpVerbs.Get, "/products")]
+    public Task<AppProduct[]> GetProducts()
+    {
+        return AccountService.GetProducts();
+    }
 }

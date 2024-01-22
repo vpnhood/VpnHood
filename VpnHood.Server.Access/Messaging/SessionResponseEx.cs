@@ -5,13 +5,10 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Access.Messaging;
 
-public class SessionResponseEx : SessionResponse
+[method: JsonConstructor]
+public class SessionResponseEx(SessionErrorCode errorCode) 
+    : SessionResponse(errorCode)
 {
-    [JsonConstructor]
-    public SessionResponseEx(SessionErrorCode errorCode) : base(errorCode)
-    {
-    }
-
     [JsonIgnore(Condition =JsonIgnoreCondition.WhenWritingNull)]
     public string? ExtraData { get; set; }
     

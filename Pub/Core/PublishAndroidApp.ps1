@@ -96,7 +96,7 @@ else
 }
 
 # restore standard icon
-$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_dev");
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_web");
 $appIconXmlDoc.save($appIconXml);
 
 # copy to solution ouput

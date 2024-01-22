@@ -25,4 +25,10 @@ public class AccountController : ControllerBase, IAccountController
     {
         throw new NotImplementedException();
     }
+
+    [HttpGet("products")]
+    public Task<AppProduct[]> GetProducts()
+    {
+        throw new NotImplementedException();
+    }
 }

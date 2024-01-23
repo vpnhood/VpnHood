@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
@@ -6,6 +7,7 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Utils;
+using VpnHood.Common;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
@@ -18,7 +20,7 @@ public class ServerFarmService(
     HttpClient httpClient
     )
 {
-    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary, 
+    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary,
         bool validateTokenUrl, CancellationToken cancellationToken)
     {
         var dtos = includeSummary
@@ -28,18 +30,36 @@ public class ServerFarmService(
         var serverFarmData = dtos.Single();
 
         if (validateTokenUrl && serverFarmData.ServerFarm.TokenUrl != null)
-            serverFarmData.TokenUrlError = await ValidateTokenUrl(serverFarmData.ServerFarm.TokenUrl, cancellationToken);
+        {
+            var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId);
+            serverFarmData.TokenUrlError = await ValidateTokenUrl(serverFarmData.ServerFarm.TokenUrl, serverFarm.TokenJson, cancellationToken);
+        }
 
         return serverFarmData;
     }
 
-    private async Task<string?> ValidateTokenUrl(Uri url, CancellationToken cancellationToken)
+    private async Task<string?> ValidateTokenUrl(Uri url, string? currentTokenJson, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(currentTokenJson))
+            return null; // there is no token at the moment
+
         try
         {
-            var buf = new byte[1024 * 8];
+            var curServerToken = VhUtil.JsonDeserialize<ServerToken>(currentTokenJson);
+            if (curServerToken.IsValidHostName && string.IsNullOrEmpty(curServerToken.HostName))
+                throw new Exception("You farm needs a valid certificate.");
+
+            if (!curServerToken.IsValidHostName && VhUtil.IsNullOrEmpty(curServerToken.HostEndPoints))
+                throw new Exception("You farm needs at-least a public in token endpoint");
+
+            var buf = new byte[1024 * 8]; // make sure don't fetch a big data
             var stream = await httpClient.GetStreamAsync(url, cancellationToken);
-            var res = stream.ReadAtLeast(buf, buf.Length, false);
+            var read = stream.ReadAtLeast(buf, buf.Length, false);
+            var encServerToken = Encoding.UTF8.GetString(buf, 0, read);
+            var remoteServerToken = ServerToken.Decrypt(curServerToken.Secret!, encServerToken);
+            if (remoteServerToken.IsTokenUpdated(curServerToken))
+                return "The token uploaded to the URL is old and needs to be updated.";
+
             return null;
         }
         catch (Exception ex)

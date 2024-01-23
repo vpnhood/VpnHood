@@ -81,7 +81,7 @@
       "exportTypes": true,
       "wrapDtoExceptions": false,
       "exceptionClass": "ApiException",
-      "clientBaseClass": null,
+      "clientBaseClass": "VpnHood.Common.Client.ApiClientCommon",
       "wrapResponses": false,
       "wrapResponseMethods": [],
       "generateResponseClasses": true,

@@ -12,7 +12,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     Banner = "@mipmap/banner", // for TV
     UsesCleartextTraffic = true, // required for localhost
     SupportsRtl = true, AllowBackup = true)]
-public class App(IntPtr javaReference, JniHandleOwnership transfer) 
+public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : AndroidApp(javaReference, transfer)
 {
     protected override AppOptions AppOptions => new()
@@ -20,5 +20,19 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         Resources = VpnHoodAppResource.Resources,
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl
     };
+
+    private static readonly Lazy<HttpClient> StoreHttpClientLazy = new(() =>
+    {
+#if DEBUG
+        var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+        return new HttpClient(handler) { BaseAddress = AssemblyInfo.StoreBaseUri };
+#else
+        return new HttpClient() { BaseAddress = AssemblyInfo.StoreBaseUri }; // TODO Check
+#endif
+
+    });
+
+    public static HttpClient StoreHttpClient => StoreHttpClientLazy.Value;
 }
 

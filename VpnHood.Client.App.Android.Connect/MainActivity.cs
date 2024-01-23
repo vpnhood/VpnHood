@@ -15,6 +15,7 @@ using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Common.Client;
 using VpnHood.Store.Api;
 using Java.Util;
+using System.Net.Http.Headers;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -127,9 +128,8 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 
         // Get products list from GooglePlay.
         var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams);
-
-        if (response.Result.ResponseCode != BillingResponseCode.Ok || !response.ProductDetails.Any())
-            throw new Exception($"Could not get products from google or product list is empty. BillingResponseCode: {response.Result.ResponseCode}, ProductList: {response.ProductDetails}");
+        if (response.Result.ResponseCode != BillingResponseCode.Ok) throw new Exception($"Could not get products from google. BillingResponseCode: {response.Result.ResponseCode}");
+        if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
 
         // Save products list to file.
         await OnProductDetailsResponse(response.ProductDetails);
@@ -253,6 +253,8 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 
     private async Task OnSignIn(ApiKey apiKey)
     {
+        // TODO Check expired api key
+        _storeHttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value);
         var authenticationClient = new AuthenticationClient(_storeHttpClient);
         var currentUser = await authenticationClient.GetCurrentUserAsync();
         var localAccountFile = new LocalAccountFile()

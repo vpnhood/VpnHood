@@ -14,6 +14,7 @@ using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Common.Client;
 using VpnHood.Store.Api;
+using Java.Util;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -34,12 +35,12 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 {
-    private readonly HttpClient _storeHttpClient = new(AssemblyInfo.StoreHttpClientHandler) { BaseAddress = AssemblyInfo.StoreBaseUri };
+    private readonly HttpClient _storeHttpClient = App.StoreHttpClient;
     private GoogleSignInOptions _googleSignInOptions = default!;
     private GoogleSignInClient _googleSignInClient = default!;
     private BillingClient _billingClient = default!;
-    private string _accountFilePath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
-    private string _productsFilePath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "products.json");
+    private static string AccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
+    private static string ProductsFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "products.json");
     public bool IsGoogleSignInSupported => true;
 
     protected override IAppUpdaterService CreateAppUpdaterService()
@@ -47,7 +48,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         return new GooglePlayAppUpdaterService(this);
     }
 
-    protected override void OnCreate(Bundle? savedInstanceState)
+    protected override async void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
         MobileAds.Initialize(this);
@@ -65,7 +66,142 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         billingBuilder.SetListener(PurchasesUpdatedListener);
         billingBuilder.EnablePendingPurchases();
         _billingClient = billingBuilder.Build();
-        StartConnection();
+        await StartConnection();
+    }
+
+    // Start connection to the GooglePlayBillingClient.
+    private async Task StartConnection()
+    {
+        //_billingClient.StartConnection(OnBillingSetupFinished, OnBillingServiceDisconnected);
+        var billingResult = await _billingClient.StartConnectionAsync();
+        switch (billingResult.ResponseCode)
+        {
+            case BillingResponseCode.ServiceDisconnected:
+                throw new NotImplementedException();
+            case BillingResponseCode.Ok:
+                OnBillingSetupFinished();
+                break;
+            case BillingResponseCode.BillingUnavailable:
+                throw new NotImplementedException();
+            case BillingResponseCode.DeveloperError:
+                throw new NotImplementedException();
+            case BillingResponseCode.Error:
+                throw new NotImplementedException();
+            case BillingResponseCode.FeatureNotSupported:
+                throw new NotImplementedException();
+            case BillingResponseCode.ItemAlreadyOwned:
+                throw new NotImplementedException();
+            case BillingResponseCode.ItemNotOwned:
+                throw new NotImplementedException();
+            case BillingResponseCode.ItemUnavailable:
+                throw new NotImplementedException();
+            case BillingResponseCode.NetworkError:
+                throw new NotImplementedException();
+            case BillingResponseCode.ServiceTimeout:
+                throw new NotImplementedException();
+            case BillingResponseCode.ServiceUnavailable:
+                throw new NotImplementedException();
+            case BillingResponseCode.UserCancelled:
+                throw new NotImplementedException();
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    // Get products list from GooglePlay.
+    private async void OnBillingSetupFinished(BillingResult? billingResult = null)
+    {
+        var isDeviceSupportSubscription = _billingClient.IsFeatureSupported("subscriptions");//TODO Check parameter
+        if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
+            throw new NotImplementedException();
+
+        // Set list of the created products in the GooglePlay.
+        var productDetailsParams = QueryProductDetailsParams.NewBuilder()
+            .SetProductList([
+                QueryProductDetailsParams.Product.NewBuilder()
+                    .SetProductId("hidden_farm") //TODO Change product id
+                    .SetProductType(BillingClient.ProductType.Subs)
+                    .Build()
+            ])
+        .Build();
+
+        // Get products list from GooglePlay.
+        var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams);
+
+        if (response.Result.ResponseCode != BillingResponseCode.Ok || !response.ProductDetails.Any())
+            throw new Exception($"Could not get products from google or product list is empty. BillingResponseCode: {response.Result.ResponseCode}, ProductList: {response.ProductDetails}");
+
+        // Save products list to file.
+        await OnProductDetailsResponse(response.ProductDetails);
+    }
+
+    // Save products list to the private storage file.
+    private static async Task OnProductDetailsResponse(IList<ProductDetails> productDetailsList)
+    {
+        var productDetails = productDetailsList.First();
+
+        var plans = productDetails.GetSubscriptionOfferDetails();
+
+        var productPlans = plans
+            .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
+            .Select(plan => new AppProductPlan()
+            {
+                PlanId = plan.BasePlanId,
+                PriceAmount = plan.PricingPhases.PricingPhaseList.First().PriceAmountMicros,
+                PriceCurrency = plan.PricingPhases.PricingPhaseList.First().PriceCurrencyCode
+            })
+            .ToArray();
+
+        var appProduct = new AppProduct()
+        {
+            ProductId = productDetails.ProductId,
+            ProductName = productDetails.Name,
+            Plans = productPlans,
+        };
+
+        await File.WriteAllTextAsync(ProductsFilePath, JsonSerializer.Serialize(appProduct));
+    }
+
+    private async void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
+    {
+        switch (billingResult.ResponseCode)
+        {
+            case BillingResponseCode.ServiceDisconnected:
+                await OnBillingServiceDisconnected();
+                break;
+            case BillingResponseCode.Ok:
+                OnBillingSetupFinished(billingResult);
+                break;
+            case BillingResponseCode.BillingUnavailable:
+                throw new NotImplementedException();
+            case BillingResponseCode.DeveloperError:
+                throw new NotImplementedException();
+            case BillingResponseCode.Error:
+                throw new NotImplementedException();
+            case BillingResponseCode.FeatureNotSupported:
+                throw new NotImplementedException();
+            case BillingResponseCode.ItemAlreadyOwned:
+                throw new NotImplementedException();
+            case BillingResponseCode.ItemNotOwned:
+                throw new NotImplementedException();
+            case BillingResponseCode.ItemUnavailable:
+                throw new NotImplementedException();
+            case BillingResponseCode.NetworkError:
+                throw new NotImplementedException();
+            case BillingResponseCode.ServiceTimeout:
+                throw new NotImplementedException();
+            case BillingResponseCode.ServiceUnavailable:
+                throw new NotImplementedException();
+            case BillingResponseCode.UserCancelled:
+                throw new NotImplementedException();
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private async Task OnBillingServiceDisconnected()
+    {
+        await StartConnection();
     }
 
     private TaskCompletionSource<GoogleSignInAccount>? _signInWithGoogleTaskCompletionSource;
@@ -73,14 +209,13 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     {
         var intent = _googleSignInClient.SignInIntent;
         _signInWithGoogleTaskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
-        StartActivityForResult(intent, 1);
+        StartActivityForResult(intent, 8585);
         var account = await _signInWithGoogleTaskCompletionSource.Task;
 
         if (account.IdToken == null)
             throw new ArgumentNullException(account.IdToken);
 
         await SignInToServer(account.IdToken);
-
     }
 
     private async Task SignInToServer(string idToken)
@@ -125,12 +260,25 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
             ApiKey = apiKey,
             User = currentUser
         };
-        await File.WriteAllTextAsync(_accountFilePath, JsonSerializer.Serialize(localAccountFile));
+        await File.WriteAllTextAsync(AccountFilePath, JsonSerializer.Serialize(localAccountFile));
     }
 
-    public Task<AppAccount> GetAccount()
+    public async Task<AppAccount> GetAccount()
     {
-        throw new NotImplementedException();
+        var authenticationClient = new AuthenticationClient(_storeHttpClient);
+        var currentUser = await authenticationClient.GetCurrentUserAsync();
+
+        var currentVpnUserClient = new CurrentVpnUserClient(_storeHttpClient);
+        var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(AssemblyInfo.StoreAppId, false, false);
+        var subscriptionPlanId = activeSubscription.SingleOrDefault()?.LastOrder;
+
+        var appAccount = new AppAccount()
+        {
+            Email = currentUser.Email,
+            Name = currentUser.Name,
+            SubscriptionPlanId = subscriptionPlanId?.ProviderPlanId,
+        };
+        return appAccount;
     }
 
     public Task<AppProduct[]> GetProducts()
@@ -138,168 +286,33 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         throw new NotImplementedException();
     }
 
-    private async void StartConnection()
-    {
-        //_billingClient.StartConnection(OnBillingSetupFinished, OnBillingServiceDisconnected);
-        var billingResult = await _billingClient.StartConnectionAsync();
-        switch (billingResult.ResponseCode)
-        {
-            case BillingResponseCode.ServiceDisconnected:
-                throw new NotImplementedException();
-            case BillingResponseCode.Ok:
-                OnBillingSetupFinished();
-                break;
-            case BillingResponseCode.BillingUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.DeveloperError:
-                throw new NotImplementedException();
-            case BillingResponseCode.Error:
-                throw new NotImplementedException();
-            case BillingResponseCode.FeatureNotSupported:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemAlreadyOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemNotOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.NetworkError:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceTimeout:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.UserCancelled:
-                throw new NotImplementedException();
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
-
-    private async void OnBillingSetupFinished(BillingResult? billingResult = null)
-    {
-        var isDeviceSupportSubscription = _billingClient.IsFeatureSupported("subscriptions");
-        if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
-            throw new NotImplementedException();
-
-        var productDetailsParams = QueryProductDetailsParams.NewBuilder()
-            .SetProductList([
-                QueryProductDetailsParams.Product.NewBuilder()
-                    .SetProductId("hidden_farm")
-                    .SetProductType(BillingClient.ProductType.Subs)
-                    .Build()
-            ]).Build();
-
-        try
-        {
-            var productsDetails = await _billingClient.QueryProductDetailsAsync(productDetailsParams);
-            if (productsDetails.ProductDetails.Count > 0)
-            {
-                OnProductDetailsResponse(productsDetails.Result, productsDetails.ProductDetails);
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-    }
-
-    private async void OnProductDetailsResponse(BillingResult billingResult, IList<ProductDetails> productDetailsList)
-    {
-        if (billingResult.ResponseCode != BillingResponseCode.Ok || productDetailsList.Count == 0)
-            throw new Exception($"Could not get products from google or product list is empty. BillingResponseCode: {billingResult.ResponseCode}, ProductList: {productDetailsList}");
-
-        var plans = productDetailsList[0].GetSubscriptionOfferDetails();
-
-        AppProductPlan[] productPlans = [];
-        for (var i = 0; i < plans.Count; i++)
-        {
-            productPlans[i] = new AppProductPlan()
-            {
-                PlanId = plans[i].BasePlanId,
-                PriceAmount = plans[i].PricingPhases.PricingPhaseList[0].PriceAmountMicros,
-                PriceCurrency = plans[i].PricingPhases.PricingPhaseList[0].PriceCurrencyCode
-            };
-        }
-
-        var appProduct = new AppProduct()
-        {
-            ProductId = productDetailsList[0].ProductId,
-            ProductName = productDetailsList[0].Name,
-            Plans = productPlans,
-        };
-
-        await File.WriteAllTextAsync(_productsFilePath, JsonSerializer.Serialize(appProduct));
-    }
-
-    private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
-    {
-        switch (billingResult.ResponseCode)
-        {
-            case BillingResponseCode.ServiceDisconnected:
-                OnBillingServiceDisconnected();
-                break;
-            case BillingResponseCode.Ok:
-                OnBillingSetupFinished(billingResult);
-                break;
-            case BillingResponseCode.BillingUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.DeveloperError:
-                throw new NotImplementedException();
-            case BillingResponseCode.Error:
-                throw new NotImplementedException();
-            case BillingResponseCode.FeatureNotSupported:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemAlreadyOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemNotOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.NetworkError:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceTimeout:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.UserCancelled:
-                throw new NotImplementedException();
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
-
-    private void OnBillingServiceDisconnected()
-    {
-        StartConnection();
-    }
-
-    /*protected override void OnDestroy()
-    {
-        VpnHoodApp.Instance.AccountService = null;
-        base.OnDestroy();
-    }*/
-
-
     // Google signin result
     protected override async void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
         base.OnActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == 1)
-        {
-            try
-            {
-                var account = await GoogleSignIn.GetSignedInAccountFromIntentAsync(data);
-                _signInWithGoogleTaskCompletionSource?.TrySetResult(account);
-            }
-            catch (Exception e)
-            {
-                _signInWithGoogleTaskCompletionSource?.TrySetException(e);
-            }
+        // If the request code is not related to the Google sign-in method
+        if (requestCode != 8585)
+            return;
 
+        try
+        {
+            // Get account detail from Google.
+            var account = await GoogleSignIn.GetSignedInAccountFromIntentAsync(data);
+
+            // Return account detail.
+            _signInWithGoogleTaskCompletionSource?.TrySetResult(account);
         }
+        catch (Exception ex)
+        {
+            _signInWithGoogleTaskCompletionSource?.TrySetException(ex);
+        }
+    }
+
+    protected override void OnDestroy()
+    {
+        VpnHoodApp.Instance.AccountService = null;
+        base.OnDestroy();
     }
 
     private class LocalAccountFile

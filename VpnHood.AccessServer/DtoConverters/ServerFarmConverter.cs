@@ -16,7 +16,8 @@ public static class ServerFarmConverter
             CreatedTime = model.CreatedTime,
             ServerProfileId = model.ServerProfileId,
             ServerProfileName = serverProfileName,
-            Secret = model.Secret
+            Secret = model.Secret,
+            TokenUrl = model.TokenUrl != null ? new Uri(model.TokenUrl) : null,
         };
 
         return dto;

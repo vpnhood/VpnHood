@@ -10,16 +10,6 @@ namespace VpnHood.AccessServer.Utils;
 
 public static class AccessUtil
 {
-    public static string ValidateIpEndPoint(string ipEndPoint)
-    {
-        return IPEndPoint.Parse(ipEndPoint).ToString();
-    }
-
-    public static string ValidateIpAddress(string ipAddress)
-    {
-        return IPAddress.Parse(ipAddress).ToString();
-    }
-
     public static string FindUniqueName(string template, string?[] names)
     {
         for (var i = 2; ; i++)
@@ -49,15 +39,15 @@ public static class AccessUtil
         var farmTokenNew = FarmTokenBuild(serverFarm);
 
         // check for change
-        if (!string.IsNullOrEmpty(serverFarm.FarmTokenJson))
+        if (!string.IsNullOrEmpty(serverFarm.TokenJson))
         {
-            var farmTokenOld = JsonSerializer.Deserialize<ServerToken>(serverFarm.FarmTokenJson);
+            var farmTokenOld = JsonSerializer.Deserialize<ServerToken>(serverFarm.TokenJson);
             if (farmTokenOld != null && !farmTokenOld.IsTokenUpdated(farmTokenNew))
                 return false;
         }
 
         // update host token
-        serverFarm.FarmTokenJson = JsonSerializer.Serialize(farmTokenNew);
+        serverFarm.TokenJson = JsonSerializer.Serialize(farmTokenNew);
         return true;
     }
 
@@ -81,6 +71,7 @@ public static class AccessUtil
                 throw new Exception(
                     $"More than one TCP port has been found in PublicInTokens. It is ambiguous as to which port should be used for the hostname. " +
                     $"EndPoints: {string.Join(',', hostPorts.Select(x => x.ToString()))}");
+
             hostPort = hostPorts.SingleOrDefault()?.TcpPort ?? 443;
         }
 
@@ -94,7 +85,7 @@ public static class AccessUtil
             Secret = serverFarm.Secret,
             HostPort = hostPort,
             IsValidHostName = serverFarm.UseHostName,
-            Url = serverFarm.FarmTokenUrl,
+            Url = serverFarm.TokenUrl,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
         };
 

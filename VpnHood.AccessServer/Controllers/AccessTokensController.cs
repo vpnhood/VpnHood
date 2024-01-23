@@ -115,13 +115,13 @@ public class AccessTokensController(
             .Where(x => x.AccessTokenId == accessTokenId)
             .SingleAsync();
 
-        if (string.IsNullOrEmpty(accessToken.ServerFarm!.FarmTokenJson))
+        if (string.IsNullOrEmpty(accessToken.ServerFarm!.TokenJson))
             throw new InvalidOperationException("The Farm has not been configured or it does not have at least a server with a PublicInToken access points.");
 
         // create token
         var token = new Token
         {
-            ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm.FarmTokenJson),
+            ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm.TokenJson),
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,

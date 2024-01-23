@@ -5,12 +5,12 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Agent.Services;
-using NLog.Web;
 using NLog;
 using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Common.Swagger;
+using NLog.Web;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -66,9 +66,8 @@ public class Program
         builder.Services.AddHostedService<TimedHostedService>();
 
         // NLog: Setup NLog for Dependency injection
-        //todo
-        //builder.Logging.ClearProviders();
-        //builder.Host.UseNLog();
+        builder.Logging.ClearProviders();
+        builder.Host.UseNLog();
 
         //---------------------
         // Create App

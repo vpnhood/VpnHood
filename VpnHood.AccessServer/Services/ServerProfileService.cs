@@ -10,19 +10,10 @@ using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Services;
 
-public class ServerProfileService
+public class ServerProfileService(
+    VhContext vhContext,
+    ServerService serverService)
 {
-    private readonly VhContext _vhContext;
-    private readonly ServerService _serverService;
-
-    public ServerProfileService(
-        VhContext vhContext,
-        ServerService serverService)
-    {
-        _vhContext = vhContext;
-        _serverService = serverService;
-    }
-
     public async Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
     {
         // create default name
@@ -32,7 +23,7 @@ public class ServerProfileService
         if (string.IsNullOrWhiteSpace(createParams.ServerProfileName)) createParams.ServerProfileName = Resource.NewServerProfileTemplate;
         if (createParams.ServerProfileName.Contains("##"))
         {
-            var names = await _vhContext.ServerProfiles
+            var names = await vhContext.ServerProfiles
                 .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .Select(x => x.ServerProfileName)
                 .ToArrayAsync();
@@ -50,14 +41,14 @@ public class ServerProfileService
             CreatedTime = DateTime.UtcNow
         };
 
-        await _vhContext.ServerProfiles.AddAsync(serverProfile);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.ServerProfiles.AddAsync(serverProfile);
+        await vhContext.SaveChangesAsync();
         return serverProfile.ToDto();
     }
 
     public async Task<ServerProfile> Update(Guid projectId, Guid serverProfileId, ServerProfileUpdateParams updateParams)
     {
-        var model = await _vhContext.ServerProfiles
+        var model = await vhContext.ServerProfiles
             .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerProfileId == serverProfileId);
@@ -76,17 +67,17 @@ public class ServerProfileService
         }
 
         // save
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
 
         // update cache after save
-        await _serverService.ReconfigServers(projectId, serverProfileId: serverProfileId);
+        await serverService.ReconfigServers(projectId, serverProfileId: serverProfileId);
 
         return model.ToDto();
     }
 
     public async Task Delete(Guid projectId, Guid serverProfileId)
     {
-        var model = await _vhContext.ServerProfiles
+        var model = await vhContext.ServerProfiles
             .Include(x => x.ServerFarms)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .SingleAsync(x => x.ServerProfileId == serverProfileId);
@@ -98,7 +89,7 @@ public class ServerProfileService
             throw new InvalidOperationException("The default Server Profile can not be deleted.");
 
         model.IsDeleted = true;
-        await _vhContext.SaveChangesAsync();
+        await vhContext.SaveChangesAsync();
     }
 
     public async Task<ServerProfileData[]> ListWithSummary(Guid projectId, string? search = null,
@@ -107,7 +98,7 @@ public class ServerProfileService
     {
         _ = includeSummary; //not used yet
 
-        var query = _vhContext.ServerProfiles
+        var query = vhContext.ServerProfiles
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => serverProfileId == null || x.ServerProfileId == serverProfileId)
             .Where(x =>
@@ -131,10 +122,10 @@ public class ServerProfileService
         if (includeSummary )
         {
             var summariesQuery =
-                from serverFarm in _vhContext.ServerFarms
+                from serverFarm in vhContext.ServerFarms
                     .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                     .Where(x => serverProfileId == null || x.ServerProfileId == serverProfileId)
-                join server in _vhContext.Servers on serverFarm.ServerFarmId equals server.ServerFarmId into grouping
+                join server in vhContext.Servers on serverFarm.ServerFarmId equals server.ServerFarmId into grouping
                 from server in grouping.DefaultIfEmpty()
                 select new { serverFarm.ServerProfileId, serverFarm.ServerFarmId, ServerId = (Guid?)server.ServerId };
                 
@@ -198,6 +189,10 @@ public class ServerProfileService
 
         if (serverConfig.ServerSecret != null)
             throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.", nameof(serverConfig));
+
+        if (serverConfig.ServerTokenUrl != null)
+            throw new ArgumentException($"You can not set {nameof(serverConfig.ServerTokenUrl)} here.", nameof(serverConfig));
+
 
         return serverConfig;
     }

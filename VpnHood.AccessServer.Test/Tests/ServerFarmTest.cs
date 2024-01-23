@@ -3,6 +3,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using GrayMint.Common.Exceptions;
+using VpnHood.Common.Utils;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -14,7 +15,12 @@ public class ServerFarmTest
     public async Task Crud()
     {
         var testInit = await TestInit.Create();
-        var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0);
+        var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0,
+            createParams: new ServerFarmCreateParams
+            {
+                TokenUrl = new Uri("http://localhost:8080/farm1-token")
+            });
+
         var serverDom = await farm1.AddNewServer();
         await farm1.CreateAccessToken(true);
         await farm1.CreateAccessToken(true);
@@ -51,7 +57,8 @@ public class ServerFarmTest
         });
 
         var accessFarmData = await farm1.Reload();
-        Assert.AreEqual(farm1.ServerFarm.ServerFarmName, farm1.ServerFarm.ServerFarmName);
+        Assert.AreEqual(farm1.ServerFarm.TokenUrl, accessFarmData.ServerFarm.TokenUrl);
+        Assert.AreEqual(farm1.ServerFarm.ServerFarmName, accessFarmData.ServerFarm.ServerFarmName);
         Assert.AreEqual(1, accessFarmData.Summary!.ServerCount);
         Assert.AreEqual(2, accessFarmData.Summary!.TotalTokenCount);
         Assert.AreEqual(2, accessFarmData.Summary!.UnusedTokenCount);
@@ -74,14 +81,18 @@ public class ServerFarmTest
         {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
             CertificateId = new PatchOfGuid { Value = certificate2.CertificateId },
-            ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" }
+            ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
+            TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
+            Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() }
         };
 
         await testInit.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
         await farm1.Reload();
+        Assert.AreEqual(updateParam.TokenUrl.Value, farm1.ServerFarm.TokenUrl);
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
         Assert.AreEqual(updateParam.CertificateId.Value, farm1.ServerFarm.CertificateId);
         Assert.AreEqual(updateParam.ServerProfileId.Value, farm1.ServerFarm.ServerProfileId);
+        CollectionAssert.AreEqual(updateParam.Secret.Value, farm1.ServerFarm.Secret);
 
         //-----------
         // check: AlreadyExists exception

@@ -23,7 +23,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         // nLog
-        //LogManager.Setup();
+        LogManager.Setup();
         var builder = WebApplication.CreateBuilder(args);
 
         // app options
@@ -75,8 +75,8 @@ public class Program
         });
 
         // NLog: Setup NLog for Dependency injection
-        //builder.Logging.ClearProviders();
-        //builder.Host.UseNLog();
+        builder.Logging.ClearProviders();
+        builder.Host.UseNLog();
 
         //---------------------
         // Create App

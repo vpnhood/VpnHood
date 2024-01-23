@@ -24,6 +24,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6BD0DD0E-2032-47E0-BEF9-7C145F942CEF}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.github\workflows\nuget-development.yml = .github\workflows\nuget-development.yml
+		.github\workflows\nuget-production.yml = .github\workflows\nuget-production.yml
 	EndProjectSection
 EndProject
 Global

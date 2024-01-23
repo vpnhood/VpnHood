@@ -22,7 +22,7 @@ jobs:
       with:
         version_files: "**/*.csproj"
         version_mask: 0.0.1.0
-        version_overwrite: "*.*.*.*"
+        version_overwrite: "*.*.*.0"
         github_token: ${{ secrets.GITHUB_TOKEN }}
    
     - name: Setup .NET

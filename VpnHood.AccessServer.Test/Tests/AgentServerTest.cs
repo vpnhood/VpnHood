@@ -199,8 +199,8 @@ public class AgentServerTest
         var freeUdpPortV4 = serverInfo.FreeUdpPortV4;
         var freeUdpPortV6 = serverInfo.FreeUdpPortV6;
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = new[] { publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
-        serverInfo.PublicIpAddresses = new[] { publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
+        serverInfo.PrivateIpAddresses = [publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
+        serverInfo.PublicIpAddresses = [publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
@@ -221,7 +221,8 @@ public class AgentServerTest
     [TestMethod]
     public async Task Configure()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var farmCreateParams = new ServerFarmCreateParams { TokenUrl = new Uri("http://localhost:8080/farm1-token") };
+        var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
         var serverDom = await farm.AddNewServer(false);
 
@@ -229,8 +230,8 @@ public class AgentServerTest
         var publicIp = await farm.TestInit.NewIpV6();
         var serverInfo = await farm.TestInit.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
-        serverInfo.PublicIpAddresses = new[] { publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6()) };
+        serverInfo.PrivateIpAddresses = [publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6())];
+        serverInfo.PublicIpAddresses = [publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6())];
         await serverDom.Configure(false);
         await serverDom.Reload();
 
@@ -241,6 +242,7 @@ public class AgentServerTest
         var serverStatusEx = serverDom.Server.ServerStatus;
         Assert.IsNotNull(serverStatusEx);
 
+        Assert.AreEqual(serverDom.ServerConfig.ServerTokenUrl, farmCreateParams.TokenUrl.ToString());
         Assert.AreEqual(serverInfo.Version.ToString(), server.Version);
         Assert.AreEqual(serverInfo.EnvironmentVersion.ToString(), server.EnvironmentVersion ?? "0.0.0");
         Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
@@ -296,8 +298,8 @@ public class AgentServerTest
         var privateIpV6 = await testInit.NewIpV6();
         var publicIpV4 = await testInit.NewIpV4();
         var publicIpV6 = await testInit.NewIpV6();
-        serverDom.ServerInfo.PrivateIpAddresses = new[] { privateIpV4, privateIpV6 };
-        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIpV4, publicIpV6 };
+        serverDom.ServerInfo.PrivateIpAddresses = [privateIpV4, privateIpV6];
+        serverDom.ServerInfo.PublicIpAddresses = [publicIpV4, publicIpV6];
 
         //Configure
         await serverDom.Configure();
@@ -316,7 +318,7 @@ public class AgentServerTest
         // --------
         // Check: remove publicIpV6
         // --------
-        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIpV4 };
+        serverDom.ServerInfo.PublicIpAddresses = [publicIpV4];
         await serverDom.Configure();
         await serverDom.Reload();
 
@@ -332,7 +334,7 @@ public class AgentServerTest
         // --------
         // Check: remove publicIpV4
         // --------
-        serverDom.ServerInfo.PublicIpAddresses = new[] { publicIpV6 };
+        serverDom.ServerInfo.PublicIpAddresses = [publicIpV6];
         await serverDom.Configure();
         await serverDom.Reload();
 
@@ -457,8 +459,10 @@ public class AgentServerTest
             AutoConfigure = new PatchOfBoolean { Value = false }
         });
 
-        farm.DefaultServer.ServerInfo.PrivateIpAddresses = new[] { await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
-        farm.DefaultServer.ServerInfo.PublicIpAddresses = new[] { await farm.TestInit.NewIpV6(), await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6() };
+        farm.DefaultServer.ServerInfo.PrivateIpAddresses = [await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()
+        ];
+        farm.DefaultServer.ServerInfo.PublicIpAddresses = [await farm.TestInit.NewIpV6(), await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()
+        ];
 
         // Configure
         await farm.DefaultServer.Configure();
@@ -481,7 +485,8 @@ public class AgentServerTest
         var serverDom6 = await farm.AddNewServer();
 
         // configure serverDom5 with ipv6
-        serverDom5.ServerInfo.PublicIpAddresses = new[] { await serverDom5.TestInit.NewIpV6(), await serverDom5.TestInit.NewIpV6() };
+        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestInit.NewIpV6(), await serverDom5.TestInit.NewIpV6()
+        ];
         serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
         await serverDom5.Configure();
 
@@ -626,7 +631,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig_all_servers_after_certificate_replaced()
     {
-        var farm = await ServerFarmDom.Create( serverCount: 0);
+        var farm = await ServerFarmDom.Create(serverCount: 0);
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 

@@ -62,7 +62,9 @@ public class ProjectService
             Certificate = await _certificateService.CreateSelfSingedInternal(projectId),
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),
-            CreatedTime = DateTime.UtcNow
+            CreatedTime = DateTime.UtcNow,
+            TokenJson = null,
+            TokenUrl = null
         };
 
         // create project

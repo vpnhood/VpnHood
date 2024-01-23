@@ -57,7 +57,9 @@ public class ServerFarmService(
             CertificateId = certificate.CertificateId,
             CreatedTime = DateTime.UtcNow,
             UseHostName = createParams.UseHostName,
-            Secret = VhUtil.GenerateKey()
+            Secret = VhUtil.GenerateKey(),
+            TokenJson = null,
+            TokenUrl = createParams.TokenUrl?.ToString()
         };
 
         await vhContext.ServerFarms.AddAsync(ret);
@@ -68,7 +70,6 @@ public class ServerFarmService(
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
         var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId, true, true);
-
         var reconfigure = false;
 
         // change other properties
@@ -77,6 +78,18 @@ public class ServerFarmService(
 
         if (updateParams.UseHostName != null)
             serverFarm.UseHostName = updateParams.UseHostName;
+
+        if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret))
+        {
+            serverFarm.Secret = updateParams.Secret;
+            reconfigure = true;
+        }
+
+        if (updateParams.TokenUrl != null && updateParams.TokenUrl?.ToString() != serverFarm.TokenUrl)
+        {
+            serverFarm.TokenUrl = updateParams.TokenUrl?.ToString();
+            reconfigure = true;
+        }
 
         if (updateParams.CertificateId != null && serverFarm.CertificateId != updateParams.CertificateId)
         {

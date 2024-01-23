@@ -6,4 +6,5 @@ public class ServerFarmCreateParams
     public Guid? ServerProfileId { get; set; }
     public Guid? CertificateId { get; set; }
     public bool UseHostName { get; set; }
+    public Uri? TokenUrl { get; set; }
 }

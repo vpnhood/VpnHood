@@ -8384,13 +8384,17 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerFarmId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ServerFarmName { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerProfileId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid CertificateId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string ServerFarmName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileName")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -8399,9 +8403,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
         public bool UseHostName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid CertificateId { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
+        public System.Uri? TokenUrl { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("secret")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -8428,6 +8431,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
         public bool UseHostName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
+        public System.Uri? TokenUrl { get; set; } = default!;
 
     }
 
@@ -8510,6 +8516,30 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
         public PatchOfBoolean? UseHostName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
+        public PatchOfUri? TokenUrl { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        public PatchOfByteOf? Secret { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.1.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfUri
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public System.Uri? Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.1.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfByteOf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public byte[]? Value { get; set; } = default!;
 
     }
 

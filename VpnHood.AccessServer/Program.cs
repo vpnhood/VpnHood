@@ -97,4 +97,5 @@ public class Program
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();
     }
+    //test
 }

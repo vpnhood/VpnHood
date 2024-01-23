@@ -21,7 +21,7 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpGet("account")]
-    public Task<AppAccount> GetAccount()
+    public  Task<AppAccount> GetAccount()
     {
         throw new NotImplementedException();
     }

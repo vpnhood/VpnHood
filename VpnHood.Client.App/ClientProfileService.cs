@@ -77,7 +77,7 @@ public class ClientProfileService
     {
         // find client profile
         var clientProfile = FindByTokenId(tokenId);
-        if (clientProfile == null || VhUtil.IsNullOrEmpty(serverTokenSecret))
+        if (clientProfile == null || VhUtil.IsNullOrEmpty(serverTokenSecret) || string.IsNullOrEmpty(serverTokenUrl))
             return false;
 
         // return if url not secret is changed

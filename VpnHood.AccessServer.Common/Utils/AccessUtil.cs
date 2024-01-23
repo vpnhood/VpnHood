@@ -67,12 +67,7 @@ public static class AccessUtil
         if (serverFarm.UseHostName)
         {
             var hostPorts = accessPoints.DistinctBy(x => x.TcpPort).ToArray();
-            if (hostPorts.Length > 1)
-                throw new Exception(
-                    $"More than one TCP port has been found in PublicInTokens. It is ambiguous as to which port should be used for the hostname. " +
-                    $"EndPoints: {string.Join(',', hostPorts.Select(x => x.ToString()))}");
-
-            hostPort = hostPorts.SingleOrDefault()?.TcpPort ?? 443;
+            hostPort = hostPorts.FirstOrDefault()?.TcpPort ?? 443;
         }
 
         // create token

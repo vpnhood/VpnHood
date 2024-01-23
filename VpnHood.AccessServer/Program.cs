@@ -54,6 +54,7 @@ public class Program
             httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
         });
 
+        builder.Services.AddHttpClient();
         builder.Services.AddHostedService<TimedHostedService>();
         builder.Services.AddScoped<VhRepo>();
         builder.Services.AddScoped<SyncService>();

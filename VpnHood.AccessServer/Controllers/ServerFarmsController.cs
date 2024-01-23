@@ -28,13 +28,11 @@ public class ServerFarmsController(ServerFarmService serverFarmService) : Contro
 
     [HttpGet("{serverFarmId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false)
+    public Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false, bool validateTokenUrl = false, 
+        CancellationToken cancellationToken = default)
     {
-        var dtos = includeSummary
-            ? await serverFarmService.ListWithSummary(projectId, serverFarmId: serverFarmId)
-            : await serverFarmService.List(projectId, serverFarmId: serverFarmId);
-
-        return dtos.Single();
+        return serverFarmService.Get(projectId, serverFarmId: serverFarmId, 
+            includeSummary: includeSummary, validateTokenUrl: validateTokenUrl, cancellationToken);
     }
 
     [HttpGet]

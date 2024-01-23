@@ -17,7 +17,7 @@ public static class ServerFarmConverter
             ServerProfileId = model.ServerProfileId,
             ServerProfileName = serverProfileName,
             Secret = model.Secret,
-            TokenUrl = model.TokenUrl != null ? new Uri(model.TokenUrl) : null,
+            TokenUrl = string.IsNullOrEmpty(model.TokenUrl) ? null : new Uri(model.TokenUrl),
         };
 
         return dto;

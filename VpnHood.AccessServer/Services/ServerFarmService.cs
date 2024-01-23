@@ -14,8 +14,40 @@ public class ServerFarmService(
     VhContext vhContext,
     ServerService serverService,
     VhRepo vhRepo,
-    CertificateService certificateService)
+    CertificateService certificateService,
+    HttpClient httpClient
+    )
 {
+    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary, 
+        bool validateTokenUrl, CancellationToken cancellationToken)
+    {
+        var dtos = includeSummary
+            ? await ListWithSummary(projectId, serverFarmId: serverFarmId)
+            : await List(projectId, serverFarmId: serverFarmId);
+
+        var serverFarmData = dtos.Single();
+
+        if (validateTokenUrl && serverFarmData.ServerFarm.TokenUrl != null)
+            serverFarmData.TokenUrlError = await ValidateTokenUrl(serverFarmData.ServerFarm.TokenUrl, cancellationToken);
+
+        return serverFarmData;
+    }
+
+    private async Task<string?> ValidateTokenUrl(Uri url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var buf = new byte[1024 * 8];
+            var stream = await httpClient.GetStreamAsync(url, cancellationToken);
+            var res = stream.ReadAtLeast(buf, buf.Length, false);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.ToString();
+        }
+    }
+
     public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
         // check user quota

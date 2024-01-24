@@ -16,6 +16,7 @@ using VpnHood.Common.Client;
 using VpnHood.Store.Api;
 using Java.Util;
 using System.Net.Http.Headers;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -283,9 +284,18 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         return appAccount;
     }
 
-    public Task<AppProduct[]> GetProducts()
+    public async Task<AppProduct[]> GetProducts()
     {
-        throw new NotImplementedException();
+        try
+        {
+            var appProducts = await File.ReadAllTextAsync(ProductsFilePath);
+            return JsonSerializer.Deserialize<AppProduct[]>(appProducts) ?? throw new ArgumentNullException(appProducts);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            throw;
+        }
     }
 
     // Google signin result

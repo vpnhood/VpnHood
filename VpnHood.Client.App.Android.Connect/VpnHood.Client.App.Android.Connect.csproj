@@ -4,7 +4,7 @@
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.connect.android.web</ApplicationId>
+		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
 		<ApplicationVersion>457</ApplicationVersion>
 		<ApplicationDisplayVersion>3.3.457</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>

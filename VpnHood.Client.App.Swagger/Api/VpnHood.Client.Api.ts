@@ -11,14 +11,12 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelToken } from 'axios';
 
-export class AccountClient extends VpnHood.Common.Client.ApiClientCommon {
+export class AccountClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
 
     constructor(baseUrl?: string, instance?: AxiosInstance) {
-
-        super();
 
         this.instance = instance || axios.create();
 
@@ -223,14 +221,12 @@ export class AccountClient extends VpnHood.Common.Client.ApiClientCommon {
     }
 }
 
-export class AppClient extends VpnHood.Common.Client.ApiClientCommon {
+export class AppClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
 
     constructor(baseUrl?: string, instance?: AxiosInstance) {
-
-        super();
 
         this.instance = instance || axios.create();
 

@@ -20,8 +20,7 @@ public class ServerFarmService(
     HttpClient httpClient
     )
 {
-    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary,
-        bool validateTokenUrl, CancellationToken cancellationToken)
+    public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary)
     {
         var dtos = includeSummary
             ? await ListWithSummary(projectId, serverFarmId: serverFarmId)
@@ -29,23 +28,22 @@ public class ServerFarmService(
 
         var serverFarmData = dtos.Single();
 
-        if (validateTokenUrl && serverFarmData.ServerFarm.TokenUrl != null)
-        {
-            var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId);
-            serverFarmData.TokenUrlError = await ValidateTokenUrl(serverFarmData.ServerFarm.TokenUrl, serverFarm.TokenJson, cancellationToken);
-        }
-
         return serverFarmData;
     }
 
-    private async Task<string?> ValidateTokenUrl(Uri url, string? currentTokenJson, CancellationToken cancellationToken)
+    public async Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(currentTokenJson))
-            return null; // there is no token at the moment
+        var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId);
 
+        if (string.IsNullOrEmpty(serverFarm.TokenUrl))
+            throw new InvalidOperationException($"{nameof(serverFarm.TokenUrl)} has not been set."); // there is no token at the moment
+
+        if (string.IsNullOrEmpty(serverFarm.TokenJson))
+            throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
+
+        var curServerToken = VhUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
         try
         {
-            var curServerToken = VhUtil.JsonDeserialize<ServerToken>(currentTokenJson);
             if (curServerToken.IsValidHostName && string.IsNullOrEmpty(curServerToken.HostName))
                 throw new Exception("You farm needs a valid certificate.");
 
@@ -53,18 +51,26 @@ public class ServerFarmService(
                 throw new Exception("You farm needs at-least a public in token endpoint");
 
             var buf = new byte[1024 * 8]; // make sure don't fetch a big data
-            var stream = await httpClient.GetStreamAsync(url, cancellationToken);
+            var stream = await httpClient.GetStreamAsync(serverFarm.TokenUrl, cancellationToken);
             var read = stream.ReadAtLeast(buf, buf.Length, false);
             var encServerToken = Encoding.UTF8.GetString(buf, 0, read);
             var remoteServerToken = ServerToken.Decrypt(curServerToken.Secret!, encServerToken);
-            if (remoteServerToken.IsTokenUpdated(curServerToken))
-                return "The token uploaded to the URL is old and needs to be updated.";
-
-            return null;
+            var isUpToDated = remoteServerToken.IsTokenUpdated(curServerToken);
+            return new ValidateTokenUrlResult
+            {
+                RemoteTokenTime = remoteServerToken.CreatedTime,
+                IsUpToDate = isUpToDated,
+                ErrorMessage = isUpToDated ? null : "The token uploaded to the URL is old and needs to be updated."
+            };
         }
         catch (Exception ex)
         {
-            return ex.ToString();
+            return new ValidateTokenUrlResult
+            {
+                RemoteTokenTime = null,
+                IsUpToDate = false,
+                ErrorMessage = ex.Message
+            };
         }
     }
 

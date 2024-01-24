@@ -28,12 +28,18 @@ public class ServerFarmsController(ServerFarmService serverFarmService) : Contro
 
     [HttpGet("{serverFarmId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false, bool validateTokenUrl = false, 
-        CancellationToken cancellationToken = default)
+    public Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false)
     {
-        return serverFarmService.Get(projectId, serverFarmId: serverFarmId, 
-            includeSummary: includeSummary, validateTokenUrl: validateTokenUrl, cancellationToken);
+        return serverFarmService.Get(projectId, serverFarmId: serverFarmId, includeSummary: includeSummary);
     }
+
+    [HttpGet("{serverFarmId:guid}/validate-token-url")]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
+    public Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
+    {
+        return serverFarmService.ValidateTokenUrl(projectId, serverFarmId: serverFarmId, cancellationToken);
+    }
+
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]

@@ -12,3 +12,4 @@ public class ServerFarm
     public required byte[] Secret { get; init; }
     public required DateTime CreatedTime { get; init; }
 }
+

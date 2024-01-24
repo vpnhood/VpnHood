@@ -40,9 +40,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     private readonly HttpClient _storeHttpClient = App.StoreHttpClient;
     private GoogleSignInOptions _googleSignInOptions = default!;
     private GoogleSignInClient _googleSignInClient = default!;
-    private BillingClient _billingClient = default!;
     private static string AccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
-    private static string ProductsFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "products.json");
     public bool IsGoogleSignInSupported => true;
 
     protected override IAppUpdaterService CreateAppUpdaterService()
@@ -50,11 +48,12 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         return new GooglePlayAppUpdaterService(this);
     }
 
-    protected override async void OnCreate(Bundle? savedInstanceState)
+    protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
         MobileAds.Initialize(this);
         VpnHoodApp.Instance.AccountService = this;
+        VpnHoodApp.Instance.BillingService = GoogleBillingService.Create(this);
 
         // Signin with Google
         _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
@@ -62,148 +61,8 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
             .RequestEmail()
             .Build();
         _googleSignInClient = GoogleSignIn.GetClient(this, _googleSignInOptions);
-
-        // Google play billing
-        var billingBuilder = BillingClient.NewBuilder(this);
-        billingBuilder.SetListener(PurchasesUpdatedListener);
-        billingBuilder.EnablePendingPurchases();
-        _billingClient = billingBuilder.Build();
-        await StartConnection();
     }
-
-    // Start connection to the GooglePlayBillingClient.
-    private async Task StartConnection()
-    {
-        //_billingClient.StartConnection(OnBillingSetupFinished, OnBillingServiceDisconnected);
-        var billingResult = await _billingClient.StartConnectionAsync();
-        switch (billingResult.ResponseCode)
-        {
-            case BillingResponseCode.ServiceDisconnected:
-                throw new NotImplementedException();
-            case BillingResponseCode.Ok:
-                OnBillingSetupFinished();
-                break;
-            case BillingResponseCode.BillingUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.DeveloperError:
-                throw new NotImplementedException();
-            case BillingResponseCode.Error:
-                throw new NotImplementedException();
-            case BillingResponseCode.FeatureNotSupported:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemAlreadyOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemNotOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.NetworkError:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceTimeout:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.UserCancelled:
-                throw new NotImplementedException();
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
-
-    // Get products list from GooglePlay.
-    private async void OnBillingSetupFinished(BillingResult? billingResult = null)
-    {
-        var isDeviceSupportSubscription = _billingClient.IsFeatureSupported("subscriptions");//TODO Check parameter
-        if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
-            throw new NotImplementedException();
-
-        // Set list of the created products in the GooglePlay.
-        var productDetailsParams = QueryProductDetailsParams.NewBuilder()
-            .SetProductList([
-                QueryProductDetailsParams.Product.NewBuilder()
-                    .SetProductId("hidden_farm") //TODO Change product id
-                    .SetProductType(BillingClient.ProductType.Subs)
-                    .Build()
-            ])
-        .Build();
-
-        // Get products list from GooglePlay.
-        var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams);
-        if (response.Result.ResponseCode != BillingResponseCode.Ok) throw new Exception($"Could not get products from google. BillingResponseCode: {response.Result.ResponseCode}");
-        if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
-
-        // Save products list to file.
-        await OnProductDetailsResponse(response.ProductDetails);
-    }
-
-    // Save products list to the private storage file.
-    private static async Task OnProductDetailsResponse(IList<ProductDetails> productDetailsList)
-    {
-        var productDetails = productDetailsList.First();
-
-        var plans = productDetails.GetSubscriptionOfferDetails();
-
-        var productPlans = plans
-            .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
-            .Select(plan => new AppProductPlan()
-            {
-                PlanId = plan.BasePlanId,
-                PriceAmount = plan.PricingPhases.PricingPhaseList.First().PriceAmountMicros,
-                PriceCurrency = plan.PricingPhases.PricingPhaseList.First().PriceCurrencyCode
-            })
-            .ToArray();
-
-        var appProduct = new AppProduct()
-        {
-            ProductId = productDetails.ProductId,
-            ProductName = productDetails.Name,
-            Plans = productPlans,
-        };
-
-        await File.WriteAllTextAsync(ProductsFilePath, JsonSerializer.Serialize(appProduct));
-    }
-
-    private async void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
-    {
-        switch (billingResult.ResponseCode)
-        {
-            case BillingResponseCode.ServiceDisconnected:
-                await OnBillingServiceDisconnected();
-                break;
-            case BillingResponseCode.Ok:
-                OnBillingSetupFinished(billingResult);
-                break;
-            case BillingResponseCode.BillingUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.DeveloperError:
-                throw new NotImplementedException();
-            case BillingResponseCode.Error:
-                throw new NotImplementedException();
-            case BillingResponseCode.FeatureNotSupported:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemAlreadyOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemNotOwned:
-                throw new NotImplementedException();
-            case BillingResponseCode.ItemUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.NetworkError:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceTimeout:
-                throw new NotImplementedException();
-            case BillingResponseCode.ServiceUnavailable:
-                throw new NotImplementedException();
-            case BillingResponseCode.UserCancelled:
-                throw new NotImplementedException();
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
-
-    private async Task OnBillingServiceDisconnected()
-    {
-        await StartConnection();
-    }
+    
 
     private TaskCompletionSource<GoogleSignInAccount>? _signInWithGoogleTaskCompletionSource;
     public async Task SignInWithGoogle()
@@ -284,20 +143,6 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
         return appAccount;
     }
 
-    public async Task<AppProduct[]> GetProducts()
-    {
-        try
-        {
-            var appProducts = await File.ReadAllTextAsync(ProductsFilePath);
-            return JsonSerializer.Deserialize<AppProduct[]>(appProducts) ?? throw new ArgumentNullException(appProducts);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            throw;
-        }
-    }
-
     // Google signin result
     protected override async void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
@@ -324,6 +169,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     protected override void OnDestroy()
     {
         VpnHoodApp.Instance.AccountService = null;
+        VpnHoodApp.Instance.BillingService = null;
         base.OnDestroy();
     }
 

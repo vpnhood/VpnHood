@@ -4,7 +4,7 @@
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.connect.android.web</ApplicationId>
+		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
 		<ApplicationVersion>457</ApplicationVersion>
 		<ApplicationDisplayVersion>3.3.457</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.457</Version>
+		<Version>3.3.450</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
@@ -50,7 +50,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="VpnHood.Store.Api" Version="1.0.20" />
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.0.1.4" />
 		<PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="122.3.0.2" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="120.7.0.2" />
 	</ItemGroup>
 
 </Project>

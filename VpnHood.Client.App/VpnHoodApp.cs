@@ -71,6 +71,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public AppLogService LogService { get; }
     public AppResources Resources { get; }
     public IAppAccountService? AccountService { get; set; }
+    public IAppBillingService? BillingService { get; set; }
     public IAppUpdaterService? AppUpdaterService { get; set; }
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {

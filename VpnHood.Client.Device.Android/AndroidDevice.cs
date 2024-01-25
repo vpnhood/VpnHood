@@ -3,21 +3,22 @@ using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Net;
 using Android.OS;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.Device.Droid;
 
 public class AndroidDevice : IDevice
 {
+    private static AndroidDevice? _current;
     private int _notificationId = 3500;
     private Notification? _notification;
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private TaskCompletionSource<bool> _startServiceTaskSource = new();
     private IPacketCapture? _packetCapture;
-    private static AndroidDevice? _current;
-
+    private Activity? _activity;
+    private const int RequestVpnPermissionId = 20100;
 
     public event EventHandler? OnStartAsService;
-    public event EventHandler? OnRequestVpnPermission;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
@@ -30,6 +31,13 @@ public class AndroidDevice : IDevice
             throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created.");
 
         _current = this;
+    }
+
+    public void Prepare<T>(T activity) where T : Activity, IActivityEvent
+    {
+        _activity = activity;
+        ((IActivityEvent)_activity).OnDestroyEvent += Activity_OnDestroy;
+        ((IActivityEvent)_activity).OnActivityResultEvent += Activity_OnActivityResult;
     }
 
     public void InitNotification(Notification notification, int notificationId)
@@ -105,12 +113,16 @@ public class AndroidDevice : IDevice
     public async Task<IPacketCapture> CreatePacketCapture()
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-        using var prepareIntent = VpnService.Prepare(Application.Context);
-        if (OnRequestVpnPermission != null && prepareIntent != null)
+        using var prepareIntent = VpnService.Prepare(_activity ?? Application.Context);
+        if (prepareIntent != null)
         {
             _grantPermissionTaskSource = new TaskCompletionSource<bool>();
-            OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
-            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(10000));
+            if (_activity != null)
+                _activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
+            else
+                throw new Exception("Please open the app and grant VPN permission to proceed.");
+
+            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2)));
             if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                 throw new Exception("Could not grant VPN permission in the given time.");
 
@@ -177,13 +189,15 @@ public class AndroidDevice : IDevice
         return bitmap;
     }
 
-    public void VpnPermissionGranted()
+    private void Activity_OnDestroy(object? sender, EventArgs e)
     {
-        _grantPermissionTaskSource.TrySetResult(true);
+        _activity = null;
+        _grantPermissionTaskSource.TrySetResult(false);
     }
 
-    public void VpnPermissionRejected()
+    private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
     {
-        _grantPermissionTaskSource.TrySetResult(false);
+        if (e.RequestCode == RequestVpnPermissionId)
+            _grantPermissionTaskSource.TrySetResult(e.ResultCode == Result.Ok);
     }
 }

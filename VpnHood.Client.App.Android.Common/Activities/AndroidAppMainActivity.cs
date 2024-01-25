@@ -141,10 +141,13 @@ public abstract class AndroidAppMainActivity : Activity
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
-        if (requestCode == RequestVpnPermissionId && resultCode == Result.Ok)
-            VpnDevice.VpnPermissionGranted();
-        else
-            VpnDevice.VpnPermissionRejected();
+        if (requestCode == RequestVpnPermissionId)
+        {
+            if (resultCode == Result.Ok)
+                VpnDevice.VpnPermissionGranted();
+            else
+                VpnDevice.VpnPermissionRejected();
+        }
     }
 
     protected override void OnDestroy()

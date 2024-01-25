@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Client.App.Settings;
 
@@ -7,7 +8,8 @@ public class UserSettings
     private static readonly ClientOptions DefaultClientOptions = new(); 
 
     public AppLogSettings Logging { get; set; } = new();
-    public string CultureName { get; set; } = "en";
+    [SuppressMessage("ReSharper", "UnusedMember.Global")] 
+    public string CultureCode { get; set; } = "en";
     public Guid? DefaultClientProfileId { get; set; }
     public int MaxReconnectCount { get; set; } = int.MaxValue;
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;

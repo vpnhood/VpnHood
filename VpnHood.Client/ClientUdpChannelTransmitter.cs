@@ -4,18 +4,11 @@ using VpnHood.Tunneling.Channels;
 
 namespace VpnHood.Client;
 
-public class ClientUdpChannelTransmitter : UdpChannelTransmitter
+public class ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpClient, byte[] serverKey)
+    : UdpChannelTransmitter(udpClient, serverKey)
 {
-    private readonly UdpChannel _udpChannel;
-
-    public ClientUdpChannelTransmitter(UdpChannel udpChannel, UdpClient udpClient, byte[] serverKey) : 
-        base(udpClient, serverKey)
-    {
-        _udpChannel = udpChannel;
-    }
-
     protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition, byte[] buffer, int bufferIndex)
     {
-        _udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+        udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
     }
 }

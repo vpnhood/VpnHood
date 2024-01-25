@@ -1,8 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
@@ -401,17 +399,6 @@ internal static class TestHelper
             hostEndPoint: token.ServerToken.HostEndPoints!.First(),
             encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
     }
-
-    public static bool IgnoreCertificateValidationCallback(object sender,
-        X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors)
-    {
-        _ = sender;
-        _ = certificate;
-        _ = chain;
-        _ = sslPolicyErrors;
-        return true;
-    }
-
 
     private static bool _isInit;
     internal static void Init()

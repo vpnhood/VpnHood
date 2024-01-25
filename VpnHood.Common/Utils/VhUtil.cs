@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace VpnHood.Common.Utils;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class VhUtil
 {
     public static bool IsConnectionRefusedException(Exception ex)

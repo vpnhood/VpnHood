@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -11,7 +12,8 @@ using VpnHood.Client.App.Win.Common;
 
 namespace VpnHood.Client.App.Win;
 
-// ReSharper disable once RedundantExtendsListEntry
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "RedundantExtendsListEntry")]
 public partial class MainWindow : Window
 {
     public MainWindow()

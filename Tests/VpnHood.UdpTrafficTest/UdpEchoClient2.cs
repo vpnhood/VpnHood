@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace VpnHood.UdpTrafficTest;
 
+// ReSharper disable once UnusedMember.Global
 public class UdpEchoClient2
 {
     private readonly UdpClient _udpClient = new(AddressFamily.InterNetwork);
@@ -15,6 +16,7 @@ public class UdpEchoClient2
     }
 
 
+    // ReSharper disable once UnusedMember.Global
     public Task StartAsync(IPEndPoint serverEp, int echoCount, int bufferSize, int timeout = 3000)
     {
         var task1 = StartAsync2(serverEp, echoCount, bufferSize, timeout);

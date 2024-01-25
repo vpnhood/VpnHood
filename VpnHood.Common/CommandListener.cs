@@ -4,17 +4,10 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common;
 
-public class CommandListener : IDisposable
+public class CommandListener(string commandFilePath) : IDisposable
 {
     private FileSystemWatcher? _fileSystemWatcher;
-    private readonly string _commandFilePath;
     public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
-
-    public CommandListener(string commandFilePath)
-    {
-        _commandFilePath = commandFilePath;
-    }
-
     public bool IsStarted => _fileSystemWatcher != null;
 
     public void Start()
@@ -25,10 +18,10 @@ public class CommandListener : IDisposable
         try
         {
             // delete old command
-            if (File.Exists(_commandFilePath))
-                File.Delete(_commandFilePath);
+            if (File.Exists(commandFilePath))
+                File.Delete(commandFilePath);
 
-            var watchFolderPath = Path.GetDirectoryName(_commandFilePath)!;
+            var watchFolderPath = Path.GetDirectoryName(commandFilePath)!;
             Directory.CreateDirectory(watchFolderPath);
 
             // watch new commands
@@ -36,7 +29,7 @@ public class CommandListener : IDisposable
             {
                 Path = watchFolderPath,
                 NotifyFilter = NotifyFilters.LastWrite,
-                Filter = Path.GetFileName(_commandFilePath),
+                Filter = Path.GetFileName(commandFilePath),
                 IncludeSubdirectories = false,
                 EnableRaisingEvents = true
             };
@@ -82,7 +75,7 @@ public class CommandListener : IDisposable
         try
         {
             Console.WriteLine($"Broadcasting a server command . command: {command}");
-            File.WriteAllText(_commandFilePath, command);
+            File.WriteAllText(commandFilePath, command);
         }
         catch (Exception ex)
         {

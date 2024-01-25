@@ -5,7 +5,6 @@ namespace VpnHood.Client.App.Droid.Common;
 
 internal class AndroidAppWebViewClient : WebViewClient
 {
-    public bool BrowseLinkInExternalBrowser { get; set; } = false;
     public event EventHandler? PageLoaded;
 
     public override bool ShouldOverrideUrlLoading(WebView? webView, string? url)

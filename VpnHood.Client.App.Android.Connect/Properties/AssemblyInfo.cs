@@ -12,18 +12,6 @@
 namespace VpnHood.Client.App.Droid.Connect.Properties;
 public static class AssemblyInfo
 {
-    public static bool IsDebugMode
-    {
-        get
-        {
-#if DEBUG
-            return true;
-#else
-            return false;
-#endif
-        }
-    }
-
     public static Uri UpdateInfoUrl => new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json");
 
     public static Uri StoreBaseUri => IsDebugMode
@@ -35,4 +23,20 @@ public static class AssemblyInfo
         : throw new NotImplementedException(); // TODO must implement
 
     public static bool ListenToAllIps => IsDebugMode;
+
+    // ReSharper disable StringLiteralTypo
+    public static string FirebaseClientId => "216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com";
+    // ReSharper restore StringLiteralTypo
+
+    public static bool IsDebugMode
+    {
+        get
+        {
+#if DEBUG 
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
 }

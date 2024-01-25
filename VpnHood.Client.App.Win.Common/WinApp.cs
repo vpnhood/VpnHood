@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
-using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using WinNative;
@@ -34,8 +33,6 @@ public class WinApp : IDisposable
     public event EventHandler? OpenMainWindowRequested;
     public event EventHandler? OpenMainWindowInBrowserRequested;
     public event EventHandler? ExitRequested;
-    public TimeSpan CheckUpdateInterval { get; set; } = TimeSpan.FromHours(24);
-    public JobSection JobSection { get; } = new();
     public static WinApp Instance => InstanceFiled.Value;
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }

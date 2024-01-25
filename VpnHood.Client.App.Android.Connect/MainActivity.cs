@@ -1,5 +1,3 @@
-using Android.BillingClient.Api;
-using System.Net;
 using System.Text.Json;
 using Android.Content;
 using Android.Content.PM;
@@ -14,9 +12,7 @@ using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Common.Client;
 using VpnHood.Store.Api;
-using Java.Util;
 using System.Net.Http.Headers;
-using System.Text.Json.Serialization;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -42,6 +38,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
     private GoogleSignInClient _googleSignInClient = default!;
     private static string AccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
     public bool IsGoogleSignInSupported => true;
+    protected override bool ListenToAllIps => AssemblyInfo.ListenToAllIps;
 
     protected override IAppUpdaterService CreateAppUpdaterService()
     {

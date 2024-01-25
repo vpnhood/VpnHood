@@ -1,8 +1,6 @@
-﻿using Android.Content;
-using Android.Content.PM;
-using Android.Net;
-using Android.Runtime;
+﻿
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common;
 
 // ReSharper disable StringLiteralTypo
@@ -10,9 +8,8 @@ namespace VpnHood.Client.App.Droid;
 
 [Activity(Label = "@string/app_name", MainLauncher = true)]
 // ReSharper disable once UnusedMember.Global
-public class MainActivity : Activity
+public class MainActivity : ActivityEvent
 {
-    private const int RequestVpnPermission = 10;
     private static readonly AndroidDevice Device = new();
     private VpnHoodClient? _vpnHoodClient;
     private Button _connectButton = default!;
@@ -24,9 +21,7 @@ public class MainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
-        // manage VpnPermission
-        Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+        Device.Prepare(this);
 
         // Set our simple view
         var linearLayout = new LinearLayout(this);
@@ -81,7 +76,6 @@ public class MainActivity : Activity
         _vpnHoodClient = null;
     }
 
-
     private void UpdateUi()
     {
         RunOnUiThread(() =>
@@ -103,38 +97,5 @@ public class MainActivity : Activity
                 _statusTextView.Text = "Connected";
             }
         });
-    }
-
-    private void Device_OnRequestVpnPermission(object? sender, EventArgs e)
-    {
-        var intent = VpnService.Prepare(this);
-        if (intent == null)
-        {
-            Device.VpnPermissionGranted();
-        }
-        else
-        {
-            StartActivityForResult(intent, RequestVpnPermission);
-        }
-    }
-
-    protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
-    {
-        if (requestCode == RequestVpnPermission && resultCode == Result.Ok)
-            Device.VpnPermissionGranted();
-        else
-            Device.VpnPermissionRejected();
-    }
-
-    public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
-        [GeneratedEnum] Permission[] grantResults)
-    {
-        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    protected override void OnDestroy()
-    {
-        Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
-        base.OnDestroy();
     }
 }

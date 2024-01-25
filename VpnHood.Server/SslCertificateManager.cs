@@ -7,16 +7,10 @@ using VpnHood.Server.Access.Managers;
 
 namespace VpnHood.Server;
 
-public class SslCertificateManager
+public class SslCertificateManager(IAccessManager accessManager)
 {
-    private readonly IAccessManager _accessManager;
     private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new();
     private readonly Lazy<X509Certificate2> _maintenanceCertificate = new(InitMaintenanceCertificate);
-
-    public SslCertificateManager(IAccessManager accessManager)
-    {
-        _accessManager = accessManager;
-    }
 
     private static X509Certificate2 InitMaintenanceCertificate()
     {
@@ -37,7 +31,7 @@ public class SslCertificateManager
         // get from access server
         try
         {
-            var certificateData = await _accessManager.GetSslCertificateData(ipEndPoint);
+            var certificateData = await accessManager.GetSslCertificateData(ipEndPoint);
             certificate = new X509Certificate2(certificateData);
             _certificates.TryAdd(ipEndPoint, certificate);
             return certificate;

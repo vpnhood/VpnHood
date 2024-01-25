@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
+[SuppressMessage("ReSharper", "DisposeOnUsingVariable")]
 public class ServerTest : TestBase
 {
     [TestMethod]

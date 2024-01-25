@@ -1,4 +1,3 @@
-using EmbedIO;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.WebServer.Api;

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
@@ -20,10 +21,10 @@ public abstract class ProxyManager : IPacketProxyReceiver
     private readonly IPacketProxyPool _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
 
-    public int UdpClientCount => _udpProxyPool.ClientCount;
+    [SuppressMessage("ReSharper", "UnusedMember.Global")] 
     public int PingClientCount => _pingProxyPool.ClientCount;
+    public int UdpClientCount => _udpProxyPool.ClientCount;
 
-    // ReSharper disable once UnusedMember.Global
     public int TcpConnectionCount { get { lock (_channels) return _channels.Count(x => x is not IDatagramChannel); } }
     public abstract Task OnPacketReceived(IPPacket ipPacket);
     public virtual void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint) { }

@@ -1,4 +1,5 @@
-﻿using EmbedIO;
+﻿using System.Diagnostics.CodeAnalysis;
+using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Abstractions;
@@ -6,6 +7,7 @@ using VpnHood.Client.App.WebServer.Api;
 
 namespace VpnHood.Client.App.WebServer.Controllers;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal class BillingController : WebApiController, IBillingController
 {
     public IAppBillingService BillingService => VpnHoodApp.Instance.BillingService 

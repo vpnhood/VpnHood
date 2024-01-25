@@ -4,16 +4,9 @@ using VpnHood.Common.Collections;
 
 namespace VpnHood.Server;
 
-public class NetScanDetector
+public class NetScanDetector(int itemLimit, TimeSpan itemTimeout)
 {
-    private readonly int _itemLimit;
-    private readonly TimeoutDictionary<IPAddress, NetworkIpAddressItem> _networkIpAddresses;
-
-    public NetScanDetector(int itemLimit, TimeSpan itemTimeout)
-    {
-        _itemLimit = itemLimit;
-        _networkIpAddresses = new TimeoutDictionary<IPAddress, NetworkIpAddressItem>(itemTimeout);
-    }
+    private readonly TimeoutDictionary<IPAddress, NetworkIpAddressItem> _networkIpAddresses = new(itemTimeout);
 
     private static IPAddress GetNetworkIpAddress(IPEndPoint ipEndPoint)
     {
@@ -32,21 +25,16 @@ public class NetScanDetector
 
         item.EndPoints.GetOrAdd(ipEndPoint, _ => new TimeoutItem());
 
-        if (item.EndPoints.Count <= _itemLimit)
+        if (item.EndPoints.Count <= itemLimit)
             return true;
 
         item.EndPoints.Cleanup(true);
-        return item.EndPoints.Count < _itemLimit;
+        return item.EndPoints.Count < itemLimit;
     }
 
-    private class NetworkIpAddressItem : TimeoutItem
+    private class NetworkIpAddressItem(TimeSpan? timeout) : TimeoutItem
     {
-        public TimeoutDictionary<IPEndPoint, TimeoutItem> EndPoints { get; }
-
-        public NetworkIpAddressItem(TimeSpan? timeout)
-        {
-            EndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem>(timeout);
-        }
+        public TimeoutDictionary<IPEndPoint, TimeoutItem> EndPoints { get; } = new(timeout);
     }
 
     public int GetBurstCount(IPEndPoint ipEndPoint)

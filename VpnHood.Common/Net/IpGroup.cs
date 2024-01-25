@@ -1,13 +1,7 @@
 ﻿namespace VpnHood.Common.Net;
 
-public class IpGroup
+public class IpGroup(string ipGroupId, string ipGroupName)
 {
-    public string IpGroupId { get; set; }
-    public string IpGroupName { get; set; }
-
-    public IpGroup(string ipGroupId, string ipGroupName)
-    {
-        IpGroupId = ipGroupId;
-        IpGroupName = ipGroupName;
-    }
+    public string IpGroupId { get; set; } = ipGroupId;
+    public string IpGroupName { get; set; } = ipGroupName;
 }

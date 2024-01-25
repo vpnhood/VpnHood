@@ -1,9 +1,11 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Common.Utils;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class VhTestUtil
 {
     private class AssertException : Exception

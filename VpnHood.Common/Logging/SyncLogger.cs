@@ -2,28 +2,22 @@
 
 namespace VpnHood.Common.Logging;
 
-public class SyncLogger : ILogger
+public class SyncLogger(ILogger logger) : ILogger
 {
     private readonly object _lock = new();
-    private readonly ILogger _logger;
-
-    public SyncLogger(ILogger logger)
-    {
-        _logger = logger;
-    }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         lock (_lock)
         {
-            return _logger.BeginScope(state);
+            return logger.BeginScope(state);
         }
     }
 
     public bool IsEnabled(LogLevel logLevel)
     {
         lock (_lock)
-            return _logger.IsEnabled(logLevel);
+            return logger.IsEnabled(logLevel);
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
@@ -31,7 +25,7 @@ public class SyncLogger : ILogger
     {
         lock (_lock)
         {
-            _logger.Log(logLevel, eventId, state, exception, formatter);
+            logger.Log(logLevel, eventId, state, exception, formatter);
         }
     }
 }

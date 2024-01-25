@@ -445,35 +445,29 @@ public class Session : IAsyncDisposable, IJob
             SessionId, "Close", reason, SessionResponse.SuppressedBy, SessionResponse.ErrorCode, SessionResponse.ErrorMessage ?? "None");
     }
 
-    private class SessionProxyManager : ProxyManager
+    private class SessionProxyManager(Session session, ISocketFactory socketFactory, ProxyManagerOptions options)
+        : ProxyManager(socketFactory, options)
     {
-        private readonly Session _session;
         protected override bool IsPingSupported => true;
-
-        public SessionProxyManager(Session session, ISocketFactory socketFactory, ProxyManagerOptions options)
-            : base(socketFactory, options)
-        {
-            _session = session;
-        }
 
         public override Task OnPacketReceived(IPPacket ipPacket)
         {
             if (VhLogger.IsDiagnoseMode)
                 PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
-            ipPacket = _session._netFilter.ProcessReply(ipPacket);
-            return _session.Tunnel.SendPacket(ipPacket);
+            ipPacket = session._netFilter.ProcessReply(ipPacket);
+            return session.Tunnel.SendPacket(ipPacket);
         }
 
         public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
-            _session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint, null);
+            session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint, null);
         }
 
         public override void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)
         {
-            _session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
+            session.VerifyNetScan(protocolType, remoteEndPoint, "OnNewRemoteEndPoint");
         }
     }
 }

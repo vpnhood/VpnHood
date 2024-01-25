@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Android.Content;
 using Android.Content.PM;
@@ -30,7 +31,7 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
-
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 {
     private readonly HttpClient _storeHttpClient = App.StoreHttpClient;
@@ -54,7 +55,7 @@ public class MainActivity : AndroidAppWebViewMainActivity, IAppAccountService
 
         // Signin with Google
         _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-            .RequestIdToken("216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com")
+            .RequestIdToken(AssemblyInfo.FirebaseClientId)
             .RequestEmail()
             .Build();
         _googleSignInClient = GoogleSignIn.GetClient(this, _googleSignInOptions);

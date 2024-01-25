@@ -1,12 +1,6 @@
 ﻿namespace VpnHood.Tunneling;
 
-public class NatEventArgs : EventArgs
+public class NatEventArgs(NatItem natItem) : EventArgs
 {
-    public NatItem NatItem { get; }
-
-    public NatEventArgs(NatItem natItem)
-    {
-        NatItem = natItem;
-    }
-
+    public NatItem NatItem { get; } = natItem;
 }

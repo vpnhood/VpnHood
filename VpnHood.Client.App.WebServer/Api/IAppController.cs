@@ -1,8 +1,10 @@
-﻿using VpnHood.Client.App.Settings;
+﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer.Api;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public interface IAppController
 {
     Task<AppConfig> GetConfig();

@@ -64,6 +64,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DD3D7F84-90A3-42F5-9640-906E47660812}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		VpnHood.sln.DotSettings = VpnHood.sln.DotSettings
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Connect", "VpnHood.Client.App.Android.Connect\VpnHood.Client.App.Android.Connect.csproj", "{93CA0868-8D4E-470F-ACEA-253BDAE2EDB7}"

@@ -1,5 +1,7 @@
 ﻿using System.IO.Compression;
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,21 +21,18 @@ public class VpnHoodAppWebServer : IDisposable
     private string? _indexHtml;
     private EmbedIO.WebServer? _server;
     private string? _spaHash;
-    private Uri? _url1;
+    private readonly bool _listenOnAllIps;
 
-    private VpnHoodAppWebServer(Stream spaZipStream, int defaultPort, Uri? url2)
+    private VpnHoodAppWebServer(Stream spaZipStream, int defaultPort, Uri? url = default, bool listenOnAllIps = false)
     {
         if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
         _spaZipStream = spaZipStream;
         _instance = this;
-        DefaultPort = defaultPort;
-        Url2 = url2;
+        Url = url ?? new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, defaultPort)}");
+        _listenOnAllIps = listenOnAllIps;
     }
 
-    public int DefaultPort { get; }
-    public Uri Url => Url2 ?? Url1;
-    public Uri Url1 => _url1 ?? throw new InvalidOperationException($"{nameof(Url1)} is not initialized");
-    public Uri? Url2 { get; }
+    public Uri Url { get; }
 
     public string SpaHash =>
         _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
@@ -50,17 +49,17 @@ public class VpnHoodAppWebServer : IDisposable
             _instance = null;
     }
 
-    public static VpnHoodAppWebServer Init(Stream zipStream, int defaultPort = 9090, Uri? url2 = null)
+    public static VpnHoodAppWebServer Init(Stream zipStream, int defaultPort = 9090, Uri? url = default, 
+        bool listenToAllIps = false)
     {
-        var ret = new VpnHoodAppWebServer(zipStream, defaultPort, url2);
+        var ret = new VpnHoodAppWebServer(zipStream, defaultPort, url, listenToAllIps);
         ret.Start();
         return ret;
     }
 
     private void Start()
     {
-        _url1 = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, DefaultPort)}");
-        _server = CreateWebServer(Url1, Url2, GetSpaPath());
+        _server = CreateWebServer();
         try
         {
             Logger.UnregisterLogger<ConsoleLogger>();
@@ -111,16 +110,18 @@ public class VpnHoodAppWebServer : IDisposable
         return path;
     }
 
-    private EmbedIO.WebServer CreateWebServer(Uri url1, Uri? url2, string spaPath)
+    private EmbedIO.WebServer CreateWebServer()
     {
         // read index.html for fallback
+        var spaPath = GetSpaPath();
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
-        var urlPrefixes = new[] { url1.AbsoluteUri };
-        if (url2 != null) urlPrefixes = urlPrefixes.Concat(new[] { url2.AbsoluteUri }).ToArray();
+        var urlPrefixes = new List<string> { Url.AbsoluteUri };
+        if (_listenOnAllIps)
+            urlPrefixes.AddRange(GetAllPublicIp4().Select(x => $"http://{x}:{Url.Port}"));
 
         // create the server
         var server = new EmbedIO.WebServer(o => o
-                .WithUrlPrefixes(urlPrefixes)
+                .WithUrlPrefixes(urlPrefixes.Distinct())
                 .WithMode(HttpListenerMode.EmbedIO))
             .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080") // must be first
             .WithWebApi("/api/app", ResponseSerializerCallback, c => c
@@ -134,7 +135,6 @@ public class VpnHoodAppWebServer : IDisposable
 
         return server;
     }
-
 
     private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
@@ -154,5 +154,28 @@ public class VpnHoodAppWebServer : IDisposable
         if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))
             return context.SendStringAsync(_indexHtml, "text/html", Encoding.UTF8);
         throw HttpException.NotFound();
+    }
+
+    private static IEnumerable<IPAddress> GetAllPublicIp4()
+    {
+        var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(x =>
+                x.OperationalStatus is OperationalStatus.Up &&
+                x.Supports(NetworkInterfaceComponent.IPv4) &
+                x.NetworkInterfaceType is not NetworkInterfaceType.Loopback);
+
+        var ipAddresses = new List<IPAddress>();
+        foreach (var networkInterface in networkInterfaces)
+        {
+            var ipProperties = networkInterface.GetIPProperties();
+            var uniCastAddresses = ipProperties.UnicastAddresses;
+            var ips = uniCastAddresses
+                .Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(x => x.Address);
+
+            ipAddresses.AddRange(ips);
+        }
+
+        return ipAddresses.ToArray();
     }
 }

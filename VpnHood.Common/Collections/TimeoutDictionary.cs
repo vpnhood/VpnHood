@@ -1,21 +1,19 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 
-public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeoutItem
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : IDisposable
+    where TValue : ITimeoutItem
 {
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
     private DateTime _lastCleanupTime = DateTime.MinValue;
     private bool _disposed;
 
     public bool AutoCleanup { get; set; } = true;
-    public TimeSpan? Timeout { get; set; }
-
-    public TimeoutDictionary(TimeSpan? timeout = null)
-    {
-        Timeout = timeout;
-    }
+    public TimeSpan? Timeout { get; set; } = timeout;
 
     public int Count
     {

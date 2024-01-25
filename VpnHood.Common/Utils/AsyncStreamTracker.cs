@@ -1,16 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Common.Utils;
 
-public class AsyncStreamTracker : AsyncStreamDecorator
+// Use for debugging
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen) 
+    : AsyncStreamDecorator(sourceStream, leaveOpen)
 {
     public string LogPrefix { get; set; }= "";
-
-    public AsyncStreamTracker(Stream sourceStream, bool leaveOpen) 
-        : base(sourceStream, leaveOpen)
-    {
-    }
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
     {

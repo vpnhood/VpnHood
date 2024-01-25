@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -14,22 +15,16 @@ using ProtocolType = PacketDotNet.ProtocolType;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
+[SuppressMessage("ReSharper", "DisposeOnUsingVariable")]
 public class TunnelTest : TestBase
 {
-    private class ServerUdpChannelTransmitterTest : UdpChannelTransmitter
+    private class ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey, UdpChannel udpChannel)
+        : UdpChannelTransmitter(udpClient, serverKey)
     {
-        private readonly UdpChannel _udpChannel;
-
-        public ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey, UdpChannel udpChannel) 
-            : base(udpClient, serverKey)
-        {
-            _udpChannel = udpChannel;
-        }
-
         protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint, long channelCryptorPosition, byte[] buffer, int bufferIndex)
         {
-            _udpChannel.SetRemote(this, remoteEndPoint);
-            _udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
+            udpChannel.SetRemote(this, remoteEndPoint);
+            udpChannel.OnReceiveData(channelCryptorPosition, buffer, bufferIndex);
         }
     }
 

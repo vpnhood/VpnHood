@@ -22,7 +22,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         {
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
             using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream);
+            VpnHoodAppWebServer.Init(memoryStream, url2: new Uri("http://192.168.0.66:6590")); //TODO Remove
         }
 
         InitWebUi();

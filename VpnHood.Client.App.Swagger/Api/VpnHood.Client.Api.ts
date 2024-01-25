@@ -117,7 +117,7 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getAccount( cancelToken?: CancelToken): Promise<Account> {
+    getAccount( cancelToken?: CancelToken): Promise<AppAccount> {
         let url_ = this.baseUrl + "/api/account/account";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -141,7 +141,7 @@ export class AccountClient {
         });
     }
 
-    protected processGetAccount(response: AxiosResponse): Promise<Account> {
+    protected processGetAccount(response: AxiosResponse): Promise<AppAccount> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -155,14 +155,69 @@ export class AccountClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = Account.fromJS(resultData200);
-            return Promise.resolve<Account>(result200);
+            result200 = AppAccount.fromJS(resultData200);
+            return Promise.resolve<AppAccount>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<Account>(null as any);
+        return Promise.resolve<AppAccount>(null as any);
+    }
+
+    getProducts( cancelToken?: CancelToken): Promise<AppProduct[]> {
+        let url_ = this.baseUrl + "/api/account/products";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetProducts(_response);
+        });
+    }
+
+    protected processGetProducts(response: AxiosResponse): Promise<AppProduct[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(AppProduct.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<AppProduct[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppProduct[]>(null as any);
     }
 }
 
@@ -945,11 +1000,12 @@ export class AppClient {
     }
 }
 
-export class Account implements IAccount {
-    name!: string;
-    email!: string;
+export class AppAccount implements IAppAccount {
+    name?: string | null;
+    email?: string | null;
+    subscriptionPlanId?: string | null;
 
-    constructor(data?: IAccount) {
+    constructor(data?: IAppAccount) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -962,12 +1018,13 @@ export class Account implements IAccount {
         if (_data) {
             this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
             this.email = _data["email"] !== undefined ? _data["email"] : <any>null;
+            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
         }
     }
 
-    static fromJS(data: any): Account {
+    static fromJS(data: any): AppAccount {
         data = typeof data === 'object' ? data : {};
-        let result = new Account();
+        let result = new AppAccount();
         result.init(data);
         return result;
     }
@@ -976,13 +1033,117 @@ export class Account implements IAccount {
         data = typeof data === 'object' ? data : {};
         data["name"] = this.name !== undefined ? this.name : <any>null;
         data["email"] = this.email !== undefined ? this.email : <any>null;
+        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
         return data;
     }
 }
 
-export interface IAccount {
-    name: string;
-    email: string;
+export interface IAppAccount {
+    name?: string | null;
+    email?: string | null;
+    subscriptionPlanId?: string | null;
+}
+
+export class AppProduct implements IAppProduct {
+    productId!: string;
+    productName!: string;
+    plans!: AppProductPlan[];
+
+    constructor(data?: IAppProduct) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.plans = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.productId = _data["productId"] !== undefined ? _data["productId"] : <any>null;
+            this.productName = _data["productName"] !== undefined ? _data["productName"] : <any>null;
+            if (Array.isArray(_data["plans"])) {
+                this.plans = [] as any;
+                for (let item of _data["plans"])
+                    this.plans!.push(AppProductPlan.fromJS(item));
+            }
+            else {
+                this.plans = <any>null;
+            }
+        }
+    }
+
+    static fromJS(data: any): AppProduct {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppProduct();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["productId"] = this.productId !== undefined ? this.productId : <any>null;
+        data["productName"] = this.productName !== undefined ? this.productName : <any>null;
+        if (Array.isArray(this.plans)) {
+            data["plans"] = [];
+            for (let item of this.plans)
+                data["plans"].push(item.toJSON());
+        }
+        return data;
+    }
+}
+
+export interface IAppProduct {
+    productId: string;
+    productName: string;
+    plans: AppProductPlan[];
+}
+
+export class AppProductPlan implements IAppProductPlan {
+    planId!: string;
+    priceAmount!: number;
+    priceCurrency!: string;
+
+    constructor(data?: IAppProductPlan) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.planId = _data["planId"] !== undefined ? _data["planId"] : <any>null;
+            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : <any>null;
+            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppProductPlan {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppProductPlan();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["planId"] = this.planId !== undefined ? this.planId : <any>null;
+        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : <any>null;
+        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : <any>null;
+        return data;
+    }
+}
+
+export interface IAppProductPlan {
+    planId: string;
+    priceAmount: number;
+    priceCurrency: string;
 }
 
 export class AppConfig implements IAppConfig {

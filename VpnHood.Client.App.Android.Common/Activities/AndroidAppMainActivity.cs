@@ -2,16 +2,15 @@
 using Android.Content.PM;
 using Android.Runtime;
 using Android;
-using Android.Net;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
-public abstract class AndroidAppMainActivity : Activity
+public abstract class AndroidAppMainActivity : ActivityEvent
 {
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
-    protected const int RequestVpnPermissionId = 10;
     protected const int RequestPostNotificationId = 11;
     protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     protected string[] AccessKeySchemes { get; set; } = Array.Empty<string>();
@@ -21,9 +20,7 @@ public abstract class AndroidAppMainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
-        // manage VpnPermission
-        VpnDevice.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+        VpnDevice.Prepare(this);
 
         // process intent
         ProcessIntent(Intent);
@@ -121,15 +118,6 @@ public abstract class AndroidAppMainActivity : Activity
         Toast.MakeText(this, message, ToastLength.Long)?.Show();
     }
 
-    private void Device_OnRequestVpnPermission(object? sender, EventArgs e)
-    {
-        var intent = VpnService.Prepare(this);
-        if (intent == null)
-            VpnDevice.VpnPermissionGranted();
-        else
-            StartActivityForResult(intent, RequestVpnPermissionId);
-    }
-
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
     {
         var postNotificationsIndex = Array.IndexOf(permissions, Manifest.Permission.PostNotifications);
@@ -139,22 +127,9 @@ public abstract class AndroidAppMainActivity : Activity
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
-    {
-        if (requestCode == RequestVpnPermissionId)
-        {
-            if (resultCode == Result.Ok)
-                VpnDevice.VpnPermissionGranted();
-            else
-                VpnDevice.VpnPermissionRejected();
-        }
-    }
-
     protected override void OnDestroy()
     {
-        VpnDevice.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
         VpnHoodApp.Instance.AppUpdaterService = null;
-
         base.OnDestroy();
     }
 }

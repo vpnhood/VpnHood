@@ -1,3 +1,4 @@
+using EmbedIO;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.WebServer.Api;
@@ -20,8 +21,8 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
-    [HttpGet("account")]
-    public Task<AppAccount> GetAccount()
+    [HttpGet()]
+    public  Task<AppAccount> Get()
     {
         throw new NotImplementedException();
     }

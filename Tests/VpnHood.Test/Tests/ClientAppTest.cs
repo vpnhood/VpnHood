@@ -470,6 +470,7 @@ public class ClientAppTest : TestBase
         const string newTokenUrl = "http://127.0.0.100:6000";
         fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
         fileAccessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
+        fileAccessManager.ClearCache();
 
         // create server and app
         await using var server = TestHelper.CreateServer(testAccessManager);

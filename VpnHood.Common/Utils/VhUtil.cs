@@ -172,6 +172,13 @@ public static class VhUtil
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
     }
 
+    public static bool JsonEquals(object? obj1, object? obj2)
+    {
+        if (obj1 == null && obj2 == null) return true;
+        if (obj1 == null || obj2 == null) return false;
+        return JsonSerializer.Serialize(obj1) == JsonSerializer.Serialize(obj2);
+    }
+
     public static T JsonClone<T>(object obj, JsonSerializerOptions? options = null)
     {
         var json = JsonSerializer.Serialize(obj, options);
@@ -200,8 +207,8 @@ public static class VhUtil
 
     public static string RedactHostName(string hostName)
     {
-        return hostName.Length <= 8 
-            ? "***" + hostName[^4..] 
+        return hostName.Length <= 8
+            ? "***" + hostName[^4..]
             : hostName[..2] + "***" + hostName[^4..];
     }
 

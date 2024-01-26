@@ -131,6 +131,28 @@ public class ClientProfileService
         return ret;
     }
 
+    public bool UpdateTokenByAccessKey(Token token, string accessKey)
+    {
+        try
+        {
+            var newToken = Token.FromAccessKey(accessKey);
+            if (VhUtil.JsonEquals(token, newToken))
+                return false;
+
+            if (token.TokenId != newToken.TokenId)
+                throw new Exception("Could not update the token via access key because its token ID is not the same.");
+
+            ImportAccessToken(newToken);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not update token from the given access-key.");
+            return false;
+        }
+
+    }
+
     public async Task<Token> UpdateTokenFromUrl(Token token)
     {
         if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)

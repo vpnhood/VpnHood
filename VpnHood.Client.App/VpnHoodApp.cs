@@ -47,7 +47,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
     private VersionStatus _versionStatus = VersionStatus.Unknown;
-    
+
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
     public bool IsWaitingForAd { get; set; }
@@ -177,17 +177,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (connectionState == _lastConnectionState)
             return;
         _lastConnectionState = connectionState;
-
-        if (connectionState == AppConnectionState.Connected)
-        {
-            // Update ServerTokenUrl if ut has changed
-            if (Client != null)
-                ClientProfileService.UpdateServerToken(Client.Token.TokenId, Client.ServerTokenUrl, Client.ServerSecret);
-
-            // Check new version after connection
-            _ = VersionCheck();
-        }
-
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -403,11 +392,19 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 await Diagnoser.Diagnose(ClientConnect);
             else
                 await Diagnoser.Connect(ClientConnect);
+
+            // update access token if ResponseAccessKey is set
+            if (ClientConnect.Client.ResponseAccessKey != null)
+                ClientProfileService.UpdateTokenByAccessKey(token, ClientConnect.Client.ResponseAccessKey);
+
+            // check version after first connection
+            _ = VersionCheck();
         }
         finally
         {
-            // update token after connection established or if error occurred
-            _ = ClientProfileService.UpdateTokenFromUrl(token);
+            // try to update token from url after connection or error if ResponseAccessKey is not set
+            if (ClientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
+                _ = ClientProfileService.UpdateTokenFromUrl(token); 
         }
     }
 

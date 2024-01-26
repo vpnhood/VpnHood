@@ -18,4 +18,6 @@ public class SessionResponseEx(SessionErrorCode errorCode)
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
     public string? GaMeasurementId { get; set; }
+    public string? AccessKey { get; set; }
+
 }

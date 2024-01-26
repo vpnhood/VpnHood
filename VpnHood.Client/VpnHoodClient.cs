@@ -79,8 +79,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool DropUdpPackets { get; set; }
     public ClientStat Stat { get; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
-    public string? ServerTokenUrl { get; private set; }
     public byte[]? ServerSecret { get; private set; }
+    public string? ResponseAccessKey { get; private set; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -120,7 +120,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
-        ServerTokenUrl = token.ServerToken.Url;
         
         // NAT
         Nat = new Nat(true);
@@ -657,7 +656,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _sessionKey = sessionResponse.SessionKey;
             _helloTraffic = sessionResponse.AccessUsage?.Traffic ?? new Traffic();
             ServerSecret = sessionResponse.ServerSecret;
-            ServerTokenUrl = sessionResponse.ServerTokenUrl;
+            ResponseAccessKey = sessionResponse.AccessKey;
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);

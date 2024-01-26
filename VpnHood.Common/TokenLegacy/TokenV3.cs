@@ -91,7 +91,7 @@ public class TokenV3
             HostName = token.ServerToken.HostName,
             HostPort = token.ServerToken.HostPort,
             CertificateHash = token.ServerToken.CertificateHash,
-            Url = null,
+            Url = token.ServerToken.Url, // deprecated
             HostEndPoints = token.ServerToken.HostEndPoints,
             Version = 3,
             IsPublic = false

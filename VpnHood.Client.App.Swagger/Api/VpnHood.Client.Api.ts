@@ -117,8 +117,8 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getAccount( cancelToken?: CancelToken): Promise<AppAccount> {
-        let url_ = this.baseUrl + "/api/account/account";
+    get( cancelToken?: CancelToken): Promise<AppAccount> {
+        let url_ = this.baseUrl + "/api/account";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -137,11 +137,11 @@ export class AccountClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetAccount(_response);
+            return this.processGet(_response);
         });
     }
 
-    protected processGetAccount(response: AxiosResponse): Promise<AppAccount> {
+    protected processGet(response: AxiosResponse): Promise<AppAccount> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -163,61 +163,6 @@ export class AccountClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<AppAccount>(null as any);
-    }
-
-    getProducts( cancelToken?: CancelToken): Promise<AppProduct[]> {
-        let url_ = this.baseUrl + "/api/account/products";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processGetProducts(_response);
-        });
-    }
-
-    protected processGetProducts(response: AxiosResponse): Promise<AppProduct[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(AppProduct.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<AppProduct[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<AppProduct[]>(null as any);
     }
 }
 
@@ -1000,6 +945,75 @@ export class AppClient {
     }
 }
 
+export class BillingClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    getSubscriptionPlans( cancelToken?: CancelToken): Promise<SubscriptionPlan[]> {
+        let url_ = this.baseUrl + "/api/billing/subscription-plans";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSubscriptionPlans(_response);
+        });
+    }
+
+    protected processGetSubscriptionPlans(response: AxiosResponse): Promise<SubscriptionPlan[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SubscriptionPlan.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<SubscriptionPlan[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SubscriptionPlan[]>(null as any);
+    }
+}
+
 export class AppAccount implements IAppAccount {
     name?: string | null;
     email?: string | null;
@@ -1042,108 +1056,6 @@ export interface IAppAccount {
     name?: string | null;
     email?: string | null;
     subscriptionPlanId?: string | null;
-}
-
-export class AppProduct implements IAppProduct {
-    productId!: string;
-    productName!: string;
-    plans!: AppProductPlan[];
-
-    constructor(data?: IAppProduct) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.plans = [];
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.productId = _data["productId"] !== undefined ? _data["productId"] : <any>null;
-            this.productName = _data["productName"] !== undefined ? _data["productName"] : <any>null;
-            if (Array.isArray(_data["plans"])) {
-                this.plans = [] as any;
-                for (let item of _data["plans"])
-                    this.plans!.push(AppProductPlan.fromJS(item));
-            }
-            else {
-                this.plans = <any>null;
-            }
-        }
-    }
-
-    static fromJS(data: any): AppProduct {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppProduct();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["productId"] = this.productId !== undefined ? this.productId : <any>null;
-        data["productName"] = this.productName !== undefined ? this.productName : <any>null;
-        if (Array.isArray(this.plans)) {
-            data["plans"] = [];
-            for (let item of this.plans)
-                data["plans"].push(item.toJSON());
-        }
-        return data;
-    }
-}
-
-export interface IAppProduct {
-    productId: string;
-    productName: string;
-    plans: AppProductPlan[];
-}
-
-export class AppProductPlan implements IAppProductPlan {
-    planId!: string;
-    priceAmount!: number;
-    priceCurrency!: string;
-
-    constructor(data?: IAppProductPlan) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.planId = _data["planId"] !== undefined ? _data["planId"] : <any>null;
-            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : <any>null;
-            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): AppProductPlan {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppProductPlan();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["planId"] = this.planId !== undefined ? this.planId : <any>null;
-        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : <any>null;
-        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : <any>null;
-        return data;
-    }
-}
-
-export interface IAppProductPlan {
-    planId: string;
-    priceAmount: number;
-    priceCurrency: string;
 }
 
 export class AppConfig implements IAppConfig {
@@ -1332,7 +1244,7 @@ export interface IAppSettings {
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
-    cultureName!: string;
+    cultureCode!: string;
     defaultClientProfileId?: string | null;
     maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
@@ -1365,7 +1277,7 @@ export class UserSettings implements IUserSettings {
     init(_data?: any) {
         if (_data) {
             this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
-            this.cultureName = _data["cultureName"] !== undefined ? _data["cultureName"] : <any>null;
+            this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.defaultClientProfileId = _data["defaultClientProfileId"] !== undefined ? _data["defaultClientProfileId"] : <any>null;
             this.maxReconnectCount = _data["maxReconnectCount"] !== undefined ? _data["maxReconnectCount"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
@@ -1429,7 +1341,7 @@ export class UserSettings implements IUserSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
-        data["cultureName"] = this.cultureName !== undefined ? this.cultureName : <any>null;
+        data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["defaultClientProfileId"] = this.defaultClientProfileId !== undefined ? this.defaultClientProfileId : <any>null;
         data["maxReconnectCount"] = this.maxReconnectCount !== undefined ? this.maxReconnectCount : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
@@ -1471,7 +1383,7 @@ export class UserSettings implements IUserSettings {
 
 export interface IUserSettings {
     logging: AppLogSettings;
-    cultureName: string;
+    cultureCode: string;
     defaultClientProfileId?: string | null;
     maxReconnectCount: number;
     maxDatagramChannelCount: number;
@@ -2102,6 +2014,50 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
 export interface IClientProfileUpdateParams {
     name?: string | null;
+}
+
+export class SubscriptionPlan implements ISubscriptionPlan {
+    subscriptionPlanId!: string;
+    priceAmount!: number;
+    priceCurrency!: string;
+
+    constructor(data?: ISubscriptionPlan) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
+            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : <any>null;
+            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): SubscriptionPlan {
+        data = typeof data === 'object' ? data : {};
+        let result = new SubscriptionPlan();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
+        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : <any>null;
+        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : <any>null;
+        return data;
+    }
+}
+
+export interface ISubscriptionPlan {
+    subscriptionPlanId: string;
+    priceAmount: number;
+    priceCurrency: string;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

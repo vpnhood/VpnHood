@@ -19,7 +19,7 @@ public class FileAccessManager : IAccessManager
     private const string FileExtToken = ".token";
     private const string FileExtUsage = ".usage";
     private readonly string _sslCertificatesPassword;
-    private readonly ServerToken _serverToken;
+    private ServerToken _serverToken;
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
     public FileAccessManagerSessionController SessionController { get; }
@@ -48,7 +48,7 @@ public class FileAccessManager : IAccessManager
         ServerConfig.ServerSecret ??= LoadServerSecret();
 
         // get server token
-        _serverToken = GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
+        _serverToken = GetAndUpdateServerToken();
 
         //Migrate old tokens
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -56,6 +56,12 @@ public class FileAccessManager : IAccessManager
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 
+    public void ClearCache()
+    {
+        _serverToken = GetAndUpdateServerToken();
+    }
+
+    private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
     private static ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
     {
         // PublicEndPoints
@@ -71,7 +77,7 @@ public class FileAccessManager : IAccessManager
             HostName = certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!"),
             IsValidHostName = serverConfig.IsValidHostName,
             Secret = serverConfig.ServerSecretValue,
-            Url = serverConfig.ServerTokenUrlValue,
+            Url = serverConfig.ServerTokenUrl,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
         };
 
@@ -138,6 +144,10 @@ public class FileAccessManager : IAccessManager
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
+        
+        // update accesskey
+        if (ServerConfig.ReplyAccessKey)
+            ret.AccessKey = accessItem.Token.ToAccessKey();
 
         // set endpoints
         ret.TcpEndPoints = [sessionRequestEx.HostEndPoint];
@@ -300,8 +310,10 @@ public class FileAccessManager : IAccessManager
 
         var token = accessItem.Token;
 
-        // Write accessItem
-        System.IO.File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
+        // Write accessItem without server-token
+        var accessItemClone = VhUtil.JsonClone<AccessItem>(accessItem);
+        accessItemClone.Token.ServerToken = null!; // remove server token part
+        System.IO.File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItemClone));
 
         // build default usage
         ReadAccessItemUsage(accessItem).Wait();
@@ -333,6 +345,7 @@ public class FileAccessManager : IAccessManager
 
         var json = await System.IO.File.ReadAllTextAsync(fileName);
         var accessItem = VhUtil.JsonDeserialize<AccessItem>(json);
+        accessItem.Token.ServerToken = _serverToken; // update server token
         await ReadAccessItemUsage(accessItem);
         return accessItem;
     }

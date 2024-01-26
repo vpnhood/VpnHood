@@ -27,10 +27,8 @@ public class HelloResponse : SessionResponse
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
-
     public string ServerVersion { get; set; } = default!;
     public int ServerProtocolVersion { get; set; }
-    public string? ServerTokenUrl { get; set; }
     public byte[] ServerSecret { get; set; } = default!;
     public int MaxDatagramChannelCount { get; set; } 
     public bool IsIpV6Supported { get; set; }
@@ -39,4 +37,5 @@ public class HelloResponse : SessionResponse
     public string? GaMeasurementId { get; init;}
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
+    public string? AccessKey { get; set; }
 }

@@ -14,7 +14,7 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
-        return AccountService.IsGoogleSignInSupported;
+        return VpnHoodApp.Instance.AccountService?.IsGoogleSignInSupported ?? false;
     }
 
     [Route(HttpVerbs.Post, "/signin-with-google")]

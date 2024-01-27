@@ -124,7 +124,10 @@ public class ServerFarmTest
 
         // remove server from farm
         var farm2 = await ServerFarmDom.Create(farm1.TestInit);
-        await farm1.DefaultServer.Update(new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } });
+        await farm1.DefaultServer.Update(new ServerUpdateParams
+        {
+            ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
+        });
 
         // delete the server
         await farm1.Client.DeleteAsync(farm1.ProjectId, farm1.ServerFarmId);

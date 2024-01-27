@@ -190,9 +190,6 @@ public class ServerProfileService(
         if (serverConfig.ServerSecret != null)
             throw new ArgumentException($"You can not set {nameof(serverConfig.ServerSecret)} here.", nameof(serverConfig));
 
-        if (serverConfig.ServerTokenUrl != null)
-            throw new ArgumentException($"You can not set {nameof(serverConfig.ServerTokenUrl)} here.", nameof(serverConfig));
-
 
         return serverConfig;
     }

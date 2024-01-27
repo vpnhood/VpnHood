@@ -209,8 +209,7 @@ public class AgentService(
             {
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
             },
-            ServerSecret = server.ServerFarm.Secret,
-            ServerTokenUrl = server.ServerFarm.TokenUrl
+            ServerSecret = server.ServerFarm.Secret
         };
 
         // merge with profile

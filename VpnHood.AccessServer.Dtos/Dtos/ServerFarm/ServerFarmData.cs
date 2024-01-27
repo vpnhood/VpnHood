@@ -6,5 +6,4 @@ public class ServerFarmData
     public required Certificate Certificate { get; init; }
     public required IEnumerable<ServerFarmAccessPoint> AccessPoints { get; init; }
     public ServerFarmSummary? Summary { get; init; }
-    public string? TokenUrlError { get; set; }
 }

@@ -242,7 +242,6 @@ public class AgentServerTest
         var serverStatusEx = serverDom.Server.ServerStatus;
         Assert.IsNotNull(serverStatusEx);
 
-        Assert.AreEqual(serverDom.ServerConfig.ServerTokenUrl, farmCreateParams.TokenUrl.ToString());
         Assert.AreEqual(serverInfo.Version.ToString(), server.Version);
         Assert.AreEqual(serverInfo.EnvironmentVersion.ToString(), server.EnvironmentVersion ?? "0.0.0");
         Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);

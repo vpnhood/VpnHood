@@ -57,7 +57,8 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_success()
     {
-        var farm = await ServerFarmDom.Create();
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z") };
+        var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 100,
@@ -78,6 +79,8 @@ public class AgentClientSessionTest
         Assert.AreEqual(100, sessionResponseEx.AccessUsage.MaxTraffic);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
+        Assert.IsNotNull(sessionResponseEx.AccessKey);
+        Assert.AreEqual(farmOptions.TokenUrl?.ToString(), Common.Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
@@ -90,9 +93,9 @@ public class AgentClientSessionTest
         Assert.IsTrue(sessionResponseEx.TcpEndPoints.Any());
         Assert.IsTrue(sessionResponseEx.UdpEndPoints.Any());
         foreach (var tcpEndPoint in sessionResponseEx.TcpEndPoints)
-            Assert.IsTrue(publicAccessPoints.Any(x=>IPAddress.Parse(x.IpAddress).Equals(tcpEndPoint.Address) && x.TcpPort== tcpEndPoint.Port));
+            Assert.IsTrue(publicAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(tcpEndPoint.Address) && x.TcpPort == tcpEndPoint.Port));
         foreach (var udpEndPoint in sessionResponseEx.UdpEndPoints)
-            Assert.IsTrue(publicAccessPoints.Any(x=>IPAddress.Parse(x.IpAddress).Equals(udpEndPoint.Address) && x.UdpPort== udpEndPoint.Port));
+            Assert.IsTrue(publicAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(udpEndPoint.Address) && x.UdpPort == udpEndPoint.Port));
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;

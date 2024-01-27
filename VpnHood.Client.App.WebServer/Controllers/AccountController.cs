@@ -26,6 +26,12 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.SignInWithGoogle();
     }
 
+    [Route(HttpVerbs.Post, "/sign-out")]
+    public Task SignOut()
+    {
+        return AccountService.SignOut();
+    }
+
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount> Get()
     {

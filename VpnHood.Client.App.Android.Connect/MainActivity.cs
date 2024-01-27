@@ -8,6 +8,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -39,7 +40,7 @@ public class MainActivity : AndroidAppWebViewMainActivity
     {
         base.OnCreate(savedInstanceState);
         MobileAds.Initialize(this);
-        VpnHoodApp.Instance.AccountService = GoogleSignInService.Create(this, App.StoreHttpClient);
+        VpnHoodApp.Instance.AccountService = new AppAccountService(AssemblyInfo.StoreBaseUri, AssemblyInfo.IsDebugMode, GoogleAuthenticationService.Create(this));
         VpnHoodApp.Instance.BillingService = GoogleBillingService.Create(this);
     }
 

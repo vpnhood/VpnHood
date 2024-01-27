@@ -4,5 +4,6 @@ public interface IAppAccountService
 {
     bool IsGoogleSignInSupported { get; }
     Task SignInWithGoogle();
+    Task SignOut();
     Task<AppAccount> GetAccount();
 }

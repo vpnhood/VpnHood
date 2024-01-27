@@ -9,19 +9,11 @@ namespace VpnHood.AccessServer.Controllers;
 
 [Authorize]
 [ApiController]
-public class TeamController : TeamControllerBase
+public class TeamController(
+    TeamService roleService,
+    ProjectService projectService)
+    : TeamControllerBase(roleService)
 {
-    private readonly ProjectService _projectService;
-
-    public TeamController(
-        TeamService roleService, 
-        ProjectService projectService) 
-        : base(roleService)
-    {
-        _projectService = projectService;
-    }
-
-
     [Authorize]
     [HttpGet("users/current/projects")]
     public async Task<IEnumerable<Project>> ListCurrentUserProjects()
@@ -32,7 +24,7 @@ public class TeamController : TeamControllerBase
             .Where(x => x != GetRootResourceId())
         .Select(Guid.Parse);
 
-        var ret = await _projectService.List(projectIds);
+        var ret = await projectService.List(projectIds);
         return ret;
     }
 

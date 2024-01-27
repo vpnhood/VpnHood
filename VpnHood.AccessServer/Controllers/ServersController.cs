@@ -11,49 +11,39 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/servers")]
-public class ServersController : ControllerBase
+public class ServersController(
+    UsageReportService usageReportService,
+    ServerService serverService,
+    SubscriptionService subscriptionService)
+    : ControllerBase
 {
-    private readonly UsageReportService _usageReportService;
-    private readonly ServerService _serverService;
-    private readonly SubscriptionService _subscriptionService;
-
-    public ServersController(
-        UsageReportService usageReportService,
-        ServerService serverService,
-        SubscriptionService subscriptionService)
-    {
-        _usageReportService = usageReportService;
-        _serverService = serverService;
-        _subscriptionService = subscriptionService;
-    }
-
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
     public Task<VpnServer> Create(Guid projectId, ServerCreateParams createParams)
     {
-        return _serverService.Create(projectId, createParams);
+        return serverService.Create(projectId, createParams);
     }
 
-    [HttpPatch("{serverId}")]
+    [HttpPatch("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
     public Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
-        return _serverService.Update(projectId, serverId, updateParams);
+        return serverService.Update(projectId, serverId, updateParams);
     }
 
-    [HttpGet("{serverId}")]
+    [HttpGet("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
-        var list = await _serverService.List(projectId, serverId: serverId);
+        var list = await serverService.List(projectId, serverId: serverId);
         return list.Single();
     }
 
-    [HttpDelete("{serverId}")]
+    [HttpDelete("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
     public Task Delete(Guid projectId, Guid serverId)
     {
-        return _serverService.Delete(projectId, serverId);
+        return serverService.Delete(projectId, serverId);
     }
 
     [HttpGet]
@@ -61,42 +51,42 @@ public class ServersController : ControllerBase
     public Task<ServerData[]> List(Guid projectId, string? search = null, Guid? serverId = null, Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = 1000)
     {
-        return _serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
+        return serverService.List(projectId, search: search, serverId: serverId, serverFarmId: serverFarmId, recordIndex, recordCount);
     }
 
-    [HttpPost("{serverId}/reconfigure")]
+    [HttpPost("{serverId:guid}/reconfigure")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task Reconfigure(Guid projectId, Guid serverId)
     {
-        return _serverService.Reconfigure(projectId, serverId);
+        return serverService.Reconfigure(projectId, serverId);
     }
     
     [HttpPost("{serverId}/install-by-ssh-user-password")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
-        return _serverService.InstallBySshUserPassword(projectId, serverId, installParams);
+        return serverService.InstallBySshUserPassword(projectId, serverId, installParams);
     }
 
     [HttpPost("{serverId}/install-by-ssh-user-key")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
-        return _serverService.InstallBySshUserKey(projectId, serverId, installParams);
+        return serverService.InstallBySshUserKey(projectId, serverId, installParams);
     }
     
     [HttpGet("{serverId}/install/manual")]
     [AuthorizeProjectPermission(Permissions.ServerInstall)]
     public Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
     {
-        return _serverService.GetInstallManual(projectId, serverId);
+        return serverService.GetInstallManual(projectId, serverId);
     }
 
     [HttpGet("status-summary")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
     {
-        return _serverService.GetStatusSummary(projectId, serverFarmId);
+        return serverService.GetStatusSummary(projectId, serverFarmId);
     }
 
     [HttpGet("status-history")]
@@ -105,9 +95,9 @@ public class ServersController : ControllerBase
         DateTime? usageBeginTime, DateTime? usageEndTime = null, Guid? serverId = null)
     {
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
-        await _subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
+        await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var ret = await _usageReportService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
+        var ret = await usageReportService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
         return ret;
     }
 }

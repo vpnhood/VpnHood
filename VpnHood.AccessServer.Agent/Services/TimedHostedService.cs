@@ -2,27 +2,19 @@ using Microsoft.Extensions.Options;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
-public class TimedHostedService : IHostedService, IDisposable
+public class TimedHostedService(
+    ILogger<TimedHostedService> logger,
+    IOptions<AgentOptions> agentOptions,
+    IServiceScopeFactory serviceScopeFactory)
+    : IHostedService, IDisposable
 {
-    private readonly ILogger<TimedHostedService> _logger;
-    private readonly AgentOptions _agentOptions;
+    private readonly AgentOptions _agentOptions = agentOptions.Value;
     private Timer? _saveCacheTimer;
-    private readonly IServiceScopeFactory _serviceScopeFactory;
 
-
-    public TimedHostedService(
-        ILogger<TimedHostedService> logger,
-        IOptions<AgentOptions> agentOptions,
-        IServiceScopeFactory serviceScopeFactory)
-    {
-        _logger = logger;
-        _serviceScopeFactory = serviceScopeFactory;
-        _agentOptions = agentOptions.Value;
-    }
 
     public Task StartAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation($"{nameof(TimedHostedService)} is {_agentOptions.SaveCacheInterval}");
+        logger.LogInformation($"{nameof(TimedHostedService)} is {_agentOptions.SaveCacheInterval}");
         _saveCacheTimer = new Timer(state => _ = SaveCacheJob(), null, _agentOptions.SaveCacheInterval, Timeout.InfiniteTimeSpan);
 
         return Task.CompletedTask;
@@ -45,19 +37,19 @@ public class TimedHostedService : IHostedService, IDisposable
     {
         try
         {
-            await using var vhContextScope = _serviceScopeFactory.CreateAsyncScope();
+            await using var vhContextScope = serviceScopeFactory.CreateAsyncScope();
             var cacheRepo = vhContextScope.ServiceProvider.GetRequiredService<CacheService>();
             await cacheRepo.SaveChanges();
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Could not save cache.");
+            logger.LogError(e, "Could not save cache.");
         }
     }
 
     public async Task StopAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation($"{nameof(TimedHostedService)} is stopping.");
+        logger.LogInformation($"{nameof(TimedHostedService)} is stopping.");
         try
         {
             await SaveCacheChanges();

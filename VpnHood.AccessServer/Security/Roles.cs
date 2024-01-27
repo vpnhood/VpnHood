@@ -10,10 +10,10 @@ public static class Roles
         RoleName = nameof(ProjectReader),
         RoleId = "{D7808522-5207-45A2-9924-BAA396398100}",
         IsRoot = false,
-        Permissions = new[]
-        {
+        Permissions =
+        [
             nameof(Permissions.ProjectRead)
-        }
+        ]
     };
 
     public static GmRole ProjectWriter { get; } = new()

@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Api;
+﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.AccessServer.Api;
 using System.Net;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
@@ -17,6 +18,7 @@ public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInf
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static async Task<ServerDom> Attach(TestInit testInit, Guid serverId)
     {
         var serverData = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverId);

@@ -11,54 +11,46 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects")]
-public class ProjectsController : ControllerBase
+public class ProjectsController(
+    ProjectService projectService,
+    IAuthorizationProvider authorizationProvider)
+    : ControllerBase
 {
-    private readonly ProjectService _projectService;
-    private readonly IAuthorizationProvider _authorizationProvider;
-
-    public ProjectsController(
-        ProjectService projectService, 
-        IAuthorizationProvider authorizationProvider)
-    {
-        _projectService = projectService;
-        _authorizationProvider = authorizationProvider;
-    }
-
     [HttpPost]
     [Authorize] //all authenticated user can create projects
     public async Task<Project> Create()
     {
-        var userId = await _authorizationProvider.GetUserId(User);
+        var userId = await authorizationProvider.GetUserId(User);
         if (userId == null) throw new UnregisteredUserException();
-        return await _projectService.Create(userId);
+        return await projectService.Create(userId);
     }
 
-    [HttpGet("{projectId}")]
+    [HttpGet("{projectId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Project> Get(Guid projectId)
     {
-        return _projectService.Get(projectId);
+        return projectService.Get(projectId);
     }
 
-    [HttpPatch("{projectId}")]
+    [HttpPatch("{projectId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
     public Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
-        return _projectService.Update(projectId, updateParams);
+        return projectService.Update(projectId, updateParams);
     }
 
-    [HttpPatch("{projectId}/usage")]
+    [HttpPatch("{projectId:guid}/usage")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)
     {
-        return _projectService.GetUsage(projectId, usageBeginTime, usageEndTime, serverFarmId, serverId);
+        return projectService.GetUsage(projectId, usageBeginTime, usageEndTime, serverFarmId, serverId);
     }
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectList)]
     public Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)
     {
-        return _projectService.List(search, recordIndex, recordCount);
+        return projectService.List(search, recordIndex, recordCount);
     }
 }

@@ -11,36 +11,19 @@ using VpnHood.AccessServer.Report.Services;
 
 namespace VpnHood.AccessServer.Services;
 
-public class ProjectService
+public class ProjectService(
+    VhContext vhContext,
+    SubscriptionService subscriptionService,
+    AgentCacheClient agentCacheClient,
+    UsageReportService usageReportService,
+    IRoleProvider roleProvider,
+    CertificateService certificateService)
 {
-    private readonly VhContext _vhContext;
-    private readonly AgentCacheClient _agentCacheClient;
-    private readonly UsageReportService _usageReportService;
-    private readonly SubscriptionService _subscriptionService;
-    private readonly CertificateService _certificateService;
-    private readonly IRoleProvider _roleProvider;
-
-    public ProjectService(
-        VhContext vhContext,
-        SubscriptionService subscriptionService,
-        AgentCacheClient agentCacheClient,
-        UsageReportService usageReportService,
-        IRoleProvider roleProvider, 
-        CertificateService certificateService)
-    {
-        _subscriptionService = subscriptionService;
-        _vhContext = vhContext;
-        _agentCacheClient = agentCacheClient;
-        _usageReportService = usageReportService;
-        _roleProvider = roleProvider;
-        _certificateService = certificateService;
-    }
-
     public async Task<Project> Create(string ownerUserId)
     {
         // Check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
-        await _subscriptionService.AuthorizeCreateProject(ownerUserId);
+        await subscriptionService.AuthorizeCreateProject(ownerUserId);
         var projectId = Guid.NewGuid();
 
         // ServerProfile
@@ -59,7 +42,7 @@ public class ProjectService
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
             UseHostName = false,
-            Certificate = await _certificateService.CreateSelfSingedInternal(projectId),
+            Certificate = await certificateService.CreateSelfSingedInternal(projectId),
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
@@ -112,29 +95,29 @@ public class ProjectService
             }
         };
 
-        await _vhContext.Projects.AddAsync(project);
-        await _vhContext.SaveChangesAsync();
+        await vhContext.Projects.AddAsync(project);
+        await vhContext.SaveChangesAsync();
 
         // make current user the owner
-        await _roleProvider.AddUserRole(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);
+        await roleProvider.AddUserRole(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);
         return project.ToDto();
     }
 
     public async Task<Project> Get(Guid projectId)
     {
-        var project = await _vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        var project = await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
         return project.ToDto();
     }
 
     public async Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
-        var project = await _vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        var project = await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
 
         if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
         if (updateParams.GaMeasurementId != null) project.GaMeasurementId = updateParams.GaMeasurementId;
         if (updateParams.GaApiSecret != null) project.GaApiSecret = updateParams.GaApiSecret;
-        await _vhContext.SaveChangesAsync();
-        await _agentCacheClient.InvalidateProject(projectId);
+        await vhContext.SaveChangesAsync();
+        await agentCacheClient.InvalidateProject(projectId);
 
         return project.ToDto();
     }
@@ -142,8 +125,8 @@ public class ProjectService
     public async Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)
     {
         // no lock
-        await using var trans = await _vhContext.WithNoLockTransaction();
-        var projects = await _vhContext.Projects
+        await using var trans = await vhContext.WithNoLockTransaction();
+        var projects = await vhContext.Projects
             .Where(x =>
                 string.IsNullOrEmpty(search) ||
                 x.ProjectName!.Contains(search) ||
@@ -158,8 +141,8 @@ public class ProjectService
 
     public async Task<IEnumerable<Project>> List(IEnumerable<Guid> projectIds)
     {
-        await using var trans = await _vhContext.WithNoLockTransaction();
-        var projects = await _vhContext.Projects
+        await using var trans = await vhContext.WithNoLockTransaction();
+        var projects = await vhContext.Projects
             .Where(x => projectIds.Contains(x.ProjectId))
             .OrderByDescending(x => x.ProjectName)
             .ToArrayAsync();
@@ -171,9 +154,9 @@ public class ProjectService
         Guid? serverFarmId = null, Guid? serverId = null)
     {
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
-        await _subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
+        await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var usage = await _usageReportService.GetUsage(projectId, usageBeginTime.Value, usageEndTime,
+        var usage = await usageReportService.GetUsage(projectId, usageBeginTime.Value, usageEndTime,
             serverFarmId: serverFarmId, serverId: serverId);
         return usage;
     }

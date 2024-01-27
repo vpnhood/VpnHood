@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Security.Authentication;
 using Ga4.Ga4Tracking;
-using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -139,8 +138,9 @@ public class SessionService(
         var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
         if (device == null)
         {
-            device = new DeviceModel(Guid.NewGuid())
+            device = new DeviceModel
             {
+                DeviceId = Guid.NewGuid(),
                 ProjectId = projectId,
                 ClientId = clientInfo.ClientId,
                 IpAddress = clientIpToStore,
@@ -247,7 +247,7 @@ public class SessionService(
         }.ToAccessKey();
 
         ret.GaMeasurementId = server.Project?.GaMeasurementId;
-        ret.TcpEndPoints = new[] { bestTcpEndPoint };
+        ret.TcpEndPoints = [bestTcpEndPoint];
         ret.UdpEndPoints = server.AccessPoints
             .Where(x => x is { IsPublic: true, UdpPort: > 0 })
             .Select(x => new IPEndPoint(x.IpAddress, x.UdpPort))

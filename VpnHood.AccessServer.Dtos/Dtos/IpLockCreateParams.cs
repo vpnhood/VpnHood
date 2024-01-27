@@ -4,16 +4,11 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.Dtos;
 
-public class IpLockCreateParams
+public class IpLockCreateParams(IPAddress ipAddress)
 {
     [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress IpAddress { get; set; }
+    public IPAddress IpAddress { get; set; } = ipAddress;
 
     public bool IsLocked { get; set; }
     public string? Description { get; set; }
-
-    public IpLockCreateParams(IPAddress ipAddress)
-    {
-        IpAddress = ipAddress;
-    }
 }

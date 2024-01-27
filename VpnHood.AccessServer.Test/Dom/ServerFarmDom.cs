@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using VpnHood.AccessServer.Api;
 
 namespace VpnHood.AccessServer.Test.Dom;
@@ -37,6 +38,7 @@ public class ServerFarmDom
         return ret;
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static async Task<ServerFarmDom> Attach(TestInit testInit, Guid serverFarmId)
     {
         var serverFarmData = await testInit.ServerFarmsClient.GetAsync(testInit.ProjectId, serverFarmId);

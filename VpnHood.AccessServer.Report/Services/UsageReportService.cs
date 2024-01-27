@@ -7,22 +7,12 @@ using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.Report.Services;
 
-public class UsageReportService
+public class UsageReportService(
+    VhReportContext vhReportContext,
+    IMemoryCache memoryCache,
+    IOptions<ReportServiceOptions> options)
 {
     private const int SmallCacheLength = 50;
-    private readonly VhReportContext _vhReportContext;
-    private readonly IMemoryCache _memoryCache;
-    private readonly ReportServiceOptions _options;
-
-    public UsageReportService(
-        VhReportContext vhReportContext,
-        IMemoryCache memoryCache,
-        IOptions<ReportServiceOptions> options)
-    {
-        _vhReportContext = vhReportContext;
-        _memoryCache = memoryCache;
-        _options = options.Value;
-    }
 
     private static DateTime ToUtcWithKind(DateTime dateTime)
     {
@@ -44,12 +34,12 @@ public class UsageReportService
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage? cacheRes) && cacheRes != null)
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Usage? cacheRes) && cacheRes != null)
             return cacheRes;
 
         // select and order
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
-        var query = _vhReportContext.AccessUsages
+        await using var transReport = await vhReportContext.WithNoLockTransaction();
+        var query = vhReportContext.AccessUsages
             .Where(accessUsage =>
                 (accessUsage.ProjectId == projectId) &&
                 (accessUsage.CreatedTime >= usageBeginTime) &&
@@ -78,7 +68,7 @@ public class UsageReportService
 
         // update cache
         if (cacheKey != null && cacheExpiration != null)
-            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
+            memoryCache.Set(cacheKey, res, cacheExpiration.Value);
 
         return res;
     }
@@ -91,23 +81,23 @@ public class UsageReportService
         usageEndTime ??= DateTime.UtcNow;
 
         // no lock
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
+        await using var transReport = await vhReportContext.WithNoLockTransaction();
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        usageEndTime = usageEndTime.Value.Subtract(_options.ServerUpdateStatusInterval * 2).Subtract(TimeSpan.FromMinutes(5));
-        var step1 = Math.Max(5, _options.ServerUpdateStatusInterval.TotalMinutes);
+        usageEndTime = usageEndTime.Value.Subtract(options.Value.ServerUpdateStatusInterval * 2).Subtract(TimeSpan.FromMinutes(5));
+        var step1 = Math.Max(5, options.Value.ServerUpdateStatusInterval.TotalMinutes);
         var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageBeginTime).TotalMinutes / 12 / step1);
         var baseTime = usageBeginTime;
 
 
         // per server in status interval
-        var serverStatuses = _vhReportContext.ServerStatuses
+        var serverStatuses = vhReportContext.ServerStatuses
             .Where(x =>
                 x.ProjectId == projectId &&
                 (serverId == null || x.ServerId == serverId) &&
@@ -166,7 +156,7 @@ public class UsageReportService
 
         // update cache
         if (cacheKey != null && cacheExpiration != null)
-            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
+            memoryCache.Set(cacheKey, res, cacheExpiration.Value);
 
         return res.ToArray();
     }
@@ -181,7 +171,7 @@ public class UsageReportService
             usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage>? usages) && usages != null)
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage>? usages) && usages != null)
         {
             // filter result by given accessTokenIds
             if (accessTokenIds != null)
@@ -200,13 +190,13 @@ public class UsageReportService
                 $"accessToken_usage_{projectId}_{serverFarmId}_{string.Join(',', queryAccessTokenIds)}",
                 usageBeginTime, usageEndTime, out _);
 
-            if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
+            if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
                 return usages;
         }
 
         // run the hard query
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
-        var usagesQuery = _vhReportContext.AccessUsages
+        await using var transReport = await vhReportContext.WithNoLockTransaction();
+        var usagesQuery = vhReportContext.AccessUsages
             .Where(accessUsage =>
                 (accessUsage.ProjectId == projectId) &&
                 (serverFarmId == null || accessUsage.ServerFarmId == serverFarmId) &&
@@ -232,7 +222,7 @@ public class UsageReportService
 
         // update cache
         if (cacheKey != null && cacheExpiration != null)
-            _memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
+            memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
 
         // filter result by given accessTokenIds
         if (accessTokenIds != null)
@@ -253,7 +243,7 @@ public class UsageReportService
             usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage>? usages) && usages != null)
+        if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage>? usages) && usages != null)
         {
             // filter result by given deviceIds
             if (deviceIds != null)
@@ -264,7 +254,7 @@ public class UsageReportService
         }
 
         // look for small cache
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
+        await using var transReport = await vhReportContext.WithNoLockTransaction();
         var queryDeviceIds = deviceIds is { Length: <= SmallCacheLength } ? deviceIds : null;
         if (queryDeviceIds != null)
         {
@@ -272,13 +262,13 @@ public class UsageReportService
                 $"device_usage_{projectId}_{accessTokenId}_{serverFarmId}_{string.Join(',', queryDeviceIds)}",
                 usageBeginTime, usageEndTime, out _);
 
-            if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
+            if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
                 return usages;
         }
 
         // run the hard query
         var usagesQuery =
-            from accessUsage in _vhReportContext.AccessUsages
+            from accessUsage in vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
                 (serverFarmId == null || accessUsage.ServerFarmId == serverFarmId) &&
@@ -306,7 +296,7 @@ public class UsageReportService
 
         // update cache
         if (cacheKey != null && cacheExpiration != null)
-            _memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
+            memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
 
         // filter result by given deviceIds
         if (deviceIds != null)

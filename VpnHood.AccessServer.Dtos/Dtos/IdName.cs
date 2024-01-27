@@ -1,17 +1,9 @@
 ﻿namespace VpnHood.AccessServer.Dtos;
 
-public class IdName<T>
+public class IdName<T>(T id, string name)
 {
-    public IdName(T id, string name)
-    {
-        Id = id;
-        Name = name;
-    }
-
-
-
-    public T Id { get; set; }
-    public string Name { get; set; }
+    public T Id { get; set; } = id;
+    public string Name { get; set; } = name;
 }
 
 public class IdName

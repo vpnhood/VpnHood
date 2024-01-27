@@ -1,17 +1,14 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace VpnHood.AccessServer.Dtos;
 
-public class ServerInstallManual
+public class ServerInstallManual(ServerInstallAppSettings appSettings)
 {
-    public string AppSettingsJson { get; }
-    public ServerInstallAppSettings AppSettings { get; }
+    [SuppressMessage("ReSharper", "UnusedMember.Global")] 
+    public string AppSettingsJson { get; } = JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true });
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
+    public ServerInstallAppSettings AppSettings { get; } = appSettings;
     public required string LinuxCommand { get; init; }
     public required string WindowsCommand { get; init; }
-
-    public ServerInstallManual(ServerInstallAppSettings appSettings)
-    {
-        AppSettings = appSettings;
-        AppSettingsJson = JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true });
-    }
 }

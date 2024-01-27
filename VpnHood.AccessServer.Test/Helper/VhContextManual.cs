@@ -3,13 +3,9 @@ using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Test.Helper;
 
-internal class VhContextManual : VhContext
+internal class VhContextManual(string connectionString) : VhContext
 {
-    private readonly string? _connectionString;
-    public VhContextManual(string connectionString)
-    {
-        _connectionString = connectionString;
-    }
+    private readonly string? _connectionString = connectionString;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

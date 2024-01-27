@@ -43,7 +43,6 @@ public class TestInit : IHttpClientFactory, IDisposable
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
-    public AgentSystemClient AgentSystemClient => Scope.ServiceProvider.GetRequiredService<AgentSystemClient>();
     public ServerFarmsClient ServerFarmsClient => new(HttpClient);
     public ServersClient ServersClient => new(HttpClient);
     public CertificatesClient CertificatesClient => new(HttpClient);
@@ -111,8 +110,10 @@ public class TestInit : IHttpClientFactory, IDisposable
     }
 
     public async Task<string> NewIpV4String() => (await NewIpV4()).ToString();
+    // ReSharper disable once UnusedMember.Global
     public async Task<string> NewIpV6String() => (await NewIpV6()).ToString();
 
+    // ReSharper disable once UnusedMember.Global
     public async Task<IPAddress> NewIpV4Db()
     {
         await Task.Delay(0);
@@ -122,6 +123,7 @@ public class TestInit : IHttpClientFactory, IDisposable
     }
 
     public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
+    // ReSharper disable once UnusedMember.Global
     public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
 
 
@@ -232,18 +234,18 @@ public class TestInit : IHttpClientFactory, IDisposable
         {
             Version = Version.Parse($"999.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
             EnvironmentVersion = Environment.Version,
-            PrivateIpAddresses = new[]
-            {
+            PrivateIpAddresses =
+            [
                 IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
                 IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
-                publicIp,
-            },
-            PublicIpAddresses = new[]
-            {
+                publicIp
+            ],
+            PublicIpAddresses =
+            [
                 await NewIpV4(),
                 await NewIpV6(),
-                publicIp,
-            },
+                publicIp
+            ],
             Status = NewServerStatus(null, randomStatus),
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",

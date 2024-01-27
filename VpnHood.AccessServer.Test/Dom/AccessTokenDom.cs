@@ -7,17 +7,11 @@ using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class AccessTokenDom
+public class AccessTokenDom(TestInit testInit, AccessToken accessToken)
 {
-    public TestInit TestInit { get; }
-    public AccessToken AccessToken { get; private set; }
+    public TestInit TestInit { get; } = testInit;
+    public AccessToken AccessToken { get; private set; } = accessToken;
     public Guid AccessTokenId => AccessToken.AccessTokenId;
-
-    public AccessTokenDom(TestInit testInit, AccessToken accessToken)
-    {
-        TestInit = testInit;
-        AccessToken = accessToken;
-    }
 
     public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null, AddressFamily addressFamily = AddressFamily.InterNetwork,
         bool assertError = true, bool autoRedirect = false)

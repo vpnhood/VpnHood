@@ -7,16 +7,11 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Report.Persistence;
 
 // ReSharper disable once PartialTypeWithSinglePart
-public partial class VhReportContext : DbContext
+public partial class VhReportContext(DbContextOptions<VhReportContext> options) : DbContext(options)
 {
     public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
     public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
     public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
-
-    public VhReportContext(DbContextOptions<VhReportContext> options)
-        : base(options)
-    {
-    }
 
     public async Task<IDbContextTransaction?> WithNoLockTransaction()
     {

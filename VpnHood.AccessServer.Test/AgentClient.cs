@@ -2,10 +2,5 @@
 
 namespace VpnHood.AccessServer.Test;
 
-public class AgentClient : HttpAccessManager
-{
-    public AgentClient(HttpClient httpClient, HttpAccessManagerOptions options) 
-        : base(httpClient, options)
-    {
-    }
-}
+public class AgentClient(HttpClient httpClient, HttpAccessManagerOptions options)
+    : HttpAccessManager(httpClient, options);

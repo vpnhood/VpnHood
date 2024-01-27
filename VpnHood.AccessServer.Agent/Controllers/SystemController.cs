@@ -12,18 +12,12 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 [ApiController]
 [Route("/api/system")]
 [Authorize(AgentPolicy.SystemPolicy)]
-public class SystemController : ControllerBase
+public class SystemController(
+    IOptions<GrayMintAuthenticationOptions> grayMintAuthenticationOptions,
+    GrayMintAuthentication grayMintAuthentication)
+    : ControllerBase
 {
-    private readonly GrayMintAuthenticationOptions _grayMintAuthenticationOptions;
-    private readonly GrayMintAuthentication _grayMintAuthentication;
-
-    public SystemController(
-        IOptions<GrayMintAuthenticationOptions> grayMintAuthenticationOptions,
-        GrayMintAuthentication grayMintAuthentication)
-    {
-        _grayMintAuthenticationOptions = grayMintAuthenticationOptions.Value;
-        _grayMintAuthentication = grayMintAuthentication;
-    }
+    private readonly GrayMintAuthenticationOptions _grayMintAuthenticationOptions = grayMintAuthenticationOptions.Value;
 
     [HttpGet("servers/{serverId}/agent-authorization")]
     public async Task<string> GetAgentAuthorization(Guid serverId)
@@ -31,7 +25,7 @@ public class SystemController : ControllerBase
         var claimsIdentity = new ClaimsIdentity();
         claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
-        var authenticationHeader = await _grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
+        var authenticationHeader = await grayMintAuthentication.CreateAuthenticationHeader(claimsIdentity,
             expirationTime: DateTime.UtcNow.AddYears(13));
 
         return authenticationHeader.ToString();
@@ -48,7 +42,7 @@ public class SystemController : ControllerBase
         claimsIdentity.AddClaim(new Claim("usage_type", "system"));
         claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "system"));
         claimsIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
-        var apiKey = await _grayMintAuthentication.CreateApiKey(claimsIdentity, new ApiKeyOptions()
+        var apiKey = await grayMintAuthentication.CreateApiKey(claimsIdentity, new ApiKeyOptions()
         {
             AccessTokenExpirationTime = DateTime.UtcNow.AddYears(13)
         });

@@ -2,18 +2,12 @@
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class ServerProfileDom
+public class ServerProfileDom(TestInit testInit, ServerProfile serverProfile)
 {
-    public TestInit TestInit { get; }
-    public ServerProfile ServerProfile { get; private set; }
+    public TestInit TestInit { get; } = testInit;
+    public ServerProfile ServerProfile { get; private set; } = serverProfile;
     public Guid ServerProfileId => ServerProfile.ServerProfileId;
     public ServerProfilesClient Client => TestInit.ServerProfilesClient;
-
-    public ServerProfileDom(TestInit testInit, ServerProfile serverProfile)
-    {
-        TestInit = testInit;
-        ServerProfile = serverProfile;
-    }
 
     public static async Task<ServerProfileDom> Create(TestInit? testInit = null, ServerProfileCreateParams? createParams = null)
     {

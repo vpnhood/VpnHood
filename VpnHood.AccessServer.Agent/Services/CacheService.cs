@@ -8,7 +8,10 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
-public class CacheService
+public class CacheService(
+    IOptions<AgentOptions> appOptions,
+    ILogger<CacheService> logger,
+    VhContext vhContext)
 {
     private class MemCache
     {
@@ -21,19 +24,7 @@ public class CacheService
     }
 
     private static MemCache Mem { get; } = new();
-    private readonly AgentOptions _appOptions;
-    private readonly ILogger<CacheService> _logger;
-    private readonly VhContext _vhContext;
-
-    public CacheService(
-        IOptions<AgentOptions> appOptions,
-        ILogger<CacheService> logger,
-        VhContext vhContext)
-    {
-        _appOptions = appOptions.Value;
-        _logger = logger;
-        _vhContext = vhContext;
-    }
+    private readonly AgentOptions _appOptions = appOptions.Value;
 
     public async Task Init(bool force = true)
     {
@@ -41,11 +32,11 @@ public class CacheService
             return;
 
         // this will just affect current scope
-        _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
-        _logger.LogTrace("Loading the old projects and servers...");
+        logger.LogTrace("Loading the old projects and servers...");
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
-        var serverStatuses = await _vhContext.ServerStatuses
+        var serverStatuses = await vhContext.ServerStatuses
             .Include(serverStatus => serverStatus.Server)
             .Include(serverStatus => serverStatus.Server!.Project)
             .Include(serverStatus => serverStatus.Server!.AccessPoints)
@@ -67,8 +58,8 @@ public class CacheService
             .DistinctBy(project => project.ProjectId)
             .ToDictionary(project => project.ProjectId);
 
-        _logger.LogTrace("Loading the old accesses and sessions...");
-        var sessions = await _vhContext.Sessions
+        logger.LogTrace("Loading the old accesses and sessions...");
+        var sessions = await vhContext.Sessions
             .Include(session => session.Device)
             .Include(session => session.Access)
             .Include(session => session.Access!.AccessToken)
@@ -109,7 +100,7 @@ public class CacheService
         if (Mem.Projects.TryGetValue(projectId, out project))
             return project;
 
-        project = await _vhContext.Projects
+        project = await vhContext.Projects
             .AsNoTracking()
             .SingleAsync(x => x.ProjectId == projectId);
 
@@ -126,7 +117,7 @@ public class CacheService
         if (Mem.Servers.TryGetValue(serverId, out server))
             return server;
 
-        server = await _vhContext.Servers
+        server = await vhContext.Servers
             .Include(x => x.ServerFarm)
             .Include(x => x.ServerFarm!.ServerProfile)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
@@ -182,7 +173,7 @@ public class CacheService
             return access;
 
         // load from db
-        access = await _vhContext.Accesses
+        access = await vhContext.Accesses
             .Include(x => x.AccessToken)
             .Include(x => x.AccessToken!.ServerFarm)
             .AsNoTracking()
@@ -205,7 +196,7 @@ public class CacheService
             return access;
 
         // load from db
-        access = await _vhContext.Accesses
+        access = await vhContext.Accesses
             .Include(accessModel => accessModel.AccessToken)
             .Include(accessModel => accessModel.AccessToken!.ServerFarm)
             .AsNoTracking()
@@ -300,7 +291,7 @@ public class CacheService
             var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
             if (session.EndTime == null && session.LastUsedTime < minSessionTime)
             {
-                if (session.ErrorCode != SessionErrorCode.Ok) _logger.LogWarning(
+                if (session.ErrorCode != SessionErrorCode.Ok) logger.LogWarning(
                     "Session has error but it has not been closed. SessionId: {SessionId}", session.SessionId);
                 session.EndTime = DateTime.UtcNow;
                 session.ErrorCode = SessionErrorCode.SessionClosed;
@@ -345,9 +336,9 @@ public class CacheService
         using var lockAsyncResult = await SaveChangesLock.LockAsync(TimeSpan.Zero);
         if (!lockAsyncResult.Succeeded) return;
 
-        _logger.LogTrace("Saving cache...");
-        _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-        await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
+        logger.LogTrace("Saving cache...");
+        vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
         var savingTime = DateTime.UtcNow;
 
         // find updated sessions
@@ -357,7 +348,7 @@ public class CacheService
         // never update archived session, it may not exist on db anymore
         foreach (var session in updatedSessions)
         {
-            var entry = _vhContext.Sessions.Attach(session.Clone());
+            var entry = vhContext.Sessions.Attach(session.Clone());
             entry.Property(x => x.LastUsedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
             entry.Property(x => x.SuppressedTo).IsModified = true;
@@ -375,7 +366,7 @@ public class CacheService
 
         foreach (var access in accesses)
         {
-            var entry = _vhContext.Accesses.Attach(access);
+            var entry = vhContext.Accesses.Attach(access);
             entry.Property(x => x.LastUsedTime).IsModified = true;
             entry.Property(x => x.TotalReceivedTraffic).IsModified = true;
             entry.Property(x => x.TotalSentTraffic).IsModified = true;
@@ -384,11 +375,11 @@ public class CacheService
         // save updated sessions
         try
         {
-            _logger.LogInformation(AccessEventId.Cache,
+            logger.LogInformation(AccessEventId.Cache,
                 "Saving Sessions... Projects: {Projects}, Servers: {Servers}, Sessions: {Sessions}, ModifiedSessions: {ModifiedSessions}",
                 updatedSessions.DistinctBy(x => x.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), Mem.Sessions.Count, updatedSessions.Length);
 
-            await _vhContext.SaveChangesAsync();
+            await vhContext.SaveChangesAsync();
 
             // cleanup: remove archived sessions
             foreach (var sessionPair in Mem.Sessions.Where(pair => pair.Value.IsArchived))
@@ -397,13 +388,13 @@ public class CacheService
         catch (DbUpdateConcurrencyException ex)
         {
             await ResolveDbUpdateConcurrencyException(ex);
-            _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not flush sessions. I've resolved it for the next try.");
+            vhContext.ChangeTracker.Clear();
+            logger.LogError(ex, "Could not flush sessions. I've resolved it for the next try.");
         }
         catch (Exception ex)
         {
-            _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not flush sessions.");
+            vhContext.ChangeTracker.Clear();
+            logger.LogError(ex, "Could not flush sessions.");
         }
 
         // save access usages
@@ -411,8 +402,8 @@ public class CacheService
         Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageModel>();
         try
         {
-            await _vhContext.AccessUsages.AddRangeAsync(sessionUsages);
-            await _vhContext.SaveChangesAsync();
+            await vhContext.AccessUsages.AddRangeAsync(sessionUsages);
+            await vhContext.SaveChangesAsync();
 
             // cleanup: remove unused accesses
             var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
@@ -422,8 +413,8 @@ public class CacheService
         }
         catch (Exception ex)
         {
-            _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not write AccessUsages.");
+            vhContext.ChangeTracker.Clear();
+            logger.LogError(ex, "Could not write AccessUsages.");
         }
 
         // ServerStatus
@@ -440,20 +431,20 @@ public class CacheService
         catch (DbUpdateConcurrencyException ex)
         {
             await ResolveDbUpdateConcurrencyException(ex);
-            _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not save servers status. I've resolved it for the next try.");
+            vhContext.ChangeTracker.Clear();
+            logger.LogError(ex, "Could not save servers status. I've resolved it for the next try.");
         }
         catch (Exception ex)
         {
-            _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, "Could not save servers status.");
+            vhContext.ChangeTracker.Clear();
+            logger.LogError(ex, "Could not save servers status.");
         }
 
         if (transaction != null)
             await transaction.CommitAsync();
 
         Mem.LastSavedTime = savingTime;
-        _logger.LogTrace("The cache has been saved.");
+        logger.LogTrace("The cache has been saved.");
     }
 
     private static string ToSqlValue<T>(T? value)
@@ -488,14 +479,14 @@ public class CacheService
         if (!serverStatuses.Any())
             return;
 
-        _logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
+        logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
             serverStatuses.DistinctBy(x => x.ProjectId).Count(), serverStatuses.Length);
 
-        await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
+        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
 
         // remove old is last
         var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
-        await _vhContext.ServerStatuses
+        await vhContext.ServerStatuses
             .AsNoTracking()
             .Where(serverStatus => serverIds.Contains(serverStatus.ServerId))
             .ExecuteUpdateAsync(setPropertyCalls =>
@@ -510,7 +501,7 @@ public class CacheService
             ")");
 
         var sql =
-            $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
+            $"\r\nINSERT INTO {nameof(vhContext.ServerStatuses)} (" +
             $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
             $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
             $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
@@ -519,10 +510,10 @@ public class CacheService
             $"VALUES {string.Join(',', values)}";
 
         // AddRange has issue on unique index; we got desperate
-        await _vhContext.Database.ExecuteSqlRawAsync(sql);
+        await vhContext.Database.ExecuteSqlRawAsync(sql);
 
         if (transaction != null)
-            await _vhContext.Database.CommitTransactionAsync();
+            await vhContext.Database.CommitTransactionAsync();
     }
 
     public Task<SessionModel[]> GetActiveSessions(Guid accessId)

@@ -11,15 +11,10 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/accesses")]
-public class AccessesController : ControllerBase
+public class AccessesController(VhContext vhContext) : ControllerBase
 {
-    private readonly VhContext _vhContext;
-    public AccessesController(VhContext vhContext)
-    {
-        _vhContext = vhContext;
-    }
 
-    [HttpGet("{accessId}")]
+    [HttpGet("{accessId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
@@ -33,7 +28,7 @@ public class AccessesController : ControllerBase
         DateTime? beginTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
-        var baseQuery = _vhContext.Accesses
+        var baseQuery = vhContext.Accesses
             .Include(x => x.Device)
             .Include(x => x.AccessToken)
             .ThenInclude(x => x!.ServerFarm)

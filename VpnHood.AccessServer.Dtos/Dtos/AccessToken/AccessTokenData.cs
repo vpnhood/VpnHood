@@ -1,13 +1,8 @@
 ﻿namespace VpnHood.AccessServer.Dtos;
 
-public class AccessTokenData
+public class AccessTokenData(AccessToken accessToken)
 {
-    public AccessToken AccessToken { get; set; }
+    public AccessToken AccessToken { get; set; } = accessToken;
     public Usage? Usage { get; set; }
     public Access? Access { get; set; }
-
-    public AccessTokenData(AccessToken accessToken)
-    {
-        AccessToken = accessToken;
-    }
 }

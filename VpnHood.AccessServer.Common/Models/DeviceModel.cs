@@ -2,7 +2,7 @@
 
 public class DeviceModel
 {
-    public Guid DeviceId { get; set; }
+    public required Guid DeviceId { get; init; }
     public Guid ProjectId { get; set; }
     public Guid ClientId { get; set; }
     public string? ClientVersion { get; set; }
@@ -15,9 +15,4 @@ public class DeviceModel
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ICollection<AccessModel>? Accesses { get; set; }
-
-    public DeviceModel(Guid deviceId)
-    {
-        DeviceId = deviceId;
-    }
 }

@@ -8,21 +8,12 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/system")]
-public class SystemController : ControllerBase
+public class SystemController(SyncService syncService) : ControllerBase
 {
-    private readonly SyncService _syncService;
-
-    public SystemController(
-        SyncService syncService)
-        
-    {
-        _syncService = syncService;
-    }
-
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.Sync)]
     public Task Sync()
     {
-        return _syncService.Sync();
+        return syncService.Sync();
     }
 }

@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using GrayMint.Common.Generics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Views;
 
 namespace VpnHood.AccessServer.Persistence;
 
@@ -60,6 +62,7 @@ public class VhRepo(VhContext vhContext)
 
         return query.SingleAsync();
     }
+
     public Task<ServerProfileModel> GetServerProfile(Guid projectId, Guid serverProfileId)
     {
         var query = vhContext.ServerProfiles
@@ -79,4 +82,89 @@ public class VhRepo(VhContext vhContext)
         return names;
 
     }
+
+    public async Task<int> GetMaxAccessTokenSupportCode(Guid projectId)
+    {
+        var res = await vhContext.AccessTokens
+            .Where(x => x.ProjectId == projectId)
+            .MaxAsync(x => (int?)x.SupportCode);
+
+        return res ?? 1000;
+    }
+
+    public Task<AccessTokenModel> GetAccessToken(Guid projectId, Guid accessTokenId, bool includeServerFarm = false)
+    {
+        var query = vhContext.AccessTokens
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.AccessTokenId == accessTokenId);
+
+        if (includeServerFarm)
+            query = query.Include(x => x.ServerFarm);
+
+        return query.SingleAsync();
+    }
+
+    public async Task<ListResult<AccessTokenView>> ListAccessTokenViews(Guid projectId, string? search = null,
+        Guid? accessTokenId = null, Guid? serverFarmId = null,
+        DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
+        int recordIndex = 0, int recordCount = 51)
+    {
+        // no lock
+        await using var trans = await vhContext.WithNoLockTransaction();
+
+        if (!Guid.TryParse(search, out var searchGuid)) searchGuid = Guid.Empty;
+        if (!int.TryParse(search, out var searchInt)) searchInt = -1;
+
+        // find access tokens
+        var baseQuery =
+            from accessToken in vhContext.AccessTokens
+            join serverFarm in vhContext.ServerFarms on accessToken.ServerFarmId equals serverFarm.ServerFarmId
+            join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new
+            { access.AccessTokenId, access.DeviceId } into accessGrouping
+            from access in accessGrouping.DefaultIfEmpty()
+            where
+                (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
+                (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
+                (serverFarmId == null || accessToken.ServerFarmId == serverFarmId) &&
+                (string.IsNullOrEmpty(search) ||
+                 (accessToken.AccessTokenId == searchGuid && searchGuid != Guid.Empty) ||
+                 (accessToken.SupportCode == searchInt && searchInt != -1) ||
+                 (accessToken.ServerFarmId == searchGuid && searchGuid != Guid.Empty) ||
+                 accessToken.AccessTokenName!.StartsWith(search))
+            orderby accessToken.SupportCode descending
+            select new AccessTokenView
+            {
+                ServerFarmName = serverFarm.ServerFarmName,
+                AccessToken = accessToken,
+                Access = access
+            };
+
+        var query = baseQuery
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .AsNoTracking();
+
+        var results = await query
+            .ToArrayAsync();
+
+        var ret = new ListResult<AccessTokenView>()
+        {
+            Items = results,
+            TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()
+        };
+
+        return ret;
+    }
+
+    public async Task DeleteAccessToken(Guid projectId, Guid[] accessTokenIds)
+    {
+        var accessTokens = await vhContext.AccessTokens
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => accessTokenIds.Contains(x.AccessTokenId))
+            .ToListAsync();
+
+        foreach (var accessToken in accessTokens)
+            accessToken.IsDeleted = true;
+    }
 }
+

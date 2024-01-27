@@ -22,7 +22,7 @@ public class TeamController(
 
         var projectIds = resourceIds
             .Where(x => x != GetRootResourceId())
-        .Select(Guid.Parse);
+            .Select(Guid.Parse);
 
         var ret = await projectService.List(projectIds);
         return ret;

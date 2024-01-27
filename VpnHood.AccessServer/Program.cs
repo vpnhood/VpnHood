@@ -67,6 +67,7 @@ public class Program
         builder.Services.AddScoped<UsageCycleService>();
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();
+        builder.Services.AddScoped<AccessTokensService>();
 
         // Report Service
         builder.Services.AddVhReportServices(new ReportServiceOptions

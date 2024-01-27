@@ -7887,12 +7887,6 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid AccessTokenId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("endTime")]
-        public System.DateTime? EndTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lockedTime")]
-        public System.DateTime? LockedTime { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
@@ -8451,9 +8445,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("gaApiSecret")]
         public PatchOfString? GaApiSecret { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("maxTcpCount")]
-        public PatchOfInteger? MaxTcpCount { get; set; } = default!;
-
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.1.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -8535,9 +8526,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("summary")]
         public ServerFarmSummary? Summary { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tokenUrlError")]
-        public string? TokenUrlError { get; set; } = default!;
 
     }
 

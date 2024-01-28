@@ -25,7 +25,6 @@ public class GoogleBillingService: IAppBillingService
         throw new NotImplementedException();
     }
 
-
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
         await EnsureConnected();

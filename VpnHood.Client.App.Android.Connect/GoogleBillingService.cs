@@ -19,7 +19,6 @@ public class GoogleBillingService: IAppBillingService
         return new GoogleBillingService(context);
     }
 
-
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
     {
         throw new NotImplementedException();
@@ -74,5 +73,10 @@ public class GoogleBillingService: IAppBillingService
 
         if (billingResult.ResponseCode != BillingResponseCode.Ok)
             throw new Exception(billingResult.DebugMessage);
+    }
+
+    public void Dispose()
+    {
+        _billingClient.Dispose();
     }
 }

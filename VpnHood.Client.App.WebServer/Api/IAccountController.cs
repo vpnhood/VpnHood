@@ -8,5 +8,6 @@ public interface IAccountController
 {
     bool IsSigninWithGoogleSupported();
     Task SignInWithGoogle();
+    Task SignOut();
     Task<AppAccount> Get();
 }

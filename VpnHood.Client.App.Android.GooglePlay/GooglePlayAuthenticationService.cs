@@ -1,11 +1,10 @@
-using System.Net.Http.Headers;
 using Android.Gms.Auth.Api.SignIn;
-using VpnHood.Client.App.Droid.Connect.Properties;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid.Utils;
 
-namespace VpnHood.Client.App.Droid.Connect;
+namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GoogleAuthenticationService : IAuthenticationService
+public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
 {
     private const int SignInIntentId = 20200;
     private bool _disposed;
@@ -13,12 +12,12 @@ public class GoogleAuthenticationService : IAuthenticationService
     private readonly GoogleSignInClient _googleSignInClient;
     private TaskCompletionSource<GoogleSignInAccount>? _taskCompletionSource;
 
-    public GoogleAuthenticationService(Activity activity)
+    public GooglePlayAuthenticationService(Activity activity, string firebaseClientId)
     {
         _activity = activity;
 
         var googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-            .RequestIdToken(AssemblyInfo.FirebaseClientId)
+            .RequestIdToken(firebaseClientId)
             .RequestEmail()
             .Build();
 
@@ -28,19 +27,19 @@ public class GoogleAuthenticationService : IAuthenticationService
         ((IActivityEvent)_activity).OnActivityResultEvent += Activity_OnActivityResult;
     }
 
-    public static GoogleAuthenticationService Create<T>(T activity) where T : Activity, IActivityEvent
+    public static GooglePlayAuthenticationService Create<T>(T activity, string firebaseId) where T : Activity, IActivityEvent
     {
-        return new GoogleAuthenticationService(activity);
+        return new GooglePlayAuthenticationService(activity, firebaseId);
     }
 
 
-    public Task<AuthenticationHeaderValue?> TryGetAuthorization()
+    public Task<string?> TryGetIdToken()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         throw new NotImplementedException();
     }
 
-    public async Task<AuthenticationHeaderValue> SignIn()
+    public async Task<string> SignIn()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -51,7 +50,7 @@ public class GoogleAuthenticationService : IAuthenticationService
         if (account.IdToken == null)
             throw new ArgumentNullException(account.IdToken);
 
-        return new AuthenticationHeaderValue("Bearer", account.IdToken);
+        return account.IdToken;
     }
 
     public Task SignOut()

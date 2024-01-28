@@ -10,7 +10,7 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal class BillingController : WebApiController, IBillingController
 {
-    public IAppBillingService BillingService => VpnHoodApp.Instance.BillingService 
+    public IAppBillingService BillingService => VpnHoodApp.Instance.AccountService?.Billing
         ?? throw new Exception("Billing service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/subscription-plans")]

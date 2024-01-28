@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Client.App.Abstractions;
 
-public interface IAppBillingService
+public interface IAppBillingService : IDisposable
 {
     Task<SubscriptionPlan[]> GetSubscriptionPlans();
 }

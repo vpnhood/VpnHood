@@ -1,9 +1,7 @@
 ﻿using Android.Runtime;
-using System.Net.Http.Headers;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Resources;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Connect;
 

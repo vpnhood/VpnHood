@@ -59,7 +59,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         }
 
         // refresh by id token
-        var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.TryGetIdToken() : null;
+        var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.TrySilentSignIn() : null;
         if (idToken != null)
         {
             var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
@@ -68,7 +68,8 @@ public class AppAuthenticationService : IAppAuthenticationService
             return _apiKey;
         }
 
-        return null;
+        await SignOut();
+        throw new InvalidOperationException("Could not get refresh token.");// TODO check exception
     }
 
     public async Task SignInWithGoogle()
@@ -85,8 +86,10 @@ public class AppAuthenticationService : IAppAuthenticationService
         if (File.Exists(AccountFilePath))
             File.Delete(AccountFilePath);
 
-        if (_externalAuthenticationService != null)
-            await _externalAuthenticationService.SignOut();
+        if (_externalAuthenticationService == null)
+            throw new InvalidOperationException("Could not sign out account. The authentication service is null.");
+
+        await _externalAuthenticationService.SignOut();
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)

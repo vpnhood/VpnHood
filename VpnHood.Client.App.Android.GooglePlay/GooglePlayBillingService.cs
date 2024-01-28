@@ -2,21 +2,21 @@ using Android.BillingClient.Api;
 using Android.Content;
 using VpnHood.Client.App.Abstractions;
 
-namespace VpnHood.Client.App.Droid.Connect;
+namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GoogleBillingService: IAppBillingService
+public class GooglePlayBillingService: IAppBillingService
 {
     private readonly BillingClient _billingClient;
-    private GoogleBillingService(Context context)
+    private GooglePlayBillingService(Context context)
     {
         var builder = BillingClient.NewBuilder(context);
         builder.SetListener(PurchasesUpdatedListener);
         _billingClient = builder.EnablePendingPurchases().Build();
     }
 
-    public static GoogleBillingService Create(Context context)
+    public static GooglePlayBillingService Create(Context context)
     {
-        return new GoogleBillingService(context);
+        return new GooglePlayBillingService(context);
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)

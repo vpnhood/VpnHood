@@ -42,6 +42,8 @@
 	<ItemGroup>
 		<PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.9" />
 		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="120.7.0.2" />
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.0.1.4" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="122.3.0.2" />
 	</ItemGroup>
 
 </Project>

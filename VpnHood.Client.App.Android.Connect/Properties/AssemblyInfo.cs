@@ -13,7 +13,6 @@ namespace VpnHood.Client.App.Droid.Connect.Properties;
 public static class AssemblyInfo
 {
     public static Uri UpdateInfoUrl => new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json");
-
     public static Uri StoreBaseUri => IsDebugMode
         ? new Uri("https://192.168.0.67:7077")
         : new Uri("https://store-api.vpnhood.com");

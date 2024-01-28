@@ -1,7 +1,9 @@
 ﻿using Android.Runtime;
+using System.Net.Http.Headers;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Resources;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -19,15 +21,5 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         Resources = VpnHoodAppResource.Resources,
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl
     };
-
-    public static HttpClient StoreHttpClient => StoreHttpClientLazy.Value;
-    private static readonly Lazy<HttpClient> StoreHttpClientLazy = new(() =>
-    {
-        var handler = new HttpClientHandler();
-        if (AssemblyInfo.IsDebugMode)
-            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-
-        return new HttpClient(handler) { BaseAddress = AssemblyInfo.StoreBaseUri };
-    });
 }
 

@@ -39,11 +39,11 @@ public class MainActivity : AndroidAppWebViewMainActivity
     {
         base.OnCreate(savedInstanceState);
         //Android.Gms.Ads.MobileAds.Initialize(this); // for ads
-        
+
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this);
-        VpnHoodApp.Instance.AccountService =  new AppAccountService(authenticationService, googlePlayBillingService);
+        VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService);
     }
 
     protected override void OnDestroy()
@@ -51,5 +51,5 @@ public class MainActivity : AndroidAppWebViewMainActivity
         VpnHoodApp.Instance.AccountService = null;
         base.OnDestroy();
     }
- 
+
 }

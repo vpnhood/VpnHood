@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Android.Content;
 using Android.Content.PM;
-using Android.Gms.Ads;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Abstractions;
@@ -39,12 +38,12 @@ public class MainActivity : AndroidAppWebViewMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        MobileAds.Initialize(this);
+        //Android.Gms.Ads.MobileAds.Initialize(this); // for ads
         
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
-        var googleBillingService = GoogleBillingService.Create(this);
-        VpnHoodApp.Instance.AccountService =  new AppAccountService(authenticationService, googleBillingService);
+        var googlePlayBillingService = GooglePlayBillingService.Create(this);
+        VpnHoodApp.Instance.AccountService =  new AppAccountService(authenticationService, googlePlayBillingService);
     }
 
     protected override void OnDestroy()

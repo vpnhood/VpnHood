@@ -8,7 +8,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
-using VpnHood.Common.Utils;
+using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -40,14 +40,16 @@ public class MainActivity : AndroidAppWebViewMainActivity
     {
         base.OnCreate(savedInstanceState);
         MobileAds.Initialize(this);
-        VpnHoodApp.Instance.AccountService = new AppAccountService(AssemblyInfo.StoreBaseUri, AssemblyInfo.IsDebugMode, GoogleAuthenticationService.Create(this));
-        VpnHoodApp.Instance.BillingService = GoogleBillingService.Create(this);
+        
+        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
+        var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
+        var googleBillingService = GoogleBillingService.Create(this);
+        VpnHoodApp.Instance.AccountService =  new AppAccountService(authenticationService, googleBillingService);
     }
 
     protected override void OnDestroy()
     {
         VpnHoodApp.Instance.AccountService = null;
-        VpnHoodApp.Instance.BillingService = null;
         base.OnDestroy();
     }
  

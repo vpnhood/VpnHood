@@ -2,8 +2,7 @@
 
 public interface IAppAccountService
 {
-    bool IsGoogleSignInSupported { get; }
-    Task SignInWithGoogle();
-    Task SignOut();
+    IAppAuthenticationService Authentication { get; }
+    IAppBillingService? Billing { get; }
     Task<AppAccount> GetAccount();
 }

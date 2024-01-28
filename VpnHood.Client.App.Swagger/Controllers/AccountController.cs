@@ -20,6 +20,12 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
+    [HttpPost("sign-out")]
+    public new Task SignOut() // TODO Check
+    {
+        throw new NotImplementedException();
+    }
+
     [HttpGet()]
     public  Task<AppAccount> Get()
     {

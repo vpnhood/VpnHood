@@ -37,10 +37,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="Ads\InterstitialAdLoadCallback2.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
@@ -52,8 +48,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="VpnHood.Store.Api" Version="1.0.20" />
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.0.1.4" />
-		<PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="122.3.0.2" />
 	</ItemGroup>
 
 </Project>

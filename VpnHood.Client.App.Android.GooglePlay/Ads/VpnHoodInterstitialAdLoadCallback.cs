@@ -1,7 +1,7 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 
-namespace VpnHood.Client.App.Droid.Connect.Ads;
+namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 
 // ReSharper disable All
 

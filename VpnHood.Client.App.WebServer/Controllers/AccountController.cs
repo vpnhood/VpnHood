@@ -14,22 +14,22 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
-        return VpnHoodApp.Instance.AccountService?.IsGoogleSignInSupported ?? false;
+        return VpnHoodApp.Instance.AccountService?.Authentication.IsSignInWithGoogleSupported ?? false;
     }
 
     [Route(HttpVerbs.Post, "/signin-with-google")]
     public Task SignInWithGoogle()
     {
-        if (!AccountService.IsGoogleSignInSupported)
+        if (!AccountService.Authentication.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.SignInWithGoogle();
+        return AccountService.Authentication.SignInWithGoogle();
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
     public Task SignOut()
     {
-        return AccountService.SignOut();
+        return AccountService.Authentication.SignOut();
     }
 
     [Route(HttpVerbs.Get, "/")]

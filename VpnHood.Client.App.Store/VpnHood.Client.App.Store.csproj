@@ -1,9 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common for Google</Description>
-		<TargetFramework>net8.0-android34.0</TargetFramework>
-		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Client.App.Droid.GooglePlay</RootNamespace>
+		<Description>Manage clients account using VpnHood Store.</Description>
+		<TargetFramework>netstandard2.1</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -23,8 +21,6 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>3.3.458</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<BaseOutputPath></BaseOutputPath>
-		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -35,13 +31,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
-	  <ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.9" />
-		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="120.7.0.2" />
+		<PackageReference Include="VpnHood.Store.Api" Version="1.0.20" />
 	</ItemGroup>
 
 </Project>

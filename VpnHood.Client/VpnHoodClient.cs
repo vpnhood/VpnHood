@@ -197,7 +197,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async Task Connect()
     {
-        using var scope = VhLogger.Instance.BeginScope("Client2");
+        using var scope = VhLogger.Instance.BeginScope("Client");
         if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
         if (State != ClientState.None)

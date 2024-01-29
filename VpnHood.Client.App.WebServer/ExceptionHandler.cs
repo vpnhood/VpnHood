@@ -27,7 +27,7 @@ internal static class ExceptionHandler
 
             context.Response.ContentType = MediaTypeNames.Application.Json;
             context.Response.StatusCode = apiException.StatusCode;
-            throw new HttpException(HttpStatusCode.BadRequest, apiError.Message, apiError);
+            throw new HttpException(apiException.StatusCode, apiError.Message, apiError);
         }
         else
         {

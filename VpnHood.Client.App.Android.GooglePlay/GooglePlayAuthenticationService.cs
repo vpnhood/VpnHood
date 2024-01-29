@@ -1,8 +1,7 @@
+using System.Security.Authentication;
 using Android.Gms.Auth.Api.SignIn;
-using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid.Utils;
-using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -34,25 +33,12 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
         return new GooglePlayAuthenticationService(activity, firebaseId);
     }
 
-
-    public async Task<string?> TrySilentSignIn()
+    public async Task<string> SilentSignIn()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        try
-        {
-            var account = await _googleSignInClient.SilentSignInAsync();
 
-            if (account.IdToken == null)
-                throw new ArgumentNullException(account.IdToken);
-
-            return account.IdToken;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogInformation(ex.Message);
-            return null;
-        }
-        
+        var account = await _googleSignInClient.SilentSignInAsync();
+        return account?.IdToken ?? throw new AuthenticationException("Could not perform SilentSignIn by Google.");
     }
 
     public async Task<string> SignIn()

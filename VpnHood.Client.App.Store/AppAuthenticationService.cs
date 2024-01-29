@@ -49,27 +49,40 @@ public class AppAuthenticationService : IAppAuthenticationService
         if (_apiKey.AccessToken.ExpirationTime + TimeSpan.FromMinutes(5) > DateTime.UtcNow)
             return _apiKey;
 
-        // refresh by refresh token
-        if (_apiKey.RefreshToken != null && _apiKey.RefreshToken.ExpirationTime > DateTime.UtcNow)
+        try
         {
-            var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-            _apiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = _apiKey.RefreshToken.Value });
-            await SaveApiKey(_apiKey);
-            return _apiKey;
+            // refresh by refresh token
+            if (_apiKey.RefreshToken != null && _apiKey.RefreshToken.ExpirationTime > DateTime.UtcNow)
+            {
+                var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
+                _apiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = _apiKey.RefreshToken.Value });
+                await SaveApiKey(_apiKey);
+                return _apiKey;
+            }
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not get refresh the access token.");
         }
 
-        // refresh by id token
-        var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.TrySilentSignIn() : null;
-        if (idToken != null)
+        try
         {
-            var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-            _apiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken });
-            await SaveApiKey(_apiKey);
-            return _apiKey;
+            // refresh by id token
+            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn() : null;
+            if (!string.IsNullOrWhiteSpace(idToken))
+            {
+                var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
+                _apiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken });
+                await SaveApiKey(_apiKey);
+                return _apiKey;
+            }
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not refresh token by id token.");
         }
 
-        await SignOut();
-        throw new InvalidOperationException("Could not get refresh token.");// TODO check exception
+        return null;
     }
 
     public async Task SignInWithGoogle()
@@ -86,10 +99,8 @@ public class AppAuthenticationService : IAppAuthenticationService
         if (File.Exists(AccountFilePath))
             File.Delete(AccountFilePath);
 
-        if (_externalAuthenticationService == null)
-            throw new InvalidOperationException("Could not sign out account. The authentication service is null.");
-
-        await _externalAuthenticationService.SignOut();
+        if (_externalAuthenticationService != null)
+            await _externalAuthenticationService.SignOut();
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)

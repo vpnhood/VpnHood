@@ -49,10 +49,22 @@ public class VpnHoodAppWebServer : IDisposable
             _instance = null;
     }
 
-    public static VpnHoodAppWebServer Init(Stream zipStream, int defaultPort = 9090, Uri? url = default, 
+    public static bool IsDebugMode
+    {
+        get
+        {
+#if DEBUG 
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
+
+    public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default, 
         bool listenToAllIps = false)
     {
-        var ret = new VpnHoodAppWebServer(zipStream, defaultPort, url, listenToAllIps);
+        var ret = new VpnHoodAppWebServer(zipStream, IsDebugMode ? 9091 : 9090, url, listenToAllIps);
         ret.Start();
         return ret;
     }

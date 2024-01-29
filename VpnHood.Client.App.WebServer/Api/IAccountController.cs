@@ -10,4 +10,5 @@ public interface IAccountController
     Task SignInWithGoogle();
     Task SignOut();
     Task<AppAccount> Get();
+    bool IsSignedOut();
 }

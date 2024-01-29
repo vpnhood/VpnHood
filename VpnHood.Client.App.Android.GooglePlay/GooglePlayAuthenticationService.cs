@@ -1,6 +1,8 @@
 using Android.Gms.Auth.Api.SignIn;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -33,10 +35,24 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
     }
 
 
-    public Task<string?> TryGetIdToken()
+    public async Task<string?> TrySilentSignIn()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        throw new NotImplementedException();
+        try
+        {
+            var account = await _googleSignInClient.SilentSignInAsync();
+
+            if (account.IdToken == null)
+                throw new ArgumentNullException(account.IdToken);
+
+            return account.IdToken;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogInformation(ex.Message);
+            return null;
+        }
+        
     }
 
     public async Task<string> SignIn()

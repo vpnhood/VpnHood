@@ -12,5 +12,6 @@ public class ServerFarm
     public required byte[] Secret { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required bool PushTokenToClient { get; init; }
+    public required  bool UseTokenV4 { get; init; }
 }
 

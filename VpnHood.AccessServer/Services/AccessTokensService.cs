@@ -51,7 +51,7 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
             ? await vhRepo.GetServerFarm(projectId, updateParams.ServerFarmId) : null;
 
         // update
-        var accessToken = await vhRepo.GetAccessToken(projectId, accessTokenId, includeServerFarm: true);
+        var accessToken = await vhRepo.GetAccessToken(projectId, accessTokenId, includeFarm: true);
         if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
         if (updateParams.ExpirationTime != null) accessToken.ExpirationTime = updateParams.ExpirationTime;
         if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
@@ -75,7 +75,7 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
 
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
-        var accessToken = await vhRepo.GetAccessToken(projectId, accessTokenId, includeServerFarm: true);
+        var accessToken = await vhRepo.GetAccessToken(projectId, accessTokenId, includeFarm: true);
 
         // create token
         var token = new Token
@@ -88,8 +88,11 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
         };
 
 #pragma warning disable CS0618 // Type or member is obsolete
-        return TokenV3.FromToken(token).ToAccessKey();
+        if (!accessToken.ServerFarm!.UseTokenV4)
+            return TokenV3.FromToken(token).ToAccessKey();
 #pragma warning restore CS0618 // Type or member is obsolete
+
+        return token.ToAccessKey();
     }
 
     public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageBeginTime = null, DateTime? usageEndTime = null)

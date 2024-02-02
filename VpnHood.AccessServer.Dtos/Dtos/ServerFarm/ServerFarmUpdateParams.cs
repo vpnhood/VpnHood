@@ -11,4 +11,5 @@ public class ServerFarmUpdateParams
     public Patch<Uri>? TokenUrl { get; set; }
     public Patch<byte[]>? Secret { get; set; }
     public Patch<bool>? PushTokenToClient { get; set; }
+    public Patch<bool>? UseTokenV4 { get; set; }
 }

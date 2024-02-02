@@ -92,13 +92,13 @@ public class VhRepo(VhContext vhContext)
         return res ?? 1000;
     }
 
-    public Task<AccessTokenModel> GetAccessToken(Guid projectId, Guid accessTokenId, bool includeServerFarm = false)
+    public Task<AccessTokenModel> GetAccessToken(Guid projectId, Guid accessTokenId, bool includeFarm = false)
     {
         var query = vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.AccessTokenId == accessTokenId);
 
-        if (includeServerFarm)
+        if (includeFarm)
             query = query.Include(x => x.ServerFarm);
 
         return query.SingleAsync();

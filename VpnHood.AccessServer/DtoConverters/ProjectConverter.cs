@@ -14,7 +14,7 @@ public static class ProjectConverter
             GaApiSecret = model.GaApiSecret,
             GaMeasurementId = model.GaMeasurementId,
             SubscriptionType = model.SubscriptionType,
-            CreatedTime = model.CreatedTime
+            CreatedTime = model.CreatedTime,
         };
         return project;
     }

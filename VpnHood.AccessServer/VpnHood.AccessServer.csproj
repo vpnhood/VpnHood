@@ -24,31 +24,11 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<NoWarn>1701;1702;CS1591;  MSB3246;</NoWarn>
-		<WarningLevel>9999</WarningLevel>
-	</PropertyGroup>
-
 	<ItemGroup>
-		<Compile Remove="Diagrams\**" />
-		<Content Remove="Diagrams\**" />
-		<EmbeddedResource Remove="Diagrams\**" />
-		<None Remove="Diagrams\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<_WebToolingArtifacts Remove="Properties\PublishProfiles\VhAccessServer2 - ZipDeploy.pubxml" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="GrayMint.Authorization" Version="3.0.101" />
+		<PackageReference Include="GrayMint.Authorization" Version="3.0.102" />
 		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.182" />
 		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.182" />
 		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.182" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
 		<PackageReference Include="NLog" Version="5.2.8" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.8" />
@@ -71,29 +51,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
-		</Compile>
-	</ItemGroup>
-
-	<ItemGroup>
 		<Content Update="Properties\launchSettings.json">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
-
-	<ItemGroup>
-		<EmbeddedResource Update="Resource.resx">
-			<Generator>PublicResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-	</ItemGroup>
-
-	<ItemGroup>
-		<Content Include="..\VpnHood.AccessServer.Agent\nlog.config">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
 

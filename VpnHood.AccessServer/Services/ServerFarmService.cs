@@ -121,7 +121,7 @@ public class ServerFarmService(
             Secret = VhUtil.GenerateKey(),
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
-            PushTokenToClient = createParams.PushTokenToClient
+            PushTokenToClient = createParams.PushTokenToClient,
         };
 
         // update TokenJson
@@ -142,6 +142,7 @@ public class ServerFarmService(
         if (updateParams.ServerFarmName != null) serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
         if (updateParams.UseHostName != null) serverFarm.UseHostName = updateParams.UseHostName;
         if (updateParams.PushTokenToClient != null) serverFarm.PushTokenToClient = updateParams.PushTokenToClient;
+        if (updateParams.UseTokenV4 != null) serverFarm.UseTokenV4 = updateParams.UseTokenV4;
 
         if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret))
         {

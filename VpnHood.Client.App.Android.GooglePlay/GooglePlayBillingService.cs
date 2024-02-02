@@ -36,7 +36,7 @@ public class GooglePlayBillingService: IAppBillingService
         var productDetailsParams = QueryProductDetailsParams.NewBuilder()
             .SetProductList([
                 QueryProductDetailsParams.Product.NewBuilder()
-                    .SetProductId("general_subscription") //TODO Change product id
+                    .SetProductId("general_subscription")
                     .SetProductType(BillingClient.ProductType.Subs)
                     .Build()
             ])
@@ -56,8 +56,7 @@ public class GooglePlayBillingService: IAppBillingService
             .Select(plan => new SubscriptionPlan()
             {
                 SubscriptionPlanId = plan.BasePlanId,
-                PriceAmount = plan.PricingPhases.PricingPhaseList.First().PriceAmountMicros,
-                PriceCurrency = plan.PricingPhases.PricingPhaseList.First().PriceCurrencyCode
+                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice,
             })
             .ToArray();
 

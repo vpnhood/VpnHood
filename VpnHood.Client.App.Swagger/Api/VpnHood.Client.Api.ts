@@ -1108,6 +1108,7 @@ export class BillingClient {
 }
 
 export class AppAccount implements IAppAccount {
+    userId!: string;
     name?: string | null;
     email?: string | null;
     subscriptionPlanId?: string | null;
@@ -1123,6 +1124,7 @@ export class AppAccount implements IAppAccount {
 
     init(_data?: any) {
         if (_data) {
+            this.userId = _data["userId"] !== undefined ? _data["userId"] : <any>null;
             this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
             this.email = _data["email"] !== undefined ? _data["email"] : <any>null;
             this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
@@ -1138,6 +1140,7 @@ export class AppAccount implements IAppAccount {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["userId"] = this.userId !== undefined ? this.userId : <any>null;
         data["name"] = this.name !== undefined ? this.name : <any>null;
         data["email"] = this.email !== undefined ? this.email : <any>null;
         data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
@@ -1146,6 +1149,7 @@ export class AppAccount implements IAppAccount {
 }
 
 export interface IAppAccount {
+    userId: string;
     name?: string | null;
     email?: string | null;
     subscriptionPlanId?: string | null;
@@ -2111,8 +2115,7 @@ export interface IClientProfileUpdateParams {
 
 export class SubscriptionPlan implements ISubscriptionPlan {
     subscriptionPlanId!: string;
-    priceAmount!: number;
-    priceCurrency!: string;
+    planPrice!: string;
 
     constructor(data?: ISubscriptionPlan) {
         if (data) {
@@ -2126,8 +2129,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
     init(_data?: any) {
         if (_data) {
             this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
-            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : <any>null;
-            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : <any>null;
+            this.planPrice = _data["planPrice"] !== undefined ? _data["planPrice"] : <any>null;
         }
     }
 
@@ -2141,16 +2143,14 @@ export class SubscriptionPlan implements ISubscriptionPlan {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
-        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : <any>null;
-        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : <any>null;
+        data["planPrice"] = this.planPrice !== undefined ? this.planPrice : <any>null;
         return data;
     }
 }
 
 export interface ISubscriptionPlan {
     subscriptionPlanId: string;
-    priceAmount: number;
-    priceCurrency: string;
+    planPrice: string;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

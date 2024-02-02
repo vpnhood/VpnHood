@@ -142,6 +142,9 @@ public class VpnHoodAppWebServer : IDisposable
             .WithWebApi("/api/account", ResponseSerializerCallback, c => c
                 .WithController<AccountController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
+            .WithWebApi("/api/billing", ResponseSerializerCallback, c => c
+                .WithController<BillingController>()
+                .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))
             .HandleHttpException(ExceptionHandler.DataResponseForHttpException);
 

@@ -48,10 +48,7 @@ internal static class ExceptionHandler
     public static Task DataResponseForHttpException(IHttpContext context, IHttpException httpException)
     {
         if (httpException.DataObject is ApiError)
-        {
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return ResponseSerializer.Json(context, httpException.DataObject);
-        }
 
         return context.SendStandardHtmlAsync(context.Response.StatusCode);
     }

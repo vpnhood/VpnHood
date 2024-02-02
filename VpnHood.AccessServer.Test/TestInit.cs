@@ -1,20 +1,14 @@
 ﻿using System.Net;
-using System.Security.Claims;
 using System.Net.Http.Headers;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using GrayMint.Authorization.Abstractions;
-using GrayMint.Authorization.Authentications;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
-using VpnHood.AccessServer.Agent;
-using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Report.Persistence;
@@ -28,21 +22,17 @@ using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test;
 
-[TestClass]
+//todo remain to testApp
 public class TestInit : IHttpClientFactory, IDisposable
 {
     public WebApplicationFactory<Program> WebApp { get; }
-    public WebApplicationFactory<Agent.Program> AgentApp { get; }
+    public AgentTestApp AgentTestApp { get; }
 
     public IServiceScope Scope { get; }
-    public IServiceScope AgentScope { get; }
     public VhContext VhContext => Scope.ServiceProvider.GetRequiredService<VhContext>();
     public VhReportContext VhReportContext => Scope.ServiceProvider.GetRequiredService<VhReportContext>();
-    public CacheService CacheService => AgentScope.ServiceProvider.GetRequiredService<CacheService>();
     public HttpClient HttpClient { get; }
-    public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
-    public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public ServerFarmsClient ServerFarmsClient => new(HttpClient);
     public ServersClient ServersClient => new(HttpClient);
     public CertificatesClient CertificatesClient => new(HttpClient);
@@ -54,6 +44,7 @@ public class TestInit : IHttpClientFactory, IDisposable
     public SystemClient SystemClient => new(HttpClient);
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
+    public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
 
     public ApiKey SystemAdminApiKey { get; private set; } = default!;
     public AuthenticationHeaderValue SystemAdminAuthorization => new(SystemAdminApiKey.AccessToken.Scheme, SystemAdminApiKey.AccessToken.Value);
@@ -66,12 +57,26 @@ public class TestInit : IHttpClientFactory, IDisposable
 
     private TestInit(Dictionary<string, string?> appSettings, string environment)
     {
-        Environment.SetEnvironmentVariable("IsTest", true.ToString());
-        WebApp = CreateWebApp<Program>(appSettings, environment);
-        AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
-        AgentOptions.AllowRedirect = false;
+        // AgentTestApp should not any dependency to the main app
+        AgentTestApp = new AgentTestApp(appSettings, environment);
+
+        // create main app
+        WebApp = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                foreach (var appSetting in appSettings)
+                    builder.UseSetting(appSetting.Key, appSetting.Value);
+
+                builder.UseEnvironment(environment);
+
+                builder.ConfigureServices(services =>
+                {
+                    services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
+                    services.AddSingleton<IHttpClientFactory>(this);
+                });
+            });
+
         Scope = WebApp.Services.CreateScope();
-        AgentScope = AgentApp.Services.CreateScope();
         HttpClient = WebApp.CreateClient();
     }
 
@@ -291,12 +296,11 @@ public class TestInit : IHttpClientFactory, IDisposable
     {
         var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId).Result;
 
-        var http = AgentApp.CreateClient();
         var options = new Server.Access.Managers.Http.HttpAccessManagerOptions(
             installManual.AppSettings.HttpAccessManager.BaseUrl,
             installManual.AppSettings.HttpAccessManager.Authorization);
 
-        return new AgentClient(http, options);
+        return new AgentClient(AgentTestApp.HttpClient, options);
     }
 
     public async Task Sync(bool flushCache = true)
@@ -315,31 +319,13 @@ public class TestInit : IHttpClientFactory, IDisposable
         return AgentCacheClient.Flush();
     }
 
+    // IHttpClientFactory.CreateClient
     public HttpClient CreateClient(string name)
     {
         // this for simulating Agent HTTP
-        if (name == AppOptions.AgentHttpClientName)
-        {
-            var claimIdentity = new ClaimsIdentity();
-            claimIdentity.AddClaim(new Claim("usage_type", "system"));
-            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, "system"));
-            claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
-            var scope = AgentApp.Services.CreateScope();
-            var grayMintAuthentication = scope.ServiceProvider.GetRequiredService<GrayMintAuthentication>();
-            var authorization = grayMintAuthentication.CreateAuthenticationHeader(claimIdentity).Result;
-
-            var httpClient = AgentApp.CreateClient();
-            httpClient.BaseAddress = AppOptions.AgentUrl;
-            httpClient.DefaultRequestHeaders.Authorization = authorization;
-            return httpClient;
-        }
-
-        return WebApp.CreateClient();
-    }
-
-    [AssemblyInitialize]
-    public static void AssemblyInitialize(TestContext _)
-    {
+        return name == AppOptions.AgentHttpClientName 
+            ? AgentTestApp.HttpClient 
+            : WebApp.CreateClient();
     }
 
     public void Dispose()

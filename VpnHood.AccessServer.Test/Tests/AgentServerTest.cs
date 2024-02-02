@@ -28,7 +28,7 @@ public class AgentServerTest
 
         //Configure
         await serverDom.Configure();
-        Assert.AreEqual(testInit.AgentOptions.ServerUpdateStatusInterval, serverDom.ServerConfig.UpdateStatusInterval);
+        Assert.AreEqual(testInit.AgentTestApp.AgentOptions.ServerUpdateStatusInterval, serverDom.ServerConfig.UpdateStatusInterval);
         Assert.AreEqual(serverDom.ServerConfig.TcpEndPointsValue.Length, serverDom.ServerInfo.PrivateIpAddresses.Distinct().Count(),
             "Duplicate listener!");
 
@@ -473,7 +473,7 @@ public class AgentServerTest
     public async Task LoadBalancer()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestInit.AgentOptions.AllowRedirect = true;
+        farm.TestInit.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
         var serverDom1 = await farm.AddNewServer();

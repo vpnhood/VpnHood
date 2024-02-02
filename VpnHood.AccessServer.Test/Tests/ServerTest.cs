@@ -261,7 +261,7 @@ public class ServerTest
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
-        farm.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        farm.TestInit.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 
         // lost
         var sampleServer = await farm.AddNewServer();

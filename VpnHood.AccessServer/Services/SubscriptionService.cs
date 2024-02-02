@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class SubscriptionService(
     VhContext vhContext,
-    IRoleProvider roleProvider,
+    IRoleAuthorizationProvider roleProvider,
     IUserProvider userProvider)
 {
     private async Task<ProjectModel> GetProject(Guid projectId)

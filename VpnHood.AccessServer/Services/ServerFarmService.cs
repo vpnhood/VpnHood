@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
@@ -79,17 +81,22 @@ public class ServerFarmService(
             if (!curFarmToken.IsValidHostName && VhUtil.IsNullOrEmpty(curFarmToken.HostEndPoints))
                 throw new Exception("You farm needs at-least a public in token endpoint");
 
+            // create no cache request
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, serverFarm.TokenUrl);
+            httpRequestMessage.Headers.CacheControl = new CacheControlHeaderValue() { NoStore = true };
+            var responseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken);
+            var stream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken);
+
             var buf = new byte[1024 * 8]; // make sure don't fetch a big data
-            var stream = await httpClient.GetStreamAsync(serverFarm.TokenUrl, cancellationToken);
             var read = stream.ReadAtLeast(buf, buf.Length, false);
             var encFarmToken = Encoding.UTF8.GetString(buf, 0, read);
             var remoteFarmToken = ServerToken.Decrypt(curFarmToken.Secret!, encFarmToken);
-            var isUpToDated = remoteFarmToken.IsTokenUpdated(curFarmToken);
+            var isUpToDate = !remoteFarmToken.IsTokenUpdated(curFarmToken);
             return new ValidateTokenUrlResult
             {
                 RemoteTokenTime = remoteFarmToken.CreatedTime,
-                IsUpToDate = isUpToDated,
-                ErrorMessage = isUpToDated ? null : "The token uploaded to the URL is old and needs to be updated."
+                IsUpToDate = isUpToDate,
+                ErrorMessage = isUpToDate ? null : "The token uploaded to the URL is old and needs to be updated."
             };
         }
         catch (Exception ex)
@@ -369,7 +376,7 @@ public class ServerFarmService(
         if (string.IsNullOrEmpty(serverFarm.TokenJson))
             throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
 
-        var farmToken = VhUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
+        var farmToken = FarmTokenBuilder.GetUsableToken(serverFarm);
         return farmToken.Encrypt();
     }
 }

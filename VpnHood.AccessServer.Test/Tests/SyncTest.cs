@@ -94,8 +94,8 @@ public class SyncTest
         var farm = await ServerFarmDom.Create();
         var tokenDom = await farm.CreateAccessToken();
 
-        farm.TestInit.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);
-        farm.TestInit.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(1);
+        farm.TestInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);
+        farm.TestInit.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(1);
 
 
         // create sessions
@@ -119,7 +119,7 @@ public class SyncTest
         //-----------
         // check: Archived sessions must be cleared
         //-----------
-        await Task.Delay(farm.TestInit.AgentOptions.SessionPermanentlyTimeout);
+        await Task.Delay(farm.TestInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout);
         await sessionDom3.AddUsage();
         await sessionDom4.AddUsage();
         await farm.TestInit.Sync();

@@ -97,9 +97,11 @@ public class Program
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
         // upgrade
-        var scope = webApp.Services.CreateAsyncScope();
-        var farmService = scope.ServiceProvider.GetRequiredService<ServerFarmService>();
-        await farmService.UpgradeAllFarmTokens();
+        await using (var scope = webApp.Services.CreateAsyncScope())
+        {
+            var farmService = scope.ServiceProvider.GetRequiredService<ServerFarmService>();
+            await farmService.UpgradeAllFarmTokens();
+        }
 
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();

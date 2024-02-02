@@ -398,6 +398,9 @@ public class VhContext : DbContext
             entity.Property(x => x.ServerProfileName)
                 .HasMaxLength(200);
 
+            entity.Property(x => x.ServerConfig)
+                .HasMaxLength(4000);
+
             entity.Property(x => x.IsDefault)
                 .HasDefaultValue(false);
 

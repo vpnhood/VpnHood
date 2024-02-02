@@ -239,8 +239,8 @@ public class AgentClientSessionTest
     public async Task Session_Close()
     {
         var testInit = await TestInit.Create();
-        testInit.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
-        testInit.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
+        testInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
+        testInit.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
         var sampleFarm1 = await SampleFarm.Create(testInit);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.CloseSession();
@@ -265,7 +265,7 @@ public class AgentClientSessionTest
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(testInit.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
+        await Task.Delay(testInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
         await testInit.Sync();
         await VhTestUtil.AssertNotExistsException(session.AddUsage(0));
     }
@@ -522,7 +522,7 @@ public class AgentClientSessionTest
 
         // Check after Flush
         await sampler.TestInit.FlushCache();
-        await sampler.TestInit.CacheService.InvalidateSessions();
+        await sampler.TestInit.AgentTestApp.CacheService.InvalidateSessions();
         res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.Other, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);

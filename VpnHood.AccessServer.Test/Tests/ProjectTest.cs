@@ -88,7 +88,7 @@ public class ProjectTest
             ProjectName = new PatchOfString { Value = newProjectName }
         });
 
-        var server = await sampler.TestInit.CacheService.GetServer(sampler.Servers[0].ServerId);
+        var server = await sampler.TestInit.AgentTestApp.CacheService.GetServer(sampler.Servers[0].ServerId);
         Assert.AreEqual(newProjectName, server.Project?.ProjectName);
     }
 

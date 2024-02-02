@@ -26,7 +26,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.1" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0-release-23619-01" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
 		<PackageReference Include="MSTest.TestAdapter" Version="3.2.0" />
 		<PackageReference Include="MSTest.TestFramework" Version="3.2.0" />
 		<PackageReference Include="coverlet.collector" Version="6.0.0">

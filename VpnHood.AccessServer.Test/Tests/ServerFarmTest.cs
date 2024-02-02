@@ -19,8 +19,10 @@ public class ServerFarmTest
         var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0,
             createParams: new ServerFarmCreateParams
             {
-                TokenUrl = new Uri("http://localhost:8080/farm1-token")
+                TokenUrl = new Uri("http://localhost:8080/farm1-token"),
+                PushTokenToClient = true
             });
+        Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
 
         var serverDom = await farm1.AddNewServer();
         await farm1.CreateAccessToken(true);
@@ -85,7 +87,8 @@ public class ServerFarmTest
             CertificateId = new PatchOfGuid { Value = certificate2.CertificateId },
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
             TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
-            Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() }
+            Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() },
+            PushTokenToClient = new PatchOfBoolean { Value = true },
         };
 
         await testInit.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
@@ -94,6 +97,7 @@ public class ServerFarmTest
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
         Assert.AreEqual(updateParam.CertificateId.Value, farm1.ServerFarm.CertificateId);
         Assert.AreEqual(updateParam.ServerProfileId.Value, farm1.ServerFarm.ServerProfileId);
+        Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
         CollectionAssert.AreEqual(updateParam.Secret.Value, farm1.ServerFarm.Secret);
 
         //-----------
@@ -249,9 +253,9 @@ public class ServerFarmTest
         var encFarmToken = await farm.Client.GetEncryptedTokenAsync(farm.ProjectId, farm.ServerFarmId);
         var accessToken = await farm.CreateAccessToken();
         var farmToken = ServerToken.Decrypt(farm.ServerFarm.Secret, encFarmToken);
-        
+
         // compare server token part of token with farm token
-        var token =  await accessToken.GetToken();
+        var token = await accessToken.GetToken();
         Assert.AreEqual(token.ServerToken.HostName, farmToken.HostName);
 
     }

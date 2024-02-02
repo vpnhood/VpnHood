@@ -11,5 +11,6 @@ public class ServerFarm
     public required Uri? TokenUrl { get; init; }
     public required byte[] Secret { get; init; }
     public required DateTime CreatedTime { get; init; }
+    public required bool PushTokenToClient { get; init; }
 }
 

@@ -55,9 +55,31 @@ public class AgentClientSessionTest
     }
 
     [TestMethod]
+    public async Task Push_token_to_client()
+    {
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = false};
+        var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        var accessTokenDom = await farm.CreateAccessToken();
+
+        // ------------
+        // Check: with push
+        // ------------
+        await farm.Update(new ServerFarmUpdateParams { PushTokenToClient = new PatchOfBoolean { Value = true } });
+        var sessionDom = await accessTokenDom.CreateSession();
+        Assert.IsNotNull(sessionDom.SessionResponseEx.AccessKey);
+
+        // ------------
+        // Check: without push
+        // ------------
+        await farm.Update(new ServerFarmUpdateParams { PushTokenToClient = new PatchOfBoolean { Value = false } });
+        sessionDom = await accessTokenDom.CreateSession();
+        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey);
+    }
+
+    [TestMethod]
     public async Task Session_Create_success()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z") };
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = true };
         var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {

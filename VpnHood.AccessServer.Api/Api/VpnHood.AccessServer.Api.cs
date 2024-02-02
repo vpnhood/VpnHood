@@ -8565,6 +8565,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
+        public bool PushTokenToClient { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.1.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -8585,6 +8588,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
         public System.Uri? TokenUrl { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
+        public bool PushTokenToClient { get; set; } = default!;
 
     }
 
@@ -8673,6 +8679,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("secret")]
         public PatchOfByteOf? Secret { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
+        public PatchOfBoolean? PushTokenToClient { get; set; } = default!;
 
     }
 

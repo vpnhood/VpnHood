@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
@@ -17,6 +18,7 @@ public class ServerFarmService(
     ServerService serverService,
     VhRepo vhRepo,
     CertificateService certificateService,
+    AgentCacheClient agentCacheClient,
     HttpClient httpClient
     )
 {
@@ -117,7 +119,8 @@ public class ServerFarmService(
             UseHostName = createParams.UseHostName,
             Secret = VhUtil.GenerateKey(),
             TokenJson = null,
-            TokenUrl = createParams.TokenUrl?.ToString()
+            TokenUrl = createParams.TokenUrl?.ToString(),
+            PushTokenToClient = createParams.PushTokenToClient
         };
 
         await vhContext.ServerFarms.AddAsync(ret);
@@ -131,11 +134,9 @@ public class ServerFarmService(
         var reconfigure = false;
 
         // change other properties
-        if (updateParams.ServerFarmName != null)
-            serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
-
-        if (updateParams.UseHostName != null)
-            serverFarm.UseHostName = updateParams.UseHostName;
+        if (updateParams.ServerFarmName != null) serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
+        if (updateParams.UseHostName != null) serverFarm.UseHostName = updateParams.UseHostName;
+        if (updateParams.PushTokenToClient != null) serverFarm.PushTokenToClient = updateParams.PushTokenToClient;
 
         if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret))
         {
@@ -175,6 +176,8 @@ public class ServerFarmService(
         // update cache after save
         if (reconfigure)
             await serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
+        else
+            await agentCacheClient.InvalidateProjectServers(projectId, serverFarmId: serverFarmId);
 
         var ret = (await List(projectId, serverFarmId: serverFarmId)).Single();
         return ret;

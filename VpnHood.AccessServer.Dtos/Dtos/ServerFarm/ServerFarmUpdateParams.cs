@@ -10,4 +10,5 @@ public class ServerFarmUpdateParams
     public Patch<bool>? UseHostName { get; set; }
     public Patch<Uri>? TokenUrl { get; set; }
     public Patch<byte[]>? Secret { get; set; }
+    public Patch<bool>? PushTokenToClient { get; set; }
 }

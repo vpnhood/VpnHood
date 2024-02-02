@@ -237,15 +237,19 @@ public class SessionService(
         if (accessToken.ServerFarm?.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
         accessToken.FirstUsedTime ??= session.CreatedTime;
         accessToken.LastUsedTime = session.CreatedTime;
-        ret.AccessKey = new Token 
-        {
-            ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm!.TokenJson!),
-            Secret = accessToken.Secret,
-            TokenId = accessToken.AccessTokenId.ToString(),
-            Name = accessToken.AccessTokenName,
-            SupportId = accessToken.SupportCode.ToString(),
-        }.ToAccessKey();
 
+        // push token to client
+        if (accessToken.ServerFarm.PushTokenToClient)
+            ret.AccessKey = new Token
+            {
+                ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm!.TokenJson!),
+                Secret = accessToken.Secret,
+                TokenId = accessToken.AccessTokenId.ToString(),
+                Name = accessToken.AccessTokenName,
+                SupportId = accessToken.SupportCode.ToString(),
+            }.ToAccessKey();
+
+        // update session data
         ret.GaMeasurementId = server.Project?.GaMeasurementId;
         ret.TcpEndPoints = [bestTcpEndPoint];
         ret.UdpEndPoints = server.AccessPoints

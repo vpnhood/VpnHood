@@ -12,6 +12,7 @@ public class ServerFarmModel
     public required byte[] Secret { get; set; } 
     public required string? TokenJson { get; set; }
     public required string? TokenUrl { get; set; }
+    public bool PushTokenToClient { get; set; }
     public bool IsDeleted { get; set; } = false;
 
     public virtual ServerProfileModel? ServerProfile { get; set; }

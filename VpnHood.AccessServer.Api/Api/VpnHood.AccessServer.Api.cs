@@ -8568,6 +8568,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
         public bool PushTokenToClient { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("useTokenV4")]
+        public bool UseTokenV4 { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.1.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -8682,6 +8685,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
         public PatchOfBoolean? PushTokenToClient { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("useTokenV4")]
+        public PatchOfBoolean? UseTokenV4 { get; set; } = default!;
 
     }
 

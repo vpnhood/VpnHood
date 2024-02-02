@@ -3,6 +3,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using GrayMint.Common.Exceptions;
+using VpnHood.Common;
 using VpnHood.Common.Utils;
 using Token = VpnHood.Common.Token;
 
@@ -76,7 +77,8 @@ public class ServerFarmTest
         //-----------
         var serverProfile2 = await ServerProfileDom.Create(testInit);
         var certificateClient = testInit.CertificatesClient;
-        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId, new CertificateSelfSignedParams { SubjectName = "CN=fff.com" });
+        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId,
+            new CertificateSelfSignedParams { SubjectName = "CN=fff.com" });
         var updateParam = new ServerFarmUpdateParams
         {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
@@ -238,5 +240,19 @@ public class ServerFarmTest
         // check serverConfig
         Assert.AreNotEqual(serverDom1.ServerStatus.ConfigCode, (await serverDom1.SendStatus()).ConfigCode);
         Assert.AreNotEqual(serverDom2.ServerStatus.ConfigCode, (await serverDom2.SendStatus()).ConfigCode);
+    }
+
+    [TestMethod]
+    public async Task GetFarmToken()
+    {
+        var farm = await ServerFarmDom.Create();
+        var encFarmToken = await farm.Client.GetEncryptedTokenAsync(farm.ProjectId, farm.ServerFarmId);
+        var accessToken = await farm.CreateAccessToken();
+        var farmToken = ServerToken.Decrypt(farm.ServerFarm.Secret, encFarmToken);
+        
+        // compare server token part of token with farm token
+        var token =  await accessToken.GetToken();
+        Assert.AreEqual(token.ServerToken.HostName, farmToken.HostName);
+
     }
 }

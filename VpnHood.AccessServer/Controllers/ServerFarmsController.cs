@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Mime;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
@@ -56,5 +57,13 @@ public class ServerFarmsController(ServerFarmService serverFarmService) : Contro
     public Task Delete(Guid projectId, Guid serverFarmId)
     {
         return serverFarmService.Delete(projectId, serverFarmId);
+    }
+
+    [HttpGet("{serverFarmId:guid}/encrypted-token")]
+    [AuthorizeProjectPermission(Permissions.AccessTokenReadAccessKey)]
+    [Produces(MediaTypeNames.Application.Json)]
+    public Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
+    {
+        return serverFarmService.GetEncryptedToken(projectId, serverFarmId);
     }
 }

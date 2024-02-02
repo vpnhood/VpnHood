@@ -24,16 +24,17 @@ public class ServerFarmService(
     )
 {
     [Obsolete]
-    public async Task FillAllFarmToken()
+    public async Task UpgradeAllFarmTokens()
     {
         try
         {
             logger.LogWarning("FillAllFarmToken has started");
             var farms = await vhContext.ServerFarms
                 .Where(x => !x.IsDeleted)
-                .Where(x => x.TokenJson == null)
+                .Where(x => string.IsNullOrEmpty(x.TokenJson))
                 .Include(x => x.Certificate)
                 .Include(x => x.Servers)
+                .AsSplitQuery()
                 .ToArrayAsync();
 
             foreach (var farm in farms)
@@ -152,7 +153,7 @@ public class ServerFarmService(
 
         // update TokenJson
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
-        
+
         serverFarm = await vhRepo.AddAsync(serverFarm);
         await vhRepo.SaveChangesAsync();
 

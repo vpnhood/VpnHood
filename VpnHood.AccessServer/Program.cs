@@ -96,6 +96,11 @@ public class Program
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
+        // upgrade
+        var scope = webApp.Services.CreateAsyncScope();
+        var farmService = scope.ServiceProvider.GetRequiredService<ServerFarmService>();
+        await farmService.UpgradeAllFarmTokens();
+
         await GrayMintApp.RunAsync(webApp, args);
         LogManager.Shutdown();
     }

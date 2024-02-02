@@ -44,8 +44,7 @@ public class VhContext : DbContext
             .HavePrecision(0);
 
         configurationBuilder.Properties<string>()
-            .HaveMaxLength(4000);
-
+            .HaveMaxLength(450);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -105,10 +105,9 @@ public class CertificateService(
         };
 
         if (certificate.CommonName.Contains('*'))
-            throw new NotSupportedException("Wildcard certificates are currently not supported.");
+            throw new NotSupportedException("Wildcard certificates are not supported.");
 
         await vhContext.Certificates.AddAsync(certificate);
-
         return certificate;
     }
 

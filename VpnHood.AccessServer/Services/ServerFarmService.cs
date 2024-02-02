@@ -105,16 +105,17 @@ public class ServerFarmService(
 
         // create a certificate if it is not given
         var certificate = createParams.CertificateId != null
-            ? (await certificateService.Get(projectId, createParams.CertificateId.Value)).Certificate
-            : (await certificateService.CreateSelfSingedInternal(projectId)).ToDto();
+            ? await vhRepo.GetCertificate(projectId, createParams.CertificateId.Value)
+            : await certificateService.CreateSelfSingedInternal(projectId);
 
-        var ret = new ServerFarmModel
+        var serverFarm = new ServerFarmModel
         {
             ProjectId = projectId,
+            Servers = [],
             ServerFarmId = Guid.NewGuid(),
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
-            CertificateId = certificate.CertificateId,
+            Certificate = certificate,
             CreatedTime = DateTime.UtcNow,
             UseHostName = createParams.UseHostName,
             Secret = VhUtil.GenerateKey(),
@@ -123,9 +124,13 @@ public class ServerFarmService(
             PushTokenToClient = createParams.PushTokenToClient
         };
 
-        await vhContext.ServerFarms.AddAsync(ret);
-        await vhContext.SaveChangesAsync();
-        return ret.ToDto(serverProfile.ServerProfileName);
+        // update TokenJson
+        FarmTokenBuilder.UpdateIfChanged(serverFarm);
+        
+        serverFarm = await vhRepo.AddAsync(serverFarm);
+        await vhRepo.SaveChangesAsync();
+
+        return serverFarm.ToDto(serverProfile.ServerProfileName);
     }
 
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
@@ -168,7 +173,7 @@ public class ServerFarmService(
         }
 
         // update host token
-        AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
+        FarmTokenBuilder.UpdateIfChanged(serverFarm);
 
         // update
         await vhRepo.SaveChangesAsync();

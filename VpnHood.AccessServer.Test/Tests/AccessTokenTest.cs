@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
@@ -6,6 +7,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -183,6 +185,19 @@ public class AccessTokenTest
         {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
+    }
+
+    [TestMethod]
+    public async Task GetAccessKey_fail_if_server_token_not_usable()
+    {
+        var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        {
+            UseHostName = false,
+            ServerFarmName = Guid.NewGuid().ToString()
+        }, serverCount: 0);
+
+        var accessToken = await farm.CreateAccessToken();
+        await VhTestUtil.AssertApiException(HttpStatusCode.BadRequest, accessToken.GetToken());
     }
 
     [TestMethod]

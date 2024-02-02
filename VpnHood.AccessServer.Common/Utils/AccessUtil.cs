@@ -1,12 +1,4 @@
-﻿using System.Net;
-using System.Security.Cryptography.X509Certificates;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
-using VpnHood.Common.Utils;
-using VpnHood.Common;
-using System.Text.Json;
-
-namespace VpnHood.AccessServer.Utils;
+﻿namespace VpnHood.AccessServer.Utils;
 
 public static class AccessUtil
 {
@@ -33,57 +25,5 @@ public static class AccessUtil
         return cacheKey;
     }
 
-    public static bool FarmTokenUpdateIfChanged(ServerFarmModel serverFarm)
-    {
-        // build new host token
-        var farmTokenNew = FarmTokenBuild(serverFarm);
 
-        // check for change
-        if (!string.IsNullOrEmpty(serverFarm.TokenJson))
-        {
-            var farmTokenOld = JsonSerializer.Deserialize<ServerToken>(serverFarm.TokenJson);
-            if (farmTokenOld != null && !farmTokenOld.IsTokenUpdated(farmTokenNew))
-                return false;
-        }
-
-        // update host token
-        serverFarm.TokenJson = JsonSerializer.Serialize(farmTokenNew);
-        return true;
-    }
-
-    public static ServerToken FarmTokenBuild(ServerFarmModel serverFarm)
-    {
-        ArgumentNullException.ThrowIfNull(serverFarm.Servers);
-        ArgumentNullException.ThrowIfNull(serverFarm.CertificateId);
-
-        // find all public accessPoints 
-        var accessPoints = serverFarm.Servers!
-            .SelectMany(server => server.AccessPoints)
-            .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
-            .ToArray();
-
-        // find all token tcp port
-        var hostPort = 0;
-        if (serverFarm.UseHostName)
-        {
-            var hostPorts = accessPoints.DistinctBy(x => x.TcpPort).ToArray();
-            hostPort = hostPorts.FirstOrDefault()?.TcpPort ?? 443;
-        }
-
-        // create token
-        var x509Certificate = new X509Certificate2(serverFarm.Certificate!.RawData);
-        var serverToken = new ServerToken
-        {
-            CertificateHash = x509Certificate.GetCertHash(),
-            HostName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
-            HostEndPoints = accessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
-            Secret = serverFarm.Secret,
-            HostPort = hostPort,
-            IsValidHostName = serverFarm.UseHostName,
-            Url = serverFarm.TokenUrl,
-            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
-        };
-
-        return serverToken;
-    }
 }

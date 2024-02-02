@@ -239,10 +239,11 @@ public class SessionService(
         accessToken.LastUsedTime = session.CreatedTime;
 
         // push token to client
-        if (accessToken.ServerFarm.PushTokenToClient)
+        var farmToken = accessToken.ServerFarm.PushTokenToClient ? FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm) : null;
+        if (farmToken != null)
             ret.AccessKey = new Token
             {
-                ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm!.TokenJson!),
+                ServerToken = farmToken,
                 Secret = accessToken.Secret,
                 TokenId = accessToken.AccessTokenId.ToString(),
                 Name = accessToken.AccessTokenName,

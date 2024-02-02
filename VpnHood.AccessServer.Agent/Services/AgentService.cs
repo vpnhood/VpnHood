@@ -158,7 +158,7 @@ public class AgentService(
             if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(server.AccessPoints))
             {
                 server.AccessPoints = accessPoints;
-                AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
+                FarmTokenBuilder.UpdateIfChanged(serverFarm);
             }
         }
 

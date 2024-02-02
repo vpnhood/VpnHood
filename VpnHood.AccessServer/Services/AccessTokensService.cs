@@ -4,6 +4,7 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 using VpnHood.Common.TokenLegacy;
 using VpnHood.Common.Utils;
@@ -76,13 +77,10 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
     {
         var accessToken = await vhRepo.GetAccessToken(projectId, accessTokenId, includeServerFarm: true);
 
-        if (string.IsNullOrEmpty(accessToken.ServerFarm!.TokenJson))
-            throw new InvalidOperationException("The Farm has not been configured or it does not have at least a server with a PublicInToken access points.");
-
         // create token
         var token = new Token
         {
-            ServerToken = VhUtil.JsonDeserialize<ServerToken>(accessToken.ServerFarm.TokenJson),
+            ServerToken = FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm!),
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,

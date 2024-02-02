@@ -58,7 +58,7 @@ public class ServerService(
 
         // add server and update FarmToken
         serverFarm.Servers!.Add(server);
-        AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
+        FarmTokenBuilder.UpdateIfChanged(serverFarm);
 
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
@@ -103,7 +103,7 @@ public class ServerService(
         if (oldConfigCode != server.ConfigCode)
         {
             var serverFarm = await vhRepo.GetServerFarm(projectId, server.ServerFarmId, true, true);
-            AccessUtil.FarmTokenUpdateIfChanged(serverFarm);
+            FarmTokenBuilder.UpdateIfChanged(serverFarm);
             await vhRepo.SaveChangesAsync();
         }
 

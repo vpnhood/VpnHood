@@ -1,6 +1,5 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence.Views;
 
@@ -13,9 +12,10 @@ public class VhRepo(VhContext vhContext)
         return vhContext.ChangeTracker.HasChanges();
     }
 
-    public ValueTask<EntityEntry> AddAsync(object model)
+    public async ValueTask<T> AddAsync<T>(T model) where T : class
     {
-        return vhContext.AddAsync(model);
+        var entityEntry = await vhContext.AddAsync(model);
+        return entityEntry.Entity;
     }
 
     public Task SaveChangesAsync()

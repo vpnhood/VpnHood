@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -39,6 +40,7 @@ public class ProjectService(
         // Farm
         var serverFarm = new ServerFarmModel
         {
+            Servers = [],
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
             UseHostName = false,
@@ -49,6 +51,7 @@ public class ProjectService(
             TokenJson = null,
             TokenUrl = null
         };
+        FarmTokenBuilder.UpdateIfChanged(serverFarm);
 
         // create project
         var project = new ProjectModel

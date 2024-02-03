@@ -99,7 +99,7 @@ public class Program
         {
             await using var scope = webApp.Services.CreateAsyncScope();
             var farmService = scope.ServiceProvider.GetRequiredService<ServerFarmService>();
-            await farmService.UpgradeAllFarmTokens();
+            _ = farmService.UpgradeAllFarmTokens();
         }
 
         await GrayMintApp.RunAsync(webApp, args);

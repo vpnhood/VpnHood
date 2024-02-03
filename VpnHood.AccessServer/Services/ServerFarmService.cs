@@ -30,7 +30,7 @@ public class ServerFarmService(
     {
         try
         {
-            logger.LogWarning("FillAllFarmToken has started");
+            logger.LogWarning("FillAllFarmToken has started.");
             var farms = await vhContext.ServerFarms
                 .Where(x => !x.IsDeleted)
                 .Where(x => string.IsNullOrEmpty(x.TokenJson))
@@ -39,15 +39,18 @@ public class ServerFarmService(
                 .AsSplitQuery()
                 .ToArrayAsync();
 
+            logger.LogWarning("FillAllFarmToken data has been fetched and start calculating.");
             foreach (var farm in farms)
                 FarmTokenBuilder.UpdateIfChanged(farm);
 
+            logger.LogWarning("FillAllFarmToken Saving.");
+
             await vhContext.SaveChangesAsync();
-            logger.LogWarning("FillAllFarmToken has ended");
+            logger.LogWarning("FillAllFarmToken has ended.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "FillAllFarmToken has failed");
+            logger.LogError(ex, "FillAllFarmToken has failed.");
         }
     }
 

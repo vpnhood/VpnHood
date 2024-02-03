@@ -13,4 +13,10 @@ public class BillingController : ControllerBase, IBillingController
     {
         throw new NotImplementedException();
     }
+
+    [HttpPost("purchase")]
+    public Task Purchase(string userId, string planId)
+    {
+        throw new NotImplementedException();
+    }
 }

@@ -22,8 +22,7 @@ using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test;
 
-//todo remain to testApp
-public class TestInit : IHttpClientFactory, IDisposable
+public class TestApp : IHttpClientFactory, IDisposable
 {
     public WebApplicationFactory<Program> WebApp { get; }
     public AgentTestApp AgentTestApp { get; }
@@ -55,7 +54,7 @@ public class TestInit : IHttpClientFactory, IDisposable
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
 
-    private TestInit(Dictionary<string, string?> appSettings, string environment)
+    private TestApp(Dictionary<string, string?> appSettings, string environment)
     {
         // AgentTestApp should not any dependency to the main app
         AgentTestApp = new AgentTestApp(appSettings, environment);
@@ -64,11 +63,11 @@ public class TestInit : IHttpClientFactory, IDisposable
         WebApp = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
+                builder.UseSetting("IsTest", "1");
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
 
                 builder.UseEnvironment(environment);
-
                 builder.ConfigureServices(services =>
                 {
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
@@ -146,11 +145,11 @@ public class TestInit : IHttpClientFactory, IDisposable
         };
     }
 
-    public static async Task<TestInit> Create(Dictionary<string, string?>? appSettings = null,
+    public static async Task<TestApp> Create(Dictionary<string, string?>? appSettings = null,
         string environment = "Development")
     {
         appSettings ??= new Dictionary<string, string?>();
-        var ret = new TestInit(appSettings, environment);
+        var ret = new TestApp(appSettings, environment);
         await ret.Init();
         return ret;
     }

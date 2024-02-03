@@ -37,7 +37,7 @@ public class AccessTokenTest
         // Check: Should not create a session with deleted access key
         //-----------
         var farm1 = await ServerFarmDom.Create();
-        var testInit = farm1.TestInit;
+        var testApp = farm1.TestApp;
 
         //-----------
         // check: create
@@ -64,7 +64,7 @@ public class AccessTokenTest
         Assert.AreEqual(13, accessTokenDom1.AccessToken.Lifetime);
         Assert.AreEqual("https://foo.com/accessKey1", accessTokenDom1.AccessToken.Url);
 
-        var farm2 = await ServerFarmDom.Create(testInit);
+        var farm2 = await ServerFarmDom.Create(testApp);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
         var accessTokenDom2 = await farm2.CreateAccessToken(new AccessTokenCreateParams
         {
@@ -92,7 +92,7 @@ public class AccessTokenTest
         //-----------
         // check: get
         //-----------
-        var accessToken2B = (await testInit.AccessTokensClient.GetAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId))
+        var accessToken2B = (await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId))
             .AccessToken;
         Assert.IsTrue((accessToken2B.ExpirationTime!.Value - accessTokenDom2.AccessToken.ExpirationTime!.Value) < TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenId, accessToken2B.AccessTokenId);
@@ -121,8 +121,8 @@ public class AccessTokenTest
             IsEnabled = new PatchOfBoolean { Value = false }
         };
 
-        await testInit.AccessTokensClient.UpdateAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId, updateParams);
-        accessToken2B = (await testInit.AccessTokensClient.GetAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId))
+        await testApp.AccessTokensClient.UpdateAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId, updateParams);
+        accessToken2B = (await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId))
             .AccessToken;
 
         Assert.IsTrue(accessToken2B.ExpirationTime!.Value - updateParams.ExpirationTime.Value < TimeSpan.FromSeconds(1));
@@ -140,14 +140,14 @@ public class AccessTokenTest
         //-----------
         // check: getAccessKey
         //-----------
-        var secret2B = testInit.VhContext.AccessTokens
+        var secret2B = testApp.VhContext.AccessTokens
             .Single(x => x.AccessTokenId == accessToken2B.AccessTokenId)
             .Secret;
 
         var certificateData = await farm2.DefaultServer.AgentClient.GetSslCertificateData(farm2.DefaultServer.ServerConfig.TcpEndPointsValue.First());
         var x509Certificate2 = new X509Certificate2(certificateData);
 
-        var accessKey = await farm2.TestInit.AccessTokensClient.GetAccessKeyAsync(testInit.ProjectId, accessToken2B.AccessTokenId);
+        var accessKey = await farm2.TestApp.AccessTokensClient.GetAccessKeyAsync(testApp.ProjectId, accessToken2B.AccessTokenId);
         var token = Token.FromAccessKey(accessKey);
         Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.ServerToken.HostName);
         Assert.AreEqual(accessToken2B.AccessTokenName, token.Name);
@@ -162,10 +162,10 @@ public class AccessTokenTest
         //-----------
         // Check: Delete
         //-----------
-        await testInit.AccessTokensClient.DeleteAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId);
+        await testApp.AccessTokensClient.DeleteAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId);
         try
         {
-            await testInit.AccessTokensClient.GetAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId);
+            await testApp.AccessTokensClient.GetAsync(testApp.ProjectId, accessTokenDom2.AccessTokenId);
             Assert.Fail("AccessToken should not exist!");
         }
         catch (ApiException ex)
@@ -224,10 +224,10 @@ public class AccessTokenTest
     [TestMethod]
     public async Task GetAccessKey_ForDomain()
     {
-        var testInit = await TestInit.Create();
-        var certificate = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId, new CertificateSelfSignedParams());
+        var testApp = await TestApp.Create();
+        var certificate = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams());
 
-        var farm = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
+        var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate.CertificateId,
             UseHostName = true,
@@ -252,7 +252,7 @@ public class AccessTokenTest
     {
         var farm = await ServerFarmDom.Create();
         await farm.CreateAccessToken();
-        var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
+        var accessTokens = await farm.TestApp.AccessTokensClient.ListAsync(farm.ProjectId);
 
         //-----------
         // check: Quota
@@ -276,7 +276,7 @@ public class AccessTokenTest
         var farm2 = await ServerFarmDom.Create();
         try
         {
-            await farm1.TestInit.AccessTokensClient.CreateAsync(farm1.ProjectId,
+            await farm1.TestApp.AccessTokensClient.CreateAsync(farm1.ProjectId,
                 new AccessTokenCreateParams { ServerFarmId = farm2.ServerFarmId });
             Assert.Fail("KeyNotFoundException is expected!");
         }
@@ -328,19 +328,19 @@ public class AccessTokenTest
         // add usage by session of the private token
         var sessionDom3 = await accessTokenDom2.CreateSession();
         await sessionDom3.AddUsage(traffic);
-        await farm.TestInit.Sync();
+        await farm.TestApp.Sync();
 
         // list
-        var accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
+        var accessTokens = await farm.TestApp.AccessTokensClient.ListAsync(farm.TestApp.ProjectId,
             serverFarmId: farm.ServerFarmId,
-            usageBeginTime: farm.TestInit.CreatedTime.AddSeconds(-1));
+            usageBeginTime: farm.TestApp.CreatedTime.AddSeconds(-1));
 
         var publicItem = accessTokens.Items.Single(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId);
         Assert.AreEqual(traffic.Sent * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(traffic.Received * 3, publicItem.Usage?.ReceivedTraffic);
 
         // list by time
-        accessTokens = await farm.TestInit.AccessTokensClient.ListAsync(farm.TestInit.ProjectId,
+        accessTokens = await farm.TestApp.AccessTokensClient.ListAsync(farm.TestApp.ProjectId,
             serverFarmId: farm.ServerFarmId, usageBeginTime: DateTime.UtcNow.AddDays(-2));
         publicItem = accessTokens.Items.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(traffic.Sent * 3, publicItem.Usage?.SentTraffic);
@@ -351,16 +351,16 @@ public class AccessTokenTest
     public async Task Delete_Many()
     {
         var farm = await ServerFarmDom.Create();
-        var tokens1 = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
+        var tokens1 = await farm.TestApp.AccessTokensClient.ListAsync(farm.ProjectId);
 
         var accessTokenDom1 = await farm.CreateAccessToken();
         var accessTokenDom2 = await farm.CreateAccessToken();
         var accessTokenDom3 = await farm.CreateAccessToken();
 
-        await farm.TestInit.AccessTokensClient.DeleteManyAsync(farm.ProjectId,
+        await farm.TestApp.AccessTokensClient.DeleteManyAsync(farm.ProjectId,
             new[] { accessTokenDom1.AccessTokenId, accessTokenDom2.AccessTokenId });
 
-        var tokens2 = await farm.TestInit.AccessTokensClient.ListAsync(farm.ProjectId);
+        var tokens2 = await farm.TestApp.AccessTokensClient.ListAsync(farm.ProjectId);
         Assert.AreEqual(tokens1.Items.Count + 1, tokens2.Items.Count);
         Assert.IsFalse(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId));
         Assert.IsFalse(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom2.AccessTokenId));

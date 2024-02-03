@@ -13,8 +13,8 @@ public class CertificateTest
     [TestMethod]
     public async Task Crud()
     {
-        var testInit = await TestInit.Create();
-        var certificateClient = testInit.CertificatesClient;
+        var testApp = await TestApp.Create();
+        var certificateClient = testApp.CertificatesClient;
 
         //-----------
         // Create Certificate using RawData
@@ -22,7 +22,7 @@ public class CertificateTest
         var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com,O=Foo");
         const string? password = "123";
 
-        var certificate = await certificateClient.CreateByImportAsync(testInit.ProjectId, new CertificateImportParams
+        var certificate = await certificateClient.CreateByImportAsync(testApp.ProjectId, new CertificateImportParams
         {
             RawData = x509Certificate.Export(X509ContentType.Pfx, password),
             Password = password
@@ -32,14 +32,14 @@ public class CertificateTest
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));
 
         // get
-        var certificateData = await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId);
+        var certificateData = await certificateClient.GetAsync(testApp.ProjectId, certificate.CertificateId);
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificateData.Certificate.CommonName);
 
         //-----------
         // Create Certificate using subject name
         //-----------
         var expirationTime = DateTime.UtcNow.AddDays(7);
-        certificate = await certificateClient.CreateBySelfSignedAsync(testInit.ProjectId,
+        certificate = await certificateClient.CreateBySelfSignedAsync(testApp.ProjectId,
             new CertificateSelfSignedParams { SubjectName = $"CN={certificate.CommonName}", ExpirationTime = expirationTime });
         Assert.IsFalse(string.IsNullOrEmpty(certificate.Thumbprint));
         Assert.IsFalse(certificate.IsVerified);
@@ -49,23 +49,23 @@ public class CertificateTest
         //-----------
         // Update a certificate
         //-----------
-        certificate = await certificateClient.ReplaceByImportAsync(testInit.ProjectId, certificate.CertificateId,
+        certificate = await certificateClient.ReplaceByImportAsync(testApp.ProjectId, certificate.CertificateId,
             new CertificateImportParams
             {
                 RawData = x509Certificate.Export(X509ContentType.Pfx, password),
                 Password = password
             });
 
-        certificate = (await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId)).Certificate;
+        certificate = (await certificateClient.GetAsync(testApp.ProjectId, certificate.CertificateId)).Certificate;
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificate.CommonName);
 
         //-----------
         // Delete a certificate
         //-----------
-        await certificateClient.DeleteAsync(testInit.ProjectId, certificate.CertificateId);
+        await certificateClient.DeleteAsync(testApp.ProjectId, certificate.CertificateId);
         try
         {
-            await certificateClient.GetAsync(testInit.ProjectId, certificate.CertificateId);
+            await certificateClient.GetAsync(testApp.ProjectId, certificate.CertificateId);
         }
         catch (ApiException ex)
         {
@@ -75,7 +75,7 @@ public class CertificateTest
         //-----------
         // list
         //-----------
-        var certificates = await certificateClient.ListAsync(testInit.ProjectId);
+        var certificates = await certificateClient.ListAsync(testApp.ProjectId);
         Assert.IsTrue(certificates.Count > 0);
         Assert.IsFalse(certificates.Any(x => x.Certificate.RawData != null));
     }
@@ -83,8 +83,8 @@ public class CertificateTest
     [TestMethod]
     public async Task Fail_updating_certificate_with_another_common_name()
     {
-        var testInit = await TestInit.Create();
-        var certificateClient = testInit.CertificatesClient;
+        var testApp = await TestApp.Create();
+        var certificateClient = testApp.CertificatesClient;
 
         //-----------
         // Create Certificate using RawData
@@ -92,7 +92,7 @@ public class CertificateTest
         var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com");
         const string? password = "123";
 
-        var certificate = await certificateClient.CreateByImportAsync(testInit.ProjectId, new CertificateImportParams
+        var certificate = await certificateClient.CreateByImportAsync(testApp.ProjectId, new CertificateImportParams
         {
             RawData = x509Certificate.Export(X509ContentType.Pfx, password),
             Password = password
@@ -108,7 +108,7 @@ public class CertificateTest
         x509Certificate = CertificateUtil.CreateSelfSigned("CN=zz.1234.com");
         try
         {
-            await certificateClient.ReplaceByImportAsync(testInit.ProjectId, certificate.CertificateId,
+            await certificateClient.ReplaceByImportAsync(testApp.ProjectId, certificate.CertificateId,
                 new CertificateImportParams
                 {
                     RawData = x509Certificate.Export(X509ContentType.Pfx, password: "")

@@ -13,26 +13,26 @@ public class SyncTest
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer(false);
-        var vhContext = farm.TestInit.VhContext;
-        var vhReportContext = farm.TestInit.VhReportContext;
+        var vhContext = farm.TestApp.VhContext;
+        var vhReportContext = farm.TestApp.VhReportContext;
 
         var entity1 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
-            ProjectId = farm.TestInit.ProjectId,
+            ProjectId = farm.TestApp.ProjectId,
             ServerId = serverDom.ServerId,
             CreatedTime = DateTime.UtcNow,
             IsLast = true
         });
         var entity2 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
-            ProjectId = farm.TestInit.ProjectId,
+            ProjectId = farm.TestApp.ProjectId,
             ServerId = serverDom.ServerId,
             CreatedTime = DateTime.UtcNow,
             IsLast = false
         });
         var entity3 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
-            ProjectId = farm.TestInit.ProjectId,
+            ProjectId = farm.TestApp.ProjectId,
             ServerId = serverDom.ServerId,
             CreatedTime = DateTime.UtcNow,
             IsLast = false
@@ -40,7 +40,7 @@ public class SyncTest
 
         await vhContext.SaveChangesAsync();
 
-        await farm.TestInit.Sync(false); // do not flush
+        await farm.TestApp.Sync(false); // do not flush
 
         var res = await vhContext.ServerStatuses.Where(x => x.ServerId == serverDom.ServerId).ToArrayAsync();
         Assert.AreEqual(1, res.Length);
@@ -59,11 +59,11 @@ public class SyncTest
     public async Task Sync_AccessUsages()
     {
         var farm = await ServerFarmDom.Create();
-        var testInit = farm.TestInit;
+        var testApp = farm.TestApp;
 
         // init
-        await testInit.Sync();
-        Assert.IsFalse(testInit.VhContext.AccessUsages.Any(), "Sync should clear all access usages");
+        await testApp.Sync();
+        Assert.IsFalse(testApp.VhContext.AccessUsages.Any(), "Sync should clear all access usages");
 
         // create token
         var accessTokenDom = await farm.CreateAccessToken();
@@ -75,17 +75,17 @@ public class SyncTest
         await sessionDom.AddUsage(10051, 20051);
         await sessionDom.AddUsage(20, 30);
 
-        await testInit.FlushCache();
-        var entities = await testInit.VhContext.AccessUsages.ToArrayAsync();
+        await testApp.FlushCache();
+        var entities = await testApp.VhContext.AccessUsages.ToArrayAsync();
         Assert.IsTrue(entities.Length > 0);
-        await testInit.Sync();
-        Assert.IsFalse(testInit.VhContext.AccessUsages.Any(), "Sync should clear all access usages");
+        await testApp.Sync();
+        Assert.IsFalse(testApp.VhContext.AccessUsages.Any(), "Sync should clear all access usages");
 
         //-----------
         // check: Copy to Report
         //-----------
         foreach (var entity in entities)
-            Assert.IsTrue(await testInit.VhReportContext.AccessUsages.AnyAsync(x => x.AccessUsageId == entity.AccessUsageId));
+            Assert.IsTrue(await testApp.VhReportContext.AccessUsages.AnyAsync(x => x.AccessUsageId == entity.AccessUsageId));
     }
 
     [TestMethod]
@@ -94,8 +94,8 @@ public class SyncTest
         var farm = await ServerFarmDom.Create();
         var tokenDom = await farm.CreateAccessToken();
 
-        farm.TestInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);
-        farm.TestInit.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(1);
+        farm.TestApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);
+        farm.TestApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(1);
 
 
         // create sessions
@@ -105,12 +105,12 @@ public class SyncTest
         var sessionDom4 = await tokenDom.CreateSession();
         await sessionDom1.CloseSession();
         await sessionDom2.CloseSession();
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
 
         //-----------
         // check: Created Sessions
         //-----------
-        var vhContext = farm.TestInit.VhContext;
+        var vhContext = farm.TestApp.VhContext;
         Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom1.SessionId)).EndTime);
         Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom2.SessionId)).EndTime);
         Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom3.SessionId)).EndTime);
@@ -119,10 +119,10 @@ public class SyncTest
         //-----------
         // check: Archived sessions must be cleared
         //-----------
-        await Task.Delay(farm.TestInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout);
+        await Task.Delay(farm.TestApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout);
         await sessionDom3.AddUsage();
         await sessionDom4.AddUsage();
-        await farm.TestInit.Sync();
+        await farm.TestApp.Sync();
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom1.SessionId));
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom2.SessionId));
         Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");
@@ -131,7 +131,7 @@ public class SyncTest
         //-----------
         // check: Copy to Report
         //-----------
-        await using var vhReportContext = farm.TestInit.VhReportContext;
+        await using var vhReportContext = farm.TestApp.VhReportContext;
         Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom1.SessionId));
         Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom2.SessionId));
         Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");

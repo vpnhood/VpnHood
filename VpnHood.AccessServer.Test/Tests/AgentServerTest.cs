@@ -17,18 +17,18 @@ public class AgentServerTest
     // return the only PublicInToken AccessPoint
     private async Task<AccessPoint[]> Configure_auto_update_accessPoints_on_internal(ServerDom serverDom)
     {
-        var testInit = serverDom.TestInit;
+        var testApp = serverDom.TestApp;
 
         // create serverInfo
-        var publicIp = await testInit.NewIpV6();
-        var privateIp = await testInit.NewIpV4();
-        var ipAddresses = new[] { publicIp, privateIp, await testInit.NewIpV6(), privateIp };
+        var publicIp = await testApp.NewIpV6();
+        var privateIp = await testApp.NewIpV4();
+        var ipAddresses = new[] { publicIp, privateIp, await testApp.NewIpV6(), privateIp };
         serverDom.ServerInfo.PrivateIpAddresses = ipAddresses;
-        serverDom.ServerInfo.PublicIpAddresses = [publicIp, await testInit.NewIpV4(), await testInit.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses = [publicIp, await testApp.NewIpV4(), await testApp.NewIpV6()];
 
         //Configure
         await serverDom.Configure();
-        Assert.AreEqual(testInit.AgentTestApp.AgentOptions.ServerUpdateStatusInterval, serverDom.ServerConfig.UpdateStatusInterval);
+        Assert.AreEqual(testApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval, serverDom.ServerConfig.UpdateStatusInterval);
         Assert.AreEqual(serverDom.ServerConfig.TcpEndPointsValue.Length, serverDom.ServerInfo.PrivateIpAddresses.Distinct().Count(),
             "Duplicate listener!");
 
@@ -132,11 +132,11 @@ public class AgentServerTest
         // --------
 
         // create serverInfo
-        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
+        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
         serverDom.ServerInfo.PublicIpAddresses =
         [
-            await farm.TestInit.NewIpV4(),
-            await farm.TestInit.NewIpV6(),
+            await farm.TestApp.NewIpV4(),
+            await farm.TestApp.NewIpV6(),
             IPAddress.Parse(publicInTokenAccessPoints2[0].IpAddress),
             IPAddress.Parse(publicInTokenAccessPoints2[1].IpAddress)
         ];
@@ -178,7 +178,7 @@ public class AgentServerTest
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
             AutoConfigure = new PatchOfBoolean { Value = false },
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestInit.NewAccessPoint(udpPort: -1) } }
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await farm.TestApp.NewAccessPoint(udpPort: -1) } }
         });
 
         // Configure
@@ -194,13 +194,13 @@ public class AgentServerTest
         var serverDom = await farm.AddNewServer(false);
 
         // create serverInfo and configure
-        var publicIp = await farm.TestInit.NewIpV6();
-        var serverInfo = await farm.TestInit.NewServerInfo(randomStatus: true);
+        var publicIp = await farm.TestApp.NewIpV6();
+        var serverInfo = await farm.TestApp.NewServerInfo(randomStatus: true);
         var freeUdpPortV4 = serverInfo.FreeUdpPortV4;
         var freeUdpPortV6 = serverInfo.FreeUdpPortV6;
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = [publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
-        serverInfo.PublicIpAddresses = [publicIp, await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()];
+        serverInfo.PrivateIpAddresses = [publicIp, await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverInfo.PublicIpAddresses = [publicIp, await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
         await serverDom.Configure();
         await serverDom.Reload();
         Assert.IsNotNull(serverDom.ServerConfig.UdpEndPoints);
@@ -227,11 +227,11 @@ public class AgentServerTest
         var serverDom = await farm.AddNewServer(false);
 
         // create serverInfo and configure
-        var publicIp = await farm.TestInit.NewIpV6();
-        var serverInfo = await farm.TestInit.NewServerInfo(randomStatus: true);
+        var publicIp = await farm.TestApp.NewIpV6();
+        var serverInfo = await farm.TestApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo = serverInfo;
-        serverInfo.PrivateIpAddresses = [publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6())];
-        serverInfo.PublicIpAddresses = [publicIp, (await farm.TestInit.NewIpV4()), (await farm.TestInit.NewIpV6())];
+        serverInfo.PrivateIpAddresses = [publicIp, (await farm.TestApp.NewIpV4()), (await farm.TestApp.NewIpV6())];
+        serverInfo.PublicIpAddresses = [publicIp, (await farm.TestApp.NewIpV4()), (await farm.TestApp.NewIpV6())];
         await serverDom.Configure(false);
         await serverDom.Reload();
 
@@ -264,15 +264,15 @@ public class AgentServerTest
         //-----------
         // check: Check ServerStatus log is inserted
         //-----------
-        var serverStatus = TestInit.NewServerStatus(null, randomStatus: true);
+        var serverStatus = TestApp.NewServerStatus(null, randomStatus: true);
         await serverDom.SendStatus(serverStatus);
 
         dateTime = DateTime.UtcNow;
         await Task.Delay(500);
         await serverDom.SendStatus(serverStatus);
-        await farm.TestInit.Sync();
+        await farm.TestApp.Sync();
         await serverDom.SendStatus(serverStatus); // last status will not be synced
-        await farm.TestInit.Sync();
+        await farm.TestApp.Sync();
 
         await serverDom.Reload();
         server = serverDom.Server;
@@ -289,14 +289,14 @@ public class AgentServerTest
     public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
-        var testInit = farm.TestInit;
+        var testApp = farm.TestApp;
         var serverDom = await farm.AddNewServer(false, false);
 
         // create serverInfo
-        var privateIpV4 = await testInit.NewIpV4();
-        var privateIpV6 = await testInit.NewIpV6();
-        var publicIpV4 = await testInit.NewIpV4();
-        var publicIpV6 = await testInit.NewIpV6();
+        var privateIpV4 = await testApp.NewIpV4();
+        var privateIpV6 = await testApp.NewIpV6();
+        var publicIpV4 = await testApp.NewIpV4();
+        var publicIpV6 = await testApp.NewIpV6();
         serverDom.ServerInfo.PrivateIpAddresses = [privateIpV4, privateIpV6];
         serverDom.ServerInfo.PublicIpAddresses = [publicIpV4, publicIpV6];
 
@@ -352,14 +352,14 @@ public class AgentServerTest
     public async Task Reconfig()
     {
         var farm = await ServerFarmDom.Create();
-        var testInit = farm.TestInit;
+        var testApp = farm.TestApp;
         var serverDom = farm.DefaultServer;
 
         //-----------
         // check
         //-----------
         var oldCode = serverDom.ServerStatus.ConfigCode;
-        var accessPoint = await testInit.NewAccessPoint();
+        var accessPoint = await testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
@@ -373,7 +373,7 @@ public class AgentServerTest
         // check
         //-----------
         oldCode = serverCommand.ConfigCode;
-        accessPoint = await testInit.NewAccessPoint();
+        accessPoint = await testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint } }
@@ -386,10 +386,10 @@ public class AgentServerTest
         // check
         //-----------
         oldCode = serverCommand.ConfigCode;
-        serverDom.ServerInfo = await testInit.NewServerInfo(randomStatus: true);
+        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo.Status.ConfigCode = Guid.NewGuid().ToString();
         await serverDom.SendStatus(false);
-        var serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
+        var serverModel = await testApp.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverDom.ServerInfo.Status.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be set by Server_UpdateStatus.");
 
@@ -406,7 +406,7 @@ public class AgentServerTest
         //-----------
         serverDom.ServerInfo.Status.ConfigCode = Guid.NewGuid().ToString();
         serverCommand = await serverDom.SendStatus(false);
-        serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
+        serverModel = await testApp.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverDom.ServerInfo.Status.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be changed even by incorrect ConfigCode");
         Assert.AreEqual(oldCode, serverModel.ConfigCode.ToString(),
@@ -417,7 +417,7 @@ public class AgentServerTest
         //-----------
         serverDom.ServerInfo.Status.ConfigCode = serverCommand.ConfigCode;
         await serverDom.SendStatus(false);
-        serverModel = await testInit.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
+        serverModel = await testApp.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverDom.ServerId);
         Assert.AreEqual(serverModel.ConfigCode, serverModel.LastConfigCode,
             "LastConfigCode should be changed to recent ConfigCode");
 
@@ -426,7 +426,7 @@ public class AgentServerTest
         //-----------
         await serverDom.Update(new ServerUpdateParams
         {
-            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await testInit.NewAccessPoint() } }
+            AccessPoints = new PatchOfAccessPointOf { Value = new[] { await testApp.NewAccessPoint() } }
         });
         await serverDom.Reload();
         Assert.AreEqual(ServerState.Configuring, serverDom.Server.ServerState);
@@ -436,7 +436,7 @@ public class AgentServerTest
     public async Task Reconfig_by_changing_farm()
     {
         var farm1 = await ServerFarmDom.Create();
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
 
         var oldCode = farm1.DefaultServer.ServerInfo.Status.ConfigCode;
         await farm1.DefaultServer.Client.UpdateAsync(farm1.ProjectId, farm1.DefaultServer.ServerId,
@@ -458,9 +458,9 @@ public class AgentServerTest
             AutoConfigure = new PatchOfBoolean { Value = false }
         });
 
-        farm.DefaultServer.ServerInfo.PrivateIpAddresses = [await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()
+        farm.DefaultServer.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
         ];
-        farm.DefaultServer.ServerInfo.PublicIpAddresses = [await farm.TestInit.NewIpV6(), await farm.TestInit.NewIpV4(), await farm.TestInit.NewIpV6()
+        farm.DefaultServer.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV6(), await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()
         ];
 
         // Configure
@@ -473,7 +473,7 @@ public class AgentServerTest
     public async Task LoadBalancer()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestInit.AgentTestApp.AgentOptions.AllowRedirect = true;
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
         var serverDom1 = await farm.AddNewServer();
@@ -484,7 +484,7 @@ public class AgentServerTest
         var serverDom6 = await farm.AddNewServer();
 
         // configure serverDom5 with ipv6
-        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestInit.NewIpV6(), await serverDom5.TestInit.NewIpV6()
+        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()
         ];
         serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
         await serverDom5.Configure();
@@ -585,29 +585,29 @@ public class AgentServerTest
         var server = await sampler.AddNewServer();
 
         // Clear Cache
-        await sampler.TestInit.FlushCache();
-        await sampler.TestInit.AgentCacheClient.InvalidateProject(sampler.ProjectId);
+        await sampler.TestApp.FlushCache();
+        await sampler.TestApp.AgentCacheClient.InvalidateProject(sampler.ProjectId);
 
         // update status again
         await server.SendStatus(server.ServerInfo.Status);
-        var servers = await sampler.TestInit.AgentCacheClient.GetServers(sampler.ProjectId);
+        var servers = await sampler.TestApp.AgentCacheClient.GetServers(sampler.ProjectId);
         Assert.IsTrue(servers.Any(x => x.ServerId == server.ServerId));
     }
 
     [TestMethod]
     public async Task GetCertificateData()
     {
-        var testInit = await TestInit.Create();
+        var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var certificate1 = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName1}" });
-        var farm1 = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
+        var certificate1 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName1}" });
+        var farm1 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate1.CertificateId
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var certificate2 = await testInit.CertificatesClient.CreateBySelfSignedAsync(testInit.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName2}" });
-        var farm2 = await ServerFarmDom.Create(testInit, createParams: new ServerFarmCreateParams
+        var certificate2 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName2}" });
+        var farm2 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate2.CertificateId
         });
@@ -634,8 +634,8 @@ public class AgentServerTest
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 
-        var cert = await farm.TestInit.CertificatesClient.GetAsync(farm.TestInit.ProjectId, farm.ServerFarm.CertificateId);
-        await farm.TestInit.CertificatesClient.ReplaceBySelfSignedAsync(farm.TestInit.ProjectId, cert.Certificate.CertificateId, new CertificateSelfSignedParams
+        var cert = await farm.TestApp.CertificatesClient.GetAsync(farm.TestApp.ProjectId, farm.ServerFarm.CertificateId);
+        await farm.TestApp.CertificatesClient.ReplaceBySelfSignedAsync(farm.TestApp.ProjectId, cert.Certificate.CertificateId, new CertificateSelfSignedParams
         {
             SubjectName = "CN=" + cert.Certificate.CommonName
         });
@@ -653,7 +653,7 @@ public class AgentServerTest
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 
-        var cert = await farm.TestInit.CertificatesClient.CreateBySelfSignedAsync(farm.TestInit.ProjectId,
+        var cert = await farm.TestApp.CertificatesClient.CreateBySelfSignedAsync(farm.TestApp.ProjectId,
             new CertificateSelfSignedParams { SubjectName = $"CN={Guid.NewGuid()}.com" });
 
         await farm.Update(new ServerFarmUpdateParams
@@ -672,7 +672,7 @@ public class AgentServerTest
     public async Task Server_UpdateStatus()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
-        var testInit = farm.TestInit;
+        var testApp = farm.TestApp;
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();
 
@@ -680,23 +680,23 @@ public class AgentServerTest
         await serverDom1.SendStatus(new ServerStatus { SessionCount = 2 });
         await serverDom1.SendStatus(new ServerStatus { SessionCount = 3 });
         await serverDom1.SendStatus(new ServerStatus { SessionCount = 4, AvailableMemory = 100, CpuUsage = 2 });
-        await testInit.FlushCache();
+        await testApp.FlushCache();
 
         await serverDom1.SendStatus(new ServerStatus { SessionCount = 9 });
         await serverDom1.SendStatus(new ServerStatus { SessionCount = 10 });
         await serverDom2.SendStatus(new ServerStatus { SessionCount = 19 });
         await serverDom2.SendStatus(new ServerStatus { SessionCount = 20 });
 
-        var serverData1 = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom1.ServerId);
+        var serverData1 = await testApp.ServersClient.GetAsync(testApp.ProjectId, serverDom1.ServerId);
         Assert.AreEqual(serverData1.Server.ServerStatus?.SessionCount, 10);
 
-        var serverData2 = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom2.ServerId);
+        var serverData2 = await testApp.ServersClient.GetAsync(testApp.ProjectId, serverDom2.ServerId);
         Assert.AreEqual(serverData2.Server.ServerStatus?.SessionCount, 20);
 
-        await testInit.FlushCache();
+        await testApp.FlushCache();
 
         // check saving cache
-        var serverStatus = await testInit.VhContext.ServerStatuses
+        var serverStatus = await testApp.VhContext.ServerStatuses
             .Where(x => x.ServerId == serverDom1.ServerId || x.ServerId == serverDom2.ServerId)
             .ToArrayAsync();
 

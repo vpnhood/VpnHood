@@ -15,8 +15,8 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Crud()
     {
-        var testInit = await TestInit.Create();
-        var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0,
+        var testApp = await TestApp.Create();
+        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0,
             createParams: new ServerFarmCreateParams
             {
                 TokenUrl = new Uri("http://localhost:8080/farm1-token"),
@@ -31,8 +31,8 @@ public class ServerFarmTest
         //-----------
         // check: create
         //-----------
-        var publicIp1 = await testInit.NewIpV4();
-        var publicIp2 = await testInit.NewIpV4();
+        var publicIp1 = await testApp.NewIpV4();
+        var publicIp2 = await testApp.NewIpV4();
         await serverDom.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf
@@ -77,8 +77,8 @@ public class ServerFarmTest
         //-----------
         // check: update 
         //-----------
-        var serverProfile2 = await ServerProfileDom.Create(testInit);
-        var certificateClient = testInit.CertificatesClient;
+        var serverProfile2 = await ServerProfileDom.Create(testApp);
+        var certificateClient = testApp.CertificatesClient;
         var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId,
             new CertificateSelfSignedParams { SubjectName = "CN=fff.com" });
         var updateParam = new ServerFarmUpdateParams
@@ -91,7 +91,7 @@ public class ServerFarmTest
             PushTokenToClient = new PatchOfBoolean { Value = true },
         };
 
-        await testInit.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
+        await testApp.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
         await farm1.Reload();
         Assert.AreEqual(updateParam.TokenUrl.Value, farm1.ServerFarm.TokenUrl);
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
@@ -105,7 +105,7 @@ public class ServerFarmTest
         //-----------
         try
         {
-            await ServerFarmDom.Create(testInit,
+            await ServerFarmDom.Create(testApp,
                 new ServerFarmCreateParams
                 {
                     ServerFarmName = farm1.ServerFarm.ServerFarmName
@@ -126,10 +126,10 @@ public class ServerFarmTest
         var session = await accessTokenDom.CreateSession();
         await session.AddUsage();
         await session.AddUsage();
-        //await farm1.TestInit.FlushCache();
+        //await farm1.TestApp.FlushCache();
 
         // remove server from farm
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
         await farm1.DefaultServer.Update(new ServerUpdateParams
         {
             ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
@@ -162,11 +162,11 @@ public class ServerFarmTest
     public async Task List()
     {
         var farm1 = await ServerFarmDom.Create(serverCount: 1);
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit, serverCount: 1);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 1);
         await farm1.DefaultServer.CreateSession((await farm1.CreateAccessToken()).AccessToken);
         await farm2.DefaultServer.CreateSession((await farm2.CreateAccessToken()).AccessToken);
 
-        var farms = await farm1.TestInit.ServerFarmsClient.ListAsync(farm1.TestInit.ProjectId, includeSummary: false);
+        var farms = await farm1.TestApp.ServerFarmsClient.ListAsync(farm1.TestApp.ProjectId, includeSummary: false);
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
@@ -179,11 +179,11 @@ public class ServerFarmTest
     public async Task List_with_summary()
     {
         var farm1 = await ServerFarmDom.Create(serverCount: 1);
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit, serverCount: 1);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 1);
         await farm1.DefaultServer.CreateSession((await farm1.CreateAccessToken()).AccessToken);
         await farm2.DefaultServer.CreateSession((await farm2.CreateAccessToken()).AccessToken);
 
-        var farms = await farm1.TestInit.ServerFarmsClient.ListAsync(farm1.TestInit.ProjectId, includeSummary: true);
+        var farms = await farm1.TestApp.ServerFarmsClient.ListAsync(farm1.TestApp.ProjectId, includeSummary: true);
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
@@ -199,11 +199,11 @@ public class ServerFarmTest
         //-----------
         // check: can not delete a farm with server
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit, serverCount: 0);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp, serverCount: 0);
         var serverDom = await farm2.AddNewServer();
         try
         {
-            await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
+            await farm2.TestApp.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
             Assert.Fail("Exception Expected!");
         }
         catch (ApiException ex)
@@ -212,11 +212,11 @@ public class ServerFarmTest
         }
 
         // move server to farm1
-        await farm2.TestInit.ServersClient.UpdateAsync(farm2.ProjectId, serverDom.ServerId, new ServerUpdateParams
+        await farm2.TestApp.ServersClient.UpdateAsync(farm2.ProjectId, serverDom.ServerId, new ServerUpdateParams
         {
             ServerFarmId = new PatchOfGuid { Value = farm1.ServerFarmId }
         });
-        await farm2.TestInit.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
+        await farm2.TestApp.ServerFarmsClient.DeleteAsync(farm2.ProjectId, farm2.ServerFarmId);
         try
         {
             await farm2.Reload();
@@ -234,7 +234,7 @@ public class ServerFarmTest
         var farm = await ServerFarmDom.Create();
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();
-        var serverProfileDom = await ServerProfileDom.Create(farm.TestInit);
+        var serverProfileDom = await ServerProfileDom.Create(farm.TestApp);
 
         await farm.Update(new ServerFarmUpdateParams
         {

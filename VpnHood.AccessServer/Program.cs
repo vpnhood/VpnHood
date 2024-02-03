@@ -2,8 +2,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using NLog;
-using NLog.Web;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.Swagger;
 using GrayMint.Authorization;
@@ -23,7 +21,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         // nLog
-        LogManager.Setup();
+        //LogManager.Setup();
         var builder = WebApplication.CreateBuilder(args);
 
         // app options
@@ -77,8 +75,8 @@ public class Program
         });
 
         // NLog: Setup NLog for Dependency injection
-        builder.Logging.ClearProviders();
-        builder.Host.UseNLog();
+        //builder.Logging.ClearProviders();
+        //builder.Host.UseNLog();
 
         //---------------------
         // Create App
@@ -97,14 +95,14 @@ public class Program
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
         // upgrade
-        await using (var scope = webApp.Services.CreateAsyncScope())
+        if (builder.Configuration.GetValue<string>("IsTest") != "1")
         {
+            await using var scope = webApp.Services.CreateAsyncScope();
             var farmService = scope.ServiceProvider.GetRequiredService<ServerFarmService>();
             await farmService.UpgradeAllFarmTokens();
         }
 
         await GrayMintApp.RunAsync(webApp, args);
-        LogManager.Shutdown();
     }
     //test
 }

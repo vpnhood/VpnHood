@@ -7,9 +7,9 @@ using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class AccessTokenDom(TestInit testInit, AccessToken accessToken)
+public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
 {
-    public TestInit TestInit { get; } = testInit;
+    public TestApp TestApp { get; } = testApp;
     public AccessToken AccessToken { get; private set; } = accessToken;
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
@@ -27,15 +27,15 @@ public class AccessTokenDom(TestInit testInit, AccessToken accessToken)
         bool assertError = true, bool autoRedirect = false)
     {
         // find server of the farm that listen to token EndPoint
-        var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId);
+        var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId);
         var serverData = servers.First(x =>
             x.Server.AccessPoints.Any(accessPoint =>
                 new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(serverEndPoint)));
 
         clientIp ??= serverEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6
-            ? await TestInit.NewIpV6() : await TestInit.NewIpV4();
+            ? await TestApp.NewIpV6() : await TestApp.NewIpV4();
 
-        var sessionRequestEx = await TestInit.CreateSessionRequestEx(
+        var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,
             serverEndPoint,
             clientId,
@@ -44,7 +44,7 @@ public class AccessTokenDom(TestInit testInit, AccessToken accessToken)
 
         // create session
         var ret = await SessionDom.Create(
-            TestInit, serverData.Server.ServerId, AccessToken, sessionRequestEx, assertError: assertError && !autoRedirect);
+            TestApp, serverData.Server.ServerId, AccessToken, sessionRequestEx, assertError: assertError && !autoRedirect);
 
         // redirect 
         if (autoRedirect && ret.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
@@ -62,14 +62,14 @@ public class AccessTokenDom(TestInit testInit, AccessToken accessToken)
 
     public async Task<AccessTokenData> Reload()
     {
-        var accessTokenData = await TestInit.AccessTokensClient.GetAsync(TestInit.ProjectId, AccessTokenId);
+        var accessTokenData = await TestApp.AccessTokensClient.GetAsync(TestApp.ProjectId, AccessTokenId);
         AccessToken = accessTokenData.AccessToken;
         return accessTokenData;
     }
 
     public Task<string> GetAccessKey()
     {
-        return TestInit.AccessTokensClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
+        return TestApp.AccessTokensClient.GetAccessKeyAsync(TestApp.ProjectId, AccessToken.AccessTokenId);
     }
 
     public async Task<Token> GetToken()
@@ -81,6 +81,6 @@ public class AccessTokenDom(TestInit testInit, AccessToken accessToken)
 
     public async Task Update(AccessTokenUpdateParams updateParams)
     {
-        await TestInit.AccessTokensClient.UpdateAsync(TestInit.ProjectId, AccessTokenId, updateParams);
+        await TestApp.AccessTokensClient.UpdateAsync(TestApp.ProjectId, AccessTokenId, updateParams);
     }
 }

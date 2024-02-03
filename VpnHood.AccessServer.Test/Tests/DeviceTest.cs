@@ -20,12 +20,12 @@ public class DeviceTest
         var session1 = await accessTokenDom1.CreateSession();
         var session2 = await accessTokenDom2.CreateSession();
 
-        var device1 = await farm1.TestInit.DevicesClient.FindByClientIdAsync(farm1.TestInit.ProjectId, session1.SessionRequestEx.ClientInfo.ClientId);
+        var device1 = await farm1.TestApp.DevicesClient.FindByClientIdAsync(farm1.TestApp.ProjectId, session1.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device1.ClientId, session1.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device1.ClientVersion, session1.SessionRequestEx.ClientInfo.ClientVersion);
         Assert.AreEqual(device1.UserAgent, session1.SessionRequestEx.ClientInfo.UserAgent);
 
-        var device2 = await farm2.TestInit.DevicesClient.FindByClientIdAsync(farm2.TestInit.ProjectId, session2.SessionRequestEx.ClientInfo.ClientId);
+        var device2 = await farm2.TestApp.DevicesClient.FindByClientIdAsync(farm2.TestApp.ProjectId, session2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientId, session2.SessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientVersion, session2.SessionRequestEx.ClientInfo.ClientVersion);
         Assert.AreEqual(device2.UserAgent, session2.SessionRequestEx.ClientInfo.UserAgent);
@@ -40,7 +40,7 @@ public class DeviceTest
         var accessTokenDom = await farm.CreateAccessToken();
         var clientId = Guid.NewGuid();
         await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);
-        var deviceClient = farm.TestInit.DevicesClient;
+        var deviceClient = farm.TestApp.DevicesClient;
         
         var device = await deviceClient.FindByClientIdAsync(farm.ProjectId, clientId);
         Assert.IsNull(device.LockedTime);
@@ -79,9 +79,9 @@ public class DeviceTest
         var sampleSession2 = await sampleAccessToken.CreateSession();
         await sampleSession2.AddUsage(10);
 
-        await sampler.TestInit.Sync();
-        var res = await sampler.TestInit.DevicesClient.ListAsync(
-            sampler.ProjectId, usageBeginTime: sampler.TestInit.CreatedTime);
+        await sampler.TestApp.Sync();
+        var res = await sampler.TestApp.DevicesClient.ListAsync(
+            sampler.ProjectId, usageBeginTime: sampler.TestApp.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }
 
@@ -96,9 +96,9 @@ public class DeviceTest
         var sampleSession2 = await sampleAccessToken.CreateSession();
         await sampleSession2.AddUsage(10);
 
-        await sampler.TestInit.Sync();
-        var res = await sampler.TestInit.DevicesClient.ListAsync(
-            sampler.ProjectId, usageBeginTime: sampler.TestInit.CreatedTime);
+        await sampler.TestApp.Sync();
+        var res = await sampler.TestApp.DevicesClient.ListAsync(
+            sampler.ProjectId, usageBeginTime: sampler.TestApp.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }
 

@@ -24,15 +24,15 @@ public class AccessTest
 
         var sessionDom = await accessTokenDom.CreateSession();
         await sessionDom.AddUsage(20, 10);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
 
-        var accessDatas = await farm.TestInit.AccessesClient.ListAsync(farm.TestInit.ProjectId, accessTokenDom.AccessTokenId);
+        var accessDatas = await farm.TestApp.AccessesClient.ListAsync(farm.TestApp.ProjectId, accessTokenDom.AccessTokenId);
         var accessData = accessDatas.Items.Single(x => x.Access.AccessTokenId == accessTokenDom.AccessTokenId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
 
         // check single get
-        accessData = await farm.TestInit.AccessesClient.GetAsync(farm.TestInit.ProjectId, accessData.Access.AccessId);
+        accessData = await farm.TestApp.AccessesClient.GetAsync(farm.TestApp.ProjectId, accessData.Access.AccessId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
         Assert.AreEqual(accessTokenDom.AccessTokenId, accessData.Access.AccessTokenId);
@@ -42,8 +42,8 @@ public class AccessTest
     [TestMethod]
     public async Task List()
     {
-        var testInit2 = await TestInit.Create();
-        var sample1 = await ServerFarmDom.Create(testInit2);
+        var testApp2 = await TestApp.Create();
+        var sample1 = await ServerFarmDom.Create(testApp2);
         var actualAccessCount = 0;
         var usageCount = 0;
         var deviceCount = 0;
@@ -73,7 +73,7 @@ public class AccessTest
         // ----------------
         // Create accessToken2 public in ServerFarm2
         // ----------------
-        var sample2 = await ServerFarmDom.Create(testInit2);
+        var sample2 = await ServerFarmDom.Create(testApp2);
         var accessToken2 = await sample2.CreateAccessToken(true);
         var sample2UsageCount = 0;
         var sample2AccessCount = 0;
@@ -120,8 +120,8 @@ public class AccessTest
         await sessionDom.AddUsage(traffic);
         await sessionDom.AddUsage(traffic);
 
-        await testInit2.FlushCache();
-        var res = await testInit2.AccessesClient.ListAsync(sample1.TestInit.ProjectId);
+        await testApp2.FlushCache();
+        var res = await testApp2.AccessesClient.ListAsync(sample1.TestApp.ProjectId);
 
         Assert.IsTrue(res.Items.All(x => x.Access.LastUsedTime >= sample1.CreatedTime.AddSeconds(-1)));
         Assert.AreEqual(actualAccessCount, res.Items.Count);
@@ -131,7 +131,7 @@ public class AccessTest
         Assert.AreEqual(traffic.Received * usageCount,  res.Items.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
-        res = await testInit2.AccessesClient.ListAsync(testInit2.ProjectId, serverFarmId: sample2.ServerFarmId);
+        res = await testApp2.AccessesClient.ListAsync(testApp2.ProjectId, serverFarmId: sample2.ServerFarmId);
         Assert.AreEqual(sample2AccessCount, res.Items.Count);
         Assert.AreEqual(traffic.Sent * sample2UsageCount, res.Items.Sum(x => x.Access.CycleSentTraffic));
         Assert.AreEqual(traffic.Received * sample2UsageCount, res.Items.Sum(x => x.Access.CycleReceivedTraffic));

@@ -8,30 +8,30 @@ namespace VpnHood.AccessServer.Test.Dom;
 
 public class SessionDom
 {
-    public TestInit TestInit { get; }
+    public TestApp TestApp { get; }
     public AgentClient AgentClient { get; }
     public AccessToken AccessToken { get; }
     public SessionRequestEx SessionRequestEx { get; }
     public SessionResponseEx SessionResponseEx { get; private set; }
     public long SessionId => (long)SessionResponseEx.SessionId;
 
-    private SessionDom(TestInit testInit, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
+    private SessionDom(TestApp testApp, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
     {
-        TestInit = testInit;
+        TestApp = testApp;
         AgentClient = agentClient;
         AccessToken = accessToken;
         SessionRequestEx = sessionRequestEx;
         SessionResponseEx = sessionResponseEx;
     }
 
-    public static async Task<SessionDom> Create(TestInit testInit, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
+    public static async Task<SessionDom> Create(TestApp testApp, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
     {
-        agentClient ??= testInit.CreateAgentClient(serverId);
+        agentClient ??= testApp.CreateAgentClient(serverId);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
         if (assertError)
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
 
-        var ret = new SessionDom(testInit, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
+        var ret = new SessionDom(testApp, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
         return ret;
     }
 
@@ -62,6 +62,6 @@ public class SessionDom
 
     public Task<Session> GetSessionFromCache()
     {
-        return TestInit.AgentCacheClient.GetSession(SessionId);
+        return TestApp.AgentCacheClient.GetSession(SessionId);
     }
 }

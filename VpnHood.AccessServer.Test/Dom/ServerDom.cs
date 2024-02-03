@@ -6,11 +6,11 @@ using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInfo)
+public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 {
-    public TestInit TestInit { get; } = testInit;
-    public ServersClient Client => TestInit.ServersClient;
-    public AgentClient AgentClient { get; } = testInit.CreateAgentClient(server.ServerId);
+    public TestApp TestApp { get; } = testApp;
+    public ServersClient Client => TestApp.ServersClient;
+    public AgentClient AgentClient { get; } = testApp.CreateAgentClient(server.ServerId);
     public VpnServer Server { get; private set; } = server;
     public List<SessionDom> Sessions { get; } = [];
     public ServerInfo ServerInfo { get; set; } = serverInfo;
@@ -19,13 +19,13 @@ public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInf
     public Guid ServerId => Server.ServerId;
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public static async Task<ServerDom> Attach(TestInit testInit, Guid serverId)
+    public static async Task<ServerDom> Attach(TestApp testApp, Guid serverId)
     {
-        var serverData = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverId);
-        return Attach(testInit, serverData.Server);
+        var serverData = await testApp.ServersClient.GetAsync(testApp.ProjectId, serverId);
+        return Attach(testApp, serverData.Server);
     }
 
-    public static ServerDom Attach(TestInit testInit, VpnServer server)
+    public static ServerDom Attach(TestApp testApp, VpnServer server)
     {
         var serverInfo = new ServerInfo
         {
@@ -58,24 +58,24 @@ public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInf
             }
         };
 
-        var serverDom = new ServerDom(testInit, server, serverInfo);
+        var serverDom = new ServerDom(testApp, server, serverInfo);
         return serverDom;
     }
 
     public async Task Reload()
     {
-        var serverData = await TestInit.ServersClient.GetAsync(TestInit.ProjectId, ServerId);
+        var serverData = await TestApp.ServersClient.GetAsync(TestApp.ProjectId, ServerId);
         Server = serverData.Server;
     }
 
-    public static async Task<ServerDom> Create(TestInit testInit, ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
+    public static async Task<ServerDom> Create(TestApp testApp, ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
     {
-        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, createParams);
+        var server = await testApp.ServersClient.CreateAsync(testApp.ProjectId, createParams);
 
         var myServer = new ServerDom(
-            testInit: testInit,
+            testApp: testApp,
             server: server,
-            serverInfo: await testInit.NewServerInfo(randomStatus: false)
+            serverInfo: await testApp.NewServerInfo(randomStatus: false)
             );
 
         if (configure)
@@ -87,14 +87,14 @@ public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInf
         return myServer;
     }
 
-    public static Task<ServerDom> Create(TestInit testInit, Guid serverFarmId, bool configure = true, bool sendStatus = true)
+    public static Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true, bool sendStatus = true)
     {
-        return Create(testInit, new ServerCreateParams { ServerFarmId = serverFarmId }, configure, sendStatus);
+        return Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId }, configure, sendStatus);
     }
 
     public async Task Update(ServerUpdateParams updateParams)
     {
-        Server = await TestInit.ServersClient.UpdateAsync(TestInit.ProjectId, ServerId, updateParams);
+        Server = await TestApp.ServersClient.UpdateAsync(TestApp.ProjectId, ServerId, updateParams);
     }
 
     public async Task Configure(bool updateStatus = true)
@@ -119,19 +119,19 @@ public class ServerDom(TestInit testInit, VpnServer server, ServerInfo serverInf
 
     public async Task<SessionDom> CreateSession(AccessToken accessToken, Guid? clientId = null, bool assertError = true)
     {
-        var sessionRequestEx = await TestInit.CreateSessionRequestEx(
+        var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             accessToken,
             ServerConfig.TcpEndPointsValue.First(),
             clientId,
-            await TestInit.NewIpV4());
+            await TestApp.NewIpV4());
 
-        var testSession = await SessionDom.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);
+        var testSession = await SessionDom.Create(TestApp, ServerId, accessToken, sessionRequestEx, AgentClient, assertError);
         Sessions.Add(testSession);
         return testSession;
     }
 
     public Task Delete()
     {
-        return Client.DeleteAsync(TestInit.ProjectId, ServerId);
+        return Client.DeleteAsync(TestApp.ProjectId, ServerId);
     }
 }

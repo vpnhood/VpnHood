@@ -6,32 +6,32 @@ namespace VpnHood.AccessServer.Test.Dom;
 
 public class ServerFarmDom
 {
-    public TestInit TestInit { get; }
+    public TestApp TestApp { get; }
     public ServerFarm ServerFarm { get; private set; }
     public List<ServerDom> Servers { get; private set; } = [];
     public Guid ServerFarmId => ServerFarm.ServerFarmId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
-    public Guid ProjectId => TestInit.ProjectId;
+    public Guid ProjectId => TestApp.ProjectId;
     public ServerDom DefaultServer => Servers.First();
-    public ServerFarmsClient Client => TestInit.ServerFarmsClient;
+    public ServerFarmsClient Client => TestApp.ServerFarmsClient;
 
-    protected ServerFarmDom(TestInit testInit, ServerFarm serverFarm)
+    protected ServerFarmDom(TestApp testApp, ServerFarm serverFarm)
     {
-        TestInit = testInit;
+        TestApp = testApp;
         ServerFarm = serverFarm;
     }
 
-    public static async Task<ServerFarmDom> Create(TestInit? testInit = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
+    public static async Task<ServerFarmDom> Create(TestApp? testApp = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
     {
-        testInit ??= await TestInit.Create();
+        testApp ??= await TestApp.Create();
         createParams ??= new ServerFarmCreateParams
         {
             ServerFarmName = Guid.NewGuid().ToString()
         };
 
-        var serverFarm = await testInit.ServerFarmsClient.CreateAsync(testInit.ProjectId, createParams);
+        var serverFarm = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, createParams);
 
-        var ret = new ServerFarmDom(testInit, serverFarm);
+        var ret = new ServerFarmDom(testApp, serverFarm);
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
 
@@ -39,10 +39,10 @@ public class ServerFarmDom
     }
 
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public static async Task<ServerFarmDom> Attach(TestInit testInit, Guid serverFarmId)
+    public static async Task<ServerFarmDom> Attach(TestApp testApp, Guid serverFarmId)
     {
-        var serverFarmData = await testInit.ServerFarmsClient.GetAsync(testInit.ProjectId, serverFarmId);
-        var serverFarm = new ServerFarmDom(testInit, serverFarmData.ServerFarm);
+        var serverFarmData = await testApp.ServerFarmsClient.GetAsync(testApp.ProjectId, serverFarmId);
+        var serverFarm = new ServerFarmDom(testApp, serverFarmData.ServerFarm);
         await serverFarm.ReattachServers();
         return serverFarm;
     }
@@ -56,15 +56,15 @@ public class ServerFarmDom
 
     public async Task<ServerFarmData> Reload()
     {
-        var serverFarmData = await TestInit.ServerFarmsClient.GetAsync(ProjectId, ServerFarmId, includeSummary: true);
+        var serverFarmData = await TestApp.ServerFarmsClient.GetAsync(ProjectId, ServerFarmId, includeSummary: true);
         ServerFarm = serverFarmData.ServerFarm;
         return serverFarmData;
     }
 
     public async Task ReattachServers()
     {
-        var servers = await TestInit.ServersClient.ListAsync(TestInit.ProjectId, serverFarmId: ServerFarmId);
-        Servers = servers.Select(serverData => ServerDom.Attach(TestInit, serverData.Server)).ToList();
+        var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId, serverFarmId: ServerFarmId);
+        Servers = servers.Select(serverData => ServerDom.Attach(TestApp, serverData.Server)).ToList();
     }
 
     public async Task ReloadServers()
@@ -76,14 +76,14 @@ public class ServerFarmDom
 
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic = false)
     {
-        var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId,
+        var ret = await TestApp.AccessTokensClient.CreateAsync(TestApp.ProjectId,
             new AccessTokenCreateParams
             {
                 ServerFarmId = ServerFarm.ServerFarmId,
                 IsPublic = isPublic
             });
 
-        return new AccessTokenDom(TestInit, ret);
+        return new AccessTokenDom(TestApp, ret);
     }
 
     public async Task<AccessTokenDom> CreateAccessToken(AccessTokenCreateParams createParams)
@@ -93,13 +93,13 @@ public class ServerFarmDom
 
         createParams.ServerFarmId = ServerFarm.ServerFarmId;
 
-        var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId, createParams);
-        return new AccessTokenDom(TestInit, ret);
+        var ret = await TestApp.AccessTokensClient.CreateAsync(TestApp.ProjectId, createParams);
+        return new AccessTokenDom(TestApp, ret);
     }
 
     public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true)
     {
-        var sampleServer = await ServerDom.Create(TestInit, ServerFarmId, configure, sendStatus);
+        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, sendStatus);
         Servers.Add(sampleServer);
         return sampleServer;
     }
@@ -111,7 +111,7 @@ public class ServerFarmDom
             throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm", nameof(createParams));
 
         createParams.ServerFarmId = ServerFarmId;
-        var sampleServer = await ServerDom.Create(TestInit, createParams, configure, sendStatus);
+        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus);
         Servers.Add(sampleServer);
         return sampleServer;
     }

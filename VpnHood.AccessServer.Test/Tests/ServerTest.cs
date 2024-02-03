@@ -28,15 +28,15 @@ public class ServerTest
     [TestMethod]
     public async Task Crud()
     {
-        var testInit = await TestInit.Create();
-        var farm1 = await ServerFarmDom.Create(testInit, serverCount: 0);
+        var testApp = await TestApp.Create();
+        var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         //-----------
         // check: Create
         //-----------
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
-        var install1A = await farm1.TestInit.ServersClient.GetInstallManualAsync(testInit.ProjectId, serverDom.ServerId);
+        var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
         //-----------
         // check: Get
@@ -46,7 +46,7 @@ public class ServerTest
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        serverDom.ServerInfo = await testInit.NewServerInfo(randomStatus: true);
+        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true);
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.Configure(false);
         await serverDom.Reload();
@@ -59,13 +59,13 @@ public class ServerTest
         Assert.AreEqual(ServerState.Idle, serverDom.Server.ServerState);
 
         // ServerState.Active
-        serverDom.ServerInfo.Status = TestInit.NewServerStatus(serverDom.ServerConfig.ConfigCode, true);
+        serverDom.ServerInfo.Status = TestApp.NewServerStatus(serverDom.ServerConfig.ConfigCode, true);
         await serverDom.SendStatus();
         await serverDom.Reload();
         Assert.AreEqual(ServerState.Active, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        await serverDom.Client.ReconfigureAsync(testInit.ProjectId, serverDom.ServerId);
+        await serverDom.Client.ReconfigureAsync(testApp.ProjectId, serverDom.ServerId);
         await serverDom.Reload();
         Assert.AreEqual(ServerState.Configuring, serverDom.Server.ServerState);
 
@@ -80,7 +80,7 @@ public class ServerTest
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
-        var install1C = await serverDom.Client.GetInstallManualAsync(testInit.ProjectId, serverDom.ServerId);
+        var install1C = await serverDom.Client.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
@@ -90,28 +90,28 @@ public class ServerTest
         //-----------
         serverUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
         await serverDom.Update(serverUpdateParam);
-        install1C = await serverDom.Client.GetInstallManualAsync(testInit.ProjectId, serverDom.Server.ServerId);
+        install1C = await serverDom.Client.GetInstallManualAsync(testApp.ProjectId, serverDom.Server.ServerId);
         CollectionAssert.AreNotEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
 
         //-----------
         // check: Update (serverFarmId)
         //-----------
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
         serverUpdateParam = new ServerUpdateParams { ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId } };
-        await serverDom.Client.UpdateAsync(testInit.ProjectId, serverDom.ServerId, serverUpdateParam);
+        await serverDom.Client.UpdateAsync(testApp.ProjectId, serverDom.ServerId, serverUpdateParam);
         await serverDom.Reload();
         Assert.AreEqual(farm2.ServerFarmId, serverDom.Server.ServerFarmId);
 
         //-----------
         // check: List
         //-----------
-        var servers = await serverDom.Client.ListAsync(testInit.ProjectId);
+        var servers = await serverDom.Client.ListAsync(testApp.ProjectId);
         Assert.IsTrue(servers.Any(x => x.Server.ServerName == serverDom.Server.ServerName && x.Server.ServerId == serverDom.ServerId));
 
         //-----------
         // check: Delete
         //-----------
-        await serverDom.Client.DeleteAsync(testInit.ProjectId, serverDom.ServerId);
+        await serverDom.Client.DeleteAsync(testApp.ProjectId, serverDom.ServerId);
         try
         {
             await serverDom.Reload();
@@ -188,7 +188,7 @@ public class ServerTest
 
         try
         {
-            await p1Farm.TestInit.ServersClient.CreateAsync(p1Farm.ProjectId,
+            await p1Farm.TestApp.ServersClient.CreateAsync(p1Farm.ProjectId,
                 new ServerCreateParams
                 {
                     ServerName = $"{Guid.NewGuid()}",
@@ -240,7 +240,7 @@ public class ServerTest
         // add another server
         var server2Dom = await farm.AddNewServer(new ServerCreateParams
         {
-            AccessPoints = new[] {await farm.TestInit.NewAccessPoint()}
+            AccessPoints = new[] {await farm.TestApp.NewAccessPoint()}
         });
         var server2TokenIp = server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         accessToken = await farm.CreateAccessToken();
@@ -260,8 +260,8 @@ public class ServerTest
     public async Task GetStatusSummary()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
-        farm.TestInit.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 
         // lost
         var sampleServer = await farm.AddNewServer();
@@ -292,7 +292,7 @@ public class ServerTest
         sampleServer = await farm.AddNewServer();
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
 
-        var liveUsageSummary = await farm.TestInit.ServersClient.GetStatusSummaryAsync(farm.TestInit.ProjectId);
+        var liveUsageSummary = await farm.TestApp.ServersClient.GetStatusSummaryAsync(farm.TestApp.ProjectId);
         Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
@@ -306,18 +306,18 @@ public class ServerTest
     public async Task GetStatusHistory()
     {
         var farm = await ServerFarmDom.Create();
-        var res = await farm.TestInit.ServersClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await farm.TestApp.ServersClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
 
     [TestMethod]
     public async Task Crud_AccessPoints()
     {
-        var testInit = await TestInit.Create();
-        var farm = await ServerFarmDom.Create(testInit, serverCount: 0);
+        var testApp = await TestApp.Create();
+        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
-        var accessPoint1 = await testInit.NewAccessPoint();
-        var accessPoint2 = await testInit.NewAccessPoint();
+        var accessPoint1 = await testApp.NewAccessPoint();
+        var accessPoint2 = await testApp.NewAccessPoint();
 
         // create server
         var serverDom = await farm.AddNewServer(new ServerCreateParams
@@ -353,7 +353,7 @@ public class ServerTest
         // check: update 
         //-----------
         var oldConfig = (await serverDom.SendStatus(serverDom.ServerInfo.Status)).ConfigCode;
-        var accessPoint3 = await testInit.NewAccessPoint();
+        var accessPoint3 = await testApp.NewAccessPoint();
         await serverDom.Update(new ServerUpdateParams
         {
             AccessPoints = new PatchOfAccessPointOf { Value = new[] { accessPoint3 } }

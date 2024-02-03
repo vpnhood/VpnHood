@@ -35,7 +35,7 @@ public class AgentTestApp
             });
         
         AgentScope = AgentApp.Services.CreateScope();
-        AgentOptions.AllowRedirect = false; //to move to settings
+        AgentOptions.AllowRedirect = false; //todo move to settings
         
         HttpClient = AgentApp.CreateClient();
         HttpClient.DefaultRequestHeaders.Authorization = GetAuthenticationHeaderValue(AgentApp.Services);

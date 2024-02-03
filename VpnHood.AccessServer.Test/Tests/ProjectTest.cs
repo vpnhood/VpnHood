@@ -13,8 +13,8 @@ public class ProjectTest
     [TestMethod]
     public async Task Crud()
     {
-        var testInit = await TestInit.Create();
-        var projectsClient = testInit.ProjectsClient;
+        var testApp = await TestApp.Create();
+        var projectsClient = testApp.ProjectsClient;
         var project1A = await projectsClient.CreateAsync();
         var projectId = project1A.ProjectId;
         Assert.AreEqual(projectId, project1A.ProjectId);
@@ -58,20 +58,20 @@ public class ProjectTest
         //-----------
         // Check: default group is created
         //-----------
-        var serverFarms = await testInit.ServerFarmsClient.ListAsync(projectId);
+        var serverFarms = await testApp.ServerFarmsClient.ListAsync(projectId);
         Assert.IsTrue(serverFarms.Count > 0);
 
         //-----------
         // Check: a public and private token is created
         //-----------
-        var accessTokens = await testInit.AccessTokensClient.ListAsync(projectId);
+        var accessTokens = await testApp.AccessTokensClient.ListAsync(projectId);
         Assert.IsTrue(accessTokens.Items.Any(x => x.AccessToken.IsPublic));
         Assert.IsTrue(accessTokens.Items.Any(x => !x.AccessToken.IsPublic));
 
         //-----------
         // Check: All project
         //-----------
-        var userProjects = await testInit.TeamClient.ListCurrentUserProjectsAsync();
+        var userProjects = await testApp.TeamClient.ListCurrentUserProjectsAsync();
         Assert.IsTrue(userProjects.Any(x => x.ProjectId == projectId));
     }
 
@@ -83,12 +83,12 @@ public class ProjectTest
         await sampleAccessToken.CreateSession();
 
         var newProjectName = Guid.NewGuid().ToString();
-        await sampler.TestInit.ProjectsClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
+        await sampler.TestApp.ProjectsClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
         {
             ProjectName = new PatchOfString { Value = newProjectName }
         });
 
-        var server = await sampler.TestInit.AgentTestApp.CacheService.GetServer(sampler.Servers[0].ServerId);
+        var server = await sampler.TestApp.AgentTestApp.CacheService.GetServer(sampler.Servers[0].ServerId);
         Assert.AreEqual(newProjectName, server.Project?.ProjectName);
     }
 
@@ -96,14 +96,14 @@ public class ProjectTest
     public async Task MaxUserProjects()
     {
         // create first project
-        var testInit = await TestInit.Create();
+        var testApp = await TestApp.Create();
 
         // create next project the using same user
-        await testInit.ProjectsClient.CreateAsync();
+        await testApp.ProjectsClient.CreateAsync();
         try
         {
             QuotaConstants.ProjectCount = 2;
-            await testInit.ProjectsClient.CreateAsync();
+            await testApp.ProjectsClient.CreateAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
         catch (ApiException ex)
@@ -115,12 +115,12 @@ public class ProjectTest
     [TestMethod]
     public async Task Owner_is_created()
     {
-        var testInit = await TestInit.Create();
-        var userRoles = await testInit.TeamClient.ListUserRolesAsync(testInit.ProjectId.ToString());
+        var testApp = await TestApp.Create();
+        var userRoles = await testApp.TeamClient.ListUserRolesAsync(testApp.ProjectId.ToString());
         Assert.AreEqual(1, userRoles.TotalCount);
 
         var userRole = userRoles.Items.First();
-        Assert.AreEqual(testInit.ProjectOwnerApiKey.UserId, userRole.User?.UserId);
+        Assert.AreEqual(testApp.ProjectOwnerApiKey.UserId, userRole.User?.UserId);
         Assert.AreEqual(Roles.ProjectOwner.RoleId, userRole.Role.RoleId);
     }
 
@@ -143,9 +143,9 @@ public class ProjectTest
         sessionDom = await accessTokenDom2.CreateSession();
         await sessionDom.AddUsage();
 
-        await farm.TestInit.Sync();
+        await farm.TestApp.Sync();
 
-        var res = await farm.TestInit.ProjectsClient.GetUsageAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await farm.TestApp.ProjectsClient.GetUsageAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.AreEqual(4, res.DeviceCount);
     }
 }

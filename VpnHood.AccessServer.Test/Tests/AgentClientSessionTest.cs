@@ -29,7 +29,7 @@ public class AgentClientSessionTest
         //-----------
         var sessionDom = await accessTokenDom.CreateSession();
         var sessionResponse = await sessionDom.AddUsage(5, 10);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
         Assert.AreEqual(5, sessionResponse.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, sessionResponse.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, sessionResponse.ErrorCode);
@@ -121,25 +121,25 @@ public class AgentClientSessionTest
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
-        var device = await farm.TestInit.DevicesClient.FindByClientIdAsync(farm.TestInit.ProjectId, clientInfo.ClientId);
+        var device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
         var sessionRequestEx = sessionDom.SessionRequestEx;
-        sessionRequestEx.ClientIp = await farm.TestInit.NewIpV4();
+        sessionRequestEx.ClientIp = await farm.TestApp.NewIpV4();
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
         await farm.DefaultServer.AgentClient.Session_Create(sessionRequestEx);
-        device = await farm.TestInit.DevicesClient.FindByClientIdAsync(farm.TestInit.ProjectId, clientInfo.ClientId);
+        device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
     private async Task<Models.AccessModel> GetAccessFromSession(SessionDom sessionDom)
     {
-        await using var scope = sessionDom.TestInit.WebApp.Services.CreateAsyncScope();
+        await using var scope = sessionDom.TestApp.WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var session = await vhContext.Sessions
             .Include(x => x.Access)
@@ -210,7 +210,7 @@ public class AgentClientSessionTest
         var serverDom12 = await farm1.AddNewServer();
         var accessTokenDom11 = await farm1.CreateAccessToken(true);
 
-        var farm2 = await ServerFarmDom.Create(farm1.TestInit);
+        var farm2 = await ServerFarmDom.Create(farm1.TestApp);
         var serverDom21 = await farm2.AddNewServer();
         var serverDom22 = await farm2.AddNewServer();
         var accessTokenDom21 = await farm2.CreateAccessToken(true);
@@ -238,10 +238,10 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Close()
     {
-        var testInit = await TestInit.Create();
-        testInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
-        testInit.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
-        var sampleFarm1 = await SampleFarm.Create(testInit);
+        var testApp = await TestApp.Create();
+        testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
+        testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
+        var sampleFarm1 = await SampleFarm.Create(testApp);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.CloseSession();
         Assert.AreEqual(SessionErrorCode.Ok, responseBase.ErrorCode);
@@ -265,17 +265,17 @@ public class AgentClientSessionTest
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(testInit.AgentTestApp.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
-        await testInit.Sync();
+        await Task.Delay(testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout.Add(TimeSpan.FromMilliseconds(50)));
+        await testApp.Sync();
         await VhTestUtil.AssertNotExistsException(session.AddUsage(0));
     }
 
     [TestMethod]
     public async Task Session_Bombard()
     {
-        var testInit = await TestInit.Create();
-        var sampleFarm1 = await SampleFarm.Create(testInit);
-        var sampleFarm2 = await SampleFarm.Create(testInit);
+        var testApp = await TestApp.Create();
+        var sampleFarm1 = await SampleFarm.Create(testApp);
+        var sampleFarm2 = await SampleFarm.Create(testApp);
 
         var createSessionTasks = new List<Task<SessionDom>>();
         for (var i = 0; i < 50; i++)
@@ -294,7 +294,7 @@ public class AgentClientSessionTest
         }
 
         await Task.WhenAll(createSessionTasks);
-        await testInit.Sync();
+        await testApp.Sync();
 
         await sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1);
         await sampleFarm1.Server1.CreateSession(sampleFarm1.PublicToken1);
@@ -308,7 +308,7 @@ public class AgentClientSessionTest
         tasks = tasks.Concat(sampleFarm2.Server2.Sessions.Select(x => x.AddUsage()));
         await Task.WhenAll(tasks);
 
-        await testInit.FlushCache();
+        await testApp.FlushCache();
         tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage());
         tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage()));
         tasks = tasks.Concat(sampleFarm2.Server1.Sessions.Select(x => x.AddUsage()));
@@ -316,7 +316,7 @@ public class AgentClientSessionTest
         await Task.WhenAll(tasks);
 
 
-        await testInit.Sync();
+        await testApp.Sync();
     }
 
     [TestMethod]
@@ -343,7 +343,7 @@ public class AgentClientSessionTest
         // check: add usage
         //-----------
         response = await sessionDom1.AddUsage(5, 10);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
         Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
@@ -355,7 +355,7 @@ public class AgentClientSessionTest
 
         // again
         response = await sessionDom1.AddUsage(5, 10);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
         Assert.AreEqual(10, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
@@ -370,7 +370,7 @@ public class AgentClientSessionTest
         //-----------
         var sessionDom2 = await accessTokenDom.CreateSession();
         response = await sessionDom2.AddUsage(5, 10);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
 
         Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
@@ -386,7 +386,7 @@ public class AgentClientSessionTest
         //-------------
 
         //remove last cycle
-        var cycleManager = farm.TestInit.Scope.ServiceProvider.GetRequiredService<UsageCycleService>();
+        var cycleManager = farm.TestApp.Scope.ServiceProvider.GetRequiredService<UsageCycleService>();
         await cycleManager.DeleteCycle(cycleManager.CurrentCycleId);
         await cycleManager.UpdateCycle();
 
@@ -407,7 +407,7 @@ public class AgentClientSessionTest
         // check: Session for another client should be reset too
         //-------------
         response = await sessionDom1.AddUsage(50, 100);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
         Assert.AreEqual(50, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(100, response.AccessUsage?.Traffic.Received);
     }
@@ -431,7 +431,7 @@ public class AgentClientSessionTest
         // check: add usage by client 1
         //-----------
         response = await sessionDom1.AddUsage(5, 10);
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
         Assert.AreEqual(5, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
@@ -449,7 +449,7 @@ public class AgentClientSessionTest
         Assert.AreEqual(20, response2.AccessUsage?.Traffic.Received);
         Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
 
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
         accessData = await accessTokenDom.Reload();
         Assert.AreEqual(10, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(20, accessData.Access?.TotalReceivedTraffic);
@@ -467,14 +467,14 @@ public class AgentClientSessionTest
         await sessionDom.AddUsage(20, 30);
         await sessionDom.CloseSession();
 
-        await farm.TestInit.FlushCache();
+        await farm.TestApp.FlushCache();
 
-        var session = await farm.TestInit.VhContext.Sessions
+        var session = await farm.TestApp.VhContext.Sessions
             .Include(x => x.Access)
             .Include(x => x.Access!.AccessToken)
             .SingleAsync(x => x.SessionId == sessionDom.SessionId);
 
-        var deviceData = await farm.TestInit.DevicesClient.GetAsync(farm.ProjectId, session.DeviceId);
+        var deviceData = await farm.TestApp.DevicesClient.GetAsync(farm.ProjectId, session.DeviceId);
 
         Assert.AreEqual(sampleAccessToken.AccessTokenId, session.Access?.AccessTokenId);
         Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
@@ -482,9 +482,9 @@ public class AgentClientSessionTest
         Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
 
         // check sync
-        await farm.TestInit.Sync();
+        await farm.TestApp.Sync();
 
-        var accessUsage = await farm.TestInit.VhReportContext.AccessUsages
+        var accessUsage = await farm.TestApp.VhReportContext.AccessUsages
             .OrderByDescending(x => x.AccessUsageId)
             .FirstAsync(x => x.SessionId == sessionDom.SessionId);
 
@@ -503,14 +503,14 @@ public class AgentClientSessionTest
     public async Task Session_Create_Status_SuppressToOther()
     {
         var sampler = await ServerFarmDom.Create();
-        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId,
+        var accessToken = await sampler.TestApp.AccessTokensClient.CreateAsync(sampler.ProjectId,
             new AccessTokenCreateParams
             {
                 ServerFarmId = sampler.ServerFarmId,
                 MaxDevice = 2
             });
 
-        var sampleAccessToken = new AccessTokenDom(sampler.TestInit, accessToken);
+        var sampleAccessToken = new AccessTokenDom(sampler.TestApp, accessToken);
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleAccessToken.CreateSession();
         var sampleSession3 = await sampleAccessToken.CreateSession();
@@ -521,8 +521,8 @@ public class AgentClientSessionTest
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
 
         // Check after Flush
-        await sampler.TestInit.FlushCache();
-        await sampler.TestInit.AgentTestApp.CacheService.InvalidateSessions();
+        await sampler.TestApp.FlushCache();
+        await sampler.TestApp.AgentTestApp.CacheService.InvalidateSessions();
         res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.Other, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
@@ -532,14 +532,14 @@ public class AgentClientSessionTest
     public async Task Session_Create_Status_SuppressToYourself()
     {
         var sampler = await ServerFarmDom.Create();
-        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId,
+        var accessToken = await sampler.TestApp.AccessTokensClient.CreateAsync(sampler.ProjectId,
             new AccessTokenCreateParams
             {
                 ServerFarmId = sampler.ServerFarmId,
                 MaxDevice = 2
             });
 
-        var sampleAccessToken = new AccessTokenDom(sampler.TestInit, accessToken);
+        var sampleAccessToken = new AccessTokenDom(sampler.TestApp, accessToken);
         var clientId = Guid.NewGuid();
 
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);

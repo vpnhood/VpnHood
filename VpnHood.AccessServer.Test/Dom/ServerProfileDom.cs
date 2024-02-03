@@ -2,36 +2,36 @@
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class ServerProfileDom(TestInit testInit, ServerProfile serverProfile)
+public class ServerProfileDom(TestApp testApp, ServerProfile serverProfile)
 {
-    public TestInit TestInit { get; } = testInit;
+    public TestApp TestApp { get; } = testApp;
     public ServerProfile ServerProfile { get; private set; } = serverProfile;
     public Guid ServerProfileId => ServerProfile.ServerProfileId;
-    public ServerProfilesClient Client => TestInit.ServerProfilesClient;
+    public ServerProfilesClient Client => TestApp.ServerProfilesClient;
 
-    public static async Task<ServerProfileDom> Create(TestInit? testInit = null, ServerProfileCreateParams? createParams = null)
+    public static async Task<ServerProfileDom> Create(TestApp? testApp = null, ServerProfileCreateParams? createParams = null)
     {
-        testInit ??= await TestInit.Create();
-        var serverProfile = await testInit.ServerProfilesClient.CreateAsync(testInit.ProjectId, createParams);
-        return new ServerProfileDom(testInit, serverProfile);
+        testApp ??= await TestApp.Create();
+        var serverProfile = await testApp.ServerProfilesClient.CreateAsync(testApp.ProjectId, createParams);
+        return new ServerProfileDom(testApp, serverProfile);
     }
     
     public async Task<ServerProfile> Update(ServerProfileUpdateParams updateParams)
     {
-        var serverProfile = await Client.UpdateAsync(TestInit.ProjectId, ServerProfileId, updateParams);
+        var serverProfile = await Client.UpdateAsync(TestApp.ProjectId, ServerProfileId, updateParams);
         ServerProfile = serverProfile;
         return serverProfile;
     }
 
     public async Task<ServerProfileData> Reload()
     {
-        var data = await Client.GetAsync(TestInit.ProjectId, ServerProfileId, includeSummary: true);
+        var data = await Client.GetAsync(TestApp.ProjectId, ServerProfileId, includeSummary: true);
         ServerProfile = data.ServerProfile;
         return data;
     }
 
     public Task Delete()
     {
-        return Client.DeleteAsync(TestInit.ProjectId, ServerProfileId);
+        return Client.DeleteAsync(TestApp.ProjectId, ServerProfileId);
     }
 }

@@ -14,7 +14,7 @@ public class AgentAccessTest
     {
         var serverFarmDom = await ServerFarmDom.Create();
         var accessTokenDom = await serverFarmDom.CreateAccessToken();
-        await accessTokenDom.TestInit.AccessTokensClient.UpdateAsync(serverFarmDom.TestInit.ProjectId, accessTokenDom.AccessTokenId,
+        await accessTokenDom.TestApp.AccessTokensClient.UpdateAsync(serverFarmDom.TestApp.ProjectId, accessTokenDom.AccessTokenId,
             new AccessTokenUpdateParams
             {
                 IsEnabled = new PatchOfBoolean { Value = false }
@@ -53,10 +53,10 @@ public class AgentAccessTest
         await accessTokenDom.CreateSession();
 
         // Shift FirstUseTime to one day before
-        var accessTokenModel = await accessTokenDom.TestInit.VhContext.AccessTokens.SingleAsync(x =>
+        var accessTokenModel = await accessTokenDom.TestApp.VhContext.AccessTokens.SingleAsync(x =>
             x.AccessTokenId == accessTokenDom.AccessTokenId);
         accessTokenModel.FirstUsedTime = serverFarmDom.CreatedTime.AddHours(-25);
-        await accessTokenDom.TestInit.VhContext.SaveChangesAsync();
+        await accessTokenDom.TestApp.VhContext.SaveChangesAsync();
 
         // Create new Session
         var session = await accessTokenDom.CreateSession(assertError: false);

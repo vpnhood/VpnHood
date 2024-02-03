@@ -15,16 +15,16 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Default_ServerProfile()
     {
-        var testInit = await TestInit.Create();
+        var testApp = await TestApp.Create();
 
         // -----------
         // Make sure default is created
         // -----------
-        var serverProfiles = await testInit.ServerProfilesClient.ListAsync(testInit.ProjectId);
+        var serverProfiles = await testApp.ServerProfilesClient.ListAsync(testApp.ProjectId);
         var defaultServerProfile = serverProfiles.Single(x => x.ServerProfile.IsDefault).ServerProfile;
         Assert.IsNotNull(defaultServerProfile);
 
-        var serverProfileDom = new ServerProfileDom(testInit, defaultServerProfile);
+        var serverProfileDom = new ServerProfileDom(testApp, defaultServerProfile);
 
         // -----------
         // Default can not be deleted
@@ -59,7 +59,7 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Crud()
     {
-        var testInit = await TestInit.Create();
+        var testApp = await TestApp.Create();
 
         // -----------
         // Create
@@ -67,7 +67,7 @@ public class ServerProfileTest
         // ReSharper disable once UseObjectOrCollectionInitializer
         var serverConfig = new ServerConfig();
         serverConfig.SessionOptions.NetScanLimit = 1000;
-        var serverProfileDom = await ServerProfileDom.Create(testInit, new ServerProfileCreateParams
+        var serverProfileDom = await ServerProfileDom.Create(testApp, new ServerProfileCreateParams
         {
             ServerConfig = JsonSerializer.Serialize(serverConfig)
         });
@@ -111,11 +111,11 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Reconfigure_all_servers_on_update()
     {
-        var testInit = await TestInit.Create();
-        var serverProfileDom = await ServerProfileDom.Create(testInit);
+        var testApp = await TestApp.Create();
+        var serverProfileDom = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
         {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
@@ -123,7 +123,7 @@ public class ServerProfileTest
         var serverDom2 = await farm1.AddNewServer();
 
         // farm2
-        var farm2 = await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        var farm2 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
         {
             ServerProfileId = serverProfileDom.ServerProfileId
         });
@@ -153,11 +153,11 @@ public class ServerProfileTest
     [TestMethod]
     public async Task Get_with_summaries()
     {
-        var testInit = await TestInit.Create();
-        var serverProfileDom1 = await ServerProfileDom.Create(testInit);
+        var testApp = await TestApp.Create();
+        var serverProfileDom1 = await ServerProfileDom.Create(testApp);
 
         // farm1
-        var farm1 = await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        var farm1 = await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
         {
             ServerProfileId = serverProfileDom1.ServerProfileId,
         }, serverCount: 0);
@@ -166,7 +166,7 @@ public class ServerProfileTest
         await farm1.AddNewServer();
 
         // farm2
-        await ServerFarmDom.Create(testInit, new ServerFarmCreateParams
+        await ServerFarmDom.Create(testApp, new ServerFarmCreateParams
         {
             ServerProfileId = serverProfileDom1.ServerProfileId,
         }, serverCount: 0);

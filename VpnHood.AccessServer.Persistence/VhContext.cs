@@ -164,8 +164,8 @@ public class VhContext : DbContext
                 .HasFilter($"{nameof(ServerModel.IsDeleted)} = 0")
                 .IsUnique();
 
-            entity.Property(e => e.Description)
-                .HasMaxLength(400);
+            entity.Property(e => e.LastConfigError)
+                .HasMaxLength(2000);
 
             entity.Property(e => e.ServerName)
                 .HasMaxLength(100);
@@ -276,11 +276,20 @@ public class VhContext : DbContext
                 .HasFilter($"{nameof(ServerFarmModel.IsDeleted)} = 0")
                 .IsUnique();
 
+            entity.Property(e => e.PushTokenToClient)
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.UseTokenV4)
+                .HasDefaultValue(false);
+
             entity.Property(e => e.ServerFarmName)
                 .HasMaxLength(100);
 
             entity.Property(e => e.UseHostName)
                 .HasDefaultValue(false);
+
+            entity.Property(e => e.TokenJson)
+                .HasMaxLength(4000);
 
             entity.Property(e => e.IsDeleted)
                 .HasDefaultValue(false);

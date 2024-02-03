@@ -17,4 +17,10 @@ internal class BillingController : WebApiController, IBillingController
         return BillingService.GetSubscriptionPlans();
     }
 
+    [Route(HttpVerbs.Post, "/purchase")]
+    public Task Purchase(string userId, string planId)
+    {
+        return BillingService.Purchase(userId, planId);
+    }
+
 }

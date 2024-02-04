@@ -22,6 +22,7 @@ public static class AssemblyInfo
         : throw new NotImplementedException(); // TODO must implement
 
     public static bool ListenToAllIps => IsDebugMode;
+    public static int? DefaultSpaPort => IsDebugMode ? 9091 : 9090;
 
     // ReSharper disable StringLiteralTypo
     public static string FirebaseClientId => "216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com";

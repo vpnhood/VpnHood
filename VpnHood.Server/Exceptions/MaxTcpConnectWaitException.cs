@@ -5,13 +5,10 @@ using VpnHood.Tunneling;
 
 namespace VpnHood.Server.Exceptions;
 
-internal class MaxTcpConnectWaitException : ServerSessionException
+internal class MaxTcpConnectWaitException(IPEndPoint remoteEndPoint, Session session, string requestId)
+    : ServerSessionException(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId,
+        "Maximum TcpConnectWait has been reached.")
 {
-    public MaxTcpConnectWaitException(IPEndPoint remoteEndPoint, Session session, string requestId)
-        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, "Maximum TcpConnectWait has been reached.")
-    {
-    }
-
     public override void Log()
     {
         //let EventReporter manage it

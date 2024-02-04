@@ -5,13 +5,10 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Access.Messaging;
 
-public class SessionResponseEx : SessionResponse
+[method: JsonConstructor]
+public class SessionResponseEx(SessionErrorCode errorCode) 
+    : SessionResponse(errorCode)
 {
-    [JsonConstructor]
-    public SessionResponseEx(SessionErrorCode errorCode) : base(errorCode)
-    {
-    }
-
     [JsonIgnore(Condition =JsonIgnoreCondition.WhenWritingNull)]
     public string? ExtraData { get; set; }
     
@@ -21,4 +18,6 @@ public class SessionResponseEx : SessionResponse
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
     public string? GaMeasurementId { get; set; }
+    public string? AccessKey { get; set; }
+
 }

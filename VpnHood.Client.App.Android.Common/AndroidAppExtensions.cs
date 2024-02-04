@@ -2,6 +2,7 @@
 
 public static class AndroidAppExtensions
 {
+    // ReSharper disable once UnusedMember.Global
     public static Android.Graphics.Drawables.Icon ToAndroidIcon(this AppResources.ImageData imageData)
     {
         return Android.Graphics.Drawables.Icon.CreateWithData(imageData.Data, 0, imageData.Data.Length); 

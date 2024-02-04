@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -11,7 +12,8 @@ using VpnHood.Client.App.Win.Common;
 
 namespace VpnHood.Client.App.Win;
 
-// ReSharper disable once RedundantExtendsListEntry
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "RedundantExtendsListEntry")]
 public partial class MainWindow : Window
 {
     public MainWindow()
@@ -41,10 +43,10 @@ public partial class MainWindow : Window
 
         // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
-        VpnHoodApp.Instance.VersionCheckProc = WinApp.VersionCheckProc;
+        VpnHoodApp.Instance.AppUpdaterService = new WinAppUpdaterService();
 
         if (VpnHoodApp.Instance.VersionCheckRequired)
-            WinApp.VersionCheckProc().ContinueWith(res =>
+            VpnHoodApp.Instance.AppUpdaterService.Update().ContinueWith(res =>
             {
                 if (res.Result)
                     VpnHoodApp.Instance.VersionCheckPostpone();

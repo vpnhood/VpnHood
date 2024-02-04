@@ -12,14 +12,30 @@
 namespace VpnHood.Client.App.Droid.Connect.Properties;
 public static class AssemblyInfo
 {
-    public static Uri UpdateInfoUrl
+    public static Uri UpdateInfoUrl => new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json");
+    public static Uri StoreBaseUri => IsDebugMode
+        ? new Uri("https://192.168.0.67:7077")
+        : new Uri("https://store-api.vpnhood.com");
+
+    public static Guid StoreAppId => IsDebugMode
+        ? Guid.Parse("3B5543E4-EBAD-4E73-A3CB-4CF26608BC29")
+        : throw new NotImplementedException(); // TODO must implement
+
+    public static bool ListenToAllIps => IsDebugMode;
+    public static int? DefaultSpaPort => IsDebugMode ? 9091 : 9090;
+
+    // ReSharper disable StringLiteralTypo
+    public static string FirebaseClientId => "216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com";
+    // ReSharper restore StringLiteralTypo
+
+    public static bool IsDebugMode
     {
         get
         {
-#if ANDROID_AAB
-            return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android.json");
+#if DEBUG 
+            return true;
 #else
-            return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodConnect-android-web.json");
+            return false;
 #endif
         }
     }

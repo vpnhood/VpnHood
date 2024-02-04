@@ -1,0 +1,117 @@
+using Android.BillingClient.Api;
+using VpnHood.Client.App.Abstractions;
+
+namespace VpnHood.Client.App.Droid.GooglePlay;
+
+public class GooglePlayBillingService: IAppBillingService
+{
+    private readonly BillingClient _billingClient;
+    private readonly Activity _activity;
+    private ProductDetails? _productDetails;
+    private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
+    private GooglePlayBillingService(Activity activity)
+    {
+        var builder = BillingClient.NewBuilder(activity);
+        builder.SetListener(PurchasesUpdatedListener);
+        _billingClient = builder.EnablePendingPurchases().Build();
+        _activity = activity;
+    }
+
+    public static GooglePlayBillingService Create(Activity activity)
+    {
+        return new GooglePlayBillingService(activity);
+    }
+
+    private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
+    {
+        await EnsureConnected();
+
+        var isDeviceSupportSubscription = _billingClient.IsFeatureSupported("subscriptions");//TODO Check parameter
+        if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
+            throw new NotImplementedException();
+
+        // Set list of the created products in the GooglePlay.
+        var productDetailsParams = QueryProductDetailsParams.NewBuilder()
+            .SetProductList([
+                QueryProductDetailsParams.Product.NewBuilder()
+                    .SetProductId("general_subscription")
+                    .SetProductType(BillingClient.ProductType.Subs)
+                    .Build()
+            ])
+            .Build();
+
+        // Get products list from GooglePlay.
+        var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams);
+        if (response.Result.ResponseCode != BillingResponseCode.Ok) throw new Exception($"Could not get products from google. BillingResponseCode: {response.Result.ResponseCode}");
+        if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
+
+        var productDetails = response.ProductDetails.First();
+        _productDetails = productDetails;
+
+        var plans = productDetails.GetSubscriptionOfferDetails();
+        _subscriptionOfferDetails = plans;
+
+        var subscriptionPlans = plans
+            .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
+            .Select(plan => new SubscriptionPlan()
+            {
+                SubscriptionPlanId = plan.BasePlanId,
+                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice,
+            })
+            .ToArray();
+
+        return subscriptionPlans;
+    }
+
+    public async Task Purchase(string userId, string planId)
+    {
+        await EnsureConnected();
+
+        var offerToken = _subscriptionOfferDetails == null 
+            ? throw new NullReferenceException("Could not found subscription offer details.") 
+            : _subscriptionOfferDetails
+            .Where(x => x.BasePlanId == planId)
+            .Select(x => x.OfferToken)
+            .Single();
+
+        var productDetailsParam = BillingFlowParams.ProductDetailsParams.NewBuilder()
+            .SetProductDetails(_productDetails ?? throw new NullReferenceException("Could not found product details."))
+            .SetOfferToken(offerToken)
+            .Build();
+
+        var billingFlowParams = BillingFlowParams.NewBuilder()
+            .SetObfuscatedAccountId(userId)
+            .SetProductDetailsParamsList([productDetailsParam])
+            .Build();
+
+
+        var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
+
+        if (billingResult.ResponseCode != BillingResponseCode.Ok)
+            throw new Exception(billingResult.DebugMessage)
+            {
+                Data = { {"ResponseCode", billingResult.ResponseCode} }
+            };
+    }
+
+    private async Task EnsureConnected()
+    {
+        if (_billingClient.IsReady)
+         return;
+
+        var billingResult = await _billingClient.StartConnectionAsync();
+
+        if (billingResult.ResponseCode != BillingResponseCode.Ok)
+            throw new Exception(billingResult.DebugMessage);
+    }
+
+    public void Dispose()
+    {
+        _billingClient.Dispose();
+    }
+}

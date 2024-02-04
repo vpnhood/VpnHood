@@ -7,7 +7,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common;
 
-public class ServerToken : IComparable<ServerToken>
+public class ServerToken 
 {
     [JsonPropertyName("ct")]
     public required DateTime CreatedTime { get; set; }
@@ -70,7 +70,7 @@ public class ServerToken : IComparable<ServerToken>
 
     public static ServerToken Decrypt(byte[] serverSecret, string base64)
     {
-        var parts = base64.Split('.');
+        var parts = base64.Trim().Split('.');
         if (parts.Length != 2)
             throw new FormatException("Could not parse server token data.");    
 
@@ -91,20 +91,22 @@ public class ServerToken : IComparable<ServerToken>
         return serverToken;
     }
 
-    public int CompareTo(ServerToken other)
+    public bool IsTokenUpdated(ServerToken newServerToken)
     {
         // create first server token by removing its created time
         var serverToken1 = VhUtil.JsonClone<ServerToken>(this);
         serverToken1.CreatedTime = DateTime.MinValue;
 
         // create second server token by removing its created time
-        var serverToken2 = VhUtil.JsonClone<ServerToken>(other);
+        var serverToken2 = VhUtil.JsonClone<ServerToken>(newServerToken);
         serverToken2.CreatedTime = DateTime.MinValue;
 
         // compare
         if (JsonSerializer.Serialize(serverToken1) == JsonSerializer.Serialize(serverToken2))
-            return 0;
+            return false;
 
-        return CreatedTime.CompareTo(other.CreatedTime);
+        // if token are not equal, check if new token CreatedTime is newer or equal.
+        // If created time is equal assume new token is updated because there is change in token.
+        return newServerToken.CreatedTime >= CreatedTime;
     }
 }

@@ -1,8 +1,6 @@
-﻿using Object = Java.Lang.Object;
+﻿namespace VpnHood.Client.App.Droid.GooglePlay;
 
-namespace VpnHood.Client.App.Droid.Common.Utils;
-
-public class GooglePlayTaskCompleteListener<T> : Object,
+public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
     Xamarin.Google.Android.Play.Core.Tasks.IOnSuccessListener,
     Xamarin.Google.Android.Play.Core.Tasks.IOnFailureListener
 {
@@ -16,7 +14,7 @@ public class GooglePlayTaskCompleteListener<T> : Object,
         appUpdateInfo.AddOnFailureListener(this);
     }
 
-    public void OnSuccess(Object? obj)
+    public void OnSuccess(Java.Lang.Object? obj)
     {
         if (obj is T result)
             _taskCompletionSource.TrySetResult(result);

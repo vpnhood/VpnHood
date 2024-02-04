@@ -5,9 +5,8 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class Nat : IDisposable
+public class Nat(bool isDestinationSensitive) : IDisposable
 {
-    private readonly bool _isDestinationSensitive;
     private readonly object _lockObject = new();
     private readonly Dictionary<(IPVersion, ProtocolType), ushort> _lastNatIds = new();
     private readonly Dictionary<(IPVersion, ProtocolType, ushort), NatItem> _map = new();
@@ -16,15 +15,9 @@ public class Nat : IDisposable
     private DateTime _lastCleanupTime = FastDateTime.Now;
 
     public event EventHandler<NatEventArgs>? OnNatItemRemoved;
-
     public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
     public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
-
-    public Nat(bool isDestinationSensitive)
-    {
-        _isDestinationSensitive = isDestinationSensitive;
-    }
 
     public int ItemCount
     {
@@ -44,7 +37,7 @@ public class Nat : IDisposable
 
     private NatItem CreateNatItemFromPacket(IPPacket ipPacket)
     {
-        return _isDestinationSensitive ? new NatItemEx(ipPacket) : new NatItem(ipPacket);
+        return isDestinationSensitive ? new NatItemEx(ipPacket) : new NatItem(ipPacket);
     }
 
     private bool IsExpired(NatItem natItem)

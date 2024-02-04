@@ -8,34 +8,22 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling.Channels;
 
-public class UdpChannel : IDatagramChannel
+public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
+    : IDatagramChannel
 {
     private IPEndPoint? _lastRemoteEp;
     private readonly byte[] _buffer = new byte[0xFFFF];
     private UdpChannelTransmitter? _udpChannelTransmitter;
-    private readonly ulong _sessionId;
-    private readonly bool _isServer;
-    private readonly int _protocolVersion;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly BufferCryptor _sessionCryptorWriter;
-    private readonly BufferCryptor _sessionCryptorReader;
+    private readonly BufferCryptor _sessionCryptorWriter = new(sessionKey);
+    private readonly BufferCryptor _sessionCryptorReader = new(sessionKey);
     private bool _disposed;
-    private readonly long _cryptorPosBase;
+    private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
     private readonly List<IPPacket> _receivedIpPackets = [];
 
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
-
-    public UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int protocolVersion)
-    {
-        _sessionId = sessionId;
-        _isServer = isServer;
-        _protocolVersion = protocolVersion;
-        _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
-        _sessionCryptorReader = new BufferCryptor(sessionKey);
-        _sessionCryptorWriter = new BufferCryptor(sessionKey);
-    }
 
     public bool IsClosePending => false;
     public bool Connected { get; private set; }
@@ -77,8 +65,8 @@ public class UdpChannel : IDatagramChannel
             // send buffer
             if (_lastRemoteEp == null) throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
             if (_udpChannelTransmitter == null) throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
-            var ret = await _udpChannelTransmitter.SendAsync(_lastRemoteEp, _sessionId, 
-                sessionCryptoPosition, _buffer, bufferIndex, _protocolVersion);
+            var ret = await _udpChannelTransmitter.SendAsync(_lastRemoteEp, sessionId, 
+                sessionCryptoPosition, _buffer, bufferIndex, protocolVersion);
 
             Traffic.Sent += ret;
             LastActivityTime = FastDateTime.Now;
@@ -141,7 +129,7 @@ public class UdpChannel : IDatagramChannel
         if (_disposed) return default;
         _disposed = true;
         Connected = false;
-        if (!_isServer)
+        if (!isServer)
             _udpChannelTransmitter?.Dispose();
 
         return default;

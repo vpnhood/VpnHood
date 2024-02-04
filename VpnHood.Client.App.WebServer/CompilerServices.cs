@@ -1,4 +1,5 @@
 ﻿#pragma warning disable CS9113 // Parameter is unread.
+// ReSharper disable UnusedMember.Global
 // ReSharper disable RedundantTypeDeclarationBody
 // ReSharper disable UnusedParameter.Local
 // ReSharper disable CheckNamespace

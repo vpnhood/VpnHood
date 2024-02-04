@@ -4,9 +4,9 @@
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
-		<ApplicationId>com.vpnhood.connect.android.web</ApplicationId>
-		<ApplicationVersion>450</ApplicationVersion>
-		<ApplicationDisplayVersion>3.3.450</ApplicationDisplayVersion>
+		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
+		<ApplicationVersion>457</ApplicationVersion>
+		<ApplicationDisplayVersion>3.3.457</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -37,19 +37,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="Ads\InterstitialAdLoadCallback2.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Store\VpnHood.Client.App.Store.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.GooglePlayServices.Ads.Lite" Version="122.3.0.2" />
+		<PackageReference Include="VpnHood.Store.Api" Version="1.0.20" />
 	</ItemGroup>
 
 </Project>

@@ -61,7 +61,7 @@ public class ClientProfileService
         var index = _clientProfiles.FindIndex(x => x.ClientProfileId == clientProfile.ClientProfileId);
         if (index == -1)
             throw new NotExistsException($"ClientProfile does not exist. ClientProfileId: {clientProfile.ClientProfileId}");
-            
+
         _clientProfiles[index] = clientProfile;
 
         // fix name
@@ -71,6 +71,7 @@ public class ClientProfileService
 
         Save();
     }
+
 
     public ClientProfile ImportAccessKey(string accessKey)
     {
@@ -100,36 +101,97 @@ public class ClientProfileService
         return ret;
     }
 
-    public async Task<Token> UpdateTokenFromUrl(Token token)
+    public bool UpdateTokenByAccessKey(Token token, string accessKey)
     {
+        try
+        {
+            var newToken = Token.FromAccessKey(accessKey);
+            if (VhUtil.JsonEquals(token, newToken))
+                return false;
+
+            if (token.TokenId != newToken.TokenId)
+                throw new Exception("Could not update the token via access key because its token ID is not the same.");
+
+            ImportAccessToken(newToken);
+            VhLogger.Instance.LogInformation("ServerToken has been updated.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not update token from the given access-key.");
+            return false;
+        }
+
+    }
+
+    [Obsolete("Temporary and will be removed by March 1 2024")]
+    private async Task<bool> UpdateTokenFromUrlV3(Token token)
+    {
+        // allow update from v3 to v4
+        VhLogger.Instance.LogInformation("Trying to get new token from token url v3, Url: {Url}", token.ServerToken.Url);
+        try
+        {
+            using var client = new HttpClient();
+            var accessKey = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20));
+            var newToken = Token.FromAccessKey(accessKey);
+            if (newToken.TokenId != token.TokenId)
+            {
+                VhLogger.Instance.LogInformation("Token has not been updated.");
+                return false;
+            }
+
+            //update store
+            token = newToken;
+            ImportAccessToken(token);
+            VhLogger.Instance.LogInformation("Token has been updated. TokenId: {TokenId}, SupportId: {SupportId}",
+                VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not update token from token url.");
+            return false;
+        }
+
+    }
+
+    public async Task<bool> UpdateTokenFromUrl(Token token)
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (token.ServerToken.Secret == null)
+            return await UpdateTokenFromUrlV3(token);
+#pragma warning restore CS0618 // Type or member is obsolete
+
         if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
-            return token;
+            return false;
 
         // update token
-        VhLogger.Instance.LogInformation("Trying to get new server token from url. Url: {Url}", VhLogger.FormatHostName(token.ServerToken.Url));
+        VhLogger.Instance.LogInformation("Trying to get a new ServerToken from url. Url: {Url}", VhLogger.FormatHostName(token.ServerToken.Url));
         try
         {
             using var client = new HttpClient();
             var encryptedServerToken = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20));
             var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
-            if (token.ServerToken.CreatedTime >= newServerToken.CreatedTime)
+
+            // return older only if token body is same and created time is newer
+            if (!token.ServerToken.IsTokenUpdated(newServerToken))
             {
-                VhLogger.Instance.LogInformation("ServerToken has not been updated.");
-                return token;
+                VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated.");
+                return false;
             }
 
             //update store
             token = VhUtil.JsonClone<Token>(token);
             token.ServerToken = newServerToken;
             ImportAccessToken(token);
-            VhLogger.Instance.LogInformation("ServerToken has been updated.");
+            VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
+            return true;
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Could not update ServerToken from url.");
+            return false;
         }
-
-        return token;
     }
 
     private void Save()
@@ -138,7 +200,7 @@ public class ClientProfileService
         File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(_clientProfiles));
     }
 
-    private ClientProfile[] Load()
+    private IEnumerable<ClientProfile> Load()
     {
         try
         {
@@ -150,4 +212,5 @@ public class ClientProfileService
             return [];
         }
     }
+
 }

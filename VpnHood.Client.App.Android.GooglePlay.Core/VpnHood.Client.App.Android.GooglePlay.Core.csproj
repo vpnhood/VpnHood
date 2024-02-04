@@ -1,7 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.Client.App.</Description>
-		<TargetFramework>netstandard2.1</TargetFramework>
+		<Description>VpnHood Android Client App Common for Google Core</Description>
+		<TargetFramework>net8.0-android34.0</TargetFramework>
+		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.Client.App.Droid.GooglePlay</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,18 +23,9 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>3.3.460</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+		<BaseOutputPath></BaseOutputPath>
+		<BaseIntermediateOutputPath />
 	</PropertyGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-		<PackageReference Include="System.Text.Json" Version="8.0.1" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
-		<ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
-		<ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
@@ -42,7 +35,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Resources\" />
+	  <PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.9" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 	</ItemGroup>
 
 </Project>

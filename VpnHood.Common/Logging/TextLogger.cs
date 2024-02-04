@@ -3,15 +3,9 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Common.Logging;
 
-public abstract class TextLogger : ILogger, ILoggerProvider
+public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
 {
-    private readonly bool _includeScopes;
     private readonly LoggerExternalScopeProvider _scopeProvider = new();
-
-    protected TextLogger(bool includeScopes)
-    {
-        _includeScopes = includeScopes;
-    }
 
     public IDisposable BeginScope<TState>(TState state) where TState : notnull
     {
@@ -51,7 +45,7 @@ public abstract class TextLogger : ILogger, ILoggerProvider
     {
         var logBuilder = new StringBuilder();
 
-        if (_includeScopes)
+        if (includeScopes)
         {
             logBuilder.AppendLine();
             logBuilder.Append($"{logLevel.ToString()[..4]} ");

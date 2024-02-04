@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Utils;
+﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.JobController;
 
@@ -98,6 +99,7 @@ public class JobSection
         }
     }
 
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public void Reschedule()
     {
         lock (_lockObject)

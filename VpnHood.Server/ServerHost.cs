@@ -591,12 +591,11 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
-        var helloResponse = new HelloSessionResponse(sessionResponse)
+        var helloResponse = new HelloResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            ServerTokenUrl = _sessionManager.ServerTokenUrl,
             TcpEndPoints = sessionResponse.TcpEndPoints,
             UdpEndPoints = sessionResponse.UdpEndPoints,
             GaMeasurementId = sessionResponse.GaMeasurementId,
@@ -613,6 +612,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue + TunnelDefaults.ClientRequestTimeoutDelta,
             // client should wait less to make sure server is not closing the connection
             TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta,
+            AccessKey = sessionResponse.AccessKey,
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);

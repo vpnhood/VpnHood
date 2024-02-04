@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -24,7 +25,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private const string FileNameSettings = "settings.json";
     private const string FolderNameProfiles = "profiles";
     private static VpnHoodApp? _instance;
-    private readonly IAppProvider _appProvider;
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
     private readonly string? _appGa4MeasurementId;
@@ -48,7 +48,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
     private VersionStatus _versionStatus = VersionStatus.Unknown;
 
-    public Func<Task<bool>>? VersionCheckProc { get; set; }
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
     public bool IsWaitingForAd { get; set; }
@@ -65,14 +64,15 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
-    public IDevice Device => _appProvider.Device;
+    public IDevice Device { get; }
     public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
     public AppResources Resources { get; }
-
-    private VpnHoodApp(IAppProvider appProvider, AppOptions? options = default)
+    public IAppAccountService? AccountService { get; set; }
+    public IAppUpdaterService? AppUpdaterService { get; set; }
+    private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
@@ -82,9 +82,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
         Resources = options.Resources;
 
-        _appProvider = appProvider ?? throw new ArgumentNullException(nameof(appProvider));
-        if (_appProvider.Device == null) throw new ArgumentNullException(nameof(_appProvider.Device));
-        Device.OnStartAsService += Device_OnStartAsService;
+        Device = device;
+        device.OnStartAsService += Device_OnStartAsService;
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
@@ -107,7 +106,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         });
 
         // create start up logger
-        if (!appProvider.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
+        if (!device.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
@@ -177,25 +176,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (connectionState == _lastConnectionState)
             return;
         _lastConnectionState = connectionState;
-
-        if (connectionState == AppConnectionState.Connected)
-        {
-            // Update ServerTokenUrl if ut has changed
-            var clientProfile = ClientProfileService.FindByTokenId(Client?.Token.TokenId ?? string.Empty);
-            if (clientProfile != null && Client != null && Client.ServerTokenUrl != clientProfile.Token.ServerToken.Url)
-            {
-                VhLogger.Instance.LogInformation(GeneralEventId.Session,
-                    "Updating ServerToken Url. ServerTokenUrl: {ServerTokenUrl}",
-                    VhLogger.FormatHostName(Client.ServerTokenUrl));
-
-                clientProfile.Token.ServerToken.Url = Client.ServerTokenUrl;
-                ClientProfileService.Update(clientProfile);
-            }
-
-            // Check new version after connection
-            _ = VersionCheck();
-        }
-
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -208,9 +188,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public event EventHandler? ClientConnectCreated;
 
-    public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
+    public static VpnHoodApp Init(IDevice device, AppOptions? options = default)
     {
-        return new VpnHoodApp(clientAppProvider, options);
+        return new VpnHoodApp(device, options);
     }
 
     private void RemoveClientProfileByTokenId(string tokenId)
@@ -350,7 +330,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         // log general info
         VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
         VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
-        VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
+        VhLogger.Instance.LogInformation($"OS: {Device.OsInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
         // it slows down tests and does not need to be logged in normal situation
@@ -411,11 +391,19 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 await Diagnoser.Diagnose(ClientConnect);
             else
                 await Diagnoser.Connect(ClientConnect);
+
+            // update access token if ResponseAccessKey is set
+            if (ClientConnect.Client.ResponseAccessKey != null)
+                ClientProfileService.UpdateTokenByAccessKey(token, ClientConnect.Client.ResponseAccessKey);
+
+            // check version after first connection
+            _ = VersionCheck();
         }
         finally
         {
-            // update token after connection established or if error occurred
-            _ = ClientProfileService.UpdateTokenFromUrl(token);
+            // try to update token from url after connection or error if ResponseAccessKey is not set
+            if (ClientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
+                _ = ClientProfileService.UpdateTokenFromUrl(token); 
         }
     }
 
@@ -494,7 +482,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
             // check diagnose
             if (_hasDiagnoseStarted && _lastError == null)
-                _lastError = "Diagnose has finished and no issue has been detected.";
+                _lastError = "Diagnoser has finished and no issue has been detected.";
 
             // close client
             try
@@ -571,11 +559,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             return;
 
         // check version by app container
-        if (VersionCheckProc != null)
+        if (AppUpdaterService != null)
         {
             try
             {
-                if (await VersionCheckProc())
+                if (await AppUpdaterService.Update())
                 {
                     _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
                     VersionCheckRequired = false;

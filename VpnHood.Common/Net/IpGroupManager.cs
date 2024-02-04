@@ -124,13 +124,9 @@ public class IpGroupManager
         return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
     }
 
-    private class IpGroupNetwork : IpGroup
+    private class IpGroupNetwork(string ipGroupId, string ipGroupName) 
+        : IpGroup(ipGroupId, ipGroupName)
     {
-        public IpGroupNetwork(string ipGroupId, string ipGroupName)
-            : base(ipGroupId, ipGroupName)
-        {
-        }
-
         public List<IpRange> IpRanges { get; } = [];
     }
 }

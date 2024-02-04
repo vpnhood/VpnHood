@@ -6,6 +6,7 @@ using VpnHood.Client.App.WebServer;
 using VpnHood.Client.App.Win.Common;
 using VpnHood.Common.Logging;
 using System.Net;
+using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Win;
 
@@ -21,7 +22,7 @@ public partial class App : Application
             WinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
-            VpnHoodApp.Init(new WinAppProvider(), new AppOptions
+            VpnHoodApp.Init(new WinDivertDevice(), new AppOptions
             {
                 Resources = VpnHoodAppResource.Resources,
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
@@ -30,7 +31,7 @@ public partial class App : Application
             // initialize SPA
             ArgumentNullException.ThrowIfNull(VpnHoodAppResource.Resources.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodAppResource.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(spaResource, url2: WinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
+            VpnHoodAppWebServer.Init(spaResource, url: WinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
 
             // initialize Win
             WinApp.Instance.ExitRequested += (_, _) => Shutdown();

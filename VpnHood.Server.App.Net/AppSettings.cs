@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Managers.Http;
@@ -8,13 +9,17 @@ namespace VpnHood.Server.App;
 
 public class AppSettings
 {
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [Obsolete("Use HttpAccessManager")]
     public HttpAccessManagerOptions? RestAccessServer { set => HttpAccessManager = value; }
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [Obsolete("Use HttpAccessManager")]
     public HttpAccessManagerOptions? HttpAccessServer { set => HttpAccessManager = value; }
     [Obsolete("Use FileAccessManager")]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public FileAccessManagerOptions? FileAccessServer { set => FileAccessManager = value; }
     [Obsolete("Use ManagementSecret")]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public string? Secret { set => ManagementSecret = value; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

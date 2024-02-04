@@ -3,23 +3,15 @@ using VpnHood.Client.App.Droid.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public sealed class AndroidAppNotification : IDisposable
+public sealed class AndroidAppNotification(Context context, VpnHoodApp vpnHoodApp) 
+    : IDisposable
 {
     public static int NotificationId => 1000;
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
-    private readonly Notification.Builder _notificationBuilder;
+    private readonly Notification.Builder _notificationBuilder = CreateNotificationBuilder(context, vpnHoodApp.Resources);
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
-    private readonly Context _context;
-    private readonly VpnHoodApp _vpnHoodApp;
-
-    public AndroidAppNotification(Context context, VpnHoodApp vpnHoodApp)
-    {
-        _context = context;
-        _vpnHoodApp = vpnHoodApp;
-        _notificationBuilder = CreateNotificationBuilder(context, vpnHoodApp.Resources);
-    }
 
     public Notification Notification => _notificationBuilder.Build();
 
@@ -92,13 +84,13 @@ public sealed class AndroidAppNotification : IDisposable
         lock (_stateLock)
         {
             // update only when the state changed
-            var connectionState = _vpnHoodApp.ConnectionState;
+            var connectionState = vpnHoodApp.ConnectionState;
             if (_lastNotifyState == connectionState && !force)
                 return;
 
             // connection status
             // Set subtitle
-            var activeProfileName = _vpnHoodApp.GetActiveClientProfile()?.ToInfo().ClientProfileName;
+            var activeProfileName = vpnHoodApp.GetActiveClientProfile()?.ToInfo().ClientProfileName;
             _notificationBuilder.SetContentTitle(activeProfileName);
             _notificationBuilder.SetSubText(connectionState == AppConnectionState.Connected
                 ? $"{connectionState}"
@@ -112,7 +104,7 @@ public sealed class AndroidAppNotification : IDisposable
 
 
             // show or hide
-            var notificationManager = (NotificationManager?)_context.GetSystemService(Context.NotificationService);
+            var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService);
             if (notificationManager == null)
                 return;
 

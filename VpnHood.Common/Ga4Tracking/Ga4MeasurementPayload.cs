@@ -1,8 +1,10 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Ga4Tracking;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 internal class Ga4MeasurementPayload
 {
     public class UserProperty

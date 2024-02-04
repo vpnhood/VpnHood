@@ -3,14 +3,8 @@
 namespace VpnHood.Common.Net;
 
 // ReSharper disable once InconsistentNaming
-public class IPEndPointPair
+public class IPEndPointPair(IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
 {
-    public IPEndPointPair(IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
-    {
-        LocalEndPoint = localEndPoint;
-        RemoteEndPoint = remoteEndPoint;
-    }
-
-    public IPEndPoint LocalEndPoint { get; } 
-    public IPEndPoint RemoteEndPoint { get; } 
+    public IPEndPoint LocalEndPoint { get; } = localEndPoint;
+    public IPEndPoint RemoteEndPoint { get; } = remoteEndPoint;
 }

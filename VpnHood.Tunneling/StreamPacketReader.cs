@@ -5,17 +5,12 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class StreamPacketReader : IAsyncDisposable
+public class StreamPacketReader(Stream stream) : IAsyncDisposable
 {
     private readonly List<IPPacket> _ipPackets = [];
-    private readonly ReadCacheStream _stream;
+    private readonly ReadCacheStream _stream = new(stream, true, 15000); // max batch
     private byte[] _packetBuffer = new byte[1600];
     private int _packetBufferCount;
-
-    public StreamPacketReader(Stream stream)
-    {
-        _stream = new ReadCacheStream(stream, true, 15000); // max batch
-    }
 
 
     /// <returns>null if read nothing</returns>

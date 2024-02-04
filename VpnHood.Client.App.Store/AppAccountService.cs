@@ -23,8 +23,9 @@ public class AppAccountService(
 
         var appAccount = new AppAccount()
         {
-            Email = currentUser.Email,
+            UserId = currentUser.UserId,
             Name = currentUser.Name,
+            Email = currentUser.Email,
             SubscriptionPlanId = subscriptionPlanId?.ProviderPlanId,
         };
         return appAccount;

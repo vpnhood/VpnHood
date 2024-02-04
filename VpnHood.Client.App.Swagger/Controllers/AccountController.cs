@@ -8,6 +8,12 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 [Route("api/account")]
 public class AccountController : ControllerBase, IAccountController
 {
+    [HttpGet()]
+    public Task<AppAccount> Get()
+    {
+        throw new NotImplementedException();
+    }
+
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
@@ -26,8 +32,8 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
-    [HttpGet()]
-    public  Task<AppAccount> Get()
+    [HttpGet("is-sign-out")]
+    public bool IsSignedOut()
     {
         throw new NotImplementedException();
     }

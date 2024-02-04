@@ -11,6 +11,12 @@ internal class AccountController : WebApiController, IAccountController
     public IAppAccountService AccountService => VpnHoodApp.Instance.AccountService
         ?? throw new Exception("Account service is not available at this moment.");
 
+    [Route(HttpVerbs.Get, "/")]
+    public Task<AppAccount> Get()
+    {
+        return AccountService.GetAccount();
+    }
+
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
@@ -32,9 +38,9 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.Authentication.SignOut();
     }
 
-    [Route(HttpVerbs.Get, "/")]
-    public Task<AppAccount> Get()
+    [Route(HttpVerbs.Get, "/is-sign-out")]
+    public bool IsSignedOut()
     {
-        return AccountService.GetAccount();
+        return AccountService.Authentication.IsSignedOut();
     }
 }

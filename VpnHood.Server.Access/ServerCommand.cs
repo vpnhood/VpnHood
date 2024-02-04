@@ -1,11 +1,6 @@
 ﻿namespace VpnHood.Server.Access;
 
-public class ServerCommand
+public class ServerCommand(string configCode)
 {
-    public string ConfigCode { get; set; }
-
-    public ServerCommand(string configCode)
-    {
-        ConfigCode = configCode;
-    }
+    public string ConfigCode { get; set; } = configCode;
 }

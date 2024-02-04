@@ -2,14 +2,8 @@
 
 namespace VpnHood.Client.Device;
 
-public class PacketReceivedEventArgs : EventArgs
+public sealed class PacketReceivedEventArgs(IPPacket[] ipPackets, IPacketCapture packetCapture) : EventArgs
 {
-    public IPPacket[] IpPackets { get; }
-    public IPacketCapture PacketCapture { get; }
-
-    public PacketReceivedEventArgs(IPPacket[] ipPackets, IPacketCapture packetCapture)
-    {
-        IpPackets = ipPackets;
-        PacketCapture = packetCapture;
-    }
+    public IPPacket[] IpPackets { get; } = ipPackets;
+    public IPacketCapture PacketCapture { get; } = packetCapture;
 }

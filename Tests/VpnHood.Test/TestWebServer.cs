@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using EmbedIO;
@@ -38,16 +39,12 @@ public class TestWebServer : IDisposable
 
     public IPEndPoint HttpsV4EndPoint1 => HttpsV4EndPoints[0];
     public IPEndPoint HttpsV4EndPoint2 => HttpsV4EndPoints[1];
-    public IPEndPoint HttpsV4EndPoint3 => HttpsV4EndPoints[2];
     public IPEndPoint HttpV4EndPoint1 => HttpV4EndPoints[0];
     public IPEndPoint HttpV4EndPoint2 => HttpV4EndPoints[1];
-    public IPEndPoint HttpV4EndPoint3 => HttpV4EndPoints[2];
     public IPEndPoint UdpV4EndPoint1 => UdpV4EndPoints[0];
     public IPEndPoint UdpV4EndPoint2 => UdpV4EndPoints[1];
-    public IPEndPoint UdpV4EndPoint4 => UdpV4EndPoints[2];
     public IPEndPoint UdpV6EndPoint1 => UdpV6EndPoints[0];
     public IPEndPoint UdpV6EndPoint2 => UdpV6EndPoints[1];
-    public IPEndPoint UdpV6EndPoint4 => UdpV6EndPoints[2];
     public IPEndPoint[] UdpV4EndPoints  => UdpEndPoints.Where(x=>x.AddressFamily== AddressFamily.InterNetwork).ToArray();
     public IPEndPoint[] UdpV6EndPoints  => UdpEndPoints.Where(x=>x.AddressFamily== AddressFamily.InterNetworkV6).ToArray();
 
@@ -59,6 +56,7 @@ public class TestWebServer : IDisposable
     public string FileContent2 { get; set; }
 
     public Uri FileHttpUrl1 => new($"http://{HttpV4EndPoints.First()}/file1");
+    [SuppressMessage("ReSharper", "UnusedMember.Global")] 
     public Uri FileHttpUrl2 => new($"http://{HttpV4EndPoints.First()}/file2");
 
     private UdpClient[] UdpClients { get; }
@@ -130,15 +128,8 @@ public class TestWebServer : IDisposable
             udpClient.Dispose();
     }
 
-    private class ApiController : WebApiController
+    private class ApiController(TestWebServer testWebServer) : WebApiController
     {
-        private readonly TestWebServer _testWebServer;
-
-        public ApiController(TestWebServer testWebServer)
-        {
-            _testWebServer = testWebServer;
-        }
-
         // ReSharper disable once UnusedMember.Local
         [Route(HttpVerbs.Get, "/file1")]
         public async Task File1()
@@ -146,7 +137,7 @@ public class TestWebServer : IDisposable
             Response.ContentType = MimeType.PlainText;
             await using var stream = HttpContext.OpenResponseStream();
             await using var streamWriter = new StreamWriter(stream);
-            await streamWriter.WriteAsync(_testWebServer.FileContent1);
+            await streamWriter.WriteAsync(testWebServer.FileContent1);
         }
 
         // ReSharper disable once UnusedMember.Local
@@ -156,7 +147,7 @@ public class TestWebServer : IDisposable
             Response.ContentType = MimeType.PlainText;
             await using var stream = HttpContext.OpenResponseStream();
             await using var streamWriter = new StreamWriter(stream);
-            await streamWriter.WriteAsync(_testWebServer.FileContent2);
+            await streamWriter.WriteAsync(testWebServer.FileContent2);
         }
     }
 }

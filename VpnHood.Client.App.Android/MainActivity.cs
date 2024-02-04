@@ -1,7 +1,9 @@
-﻿using Android.Content;
+﻿using System.Diagnostics.CodeAnalysis;
+using Android.Content;
 using Android.Content.PM;
 using Android.Views;
 using Android.Service.QuickSettings;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 
 namespace VpnHood.Client.App.Droid;
@@ -22,6 +24,7 @@ namespace VpnHood.Client.App.Droid;
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault], DataScheme = "content", DataMimeTypes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3])]
 [IntentFilter([Intent.ActionView], Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable], DataSchemes = [AccessKeyScheme1, AccessKeyScheme2])]
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public class MainActivity : AndroidAppWebViewMainActivity
 {
     // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
@@ -35,5 +38,17 @@ public class MainActivity : AndroidAppWebViewMainActivity
     {
         AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2];
         AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3];
+    }
+
+
+    // ReSharper disable once ReturnTypeCanBeNotNullable
+    protected override IAppUpdaterService? CreateAppUpdaterService()
+    {
+#if  GOOGLE_PLAY
+        // ReSharper disable once RedundantNameQualifier
+        return new VpnHood.Client.App.Droid.GooglePlay.GooglePlayAppUpdaterService(this);
+#else
+        return null;
+#endif
     }
 }

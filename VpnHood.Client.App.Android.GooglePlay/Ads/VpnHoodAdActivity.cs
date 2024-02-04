@@ -1,9 +1,8 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 
-
-namespace VpnHood.Client.App.Droid.Connect.Ads;
-[Activity(Label = "@string/ads_activity_title")]
+namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
+//[Activity(Label = "@string/ads_activity_title")]
 public class VpnHoodAdActivity : Activity
 {
     private static bool _isInitializedCalled;

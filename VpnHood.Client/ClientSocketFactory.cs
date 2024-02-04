@@ -5,43 +5,36 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client;
 
-public class ClientSocketFactory : ISocketFactory
+public class ClientSocketFactory(
+    IPacketCapture packetCapture,
+    ISocketFactory socketFactory)
+    : ISocketFactory
 {
-    private readonly IPacketCapture _packetCapture;
-    private readonly ISocketFactory _socketFactory;
-
-    public ClientSocketFactory(IPacketCapture packetCapture, 
-        ISocketFactory socketFactory)
-    {
-        _packetCapture = packetCapture;
-        _socketFactory = socketFactory;
-    }
-
     public TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
-        var tcpClient = _socketFactory.CreateTcpClient(addressFamily);
+        var tcpClient = socketFactory.CreateTcpClient(addressFamily);
 
         // config for client
-        _socketFactory.SetKeepAlive(tcpClient.Client, true);
+        socketFactory.SetKeepAlive(tcpClient.Client, true);
         VhUtil.ConfigTcpClient(tcpClient, null, null);
         
         // auto protect
-        if (_packetCapture.CanProtectSocket)
-            _packetCapture.ProtectSocket(tcpClient.Client);
+        if (packetCapture.CanProtectSocket)
+            packetCapture.ProtectSocket(tcpClient.Client);
 
         return tcpClient;
     }
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var ret = _socketFactory.CreateUdpClient(addressFamily);
-        if (_packetCapture.CanProtectSocket)
-            _packetCapture.ProtectSocket(ret.Client);
+        var ret = socketFactory.CreateUdpClient(addressFamily);
+        if (packetCapture.CanProtectSocket)
+            packetCapture.ProtectSocket(ret.Client);
         return ret;
     }
 
     public void SetKeepAlive(Socket socket, bool enable)
     {
-        _socketFactory.SetKeepAlive(socket, enable);
+        socketFactory.SetKeepAlive(socket, enable);
     }
 }

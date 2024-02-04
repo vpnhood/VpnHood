@@ -145,7 +145,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            SessionManager.ServerTokenUrl = serverConfig.ServerTokenUrl;
             JobSection.Interval = serverConfig.UpdateStatusIntervalValue;
             ServerUtil.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
@@ -234,7 +233,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
         return VhLogger.IsAnonymousMode
-            ? VhUtil.RedactJsonValue(json, [nameof(ServerConfig.ServerTokenUrl), nameof(ServerConfig.ServerSecret)])
+            ? VhUtil.RedactJsonValue(json, [nameof(ServerConfig.ServerSecret)])
             : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
     }
 

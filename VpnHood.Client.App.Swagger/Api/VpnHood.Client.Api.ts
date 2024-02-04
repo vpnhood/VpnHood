@@ -11,7 +11,255 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelToken } from 'axios';
 
-export class AppApiClient {
+export class AccountClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    get( cancelToken?: CancelToken): Promise<AppAccount> {
+        let url_ = this.baseUrl + "/api/account";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGet(_response);
+        });
+    }
+
+    protected processGet(response: AxiosResponse): Promise<AppAccount> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppAccount.fromJS(resultData200);
+            return Promise.resolve<AppAccount>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppAccount>(null as any);
+    }
+
+    isSigninWithGoogleSupported( cancelToken?: CancelToken): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/account/is-signin-with-google-supported";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processIsSigninWithGoogleSupported(_response);
+        });
+    }
+
+    protected processIsSigninWithGoogleSupported(response: AxiosResponse): Promise<boolean> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<boolean>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<boolean>(null as any);
+    }
+
+    signInWithGoogle( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/account/signin-with-google";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSignInWithGoogle(_response);
+        });
+    }
+
+    protected processSignInWithGoogle(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    signOut( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/account/sign-out";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSignOut(_response);
+        });
+    }
+
+    protected processSignOut(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    isSignedOut( cancelToken?: CancelToken): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/account/is-sign-out";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processIsSignedOut(_response);
+        });
+    }
+
+    protected processIsSignedOut(response: AxiosResponse): Promise<boolean> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<boolean>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<boolean>(null as any);
+    }
+}
+
+export class AppClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
@@ -790,6 +1038,175 @@ export class AppApiClient {
     }
 }
 
+export class BillingClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
+
+    getSubscriptionPlans( cancelToken?: CancelToken): Promise<SubscriptionPlan[]> {
+        let url_ = this.baseUrl + "/api/billing/subscription-plans";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSubscriptionPlans(_response);
+        });
+    }
+
+    protected processGetSubscriptionPlans(response: AxiosResponse): Promise<SubscriptionPlan[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(SubscriptionPlan.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<SubscriptionPlan[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SubscriptionPlan[]>(null as any);
+    }
+
+    purchase(userId: string, planId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/billing/purchase?";
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined and cannot be null.");
+        else
+            url_ += "userId=" + encodeURIComponent("" + userId) + "&";
+        if (planId === undefined || planId === null)
+            throw new Error("The parameter 'planId' must be defined and cannot be null.");
+        else
+            url_ += "planId=" + encodeURIComponent("" + planId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processPurchase(_response);
+        });
+    }
+
+    protected processPurchase(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+}
+
+export class AppAccount implements IAppAccount {
+    userId!: string;
+    name?: string | null;
+    email?: string | null;
+    subscriptionPlanId?: string | null;
+
+    constructor(data?: IAppAccount) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.userId = _data["userId"] !== undefined ? _data["userId"] : <any>null;
+            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
+            this.email = _data["email"] !== undefined ? _data["email"] : <any>null;
+            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppAccount {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppAccount();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["userId"] = this.userId !== undefined ? this.userId : <any>null;
+        data["name"] = this.name !== undefined ? this.name : <any>null;
+        data["email"] = this.email !== undefined ? this.email : <any>null;
+        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
+        return data;
+    }
+}
+
+export interface IAppAccount {
+    userId: string;
+    name?: string | null;
+    email?: string | null;
+    subscriptionPlanId?: string | null;
+}
+
 export class AppConfig implements IAppConfig {
     features!: AppFeatures;
     settings!: AppSettings;
@@ -976,7 +1393,7 @@ export interface IAppSettings {
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
-    cultureName!: string;
+    cultureCode!: string;
     defaultClientProfileId?: string | null;
     maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
@@ -1009,7 +1426,7 @@ export class UserSettings implements IUserSettings {
     init(_data?: any) {
         if (_data) {
             this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
-            this.cultureName = _data["cultureName"] !== undefined ? _data["cultureName"] : <any>null;
+            this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.defaultClientProfileId = _data["defaultClientProfileId"] !== undefined ? _data["defaultClientProfileId"] : <any>null;
             this.maxReconnectCount = _data["maxReconnectCount"] !== undefined ? _data["maxReconnectCount"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
@@ -1073,7 +1490,7 @@ export class UserSettings implements IUserSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
-        data["cultureName"] = this.cultureName !== undefined ? this.cultureName : <any>null;
+        data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["defaultClientProfileId"] = this.defaultClientProfileId !== undefined ? this.defaultClientProfileId : <any>null;
         data["maxReconnectCount"] = this.maxReconnectCount !== undefined ? this.maxReconnectCount : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
@@ -1115,7 +1532,7 @@ export class UserSettings implements IUserSettings {
 
 export interface IUserSettings {
     logging: AppLogSettings;
-    cultureName: string;
+    cultureCode: string;
     defaultClientProfileId?: string | null;
     maxReconnectCount: number;
     maxDatagramChannelCount: number;
@@ -1746,6 +2163,46 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
 export interface IClientProfileUpdateParams {
     name?: string | null;
+}
+
+export class SubscriptionPlan implements ISubscriptionPlan {
+    subscriptionPlanId!: string;
+    planPrice!: string;
+
+    constructor(data?: ISubscriptionPlan) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
+            this.planPrice = _data["planPrice"] !== undefined ? _data["planPrice"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): SubscriptionPlan {
+        data = typeof data === 'object' ? data : {};
+        let result = new SubscriptionPlan();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
+        data["planPrice"] = this.planPrice !== undefined ? this.planPrice : <any>null;
+        return data;
+    }
+}
+
+export interface ISubscriptionPlan {
+    subscriptionPlanId: string;
+    planPrice: string;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

@@ -1,9 +1,4 @@
 ﻿namespace VpnHood.Tunneling.Messaging;
 
-public class ByeRequest : RequestBase
-{
-    public ByeRequest(string requestId, ulong sessionId, byte[] sessionKey)
-        : base(Messaging.RequestCode.Bye, requestId, sessionId, sessionKey)
-    {
-    }
-}
+public class ByeRequest(string requestId, ulong sessionId, byte[] sessionKey)
+    : RequestBase(Messaging.RequestCode.Bye, requestId, sessionId, sessionKey);

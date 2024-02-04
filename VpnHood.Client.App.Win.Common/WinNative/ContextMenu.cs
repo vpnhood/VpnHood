@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 // ReSharper disable once CheckNamespace
 namespace WinNative;
@@ -48,6 +49,7 @@ public class ContextMenu : IDisposable
     }
 
     [Flags]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public enum MenuFlags : uint
     {
         String = 0,

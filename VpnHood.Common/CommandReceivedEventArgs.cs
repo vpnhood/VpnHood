@@ -1,10 +1,6 @@
 ﻿namespace VpnHood.Common;
 
-public class CommandReceivedEventArgs : EventArgs
+public class CommandReceivedEventArgs(string[] arguments) : EventArgs
 {
-    public string[] Arguments;
-    public CommandReceivedEventArgs(string[] arguments)
-    {
-        Arguments = arguments;
-    }
+    public string[] Arguments = arguments;
 }

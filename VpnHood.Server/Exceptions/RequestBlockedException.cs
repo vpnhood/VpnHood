@@ -5,13 +5,10 @@ using VpnHood.Tunneling;
 
 namespace VpnHood.Server.Exceptions;
 
-internal class RequestBlockedException : ServerSessionException
+internal class RequestBlockedException(IPEndPoint remoteEndPoint, Session session, string requestId)
+    : ServerSessionException(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId,
+        "The destination address is blocked.")
 {
-    public RequestBlockedException(IPEndPoint remoteEndPoint, Session session, string requestId)
-        : base(remoteEndPoint, session, SessionErrorCode.GeneralError, requestId, "The destination address is blocked.")
-    {
-    }
-
     protected override LogLevel LogLevel => LogLevel.Information;
     protected override EventId EventId => GeneralEventId.NetFilter;
     

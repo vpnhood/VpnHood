@@ -3,15 +3,11 @@ using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public class AndroidApp : Application
+public class AndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
+    : Application(javaReference, transfer)
 {
     private AndroidAppNotification? _appNotification;
     protected virtual AppOptions AppOptions { get; } = new();
-
-    public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
-        : base(javaReference, transfer)
-    {
-    }
 
     public override void OnCreate()
     {
@@ -19,7 +15,7 @@ public class AndroidApp : Application
 
         //app init
         if (!VpnHoodApp.IsInit) 
-            VpnHoodApp.Init(new AndroidAppProvider(), AppOptions);
+            VpnHoodApp.Init(new AndroidDevice(), AppOptions);
 
         // init notification
         _appNotification = new AndroidAppNotification(this, VpnHoodApp.Instance); 

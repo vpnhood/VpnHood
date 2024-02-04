@@ -6,9 +6,9 @@ using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
 
-namespace VpnHood.Client.App.WebServer;
+namespace VpnHood.Client.App.WebServer.Controllers;
 
-internal class ClientAppApiController : WebApiController, IClientAppApi
+internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 

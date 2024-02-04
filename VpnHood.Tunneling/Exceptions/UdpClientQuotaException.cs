@@ -2,14 +2,9 @@
 
 namespace VpnHood.Tunneling.Exceptions;
 
-public class UdpClientQuotaException : Exception, ISelfLog
+public class UdpClientQuotaException(int maxUdpClient)
+    : Exception($"Maximum UdpClient has been reached. MaxUdpClient: {maxUdpClient}"), ISelfLog
 {
-    public UdpClientQuotaException(int maxUdpClient) 
-        : base($"Maximum UdpClient has been reached. MaxUdpClient: {maxUdpClient}")
-    {
-
-    }
-
     public void Log()
     {
         // do nothing

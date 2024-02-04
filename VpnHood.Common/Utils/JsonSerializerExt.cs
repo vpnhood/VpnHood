@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
 namespace VpnHood.Common.Utils;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class JsonSerializerExt
 {
     // Dynamically attach a JsonSerializerOptions copy that is configured using PopulateTypeInfoResolver
@@ -46,21 +48,14 @@ public static class JsonSerializerExt
         return populateResolverOptions;
     }
 
-    private class PopulateTypeInfoResolver : IJsonTypeInfoResolver
+    private class PopulateTypeInfoResolver(IJsonTypeInfoResolver jsonTypeInfoResolver) : IJsonTypeInfoResolver
     {
-        private readonly IJsonTypeInfoResolver _jsonTypeInfoResolver;
-        
         [ThreadStatic]
         internal static object? TargetPopulateObject;
 
-        public PopulateTypeInfoResolver(IJsonTypeInfoResolver jsonTypeInfoResolver)
-        {
-            _jsonTypeInfoResolver = jsonTypeInfoResolver;
-        }
-
         public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
         {
-            var typeInfo = _jsonTypeInfoResolver.GetTypeInfo(type, options);
+            var typeInfo = jsonTypeInfoResolver.GetTypeInfo(type, options);
             if (typeInfo == null || typeInfo.Kind == JsonTypeInfoKind.None) 
                 return typeInfo;
             

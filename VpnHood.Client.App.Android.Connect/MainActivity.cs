@@ -29,6 +29,7 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class MainActivity : AndroidAppWebViewMainActivity
 {
     protected override bool ListenToAllIps => AssemblyInfo.ListenToAllIps;
+    protected override int? DefaultSpaPort => AssemblyInfo.DefaultSpaPort;
 
     protected override IAppUpdaterService CreateAppUpdaterService()
     {

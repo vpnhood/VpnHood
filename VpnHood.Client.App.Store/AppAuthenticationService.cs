@@ -39,25 +39,41 @@ public class AppAuthenticationService : IAppAuthenticationService
         _apiKey = LoadApiKey(AccountFilePath);
     }
 
+    private ApiKey? ApiKey
+    {
+        get => _apiKey;
+        set
+        {
+            _apiKey = value;
+            if (value == null)
+            {
+                if (File.Exists(AccountFilePath))
+                    File.Delete(AccountFilePath);
+                return;
+            }
+
+            File.WriteAllText(AccountFilePath, JsonSerializer.Serialize(value));
+        }
+    }
+
     private async Task<ApiKey?> TryGetApiKey()
     {
         // null if it has not been signed in yet
-        if (_apiKey == null)
+        if (ApiKey == null)
             return null;
 
         // current key is valid
-        if (_apiKey.AccessToken.ExpirationTime + TimeSpan.FromMinutes(5) > DateTime.UtcNow)
-            return _apiKey;
+        if (ApiKey.AccessToken.ExpirationTime - TimeSpan.FromMinutes(5) > DateTime.UtcNow)
+            return ApiKey;
 
         try
         {
             // refresh by refresh token
-            if (_apiKey.RefreshToken != null && _apiKey.RefreshToken.ExpirationTime > DateTime.UtcNow)
+            if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow)
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                _apiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = _apiKey.RefreshToken.Value });
-                await SaveApiKey(_apiKey);
-                return _apiKey;
+                ApiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value });
+                return ApiKey;
             }
         }
         catch (Exception ex)
@@ -72,9 +88,8 @@ public class AppAuthenticationService : IAppAuthenticationService
             if (!string.IsNullOrWhiteSpace(idToken))
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                _apiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken });
-                await SaveApiKey(_apiKey);
-                return _apiKey;
+                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken });
+                return ApiKey;
             }
         }
         catch (Exception ex)
@@ -96,6 +111,7 @@ public class AppAuthenticationService : IAppAuthenticationService
 
     public async Task SignOut()
     {
+        ApiKey = null;
         if (File.Exists(AccountFilePath))
             File.Delete(AccountFilePath);
 
@@ -103,17 +119,21 @@ public class AppAuthenticationService : IAppAuthenticationService
             await _externalAuthenticationService.SignOut();
     }
 
+    public bool IsSignedOut()
+    {
+        return ApiKey == null;
+    }
+
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
         try
         {
-            var apiKey = await authenticationClient.SignInAsync(new SignInRequest
+            ApiKey = await authenticationClient.SignInAsync(new SignInRequest
             {
                 IdToken = idToken,
                 RefreshTokenType = RefreshTokenType.None
             });
-            await SaveApiKey(apiKey);
         }
         catch (ApiException ex)
         {
@@ -125,12 +145,11 @@ public class AppAuthenticationService : IAppAuthenticationService
     private async Task SignUpToVpnHoodStore(string idToken)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-        var apiKey = await authenticationClient.SignUpAsync(new SignUpRequest()
+        ApiKey = await authenticationClient.SignUpAsync(new SignUpRequest()
         {
             IdToken = idToken,
             RefreshTokenType = RefreshTokenType.None
         });
-        await SaveApiKey(apiKey);
     }
 
     private static ApiKey? LoadApiKey(string accountFilePath)
@@ -151,10 +170,6 @@ public class AppAuthenticationService : IAppAuthenticationService
         }
     }
 
-    private static Task SaveApiKey(ApiKey apiKey)
-    {
-        return File.WriteAllTextAsync(AccountFilePath, JsonSerializer.Serialize(apiKey));
-    }
     public void Dispose()
     {
         if (_disposed) return;

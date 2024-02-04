@@ -23,7 +23,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         {
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
             using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream, listenToAllIps: ListenToAllIps);
+            VpnHoodAppWebServer.Init(memoryStream, 9091, listenToAllIps: ListenToAllIps);//TODO change default port
         }
 
         InitWebUi();

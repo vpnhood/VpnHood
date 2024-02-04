@@ -1,5 +1,4 @@
 using Android.BillingClient.Api;
-using Android.Content;
 using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
@@ -7,16 +6,20 @@ namespace VpnHood.Client.App.Droid.GooglePlay;
 public class GooglePlayBillingService: IAppBillingService
 {
     private readonly BillingClient _billingClient;
-    private GooglePlayBillingService(Context context)
+    private readonly Activity _activity;
+    private ProductDetails? _productDetails;
+    private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
+    private GooglePlayBillingService(Activity activity)
     {
-        var builder = BillingClient.NewBuilder(context);
+        var builder = BillingClient.NewBuilder(activity);
         builder.SetListener(PurchasesUpdatedListener);
         _billingClient = builder.EnablePendingPurchases().Build();
+        _activity = activity;
     }
 
-    public static GooglePlayBillingService Create(Context context)
+    public static GooglePlayBillingService Create(Activity activity)
     {
-        return new GooglePlayBillingService(context);
+        return new GooglePlayBillingService(activity);
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -36,7 +39,7 @@ public class GooglePlayBillingService: IAppBillingService
         var productDetailsParams = QueryProductDetailsParams.NewBuilder()
             .SetProductList([
                 QueryProductDetailsParams.Product.NewBuilder()
-                    .SetProductId("general_subscription") //TODO Change product id
+                    .SetProductId("general_subscription")
                     .SetProductType(BillingClient.ProductType.Subs)
                     .Build()
             ])
@@ -48,20 +51,52 @@ public class GooglePlayBillingService: IAppBillingService
         if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
 
         var productDetails = response.ProductDetails.First();
+        _productDetails = productDetails;
 
         var plans = productDetails.GetSubscriptionOfferDetails();
+        _subscriptionOfferDetails = plans;
 
         var subscriptionPlans = plans
             .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
             .Select(plan => new SubscriptionPlan()
             {
                 SubscriptionPlanId = plan.BasePlanId,
-                PriceAmount = plan.PricingPhases.PricingPhaseList.First().PriceAmountMicros,
-                PriceCurrency = plan.PricingPhases.PricingPhaseList.First().PriceCurrencyCode
+                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice,
             })
             .ToArray();
 
         return subscriptionPlans;
+    }
+
+    public async Task Purchase(string userId, string planId)
+    {
+        await EnsureConnected();
+
+        var offerToken = _subscriptionOfferDetails == null 
+            ? throw new NullReferenceException("Could not found subscription offer details.") 
+            : _subscriptionOfferDetails
+            .Where(x => x.BasePlanId == planId)
+            .Select(x => x.OfferToken)
+            .Single();
+
+        var productDetailsParam = BillingFlowParams.ProductDetailsParams.NewBuilder()
+            .SetProductDetails(_productDetails ?? throw new NullReferenceException("Could not found product details."))
+            .SetOfferToken(offerToken)
+            .Build();
+
+        var billingFlowParams = BillingFlowParams.NewBuilder()
+            .SetObfuscatedAccountId(userId)
+            .SetProductDetailsParamsList([productDetailsParam])
+            .Build();
+
+
+        var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
+
+        if (billingResult.ResponseCode != BillingResponseCode.Ok)
+            throw new Exception(billingResult.DebugMessage)
+            {
+                Data = { {"ResponseCode", billingResult.ResponseCode} }
+            };
     }
 
     private async Task EnsureConnected()

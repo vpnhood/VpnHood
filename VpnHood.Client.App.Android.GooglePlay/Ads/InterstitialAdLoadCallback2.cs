@@ -1,11 +1,10 @@
-﻿using System;
-using Android.Gms.Ads.Interstitial;
+﻿using Android.Gms.Ads.Interstitial;
 using Android.Runtime;
 
-namespace VpnHood.Client.App.Droid.Connect.Ads;
+namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 
 // fix google ad library problem
-public class InterstitialAdLoadCallback2 : Android.Gms.Ads.Interstitial.InterstitialAdLoadCallback
+public class InterstitialAdLoadCallback2 : InterstitialAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 

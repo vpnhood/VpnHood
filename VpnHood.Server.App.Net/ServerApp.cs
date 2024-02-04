@@ -32,6 +32,8 @@ public class ServerApp : IDisposable
     private FileStream? _lockStream;
     private bool _disposed;
 
+    public IAccessManager AccessManager { get; }
+    public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
     public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
     public AppSettings AppSettings { get; }
@@ -128,22 +130,6 @@ public class ServerApp : IDisposable
         return serverId;
     }
 
-    public static byte[] GetServerKey(string storagePath)
-    {
-        var serverKeyFile = Path.Combine(storagePath, "server-key");
-        var serverKey = new byte[16];
-        if (File.Exists(serverKeyFile) &&
-            Convert.TryFromBase64String(File.ReadAllText(serverKeyFile), serverKey, out var bytesWritten)
-            && bytesWritten == 16)
-            return serverKey;
-
-        serverKey = VhUtil.GenerateKey();
-        File.WriteAllText(serverKeyFile, Convert.ToBase64String(serverKey));
-        return serverKey;
-    }
-
-    public IAccessManager AccessManager { get; }
-    public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
 
     private static FileAccessManager CreateFileAccessManager(string storageFolderPath, FileAccessManagerOptions? options)
     {

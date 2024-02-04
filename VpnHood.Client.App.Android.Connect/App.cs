@@ -11,20 +11,13 @@ namespace VpnHood.Client.App.Droid.Connect;
     Banner = "@mipmap/banner", // for TV
     UsesCleartextTraffic = true, // required for localhost
     SupportsRtl = true, AllowBackup = true)]
-public class App : AndroidApp
+public class App(IntPtr javaReference, JniHandleOwnership transfer)
+    : AndroidApp(javaReference, transfer)
 {
-    public App(IntPtr javaReference, JniHandleOwnership transfer)
-        : base(javaReference, transfer)
-    {
-    }
-
     protected override AppOptions AppOptions => new()
     {
-        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
         Resources = VpnHoodAppResource.Resources,
-
+        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl
     };
-
 }
-
 

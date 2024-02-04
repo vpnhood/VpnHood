@@ -12,6 +12,7 @@ using VpnHood.Server;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Tunneling;
 using EmbedIO;
+// ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
 
@@ -123,7 +124,7 @@ public class ClientServerTest : TestBase
         // let channel be created gradually
         for (var i = 0; i < 6; i++)
         {
-            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
+            await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
             await Task.Delay(50);
         }
 
@@ -143,7 +144,7 @@ public class ClientServerTest : TestBase
         // let channel be removed gradually
         for (var i = 0; i < 6; i++)
         {
-            await TestHelper.Test_Udp(TestHelper.TEST_UdpV4EndPoint1);
+            await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
             await Task.Delay(50);
         }
 
@@ -273,7 +274,7 @@ public class ClientServerTest : TestBase
         using var httpClient = new HttpClient();
         try
         {
-            await httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}",
+            await httpClient.GetStringAsync($"http://{TestConstants.NsEndPoint1}",
                 new CancellationTokenSource(2000).Token);
             Assert.Fail("Exception expected!");
         }
@@ -323,7 +324,7 @@ public class ClientServerTest : TestBase
         oldServerSentByteCount = serverSession.Tunnel.Traffic.Sent;
         oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
-        await TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingV4Address1);
+        await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
 
         Assert.AreNotEqual(oldClientSentByteCount, client.Stat.SessionTraffic.Sent, 500,
             "Not enough data has been sent through the client.");
@@ -401,7 +402,7 @@ public class ClientServerTest : TestBase
         {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
-            await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
+            await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
         }
 
         // create client
@@ -409,7 +410,7 @@ public class ClientServerTest : TestBase
         {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
-            await TestHelper.Test_Udp(udpClient, TestHelper.TEST_UdpV4EndPoint1);
+            await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
         }
     }
 
@@ -420,7 +421,7 @@ public class ClientServerTest : TestBase
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443);
+        using TcpClient tcpClient = new(TestConstants.HttpsUri1.Host, 443);
         await using var stream = tcpClient.GetStream();
 
         // create client
@@ -657,10 +658,10 @@ public class ClientServerTest : TestBase
         await using var client = TestHelper.CreateClient(token);
 
         using var httpClient = new HttpClient();
-        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4441");
-        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4442");
-        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4443");
-        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4445");
+        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4441");
+        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4442");
+        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4443");
+        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4445");
 
         await Task.Delay(1000);
         var session = server.SessionManager.GetSessionById(client.SessionId);
@@ -685,13 +686,13 @@ public class ClientServerTest : TestBase
         using var tcpClient3 = new TcpClient();
         using var tcpClient4 = new TcpClient();
 
-        await tcpClient1.ConnectAsync(TestHelper.TEST_HttpsUri1.Host, 443);
+        await tcpClient1.ConnectAsync(TestConstants.HttpsUri1.Host, 443);
         await Task.Delay(300);
-        await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsUri1.Host, 443);
+        await tcpClient2.ConnectAsync(TestConstants.HttpsUri1.Host, 443);
         await Task.Delay(300);
-        await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsUri2.Host, 443);
+        await tcpClient3.ConnectAsync(TestConstants.HttpsUri2.Host, 443);
         await Task.Delay(300);
-        await tcpClient4.ConnectAsync(TestHelper.TEST_HttpsUri2.Host, 443);
+        await tcpClient4.ConnectAsync(TestConstants.HttpsUri2.Host, 443);
         await Task.Delay(300);
 
         var session = server.SessionManager.GetSessionById(client.SessionId);
@@ -740,9 +741,9 @@ public class ClientServerTest : TestBase
         using (var tcpClient2 = new TcpClient())
         using (var tcpClient3 = new TcpClient())
         {
-            await tcpClient1.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
-            await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
-            await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
+            await tcpClient1.ConnectAsync(TestConstants.HttpsEndPoint1);
+            await tcpClient2.ConnectAsync(TestConstants.HttpsEndPoint1);
+            await tcpClient3.ConnectAsync(TestConstants.HttpsEndPoint1);
 
             await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, () => client.Stat.ConnectorStat.CreatedConnectionCount);
             await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
@@ -756,8 +757,8 @@ public class ClientServerTest : TestBase
         using (var tcpClient4 = new TcpClient())
         using (var tcpClient5 = new TcpClient())
         {
-            await tcpClient4.ConnectAsync(TestHelper.TEST_HttpsEndPoint1);
-            await tcpClient5.ConnectAsync(TestHelper.TEST_HttpsEndPoint2);
+            await tcpClient4.ConnectAsync(TestConstants.HttpsEndPoint1);
+            await tcpClient5.ConnectAsync(TestConstants.HttpsEndPoint2);
             await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount, () => client.Stat.ConnectorStat.CreatedConnectionCount);
             await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 2, () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
         }

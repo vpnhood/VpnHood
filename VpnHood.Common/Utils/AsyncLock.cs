@@ -2,7 +2,7 @@
 
 namespace VpnHood.Common.Utils;
 
-public class AsyncLock
+public sealed class AsyncLock
 {
     private readonly SemaphoreSlimEx _semaphoreSlimEx = new(1, 1);
     private static readonly ConcurrentDictionary<string, SemaphoreSlimEx> SemaphoreSlims = new();
@@ -12,39 +12,29 @@ public class AsyncLock
         public bool Succeeded { get; }
     }
 
-    private class SemaphoreSlimEx : SemaphoreSlim
+    private class SemaphoreSlimEx(int initialCount, int maxCount) 
+        : SemaphoreSlim(initialCount, maxCount)
     {
-        public SemaphoreSlimEx(int initialCount, int maxCount)
-            : base(initialCount, maxCount) { }
-
         public int ReferenceCount { get; set; }
     }
 
-    private class SemaphoreLock : ILockAsyncResult
+    private class SemaphoreLock(SemaphoreSlimEx semaphoreSlimEx, bool succeeded, string? name)
+        : ILockAsyncResult
     {
-        private readonly SemaphoreSlimEx _semaphoreSlimEx;
-        private readonly string? _name;
         private bool _disposed;
-        public bool Succeeded { get; }
-
-        public SemaphoreLock(SemaphoreSlimEx semaphoreSlimEx, bool succeeded, string? name)
-        {
-            _semaphoreSlimEx = semaphoreSlimEx;
-            _name = name;
-            Succeeded = succeeded;
-        }
+        public bool Succeeded { get; } = succeeded;
 
         public void Dispose()
         {
             if (_disposed || !Succeeded) return;
             _disposed = true;
 
-            _semaphoreSlimEx.Release();
+            semaphoreSlimEx.Release();
             lock (SemaphoreSlims)
             {
-                _semaphoreSlimEx.ReferenceCount--;
-                if (_semaphoreSlimEx.ReferenceCount == 0 && _name != null)
-                    SemaphoreSlims.TryRemove(_name, out _);
+                semaphoreSlimEx.ReferenceCount--;
+                if (semaphoreSlimEx.ReferenceCount == 0 && name != null)
+                    SemaphoreSlims.TryRemove(name, out _);
             }
         }
     }

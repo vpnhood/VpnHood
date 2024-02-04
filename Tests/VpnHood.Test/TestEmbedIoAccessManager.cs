@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using EmbedIO;
@@ -11,8 +12,6 @@ using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Messaging;
-
-// ReSharper disable UnusedMember.Local
 
 namespace VpnHood.Test;
 
@@ -73,21 +72,15 @@ public class TestEmbedIoAccessManager : IDisposable
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 
-    private class ApiController : WebApiController
+    [SuppressMessage("ReSharper", "UnusedMember.Local")]
+    private class ApiController(TestEmbedIoAccessManager embedIoAccessManager) : WebApiController
     {
-        private readonly TestEmbedIoAccessManager _embedIoAccessManager;
-
-        public ApiController(TestEmbedIoAccessManager embedIoAccessManager)
-        {
-            _embedIoAccessManager = embedIoAccessManager;
-        }
-
-        private IAccessManager AccessManager => _embedIoAccessManager.FileAccessManager;
+        private IAccessManager AccessManager => embedIoAccessManager.FileAccessManager;
 
         protected override void OnBeforeHandler()
         {
-            if (_embedIoAccessManager.HttpException != null)
-                throw _embedIoAccessManager.HttpException;
+            if (embedIoAccessManager.HttpException != null)
+                throw embedIoAccessManager.HttpException;
             base.OnBeforeHandler();
         }
 
@@ -117,10 +110,10 @@ public class TestEmbedIoAccessManager : IDisposable
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
-            if (_embedIoAccessManager.RedirectHostEndPoint != null &&
-                !sessionRequestEx.HostEndPoint.Equals(_embedIoAccessManager.RedirectHostEndPoint))
+            if (embedIoAccessManager.RedirectHostEndPoint != null &&
+                !sessionRequestEx.HostEndPoint.Equals(embedIoAccessManager.RedirectHostEndPoint))
             {
-                res.RedirectHostEndPoint = _embedIoAccessManager.RedirectHostEndPoint;
+                res.RedirectHostEndPoint = embedIoAccessManager.RedirectHostEndPoint;
                 res.ErrorCode = SessionErrorCode.RedirectHost;
             }
 

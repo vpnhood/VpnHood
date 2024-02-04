@@ -13,4 +13,6 @@ public class FileAccessManagerOptions : ServerConfig
     public string? SslCertificatesPassword { get; set; }
     public int? HostPort { get; set; }
     public bool IsValidHostName { get; set; }
+    public string? ServerTokenUrl { get; set; }
+    public bool ReplyAccessKey { get; set; } = true; // if false, access tokens will only be updated by url
 }

@@ -376,6 +376,9 @@ public class VhContext : DbContext
             entity.Property(e => e.ExtraData)
                 .HasMaxLength(100);
 
+            entity.Property(e => e.ErrorMessage)
+                .HasMaxLength(1000);
+
             entity.HasOne(e => e.Server)
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)

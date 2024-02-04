@@ -27,13 +27,12 @@ public class VhRepo(VhContext vhContext)
         bool includeServers = false, bool includeCertificate = false)
     {
         var query = vhContext.ServerFarms
-            .Where(farm => farm.ProjectId == projectId)
-            .Where(farm => farm.ServerFarmId == serverFarmId && !farm.IsDeleted);
+            .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
+            .Where(farm => farm.ServerFarmId == serverFarmId);
 
         if (includeServers)
             query = query
-                .Include(farm => farm.Servers)
-                .Where(farm => farm.Servers!.All(x => !x.IsDeleted));
+                .Include(farm => farm.Servers!.Where(server => !server.IsDeleted));
 
         if (includeCertificate)
             query = query

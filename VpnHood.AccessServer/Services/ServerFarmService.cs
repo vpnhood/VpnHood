@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +15,6 @@ using VpnHood.Common.Utils;
 namespace VpnHood.AccessServer.Services;
 
 public class ServerFarmService(
-    ILogger<ServerFarmService> logger,
     VhContext vhContext,
     ServerService serverService,
     VhRepo vhRepo,
@@ -25,34 +23,6 @@ public class ServerFarmService(
     HttpClient httpClient
     )
 {
-    [Obsolete]
-    public async Task UpgradeAllFarmTokens()
-    {
-        try
-        {
-            logger.LogWarning("FillAllFarmToken has started.");
-            var farms = await vhContext.ServerFarms
-                .Where(x => !x.IsDeleted)
-                .Where(x => string.IsNullOrEmpty(x.TokenJson))
-                .Include(x => x.Certificate)
-                .Include(x => x.Servers)
-                .AsSplitQuery()
-                .ToArrayAsync();
-
-            logger.LogWarning("FillAllFarmToken data has been fetched and start calculating.");
-            foreach (var farm in farms)
-                FarmTokenBuilder.UpdateIfChanged(farm);
-
-            logger.LogWarning("FillAllFarmToken Saving.");
-
-            await vhContext.SaveChangesAsync();
-            logger.LogWarning("FillAllFarmToken has ended.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "FillAllFarmToken has failed.");
-        }
-    }
 
     public async Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary)
     {

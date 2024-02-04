@@ -74,14 +74,11 @@ public class Program
             ServerUpdateStatusInterval = appOptions.ServerUpdateStatusInterval
         });
 
-        // NLog: Setup NLog for Dependency injection
-        //builder.Logging.ClearProviders();
-        //builder.Host.UseNLog();
-
         //---------------------
         // Create App
         //---------------------
         var webApp = builder.Build();
+
         webApp.UseGrayMintCommonServices(new UseServicesOptions() { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
         webApp.UseGrayMintSwagger(true);
@@ -93,16 +90,7 @@ public class Program
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
-
-        // upgrade
-        if (builder.Configuration.GetValue<string>("IsTest") != "1")
-        {
-            await using var scope = webApp.Services.CreateAsyncScope();
-            var farmService = scope.ServiceProvider.GetRequiredService<ServerFarmService>();
-            _ = farmService.UpgradeAllFarmTokens();
-        }
-
+        
         await GrayMintApp.RunAsync(webApp, args);
     }
-    //test
 }

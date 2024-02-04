@@ -2,9 +2,7 @@
   "profiles": {
     "Windows.Development": {
       "commandName": "Project",
-      "launchBrowser": false,
       "launchUrl": "swagger",
-      "commandLineArgs": "/recreatedb2",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

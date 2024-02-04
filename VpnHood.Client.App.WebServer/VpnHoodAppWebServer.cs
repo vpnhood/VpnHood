@@ -49,22 +49,11 @@ public class VpnHoodAppWebServer : IDisposable
             _instance = null;
     }
 
-    public static bool IsDebugMode
-    {
-        get
-        {
-#if DEBUG 
-            return true;
-#else
-            return false;
-#endif
-        }
-    }
 
     public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default, 
         bool listenToAllIps = false)
     {
-        var ret = new VpnHoodAppWebServer(zipStream, IsDebugMode ? 9091 : 9090, url, listenToAllIps);
+        var ret = new VpnHoodAppWebServer(zipStream, 9090, url, listenToAllIps);
         ret.Start();
         return ret;
     }
@@ -141,6 +130,9 @@ public class VpnHoodAppWebServer : IDisposable
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithWebApi("/api/account", ResponseSerializerCallback, c => c
                 .WithController<AccountController>()
+                .HandleUnhandledException(ExceptionHandler.DataResponseForException))
+            .WithWebApi("/api/billing", ResponseSerializerCallback, c => c
+                .WithController<BillingController>()
                 .HandleUnhandledException(ExceptionHandler.DataResponseForException))
             .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed))
             .HandleHttpException(ExceptionHandler.DataResponseForHttpException);

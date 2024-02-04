@@ -24,6 +24,54 @@ export class AccountClient {
 
     }
 
+    get( cancelToken?: CancelToken): Promise<AppAccount> {
+        let url_ = this.baseUrl + "/api/account";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGet(_response);
+        });
+    }
+
+    protected processGet(response: AxiosResponse): Promise<AppAccount> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppAccount.fromJS(resultData200);
+            return Promise.resolve<AppAccount>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppAccount>(null as any);
+    }
+
     isSigninWithGoogleSupported( cancelToken?: CancelToken): Promise<boolean> {
         let url_ = this.baseUrl + "/api/account/is-signin-with-google-supported";
         url_ = url_.replace(/[?&]$/, "");
@@ -161,8 +209,8 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    get( cancelToken?: CancelToken): Promise<AppAccount> {
-        let url_ = this.baseUrl + "/api/account";
+    isSignedOut( cancelToken?: CancelToken): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/account/is-sign-out";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -181,11 +229,11 @@ export class AccountClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGet(_response);
+            return this.processIsSignedOut(_response);
         });
     }
 
-    protected processGet(response: AxiosResponse): Promise<AppAccount> {
+    protected processIsSignedOut(response: AxiosResponse): Promise<boolean> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -199,14 +247,15 @@ export class AccountClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppAccount.fromJS(resultData200);
-            return Promise.resolve<AppAccount>(result200);
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<boolean>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppAccount>(null as any);
+        return Promise.resolve<boolean>(null as any);
     }
 }
 
@@ -1056,9 +1105,62 @@ export class BillingClient {
         }
         return Promise.resolve<SubscriptionPlan[]>(null as any);
     }
+
+    purchase(userId: string, planId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/billing/purchase?";
+        if (userId === undefined || userId === null)
+            throw new Error("The parameter 'userId' must be defined and cannot be null.");
+        else
+            url_ += "userId=" + encodeURIComponent("" + userId) + "&";
+        if (planId === undefined || planId === null)
+            throw new Error("The parameter 'planId' must be defined and cannot be null.");
+        else
+            url_ += "planId=" + encodeURIComponent("" + planId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processPurchase(_response);
+        });
+    }
+
+    protected processPurchase(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class AppAccount implements IAppAccount {
+    userId!: string;
     name?: string | null;
     email?: string | null;
     subscriptionPlanId?: string | null;
@@ -1074,6 +1176,7 @@ export class AppAccount implements IAppAccount {
 
     init(_data?: any) {
         if (_data) {
+            this.userId = _data["userId"] !== undefined ? _data["userId"] : <any>null;
             this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
             this.email = _data["email"] !== undefined ? _data["email"] : <any>null;
             this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
@@ -1089,6 +1192,7 @@ export class AppAccount implements IAppAccount {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["userId"] = this.userId !== undefined ? this.userId : <any>null;
         data["name"] = this.name !== undefined ? this.name : <any>null;
         data["email"] = this.email !== undefined ? this.email : <any>null;
         data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
@@ -1097,6 +1201,7 @@ export class AppAccount implements IAppAccount {
 }
 
 export interface IAppAccount {
+    userId: string;
     name?: string | null;
     email?: string | null;
     subscriptionPlanId?: string | null;
@@ -2062,8 +2167,7 @@ export interface IClientProfileUpdateParams {
 
 export class SubscriptionPlan implements ISubscriptionPlan {
     subscriptionPlanId!: string;
-    priceAmount!: number;
-    priceCurrency!: string;
+    planPrice!: string;
 
     constructor(data?: ISubscriptionPlan) {
         if (data) {
@@ -2077,8 +2181,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
     init(_data?: any) {
         if (_data) {
             this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
-            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : <any>null;
-            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : <any>null;
+            this.planPrice = _data["planPrice"] !== undefined ? _data["planPrice"] : <any>null;
         }
     }
 
@@ -2092,16 +2195,14 @@ export class SubscriptionPlan implements ISubscriptionPlan {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
-        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : <any>null;
-        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : <any>null;
+        data["planPrice"] = this.planPrice !== undefined ? this.planPrice : <any>null;
         return data;
     }
 }
 
 export interface ISubscriptionPlan {
     subscriptionPlanId: string;
-    priceAmount: number;
-    priceCurrency: string;
+    planPrice: string;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

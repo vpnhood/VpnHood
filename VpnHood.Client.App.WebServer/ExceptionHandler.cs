@@ -27,7 +27,7 @@ internal static class ExceptionHandler
 
             context.Response.ContentType = MediaTypeNames.Application.Json;
             context.Response.StatusCode = apiException.StatusCode;
-            throw new HttpException(HttpStatusCode.BadRequest, apiError.Message, apiError);
+            throw new HttpException(apiException.StatusCode, apiError.Message, apiError);
         }
         else
         {
@@ -48,10 +48,7 @@ internal static class ExceptionHandler
     public static Task DataResponseForHttpException(IHttpContext context, IHttpException httpException)
     {
         if (httpException.DataObject is ApiError)
-        {
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return ResponseSerializer.Json(context, httpException.DataObject);
-        }
 
         return context.SendStandardHtmlAsync(context.Response.StatusCode);
     }

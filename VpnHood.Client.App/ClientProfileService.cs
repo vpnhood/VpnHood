@@ -113,6 +113,7 @@ public class ClientProfileService
                 throw new Exception("Could not update the token via access key because its token ID is not the same.");
 
             ImportAccessToken(newToken);
+            VhLogger.Instance.LogInformation("ServerToken has been updated.");
             return true;
         }
         catch (Exception ex)
@@ -183,7 +184,7 @@ public class ClientProfileService
             token = VhUtil.JsonClone<Token>(token);
             token.ServerToken = newServerToken;
             ImportAccessToken(token);
-            VhLogger.Instance.LogInformation("ServerToken has been updated.");
+            VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
             return true;
         }
         catch (Exception ex)

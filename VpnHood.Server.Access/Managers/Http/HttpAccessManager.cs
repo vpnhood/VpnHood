@@ -27,11 +27,10 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
     public HttpAccessManager(HttpClient httpClient, HttpAccessManagerOptions options)
         : base(httpClient)
     {
-        httpClient.BaseAddress =
-            new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri;
+        DefaultBaseAddress = new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri;
 
         if (AuthenticationHeaderValue.TryParse(options.Authorization, out var authenticationHeaderValue))
-            httpClient.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
+            DefaultAuthorization = authenticationHeaderValue;
     }
 
     protected override Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)

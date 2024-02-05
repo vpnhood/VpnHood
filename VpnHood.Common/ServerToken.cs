@@ -70,7 +70,7 @@ public class ServerToken
 
     public static ServerToken Decrypt(byte[] serverSecret, string base64)
     {
-        var parts = base64.Split('.');
+        var parts = base64.Trim().Split('.');
         if (parts.Length != 2)
             throw new FormatException("Could not parse server token data.");    
 

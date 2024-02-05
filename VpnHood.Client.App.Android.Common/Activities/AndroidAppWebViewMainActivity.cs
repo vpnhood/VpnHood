@@ -10,6 +10,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
     private bool _isWeViewVisible;
     public WebView? WebView { get; private set; }
     protected virtual bool ListenToAllIps => false;
+    protected virtual int? DefaultSpaPort => null;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -23,7 +24,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         {
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
             using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream, 9091, listenToAllIps: ListenToAllIps);//TODO change default port
+            VpnHoodAppWebServer.Init(memoryStream, DefaultSpaPort, listenToAllIps: ListenToAllIps);
         }
 
         InitWebUi();

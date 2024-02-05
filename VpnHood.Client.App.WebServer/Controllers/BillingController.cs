@@ -18,7 +18,7 @@ internal class BillingController : WebApiController, IBillingController
     }
 
     [Route(HttpVerbs.Post, "/purchase")]
-    public Task Purchase(string userId, string planId)
+    public Task<string> Purchase([QueryField] string userId, [QueryField] string planId)
     {
         return BillingService.Purchase(userId, planId);
     }

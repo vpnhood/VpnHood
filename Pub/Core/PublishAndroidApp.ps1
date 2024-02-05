@@ -73,7 +73,7 @@ if ($apk)
 }
 
 # ------------- aab
-else
+if ($aab)
 {
 	# set app icon
 	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
@@ -91,8 +91,6 @@ else
 		/p:ApplicationId=$packageId `
 		/p:DefineConstants=GOOGLE_PLAY `
 		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
-
-
 }
 
 # restore standard icon

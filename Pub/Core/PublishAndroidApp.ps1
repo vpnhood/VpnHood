@@ -46,18 +46,18 @@ Write-Host "*** Creating $module_packageFileName ..." -BackgroundColor Blue -For
 $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/$background");
 $appIconXmlDoc.save($appIconXml);
 
-# ------------- aab
+# ------------- apk
 if ($apk)
 {
 	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 
-	 if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
-	 dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
+	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
+	dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:ApplicationId=$packageId `
 		/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
-
+	 
 	# publish info
 	$json = @{
 		Version = $versionParam; 
@@ -69,7 +69,7 @@ if ($apk)
 		DeprecatedVersion = "$deprecatedVersion";
 		NotificationDelay = "03.00:00:00";
 	};
-	$json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
+	$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
 }
 
 # ------------- aab
@@ -99,11 +99,12 @@ else
 $appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background_web");
 $appIconXmlDoc.save($appIconXml);
 
-# copy to solution ouput
-Copy-Item -path $signedPacakgeFile -Destination "$moduleDir/$module_packageFileName" -Force
+# copy to module
+Copy-Item -path $signedPacakgeFile -Destination $module_packageFile -Force
+
 if ($isLatest)
 {
-	Copy-Item -path $signedPacakgeFile -Destination "$moduleDirLatest/$module_packageFileName" -Force -Recurse;
+	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }
 
 # report version

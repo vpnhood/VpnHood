@@ -9,6 +9,7 @@ public class GooglePlayBillingService: IAppBillingService
     private readonly Activity _activity;
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
+    private TaskCompletionSource<string>? _taskCompletionSource;
     private GooglePlayBillingService(Activity activity)
     {
         var builder = BillingClient.NewBuilder(activity);
@@ -24,7 +25,21 @@ public class GooglePlayBillingService: IAppBillingService
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
     {
-        throw new NotImplementedException();
+        switch (billingResult.ResponseCode)
+        {
+            case BillingResponseCode.Ok:
+                if (purchases.Any())
+                    _taskCompletionSource?.TrySetResult(purchases.First().OrderId);
+                else
+                    _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
+                break;
+            case BillingResponseCode.UserCancelled:
+                _taskCompletionSource?.TrySetCanceled();
+                break;  
+            default:
+                _taskCompletionSource?.TrySetException(CreateBillingResultException(billingResult));
+                break;
+        }
     }
 
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
@@ -68,7 +83,7 @@ public class GooglePlayBillingService: IAppBillingService
         return subscriptionPlans;
     }
 
-    public async Task Purchase(string userId, string planId)
+    public async Task<string> Purchase(string userId, string planId)
     {
         await EnsureConnected();
 
@@ -93,10 +108,11 @@ public class GooglePlayBillingService: IAppBillingService
         var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
 
         if (billingResult.ResponseCode != BillingResponseCode.Ok)
-            throw new Exception(billingResult.DebugMessage)
-            {
-                Data = { {"ResponseCode", billingResult.ResponseCode} }
-            };
+            throw CreateBillingResultException(billingResult);
+
+        _taskCompletionSource = new TaskCompletionSource<string>();
+        var orderId = await _taskCompletionSource.Task;
+        return orderId;
     }
 
     private async Task EnsureConnected()
@@ -113,5 +129,16 @@ public class GooglePlayBillingService: IAppBillingService
     public void Dispose()
     {
         _billingClient.Dispose();
+    }
+
+    private static Exception CreateBillingResultException(BillingResult billingResult)
+    {
+        if (billingResult.ResponseCode == BillingResponseCode.Ok)
+            throw new InvalidOperationException("Response code should be not OK.");
+
+        return new Exception(billingResult.DebugMessage)
+        {
+            Data = { { "ResponseCode", billingResult.ResponseCode } }
+        };
     }
 }

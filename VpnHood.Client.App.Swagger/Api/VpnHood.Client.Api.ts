@@ -1106,7 +1106,7 @@ export class BillingClient {
         return Promise.resolve<SubscriptionPlan[]>(null as any);
     }
 
-    purchase(userId: string, planId: string, cancelToken?: CancelToken): Promise<void> {
+    purchase(userId: string, planId: string, cancelToken?: CancelToken): Promise<string> {
         let url_ = this.baseUrl + "/api/billing/purchase?";
         if (userId === undefined || userId === null)
             throw new Error("The parameter 'userId' must be defined and cannot be null.");
@@ -1122,6 +1122,7 @@ export class BillingClient {
             method: "POST",
             url: url_,
             headers: {
+                "Accept": "application/json"
             },
             cancelToken
         };
@@ -1137,7 +1138,7 @@ export class BillingClient {
         });
     }
 
-    protected processPurchase(response: AxiosResponse): Promise<void> {
+    protected processPurchase(response: AxiosResponse): Promise<string> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1149,13 +1150,17 @@ export class BillingClient {
         }
         if (status === 200) {
             const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<string>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<string>(null as any);
     }
 }
 

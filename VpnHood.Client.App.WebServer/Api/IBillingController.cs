@@ -7,5 +7,5 @@ namespace VpnHood.Client.App.WebServer.Api;
 public interface IBillingController
 {
     Task<SubscriptionPlan[]> GetSubscriptionPlans();
-    Task<string> Purchase(string userId, string planId);
+    Task<string> Purchase(string planId);
 }

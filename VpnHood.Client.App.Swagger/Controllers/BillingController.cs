@@ -15,7 +15,7 @@ public class BillingController : ControllerBase, IBillingController
     }
 
     [HttpPost("purchase")]
-    public Task<string> Purchase(string userId, string planId)
+    public Task<string> Purchase(string planId)
     {
         throw new NotImplementedException();
     }

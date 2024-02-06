@@ -12,7 +12,7 @@ internal class AccountController : WebApiController, IAccountController
         ?? throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/")]
-    public Task<AppAccount> Get()
+    public Task<AppAccount?> Get()
     {
         return AccountService.GetAccount();
     }
@@ -36,11 +36,5 @@ internal class AccountController : WebApiController, IAccountController
     public Task SignOut()
     {
         return AccountService.Authentication.SignOut();
-    }
-
-    [Route(HttpVerbs.Get, "/is-sign-out")]
-    public bool IsSignedOut()
-    {
-        return AccountService.Authentication.IsSignedOut();
     }
 }

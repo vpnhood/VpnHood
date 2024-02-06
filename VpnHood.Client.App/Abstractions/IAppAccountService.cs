@@ -4,5 +4,5 @@ public interface IAppAccountService
 {
     IAppAuthenticationService Authentication { get; }
     IAppBillingService? Billing { get; }
-    Task<AppAccount> GetAccount();
+    Task<AppAccount?> GetAccount();
 }

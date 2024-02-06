@@ -208,55 +208,6 @@ export class AccountClient {
         }
         return Promise.resolve<void>(null as any);
     }
-
-    isSignedOut( cancelToken?: CancelToken): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/account/is-sign-out";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processIsSignedOut(_response);
-        });
-    }
-
-    protected processIsSignedOut(response: AxiosResponse): Promise<boolean> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return Promise.resolve<boolean>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<boolean>(null as any);
-    }
 }
 
 export class AppClient {
@@ -1106,12 +1057,8 @@ export class BillingClient {
         return Promise.resolve<SubscriptionPlan[]>(null as any);
     }
 
-    purchase(userId: string, planId: string, cancelToken?: CancelToken): Promise<string> {
+    purchase(planId: string, cancelToken?: CancelToken): Promise<string> {
         let url_ = this.baseUrl + "/api/billing/purchase?";
-        if (userId === undefined || userId === null)
-            throw new Error("The parameter 'userId' must be defined and cannot be null.");
-        else
-            url_ += "userId=" + encodeURIComponent("" + userId) + "&";
         if (planId === undefined || planId === null)
             throw new Error("The parameter 'planId' must be defined and cannot be null.");
         else

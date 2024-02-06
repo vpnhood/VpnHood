@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using GrayMint.Common.Utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Security;
@@ -9,37 +10,44 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/certificates")]
 [Authorize]
-public class CertificatesController(CertificateService certificateService) : ControllerBase
+public class CertificatesController(
+    CertificateService certificateService,
+    SubscriptionService subscriptionService) 
+    : ControllerBase
 {
     [HttpPost("self-signed")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> CreateBySelfSigned(Guid projectId, CertificateSelfSignedParams? createParams)
+    public async Task<Certificate> CreateBySelfSigned(Guid projectId, CertificateSelfSignedParams? createParams = null)
     {
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
+        await subscriptionService.AuthorizeAddCertificate(projectId);
+
         var ret = await certificateService.CreateSelfSinged(projectId, createParams);
         return ret;
     }
 
-    [HttpPut("{certificateId}/self-signed")]
+    [HttpPost("trusted")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> ReplaceBySelfSigned(Guid projectId, Guid certificateId, CertificateSelfSignedParams? createParams = null)
+    public async Task<Certificate> CreateTrusted(Guid projectId, CertificateSigningRequest csr)
     {
-        var ret = await certificateService.ReplaceBySelfSinged(projectId, certificateId, createParams);
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
+        await subscriptionService.AuthorizeAddCertificate(projectId);
+
+        var ret = await certificateService.CreateTrusted(projectId, csr);
         return ret;
     }
+
+
 
     [HttpPost("import")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> CreateByImport(Guid projectId, CertificateImportParams importParams)
     {
-        var ret = await certificateService.CreateByImport(projectId, importParams);
-        return ret;
-    }
+        // check user quota
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
+        await subscriptionService.AuthorizeAddCertificate(projectId);
 
-    [HttpPost("{certificateId}/import")]
-    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> ReplaceByImport(Guid projectId, Guid certificateId, CertificateImportParams importParams)
-    {
-        var ret = await certificateService.ReplaceByImport(projectId, certificateId, importParams);
+        var ret = await certificateService.CreateByImport(projectId, importParams);
         return ret;
     }
 

@@ -211,12 +211,10 @@ public class ServerFarmService(
             {
                 ServerFarm = x,
                 x.ServerProfile!.ServerProfileName,
-                Certificate = new CertificateModel
+                Certificate = new
                 {
-                    CertificateId = x.CertificateId,
-                    CommonName = x.Certificate!.CommonName,
-                    CreatedTime = x.Certificate.CreatedTime,
-                    ExpirationTime = x.Certificate.ExpirationTime
+                    x.Certificate!.CommonName,
+                    x.Certificate.ExpirationTime,
                 }
             })
             .OrderByDescending(x => x.ServerFarm.ServerFarmName)
@@ -230,7 +228,8 @@ public class ServerFarmService(
             .Select(x => new ServerFarmData
             {
                 ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
-                Certificate = x.Certificate.ToDto(),
+                CertificateCommonName = x.Certificate.CommonName,
+                CertificateExpirationTime = x.Certificate.ExpirationTime,
                 AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId)
             });
 
@@ -285,12 +284,10 @@ public class ServerFarmService(
             {
                 ServerFarm = x,
                 x.ServerProfile!.ServerProfileName,
-                Certificate = new CertificateModel
+                Certificate = new 
                 {
-                    CertificateId = x.CertificateId,
-                    CommonName = x.Certificate!.CommonName,
-                    CreatedTime = x.Certificate.CreatedTime,
-                    ExpirationTime = x.Certificate.ExpirationTime
+                    x.Certificate!.CommonName,
+                    x.Certificate.ExpirationTime
                 },
                 ServerCount = x.Servers!.Count(y => !y.IsDeleted),
                 AccessTokens = x.AccessTokens!.Select(y => new { y.IsDeleted, y.FirstUsedTime, y.LastUsedTime }).ToArray()
@@ -310,7 +307,8 @@ public class ServerFarmService(
         var ret = results.Select(x => new ServerFarmData
         {
             ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
-            Certificate = x.Certificate.ToDto(),
+            CertificateCommonName = x.Certificate.CommonName,
+            CertificateExpirationTime = x.Certificate.ExpirationTime,
             AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
             Summary = new ServerFarmSummary
             {

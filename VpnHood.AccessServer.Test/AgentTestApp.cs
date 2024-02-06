@@ -26,6 +26,7 @@ public class AgentTestApp
             {
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
+                builder.UseSetting(nameof(AgentOptions.AllowRedirect), "false");
 
                 builder.UseEnvironment(environment);
                 builder.ConfigureServices(services =>
@@ -35,7 +36,7 @@ public class AgentTestApp
             });
         
         AgentScope = AgentApp.Services.CreateScope();
-        AgentOptions.AllowRedirect = false; //todo move to settings
+        AgentOptions.AllowRedirect = false;
         
         HttpClient = AgentApp.CreateClient();
         HttpClient.DefaultRequestHeaders.Authorization = GetAuthenticationHeaderValue(AgentApp.Services);

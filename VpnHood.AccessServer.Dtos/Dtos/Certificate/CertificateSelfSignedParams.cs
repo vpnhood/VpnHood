@@ -2,6 +2,6 @@
 
 public class CertificateSelfSignedParams
 {
-    public string? SubjectName { get; set; }
+    public required CertificateSigningRequest CertificateSigningRequest { get; init; }
     public DateTime? ExpirationTime { get; set; }
 }

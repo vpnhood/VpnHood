@@ -23,8 +23,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Common" Version="3.3.461-prerelease" />
-		<PackageReference Include="VpnHood.Server.Access" Version="3.3.461-prerelease" />
+		<PackageReference Include="GrayMint.Common" Version="2.0.184" />
+		<PackageReference Include="VpnHood.Common" Version="3.3.462" />
+		<PackageReference Include="VpnHood.Server.Access" Version="3.3.462" />
 	</ItemGroup>
 
 </Project>

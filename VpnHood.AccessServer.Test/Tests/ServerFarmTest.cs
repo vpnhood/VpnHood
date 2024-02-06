@@ -79,8 +79,8 @@ public class ServerFarmTest
         //-----------
         var serverProfile2 = await ServerProfileDom.Create(testApp);
         var certificateClient = testApp.CertificatesClient;
-        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId,
-            new CertificateSelfSignedParams { SubjectName = "CN=fff.com" });
+        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId);
+
         var updateParam = new ServerFarmUpdateParams
         {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
@@ -170,8 +170,7 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().Certificate);
-        Assert.IsNull(farms.First().Certificate.RawData);
+        Assert.IsNotNull(farms.First().CertificateCommonName);
     }
 
 
@@ -187,8 +186,7 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().Certificate);
-        Assert.IsNull(farms.First().Certificate.RawData);
+        Assert.IsNotNull(farms.First().CertificateCommonName);
     }
 
     [TestMethod]

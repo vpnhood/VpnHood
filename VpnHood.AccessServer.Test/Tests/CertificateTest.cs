@@ -39,25 +39,33 @@ public class CertificateTest
         // Create Certificate using subject name
         //-----------
         var expirationTime = DateTime.UtcNow.AddDays(7);
-        certificate = await certificateClient.CreateBySelfSignedAsync(testApp.ProjectId,
-            new CertificateSelfSignedParams { SubjectName = $"CN={certificate.CommonName}", ExpirationTime = expirationTime });
+        var csr = new CertificateSigningRequest
+        {
+            CommonName = certificate.CommonName,
+            Organization = Guid.NewGuid().ToString(),
+            OrganizationUnit = Guid.NewGuid().ToString(),
+            LocationCity = Guid.NewGuid().ToString(),
+            LocationCountry = Guid.NewGuid().ToString(),
+            LocationState = Guid.NewGuid().ToString()
+        };
+        certificate = await certificateClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams
+        {
+            CertificateSigningRequest = csr, 
+            ExpirationTime = expirationTime
+        });
         Assert.IsFalse(string.IsNullOrEmpty(certificate.Thumbprint));
         Assert.IsFalse(certificate.IsVerified);
         Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow.AddDays(6) && certificate.ExpirationTime < DateTime.UtcNow.AddDays(8));
         Assert.IsTrue(certificate.IssueTime > DateTime.UtcNow.AddDays(-1));
 
-        //-----------
-        // Update a certificate
-        //-----------
-        certificate = await certificateClient.ReplaceByImportAsync(testApp.ProjectId, certificate.CertificateId,
-            new CertificateImportParams
-            {
-                RawData = x509Certificate.Export(X509ContentType.Pfx, password),
-                Password = password
-            });
-
         certificate = (await certificateClient.GetAsync(testApp.ProjectId, certificate.CertificateId)).Certificate;
-        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificate.CommonName);
+        Assert.AreEqual(csr.CommonName, certificate.CommonName);
+        Assert.IsTrue(certificate.SubjectName.Contains($"CN={csr.CommonName}"));
+        Assert.IsTrue(certificate.SubjectName.Contains($"O={csr.Organization}"));
+        Assert.IsTrue(certificate.SubjectName.Contains($"OU={csr.OrganizationUnit}"));
+        Assert.IsTrue(certificate.SubjectName.Contains($"C={csr.LocationCountry}"));
+        Assert.IsTrue(certificate.SubjectName.Contains($"S={csr.LocationState}"));
+        Assert.IsTrue(certificate.SubjectName.Contains($"L={csr.LocationCity}"));
 
         //-----------
         // Delete a certificate
@@ -78,47 +86,5 @@ public class CertificateTest
         var certificates = await certificateClient.ListAsync(testApp.ProjectId);
         Assert.IsTrue(certificates.Count > 0);
         Assert.IsFalse(certificates.Any(x => x.Certificate.RawData != null));
-    }
-
-    [TestMethod]
-    public async Task Fail_updating_certificate_with_another_common_name()
-    {
-        var testApp = await TestApp.Create();
-        var certificateClient = testApp.CertificatesClient;
-
-        //-----------
-        // Create Certificate using RawData
-        //-----------
-        var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com");
-        const string? password = "123";
-
-        var certificate = await certificateClient.CreateByImportAsync(testApp.ProjectId, new CertificateImportParams
-        {
-            RawData = x509Certificate.Export(X509ContentType.Pfx, password),
-            Password = password
-        });
-
-
-        //-----------
-        // Update a certificate
-        //-----------
-        //-----------
-        // Create Certificate using RawData
-        //-----------
-        x509Certificate = CertificateUtil.CreateSelfSigned("CN=zz.1234.com");
-        try
-        {
-            await certificateClient.ReplaceByImportAsync(testApp.ProjectId, certificate.CertificateId,
-                new CertificateImportParams
-                {
-                    RawData = x509Certificate.Export(X509ContentType.Pfx, password: "")
-                });
-            Assert.Fail("Invalid Operation is expected");
-        }
-        catch (ApiException ex)
-        {
-            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
-        }
-
     }
 }

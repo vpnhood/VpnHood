@@ -599,14 +599,22 @@ public class AgentServerTest
     {
         var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var certificate1 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName1}" });
+        var certificate1 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest{CommonName = dnsName1 }
+        });
+
         var farm1 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate1.CertificateId
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var certificate2 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName2}" });
+        var certificate2 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2}
+        });
+
         var farm2 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
             CertificateId = certificate2.CertificateId
@@ -628,33 +636,13 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task Reconfig_all_servers_after_certificate_replaced()
-    {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
-        var server1 = await farm.AddNewServer();
-        var server2 = await farm.AddNewServer();
-
-        var cert = await farm.TestApp.CertificatesClient.GetAsync(farm.TestApp.ProjectId, farm.ServerFarm.CertificateId);
-        await farm.TestApp.CertificatesClient.ReplaceBySelfSignedAsync(farm.TestApp.ProjectId, cert.Certificate.CertificateId, new CertificateSelfSignedParams
-        {
-            SubjectName = "CN=" + cert.Certificate.CommonName
-        });
-
-        var command1 = await server1.SendStatus();
-        var command2 = await server2.SendStatus();
-        Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
-        Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
-    }
-
-    [TestMethod]
     public async Task Reconfig_all_servers_after_farm_certificate_changed()
     {
         var farm = await ServerFarmDom.Create(serverCount: 0);
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 
-        var cert = await farm.TestApp.CertificatesClient.CreateBySelfSignedAsync(farm.TestApp.ProjectId,
-            new CertificateSelfSignedParams { SubjectName = $"CN={Guid.NewGuid()}.com" });
+        var cert = await farm.TestApp.CertificatesClient.CreateBySelfSignedAsync(farm.TestApp.ProjectId);
 
         await farm.Update(new ServerFarmUpdateParams
         {

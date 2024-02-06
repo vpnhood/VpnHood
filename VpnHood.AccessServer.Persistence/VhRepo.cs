@@ -1,4 +1,5 @@
 ﻿using GrayMint.Common.Generics;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence.Views;
@@ -164,6 +165,69 @@ public class VhRepo(VhContext vhContext)
 
         foreach (var accessToken in accessTokens)
             accessToken.IsDeleted = true;
+    }
+
+    public async Task<IEnumerable<CertificateView>> ListCertificates(Guid projectId, string? search = null,
+        Guid? certificateId = null, bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
+    {
+        var query = vhContext.Certificates
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => certificateId == null || x.CertificateId == certificateId)
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.CommonName.Contains(search) ||
+                x.CertificateId.ToString() == search);
+
+        var res = await query
+            .OrderBy(x => x.CommonName)
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .Select(x => new CertificateView
+            {
+                Certificate = new CertificateModel //exclude RawData
+                {
+                    CertificateId = x.CertificateId,
+                    SubjectName = x.SubjectName,
+                    DnsVerificationText = x.DnsVerificationText,
+                    CommonName = x.CommonName,
+                    CreatedTime = x.CreatedTime,
+                    ExpirationTime = x.ExpirationTime,
+                    IssueTime = x.IssueTime,
+                    IsDeleted = x.IsDeleted,
+                    IsVerified = x.IsVerified,
+                    ProjectId = x.ProjectId,
+                    Thumbprint = x.Thumbprint,
+                    RawData = Array.Empty<byte>()
+                },
+                ServerFarms = includeSummary
+                    ? x.ServerFarms!
+                        .Where(y => !y.IsDeleted)
+                        .Select(y => IdName.Create(y.ServerFarmId, y.ServerFarmName))
+                    : null
+            })
+            .AsNoTracking()
+            .ToArrayAsync();
+
+        return res;
+    }
+
+    public Task<int> ServerFarmCount(Guid projectId, Guid? certificateId = null)
+    {
+        return vhContext.ServerFarms
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.CertificateId == certificateId || certificateId == null)
+            .CountAsync();
+    }
+
+    public async Task CertificateDelete(Guid projectId, Guid certificateId)
+    {
+        var certificate = await vhContext.Certificates
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.CertificateId == certificateId)
+            .SingleAsync();
+
+        certificate.IsDeleted = true;
+        await vhContext.SaveChangesAsync();
     }
 }
 

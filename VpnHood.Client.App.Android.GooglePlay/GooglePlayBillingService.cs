@@ -1,4 +1,5 @@
 using Android.BillingClient.Api;
+using Org.Apache.Http.Authentication;
 using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
@@ -7,20 +8,22 @@ public class GooglePlayBillingService: IAppBillingService
 {
     private readonly BillingClient _billingClient;
     private readonly Activity _activity;
+    private readonly IAppAuthenticationService _authenticationService;
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
-    private GooglePlayBillingService(Activity activity)
+    private GooglePlayBillingService(Activity activity, IAppAuthenticationService authenticationService)
     {
         var builder = BillingClient.NewBuilder(activity);
         builder.SetListener(PurchasesUpdatedListener);
         _billingClient = builder.EnablePendingPurchases().Build();
         _activity = activity;
+        _authenticationService = authenticationService;
     }
 
-    public static GooglePlayBillingService Create(Activity activity)
+    public static GooglePlayBillingService Create(Activity activity, IAppAuthenticationService authenticationService)
     {
-        return new GooglePlayBillingService(activity);
+        return new GooglePlayBillingService(activity, authenticationService);
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -83,9 +86,12 @@ public class GooglePlayBillingService: IAppBillingService
         return subscriptionPlans;
     }
 
-    public async Task<string> Purchase(string userId, string planId)
+    public async Task<string> Purchase(string planId)
     {
         await EnsureConnected();
+
+        if (_authenticationService.UserId == null)
+            throw new AuthenticationException();
 
         var offerToken = _subscriptionOfferDetails == null 
             ? throw new NullReferenceException("Could not found subscription offer details.") 
@@ -100,7 +106,7 @@ public class GooglePlayBillingService: IAppBillingService
             .Build();
 
         var billingFlowParams = BillingFlowParams.NewBuilder()
-            .SetObfuscatedAccountId(userId)
+            .SetObfuscatedAccountId(_authenticationService.UserId)
             .SetProductDetailsParamsList([productDetailsParam])
             .Build();
 

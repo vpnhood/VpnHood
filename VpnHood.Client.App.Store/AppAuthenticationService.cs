@@ -17,6 +17,9 @@ public class AppAuthenticationService : IAppAuthenticationService
     private ApiKey? _apiKey;
     public static string AccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
     public bool IsSignInWithGoogleSupported => _externalAuthenticationService != null;
+
+    public string? UserId => ApiKey?.UserId;
+
     public HttpClient HttpClient { get; }
     public Guid StoreAppId { get; }
 
@@ -117,11 +120,6 @@ public class AppAuthenticationService : IAppAuthenticationService
 
         if (_externalAuthenticationService != null)
             await _externalAuthenticationService.SignOut();
-    }
-
-    public bool IsSignedOut()
-    {
-        return ApiKey == null;
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)

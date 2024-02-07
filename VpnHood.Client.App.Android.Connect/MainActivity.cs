@@ -43,8 +43,8 @@ public class MainActivity : AndroidAppWebViewMainActivity
 
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
-        var googlePlayBillingService = GooglePlayBillingService.Create(this);
-        VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService);
+        var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
+        VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 
     protected override void OnDestroy()

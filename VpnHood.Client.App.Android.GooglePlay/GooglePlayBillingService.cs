@@ -1,4 +1,5 @@
 using Android.BillingClient.Api;
+using Org.Apache.Http.Authentication;
 using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
@@ -7,24 +8,41 @@ public class GooglePlayBillingService: IAppBillingService
 {
     private readonly BillingClient _billingClient;
     private readonly Activity _activity;
+    private readonly IAppAuthenticationService _authenticationService;
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
-    private GooglePlayBillingService(Activity activity)
+    private TaskCompletionSource<string>? _taskCompletionSource;
+    private GooglePlayBillingService(Activity activity, IAppAuthenticationService authenticationService)
     {
         var builder = BillingClient.NewBuilder(activity);
         builder.SetListener(PurchasesUpdatedListener);
         _billingClient = builder.EnablePendingPurchases().Build();
         _activity = activity;
+        _authenticationService = authenticationService;
     }
 
-    public static GooglePlayBillingService Create(Activity activity)
+    public static GooglePlayBillingService Create(Activity activity, IAppAuthenticationService authenticationService)
     {
-        return new GooglePlayBillingService(activity);
+        return new GooglePlayBillingService(activity, authenticationService);
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
     {
-        throw new NotImplementedException();
+        switch (billingResult.ResponseCode)
+        {
+            case BillingResponseCode.Ok:
+                if (purchases.Any())
+                    _taskCompletionSource?.TrySetResult(purchases.First().OrderId);
+                else
+                    _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
+                break;
+            case BillingResponseCode.UserCancelled:
+                _taskCompletionSource?.TrySetCanceled();
+                break;  
+            default:
+                _taskCompletionSource?.TrySetException(CreateBillingResultException(billingResult));
+                break;
+        }
     }
 
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
@@ -68,9 +86,12 @@ public class GooglePlayBillingService: IAppBillingService
         return subscriptionPlans;
     }
 
-    public async Task Purchase(string userId, string planId)
+    public async Task<string> Purchase(string planId)
     {
         await EnsureConnected();
+
+        if (_authenticationService.UserId == null)
+            throw new AuthenticationException();
 
         var offerToken = _subscriptionOfferDetails == null 
             ? throw new NullReferenceException("Could not found subscription offer details.") 
@@ -85,7 +106,7 @@ public class GooglePlayBillingService: IAppBillingService
             .Build();
 
         var billingFlowParams = BillingFlowParams.NewBuilder()
-            .SetObfuscatedAccountId(userId)
+            .SetObfuscatedAccountId(_authenticationService.UserId)
             .SetProductDetailsParamsList([productDetailsParam])
             .Build();
 
@@ -93,10 +114,11 @@ public class GooglePlayBillingService: IAppBillingService
         var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
 
         if (billingResult.ResponseCode != BillingResponseCode.Ok)
-            throw new Exception(billingResult.DebugMessage)
-            {
-                Data = { {"ResponseCode", billingResult.ResponseCode} }
-            };
+            throw CreateBillingResultException(billingResult);
+
+        _taskCompletionSource = new TaskCompletionSource<string>();
+        var orderId = await _taskCompletionSource.Task;
+        return orderId;
     }
 
     private async Task EnsureConnected()
@@ -113,5 +135,16 @@ public class GooglePlayBillingService: IAppBillingService
     public void Dispose()
     {
         _billingClient.Dispose();
+    }
+
+    private static Exception CreateBillingResultException(BillingResult billingResult)
+    {
+        if (billingResult.ResponseCode == BillingResponseCode.Ok)
+            throw new InvalidOperationException("Response code should be not OK.");
+
+        return new Exception(billingResult.DebugMessage)
+        {
+            Data = { { "ResponseCode", billingResult.ResponseCode } }
+        };
     }
 }

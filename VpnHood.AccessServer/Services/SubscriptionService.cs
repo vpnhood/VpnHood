@@ -3,7 +3,6 @@ using GrayMint.Authorization.UserManagement.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
@@ -11,15 +10,10 @@ namespace VpnHood.AccessServer.Services;
 
 public class SubscriptionService(
     VhContext vhContext,
+    VhRepo vhRepo,
     IRoleAuthorizationProvider roleProvider,
     IUserProvider userProvider)
 {
-    private async Task<ProjectModel> GetProject(Guid projectId)
-    {
-        var project = await vhContext.Projects.FindAsync(projectId);
-        return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");
-    }
-
     public async Task AuthorizeCreateProject(string userId)
     {
         var user = await userProvider.Get(userId); // make sure the user is registered
@@ -50,6 +44,12 @@ public class SubscriptionService(
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
     }
 
+    public async Task AuthorizeCertificateSignRequest(Guid projectId)
+    {
+        var project = await vhRepo.ProjectGet(projectId);
+        if (project.CsrCount >= QuotaConstants.CsrCount)
+            throw new QuotaException(nameof(CertificateSigningRequest), QuotaConstants.CsrCount);
+    }
 
     private async Task<bool> IsFreePlan(Guid projectId)
     {
@@ -59,7 +59,7 @@ public class SubscriptionService(
 
     public async Task VerifyUsageQueryPermission(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime)
     {
-        var project = await GetProject(projectId);
+        var project = await vhRepo.ProjectGet(projectId);
         usageBeginTime ??= DateTime.UtcNow;
         usageEndTime ??= DateTime.UtcNow;
         var requestTimeSpan = usageEndTime - usageBeginTime;

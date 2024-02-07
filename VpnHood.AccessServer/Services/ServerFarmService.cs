@@ -37,7 +37,7 @@ public class ServerFarmService(
 
     public async Task<ValidateTokenUrlResult> ValidateTokenUrl(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
-        var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
 
         if (string.IsNullOrEmpty(serverFarm.TokenUrl))
             throw new InvalidOperationException($"{nameof(serverFarm.TokenUrl)} has not been set."); // there is no token at the moment
@@ -112,7 +112,7 @@ public class ServerFarmService(
 
         // create a certificate if it is not given
         var certificate = createParams.CertificateId != null
-            ? await vhRepo.GetCertificate(projectId, createParams.CertificateId.Value)
+            ? await vhRepo.CertificateGet(projectId, createParams.CertificateId.Value)
             : await certificateService.CreateSelfSingedInternal(projectId);
 
         var serverFarm = new ServerFarmModel
@@ -142,7 +142,7 @@ public class ServerFarmService(
 
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
-        var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId, true, true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, true, true);
         var reconfigure = false;
 
         // change other properties
@@ -166,7 +166,7 @@ public class ServerFarmService(
         if (updateParams.CertificateId != null && serverFarm.CertificateId != updateParams.CertificateId)
         {
             // makes sure that the certificate belongs to this project
-            var certificate = await vhRepo.GetCertificate(projectId, updateParams.CertificateId.Value);
+            var certificate = await vhRepo.CertificateGet(projectId, updateParams.CertificateId.Value);
             serverFarm.CertificateId = certificate.CertificateId;
             reconfigure = true;
         }
@@ -175,7 +175,7 @@ public class ServerFarmService(
         if (updateParams.ServerProfileId != null && updateParams.ServerProfileId != serverFarm.ServerProfileId)
         {
             // makes sure that the serverProfile belongs to this project
-            var serverProfile = await vhRepo.GetServerProfile(projectId, updateParams.ServerProfileId);
+            var serverProfile = await vhRepo.ServerProfileGet(projectId, updateParams.ServerProfileId);
             serverFarm.ServerProfileId = serverProfile.ServerProfileId;
             reconfigure = true;
         }
@@ -343,7 +343,7 @@ public class ServerFarmService(
 
     public async Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
     {
-        var serverFarm = await vhRepo.GetServerFarm(projectId, serverFarmId);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
         if (string.IsNullOrEmpty(serverFarm.TokenJson))
             throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
 

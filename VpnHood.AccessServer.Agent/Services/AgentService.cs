@@ -135,7 +135,7 @@ public class AgentService(
         await CheckServerVersion(server); // must after assigning version 
 
         // ready for update
-        server = await vhRepo.GetServer(server.ProjectId, serverId);
+        server = await vhRepo.ServerGet(server.ProjectId, serverId);
 
         // update cache
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -151,7 +151,7 @@ public class AgentService(
         // calculate access points
         if (server.AutoConfigure)
         {
-            var serverFarm = await vhRepo.GetServerFarm(server.ProjectId, server.ServerFarmId, true, true);
+            var serverFarm = await vhRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, true, true);
             var accessPoints = BuildServerAccessPoints(server.ServerId, serverFarm.Servers!, serverInfo);
 
             // check if access points has been changed, then update host token and access points

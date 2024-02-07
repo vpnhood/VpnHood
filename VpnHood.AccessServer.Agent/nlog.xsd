@@ -2773,7 +2773,7 @@
         </xs:attribute>
         <xs:attribute name="excludeProperties" type="xs:string">
           <xs:annotation>
-            <xs:documentation>ListCertificates of property names to exclude when P:NLog.Layouts.JsonLayout.IncludeAllProperties is true</xs:documentation>
+            <xs:documentation>CertificateList of property names to exclude when P:NLog.Layouts.JsonLayout.IncludeAllProperties is true</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="indentJson" type="xs:boolean">
@@ -2996,7 +2996,7 @@
         </xs:attribute>
         <xs:attribute name="excludeProperties" type="xs:string">
           <xs:annotation>
-            <xs:documentation>ListCertificates of property names to exclude when P:NLog.Layouts.XmlElementBase.IncludeAllProperties is true</xs:documentation>
+            <xs:documentation>CertificateList of property names to exclude when P:NLog.Layouts.XmlElementBase.IncludeAllProperties is true</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="includeEmptyValue" type="xs:boolean">
@@ -3128,7 +3128,7 @@
     </xs:attribute>
     <xs:attribute name="excludeProperties" type="xs:string">
       <xs:annotation>
-        <xs:documentation>ListCertificates of property names to exclude when P:NLog.Layouts.XmlElementBase.IncludeAllProperties is true</xs:documentation>
+        <xs:documentation>CertificateList of property names to exclude when P:NLog.Layouts.XmlElementBase.IncludeAllProperties is true</xs:documentation>
       </xs:annotation>
     </xs:attribute>
     <xs:attribute name="includeEmptyValue" type="xs:boolean">

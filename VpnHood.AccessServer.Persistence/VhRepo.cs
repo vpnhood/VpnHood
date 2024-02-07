@@ -6,25 +6,10 @@ using VpnHood.AccessServer.Persistence.Views;
 
 namespace VpnHood.AccessServer.Persistence;
 
-public class VhRepo(VhContext vhContext)
+public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
 {
-    public bool HasChanges()
-    {
-        return vhContext.ChangeTracker.HasChanges();
-    }
 
-    public async ValueTask<T> AddAsync<T>(T model) where T : class
-    {
-        var entityEntry = await vhContext.AddAsync(model);
-        return entityEntry.Entity;
-    }
-
-    public Task SaveChangesAsync()
-    {
-        return vhContext.SaveChangesAsync();
-    }
-
-    public Task<ServerFarmModel> GetServerFarm(Guid projectId, Guid serverFarmId,
+    public Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
         bool includeServers = false, bool includeCertificate = false)
     {
         var query = vhContext.ServerFarms
@@ -42,7 +27,7 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerModel> GetServer(Guid projectId, Guid serverId, bool includeFarm = false)
+    public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false)
     {
         var query = vhContext.Servers
             .Where(server => server.ProjectId == projectId)
@@ -54,7 +39,7 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<CertificateModel> GetCertificate(Guid projectId, Guid certificateId)
+    public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId)
     {
         var query = vhContext.Certificates
             .Where(certificate => certificate.ProjectId == projectId)
@@ -63,7 +48,7 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerProfileModel> GetServerProfile(Guid projectId, Guid serverProfileId)
+    public Task<ServerProfileModel> ServerProfileGet(Guid projectId, Guid serverProfileId)
     {
         var query = vhContext.ServerProfiles
             .Where(serverProfile => serverProfile.ProjectId == projectId)
@@ -72,7 +57,7 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public async Task<string[]> GetServerNames(Guid projectId)
+    public async Task<string[]> ServerGetNames(Guid projectId)
     {
         var names = await vhContext.Servers
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
@@ -83,7 +68,7 @@ public class VhRepo(VhContext vhContext)
 
     }
 
-    public async Task<int> GetMaxAccessTokenSupportCode(Guid projectId)
+    public async Task<int> AccessTokenGetMaxSupportCode(Guid projectId)
     {
         var res = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId)
@@ -92,7 +77,7 @@ public class VhRepo(VhContext vhContext)
         return res ?? 1000;
     }
 
-    public Task<AccessTokenModel> GetAccessToken(Guid projectId, Guid accessTokenId, bool includeFarm = false)
+    public Task<AccessTokenModel> AccessTokenGet(Guid projectId, Guid accessTokenId, bool includeFarm = false)
     {
         var query = vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId)
@@ -104,7 +89,7 @@ public class VhRepo(VhContext vhContext)
         return query.SingleAsync();
     }
 
-    public async Task<ListResult<AccessTokenView>> ListAccessTokenViews(Guid projectId, string? search = null,
+    public async Task<ListResult<AccessTokenView>> AccessTokenList(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 51)
@@ -156,7 +141,7 @@ public class VhRepo(VhContext vhContext)
         return ret;
     }
 
-    public async Task DeleteAccessToken(Guid projectId, Guid[] accessTokenIds)
+    public async Task AccessTokenDelete(Guid projectId, Guid[] accessTokenIds)
     {
         var accessTokens = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
@@ -167,7 +152,15 @@ public class VhRepo(VhContext vhContext)
             accessToken.IsDeleted = true;
     }
 
-    public async Task<IEnumerable<CertificateView>> ListCertificates(Guid projectId, string? search = null,
+    public Task<int> ServerFarmCount(Guid projectId, Guid? certificateId = null)
+    {
+        return vhContext.ServerFarms
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.CertificateId == certificateId || certificateId == null)
+            .CountAsync();
+    }
+
+    public async Task<IEnumerable<CertificateView>> CertificateList(Guid projectId, string? search = null,
         Guid? certificateId = null, bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
         var query = vhContext.Certificates
@@ -211,14 +204,6 @@ public class VhRepo(VhContext vhContext)
         return res;
     }
 
-    public Task<int> ServerFarmCount(Guid projectId, Guid? certificateId = null)
-    {
-        return vhContext.ServerFarms
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .Where(x => x.CertificateId == certificateId || certificateId == null)
-            .CountAsync();
-    }
-
     public async Task CertificateDelete(Guid projectId, Guid certificateId)
     {
         var certificate = await vhContext.Certificates
@@ -228,6 +213,13 @@ public class VhRepo(VhContext vhContext)
 
         certificate.IsDeleted = true;
         await vhContext.SaveChangesAsync();
+    }
+
+    public Task<ProjectModel> ProjectGet(Guid projectId)
+    {
+        return vhContext.Projects
+            .Where(x => x.ProjectId == projectId)
+            .SingleAsync();
     }
 }
 

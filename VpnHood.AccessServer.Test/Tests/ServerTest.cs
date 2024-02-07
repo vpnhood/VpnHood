@@ -103,7 +103,7 @@ public class ServerTest
         Assert.AreEqual(farm2.ServerFarmId, serverDom.Server.ServerFarmId);
 
         //-----------
-        // check: ListCertificates
+        // check: CertificateList
         //-----------
         var servers = await serverDom.Client.ListAsync(testApp.ProjectId);
         Assert.IsTrue(servers.Any(x => x.Server.ServerName == serverDom.Server.ServerName && x.Server.ServerId == serverDom.ServerId));

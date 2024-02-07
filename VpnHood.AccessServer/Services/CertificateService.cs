@@ -1,5 +1,4 @@
 ﻿using System.Security.Cryptography.X509Certificates;
-using GrayMint.Common.Utils;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
@@ -10,7 +9,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class CertificateService(
     VhRepo vhRepo,
-    SubscriptionService subscriptionService)
+    CertificateSignerService signerService)
 {
     internal Task<CertificateModel> CreateSelfSingedInternal(Guid projectId)
     {
@@ -34,19 +33,21 @@ public class CertificateService(
 
     public async Task<Certificate> CreateTrusted(Guid projectId, CertificateSigningRequest csr)
     {
-        // check user quota
-        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        await subscriptionService.AuthorizeAddCertificate(projectId);
         if (string.IsNullOrWhiteSpace(csr.CommonName))
             throw new ArgumentException("CommonName is required.", nameof(csr.CommonName));
 
         if (csr.CommonName.Contains('*'))
             throw new NotSupportedException("Wildcard certificates are not supported.");
 
+        var orderId = signerService.NewOrder(csr);
+
         // create a self-signed certificate till we get the real one
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(csr.BuildSubjectName(), DateTime.UtcNow.AddYears(10));
         var certificateModel = await Add(projectId, x509Certificate2);
+        var project = await vhRepo.ProjectGet(projectId);
+        project.CsrCount++;
         await vhRepo.SaveChangesAsync();
+        
         return certificateModel.ToDto();
     }
 
@@ -101,7 +102,7 @@ public class CertificateService(
         Guid? certificateId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = 300)
     {
-        var res = await vhRepo.ListCertificates(projectId, search, certificateId, includeSummary, recordIndex, recordCount);
+        var res = await vhRepo.CertificateList(projectId, search, certificateId, includeSummary, recordIndex, recordCount);
         var ret = res.Select(x => new CertificateData
         {
             Certificate = x.Certificate.ToDto(),

@@ -30,13 +30,14 @@ public class CertificatesController(
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
     public async Task<Certificate> CreateTrusted(Guid projectId, CertificateSigningRequest csr)
     {
+        // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
         await subscriptionService.AuthorizeAddCertificate(projectId);
+        await subscriptionService.AuthorizeCertificateSignRequest(projectId);
 
         var ret = await certificateService.CreateTrusted(projectId, csr);
         return ret;
     }
-
 
 
     [HttpPost("import")]

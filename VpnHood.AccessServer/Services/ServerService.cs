@@ -30,14 +30,14 @@ public class ServerService(
         await subscriptionService.AuthorizeCreateServer(projectId);
 
         // validate
-        var serverFarm = await vhRepo.GetServerFarm(projectId, createParams.ServerFarmId, true, true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId, true, true);
 
         // Resolve Name Template
         var serverName = createParams.ServerName?.Trim();
         if (string.IsNullOrWhiteSpace(serverName)) serverName = Resource.NewServerTemplate;
         if (serverName.Contains("##"))
         {
-            var names = await vhRepo.GetServerNames(projectId);
+            var names = await vhRepo.ServerGetNames(projectId);
             serverName = AccessUtil.FindUniqueName(serverName, names);
         }
 
@@ -75,13 +75,13 @@ public class ServerService(
             throw new ArgumentException($"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set", nameof(updateParams));
 
         // validate
-        var server = await vhRepo.GetServer(projectId, serverId);
+        var server = await vhRepo.ServerGet(projectId, serverId);
         var oldConfigCode = server.ConfigCode;
 
         if (updateParams.ServerFarmId != null)
         {
             // make sure new farm belong to this account
-            var serverFarm = await vhRepo.GetServerFarm(projectId, updateParams.ServerFarmId);
+            var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = VhUtil.GenerateKey();
@@ -102,7 +102,7 @@ public class ServerService(
         // update FarmToken if config has been changed
         if (oldConfigCode != server.ConfigCode)
         {
-            var serverFarm = await vhRepo.GetServerFarm(projectId, server.ServerFarmId, true, true);
+            var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, true, true);
             FarmTokenBuilder.UpdateIfChanged(serverFarm);
             await vhRepo.SaveChangesAsync();
         }

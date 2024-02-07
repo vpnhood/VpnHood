@@ -9,7 +9,7 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 public class AccountController : ControllerBase, IAccountController
 {
     [HttpGet()]
-    public Task<AppAccount> Get()
+    public Task<AppAccount?> Get()
     {
         throw new NotImplementedException();
     }
@@ -28,12 +28,6 @@ public class AccountController : ControllerBase, IAccountController
 
     [HttpPost("sign-out")]
     public new Task SignOut() // TODO Check
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpGet("is-sign-out")]
-    public bool IsSignedOut()
     {
         throw new NotImplementedException();
     }

@@ -1,10 +1,13 @@
+# v3.3.463
+### Client
+* Fix: The "Connect" button for free public server does not work under certain circumstances
+
 # v3.3.462
 ### Client
-* Fix: Updating ServerTokenUrl from the server
+* Fix: Pull the recent tokens from the server & URL
 
-* ### Server
-* Fix: Updating ServerTokenUrl & ServerSecret from the server
-
+### Server
+* Fix: Push the recent tokens to clients
 
 # v3.3.454
 ### Client

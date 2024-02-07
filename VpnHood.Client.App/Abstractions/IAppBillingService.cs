@@ -3,5 +3,5 @@
 public interface IAppBillingService : IDisposable
 {
     Task<SubscriptionPlan[]> GetSubscriptionPlans();
-    Task Purchase(string userId, string planId);
+    Task<string> Purchase(string planId);
 }

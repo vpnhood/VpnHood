@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Report.Models;
 using VpnHood.AccessServer.Report.Persistence;
 
 namespace VpnHood.AccessServer.Report.Services;
@@ -28,8 +28,10 @@ public class ReportWriterService
                 PostgresException{ SqlState: "23505"  };
     }
 
-    public async Task Write(ServerStatusModel[] items)
+    public async Task Write(IEnumerable<ServerStatusArchive> serverStatuses)
     {
+        var items = serverStatuses.ToArray();
+
         try
         {
             if (items.Length == 0)
@@ -60,8 +62,10 @@ public class ReportWriterService
         }
     }
 
-    public async Task Write(SessionModel[] items)
+    public async Task Write(IEnumerable<SessionArchive> sessions)
     {
+        var items = sessions.ToArray();
+
         try
         {
             if (items.Length == 0)
@@ -96,8 +100,10 @@ public class ReportWriterService
         }
     }
 
-    public async Task Write(AccessUsageModel[] items)
+    public async Task Write(IEnumerable<AccessUsageArchive> accessUsages)
     {
+        var items = accessUsages.ToArray();
+
         try
         {
             if (items.Length == 0)

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Services;
 
@@ -34,7 +35,7 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items);
+            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
 
             // remove synced items
             logger.LogInformation(AccessEventId.Archive, 
@@ -72,7 +73,7 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items);
+            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
 
             // remove synced items
             logger.LogInformation(AccessEventId.Archive, "Removing old synced ServerStatuses from agent database. Count: {Count}", items.Length);
@@ -104,7 +105,7 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items);
+            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
 
             logger.LogInformation(AccessEventId.Archive, $"Removing old synced Sessions from agent database. Count: {items.Length}");
             var ids = items.Select(x => x.SessionId);

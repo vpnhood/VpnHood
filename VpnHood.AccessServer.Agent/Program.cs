@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Common.Swagger;
-using NLog.Web;
 
 namespace VpnHood.AccessServer.Agent;
 

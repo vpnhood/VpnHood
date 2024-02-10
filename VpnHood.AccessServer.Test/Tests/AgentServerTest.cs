@@ -2,7 +2,6 @@
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
@@ -34,7 +33,7 @@ public class AgentServerTest
             "Duplicate listener!");
 
         //-----------
-        // check: Configure with AutoUpdate is true (ServerModel.ServerFarmId is set)
+        // check: Configure with AutoUpdate is true (ServerReportModel.ServerFarmId is set)
         //-----------
         await serverDom.Reload();
         var accessPoints = serverDom.Server.AccessPoints.ToArray();

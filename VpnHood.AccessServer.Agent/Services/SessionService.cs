@@ -164,10 +164,10 @@ public class SessionService(
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock = await GrayMint.Common.Utils.AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
         var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
-        if (access == null) 
+        if (access == null)
         {
-                access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
-                logger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
+            access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
+            logger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
         }
         else
         {

@@ -53,7 +53,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
                 },
                 ConfigError = server.LastConfigError,
                 UdpConnectionCount = server.ServerStatus?.UdpConnectionCount ?? 0,
-                UsedMemory = server is { TotalMemory: { }, ServerStatus.AvailableMemory: { } }
+                UsedMemory = server is { TotalMemory: not null, ServerStatus.AvailableMemory: not null }
                     ? server.TotalMemory.Value - server.ServerStatus.AvailableMemory.Value
                     : 0
             }

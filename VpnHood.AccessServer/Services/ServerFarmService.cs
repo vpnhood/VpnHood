@@ -57,7 +57,7 @@ public class ServerFarmService(
 
             // create no cache request
             var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, serverFarm.TokenUrl);
-            httpRequestMessage.Headers.CacheControl = new CacheControlHeaderValue() { NoStore = true };
+            httpRequestMessage.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
             var responseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken);
             var stream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken);
 

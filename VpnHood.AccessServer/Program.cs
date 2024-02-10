@@ -79,7 +79,7 @@ public class Program
         //---------------------
         var webApp = builder.Build();
 
-        webApp.UseGrayMintCommonServices(new UseServicesOptions() { UseAppExceptions = false });
+        webApp.UseGrayMintCommonServices(new UseServicesOptions { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
         webApp.UseGrayMintSwagger(true);
         await webApp.Services.UseGrayMintDatabaseCommand<VhContext>(args);

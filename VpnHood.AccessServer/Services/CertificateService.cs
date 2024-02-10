@@ -20,7 +20,7 @@ public class CertificateService(
     public async Task<Certificate> CreateSelfSinged(Guid projectId, CertificateSelfSignedParams? createParams)
     {
         // check user quota
-        createParams ??= new CertificateSelfSignedParams()
+        createParams ??= new CertificateSelfSignedParams
         {
             CertificateSigningRequest = new CertificateSigningRequest { CommonName = CertificateUtil.CreateRandomDns() }
         };

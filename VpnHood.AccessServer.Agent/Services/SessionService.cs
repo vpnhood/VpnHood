@@ -47,7 +47,7 @@ public class SessionService(
             EventName = Ga4TagEvents.PageView,
             DocumentLocation = $"{server.ServerFarmName}/{server.ServerName}",
             DocumentTitle = $"{server.ServerFarmName}",
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
                 {"DeviceId", session.DeviceId},
                 {"TokenId", access.AccessTokenId},

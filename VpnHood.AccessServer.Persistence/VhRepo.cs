@@ -132,7 +132,7 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
         var results = await query
             .ToArrayAsync();
 
-        var ret = new ListResult<AccessTokenView>()
+        var ret = new ListResult<AccessTokenView>
         {
             Items = results,
             TotalCount = results.Length < recordCount ? recordIndex + results.Length : await baseQuery.LongCountAsync()

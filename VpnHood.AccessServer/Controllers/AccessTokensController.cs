@@ -2,7 +2,7 @@
 using GrayMint.Common.Generics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.AccessToken;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common.Utils;

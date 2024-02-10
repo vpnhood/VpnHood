@@ -40,7 +40,7 @@ public class ReportWriterService
             foreach (var item in items)
                 item.CreatedTime = DateTime.SpecifyKind(item.CreatedTime, DateTimeKind.Utc);
 
-            _logger.LogInformation(AccessEventId.Archive, $"Copy old ServerStatuses to report database. Count: {items.Length}");
+            _logger.LogInformation($"Copy old ServerStatuses to report database. Count: {items.Length}");
             _vhReportContext.ChangeTracker.Clear();
             await _vhReportContext.ServerStatuses.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
@@ -48,7 +48,7 @@ public class ReportWriterService
         catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
-            _logger.LogWarning(AccessEventId.Archive, "Managing duplicate ServerStatuses...");
+            _logger.LogWarning("Managing duplicate ServerStatuses...");
             _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.ServerStatusId);
@@ -78,7 +78,7 @@ public class ReportWriterService
                 item.EndTime = item.EndTime!=null ? DateTime.SpecifyKind(item.EndTime.Value, DateTimeKind.Utc) : null;
             }
 
-            _logger.LogInformation(AccessEventId.Archive, $"Copy old Sessions to report database. Count: {items.Length}");
+            _logger.LogInformation($"Copy old Sessions to report database. Count: {items.Length}");
             _vhReportContext.ChangeTracker.Clear();
             await _vhReportContext.Sessions.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
@@ -86,7 +86,7 @@ public class ReportWriterService
         catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
-            _logger.LogInformation(AccessEventId.Archive, "Managing duplicate Sessions...");
+            _logger.LogInformation("Managing duplicate Sessions...");
             _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.SessionId);
@@ -112,7 +112,7 @@ public class ReportWriterService
             foreach (var item in items)
                 item.CreatedTime = DateTime.SpecifyKind(item.CreatedTime, DateTimeKind.Utc);
 
-            _logger.LogInformation(AccessEventId.Archive, $"Copy old AccessUsages to report database. Count: {items.Length}");
+            _logger.LogInformation($"Copy old AccessUsages to report database. Count: {items.Length}");
             _vhReportContext.ChangeTracker.Clear();
             await _vhReportContext.AccessUsages.AddRangeAsync(items);
             await _vhReportContext.SaveChangesAsync();
@@ -120,7 +120,7 @@ public class ReportWriterService
         catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
         {
             // remove duplicates
-            _logger.LogInformation(AccessEventId.Archive, "Managing duplicate AccessUsages...");
+            _logger.LogInformation("Managing duplicate AccessUsages...");
             _vhReportContext.ChangeTracker.Clear();
 
             var ids = items.Select(x => x.AccessUsageId);

@@ -1,10 +1,9 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Dtos.ServerProfile;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 
@@ -28,7 +27,7 @@ public class ServerProfileService(
                 .Select(x => x.ServerProfileName)
                 .ToArrayAsync();
 
-            createParams.ServerProfileName = AccessUtil.FindUniqueName(createParams.ServerProfileName, names);
+            createParams.ServerProfileName = AccessServerUtil.FindUniqueName(createParams.ServerProfileName, names);
         }
 
         var serverProfile = new ServerProfileModel

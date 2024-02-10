@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.Persistence;
 

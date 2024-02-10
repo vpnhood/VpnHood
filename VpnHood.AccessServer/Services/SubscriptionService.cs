@@ -1,9 +1,10 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
 using GrayMint.Authorization.UserManagement.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Certificate;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Services;

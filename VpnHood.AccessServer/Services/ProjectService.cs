@@ -1,14 +1,16 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common.Utils;
 using VpnHood.AccessServer.Persistence;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Report.Views;
+using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Utils;
 
 namespace VpnHood.AccessServer.Services;
 

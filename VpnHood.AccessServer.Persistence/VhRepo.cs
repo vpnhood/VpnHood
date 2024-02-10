@@ -1,7 +1,7 @@
 ﻿using GrayMint.Common.Generics;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Views;
 
 namespace VpnHood.AccessServer.Persistence;

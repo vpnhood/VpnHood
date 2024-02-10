@@ -37,8 +37,8 @@ public class TimedHostedService(
     {
         try
         {
-            await using var vhContextScope = serviceScopeFactory.CreateAsyncScope();
-            var cacheRepo = vhContextScope.ServiceProvider.GetRequiredService<CacheService>();
+            await using var scope = serviceScopeFactory.CreateAsyncScope();
+            var cacheRepo = scope.ServiceProvider.GetRequiredService<CacheService>();
             await cacheRepo.SaveChanges();
         }
         catch (Exception e)

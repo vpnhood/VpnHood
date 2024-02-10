@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Report.Persistence;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Report.Utils;
+using VpnHood.AccessServer.Report.Views;
 
 namespace VpnHood.AccessServer.Report.Services;
 
@@ -32,7 +32,7 @@ public class ReportUsageService(
         usageEndTime = ToUtcWithKind(usageEndTime);
 
         // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
+        var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out Usage? cacheRes) && cacheRes != null)
             return cacheRes;
@@ -84,7 +84,7 @@ public class ReportUsageService(
         await using var transReport = await vhReportContext.WithNoLockTransaction();
 
         // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
+        var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
             return cacheRes;
@@ -167,7 +167,7 @@ public class ReportUsageService(
     {
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
-        var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_usage_{projectId}_{serverFarmId}",
+        var cacheKey = ReportUtil.GenerateCacheKey($"accessToken_usage_{projectId}_{serverFarmId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
@@ -186,7 +186,7 @@ public class ReportUsageService(
         var queryAccessTokenIds = accessTokenIds is { Length: <= SmallCacheLength } ? accessTokenIds : null;
         if (queryAccessTokenIds != null)
         {
-            cacheKey = AccessUtil.GenerateCacheKey(
+            cacheKey = ReportUtil.GenerateCacheKey(
                 $"accessToken_usage_{projectId}_{serverFarmId}_{string.Join(',', queryAccessTokenIds)}",
                 usageBeginTime, usageEndTime, out _);
 
@@ -239,7 +239,7 @@ public class ReportUsageService(
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
 
-        var cacheKey = AccessUtil.GenerateCacheKey($"device_usage_{projectId}_{accessTokenId}_{serverFarmId}",
+        var cacheKey = ReportUtil.GenerateCacheKey($"device_usage_{projectId}_{accessTokenId}_{serverFarmId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
@@ -258,7 +258,7 @@ public class ReportUsageService(
         var queryDeviceIds = deviceIds is { Length: <= SmallCacheLength } ? deviceIds : null;
         if (queryDeviceIds != null)
         {
-            cacheKey = AccessUtil.GenerateCacheKey(
+            cacheKey = ReportUtil.GenerateCacheKey(
                 $"device_usage_{projectId}_{accessTokenId}_{serverFarmId}_{string.Join(',', queryDeviceIds)}",
                 usageBeginTime, usageEndTime, out _);
 

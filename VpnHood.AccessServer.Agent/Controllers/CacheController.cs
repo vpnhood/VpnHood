@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Services;
-using VpnHood.AccessServer.Caches;
+using VpnHood.AccessServer.Persistence.Caches;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 

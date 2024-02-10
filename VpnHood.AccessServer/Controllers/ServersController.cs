@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Server;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using ServerStatusHistory = VpnHood.AccessServer.Dtos.ServerStatusHistory;
+using ServerStatusHistory = VpnHood.AccessServer.Report.Views.ServerStatusHistory;
 
 namespace VpnHood.AccessServer.Controllers;
 

@@ -1,13 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using System.Net;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -137,7 +138,7 @@ public class AgentClientSessionTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
-    private async Task<Models.AccessModel> GetAccessFromSession(SessionDom sessionDom)
+    private async Task<AccessModel> GetAccessFromSession(SessionDom sessionDom)
     {
         await using var scope = sessionDom.TestApp.WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();

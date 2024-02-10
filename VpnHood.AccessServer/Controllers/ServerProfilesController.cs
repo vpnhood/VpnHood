@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using Microsoft.AspNetCore.Authorization;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.ServerProfile;
 
 namespace VpnHood.AccessServer.Controllers;
 

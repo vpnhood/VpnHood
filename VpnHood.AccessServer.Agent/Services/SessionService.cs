@@ -4,10 +4,10 @@ using Ga4.Ga4Tracking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Caches;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -176,7 +176,7 @@ public class SessionService(
         access.LastUsedTime = DateTime.UtcNow; // update used time
 
         // check supported version
-        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(ServerUtil.MinClientVersion) < 0)
+        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(AgentOptions.MinClientVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another server if everything was ok

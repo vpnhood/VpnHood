@@ -2,7 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Test.Dom;
-using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
+using ServerStatusModel = VpnHood.AccessServer.Persistence.Models.ServerStatusModel;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

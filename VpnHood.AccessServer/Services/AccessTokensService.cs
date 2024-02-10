@@ -1,10 +1,10 @@
 ﻿using GrayMint.Common.Generics;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Dtos.AccessToken;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Report.Services;
-using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 using VpnHood.Common.TokenLegacy;
 using VpnHood.Common.Utils;

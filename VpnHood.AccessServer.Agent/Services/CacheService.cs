@@ -2,9 +2,9 @@
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Caches;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Agent.Services;

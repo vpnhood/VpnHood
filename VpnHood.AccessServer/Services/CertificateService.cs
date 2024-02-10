@@ -1,8 +1,8 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Dtos.Certificate;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Services;

@@ -1,17 +1,19 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.AccessServer.Persistence;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Clients;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.Common.Utils;
-using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Utils;
-using VpnHood.Server.Access.Managers.Http;
 using Renci.SshNet;
+using VpnHood.Common.Utils;
+using VpnHood.Server.Access.Managers.Http;
+using VpnHood.AccessServer.DtoConverters;
+using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Exceptions;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Server;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -38,7 +40,7 @@ public class ServerService(
         if (serverName.Contains("##"))
         {
             var names = await vhRepo.ServerGetNames(projectId);
-            serverName = AccessUtil.FindUniqueName(serverName, names);
+            serverName = AccessServerUtil.FindUniqueName(serverName, names);
         }
 
         var server = new ServerModel

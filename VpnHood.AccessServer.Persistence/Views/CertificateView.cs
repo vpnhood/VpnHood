@@ -1,5 +1,5 @@
 ﻿using GrayMint.Common.Utils;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.Persistence.Views;
 

@@ -1,13 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Caches;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.Persistence;
 
 public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 {
-    public async Task<CacheInitView> GetInitView(DateTime minServerUsedTime)
+    public async Task<InitCache> GetInitView(DateTime minServerUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
@@ -106,7 +106,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .AsNoTracking()
             .ToArrayAsync();
 
-        var ret = new CacheInitView
+        var ret = new InitCache
         {
             Servers = statuses.Select(x => x.Server).ToArray(),
             Farms = statuses.Select(x => x.Farm).DistinctBy(x => x.ServerFarmId).ToArray(),

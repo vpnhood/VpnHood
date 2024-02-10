@@ -28,8 +28,4 @@
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
-	</ItemGroup>
-
 </Project>

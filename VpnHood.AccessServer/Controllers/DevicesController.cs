@@ -5,6 +5,7 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 

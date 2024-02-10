@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Caches;
+using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Messaging;
 using AccessToken = VpnHood.AccessServer.Api.AccessToken;

@@ -1,6 +1,4 @@
-﻿using VpnHood.Common.Messaging;
-
-namespace VpnHood.AccessServer.Report.Models;
+﻿namespace VpnHood.AccessServer.Report.Models;
 
 public class SessionArchive
 {
@@ -15,8 +13,8 @@ public class SessionArchive
     public required DateTime CreatedTime { get; set; }
     public required DateTime LastUsedTime { get; set; }
     public required DateTime? EndTime { get; set; }
-    public required SessionSuppressType SuppressedBy { get; set; }
-    public required SessionSuppressType SuppressedTo { get; set; }
-    public required SessionErrorCode ErrorCode { get; set; }
+    public required int SuppressedBy { get; set; }
+    public required int SuppressedTo { get; set; }
+    public required int ErrorCode { get; set; }
     public required string? ErrorMessage { get; set; }
 }

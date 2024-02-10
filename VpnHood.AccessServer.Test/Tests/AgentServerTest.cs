@@ -3,9 +3,9 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 
@@ -530,7 +530,7 @@ public class AgentServerTest
         Assert.IsTrue(farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
 
         // LastConfigError must be removed after successful configuration
-        farm.DefaultServer.ServerInfo.Version = ServerUtil.MinServerVersion;
+        farm.DefaultServer.ServerInfo.Version = AgentOptions.MinServerVersion;
         await farm.DefaultServer.Configure();
         await farm.DefaultServer.Reload();
         Assert.IsNull(farm.DefaultServer.Server.LastConfigError);

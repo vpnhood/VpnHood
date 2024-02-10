@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Models;
+﻿using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -20,9 +20,9 @@ public static class ArchiveConverter
             CreatedTime = model.CreatedTime,
             LastUsedTime = model.LastUsedTime,
             EndTime = model.EndTime,
-            SuppressedBy = model.SuppressedBy,
-            SuppressedTo = model.SuppressedTo,
-            ErrorCode = model.ErrorCode,
+            SuppressedBy = (int)model.SuppressedBy,
+            SuppressedTo = (int)model.SuppressedTo,
+            ErrorCode = (int)model.ErrorCode,
             ErrorMessage = model.ErrorMessage,
         };
     }

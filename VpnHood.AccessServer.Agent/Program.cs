@@ -1,7 +1,6 @@
 using System.Text.Json;
 using GrayMint.Common.AspNetCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Agent.Services;
@@ -54,7 +53,8 @@ public class Program
         builder.Services
             .AddDbContextPool<VhContext>(options =>
             {
-                options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
+                //todo
+                //options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
 

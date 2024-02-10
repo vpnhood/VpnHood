@@ -3,11 +3,12 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Caches;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
@@ -65,10 +66,10 @@ public class AgentService(
 
     private async Task CheckServerVersion(ServerCache server, string? version)
     {
-        if (!string.IsNullOrEmpty(version) && Version.Parse(version) >= ServerUtil.MinServerVersion)
+        if (!string.IsNullOrEmpty(version) && Version.Parse(version) >= AgentOptions.MinServerVersion)
             return;
 
-        var errorMessage = $"Your server version is not supported. Please update your server. MinSupportedVersion: {ServerUtil.MinServerVersion}";
+        var errorMessage = $"Your server version is not supported. Please update your server. MinSupportedVersion: {AgentOptions.MinServerVersion}";
         if (server.LastConfigError != errorMessage)
         {
             // update db & cache
@@ -186,7 +187,7 @@ public class AgentService(
             },
             SessionOptions = new SessionOptions
             {
-                TcpBufferSize = ServerUtil.GetBestTcpBufferSize(serverModel.TotalMemory),
+                TcpBufferSize = AgentUtil.GetBestTcpBufferSize(serverModel.TotalMemory),
             },
             ServerSecret = serverFarmModel.Secret
         };

@@ -4,11 +4,12 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.ServerFarm;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Utils;
 
@@ -102,7 +103,7 @@ public class ServerFarmService(
                 .Select(x => x.ServerFarmName)
                 .ToArrayAsync();
 
-            createParams.ServerFarmName = AccessUtil.FindUniqueName(createParams.ServerFarmName, names);
+            createParams.ServerFarmName = AccessServerUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
 
         // Set ServerProfileId

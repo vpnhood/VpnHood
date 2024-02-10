@@ -11,7 +11,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
-public class AccessTokensService(UsageReportService usageReportService, VhRepo vhRepo)
+public class AccessTokensService(ReportUsageService reportUsageService, VhRepo vhRepo)
 {
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
@@ -128,7 +128,7 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
         if (usageBeginTime != null)
         {
             var accessTokenIds = results.Select(x => x.AccessToken.AccessTokenId).ToArray();
-            var usages = await usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageBeginTime, usageEndTime);
+            var usages = await reportUsageService.GetAccessTokensUsage(projectId, accessTokenIds, serverFarmId, usageBeginTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.AccessToken.AccessTokenId, out var usage))

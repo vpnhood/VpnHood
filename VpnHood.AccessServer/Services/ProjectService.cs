@@ -16,7 +16,7 @@ public class ProjectService(
     VhContext vhContext,
     SubscriptionService subscriptionService,
     AgentCacheClient agentCacheClient,
-    UsageReportService usageReportService,
+    ReportUsageService usageReportService,
     IRoleProvider roleProvider,
     CertificateService certificateService)
 {

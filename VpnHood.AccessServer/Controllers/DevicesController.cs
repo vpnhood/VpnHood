@@ -15,7 +15,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize]
 public class DevicesController(
     VhContext vhContext,
-    UsageReportService usageReportService,
+    ReportUsageService reportUsageService,
     SubscriptionService subscriptionService)
     : ControllerBase
 {
@@ -92,7 +92,7 @@ public class DevicesController(
         if (usageBeginTime != null)
         {
             var deviceIds = results.Select(x => x.Device.DeviceId).ToArray();
-            var usages = await usageReportService.GetDevicesUsage(projectId, deviceIds,
+            var usages = await reportUsageService.GetDevicesUsage(projectId, deviceIds,
                 null, null, usageBeginTime, usageEndTime);
 
             foreach (var result in results)
@@ -112,7 +112,7 @@ public class DevicesController(
     {
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var usagesDictionary = await usageReportService.GetDevicesUsage(projectId,
+        var usagesDictionary = await reportUsageService.GetDevicesUsage(projectId,
             accessTokenId: accessTokenId, serverFarmId: serverFarmId);
 
         var usages = usagesDictionary

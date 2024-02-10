@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Utils;
 
 namespace VpnHood.AccessServer.Report.Services;
 
-public class UsageReportService(
+public class ReportUsageService(
     VhReportContext vhReportContext,
     IMemoryCache memoryCache,
     IOptions<ReportServiceOptions> options)

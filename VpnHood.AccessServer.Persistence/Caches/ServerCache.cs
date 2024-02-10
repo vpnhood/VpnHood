@@ -18,5 +18,5 @@ public class ServerCache
     public required bool IsEnabled { get; init; }
     public required Guid AuthorizationCode { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
-    public required ServerStatusModel? ServerStatus { get; set; } //todo should not have navigation
+    public required ServerStatusBaseModel? ServerStatus { get; set; }
 }

@@ -7,6 +7,16 @@ namespace VpnHood.AccessServer.Persistence;
 
 public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 {
+    public void ClearChangeTracker()
+    {
+        vhContext.ChangeTracker.Clear();
+    }
+
+    public void SetCommandTimeout(TimeSpan fromMinutes)
+    {
+        vhContext.Database.SetCommandTimeout(fromMinutes);
+    }
+
     public async Task<InitCache> GetInitView(DateTime minServerUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
@@ -360,7 +370,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         return query.SingleAsync();
     }
 
-    public Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId, 
+    public Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
         bool includeServersAndAccessPoints = false, bool includeCertificate = false, bool includeServerProfile = true)
     {
         var query = vhContext.ServerFarms
@@ -386,5 +396,72 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     public ValueTask<ServerModel?> FindServerAsync(Guid serverServerId)
     {
         return vhContext.Servers.FindAsync(serverServerId);
+    }
+
+    private static string ToSqlValue<T>(T? value)
+    {
+        return value?.ToString() ?? "NULL";
+    }
+
+    public async Task AddAndSaveServerStatuses(ServerStatusBaseModel[] serverStatuses)
+    {
+        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
+
+        // remove old IsLast
+        var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
+        await vhContext.ServerStatuses
+            .AsNoTracking()
+            .Where(serverStatus => serverIds.Contains(serverStatus.ServerId))
+            .ExecuteUpdateAsync(setPropertyCalls =>
+                setPropertyCalls.SetProperty(serverStatus => serverStatus.IsLast, serverStatus => false));
+
+        var models = serverStatuses.Select(x =>
+            new ServerStatusModel
+            {
+                ServerStatusId = 0,
+                IsLast = true,
+                CreatedTime = x.CreatedTime,
+                AvailableMemory = x.AvailableMemory,
+                CpuUsage = x.CpuUsage,
+                ServerId = x.ServerId,
+                IsConfigure = x.IsConfigure,
+                ProjectId = x.ProjectId,
+                SessionCount = x.SessionCount,
+                TcpConnectionCount = x.TcpConnectionCount,
+                UdpConnectionCount = x.UdpConnectionCount,
+                ThreadCount = x.ThreadCount,
+                TunnelReceiveSpeed = x.TunnelReceiveSpeed,
+                TunnelSendSpeed = x.TunnelSendSpeed
+            });
+
+        await vhContext.ServerStatuses.AddRangeAsync(models);
+        await vhContext.SaveChangesAsync();
+
+        /*
+        // save new statuses
+        var values = models.Select(x =>
+            "\r\n(" +
+            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
+            $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
+            $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
+            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
+            ")");
+
+        var sql =
+            $"\r\nINSERT INTO {nameof(vhContext.ServerStatuses)} (" +
+            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
+            $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
+            $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
+            $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
+            ") " +
+            $"VALUES {string.Join(',', values)}";
+
+        // AddRange has issue on unique index; we got desperate
+        await vhContext.Database.ExecuteSqlRawAsync(sql);
+        */
+
+        if (transaction != null)
+            await vhContext.Database.CommitTransactionAsync();
+
     }
 }

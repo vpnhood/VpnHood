@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.Persistence.Utils;
 
 public class ServerStateResolver
 {
-    public required ServerStatusModel? ServerStatus { get; init; }
+    public required ServerStatusBaseModel? ServerStatus { get; init; }
     public required TimeSpan LostServerThreshold { get; init; }
     public required DateTime? ConfigureTime { get; init; }
     public required Guid ConfigCode { get; init; }

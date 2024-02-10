@@ -12,8 +12,7 @@ namespace VpnHood.AccessServer.Agent.Services;
 public class CacheService(
     IOptions<AgentOptions> appOptions,
     ILogger<CacheService> logger,
-    VhAgentRepo vhAgentRepo,
-    VhContext vhContext)
+    VhAgentRepo vhAgentRepo)
 {
     private class MemCache
     {
@@ -276,7 +275,7 @@ public class CacheService(
         if (!lockAsyncResult.Succeeded) return;
 
         logger.LogTrace("Saving cache...");
-        vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        vhAgentRepo.SetCommandTimeout(TimeSpan.FromMinutes(5));
         var savingTime = DateTime.UtcNow;
 
         // find updated sessions
@@ -311,12 +310,12 @@ public class CacheService(
         catch (DbUpdateConcurrencyException ex)
         {
             await ResolveDbUpdateConcurrencyException(ex);
-            vhContext.ChangeTracker.Clear();
+            vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not flush sessions. I will resolve it for the next try.");
         }
         catch (Exception ex)
         {
-            vhContext.ChangeTracker.Clear();
+            vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not flush sessions.");
         }
 
@@ -335,14 +334,23 @@ public class CacheService(
         }
         catch (Exception ex)
         {
-            vhContext.ChangeTracker.Clear();
+            vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not write AccessUsages.");
         }
 
         // ServerStatus
         try
         {
-            await SaveServersStatus();
+            var serverStatuses = Mem.Servers.Values
+                .Where(server => server.ServerStatus?.CreatedTime > Mem.LastSavedTime)
+                .Select(server => server.ServerStatus!)
+                .ToArray();
+
+            logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
+                serverStatuses.DistinctBy(x => x.ProjectId).Count(), serverStatuses.Length);
+
+            if (serverStatuses.Any())
+                await vhAgentRepo.AddAndSaveServerStatuses(serverStatuses);
 
             //cleanup: remove lost servers
             var minStatusTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
@@ -353,85 +361,17 @@ public class CacheService(
         catch (DbUpdateConcurrencyException ex)
         {
             await ResolveDbUpdateConcurrencyException(ex);
-            vhContext.ChangeTracker.Clear();
+            vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not save servers status. I've resolved it for the next try.");
         }
         catch (Exception ex)
         {
-            vhContext.ChangeTracker.Clear();
+            vhAgentRepo.ClearChangeTracker();
             logger.LogError(ex, "Could not save servers status.");
         }
 
         Mem.LastSavedTime = savingTime;
         logger.LogTrace("The cache has been saved.");
-    }
-
-    private static string ToSqlValue<T>(T? value)
-    {
-        return value?.ToString() ?? "NULL";
-    }
-
-    public async Task SaveServersStatus()
-    {
-        var serverStatuses = Mem.Servers.Values
-            .Where(server => server.ServerStatus?.CreatedTime > Mem.LastSavedTime)
-            .Select(server => server.ServerStatus!)
-            .Select(x => new ServerStatusModel
-            {
-                ServerStatusId = 0,
-                IsLast = true,
-                CreatedTime = x.CreatedTime,
-                AvailableMemory = x.AvailableMemory,
-                CpuUsage = x.CpuUsage,
-                ServerId = x.ServerId,
-                IsConfigure = x.IsConfigure,
-                ProjectId = x.ProjectId,
-                SessionCount = x.SessionCount,
-                TcpConnectionCount = x.TcpConnectionCount,
-                UdpConnectionCount = x.UdpConnectionCount,
-                ThreadCount = x.ThreadCount,
-                TunnelReceiveSpeed = x.TunnelReceiveSpeed,
-                TunnelSendSpeed = x.TunnelSendSpeed
-            }).ToArray();
-
-        if (!serverStatuses.Any())
-            return;
-
-        logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
-            serverStatuses.DistinctBy(x => x.ProjectId).Count(), serverStatuses.Length);
-
-        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
-
-        // remove old is last
-        var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
-        await vhContext.ServerStatuses
-            .AsNoTracking()
-            .Where(serverStatus => serverIds.Contains(serverStatus.ServerId))
-            .ExecuteUpdateAsync(setPropertyCalls =>
-                setPropertyCalls.SetProperty(serverStatus => serverStatus.IsLast, serverStatus => false));
-
-        // save new statuses
-        var values = serverStatuses.Select(x => "\r\n(" +
-            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
-            $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
-            $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
-            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
-            ")");
-
-        var sql =
-            $"\r\nINSERT INTO {nameof(vhContext.ServerStatuses)} (" +
-            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
-            $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
-            $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
-            $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
-            ") " +
-            $"VALUES {string.Join(',', values)}";
-
-        // AddRange has issue on unique index; we got desperate
-        await vhContext.Database.ExecuteSqlRawAsync(sql);
-
-        if (transaction != null)
-            await vhContext.Database.CommitTransactionAsync();
     }
 
     public Task<SessionCache[]> GetActiveSessions(Guid accessId)

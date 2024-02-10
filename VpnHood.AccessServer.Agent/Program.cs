@@ -53,8 +53,6 @@ public class Program
         builder.Services
             .AddDbContextPool<VhContext>(options =>
             {
-                //todo
-                //options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
 

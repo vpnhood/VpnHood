@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using VpnHood.AccessServer.Api;
+using VpnHood.Common.Messaging;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -45,7 +46,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
                 SessionCount = server.ServerStatus?.SessionCount ?? 0,
                 TcpConnectionCount = server.ServerStatus?.TcpConnectionCount ?? 0,
                 ThreadCount = server.ServerStatus?.ThreadCount ?? 0,
-                TunnelSpeed = new Common.Messaging.Traffic
+                TunnelSpeed = new Traffic
                 {
                     Sent = server.ServerStatus?.TunnelReceiveSpeed ?? 0,
                     Received = server.ServerStatus?.TunnelSendSpeed ?? 0,

@@ -10,6 +10,7 @@ using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -103,7 +104,7 @@ public class AgentClientSessionTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.AccessKey);
-        Assert.AreEqual(farmOptions.TokenUrl?.ToString(), Common.Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
+        Assert.AreEqual(farmOptions.TokenUrl?.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);

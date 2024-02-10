@@ -18,6 +18,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
+using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test;
@@ -295,7 +296,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     {
         var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId).Result;
 
-        var options = new Server.Access.Managers.Http.HttpAccessManagerOptions(
+        var options = new HttpAccessManagerOptions(
             installManual.AppSettings.HttpAccessManager.BaseUrl,
             installManual.AppSettings.HttpAccessManager.Authorization);
 

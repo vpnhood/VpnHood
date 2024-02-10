@@ -14,6 +14,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
+using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -342,7 +343,7 @@ public class ServerService(
     {
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
+        var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
@@ -353,13 +354,13 @@ public class ServerService(
         await using var keyStream = new MemoryStream(installParams.UserPrivateKey);
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase);
 
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
+        var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
 
-    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? loginPassword)
+    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, ConnectionInfo connectionInfo, string? loginPassword)
     {
         using var sshClient = new SshClient(connectionInfo);
         sshClient.Connect();

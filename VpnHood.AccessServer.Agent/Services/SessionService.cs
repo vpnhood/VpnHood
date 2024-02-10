@@ -13,6 +13,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Messaging;
+using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -162,7 +163,7 @@ public class SessionService(
 
         // multiple requests may be already queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        using var accessLock = await GrayMint.Common.Utils.AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
+        using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
         var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
         if (access == null)
         {

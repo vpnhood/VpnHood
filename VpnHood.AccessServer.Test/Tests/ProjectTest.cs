@@ -32,7 +32,7 @@ public class ProjectTest
         {
             GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         var project1C = await projectsClient.GetAsync(projectId);
@@ -47,7 +47,7 @@ public class ProjectTest
         updateParams = new ProjectUpdateParams
         {
             GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() }
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         project1C = await projectsClient.GetAsync(projectId);

@@ -391,7 +391,7 @@ public class CacheService(
                 UdpConnectionCount = x.UdpConnectionCount,
                 ThreadCount = x.ThreadCount,
                 TunnelReceiveSpeed = x.TunnelReceiveSpeed,
-                TunnelSendSpeed = x.TunnelSendSpeed,
+                TunnelSendSpeed = x.TunnelSendSpeed
             }).ToArray();
 
         if (!serverStatuses.Any())

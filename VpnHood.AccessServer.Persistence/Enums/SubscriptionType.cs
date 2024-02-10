@@ -6,5 +6,5 @@ namespace VpnHood.AccessServer.Persistence.Enums;
 public enum SubscriptionType
 {
     Free = 0,
-    Unlimited = 1,
+    Unlimited = 1
 }

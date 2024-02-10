@@ -36,7 +36,7 @@ public class ProjectService(
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
             IsDeleted = false,
-            CreatedTime = DateTime.UtcNow,
+            CreatedTime = DateTime.UtcNow
         };
 
         // Farm
@@ -63,11 +63,11 @@ public class ProjectService(
             CreatedTime = DateTime.UtcNow,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
-                serverProfile,
+                serverProfile
             },
             ServerFarms = new HashSet<ServerFarmModel>
             {
-                serverFarm,
+                serverFarm
             },
             AccessTokens = new HashSet<AccessTokenModel>
             {
@@ -114,7 +114,7 @@ public class ProjectService(
                     LastUsedTime = null,
                     MaxTraffic = 0,
                     Lifetime = 0,
-                    Url = null,
+                    Url = null
                 }
             }
         };

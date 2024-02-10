@@ -23,7 +23,7 @@ public static class ArchiveConverter
             SuppressedBy = (int)model.SuppressedBy,
             SuppressedTo = (int)model.SuppressedTo,
             ErrorCode = (int)model.ErrorCode,
-            ErrorMessage = model.ErrorMessage,
+            ErrorMessage = model.ErrorMessage
         };
     }
 
@@ -45,7 +45,7 @@ public static class ArchiveConverter
             TotalSentTraffic = model.TotalSentTraffic,
             TotalReceivedTraffic = model.TotalReceivedTraffic,
             ReceivedTraffic = model.ReceivedTraffic,
-            SentTraffic = model.SentTraffic,
+            SentTraffic = model.SentTraffic
         };
     }
 
@@ -65,7 +65,7 @@ public static class ArchiveConverter
             ThreadCount = model.ThreadCount,
             TunnelReceiveSpeed = model.TunnelReceiveSpeed,
             TunnelSendSpeed = model.TunnelSendSpeed,
-            UdpConnectionCount = model.UdpConnectionCount,
+            UdpConnectionCount = model.UdpConnectionCount
         };
     }
 }

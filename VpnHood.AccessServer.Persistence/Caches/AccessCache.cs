@@ -27,7 +27,7 @@ public class AccessCache : AccessBaseModel
             TotalReceivedTraffic = TotalReceivedTraffic,
             TotalTraffic = TotalTraffic,
             CycleTraffic = CycleTraffic,
-            Description = Description,
+            Description = Description
         };
     }
 }

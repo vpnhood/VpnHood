@@ -32,7 +32,7 @@ public static class Roles
             Permissions.ServerWrite,
             Permissions.ServerInstall,
             Permissions.ServerFarmWrite,
-            Permissions.IpLockWrite,
+            Permissions.IpLockWrite
         }.Concat(ProjectReader.Permissions).ToArray()
     };
 
@@ -44,7 +44,7 @@ public static class Roles
         Permissions = new[]
         {
             RolePermissions.RoleRead,
-            RolePermissions.RoleWrite,
+            RolePermissions.RoleWrite
         }.Concat(ProjectWriter.Permissions).ToArray()
 
     };
@@ -57,7 +57,7 @@ public static class Roles
         Permissions = new[]
         {
             Permissions.ProjectCreate,
-            RolePermissions.RoleWriteOwner,
+            RolePermissions.RoleWriteOwner
         }.Concat(ProjectAdmin.Permissions).ToArray()
     };
 

@@ -27,7 +27,7 @@ public class SyncTest
             UdpConnectionCount = 0,
             ThreadCount = 0,
             TunnelSendSpeed = 0,
-            TunnelReceiveSpeed = 0,
+            TunnelReceiveSpeed = 0
         });
 
         return entityEntry.Entity;

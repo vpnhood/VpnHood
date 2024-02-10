@@ -108,7 +108,7 @@ public class ServerProfileService(
             .ThenBy(x => x.ServerProfileName)
             .Select(x => new ServerProfileData
             {
-                ServerProfile = x.ToDto(),
+                ServerProfile = x.ToDto()
             });
 
         // get farms
@@ -136,7 +136,7 @@ public class ServerProfileService(
                 serverProfileData.Summary = new ServerProfileSummary
                 {
                     ServerCount = summaries.Count(x => x.ServerId != null),
-                    ServerFarmCount = summaries.DistinctBy(x => x.ServerFarmId).Count(),
+                    ServerFarmCount = summaries.DistinctBy(x => x.ServerFarmId).Count()
                 };
             }
         }

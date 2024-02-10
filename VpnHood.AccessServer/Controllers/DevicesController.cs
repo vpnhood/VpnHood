@@ -80,7 +80,7 @@ public class DevicesController(
             .OrderByDescending(device => device.ModifiedTime)
             .Select(device => new DeviceData
             {
-                Device = device.ToDto(),
+                Device = device.ToDto()
             });
 
         var results = await query
@@ -123,7 +123,7 @@ public class DevicesController(
             .Select(x => new
             {
                 DeviceId = x.Key,
-                Traffic = x.Value,
+                Traffic = x.Value
             })
             .ToArray();
 

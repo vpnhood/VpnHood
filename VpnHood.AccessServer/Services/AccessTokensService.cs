@@ -39,7 +39,7 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
             IsEnabled = true,
             IsDeleted = false,
             FirstUsedTime = null,
-            LastUsedTime = null,
+            LastUsedTime = null
         };
 
         await vhRepo.AddAsync(accessToken);

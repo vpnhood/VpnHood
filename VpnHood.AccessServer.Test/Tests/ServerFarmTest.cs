@@ -45,7 +45,7 @@ public class ServerFarmTest
                         IpAddress = publicIp1.ToString(),
                         TcpPort = 443,
                         IsListen = true,
-                        UdpPort = 443,
+                        UdpPort = 443
                     },
                     new AccessPoint
                     {
@@ -53,7 +53,7 @@ public class ServerFarmTest
                         IpAddress = publicIp2.ToString(),
                         TcpPort = 443,
                         IsListen = true,
-                        UdpPort = 443,
+                        UdpPort = 443
                     }
                 }
             }
@@ -88,7 +88,7 @@ public class ServerFarmTest
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
             TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
             Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() },
-            PushTokenToClient = new PatchOfBoolean { Value = true },
+            PushTokenToClient = new PatchOfBoolean { Value = true }
         };
 
         await testApp.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);

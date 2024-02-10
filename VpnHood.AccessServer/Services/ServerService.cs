@@ -67,7 +67,7 @@ public class ServerService(
             ConfigureTime = null,
             EnvironmentVersion = null,
             MachineName = null,
-            IsDeleted = false,
+            IsDeleted = false
         };
 
         // add server and update FarmToken
@@ -293,7 +293,7 @@ public class ServerService(
             LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
             SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
             TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
-            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
+            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed)
         };
 
         return usageSummary;

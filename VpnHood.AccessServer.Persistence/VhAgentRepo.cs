@@ -39,7 +39,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 Farm = new ServerFarmCache
                 {
                     ProjectId = x.Server.ServerFarm.ProjectId,
-                    ServerFarmId = x.Server.ServerFarm.ServerFarmId,
+                    ServerFarmId = x.Server.ServerFarm.ServerFarmId
                 },
                 Project = new ProjectCache
                 {
@@ -78,7 +78,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ClientId = x.Device!.ClientId,
                     UserAgent = x.Device.UserAgent,
                     Country = x.Device.Country,
-                    DeviceIp = x.DeviceIp,
+                    DeviceIp = x.DeviceIp
                 },
                 Access = new AccessCache
                 {
@@ -100,7 +100,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     AccessTokenName = x.Access.AccessToken.AccessTokenName,
                     MaxDevice = x.Access.AccessToken.MaxDevice,
                     MaxTraffic = x.Access.AccessToken.MaxTraffic,
-                    IsPublic = x.Access.AccessToken.IsPublic,
+                    IsPublic = x.Access.AccessToken.IsPublic
                 }
             })
             .AsNoTracking()
@@ -112,7 +112,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             Farms = statuses.Select(x => x.Farm).DistinctBy(x => x.ServerFarmId).ToArray(),
             Projects = statuses.Select(x => x.Project).DistinctBy(x => x.ProjectId).ToArray(),
             Sessions = sessions.Select(x => x.Session).ToArray(),
-            Accesses = sessions.Select(x => x.Access).DistinctBy(x => x.AccessId).ToArray(),
+            Accesses = sessions.Select(x => x.Access).DistinctBy(x => x.AccessId).ToArray()
         };
 
         return ret;
@@ -139,7 +139,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessPoints = x.AccessPoints.ToArray(),
                 ServerFarmName = x.ServerFarm!.ServerFarmName,
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
-                ServerStatus = x.ServerStatuses!.FirstOrDefault(),
+                ServerStatus = x.ServerStatuses!.FirstOrDefault()
             })
             .AsNoTracking()
             .ToArrayAsync();
@@ -203,7 +203,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessTokenName = x.AccessToken.AccessTokenName,
                 MaxDevice = x.AccessToken.MaxDevice,
                 MaxTraffic = x.AccessToken.MaxTraffic,
-                IsPublic = x.AccessToken.IsPublic,
+                IsPublic = x.AccessToken.IsPublic
             })
             .AsNoTracking()
             .SingleAsync();
@@ -233,7 +233,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessTokenName = x.AccessToken.AccessTokenName,
                 MaxDevice = x.AccessToken.MaxDevice,
                 MaxTraffic = x.AccessToken.MaxTraffic,
-                IsPublic = x.AccessToken.IsPublic,
+                IsPublic = x.AccessToken.IsPublic
             })
             .AsNoTracking()
             .SingleOrDefaultAsync();
@@ -293,7 +293,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             SuppressedTo = session.SuppressedTo,
             IsArchived = session.IsArchived,
             Country = session.Country,
-            DeviceIp = session.DeviceIp,
+            DeviceIp = session.DeviceIp
         };
 
         var entry = vhContext.Sessions.Attach(model);

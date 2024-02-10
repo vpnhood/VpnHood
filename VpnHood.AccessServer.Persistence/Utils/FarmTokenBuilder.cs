@@ -62,7 +62,7 @@ public static class FarmTokenBuilder
             HostPort = hostPort,
             IsValidHostName = serverFarm.UseHostName,
             Url = serverFarm.TokenUrl,
-            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
+            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
         };
 
         return serverToken;

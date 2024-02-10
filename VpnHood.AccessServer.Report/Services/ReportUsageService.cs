@@ -51,14 +51,14 @@ public class ReportUsageService(
             .Select(g => new
             {
                 SentTraffic = g.Sum(y => y.SentTraffic),
-                ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
+                ReceivedTraffic = g.Sum(y => y.ReceivedTraffic)
             })
             .GroupBy(g => true)
             .Select(g => new Usage
             {
                 DeviceCount = g.Count(),
                 SentTraffic = g.Sum(y => y.SentTraffic),
-                ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
+                ReceivedTraffic = g.Sum(y => y.ReceivedTraffic)
             });
 
 
@@ -115,7 +115,7 @@ public class ReportUsageService(
                 g.Key.Minutes,
                 g.Key.ServerId,
                 SessionCount = g.Max(x => x.SessionCount),
-                TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
+                TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed)
             });
 
         // sum of max in status interval
@@ -125,7 +125,7 @@ public class ReportUsageService(
             {
                 Minutes = g.Key,
                 SessionCount = g.Sum(x => x.SessionCount),
-                TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
+                TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed)
                 // ServerCount = g.Count() 
             });
 
@@ -137,7 +137,7 @@ public class ReportUsageService(
                 {
                     Time = baseTime.AddMinutes(g.Key * step2 * step1),
                     SessionCount = g.Max(y => y.SessionCount),
-                    TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
+                    TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed)
                     // ServerCount = g.Max(y=>y.ServerCount) 
                 })
             .OrderBy(x => x.Time);
@@ -212,7 +212,7 @@ public class ReportUsageService(
                     SentTraffic = g.Sum(y => y.SentTraffic),
                     ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
                     DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
-                    AccessTokenCount = 1,
+                    AccessTokenCount = 1
                 }
             });
 
@@ -285,7 +285,7 @@ public class ReportUsageService(
                     {
                         SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
                         ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                        LastUsedTime = g.Max(y => y.accessUsage.CreatedTime),
+                        LastUsedTime = g.Max(y => y.accessUsage.CreatedTime)
                     }
                     : null
             };

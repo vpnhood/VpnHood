@@ -251,7 +251,7 @@ public class VhContext : DbContext
                     e.TunnelSendSpeed,
                     e.TunnelReceiveSpeed,
                     e.IsConfigure,
-                    e.CreatedTime,
+                    e.CreatedTime
                 })
                 .IsUnique()
                 .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");

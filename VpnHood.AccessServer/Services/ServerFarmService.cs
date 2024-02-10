@@ -129,7 +129,7 @@ public class ServerFarmService(
             Secret = VhUtil.GenerateKey(),
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
-            PushTokenToClient = createParams.PushTokenToClient,
+            PushTokenToClient = createParams.PushTokenToClient
         };
 
         // update TokenJson
@@ -215,7 +215,7 @@ public class ServerFarmService(
                 Certificate = new
                 {
                     x.Certificate!.CommonName,
-                    x.Certificate.ExpirationTime,
+                    x.Certificate.ExpirationTime
                 }
             })
             .OrderByDescending(x => x.ServerFarm.ServerFarmName)

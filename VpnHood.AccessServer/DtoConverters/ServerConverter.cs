@@ -16,7 +16,7 @@ public static class ServerConverter
             ConfigureTime = model.ConfigureTime,
             ConfigCode = model.ConfigCode,
             LastConfigCode = model.LastConfigCode,
-            IsEnabled = model.IsEnabled,
+            IsEnabled = model.IsEnabled
         };
 
         return new VpnServer
@@ -39,7 +39,7 @@ public static class ServerConverter
             LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
-            AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),  
+            AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray()
         };
     }
 

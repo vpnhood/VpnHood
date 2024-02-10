@@ -19,7 +19,7 @@ public static class AccessEventId
         Session,
         Cache,
         Maintenance,
-        Cycle,
+        Cycle
     }
 
 }

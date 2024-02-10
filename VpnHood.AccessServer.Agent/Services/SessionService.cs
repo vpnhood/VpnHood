@@ -57,7 +57,7 @@ public class SessionService(
                 {"FarmId", server.ServerFarmId},
                 {"Traffic", Math.Round(traffic.Total / 1_000_000d)},
                 {"Sent", Math.Round(traffic.Sent / 1_000_000d)},
-                {"Received", Math.Round(traffic.Received / 1_000_000d)},
+                {"Received", Math.Round(traffic.Received / 1_000_000d)}
             }
         };
 
@@ -233,7 +233,7 @@ public class SessionService(
                 Secret = accessToken.Secret,
                 TokenId = accessToken.AccessTokenId.ToString(),
                 Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportCode.ToString(),
+                SupportId = accessToken.SupportCode.ToString()
             }.ToAccessKey();
 
         // update session data
@@ -296,7 +296,7 @@ public class SessionService(
             Traffic = new Traffic
             {
                 Sent = access.TotalSentTraffic - access.LastCycleSentTraffic,
-                Received = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic,
+                Received = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic
             },
             MaxClientCount = access.MaxDevice,
             MaxTraffic = access.MaxTraffic,
@@ -405,7 +405,7 @@ public class SessionService(
             AccessId = session.AccessId,
             SessionId = session.SessionId,
             ProjectId = server.ProjectId,
-            ServerId = server.ServerId,
+            ServerId = server.ServerId
         });
 
         _ = TrackUsage(project, server, session, access, traffic);

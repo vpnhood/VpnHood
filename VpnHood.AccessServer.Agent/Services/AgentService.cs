@@ -187,7 +187,7 @@ public class AgentService(
             },
             SessionOptions = new SessionOptions
             {
-                TcpBufferSize = AgentUtil.GetBestTcpBufferSize(serverModel.TotalMemory),
+                TcpBufferSize = AgentUtil.GetBestTcpBufferSize(serverModel.TotalMemory)
             },
             ServerSecret = serverFarmModel.Secret
         };
@@ -357,7 +357,7 @@ public class AgentService(
             SessionCount = serverStatus.SessionCount,
             ThreadCount = serverStatus.ThreadCount,
             TunnelSendSpeed = serverStatus.TunnelSpeed.Sent,
-            TunnelReceiveSpeed = serverStatus.TunnelSpeed.Received,
+            TunnelReceiveSpeed = serverStatus.TunnelSpeed.Received
         };
     }
 }

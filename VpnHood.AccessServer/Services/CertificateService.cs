@@ -106,7 +106,7 @@ public class CertificateService(
         var ret = res.Select(x => new CertificateData
         {
             Certificate = x.Certificate.ToDto(),
-            ServerFarms = x.ServerFarms,
+            ServerFarms = x.ServerFarms
         });
 
         return ret;

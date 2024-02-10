@@ -22,7 +22,7 @@ public class AgentCacheClient : ApiClientBase
         var parameters = new Dictionary<string, object?>
         {
             [nameof(serverFarmId)] = serverFarmId,
-            [nameof(serverProfileId)] = serverProfileId,
+            [nameof(serverProfileId)] = serverProfileId
         };
 
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", parameters, null);

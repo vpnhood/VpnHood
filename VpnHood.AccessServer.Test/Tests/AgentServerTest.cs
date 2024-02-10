@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.AccessServer.Utils;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -525,18 +526,9 @@ public class AgentServerTest
         farm.DefaultServer.ServerInfo.Version = Version.Parse("0.0.1");
 
         //Configure
-        try
-        {
-            await farm.DefaultServer.Configure();
-            Assert.Fail($"{nameof(NotSupportedException)} was expected.");
-        }
-        catch (ApiException e)
-        {
-            Assert.AreEqual(nameof(NotSupportedException), e.ExceptionTypeName);
-
-            await farm.DefaultServer.Reload();
-            Assert.IsTrue(farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
-        }
+        await VhTestUtil.AssertApiException<NotSupportedException>(farm.DefaultServer.Configure());
+        await farm.DefaultServer.Reload();
+        Assert.IsTrue(farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
 
         // LastConfigError must be removed after successful configuration
         farm.DefaultServer.ServerInfo.Version = ServerUtil.MinServerVersion;

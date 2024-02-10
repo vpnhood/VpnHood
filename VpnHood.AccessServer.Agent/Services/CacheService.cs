@@ -2,6 +2,7 @@
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Caches;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.Common.Messaging;
@@ -11,14 +12,16 @@ namespace VpnHood.AccessServer.Agent.Services;
 public class CacheService(
     IOptions<AgentOptions> appOptions,
     ILogger<CacheService> logger,
+    VhAgentRepo vhAgentRepo,
     VhContext vhContext)
 {
     private class MemCache
     {
-        public ConcurrentDictionary<Guid, ProjectModel> Projects = new();
-        public ConcurrentDictionary<Guid, ServerModel> Servers = new();
-        public ConcurrentDictionary<long, SessionModel> Sessions = new();
-        public ConcurrentDictionary<Guid, AccessModel> Accesses = new();
+        public ConcurrentDictionary<Guid, ProjectCache> Projects = new();
+        public ConcurrentDictionary<Guid, ServerFarmCache> Farms = new();
+        public ConcurrentDictionary<Guid, ServerCache> Servers = new();
+        public ConcurrentDictionary<long, SessionCache> Sessions = new();
+        public ConcurrentDictionary<Guid, AccessCache> Accesses = new();
         public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
         public DateTime LastSavedTime = DateTime.MinValue;
     }
@@ -32,51 +35,13 @@ public class CacheService(
             return;
 
         // this will just affect current scope
-        vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-
-        logger.LogTrace("Loading the old projects and servers...");
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
-        var serverStatuses = await vhContext.ServerStatuses
-            .Include(serverStatus => serverStatus.Server)
-            .Include(serverStatus => serverStatus.Server!.Project)
-            .Include(serverStatus => serverStatus.Server!.AccessPoints)
-            .Include(serverStatus => serverStatus.Server!.ServerFarm)
-            .Include(serverStatus => serverStatus.Server!.ServerFarm!.ServerProfile)
-            .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
-            .ToArrayAsync();
-
-        // set server status
-        foreach (var serverStatus in serverStatuses)
-            serverStatus.Server!.ServerStatus = serverStatus;
-
-        var servers = serverStatuses
-            .Select(serverStatus => serverStatus.Server!)
-            .ToDictionary(server => server.ServerId);
-
-        var projects = serverStatuses
-            .Select(serverStatus => serverStatus.Project!)
-            .DistinctBy(project => project.ProjectId)
-            .ToDictionary(project => project.ProjectId);
-
-        logger.LogTrace("Loading the old accesses and sessions...");
-        var sessions = await vhContext.Sessions
-            .Include(session => session.Device)
-            .Include(session => session.Access)
-            .Include(session => session.Access!.AccessToken)
-            .Include(session => session.Access!.AccessToken!.ServerFarm)
-            .Where(session => !session.IsArchived)
-            .AsNoTracking()
-            .ToDictionaryAsync(session => session.SessionId);
-
-        var accesses = sessions.Values
-            .Select(session => session.Access!)
-            .DistinctBy(access => access.AccessId)
-            .ToDictionary(access => access.AccessId);
-
-        Mem.Projects = new ConcurrentDictionary<Guid, ProjectModel>(projects);
-        Mem.Servers = new ConcurrentDictionary<Guid, ServerModel>(servers);
-        Mem.Sessions = new ConcurrentDictionary<long, SessionModel>(sessions);
-        Mem.Accesses = new ConcurrentDictionary<Guid, AccessModel>(accesses);
+        var agentInit = await vhAgentRepo.GetInitView(minServerUsedTime);
+        Mem.Projects = new ConcurrentDictionary<Guid, ProjectCache>(agentInit.Projects.ToDictionary(x => x.ProjectId));
+        Mem.Farms = new ConcurrentDictionary<Guid, ServerFarmCache>(agentInit.Farms.ToDictionary(x => x.ServerFarmId));
+        Mem.Servers = new ConcurrentDictionary<Guid, ServerCache>(agentInit.Servers.ToDictionary(x => x.ServerId));
+        Mem.Sessions = new ConcurrentDictionary<long, SessionCache>(agentInit.Sessions.ToDictionary(x => x.SessionId));
+        Mem.Accesses = new ConcurrentDictionary<Guid, AccessCache>(agentInit.Accesses.ToDictionary(x => x.AccessId));
     }
 
     public async Task InvalidateSessions()
@@ -86,12 +51,12 @@ public class CacheService(
         await Init();
     }
 
-    public Task<ConcurrentDictionary<Guid, ServerModel>> GetServers()
+    public Task<ConcurrentDictionary<Guid, ServerCache>> GetServers()
     {
         return Task.FromResult(Mem.Servers);
     }
 
-    public async Task<ProjectModel?> GetProject(Guid projectId)
+    public async Task<ProjectCache> GetProject(Guid projectId)
     {
         if (Mem.Projects.TryGetValue(projectId, out var project))
             return project;
@@ -100,54 +65,57 @@ public class CacheService(
         if (Mem.Projects.TryGetValue(projectId, out project))
             return project;
 
-        project = await vhContext.Projects
-            .AsNoTracking()
-            .SingleAsync(x => x.ProjectId == projectId);
-
-        project = Mem.Projects.GetOrAdd(projectId, project);
+        project = await vhAgentRepo.GetProject(projectId);
+        Mem.Projects.TryAdd(projectId, project);
         return project;
     }
 
-    public async Task<ServerModel> GetServer(Guid serverId)
+    public async Task<ServerCache> GetServer(Guid serverId)
     {
-        if (Mem.Servers.TryGetValue(serverId, out var server) && !server.IsDeleted)
+        if (Mem.Servers.TryGetValue(serverId, out var server))
             return server;
 
-        using var serversLock = await AsyncLock.LockAsync($"Cache_Server_{serverId}");
+        using var serversLock = await AsyncLock.LockAsync($"cache_server_{serverId}");
         if (Mem.Servers.TryGetValue(serverId, out server))
             return server;
 
-        server = await vhContext.Servers
-            .Include(x => x.ServerFarm)
-            .Include(x => x.ServerFarm!.ServerProfile)
-            .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
-            .AsNoTracking()
-            .SingleAsync(x => x.ServerId == serverId && !x.IsDeleted);
-
-        if (server.ServerStatuses != null)
-            server.ServerStatus = server.ServerStatuses.SingleOrDefault();
-
-        server.Project = await GetProject(server.ProjectId);
-        server = Mem.Servers.GetOrAdd(serverId, server);
+        server = await vhAgentRepo.GetServer(serverId);
+        Mem.Servers.TryAdd(serverId, server);
         return server;
     }
 
-    public async Task AddSession(SessionModel session)
+    public async Task<ServerFarmCache> GetFarm(Guid farmId)
     {
-        if (session.Access == null)
-            throw new ArgumentException($"{nameof(session.Access)} is not initialized.", nameof(session));
+        if (Mem.Farms.TryGetValue(farmId, out var farm))
+            return farm;
 
-        if (session.Device == null)
-            throw new ArgumentException($"{nameof(session.Device)} is not initialized.", nameof(session));
+        using var farmsLock = await AsyncLock.LockAsync($"cache_farm_{farmId}");
+        if (Mem.Farms.TryGetValue(farmId, out farm))
+            return farm;
 
-        // check session access
-        var access = await GetAccess(session.AccessId) ?? Mem.Accesses.GetOrAdd(session.AccessId, session.Access);
-        session.Access = access;
-
-        Mem.Sessions.TryAdd(session.SessionId, session);
+        farm = await vhAgentRepo.GetFarm(farmId);
+        Mem.Farms.TryAdd(farmId, farm);
+        return farm;
     }
 
-    public Task<SessionModel> GetSession(Guid? serverId, long sessionId)
+    public async Task<AccessCache> GetAccess(Guid accessId)
+    {
+        if (Mem.Accesses.TryGetValue(accessId, out var access))
+            return access;
+
+        // multiple requests may be in queued so wait for one to finish then check the cache again
+        using var accessLock = await AsyncLock.LockAsync($"cache_access_{accessId}");
+        if (Mem.Accesses.TryGetValue(accessId, out access))
+            return access;
+
+        // load from db
+        access = await vhAgentRepo.GetAccess(accessId);
+        Mem.Accesses.TryAdd(access.AccessId, access);
+        return access;
+    }
+
+
+    public Task<SessionCache> GetSession(Guid? serverId, long sessionId)
     {
         if (!Mem.Sessions.TryGetValue(sessionId, out var session))
             throw new KeyNotFoundException();
@@ -159,105 +127,80 @@ public class CacheService(
         return Task.FromResult(session);
     }
 
-    public async Task<AccessModel?> GetAccessByTokenId(Guid tokenId, Guid? deviceId)
+
+    public async Task<AccessCache> GetOrAddAccessByTokenId(Guid accessTokenId, Guid? deviceId)
     {
         // get from cache
-        var access = Mem.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
+        var access = Mem.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // multiple requests may be in queued so wait for one to finish then check the cache
-        using var accessLock = await AsyncLock.LockAsync($"Cache_GetAccessByTokenId_{tokenId}_{deviceId}");
-        access = Mem.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
+        using var accessLock = await AsyncLock.LockAsync($"Cache_AccessByTokenId_{accessTokenId}_{deviceId}");
+        access = Mem.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // load from db
-        access = await vhContext.Accesses
-            .Include(x => x.AccessToken)
-            .Include(x => x.AccessToken!.ServerFarm)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
+        access = await vhAgentRepo.GetAccessOrDefault(accessTokenId, deviceId);
+        if (access == null)
+        {
+            access = await vhAgentRepo.AddNewAccess(accessTokenId, deviceId);
+            logger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
+        }
 
-        // return access
-        if (access != null)
-            access = Mem.Accesses.GetOrAdd(access.AccessId, access);
+        Mem.Accesses.TryAdd(access.AccessId, access);
         return access;
     }
 
-    public async Task<AccessModel?> GetAccess(Guid accessId)
+    public Task AddSession(SessionCache session)
     {
-        if (Mem.Accesses.TryGetValue(accessId, out var access))
-            return access;
-
-        // multiple requests may be in queued so wait for one to finish then check the cache again
-        using var accessLock = await AsyncLock.LockAsync($"Cache_GetAccess_{accessId}");
-        if (Mem.Accesses.TryGetValue(accessId, out access))
-            return access;
-
-        // load from db
-        access = await vhContext.Accesses
-            .Include(accessModel => accessModel.AccessToken)
-            .Include(accessModel => accessModel.AccessToken!.ServerFarm)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(accessModel => accessModel.AccessId == accessId);
-
-        // return access
-        if (access != null)
-            access = Mem.Accesses.GetOrAdd(access.AccessId, access);
-        return access;
+        Mem.Sessions.TryAdd(session.SessionId, session);
+        return Task.CompletedTask;
     }
 
-    public async Task InvalidateProject(Guid projectId)
-    {
-        // clean project cache
-        if (!Mem.Projects.TryRemove(projectId, out _))
-            return;
-
-        // set updated project for server
-        var project = await GetProject(projectId);
-        foreach (var server in Mem.Servers.Values.Where(server => server.ProjectId == projectId))
-            server.Project = project;
-    }
-
-    public async Task InvalidateProjectServers(Guid projectId, 
-        Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
+    public async Task InvalidateProjectServers(Guid projectId,
+        Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         var servers = Mem.Servers.Values.Where(server =>
-                server.ProjectId == projectId &&
-                (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-                (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId) &&
-                (certificateId == null || server.ServerFarm!.CertificateId == certificateId));
+            server.ProjectId == projectId &&
+            (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
+            (serverProfileId == null || server.ServerProfileId == serverProfileId));
 
+        await InvalidateServers(servers.Select(x => x.ServerId).ToArray());
+    }
+
+    public Task InvalidateProject(Guid projectId)
+    {
+        Mem.Projects.TryRemove(projectId, out _);
+        return Task.CompletedTask;
+    }
+
+    public Task InvalidateServer(Guid serverId)
+    {
+        return InvalidateServers([serverId]);
+    }
+
+    public async Task InvalidateServers(Guid[] serverIds)
+    {
+        // invalid servers that already exist in cache
+        serverIds = serverIds.Intersect(Mem.Servers.Keys).ToArray();
+        var servers = await vhAgentRepo.GetServers(serverIds);
+
+        // recover server status
+        foreach (var serverId in serverIds)
+            if (Mem.Servers.TryRemove(serverId, out var oldServer))
+            {
+                var server = servers.FirstOrDefault(x => x.ServerId == serverId);
+                if (server != null)
+                    server.ServerStatus = oldServer.ServerStatus;
+            }
+
+        // set new servers
         foreach (var server in servers)
-        {
-            await Task.Delay(50); // don't put pressure on db
-            await InvalidateServer(server.ServerId);
-        }
+            Mem.Servers.TryAdd(server.ServerId, server);
     }
 
-    public async Task InvalidateServer(Guid serverId)
-    {
-        if (!Mem.Servers.TryRemove(serverId, out var oldServer))
-            return;
-
-        var server = await GetServer(serverId);
-        server.ServerStatus ??= oldServer.ServerStatus; // keep last status
-    }
-
-    public async Task UpdateServer(ServerModel server)
-    {
-        if (server.AccessPoints == null)
-            throw new ArgumentException($"{nameof(server.AccessPoints)} can not be null.");
-
-        // restore last status
-        server.Project = await GetProject(server.ProjectId);
-        Mem.Servers.AddOrUpdate(server.ServerId, server, (_, oldServer) =>
-        {
-            server.ServerStatus ??= oldServer.ServerStatus; //restore last status
-            return server;
-        });
-    }
 
     public void AddSessionUsage(AccessUsageModel accessUsage)
     {
@@ -280,7 +223,7 @@ public class CacheService(
         }
     }
 
-    private IEnumerable<SessionModel> GetUpdatedSessions()
+    private IEnumerable<SessionCache> GetUpdatedSessions()
     {
         foreach (var session in Mem.Sessions.Values)
         {
@@ -338,7 +281,6 @@ public class CacheService(
 
         logger.LogTrace("Saving cache...");
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
         var savingTime = DateTime.UtcNow;
 
         // find updated sessions
@@ -347,29 +289,14 @@ public class CacheService(
         // update sessions
         // never update archived session, it may not exist on db anymore
         foreach (var session in updatedSessions)
-        {
-            var entry = vhContext.Sessions.Attach(session.Clone());
-            entry.Property(x => x.LastUsedTime).IsModified = true;
-            entry.Property(x => x.EndTime).IsModified = true;
-            entry.Property(x => x.SuppressedTo).IsModified = true;
-            entry.Property(x => x.SuppressedBy).IsModified = true;
-            entry.Property(x => x.ErrorMessage).IsModified = true;
-            entry.Property(x => x.ErrorCode).IsModified = true;
-            entry.Property(x => x.IsArchived).IsModified = true;
-        }
+            vhAgentRepo.UpdateSession(session);
 
         // update accesses
-        var accesses = updatedSessions
-            .Select(x => x.Access)
-            .DistinctBy(x => x!.AccessId)
-            .Select(access => (AccessModel)access!.Clone());
-
-        foreach (var access in accesses)
+        var accessIds = updatedSessions.Select(x => x.AccessId).Distinct();
+        foreach (var accessId in accessIds)
         {
-            var entry = vhContext.Accesses.Attach(access);
-            entry.Property(x => x.LastUsedTime).IsModified = true;
-            entry.Property(x => x.TotalReceivedTraffic).IsModified = true;
-            entry.Property(x => x.TotalSentTraffic).IsModified = true;
+            var access = await GetAccess(accessId);
+            vhAgentRepo.UpdateAccess(access);
         }
 
         // save updated sessions
@@ -379,7 +306,7 @@ public class CacheService(
                 "Saving Sessions... Projects: {Projects}, Servers: {Servers}, Sessions: {Sessions}, ModifiedSessions: {ModifiedSessions}",
                 updatedSessions.DistinctBy(x => x.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), Mem.Sessions.Count, updatedSessions.Length);
 
-            await vhContext.SaveChangesAsync();
+            await vhAgentRepo.SaveChangesAsync();
 
             // cleanup: remove archived sessions
             foreach (var sessionPair in Mem.Sessions.Where(pair => pair.Value.IsArchived))
@@ -389,7 +316,7 @@ public class CacheService(
         {
             await ResolveDbUpdateConcurrencyException(ex);
             vhContext.ChangeTracker.Clear();
-            logger.LogError(ex, "Could not flush sessions. I've resolved it for the next try.");
+            logger.LogError(ex, "Could not flush sessions. I will resolve it for the next try.");
         }
         catch (Exception ex)
         {
@@ -402,14 +329,13 @@ public class CacheService(
         Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageModel>();
         try
         {
-            await vhContext.AccessUsages.AddRangeAsync(sessionUsages);
-            await vhContext.SaveChangesAsync();
+            await vhAgentRepo.AddAccessUsages(sessionUsages);
+            await vhAgentRepo.SaveChangesAsync();
 
             // cleanup: remove unused accesses
             var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
             foreach (var accessPair in Mem.Accesses.Where(pair => pair.Value.LastUsedTime < minSessionTime))
                 Mem.Accesses.TryRemove(accessPair);
-
         }
         catch (Exception ex)
         {
@@ -424,7 +350,7 @@ public class CacheService(
 
             //cleanup: remove lost servers
             var minStatusTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
-            foreach (var serverPair in Mem.Servers.Where(pair => pair.Value.ServerStatus == null || pair.Value.ServerStatus.CreatedTime < minStatusTime))
+            foreach (var serverPair in Mem.Servers.Where(pair => pair.Value.ServerStatus?.CreatedTime < minStatusTime))
                 Mem.Servers.TryRemove(serverPair);
 
         }
@@ -440,9 +366,6 @@ public class CacheService(
             logger.LogError(ex, "Could not save servers status.");
         }
 
-        if (transaction != null)
-            await transaction.CommitAsync();
-
         Mem.LastSavedTime = savingTime;
         logger.LogTrace("The cache has been saved.");
     }
@@ -454,27 +377,26 @@ public class CacheService(
 
     public async Task SaveServersStatus()
     {
-        var serverStatuses = Mem.Servers.Values.Select(server => server.ServerStatus)
-            .Where(serverStatus => serverStatus?.CreatedTime > Mem.LastSavedTime)
-            .Select(serverStatus => serverStatus!)
-            .ToArray();
-
-        serverStatuses = serverStatuses.Select(x => new ServerStatusModel
-        {
-            IsLast = true,
-            CreatedTime = x.CreatedTime,
-            AvailableMemory = x.AvailableMemory,
-            CpuUsage = x.CpuUsage,
-            ServerId = x.ServerId,
-            IsConfigure = x.IsConfigure,
-            ProjectId = x.ProjectId,
-            SessionCount = x.SessionCount,
-            TcpConnectionCount = x.TcpConnectionCount,
-            UdpConnectionCount = x.UdpConnectionCount,
-            ThreadCount = x.ThreadCount,
-            TunnelReceiveSpeed = x.TunnelReceiveSpeed,
-            TunnelSendSpeed = x.TunnelSendSpeed,
-        }).ToArray();
+        var serverStatuses = Mem.Servers.Values
+            .Where(server => server.ServerStatus?.CreatedTime > Mem.LastSavedTime)
+            .Select(server => server.ServerStatus!)
+            .Select(x => new ServerStatusModel
+            {
+                ServerStatusId = 0,
+                IsLast = true,
+                CreatedTime = x.CreatedTime,
+                AvailableMemory = x.AvailableMemory,
+                CpuUsage = x.CpuUsage,
+                ServerId = x.ServerId,
+                IsConfigure = x.IsConfigure,
+                ProjectId = x.ProjectId,
+                SessionCount = x.SessionCount,
+                TcpConnectionCount = x.TcpConnectionCount,
+                UdpConnectionCount = x.UdpConnectionCount,
+                ThreadCount = x.ThreadCount,
+                TunnelReceiveSpeed = x.TunnelReceiveSpeed,
+                TunnelSendSpeed = x.TunnelSendSpeed,
+            }).ToArray();
 
         if (!serverStatuses.Any())
             return;
@@ -516,7 +438,7 @@ public class CacheService(
             await vhContext.Database.CommitTransactionAsync();
     }
 
-    public Task<SessionModel[]> GetActiveSessions(Guid accessId)
+    public Task<SessionCache[]> GetActiveSessions(Guid accessId)
     {
         var activeSessions = Mem.Sessions.Values
             .Where(x => x.EndTime == null && x.AccessId == accessId)

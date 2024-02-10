@@ -1,27 +1,22 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
-using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Caches;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/cache")]
 [Authorize(AgentPolicy.SystemPolicy)]
-public class CacheController(CacheService cacheService, IOptions<AgentOptions> agentOptions)
+public class CacheController(CacheService cacheService)
     : ControllerBase
 {
-    private readonly AgentOptions _agentOptions = agentOptions.Value;
-
     [HttpGet("projects/{projectId}/servers")]
-    public async Task<VpnServer[]> GetServers(Guid projectId)
+    public async Task<ServerCache[]> GetServers(Guid projectId)
     {
         var servers = (await cacheService.GetServers())
             .Values
             .Where(x => x.ProjectId == projectId)
-            .Select(x => x.ToDto(_agentOptions.LostServerThreshold))
             .ToArray();
 
         return servers;
@@ -34,19 +29,17 @@ public class CacheController(CacheService cacheService, IOptions<AgentOptions> a
     }
 
     [HttpPost("projects/{projectId}/invalidate-servers")]
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
+    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         return cacheService.InvalidateProjectServers(projectId: projectId, 
             serverFarmId: serverFarmId, 
-            serverProfileId: serverProfileId,
-            certificateId: certificateId);
+            serverProfileId: serverProfileId);
     }
 
     [HttpGet("servers/{serverId}")]
-    public async Task<VpnServer?> GetServer(Guid serverId)
+    public async Task<ServerCache?> GetServer(Guid serverId)
     {
-        var serverModel = await cacheService.GetServer(serverId);
-        var server = serverModel.ToDto(_agentOptions.LostServerThreshold);
+        var server = await cacheService.GetServer(serverId);
         return server;
     }
 
@@ -57,10 +50,10 @@ public class CacheController(CacheService cacheService, IOptions<AgentOptions> a
     }
 
     [HttpGet("sessions/{sessionId}")]
-    public async Task<Session> GetSession(long sessionId)
+    public async Task<SessionCache> GetSession(long sessionId)
     {
         var session = await cacheService.GetSession(null, sessionId);
-        return session.ToDto();
+        return session;
     }
 
     [HttpPost("sessions/invalidate")]

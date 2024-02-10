@@ -2,32 +2,31 @@
 
 public class ServerModel
 {
-    public Guid ProjectId { get; set; }
-    public Guid ServerId { get; set; }
-    public string ServerName { get; set; } = default!;
-    public string? Version { get; set; } 
-    public string? EnvironmentVersion { get; set; }
-    public string? OsInfo { get; set; }
-    public string? MachineName { get; set; }
-    public long? TotalMemory { get; set; }
-    public int? LogicalCoreCount { get; set; }
-    public DateTime? ConfigureTime { get; set; }
-    public DateTime CreatedTime { get; set; }
-    public bool IsEnabled { get; set; }
-    public string? Description { get; set; }
-    public Guid AuthorizationCode { get; set; }
-    public byte[] ManagementSecret { get; set; } = default!;
-    public Guid ServerFarmId { get; set; }
-    public Guid ConfigCode { get; set; }
-    public Guid? LastConfigCode { get; set; }
-    public string? LastConfigError { get; set; }
-    public bool AutoConfigure { get; set; }
-    public bool IsDeleted { get; set; } = false;
-    public List<AccessPointModel> AccessPoints { get; set; } = [];
+    public required Guid ProjectId { get; init; }
+    public required Guid ServerId { get; init; }
+    public required string ServerName { get; set; }
+    public required string? Version { get; set; } 
+    public required string? EnvironmentVersion { get; set; }
+    public required string? OsInfo { get; set; }
+    public required string? MachineName { get; set; }
+    public required long? TotalMemory { get; set; }
+    public required int? LogicalCoreCount { get; set; }
+    public required DateTime? ConfigureTime { get; set; }
+    public required DateTime CreatedTime { get; set; }
+    public required bool IsEnabled { get; set; }
+    public required string? Description { get; set; }
+    public required Guid AuthorizationCode { get; set; }
+    public required byte[] ManagementSecret { get; set; } 
+    public required Guid ServerFarmId { get; set; }
+    public required Guid ConfigCode { get; set; }
+    public required Guid? LastConfigCode { get; set; }
+    public required string? LastConfigError { get; set; }
+    public required bool AutoConfigure { get; set; }
+    public required bool IsDeleted { get; set; }
+    public required List<AccessPointModel> AccessPoints { get; set; } = [];
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }
-    public virtual ServerStatusModel? ServerStatus { get; set; } // ignored
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
 }

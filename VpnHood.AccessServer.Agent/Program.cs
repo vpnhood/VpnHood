@@ -51,14 +51,16 @@ public class Program
                 options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);
             });
 
+        // DbContext
         builder.Services
-            .AddScoped<VhRepo>()
             .AddDbContextPool<VhContext>(options =>
             {
                 options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
 
+        builder.Services.AddScoped<VhRepo>();
+        builder.Services.AddScoped<VhAgentRepo>();
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<AgentService>();
@@ -66,8 +68,8 @@ public class Program
         builder.Services.AddHostedService<TimedHostedService>();
 
         // NLog: Setup NLog for Dependency injection
-        builder.Logging.ClearProviders();
-        builder.Host.UseNLog();
+        //builder.Logging.ClearProviders();
+        //builder.Host.UseNLog();
 
         //---------------------
         // Create App

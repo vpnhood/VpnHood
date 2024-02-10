@@ -71,6 +71,7 @@ public class ProjectService(
             {
                 new()
                 {
+                    ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
                     ServerFarm = serverFarm,
                     AccessTokenName = "Public",
@@ -79,12 +80,23 @@ public class ProjectService(
                     IsPublic = true,
                     IsEnabled= true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow
+                    CreatedTime= DateTime.UtcNow,
+                    ModifiedTime = DateTime.UtcNow,
+                    ExpirationTime = null,
+                    LastUsedTime = null,
+                    MaxDevice = 0,
+                    MaxTraffic = 0,
+                    Lifetime = 0,
+                    Url = null,
+                    FirstUsedTime = null,
+                    ServerFarmId = serverFarm.ServerFarmId
                 },
 
                 new()
                 {
+                    ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
+                    ServerFarmId = serverFarm.ServerFarmId ,
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
@@ -93,7 +105,14 @@ public class ProjectService(
                     Secret = VhUtil.GenerateKey(),
                     IsEnabled= true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow
+                    CreatedTime= DateTime.UtcNow,
+                    ModifiedTime = DateTime.UtcNow,
+                    FirstUsedTime = null,
+                    ExpirationTime = null,
+                    LastUsedTime = null,
+                    MaxTraffic = 0,
+                    Lifetime = 0,
+                    Url = null,
                 }
             }
         };

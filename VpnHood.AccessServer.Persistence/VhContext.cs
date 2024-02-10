@@ -203,8 +203,6 @@ public class VhContext : DbContext
                 .HasPrincipalKey(e => new { e.ProjectId, e.ServerFarmId })
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.Ignore(e => e.ServerStatus);
-
             entity.OwnsMany(e => e.AccessPoints, ap =>
             {
                 ap.ToTable(nameof(ServerModel.AccessPoints));

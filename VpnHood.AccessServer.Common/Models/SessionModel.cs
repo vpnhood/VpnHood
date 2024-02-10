@@ -2,52 +2,31 @@
 
 namespace VpnHood.AccessServer.Models;
 
-public class SessionModel
+public class SessionBaseModel
 {
-    public long SessionId { get; set; }
-    public Guid ProjectId { get; set; }
-    public Guid AccessId { get; set; }
-    public Guid DeviceId { get; set; }
-    public string ClientVersion { get; set; } = default!;
-    public string? DeviceIp { get; set; }
-    public string? Country { get; set; }
-    public byte[] SessionKey { get; set; } = default!;
-    public Guid ServerId { get; set; }
-    public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
-    public DateTime LastUsedTime { get; set; } = DateTime.UtcNow;
-    public DateTime? EndTime { get; set; }
-    public SessionSuppressType SuppressedBy { get; set; }
-    public SessionSuppressType SuppressedTo { get; set; }
-    public SessionErrorCode ErrorCode { get; set; }
-    public bool IsArchived { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? ExtraData { get; set; }
+    public required long SessionId { get; set; }
+    public required Guid ProjectId { get; init; }
+    public required Guid AccessId { get; init; }
+    public required Guid DeviceId { get; init; }
+    public required string ClientVersion { get; set; }
+    public required string? DeviceIp { get; set; }
+    public required string? Country { get; set; }
+    public required byte[] SessionKey { get; set; }
+    public required Guid ServerId { get; set; }
+    public required DateTime CreatedTime { get; set; }
+    public required DateTime LastUsedTime { get; set; }
+    public required DateTime? EndTime { get; set; }
+    public required SessionSuppressType SuppressedBy { get; set; }
+    public required SessionSuppressType SuppressedTo { get; set; }
+    public required SessionErrorCode ErrorCode { get; set; }
+    public required bool IsArchived { get; set; }
+    public required string? ErrorMessage { get; set; }
+    public required string? ExtraData { get; set; }
+}
 
+public class SessionModel : SessionBaseModel
+{
     public virtual ServerModel? Server { get; set; }
     public virtual DeviceModel? Device { get; set; }
     public virtual AccessModel? Access { get; set; }
-
-    public SessionModel Clone()
-    {
-        return new SessionModel
-        {
-            ProjectId = ProjectId,
-            AccessId = AccessId,
-            DeviceId = DeviceId,
-            ServerId = ServerId,
-            SessionId = SessionId,
-            ClientVersion = ClientVersion,
-            Country = Country,
-            CreatedTime = CreatedTime,
-            DeviceIp = DeviceIp,
-            SessionKey = SessionKey,
-            LastUsedTime = LastUsedTime,
-            EndTime = EndTime,
-            SuppressedBy = SuppressedBy,
-            SuppressedTo = SuppressedTo,
-            ErrorMessage = ErrorMessage,
-            ErrorCode = ErrorCode,
-            IsArchived = IsArchived
-        };
-    }
 }

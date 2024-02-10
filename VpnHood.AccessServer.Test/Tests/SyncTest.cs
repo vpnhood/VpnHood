@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Test.Dom;
 using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
 
@@ -8,6 +9,30 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class SyncTest
 {
+    private static async Task<ServerStatusModel> AddServerStatus(VhContext vhContext, Guid projectId, Guid serverId,
+        bool isLast)
+    {
+        var entityEntry = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
+        {
+            ProjectId = projectId,
+            ServerId = serverId,
+            CreatedTime = DateTime.UtcNow,
+            AvailableMemory = 0,
+            CpuUsage = 0,
+            IsConfigure = true,
+            IsLast = isLast,
+            ServerStatusId = 0,
+            SessionCount = 0,
+            TcpConnectionCount = 0,
+            UdpConnectionCount = 0,
+            ThreadCount = 0,
+            TunnelSendSpeed = 0,
+            TunnelReceiveSpeed = 0,
+        });
+
+        return entityEntry.Entity;
+    }
+
     [TestMethod]
     public async Task Sync_ServerStatuses()
     {
@@ -16,28 +41,9 @@ public class SyncTest
         var vhContext = farm.TestApp.VhContext;
         var vhReportContext = farm.TestApp.VhReportContext;
 
-        var entity1 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
-        {
-            ProjectId = farm.TestApp.ProjectId,
-            ServerId = serverDom.ServerId,
-            CreatedTime = DateTime.UtcNow,
-            IsLast = true
-        });
-        var entity2 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
-        {
-            ProjectId = farm.TestApp.ProjectId,
-            ServerId = serverDom.ServerId,
-            CreatedTime = DateTime.UtcNow,
-            IsLast = false
-        });
-        var entity3 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
-        {
-            ProjectId = farm.TestApp.ProjectId,
-            ServerId = serverDom.ServerId,
-            CreatedTime = DateTime.UtcNow,
-            IsLast = false
-        });
-
+        var entity1 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, serverDom.ServerId, true);
+        var entity2 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, serverDom.ServerId, false);
+        var entity3 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, serverDom.ServerId, false);
         await vhContext.SaveChangesAsync();
 
         await farm.TestApp.Sync(false); // do not flush
@@ -48,11 +54,11 @@ public class SyncTest
 
         // check report database
         Assert.IsTrue(
-            await vhReportContext.ServerStatuses.AllAsync(x => x.ServerStatusId != entity1.Entity.ServerStatusId),
+            await vhReportContext.ServerStatuses.AllAsync(x => x.ServerStatusId != entity1.ServerStatusId),
             "IsLast should not be copied");
 
-        Assert.IsTrue(await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity2.Entity.ServerStatusId));
-        Assert.IsTrue(await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity3.Entity.ServerStatusId));
+        Assert.IsTrue(await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity2.ServerStatusId));
+        Assert.IsTrue(await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity3.ServerStatusId));
     }
 
     [TestMethod]

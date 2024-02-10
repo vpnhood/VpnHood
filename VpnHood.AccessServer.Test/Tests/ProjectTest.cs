@@ -78,18 +78,18 @@ public class ProjectTest
     [TestMethod]
     public async Task Invalidate_agent_cache_after_update()
     {
-        var sampler = await ServerFarmDom.Create();
-        var sampleAccessToken = await sampler.CreateAccessToken();
-        await sampleAccessToken.CreateSession();
+        var farmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await farmDom.CreateAccessToken();
+        await accessTokenDom.CreateSession();
 
-        var newProjectName = Guid.NewGuid().ToString();
-        await sampler.TestApp.ProjectsClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
+        var gaApiSecret = Guid.NewGuid().ToString();
+        await farmDom.TestApp.ProjectsClient.UpdateAsync(farmDom.ProjectId, new ProjectUpdateParams
         {
-            ProjectName = new PatchOfString { Value = newProjectName }
+            GaApiSecret = new PatchOfString { Value = gaApiSecret }
         });
 
-        var server = await sampler.TestApp.AgentTestApp.CacheService.GetServer(sampler.Servers[0].ServerId);
-        Assert.AreEqual(newProjectName, server.Project?.ProjectName);
+        var project = await farmDom.TestApp.AgentTestApp.CacheService.GetProject(farmDom.ProjectId);
+        Assert.AreEqual(gaApiSecret, project.GaApiSecret);
     }
 
     [TestMethod]

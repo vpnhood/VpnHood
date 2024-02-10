@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using GrayMint.Common.Client;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Caches;
 
 namespace VpnHood.AccessServer.Clients;
 
@@ -17,26 +17,25 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
     }
 
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
+    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         var parameters = new Dictionary<string, object?>
         {
             [nameof(serverFarmId)] = serverFarmId,
-            [nameof(certificateId)] = certificateId,
             [nameof(serverProfileId)] = serverProfileId,
         };
 
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", parameters, null);
     }
 
-    public Task<VpnServer[]> GetServers(Guid projectId)
+    public Task<ServerCache[]> GetServers(Guid projectId)
     {
-        return HttpGetAsync<VpnServer[]>($"/api/cache/projects/{projectId}/servers");
+        return HttpGetAsync<ServerCache[]>($"/api/cache/projects/{projectId}/servers");
     }
 
-    public Task<VpnServer?> GetServer(Guid serverId)
+    public Task<ServerCache?> GetServer(Guid serverId)
     {
-        return HttpGetAsync<VpnServer?>($"/api/cache/servers/{serverId}");
+        return HttpGetAsync<ServerCache?>($"/api/cache/servers/{serverId}");
     }
 
     public Task InvalidateServer(Guid serverId)
@@ -44,9 +43,9 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/servers/{serverId}/invalidate", null, null);
     }
 
-    public Task<Session> GetSession(long sessionId)
+    public Task<SessionCache> GetSession(long sessionId)
     {
-        return HttpGetAsync<Session>($"/api/cache/sessions/{sessionId}");
+        return HttpGetAsync<SessionCache>($"/api/cache/sessions/{sessionId}");
     }
 
     public Task InvalidateSessions()

@@ -21,7 +21,6 @@ public class Program
     public static async Task Main(string[] args)
     {
         // nLog
-        //LogManager.Setup();
         var builder = WebApplication.CreateBuilder(args);
 
         // app options
@@ -62,6 +61,7 @@ public class Program
         builder.Services.AddScoped<ServerService>();
         builder.Services.AddScoped<SubscriptionService>();
         builder.Services.AddScoped<CertificateService>();
+        builder.Services.AddScoped<CertificateSignerService>();
         builder.Services.AddScoped<UsageCycleService>();
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();

@@ -27,14 +27,14 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
         return query.SingleAsync();
     }
 
-    public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false)
+    public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
     {
         var query = vhContext.Servers
-            .Where(server => server.ProjectId == projectId)
-            .Where(server => server.ServerId == serverId && !server.IsDeleted);
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.ServerId == serverId);
 
-        if (includeFarm)
-            query.Include(server => server.ServerFarm);
+        if (includeFarm) query.Include(server => server.ServerFarm);
+        if (includeFarmProfile) query.Include(server => server.ServerFarm!.ServerProfile);
 
         return query.SingleAsync();
     }
@@ -42,7 +42,7 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
     public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId)
     {
         var query = vhContext.Certificates
-            .Where(certificate => certificate.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(certificate => certificate.CertificateId == certificateId && !certificate.IsDeleted);
 
         return query.SingleAsync();
@@ -51,7 +51,7 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
     public Task<ServerProfileModel> ServerProfileGet(Guid projectId, Guid serverProfileId)
     {
         var query = vhContext.ServerProfiles
-            .Where(serverProfile => serverProfile.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(serverProfile => serverProfile.ServerProfileId == serverProfileId && !serverProfile.IsDeleted);
 
         return query.SingleAsync();
@@ -71,7 +71,7 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
     public async Task<int> AccessTokenGetMaxSupportCode(Guid projectId)
     {
         var res = await vhContext.AccessTokens
-            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId) // include deleted ones
             .MaxAsync(x => (int?)x.SupportCode);
 
         return res ?? 1000;
@@ -80,7 +80,7 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
     public Task<AccessTokenModel> AccessTokenGet(Guid projectId, Guid accessTokenId, bool includeFarm = false)
     {
         var query = vhContext.AccessTokens
-            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.AccessTokenId == accessTokenId);
 
         if (includeFarm)

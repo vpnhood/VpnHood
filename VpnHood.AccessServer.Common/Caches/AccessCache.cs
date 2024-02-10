@@ -1,0 +1,33 @@
+﻿using VpnHood.AccessServer.Models;
+
+namespace VpnHood.AccessServer.Caches;
+
+public class AccessCache : AccessBaseModel
+{
+    public required int AccessTokenSupportCode { get; init; }
+    public required string? AccessTokenName { get; init; }
+    public required int MaxDevice { get; init; }
+    public required long MaxTraffic { get; init; }
+    public required DateTime? ExpirationTime { get; init; }
+    public required bool IsPublic { get; init; }
+
+    public AccessModel ToModel()
+    {
+        return new AccessModel
+        {
+            AccessId = AccessId,
+            AccessTokenId = AccessTokenId,
+            DeviceId = DeviceId,
+            CreatedTime = CreatedTime,
+            LastUsedTime = LastUsedTime,
+            LastCycleSentTraffic = LastCycleSentTraffic,
+            LastCycleReceivedTraffic = LastCycleReceivedTraffic,
+            LastCycleTraffic = LastCycleTraffic,
+            TotalSentTraffic = TotalSentTraffic,
+            TotalReceivedTraffic = TotalReceivedTraffic,
+            TotalTraffic = TotalTraffic,
+            CycleTraffic = CycleTraffic,
+            Description = Description,
+        };
+    }
+}

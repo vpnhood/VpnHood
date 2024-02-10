@@ -2,8 +2,8 @@
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Caches;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
@@ -22,14 +22,13 @@ public class AgentService(
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     SessionService sessionService,
-    VhRepo vhRepo,
-    VhContext vhContext)
+    VhAgentRepo vhAgentRepo)
 {
     private readonly AgentOptions _agentOptions = agentOptions.Value;
 
-    public async Task<ServerModel> GetServer(Guid serverId)
+    public async Task<ServerCache> GetServer(Guid serverId)
     {
-        var server = await cacheService.GetServer(serverId) ?? throw new Exception("Could not find server.");
+        var server = await cacheService.GetServer(serverId);
         return server;
     }
 
@@ -60,30 +59,23 @@ public class AgentService(
         logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
             server.ServerId, hostEndPoint);
 
-        var serverFarm = await vhContext.ServerFarms
-            .Include(serverFarm => serverFarm.Certificate)
-            .Where(serverFarm => !serverFarm.IsDeleted)
-            .SingleAsync(serverFarm => serverFarm.ServerFarmId == server.ServerFarmId);
-
+        var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeCertificate: true );
         return serverFarm.Certificate!.RawData;
     }
 
-    private async Task CheckServerVersion(ServerModel server)
+    private async Task CheckServerVersion(ServerCache server, string? version)
     {
-        if (!string.IsNullOrEmpty(server.Version) && Version.Parse(server.Version) >= ServerUtil.MinServerVersion)
+        if (!string.IsNullOrEmpty(version) && Version.Parse(version) >= ServerUtil.MinServerVersion)
             return;
 
         var errorMessage = $"Your server version is not supported. Please update your server. MinSupportedVersion: {ServerUtil.MinServerVersion}";
         if (server.LastConfigError != errorMessage)
         {
-            // update cache
-            server.LastConfigError = errorMessage;
-            await cacheService.UpdateServer(server);
-
-            // update db
-            var serverUpdate = await vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
-            serverUpdate.LastConfigError = server.LastConfigError;
-            await vhContext.SaveChangesAsync();
+            // update db & cache
+            var serverModel = await vhAgentRepo.FindServerAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverModel.LastConfigError = errorMessage;
+            await vhAgentRepo.SaveChangesAsync();
+            await cacheService.InvalidateServer(serverModel.ServerId);
 
         }
         throw new NotSupportedException(errorMessage);
@@ -93,8 +85,8 @@ public class AgentService(
     public async Task<ServerCommand> UpdateServerStatus(Guid serverId, ServerStatus serverStatus)
     {
         var server = await GetServer(serverId);
-        await CheckServerVersion(server);
-        SetServerStatus(server, serverStatus, false);
+        await CheckServerVersion(server, server.Version);
+        UpdateServerStatus(server, serverStatus, false);
 
         // remove LastConfigCode if server send its status
         if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != serverStatus.ConfigError)
@@ -103,18 +95,13 @@ public class AgentService(
                 "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
-            // update cache
-            server.ConfigureTime = DateTime.UtcNow;
-            server.LastConfigError = serverStatus.ConfigError;
-            server.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode) ? Guid.Parse(serverStatus.ConfigCode) : null;
-            await cacheService.UpdateServer(server);
-
-            // update db
-            var serverUpdate = await vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
-            serverUpdate.LastConfigError = server.LastConfigError;
-            serverUpdate.LastConfigCode = server.LastConfigCode;
-            serverUpdate.ConfigureTime = server.ConfigureTime;
-            await vhContext.SaveChangesAsync();
+            // update db & cache
+            var serverUpdate = await vhAgentRepo.FindServerAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverUpdate.LastConfigError = serverStatus.ConfigError;
+            serverUpdate.LastConfigCode = !string.IsNullOrEmpty(serverStatus.ConfigCode) ? Guid.Parse(serverStatus.ConfigCode) : null;
+            serverUpdate.ConfigureTime = DateTime.UtcNow;
+            await vhAgentRepo.SaveChangesAsync();
+            await cacheService.InvalidateServer(serverUpdate.ServerId);
         }
 
         var ret = new ServerCommand(server.ConfigCode.ToString());
@@ -131,63 +118,55 @@ public class AgentService(
             server.ServerId, serverInfo.Version);
 
         // check version
-        server.Version = serverInfo.Version.ToString();
-        await CheckServerVersion(server); // must after assigning version 
-
+        await CheckServerVersion(server, serverInfo.Version.ToString());
+        UpdateServerStatus(server, serverInfo.Status, true);
+        
         // ready for update
-        server = await vhRepo.ServerGet(server.ProjectId, serverId);
+        var serverModel = await vhAgentRepo.ServerGet(server.ProjectId, serverId, includeFarm: true, includeFarmProfile: true);
+        var serverFarmModel = serverModel.ServerFarm!;
+        var serverProfileModel = serverModel.ServerFarm!.ServerProfile!;
 
         // update cache
-        server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
-        server.OsInfo = serverInfo.OsInfo;
-        server.MachineName = serverInfo.MachineName;
-        server.ConfigureTime = DateTime.UtcNow;
-        server.TotalMemory = serverInfo.TotalMemory ?? 0;
-        server.LogicalCoreCount = serverInfo.LogicalCoreCount;
-        server.Version = serverInfo.Version.ToString();
-        server.LastConfigError = server.LastConfigError;
-        server.ConfigureTime = server.ConfigureTime;
+        serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
+        serverModel.OsInfo = serverInfo.OsInfo;
+        serverModel.MachineName = serverInfo.MachineName;
+        serverModel.ConfigureTime = DateTime.UtcNow;
+        serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
+        serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
+        serverModel.Version = serverInfo.Version.ToString();
 
         // calculate access points
-        if (server.AutoConfigure)
+        if (serverModel.AutoConfigure)
         {
-            var serverFarm = await vhRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, true, true);
-            var accessPoints = BuildServerAccessPoints(server.ServerId, serverFarm.Servers!, serverInfo);
+            var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, serverModel.ServerFarmId, 
+                includeServersAndAccessPoints: true, includeCertificate: true);
+            var accessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarm.Servers!, serverInfo);
 
             // check if access points has been changed, then update host token and access points
-            if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(server.AccessPoints))
+            if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(serverModel.AccessPoints))
             {
-                server.AccessPoints = accessPoints;
+                serverModel.AccessPoints = accessPoints;
                 FarmTokenBuilder.UpdateIfChanged(serverFarm);
             }
         }
 
-        // update if there is any change
-        await vhRepo.SaveChangesAsync();
-
-        // update cache
+        // update if there is any change & update cache
+        await vhAgentRepo.SaveChangesAsync();
         await cacheService.InvalidateServer(server.ServerId);
 
-        // get object from cache and update it
-        server = await GetServer(serverId);
-        SetServerStatus(server, serverInfo.Status, true);
-
-        // return configuration
-        var serverConfig = GetServerConfig(server);
+        // update cache
+        var serverConfig = GetServerConfig(serverModel, serverFarmModel, serverProfileModel);
         return serverConfig;
     }
 
-    private ServerConfig GetServerConfig(ServerModel server)
+    private ServerConfig GetServerConfig(ServerModel serverModel, ServerFarmModel serverFarmModel, ServerProfileModel serverProfileModel)
     {
-        if (server.ServerFarm == null)
-            throw new Exception("ServerFarm has not been fetched.");
-
-        var tcpEndPoints = server.AccessPoints
+        var tcpEndPoints = serverModel.AccessPoints
             .Where(accessPoint => accessPoint.IsListen)
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
             .ToArray();
 
-        var udpEndPoints = server.AccessPoints
+        var udpEndPoints = serverModel.AccessPoints
             .Where(accessPoint => accessPoint is { IsListen: true, UdpPort: > 0 })
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.UdpPort))
             .ToArray();
@@ -207,13 +186,13 @@ public class AgentService(
             },
             SessionOptions = new SessionOptions
             {
-                TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
+                TcpBufferSize = ServerUtil.GetBestTcpBufferSize(serverModel.TotalMemory),
             },
-            ServerSecret = server.ServerFarm.Secret
+            ServerSecret = serverFarmModel.Secret
         };
 
         // merge with profile
-        var serverProfileConfigJson = server.ServerFarm?.ServerProfile?.ServerConfig;
+        var serverProfileConfigJson = serverProfileModel.ServerConfig;
         if (!string.IsNullOrEmpty(serverProfileConfigJson))
         {
             try
@@ -240,11 +219,7 @@ public class AgentService(
                 SyncCacheSize = _agentOptions.SyncCacheSize
             }
         });
-        serverConfig.ConfigCode = server.ConfigCode.ToString(); // merge does not apply this
-
-        // old version does not support null values
-        if (Version.Parse(server.Version!) < new Version(2, 7, 355))
-            serverConfig.ApplyDefaults();
+        serverConfig.ConfigCode = serverModel.ConfigCode.ToString(); // merge does not apply this
 
         return serverConfig;
     }
@@ -287,7 +262,7 @@ public class AgentService(
         var oldTokenAccessPoints = farmServers
             .SelectMany(serverModel => serverModel.AccessPoints)
             .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
-            .ToList();
+            .ToArray();
 
         // server
         var server = farmServers.Single(x => x.ServerId == serverId);
@@ -364,10 +339,11 @@ public class AgentService(
         });
     }
 
-    private static void SetServerStatus(ServerModel server, ServerStatus serverStatus, bool isConfigure)
+    private static void UpdateServerStatus(ServerCache server, ServerStatus serverStatus, bool isConfigure)
     {
-        var serverStatusEx = new ServerStatusModel
+        server.ServerStatus = new ServerStatusModel
         {
+            ServerStatusId = 0,
             ProjectId = server.ProjectId,
             ServerId = server.ServerId,
             IsConfigure = isConfigure,
@@ -382,6 +358,5 @@ public class AgentService(
             TunnelSendSpeed = serverStatus.TunnelSpeed.Sent,
             TunnelReceiveSpeed = serverStatus.TunnelSpeed.Received,
         };
-        server.ServerStatus = serverStatusEx;
     }
 }

@@ -24,6 +24,7 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
             AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
             ProjectId = projectId,
             ServerFarmId = serverFarm.ServerFarmId,
+            ServerFarm = serverFarm,
             AccessTokenName = createParams.AccessTokenName,
             MaxTraffic = createParams.MaxTraffic,
             MaxDevice = createParams.MaxDevice,
@@ -35,7 +36,10 @@ public class AccessTokensService(UsageReportService usageReportService, VhRepo v
             SupportCode = supportCode,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
-            IsEnabled = true
+            IsEnabled = true,
+            IsDeleted = false,
+            FirstUsedTime = null,
+            LastUsedTime = null,
         };
 
         await vhRepo.AddAsync(accessToken);

@@ -54,6 +54,17 @@ public class ServerService(
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? Array.Empty<AccessPoint>()),
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
+            Description = null,
+            LastConfigCode = null,
+            LastConfigError = null,
+            LogicalCoreCount = null,
+            OsInfo = null,
+            TotalMemory = null,
+            Version = null,
+            ConfigureTime = null,
+            EnvironmentVersion = null,
+            MachineName = null,
+            IsDeleted = false,
         };
 
         // add server and update FarmToken
@@ -63,8 +74,7 @@ public class ServerService(
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
 
-
-        var serverDto = server.ToDto(appOptions.Value.LostServerThreshold);
+        var serverDto = server.ToDto(null, appOptions.Value.LostServerThreshold);
         return serverDto;
 
     }
@@ -108,8 +118,8 @@ public class ServerService(
         }
 
         await agentCacheClient.InvalidateServer(server.ServerId);
-        var serverCache = await agentCacheClient.GetServer(server.ServerId);
-        return serverCache ?? server.ToDto(appOptions.Value.LostServerThreshold);
+        var serverCached = await agentCacheClient.GetServer(server.ServerId);
+        return server.ToDto(serverCached, appOptions.Value.LostServerThreshold);
     }
 
     public async Task<ServerData[]> List(Guid projectId,
@@ -134,42 +144,20 @@ public class ServerService(
                 x.ServerFarmId.ToString() == search);
 
         var servers = await query
-            .AsNoTracking()
             .OrderBy(x => x.ServerId)
             .Skip(recordIndex)
             .Take(recordCount)
+            .AsNoTracking()
             .ToArrayAsync();
 
-        // update all status
-        var serverStatus = await vhContext.ServerStatuses
-            .AsNoTracking()
-            .Where(serverStatus =>
-                serverStatus.IsLast && serverStatus.ProjectId == projectId &&
-                (serverId == null || serverStatus.ServerId == serverId) &&
-                (serverFarmId == null || serverStatus.Server!.ServerFarmId == serverFarmId))
-            .ToDictionaryAsync(x => x.ServerId);
-
-        foreach (var serverModel in servers)
-            if (serverStatus.TryGetValue(serverModel.ServerId, out var serverStatusEx))
-                serverModel.ServerStatus = serverStatusEx;
-
         // create Dto
+        var cachedServers = await agentCacheClient.GetServers(projectId);
         var serverDatas = servers
             .Select(serverModel => new ServerData
             {
-                Server = serverModel.ToDto(appOptions.Value.LostServerThreshold)
+                Server = serverModel.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverModel.ServerId), appOptions.Value.LostServerThreshold)
             })
             .ToArray();
-
-        // update from cache
-        var cachedServers = await agentCacheClient.GetServers(projectId);
-        foreach (var serverData in serverDatas)
-        {
-            var cachedServer = cachedServers.SingleOrDefault(x => x.ServerId == serverData.Server.ServerId);
-            if (cachedServer == null) continue;
-            serverData.Server.ServerStatus = cachedServer.ServerStatus;
-            serverData.Server.ServerState = cachedServer.ServerState;
-        }
 
         // update server status if it is lost
         foreach (var serverData in serverDatas.Where(x => x.Server.ServerState is ServerState.Lost or ServerState.NotInstalled))
@@ -287,13 +275,10 @@ public class ServerService(
             .ToArrayAsync();
 
         // update model ServerStatusEx
-        var servers = serverModels
-            .Select(server => server.ToDto(appOptions.Value.LostServerThreshold))
-            .ToArray();
-
-        // update status from cache
         var cachedServers = await agentCacheClient.GetServers(projectId);
-        ServerUtil.UpdateByCache(servers, cachedServers);
+        var servers = serverModels
+            .Select(server => server.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == server.ServerId), appOptions.Value.LostServerThreshold))
+            .ToArray();
 
         // create usage summary
         var usageSummary = new ServersStatusSummary
@@ -327,8 +312,7 @@ public class ServerService(
         await vhContext.SaveChangesAsync();
         await agentCacheClient.InvalidateProjectServers(projectId,
             serverFarmId: serverFarmId,
-            serverProfileId: serverProfileId,
-            certificateId: certificateId);
+            serverProfileId: serverProfileId);
     }
 
     public async Task Delete(Guid projectId, Guid serverId)

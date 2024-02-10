@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.AccessServer.Api;
 using System.Net;
+using VpnHood.AccessServer.Api;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 

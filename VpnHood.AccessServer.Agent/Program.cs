@@ -1,14 +1,14 @@
 using System.Text.Json;
-using GrayMint.Common.AspNetCore;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Agent.Services;
-using NLog;
-using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
+using GrayMint.Common.AspNetCore;
 using GrayMint.Common.Swagger;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using NLog;
+using VpnHood.AccessServer.Agent.Services;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Agent;
 

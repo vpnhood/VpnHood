@@ -1,13 +1,13 @@
-﻿using GrayMint.Authorization.Authentications;
+﻿using System.Net.Http.Headers;
+using System.Security.Claims;
+using GrayMint.Authorization.Authentications;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
 using Microsoft.IdentityModel.JsonWebTokens;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
-using System.Net.Http.Headers;
 
 namespace VpnHood.AccessServer.Test;
 

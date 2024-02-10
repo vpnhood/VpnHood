@@ -1,5 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Dtos.Server;
+﻿using VpnHood.AccessServer.Dtos.Server;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;

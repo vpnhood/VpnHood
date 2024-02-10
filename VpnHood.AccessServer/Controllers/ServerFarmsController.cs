@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Net.Mime;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Mime;
 using VpnHood.AccessServer.Dtos.ServerFarm;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;

@@ -398,10 +398,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         return vhContext.Servers.FindAsync(serverServerId);
     }
 
-    private static string ToSqlValue<T>(T? value)
-    {
-        return value?.ToString() ?? "NULL";
-    }
+    //private static string ToSqlValue<T>(T? value)
+    //{
+    //    return value?.ToString() ?? "NULL";
+    //}
 
     public async Task AddAndSaveServerStatuses(ServerStatusBaseModel[] serverStatuses)
     {
@@ -463,5 +463,21 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         if (transaction != null)
             await vhContext.Database.CommitTransactionAsync();
 
+    }
+
+    public Task<IpLockModel?> IpLockFind(Guid projectId, string clientIp)
+    {
+        return vhContext.IpLocks
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.IpAddress == clientIp)
+            .SingleOrDefaultAsync();
+    }
+
+    public Task<DeviceModel?> DeviceFind(Guid projectId, Guid clientId)
+    {
+        return vhContext.Devices
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ClientId == clientId)
+            .SingleOrDefaultAsync();
     }
 }

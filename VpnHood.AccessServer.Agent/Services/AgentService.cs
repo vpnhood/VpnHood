@@ -57,7 +57,7 @@ public class AgentService(
     public async Task<byte[]> GetCertificate(Guid serverId, string hostEndPoint)
     {
         var server = await GetServer(serverId);
-        logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
+        logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
             server.ServerId, hostEndPoint);
 
         var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeCertificate: true );
@@ -92,8 +92,7 @@ public class AgentService(
         // remove LastConfigCode if server send its status
         if (server.LastConfigCode?.ToString() != serverStatus.ConfigCode || server.LastConfigError != serverStatus.ConfigError)
         {
-            logger.LogInformation(AccessEventId.Server,
-                "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
+            logger.LogInformation("Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
                 server.ServerId, serverStatus.ConfigCode);
 
             // update db & cache
@@ -114,8 +113,7 @@ public class AgentService(
     {
         // first use cache make sure not use db for old versions
         var server = await GetServer(serverId);
-        logger.Log(LogLevel.Information, AccessEventId.Server,
-            "Configuring a Server. ServerId: {ServerId}, Version: {Version}",
+        logger.LogInformation("Configuring a Server. ServerId: {ServerId}, Version: {Version}",
             server.ServerId, serverInfo.Version);
 
         // check version
@@ -203,7 +201,7 @@ public class AgentService(
             }
             catch (Exception ex)
             {
-                logger.LogError(AccessEventId.Server, ex, "Could not deserialize ServerProfile's ServerConfig.");
+                logger.LogError(ex, "Could not deserialize ServerProfile's ServerConfig.");
             }
         }
 

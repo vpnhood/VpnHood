@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Security.Authentication;
 using Ga4.Ga4Tracking;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Persistence;
@@ -19,13 +18,14 @@ namespace VpnHood.AccessServer.Agent.Services;
 
 public class SessionService(
     ILogger<SessionService> logger,
+    ILogger<SessionService.NewAccess> newAccessLogger,
     IOptions<AgentOptions> agentOptions,
     IMemoryCache memoryCache,
     CacheService cacheService,
     VhRepo vhRepo,
-    VhAgentRepo vhAgentRepo,
-    VhContext vhContext)
+    VhAgentRepo vhAgentRepo)
 {
+    public class NewAccess;
     private static Task TrackUsage(ProjectCache project, ServerCache server,
         SessionCache session, AccessCache access, Traffic traffic)
     {
@@ -122,7 +122,8 @@ public class SessionService(
         }
 
         // check is Ip Locked
-        if (clientIp != null && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == projectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
+        var ipLock = clientIp != null ? await vhAgentRepo.IpLockFind(projectId, clientIp.ToString()) : null;
+        if (ipLock?.LockedTime != null)
             return new SessionResponseEx(SessionErrorCode.AccessLocked)
             {
                 ErrorMessage = "Your access has been locked! Please contact the support."
@@ -130,7 +131,7 @@ public class SessionService(
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
-        var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
+        var device = await vhAgentRepo.DeviceFind(projectId, clientInfo.ClientId); 
         if (device == null)
         {
             device = new DeviceModel
@@ -168,7 +169,7 @@ public class SessionService(
         if (access == null)
         {
             access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
-            logger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
+            newAccessLogger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
         }
         else
         {
@@ -252,7 +253,7 @@ public class SessionService(
 
         // Add session to cache
         await cacheService.AddSession(session);
-        logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.SessionId);
+        logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.SessionId);
 
         ret.SessionId = (ulong)session.SessionId;
         return ret;
@@ -272,13 +273,12 @@ public class SessionService(
             // build response
             var ret = await BuildSessionResponse(session, access);
             ret.ExtraData = session.ExtraData;
-            logger.LogInformation(AccessEventId.Session, "Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId, session.EndTime);
+            logger.LogInformation("Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId, session.EndTime);
             return ret;
         }
         catch (KeyNotFoundException)
         {
-            logger.LogWarning(AccessEventId.Session,
-                "Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}",
+            logger.LogWarning("Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}",
                 sessionId, server.ServerId);
             throw;
         }
@@ -378,7 +378,7 @@ public class SessionService(
             throw new AuthenticationException();
 
         // update access if session is open
-        logger.LogInformation(AccessEventId.AddUsage,
+        logger.LogInformation(
             "AddUsage to a session. SessionId: {SessionId}, " +
             "SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {Total}, " +
             "EndTime: {EndTime}.",
@@ -416,7 +416,7 @@ public class SessionService(
         // close session
         if (closeSession)
         {
-            logger.LogInformation(AccessEventId.Session,
+            logger.LogInformation(
                 "Session has been closed by user. SessionId: {SessionId}, ResponseCode: {ResponseCode}",
                 sessionId, sessionResponse.ErrorCode);
 

@@ -29,8 +29,7 @@ public class UsageCycleService(
         if (_lastCycleIdCache == CurrentCycleId)
             return;
 
-        logger.LogTrace(AccessEventId.Cycle,
-            "Checking usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
+        logger.LogTrace("Checking usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
 
         // check is current cycle already processed from db
         if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
@@ -39,8 +38,7 @@ public class UsageCycleService(
             return;
         }
 
-        logger.LogInformation(AccessEventId.Cycle,
-            "Resetting usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
+        logger.LogInformation("Resetting usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
 
         // reset usage for users
         // it must be done by 1 hour

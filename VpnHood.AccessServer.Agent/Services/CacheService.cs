@@ -297,8 +297,7 @@ public class CacheService(
         // save updated sessions
         try
         {
-            logger.LogInformation(AccessEventId.Cache,
-                "Saving Sessions... Projects: {Projects}, Servers: {Servers}, Sessions: {Sessions}, ModifiedSessions: {ModifiedSessions}",
+            logger.LogInformation("Saving Sessions... Projects: {Projects}, Servers: {Servers}, Sessions: {Sessions}, ModifiedSessions: {ModifiedSessions}",
                 updatedSessions.DistinctBy(x => x.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), Mem.Sessions.Count, updatedSessions.Length);
 
             await vhAgentRepo.SaveChangesAsync();
@@ -346,7 +345,7 @@ public class CacheService(
                 .Select(server => server.ServerStatus!)
                 .ToArray();
 
-            logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
+            logger.LogInformation("Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
                 serverStatuses.DistinctBy(x => x.ProjectId).Count(), serverStatuses.Length);
 
             if (serverStatuses.Any())

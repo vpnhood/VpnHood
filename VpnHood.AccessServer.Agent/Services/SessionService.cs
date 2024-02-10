@@ -163,7 +163,16 @@ public class SessionService(
         // multiple requests may be already queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock = await GrayMint.Common.Utils.AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
-        var access = await cacheService.GetOrAddAccessByTokenId(accessToken.AccessTokenId, deviceId);
+        var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
+        if (access == null) 
+        {
+                access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
+                logger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
+        }
+        else
+        {
+            accessLock.Dispose(); // access is already exists so the next call will not create new
+        }
         access.LastUsedTime = DateTime.UtcNow; // update used time
 
         // check supported version

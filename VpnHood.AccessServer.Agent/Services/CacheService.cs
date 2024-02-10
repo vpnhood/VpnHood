@@ -128,7 +128,7 @@ public class CacheService(
     }
 
 
-    public async Task<AccessCache> GetOrAddAccessByTokenId(Guid accessTokenId, Guid? deviceId)
+    public async Task<AccessCache?> GetAccessByTokenId(Guid accessTokenId, Guid? deviceId)
     {
         // get from cache
         var access = Mem.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
@@ -136,20 +136,16 @@ public class CacheService(
             return access;
 
         // multiple requests may be in queued so wait for one to finish then check the cache
-        using var accessLock = await AsyncLock.LockAsync($"Cache_AccessByTokenId_{accessTokenId}_{deviceId}");
+        using var accessLock = await AsyncLock.LockAsync($"cache_AccessByTokenId_{accessTokenId}_{deviceId}");
         access = Mem.Accesses.Values.FirstOrDefault(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId);
         if (access != null)
             return access;
 
         // load from db
         access = await vhAgentRepo.GetAccessOrDefault(accessTokenId, deviceId);
-        if (access == null)
-        {
-            access = await vhAgentRepo.AddNewAccess(accessTokenId, deviceId);
-            logger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
-        }
-
-        Mem.Accesses.TryAdd(access.AccessId, access);
+        if (access != null)
+            Mem.Accesses.TryAdd(access.AccessId, access);
+        
         return access;
     }
 

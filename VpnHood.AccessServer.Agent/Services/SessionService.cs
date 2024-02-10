@@ -86,6 +86,7 @@ public class SessionService(
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
+        var project = await cacheService.GetProject(server.ProjectId);
 
         // Get accessTokenModel
         var accessToken = await vhRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId), true);
@@ -169,7 +170,9 @@ public class SessionService(
         if (access == null)
         {
             access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
-            newAccessLogger.LogInformation($"New Access has been created. AccessId: {access.AccessId}.");
+            newAccessLogger.LogInformation(
+                "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
+                access.AccessId, project.ProjectName, accessToken.ServerFarm?.ServerFarmName);
         }
         else
         {
@@ -238,7 +241,6 @@ public class SessionService(
             }.ToAccessKey();
 
         // update session data
-        var project = await cacheService.GetProject(server.ProjectId);
         ret.GaMeasurementId = project.GaMeasurementId;
         ret.TcpEndPoints = [bestTcpEndPoint];
         ret.UdpEndPoints = server.AccessPoints

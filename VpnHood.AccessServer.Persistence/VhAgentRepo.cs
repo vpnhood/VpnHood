@@ -55,7 +55,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 {
                     GaMeasurementId = x.Server.Project!.GaMeasurementId,
                     ProjectId = x.Server.ProjectId,
-                    GaApiSecret = x.Server.Project.GaApiSecret
+                    GaApiSecret = x.Server.Project.GaApiSecret,
+                    ProjectName = x.Server.Project.ProjectName
                 }
             })
             .AsNoTracking()
@@ -182,6 +183,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .Select(project => new ProjectCache
             {
                 ProjectId = project.ProjectId,
+                ProjectName = project.ProjectName,
                 GaMeasurementId = project.GaMeasurementId,
                 GaApiSecret = project.GaApiSecret
             })

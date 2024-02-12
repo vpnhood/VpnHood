@@ -46,7 +46,7 @@ public class VpnHoodConnect : IAsyncDisposable
     public int MaxReconnectCount { get; set; }
     public VpnHoodClient Client { get; private set; }
 
-    public Task Connect()
+    public Task Connect(CancellationToken cancellationToken = default)
     {
         if (IsDisposed)
             throw new ObjectDisposedException($"{VhLogger.FormatType(this)} is disposed!");
@@ -58,7 +58,7 @@ public class VpnHoodConnect : IAsyncDisposable
             Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);
 
         Client.StateChanged += Client_StateChanged;
-        return Client.Connect();
+        return Client.Connect(cancellationToken);
     }
 
     private void Client_StateChanged(object sender, EventArgs e)

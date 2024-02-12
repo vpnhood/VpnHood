@@ -30,11 +30,11 @@ public class Diagnoser
         }
     }
 
-    public async Task Connect(VpnHoodConnect clientConnect)
+    public async Task Connect(VpnHoodConnect clientConnect, CancellationToken cancellationToken)
     {
         try
         {
-            await clientConnect.Connect();
+            await clientConnect.Connect(cancellationToken);
         }
         catch
         {
@@ -50,7 +50,7 @@ public class Diagnoser
         }
     }
 
-    public async Task Diagnose(VpnHoodConnect clientConnect)
+    public async Task Diagnose(VpnHoodConnect clientConnect, CancellationToken cancellationToken)
     {
         try
         {
@@ -70,7 +70,7 @@ public class Diagnoser
 
             // VpnConnect
             IsWorking = false;
-            await clientConnect.Connect();
+            await clientConnect.Connect(cancellationToken);
 
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;

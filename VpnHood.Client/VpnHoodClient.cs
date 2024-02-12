@@ -195,7 +195,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch { await bypassChannel.DisposeAsync(); throw; }
     }
 
-    public async Task Connect()
+    public async Task Connect(CancellationToken cancellationToken = default)
     {
         using var scope = VhLogger.Instance.BeginScope("Client");
         if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
@@ -231,7 +231,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SetHostEndPoint(_connectorService.EndPointInfo.TcpEndPoint);
 
             // Establish first connection and create a session
-            await ConnectInternal(_cancellationTokenSource.Token);
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+            await ConnectInternal(linkedCancellationTokenSource.Token);
 
             // Create Tcp Proxy Host
             _clientHost.Start();
@@ -698,7 +699,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (RedirectHostException ex) when (!redirecting)
         {
             SetHostEndPoint(ex.RedirectHostEndPoint);
-            await ConnectInternal(_cancellationTokenSource.Token, true);
+            await ConnectInternal(cancellationToken, true);
         }
     }
 

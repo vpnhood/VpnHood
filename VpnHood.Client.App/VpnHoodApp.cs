@@ -47,6 +47,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
     private VersionStatus _versionStatus = VersionStatus.Unknown;
+    private CancellationTokenSource? _connectCts;
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
@@ -219,7 +220,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         _hasDisconnectedByUser = false;
     }
 
-    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false, string? userAgent = default, bool throwException = true)
+    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false, 
+        string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
         // set default profileId to clientProfileId if not set
         clientProfileId ??= GetDefaultClientProfile()?.ClientProfileId;
@@ -253,6 +255,11 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
+            // create cancellationToken
+            _connectCts = new CancellationTokenSource();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
+            cancellationToken = linkedCts.Token;
+
             // Set ActiveProfile
             ActiveClientProfile = ClientProfileService.Get(clientProfileId.Value);
             LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
@@ -270,7 +277,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
             // connect
-            await ConnectInternal(packetCapture, ActiveClientProfile.Token, userAgent);
+            await ConnectInternal(packetCapture, ActiveClientProfile.Token, userAgent, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -288,6 +295,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         }
         finally
         {
+            _connectCts?.Dispose();
+            _connectCts = null;
             _isConnecting = false;
             CheckConnectionStateChanged();
         }
@@ -323,7 +332,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         }
     }
 
-    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? userAgent)
+    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? userAgent, CancellationToken cancellationToken)
     {
         packetCapture.OnStopped += PacketCapture_OnStopped;
 
@@ -371,7 +380,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
         // Create Client
-        ClientConnect = new VpnHoodConnect(
+        var clientConnect = new VpnHoodConnect(
             packetCapture,
             Settings.ClientId,
             token,
@@ -383,26 +392,28 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             });
 
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);
-        ClientConnect.StateChanged += ClientConnect_StateChanged;
+        clientConnect.StateChanged += ClientConnect_StateChanged;
+        ClientConnect = clientConnect; // set here to allow disconnection
 
         try
         {
             if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(ClientConnect);
+                await Diagnoser.Diagnose(clientConnect, cancellationToken);
             else
-                await Diagnoser.Connect(ClientConnect);
+                await Diagnoser.Connect(clientConnect, cancellationToken);
 
             // update access token if ResponseAccessKey is set
-            if (ClientConnect.Client.ResponseAccessKey != null)
-                ClientProfileService.UpdateTokenByAccessKey(token, ClientConnect.Client.ResponseAccessKey);
+            if (clientConnect.Client.ResponseAccessKey != null)
+                ClientProfileService.UpdateTokenByAccessKey(token, clientConnect.Client.ResponseAccessKey);
 
             // check version after first connection
             _ = VersionCheck();
         }
         finally
         {
+
             // try to update token from url after connection or error if ResponseAccessKey is not set
-            if (ClientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
+            if (clientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
                 _ = ClientProfileService.UpdateTokenFromUrl(token); 
         }
     }
@@ -487,6 +498,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             // close client
             try
             {
+                // cancel current connecting if any
+                _connectCts?.Cancel();
+
                 // do not wait for bye if user request disconnection
                 if (ClientConnect != null)
                     await ClientConnect.DisposeAsync(waitForBye: !byUser);

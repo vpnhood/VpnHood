@@ -1,3 +1,11 @@
+# Upcocming
+### Client
+* Fix: Crash when pressing "Disconnect" while connecting
+
+# v3.3.463
+### Client
+* Fix: The "Connect" button for free public servers does not work under certain circumstances
+
 # v3.3.462
 ### Client
 * Fix: Pull the recent tokens from the server & URL

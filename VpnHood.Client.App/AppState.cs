@@ -23,4 +23,5 @@ public class AppState
     public required bool IsWaitingForAd { get; init; }
     public required VersionStatus VersionStatus { get; init; }
     public required PublishInfo? LastPublishInfo { get; init; }
+    public required bool? IsUdpChannelSupported { get; init; }
 }

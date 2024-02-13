@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-
-namespace VpnHood.Client.App.Abstractions;
+﻿namespace VpnHood.Client.App.Abstractions;
 
 public class AppAccount
 {

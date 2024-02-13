@@ -37,4 +37,15 @@ internal class AccountController : WebApiController, IAccountController
     {
         return AccountService.Authentication.SignOut();
     }
+
+    [Route(HttpVerbs.Get, "/subscription-order-by-provider-order-id")]
+    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId(string providerOrderId)
+    {
+        return AccountService.GetSubscriptionOrderByProviderOrderId(providerOrderId);
+    }
+
+    public Task<List<string>> GetAccessKeys(string subscriptionId)
+    {
+        throw new NotImplementedException();
+    }
 }

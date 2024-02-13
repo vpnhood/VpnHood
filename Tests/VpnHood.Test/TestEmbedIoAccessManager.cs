@@ -121,7 +121,7 @@ public class TestEmbedIoAccessManager : IDisposable
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, ulong sessionId, [QueryField] bool closeSession)
+        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId, [QueryField] bool closeSession)
         {
             _ = serverId;
             var traffic = await GetRequestDataAsync<Traffic>();

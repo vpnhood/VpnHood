@@ -9,6 +9,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
+using VpnHood.Server.Access.Messaging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
@@ -48,7 +49,7 @@ public class Session : IAsyncDisposable, IJob
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
-    public SessionResponseBase SessionResponse { get; private set; }
+    public SessionResponse SessionResponse { get; private set; }
     public UdpChannel? UdpChannel => Tunnel.UdpChannel;
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
@@ -59,7 +60,7 @@ public class Session : IAsyncDisposable, IJob
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessManager accessManager, SessionResponse sessionResponse,
+    internal Session(IAccessManager accessManager, SessionResponseEx sessionResponse,
         INetFilter netFilter,
         ISocketFactory socketFactory,
         SessionOptions options, TrackingOptions trackingOptions,
@@ -94,7 +95,7 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _syncJobSection = new JobSection(options.SyncIntervalValue);
         SessionExtraData = sessionExtraData;
-        SessionResponse = new SessionResponseBase(sessionResponse);
+        SessionResponse = sessionResponse;
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
         Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });

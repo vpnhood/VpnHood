@@ -594,8 +594,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UserAgent = UserAgent
             };
 
-            var request = new HelloRequest(Guid.NewGuid() + ":client", Token.TokenId, clientInfo,
-                VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret));
+            var request = new HelloRequest
+            {
+                RequestId = Guid.NewGuid() + ":client",
+                EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
+                ClientInfo = clientInfo,
+                TokenId = Token.TokenId,
+            };
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken);
             var sessionResponse = requestResult.Response;
@@ -715,7 +720,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
-        var request = new TcpDatagramChannelRequest(Guid.NewGuid() + ":client", SessionId, SessionKey);
+        var request = new TcpDatagramChannelRequest
+        {
+            RequestId = Guid.NewGuid() + ":client",
+            SessionId = SessionId,
+            SessionKey = SessionKey
+        };
+
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken);
         StreamDatagramChannel? channel = null;
         try
@@ -785,7 +796,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
-                new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
+                new ByeRequest()
+                {
+                    RequestId = Guid.NewGuid() + ":client",
+                    SessionId = SessionId,
+                    SessionKey = SessionKey
+
+                },
                 cancellationToken);
         }
         catch (Exception ex)

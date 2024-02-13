@@ -30,7 +30,6 @@ internal class ClientHost(
     private IPEndPoint? _localEndpointIpV6;
     private int _processingCount;
 
-    private VpnHoodClient VpnHoodClient { get; } = vpnHoodClient;
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
 
@@ -118,7 +117,7 @@ internal class ClientHost(
                 // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, loopbackAddress))
                 {
-                    var natItem = (NatItemEx?)VpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
                     ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -132,8 +131,8 @@ internal class ClientHost(
                 {
                     var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
                     var natItem = sync
-                        ? VpnHoodClient.Nat.Add(ipPacket, true)
-                        : VpnHoodClient.Nat.Get(ipPacket) ?? throw new Exception("Could not find outgoing tcp destination in NAT.");
+                        ? vpnHoodClient.Nat.Add(ipPacket, true)
+                        : vpnHoodClient.Nat.Get(ipPacket) ?? throw new Exception("Could not find outgoing tcp destination in NAT.");
 
                     tcpPacket.SourcePort = natItem.NatId; // 1
                     ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
@@ -174,7 +173,7 @@ internal class ClientHost(
             cancellationToken.ThrowIfCancellationRequested();
 
             // config tcpOrgClient
-            VpnHoodClient.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
+            vpnHoodClient.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
             VhUtil.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
@@ -183,7 +182,7 @@ internal class ClientHost(
                 ? IPVersion.IPv4
                 : IPVersion.IPv6;
 
-            var natItem = (NatItemEx?)VpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port)
+            var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port)
                           ?? throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             // create a scope for the logger
@@ -197,10 +196,10 @@ internal class ClientHost(
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             // Check IpFilter
-            if (!VpnHoodClient.IsInIpRange(natItem.DestinationAddress))
+            if (!vpnHoodClient.IsInIpRange(natItem.DestinationAddress))
             {
                 var channelId = Guid.NewGuid() + ":client";
-                await VpnHoodClient.AddPassthruTcpStream(
+                await vpnHoodClient.AddPassthruTcpStream(
                     new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
                     new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                     channelId,
@@ -209,16 +208,18 @@ internal class ClientHost(
             }
 
             // Create the Request
-            var request = new StreamProxyChannelRequest(
-                Guid.NewGuid() + ":client",
-                VpnHoodClient.SessionId,
-                VpnHoodClient.SessionKey,
-                new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                VhUtil.GenerateKey(),
-                natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1);
+            var request = new StreamProxyChannelRequest
+            {
+                RequestId = Guid.NewGuid() + ":client",
+                SessionId = vpnHoodClient.SessionId,
+                SessionKey = vpnHoodClient.SessionKey,
+                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                CipherKey = VhUtil.GenerateKey(),
+                CipherLength = natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1
+            };
 
             // read the response
-            requestResult = await VpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken);
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken);
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
@@ -231,7 +232,7 @@ internal class ClientHost(
                 binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
 
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
-            VpnHoodClient.Tunnel.AddChannel(channel);
+            vpnHoodClient.Tunnel.AddChannel(channel);
         }
         catch (Exception ex)
         {

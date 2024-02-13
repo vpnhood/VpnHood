@@ -225,7 +225,7 @@ internal class ConnectorService : IAsyncDisposable, IJob
             {
                 // we may use this buffer to encrypt so clone it for retry
                 await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken);
-                var response = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
+                var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken);
                 lock (Stat) Stat.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T>
                 {
@@ -248,13 +248,45 @@ internal class ConnectorService : IAsyncDisposable, IJob
         clientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
 
         // send request
-        await clientStream.Stream.WriteAsync(request, cancellationToken);
-        var response2 = await StreamUtil.ReadJsonAsync<T>(clientStream.Stream, cancellationToken);
-        return new ConnectorRequestResult<T>
+        try
         {
-            Response = response2,
-            ClientStream = clientStream
-        };
+            await clientStream.Stream.WriteAsync(request, cancellationToken);
+            var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken);
+            return new ConnectorRequestResult<T>
+            {
+                Response = response2,
+                ClientStream = clientStream
+            };
+        }
+        catch
+        {
+            _disposingTasks.Add(clientStream.DisposeAsync(false));
+            throw;
+        }
+    }
+
+    private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken) where T : SessionResponseBase
+    {
+        var message = await StreamUtil.ReadMessage(stream, cancellationToken);
+        try
+        {
+            var response = VhUtil.JsonDeserialize<T>(message);
+            ProcessResponseException(response);
+            return response;
+        }
+        catch(Exception ex) when (ex is not SessionException)
+        {
+            var sessionResponse =  VhUtil.JsonDeserialize<SessionResponse>(message);
+            ProcessResponseException(sessionResponse);
+            throw;
+        }
+    }
+
+    private static void ProcessResponseException(SessionResponseBase response)
+    {
+        if (response.ErrorCode == SessionErrorCode.RedirectHost) throw new RedirectHostException(response);
+        if (response.ErrorCode == SessionErrorCode.Maintenance) throw new MaintenanceException();
+        if (response.ErrorCode != SessionErrorCode.Ok) throw new SessionException(response);
     }
 
     public ValueTask DisposeAsync()

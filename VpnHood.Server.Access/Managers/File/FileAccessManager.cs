@@ -66,8 +66,8 @@ public class FileAccessManager : IAccessManager
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
-        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
-            throw new Exception("PublicEndPoints must has not been configured.");
+        if (!publicEndPoints.Any() || publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+            throw new Exception("PublicEndPoints has not been configured properly.");
 
         var serverToken = new ServerToken
         {
@@ -148,13 +148,6 @@ public class FileAccessManager : IAccessManager
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
             ret.AccessKey = accessItem.Token.ToAccessKey();
-
-        // set endpoints
-        ret.TcpEndPoints = [sessionRequestEx.HostEndPoint];
-        ret.UdpEndPoints = ServerConfig.UdpEndPointsValue
-            .Where(x => x.AddressFamily == sessionRequestEx.HostEndPoint.AddressFamily)
-            .Select(x => new IPEndPoint(sessionRequestEx.HostEndPoint.Address, x.Port))
-            .ToArray();
 
         return ret;
     }
@@ -286,11 +279,6 @@ public class FileAccessManager : IAccessManager
         var aes = Aes.Create();
         aes.KeySize = 128;
         aes.GenerateKey();
-
-        // PublicEndPoints
-        var publicEndPoints = ServerConfig.PublicEndPoints ?? ServerConfig.TcpEndPointsValue;
-        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
-            throw new Exception("PublicEndPoints must has not been configured.");
 
         // create AccessItem
         var accessItem = new AccessItem

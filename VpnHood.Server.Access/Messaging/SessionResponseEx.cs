@@ -1,6 +1,4 @@
-﻿using System.Net;
-using System.Text.Json.Serialization;
-using VpnHood.Common.Converters;
+﻿using System.Text.Json.Serialization;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Access.Messaging;
@@ -11,13 +9,6 @@ public class SessionResponseEx(SessionErrorCode errorCode)
 {
     [JsonIgnore(Condition =JsonIgnoreCondition.WhenWritingNull)]
     public string? ExtraData { get; set; }
-    
-    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[] TcpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
-    
-    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
     public string? GaMeasurementId { get; set; }
     public string? AccessKey { get; set; }
-
 }

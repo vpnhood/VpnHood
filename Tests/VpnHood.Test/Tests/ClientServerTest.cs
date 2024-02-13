@@ -742,4 +742,18 @@ public class ClientServerTest : TestBase
         // wait for free the used connections 
         await VhTestUtil.AssertEqualsWait(3, () => client.Stat.ConnectorStat.FreeConnectionCount);
     }
+
+    [TestMethod]
+    public async Task IsUdpChannelSupported_must_be_false_when_server_return_udp_port_zero()
+    {
+        // Create Server
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.UdpEndPoints = [];
+        await using var server = TestHelper.CreateServer(options: fileAccessManagerOptions);
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: TestHelper.CreateClientOptions(useUdp: true));
+        Assert.IsFalse(client.Stat.IsUdpChannelSupported);
+    }
 }

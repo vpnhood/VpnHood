@@ -152,7 +152,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         IsWaitingForAd = IsWaitingForAd,
         VersionStatus = _versionStatus,
         LastPublishInfo = _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
-        ConnectRequestTime = _connectRequestTime
+        ConnectRequestTime = _connectRequestTime,
+        IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported
     };
 
     public AppConnectionState ConnectionState

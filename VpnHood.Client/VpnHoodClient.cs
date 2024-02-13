@@ -74,8 +74,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint => _connectorService.EndPointInfo?.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
-    public IPEndPoint[]? HostTcpEndPoints { get; private set; }
-    public IPEndPoint[]? HostUdpEndPoints { get; private set; }
     public bool DropUdpPackets { get; set; }
     public ClientStat Stat { get; }
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
@@ -120,14 +118,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
-        
+
         // NAT
         Nat = new Nat(true);
 
         // Tunnel
         Tunnel = new Tunnel();
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-        
+
         // create proxy host
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
@@ -255,7 +253,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             // ReSharper disable once DisposeOnUsingVariable
             // clear before start new async task
-            scope?.Dispose(); 
+            scope?.Dispose();
             _ = DisposeAsync(ex);
             throw;
         }
@@ -662,11 +660,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;
-            HostUdpEndPoint = sessionResponse.UdpEndPoints.FirstOrDefault(x => x.AddressFamily == HostTcpEndPoint?.AddressFamily);
-
-            // set endpoints
-            HostTcpEndPoints = sessionResponse.TcpEndPoints;
-            HostUdpEndPoints = sessionResponse.UdpEndPoints;
+            if (sessionResponse.UdpPort > 0 && HostTcpEndPoint != null)
+                HostUdpEndPoint = new IPEndPoint(HostTcpEndPoint.Address, sessionResponse.UdpPort.Value);
 
             // PacketCaptureIpRanges
             if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))
@@ -726,7 +721,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // find timespan
-            var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan) 
+            var lifespan = !VhUtil.IsInfinite(_maxTcpDatagramLifespan)
                 ? TimeSpan.FromSeconds(new Random().Next((int)_minTcpDatagramLifespan.TotalSeconds, (int)_maxTcpDatagramLifespan.TotalSeconds))
                 : Timeout.InfiniteTimeSpan;
 
@@ -745,8 +740,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
         where T : SessionResponseBase
     {
-        IClientStream? clientStream = null;
-
         try
         {
             // log this request
@@ -761,30 +754,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // create a connection and send the request 
             var requestResult = await _connectorService.SendRequest<T>(eventId, request, cancellationToken);
-            var response = requestResult.Response;
-            clientStream = requestResult.ClientStream;
 
             // set SessionStatus
-            if (response.AccessUsage != null)
-                SessionStatus.AccessUsage = response.AccessUsage;
+            if (requestResult.Response.AccessUsage != null)
+                SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
 
             // client is disposed meanwhile
-            if (_disposed)
-                throw new ObjectDisposedException(VhLogger.FormatType(this));
-
-            if (response.ErrorCode == SessionErrorCode.RedirectHost) throw new RedirectHostException(response);
-            if (response.ErrorCode == SessionErrorCode.Maintenance) throw new MaintenanceException();
-            if (response.ErrorCode != SessionErrorCode.Ok) throw new SessionException(response);
-
+            if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
             _lastConnectionErrorTime = null;
             State = ClientState.Connected;
             return requestResult;
         }
         catch (SessionException ex) when (ex.SessionResponseBase.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
         {
+            // set SessionStatus
+            if (ex.SessionResponseBase.AccessUsage != null)
+                SessionStatus.AccessUsage = ex.SessionResponseBase.AccessUsage;
+
             // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
-            if (clientStream != null) await clientStream.DisposeAsync();
             throw;
         }
         catch (Exception ex)
@@ -794,7 +782,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 State = ClientState.Connecting;
 
             // dispose by session timeout or known exception
-            if (clientStream != null) await clientStream.DisposeAsync();
             _lastConnectionErrorTime ??= FastDateTime.Now;
             if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 _ = DisposeAsync(ex);
@@ -961,6 +948,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public Traffic AccountTraffic => _client._helloTraffic + SessionTraffic;
         public int DatagramChannelCount => _client.Tunnel.DatagramChannelCount;
         public bool IsUdpMode => _client.Tunnel.IsUdpMode;
+        public bool IsUdpChannelSupported => _client.HostUdpEndPoint != null;
 
         internal ClientStat(VpnHoodClient vpnHoodClient)
         {

@@ -392,12 +392,15 @@ internal static class TestHelper
     public static SessionRequestEx CreateSessionRequestEx(Token token, Guid? clientId = null)
     {
         clientId ??= Guid.NewGuid();
-
-        return new SessionRequestEx("access:" + Guid.NewGuid(),
-            token.TokenId,
-            new ClientInfo { ClientId = clientId.Value },
-            hostEndPoint: token.ServerToken.HostEndPoints!.First(),
-            encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
+        return new SessionRequestEx
+        {
+            TokenId = token.TokenId,
+            ClientInfo = new ClientInfo { ClientId = clientId.Value },
+            HostEndPoint = token.ServerToken.HostEndPoints!.First(),
+            EncryptedClientId = VhUtil.EncryptClientId(clientId.Value, token.Secret),
+            ClientIp = null,
+            ExtraData = null
+        };
     }
 
     private static bool _isInit;

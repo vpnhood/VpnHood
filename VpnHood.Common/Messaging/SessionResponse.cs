@@ -17,10 +17,17 @@ public class SessionResponse(SessionErrorCode errorCode)
     }
 
     public SessionErrorCode ErrorCode { get; set; } = errorCode;
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ErrorMessage { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public AccessUsage? AccessUsage { get; set; }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SessionSuppressType SuppressedBy { get; set; }
 
     [JsonConverter(typeof(IPEndPointConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
 }

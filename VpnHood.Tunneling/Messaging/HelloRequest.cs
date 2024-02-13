@@ -2,4 +2,11 @@
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class HelloRequest() : SessionRequest((byte)Messaging.RequestCode.Hello);
+public class HelloRequest() 
+    : ClientRequest((byte)Messaging.RequestCode.Hello)
+{
+    public required string TokenId { get; init; }
+    public required ClientInfo ClientInfo { get; init; }
+    public required byte[] EncryptedClientId { get; init; }
+
+}

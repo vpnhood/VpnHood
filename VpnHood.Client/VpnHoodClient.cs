@@ -169,7 +169,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void PacketCapture_OnStopped(object sender, EventArgs e)
     {
-        VhLogger.Instance.LogTrace("Device has been stopped!");
+        VhLogger.Instance.LogTrace("Device has been stopped.");
         _ = DisposeAsync(false);
     }
 

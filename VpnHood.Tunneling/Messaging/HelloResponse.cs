@@ -20,13 +20,8 @@ public class HelloResponse : SessionResponse
     }
 
     [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress ClientPublicAddress { get; set; } = default!;
-
-    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[] TcpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
-
-    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[] UdpEndPoints { get; set; } = Array.Empty<IPEndPoint>();
+    public required IPAddress ClientPublicAddress { get; set; }
+    public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = default!;
     public int ServerProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = default!;

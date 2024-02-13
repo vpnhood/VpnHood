@@ -22,5 +22,5 @@ public class SessionResponse : SessionResponseBase
     public ulong SessionId { get; set; }
     public byte[] SessionKey { get; set; } = Array.Empty<byte>();
     public DateTime? CreatedTime { get; set; }
-    public SessionSuppressType SuppressedTo { get; set; }
+    public SessionSuppressType SuppressedTo { get; set; } //todo why here?
 }

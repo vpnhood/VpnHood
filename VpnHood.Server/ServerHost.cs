@@ -306,7 +306,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
-            if (xVersion==2) binaryStreamType = BinaryStreamType.Custom;
+            if (xVersion == 2) binaryStreamType = BinaryStreamType.Custom;
 
             // read api key
             if (!CheckApiKeyAuthorization(authorization))
@@ -325,16 +325,16 @@ internal class ServerHost : IAsyncDisposable, IJob
             switch (binaryStreamType)
             {
                 case BinaryStreamType.Custom:
-                {
-                    await sslStream.DisposeAsync(); // dispose Ssl
-                    var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
-                    var secret = Convert.FromBase64String(xSecret);
-                    return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
-                }
-                
+                    {
+                        await sslStream.DisposeAsync(); // dispose Ssl
+                        var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
+                        var secret = Convert.FromBase64String(xSecret);
+                        return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
+                    }
+
                 case BinaryStreamType.Standard:
                     return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseClientStream);
-                
+
                 case BinaryStreamType.None:
                     return new TcpClientStream(tcpClient, sslStream, streamId);
 
@@ -591,13 +591,16 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
+        var udpPort = 
+            UdpEndPoints.SingleOrDefault(x => x.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.Port ??
+            UdpEndPoints.SingleOrDefault(x => x.Address.Equals(IPAddressUtil.GetAnyIpAddress(ipEndPointPair.LocalEndPoint.AddressFamily)))?.Port;
+
         var helloResponse = new HelloResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            TcpEndPoints = sessionResponse.TcpEndPoints,
-            UdpEndPoints = sessionResponse.UdpEndPoints,
+            UdpPort = udpPort,
             GaMeasurementId = sessionResponse.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,

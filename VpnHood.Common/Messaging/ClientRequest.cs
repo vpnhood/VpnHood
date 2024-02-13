@@ -1,11 +1,7 @@
 ﻿namespace VpnHood.Common.Messaging;
 
-public abstract class ClientRequest(byte requestCode, string requestId)
+public abstract class ClientRequest(byte requestCode)
 {
     public byte RequestCode { get; } = requestCode;
-    public string RequestId { get; set; } = requestId;
-
-    protected ClientRequest(ClientRequest obj) : this(obj.RequestCode, obj.RequestId)
-    {
-    }
+    public required string RequestId { get; set; }
 }

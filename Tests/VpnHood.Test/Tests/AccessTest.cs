@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -61,19 +62,8 @@ public class AccessTest : TestBase
 
         // create client and connect
         await using var client1 = TestHelper.CreateClient(token, autoConnect: false);
-        try
-        {
-            await client1.Connect();
-            Assert.Fail("Exception expected! access has been expired");
-        }
-        catch (AssertFailedException)
-        {
-            throw;
-        }
-        catch
-        {
-            Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
-        }
+        await Assert.ThrowsExceptionAsync<SessionException>(() => client1.Connect());
+        Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
     }
 
     [TestMethod]

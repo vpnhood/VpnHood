@@ -1,6 +1,11 @@
 # Upcocming
 ### Client
 * Fix: Crash when pressing "Disconnect" while connecting
+* Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
+
+### Server
+* Fix: Crash when pressing "Disconnect" while connecting
+* Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
 
 # v3.3.463
 ### Client

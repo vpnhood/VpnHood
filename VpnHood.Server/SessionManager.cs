@@ -225,7 +225,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // unexpected close
         if (session.IsDisposed)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-                new SessionResponseBase(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
+                new SessionResponse(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
                 requestBase.RequestId);
 
         return session;

@@ -164,7 +164,7 @@ internal class ClientHost(
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)
     {
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
-        ConnectorRequestResult<SessionResponseBase>? requestResult = null;
+        ConnectorRequestResult<SessionResponse>? requestResult = null;
         StreamProxyChannel? channel = null;
 
         try
@@ -218,7 +218,7 @@ internal class ClientHost(
                 natItem.DestinationPort == 443 ? TunnelDefaults.TlsHandshakeLength : -1);
 
             // read the response
-            requestResult = await VpnHoodClient.SendRequest<SessionResponseBase>(request, cancellationToken);
+            requestResult = await VpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken);
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel

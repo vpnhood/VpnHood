@@ -48,7 +48,7 @@ public class ServerSessionException : SessionException, ISelfLog
     public ServerSessionException(
         IPEndPoint remoteEndPoint,
         SessionResponse sessionResponse,
-        SessionRequest sessionRequest)
+        HelloRequest sessionRequest)
     : base(sessionResponse)
     {
         RemoteEndPoint = remoteEndPoint;

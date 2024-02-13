@@ -701,7 +701,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private void SetHostEndPoint(IPEndPoint ipEndPoint)
     {
         if (_connectorService.EndPointInfo == null)
-            throw new InvalidOperationException($"{nameof(ConnectorService.EndPointInfo)} is not initialized.");
+            throw new InvalidOperationException($"{nameof(ConnectorServiceBase.EndPointInfo)} is not initialized.");
 
         // update _connectorService
         _connectorService.EndPointInfo.TcpEndPoint = ipEndPoint;
@@ -742,18 +742,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try
         {
-            // log this request
-            var requestCode = (RequestCode)request.RequestCode;
-            var eventId = requestCode switch
-            {
-                RequestCode.Hello => GeneralEventId.Session,
-                RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
-                RequestCode.StreamProxyChannel => GeneralEventId.StreamProxyChannel,
-                _ => GeneralEventId.Tcp
-            };
-
             // create a connection and send the request 
-            var requestResult = await _connectorService.SendRequest<T>(eventId, request, cancellationToken);
+            var requestResult = await _connectorService.SendRequest<T>(request, cancellationToken);
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
@@ -794,7 +784,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try
         {
-            await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(GeneralEventId.Session,
+            await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(
                 new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
                 cancellationToken);
         }

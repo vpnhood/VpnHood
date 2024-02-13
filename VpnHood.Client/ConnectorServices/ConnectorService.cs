@@ -14,7 +14,7 @@ internal class ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeou
     : ConnectorServiceBase(socketFactory, tcpTimeout)
 {
     public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
-        where T : SessionResponseBase
+        where T : SessionResponse
     {
         var eventId = GetRequestEventId(request);
         VhLogger.Instance.LogTrace(eventId,
@@ -41,7 +41,7 @@ internal class ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeou
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(byte[] request, string requestId, CancellationToken cancellationToken)
-        where T : SessionResponseBase
+        where T : SessionResponse
     {
         // try reuse
         var clientStream = GetFreeClientStream();
@@ -95,7 +95,7 @@ internal class ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeou
         }
     }
 
-    private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken) where T : SessionResponseBase
+    private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken) where T : SessionResponse
     {
         var message = await StreamUtil.ReadMessage(stream, cancellationToken);
         try
@@ -112,7 +112,7 @@ internal class ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeou
         }
     }
 
-    private static void ProcessResponseException(SessionResponseBase response)
+    private static void ProcessResponseException(SessionResponse response)
     {
         if (response.ErrorCode == SessionErrorCode.RedirectHost) throw new RedirectHostException(response);
         if (response.ErrorCode == SessionErrorCode.Maintenance) throw new MaintenanceException();

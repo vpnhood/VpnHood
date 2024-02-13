@@ -444,14 +444,14 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             // reply the error to caller if it is SessionException
             // Should not reply anything when user is unknown
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(ex.SessionResponseBase),
+            await StreamUtil.WriteJsonAsync(clientStream.Stream, ex.SessionResponse,
                 cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
-                VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
-                    "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponseBase.ErrorCode);
+                VhLogger.Instance.LogInformation(ex.SessionResponse.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
+                    "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponse.ErrorCode);
 
             await clientStream.DisposeAsync();
         }
@@ -632,7 +632,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponse(SessionErrorCode.Ok), cancellationToken);
         await clientStream.DisposeAsync(false);
 
         // must be last

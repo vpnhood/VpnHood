@@ -179,27 +179,27 @@ public class FileAccessManager : IAccessManager
         return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, false);
     }
 
-    public Task<SessionResponseBase> Session_Close(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, true);
     }
 
-    private async Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
+    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
     {
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
-            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         accessItem.AccessUsage.Traffic += traffic;
         await WriteAccessItemUsage(accessItem);
@@ -208,7 +208,7 @@ public class FileAccessManager : IAccessManager
             SessionController.CloseSession(sessionId);
 
         var res = SessionController.GetSession(sessionId, accessItem, null);
-        var ret = new SessionResponseBase(res.ErrorCode)
+        var ret = new SessionResponse(res.ErrorCode)
         {
             AccessUsage = res.AccessUsage,
             ErrorMessage = res.ErrorMessage,

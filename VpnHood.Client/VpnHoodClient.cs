@@ -716,7 +716,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         // Create and send the Request Message
         var request = new TcpDatagramChannelRequest(Guid.NewGuid() + ":client", SessionId, SessionKey);
-        var requestResult = await SendRequest<SessionResponseBase>(request, cancellationToken);
+        var requestResult = await SendRequest<SessionResponse>(request, cancellationToken);
         StreamDatagramChannel? channel = null;
         try
         {
@@ -738,7 +738,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
-        where T : SessionResponseBase
+        where T : SessionResponse
     {
         try
         {
@@ -755,11 +755,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Connected;
             return requestResult;
         }
-        catch (SessionException ex) when (ex.SessionResponseBase.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
+        catch (SessionException ex) when (ex.SessionResponse.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
         {
             // set SessionStatus
-            if (ex.SessionResponseBase.AccessUsage != null)
-                SessionStatus.AccessUsage = ex.SessionResponseBase.AccessUsage;
+            if (ex.SessionResponse.AccessUsage != null)
+                SessionStatus.AccessUsage = ex.SessionResponse.AccessUsage;
 
             // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
@@ -784,7 +784,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try
         {
-            await using var requestResult = await _connectorService.SendRequest<SessionResponseBase>(
+            await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
                 new ByeRequest(Guid.NewGuid() + ":client", SessionId, SessionKey),
                 cancellationToken);
         }
@@ -806,12 +806,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             if (ex is SessionException sessionException)
             {
-                SessionStatus.ErrorCode = sessionException.SessionResponseBase.ErrorCode;
-                SessionStatus.ErrorMessage = sessionException.SessionResponseBase.ErrorMessage;
-                SessionStatus.SuppressedBy = sessionException.SessionResponseBase.SuppressedBy;
-                if (sessionException.SessionResponseBase.AccessUsage != null) //update AccessUsage if exists
+                SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
+                SessionStatus.ErrorMessage = sessionException.SessionResponse.ErrorMessage;
+                SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
+                if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
                 {
-                    SessionStatus.AccessUsage = sessionException.SessionResponseBase.AccessUsage;
+                    SessionStatus.AccessUsage = sessionException.SessionResponse.AccessUsage;
                     SessionStatus.AccessUsage.Traffic = _helloTraffic; // let calculate it on client
                 }
             }

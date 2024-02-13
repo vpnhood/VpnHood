@@ -27,7 +27,7 @@ public class Session : IAsyncDisposable, IJob
     private readonly IAccessManager _accessManager;
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
-    private readonly object _syncLock = new();
+    private readonly AsyncLock _syncLock = new();
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
@@ -41,7 +41,6 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _maxTcpChannelExceptionReporter = new(VhLogger.Instance, "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance, "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
     private readonly EventReporter _filterReporter = new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
-    private bool _isSyncing;
     private readonly Traffic _syncTraffic = new();
     private int _tcpConnectWaitCount;
     private readonly JobSection _syncJobSection;
@@ -168,32 +167,27 @@ public class Session : IAsyncDisposable, IJob
 
     private async Task Sync(bool force, bool closeSession)
     {
+        using var syncLock = await _syncLock.LockAsync();
         if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
             return;
 
+        // prepare scope
         using var scope = VhLogger.Instance.BeginScope(
             $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}");
 
-        Traffic traffic;
-        lock (_syncLock)
+        // calculate traffic
+        var traffic = new Traffic
         {
-            if (_isSyncing)
-                return;
+            Sent = Tunnel.Traffic.Received - _syncTraffic.Sent, // Intentionally Reversed: sending to tunnel means receiving form client,
+            Received = Tunnel.Traffic.Sent - _syncTraffic.Received // Intentionally Reversed: receiving from tunnel means sending for client
+        };
 
-            traffic = new Traffic
-            {
-                Sent = Tunnel.Traffic.Received - _syncTraffic.Sent, // Intentionally Reversed: sending to tunnel means receiving form client,
-                Received = Tunnel.Traffic.Sent - _syncTraffic.Received // Intentionally Reversed: receiving from tunnel means sending for client
-            };
+        var shouldSync = closeSession || (force && traffic.Total > 0) || traffic.Total >= _syncCacheSize;
+        if (!shouldSync)
+            return;
 
-            var shouldSync = closeSession || (force && traffic.Total > 0) || traffic.Total >= _syncCacheSize;
-            if (!shouldSync)
-                return;
-
-            // reset usage and sync time; no matter it is successful or not to prevent frequent call
-            _syncTraffic.Add(traffic);
-            _isSyncing = true;
-        }
+        // reset usage and sync time; no matter it is successful or not to prevent frequent call
+        _syncTraffic.Add(traffic);
 
         try
         {
@@ -215,11 +209,6 @@ public class Session : IAsyncDisposable, IJob
         {
             VhLogger.Instance.LogWarning(GeneralEventId.AccessManager, ex,
                 "Could not report usage to the access-server.");
-        }
-        finally
-        {
-            lock (_syncLock)
-                _isSyncing = false;
         }
     }
 
@@ -425,15 +414,16 @@ public class Session : IAsyncDisposable, IJob
         if (IsDisposed) return;
         IsDisposed = true;
 
+        // Sync must before dispose, Some dispose may take time
+        if (sync)
+            await Sync(true, byUser);
+
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         await Tunnel.DisposeAsync();
         await _proxyManager.DisposeAsync();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();
-
-        if (sync)
-            await Sync(true, byUser);
 
         // if there is no reason it is temporary
         var reason = "Cleanup";

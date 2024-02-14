@@ -5,6 +5,8 @@ namespace VpnHood.Tunneling.Utils;
 
 public static class HttpUtil
 {
+    public const string HttpRequestKey = "HTTP_REQUEST";
+
     public static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = 8192)
     {
@@ -62,6 +64,9 @@ public static class HttpUtil
             var line = reader.ReadLine();
             if (string.IsNullOrEmpty(line))
                 break;
+
+            if (headers.Count == 0)
+                headers[HttpRequestKey] = line;
 
             // Split the header line into header field and value
             var separatorIndex = line.IndexOf(':');

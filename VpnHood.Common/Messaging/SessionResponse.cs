@@ -7,7 +7,6 @@ namespace VpnHood.Common.Messaging;
 [method: JsonConstructor]
 public class SessionResponse(SessionErrorCode errorCode)
 {
-    //todo: remove this constructor
     public SessionResponse(SessionResponse obj) : this(obj.ErrorCode)
     {
         ErrorMessage = obj.ErrorMessage;

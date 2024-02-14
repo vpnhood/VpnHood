@@ -3,7 +3,6 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Access.Messaging;
 
-[method: JsonConstructor]
 public class SessionResponseEx(SessionErrorCode errorCode) 
     : SessionResponse(errorCode)
 {

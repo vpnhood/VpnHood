@@ -1,5 +1,6 @@
 # Upcocming
 ### Client
+* Feature: Update UI when server does not support UDP tunnel
 * Fix: Crash when pressing "Disconnect" while connecting
 * Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
 

@@ -262,7 +262,7 @@ export class AccountClient {
     }
 
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
-        let url_ = this.baseUrl + "/api/account/access-key?";
+        let url_ = this.baseUrl + "/api/account/access-keys?";
         if (subscriptionId === undefined || subscriptionId === null)
             throw new Error("The parameter 'subscriptionId' must be defined and cannot be null.");
         else
@@ -1273,8 +1273,6 @@ export interface IAppAccount {
 export class AppSubscriptionOrder implements IAppSubscriptionOrder {
     providerPlanId!: string;
     subscriptionId!: string;
-    globalServersFarmAccessKeyCount!: number;
-    hiddenServerFarmAccessKeyCount!: number;
     isProcessed!: boolean;
 
     constructor(data?: IAppSubscriptionOrder) {
@@ -1290,8 +1288,6 @@ export class AppSubscriptionOrder implements IAppSubscriptionOrder {
         if (_data) {
             this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : <any>null;
             this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : <any>null;
-            this.globalServersFarmAccessKeyCount = _data["globalServersFarmAccessKeyCount"] !== undefined ? _data["globalServersFarmAccessKeyCount"] : <any>null;
-            this.hiddenServerFarmAccessKeyCount = _data["hiddenServerFarmAccessKeyCount"] !== undefined ? _data["hiddenServerFarmAccessKeyCount"] : <any>null;
             this.isProcessed = _data["isProcessed"] !== undefined ? _data["isProcessed"] : <any>null;
         }
     }
@@ -1307,8 +1303,6 @@ export class AppSubscriptionOrder implements IAppSubscriptionOrder {
         data = typeof data === 'object' ? data : {};
         data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : <any>null;
         data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : <any>null;
-        data["globalServersFarmAccessKeyCount"] = this.globalServersFarmAccessKeyCount !== undefined ? this.globalServersFarmAccessKeyCount : <any>null;
-        data["hiddenServerFarmAccessKeyCount"] = this.hiddenServerFarmAccessKeyCount !== undefined ? this.hiddenServerFarmAccessKeyCount : <any>null;
         data["isProcessed"] = this.isProcessed !== undefined ? this.isProcessed : <any>null;
         return data;
     }
@@ -1317,8 +1311,6 @@ export class AppSubscriptionOrder implements IAppSubscriptionOrder {
 export interface IAppSubscriptionOrder {
     providerPlanId: string;
     subscriptionId: string;
-    globalServersFarmAccessKeyCount: number;
-    hiddenServerFarmAccessKeyCount: number;
     isProcessed: boolean;
 }
 
@@ -1739,6 +1731,7 @@ export class AppState implements IAppState {
     isWaitingForAd!: boolean;
     versionStatus!: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
+    isUdpChannelSupported?: boolean | null;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1775,6 +1768,7 @@ export class AppState implements IAppState {
             this.isWaitingForAd = _data["isWaitingForAd"] !== undefined ? _data["isWaitingForAd"] : <any>null;
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
             this.lastPublishInfo = _data["lastPublishInfo"] ? PublishInfo.fromJS(_data["lastPublishInfo"]) : <any>null;
+            this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
         }
     }
 
@@ -1806,6 +1800,7 @@ export class AppState implements IAppState {
         data["isWaitingForAd"] = this.isWaitingForAd !== undefined ? this.isWaitingForAd : <any>null;
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
         data["lastPublishInfo"] = this.lastPublishInfo ? this.lastPublishInfo.toJSON() : <any>null;
+        data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         return data;
     }
 }
@@ -1830,6 +1825,7 @@ export interface IAppState {
     isWaitingForAd: boolean;
     versionStatus: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
+    isUdpChannelSupported?: boolean | null;
 }
 
 export enum AppConnectionState {

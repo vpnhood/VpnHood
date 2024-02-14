@@ -38,7 +38,7 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
-    [HttpGet("access-key")]
+    [HttpGet("access-keys")]
     public Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         throw new NotImplementedException();

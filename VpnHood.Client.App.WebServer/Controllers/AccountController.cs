@@ -39,13 +39,14 @@ internal class AccountController : WebApiController, IAccountController
     }
 
     [Route(HttpVerbs.Get, "/subscription-order-by-provider-order-id")]
-    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId(string providerOrderId)
+    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId([QueryField] string providerOrderId)
     {
         return AccountService.GetSubscriptionOrderByProviderOrderId(providerOrderId);
     }
 
-    public Task<List<string>> GetAccessKeys(string subscriptionId)
+    [Route(HttpVerbs.Get, "/access-keys")]
+    public Task<List<string>> GetAccessKeys([QueryField] string subscriptionId)
     {
-        throw new NotImplementedException();
+        return AccountService.GetAccessKeys(subscriptionId);
     }
 }

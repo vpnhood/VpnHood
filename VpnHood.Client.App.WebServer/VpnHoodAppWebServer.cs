@@ -53,7 +53,7 @@ public class VpnHoodAppWebServer : IDisposable
     public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default, 
         bool listenToAllIps = false)
     {
-        var ret = new VpnHoodAppWebServer(zipStream, 9090, url, listenToAllIps);
+        var ret = new VpnHoodAppWebServer(zipStream, defaultPort ?? 9090, url, listenToAllIps);
         ret.Start();
         return ret;
     }

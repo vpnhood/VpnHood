@@ -21,46 +21,47 @@ public class Http01ChallengeService(IPAddress[] ipAddresses) : IDisposable
         foreach (var ipAddress in ipAddresses)
         {
             var ipEndPoint = new IPEndPoint(ipAddress, 80);
+            VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
+
             var listener = new TcpListener(ipEndPoint);
             listener.Start();
             _tcpListeners.Add(listener);
-
         }
-        var listenTasks = ipAddresses.Select(StartListener);
+
+        var listenTasks = _tcpListeners.Select(AcceptTcpClient);
         return Task.WhenAll(listenTasks);
     }
 
-    private TcpListener CreateListener(IPAddress ipAddress)
+    private async Task AcceptTcpClient(TcpListener tcpListener)
     {
-        throw new AbandonedMutexException();
-    }
-
-
-    private async Task StartListener(IPAddress ipAddress)
-    {
-        // Start the TCP listener on port 80
-        var ipEndPoint = new IPEndPoint(ipAddress, 80);
-        var listener = new TcpListener(ipEndPoint);
         try
         {
-            VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
-            listener.Start();
-            _tcpListeners.Add(listener);
             while (true)
             {
-                // Asynchronously wait for incoming connections
-                var client = listener.AcceptTcpClientAsync();
+                using var client = await tcpListener.AcceptTcpClientAsync();
                 //HandleRequest(client, token, keyAuthorization);
             }
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
+            VhLogger.Instance.LogError(ex, "Could not process HTTP-01 request.");
         }
-        finally
-        {
-            listener.Stop();
-        }
+    }
+
+    private static byte[] BuildHttp01Response(string challengeCode)
+    {
+        var header =
+            "HTTP/1.1 200\r\n" +
+            "Server: Kestrel\r\n" +
+            $"Date: {DateTime.UtcNow:r}\r\n" +
+            "Content-Type: text/plain\r\n" +
+            $"Content-Length: {challengeCode.Length}\r\n" +
+            "Connection: close\r\n";
+
+        var body = $"{challengeCode}\r\n";
+
+        var ret = header + "\r\n" + body;
+        return Encoding.UTF8.GetBytes(ret);
     }
 
     private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization, CancellationToken cancellationToken)
@@ -72,21 +73,13 @@ public class Http01ChallengeService(IPAddress[] ipAddresses) : IDisposable
         if (!headers.Any()) return;
         var requestPart = headers[HttpUtil.HttpRequestKey];
         var requestParts = requestPart.Split(' ');
+        var url = "/ok";
 
-        if (requestParts.Length > 1 && requestParts[0] == "GET")
+        if (requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == url)
         {
-            var url = requestParts[1];
-            // Check if the request URL matches the expected token URL
-            if (url.EndsWith(token))
-            {
-                var response = $"HTTP/1.1 200 OK\r\nContent-Length: {keyAuthorization.Length}\r\nConnection: close\r\nContent-Type: text/plain\r\n\r\n{keyAuthorization}";
-                var responseBytes = Encoding.ASCII.GetBytes(response);
-                stream.Write(responseBytes, 0, responseBytes.Length);
-            }
+            var response = BuildHttp01Response("sss");
+            await stream.WriteAsync(response, 0, response.Length, cancellationToken);
         }
-
-        // Close the connection
-        client.Close();
     }
 
     public void Stop()

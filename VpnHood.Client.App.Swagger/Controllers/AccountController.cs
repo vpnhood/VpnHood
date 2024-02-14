@@ -27,7 +27,19 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpPost("sign-out")]
-    public new Task SignOut() // TODO Check
+    public new Task SignOut()
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpGet("subscription-order-by-provider-order-id")]
+    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId(string providerOrderId)
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpGet("access-keys")]
+    public Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         throw new NotImplementedException();
     }

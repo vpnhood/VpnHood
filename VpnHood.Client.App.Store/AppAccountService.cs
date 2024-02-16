@@ -52,13 +52,13 @@ public class AppAccountService(
     public async Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         var httpClient = authenticationService.HttpClient;
-        var accessTokensClient = new AccessTokensClient(httpClient);
-        var accessTokens = await accessTokensClient.ListAsync(storeAppId, Guid.Parse(subscriptionId));
+        var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
+        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId));
 
         var accessKeyList = new List<string>();
         foreach (var accessToken in accessTokens)
         {
-            var accessKey = await accessTokensClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId);
+            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId);
             accessKeyList.Add(accessKey);
         }
 

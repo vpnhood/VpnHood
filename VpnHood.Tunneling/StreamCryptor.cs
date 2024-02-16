@@ -88,12 +88,10 @@ public class StreamCryptor : AsyncStreamDecorator
             Encrypt(buffer, offset, count);
             return _stream.WriteAsync(buffer, offset, count, cancellationToken);
         }
-        else
-        {
-            var copyBuffer = buffer[offset..count];
-            Encrypt(copyBuffer, 0, copyBuffer.Length);
-            return _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
-        }
+
+        var copyBuffer = buffer[offset..count];
+        Encrypt(copyBuffer, 0, copyBuffer.Length);
+        return _stream.WriteAsync(copyBuffer, 0, copyBuffer.Length, cancellationToken);
     }
 
     public override async ValueTask DisposeAsync()

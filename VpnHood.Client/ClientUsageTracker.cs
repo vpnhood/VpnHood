@@ -43,7 +43,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         var requestCount = _clientStat.ConnectorStat.RequestCount;
         var connectionCount = _clientStat.ConnectorStat.CreatedConnectionCount;
 
-        var tagEvent = new Ga4TagEvent()
+        var tagEvent = new Ga4TagEvent
         {
             EventName = "usage",
             Properties = new Dictionary<string, object>
@@ -52,7 +52,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
                 {"traffic_sent", Math.Round(usage.Sent / 1_000_000d)},
                 {"traffic_received", Math.Round(usage.Received / 1_000_000d)},
                 {"requests", requestCount - _lastRequestCount},
-                {"connections", connectionCount - _lastConnectionCount},
+                {"connections", connectionCount - _lastConnectionCount}
             }
         };
 

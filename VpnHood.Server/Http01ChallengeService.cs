@@ -14,7 +14,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
     private bool _disposed;
     public bool IsStarted { get; private set; }
 
-    public Task Start()
+    public void Start()
     {
         if (IsStarted) throw new InvalidOperationException("The HTTP-01 Challenge Service has already been started.");
         if (_disposed) throw new ObjectDisposedException(nameof(Http01ChallengeService));
@@ -30,10 +30,8 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
                 var listener = new TcpListener(ipEndPoint);
                 listener.Start();
                 _tcpListeners.Add(listener);
+                _ = AcceptTcpClient(listener, _cancellationTokenSource.Token);
             }
-
-            var listenTasks = _tcpListeners.Select(x => AcceptTcpClient(x, _cancellationTokenSource.Token));
-            return Task.WhenAll(listenTasks);
         }
         catch
         {
@@ -53,7 +51,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(GeneralEventId.Acme, ex, "Could not process the ACME request.");
+                VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not process the ACME request.");
             }
         }
     }
@@ -70,11 +68,11 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         var expectedUrl = $"/.well-known/acme-challenge/{token}";
         var isMatched = requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == expectedUrl;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.Acme, "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
+        VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge, "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
 
         var response = (isMatched)
             ? HttpResponseBuilder.Http01(keyAuthorization)
-            : HttpResponseBuilder.BadRequest();
+            : HttpResponseBuilder.NotFound();
 
         await stream.WriteAsync(response, 0, response.Length, cancellationToken);
         await stream.FlushAsync(cancellationToken);

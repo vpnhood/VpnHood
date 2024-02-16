@@ -52,15 +52,11 @@ public class AppAccountService(
     public async Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         var httpClient = authenticationService.HttpClient;
-        var subscriptionsClient = new SubscriptionsClient(httpClient);
-        var subscriptionData = await subscriptionsClient.GetAsync(storeAppId, Guid.Parse(subscriptionId), true);
-        var subscriptionAccessTokens = subscriptionData.AccessTokens;
-        if (subscriptionAccessTokens == null)
-            throw new Exception("The subscription does not have any AccessToken.");
+        var accessTokensClient = new AccessTokensClient(httpClient);
+        var accessTokens = await accessTokensClient.ListAsync(storeAppId, Guid.Parse(subscriptionId));
 
         var accessKeyList = new List<string>();
-        var accessTokensClient = new AccessTokensClient(httpClient);
-        foreach (var accessToken in subscriptionAccessTokens)
+        foreach (var accessToken in accessTokens)
         {
             var accessKey = await accessTokensClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId);
             accessKeyList.Add(accessKey);

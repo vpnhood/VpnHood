@@ -35,7 +35,7 @@ internal static class HttpResponseBuilder
 
     public static byte[] Http01(string keyAuthorization)
     {
-        var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
+        var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.ConnectionClose = true;
         response.Content = new StringContent(keyAuthorization, Encoding.Default, MediaTypeNames.Text.Plain);
         return Build(response);

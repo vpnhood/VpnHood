@@ -1,12 +1,13 @@
 # Upcocming
 ### Client
-* Feature: Update UI when server does not support UDP tunnel
+* Feature: Update UI when the server does not support UDP tunnel
 * Fix: Crash when pressing "Disconnect" while connecting
 * Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
 
 ### Server
 * Fix: Crash when pressing "Disconnect" while connecting
 * Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
+* Feature: Support HTTP-01 DNS challenge to auto-verify domains
 
 # v3.3.463
 ### Client

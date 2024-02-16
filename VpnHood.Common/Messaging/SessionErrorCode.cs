@@ -17,5 +17,5 @@ public enum SessionErrorCode
     Maintenance,
     RedirectHost,
     UnsupportedClient,
-    UnsupportedServer,
+    UnsupportedServer
 }

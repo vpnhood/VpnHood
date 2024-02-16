@@ -225,7 +225,7 @@ internal static class TestHelper
                 SyncCacheSize = 50,
                 SyncInterval = TimeSpan.FromMilliseconds(100)
             },
-            LogAnonymizer = false,
+            LogAnonymizer = false
         };
         return options;
     }
@@ -261,7 +261,7 @@ internal static class TestHelper
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
             NetFilter = NetFilter,
-            PublicIpDiscovery = false, //it slows down our tests
+            PublicIpDiscovery = false //it slows down our tests
         };
 
         // Create server
@@ -367,7 +367,7 @@ internal static class TestHelper
         {
             AppDataFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            LoadCountryIpGroups = false,
+            LoadCountryIpGroups = false
         };
         return appOptions;
     }

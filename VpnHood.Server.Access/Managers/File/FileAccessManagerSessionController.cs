@@ -62,7 +62,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
-        var session = new Session()
+        var session = new Session
         {
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,

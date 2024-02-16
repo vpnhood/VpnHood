@@ -116,7 +116,7 @@ public class SessionManager : IAsyncDisposable, IJob
             ExtraData = extraData,
             ClientInfo = helloRequest.ClientInfo,
             EncryptedClientId = helloRequest.EncryptedClientId,
-            TokenId = helloRequest.TokenId,
+            TokenId = helloRequest.TokenId
         });
 
         // Access Error should not pass to the client in create session
@@ -146,7 +146,7 @@ public class SessionManager : IAsyncDisposable, IJob
         return GaTracker.Track(new Ga4TagEvent
         {
             EventName = Ga4TagEvents.PageView,
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
                 { "client_version", clientInfo.ClientVersion  },
                 { "server_version", serverVersion  },
@@ -199,7 +199,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 SessionId = sessionRequest.SessionId,
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
-                ErrorMessage = ex.Message,
+                ErrorMessage = ex.Message
             }, ipEndPointPair, "dead-recovery");
             await session.DisposeAsync();
             throw;
@@ -239,9 +239,9 @@ public class SessionManager : IAsyncDisposable, IJob
         _ = GaTracker?.Track(new Ga4TagEvent
         {
             EventName = "heartbeat",
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
-                { "session_count", Sessions.Count(x=>!x.Value.IsDisposed)  },
+                { "session_count", Sessions.Count(x=>!x.Value.IsDisposed)  }
             }
         });
 

@@ -8,5 +8,5 @@ public enum RequestCode : byte
     StreamProxyChannel = 3,
     // SessionStatus = 4,
     UdpPacket = 5,
-    Bye = 50,
+    Bye = 50
 }

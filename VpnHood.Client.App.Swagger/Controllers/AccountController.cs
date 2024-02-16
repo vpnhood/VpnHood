@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 [Route("api/account")]
 public class AccountController : ControllerBase, IAccountController
 {
-    [HttpGet()]
+    [HttpGet]
     public Task<AppAccount?> Get()
     {
         throw new NotImplementedException();

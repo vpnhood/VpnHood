@@ -48,6 +48,6 @@ public static class GeneralEventId
         Request,
         TcpLife,
         Acme,
-        Test,
+        Test
     }
 }

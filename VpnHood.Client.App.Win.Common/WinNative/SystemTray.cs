@@ -58,7 +58,7 @@ public class SystemTray : IDisposable
         Contextmenu = 0x7B,
         RightButtonUp = 0x205,
         LeftButtonUp = 0x202,
-        LeftButtonDblClick = 0x203,
+        LeftButtonDblClick = 0x203
     }
 
     [Flags]
@@ -66,7 +66,7 @@ public class SystemTray : IDisposable
     {
         Message = 0x01,
         Icon = 0x02,
-        Tip = 0x04,
+        Tip = 0x04
     }
 
 
@@ -109,7 +109,7 @@ public class SystemTray : IDisposable
             uCallbackMessage = Message,
             uFlags = (uint)(NotifyIconFlag.Message | NotifyIconFlag.Icon | NotifyIconFlag.Tip),
             hIcon = hIcon,
-            szTip = tip,
+            szTip = tip
         };
 
         Shell_NotifyIcon((uint)NotifyIconMessage.NimAdd, ref _notificationData);

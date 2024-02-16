@@ -21,7 +21,8 @@ internal class Program
             var udpEchoClient = new UdpEchoClient();
             return udpEchoClient.StartAsync(udpEchoServer.LocalEndPoint!, 1000, 1000);
         }
-        else if (args[0] == "client")
+
+        if (args[0] == "client")
         {
             var serverEp = IPEndPoint.Parse(args[1]);
             var dataLen = args.Length > 2 ? int.Parse(args[2]) : 1000;
@@ -30,17 +31,14 @@ internal class Program
             return udpEchoClient.StartAsync(serverEp, echoCount, dataLen);
         }
 
-        else if (args[0] == "server")
+        if (args[0] == "server")
         {
             var serverEp = args.Length > 1 ? IPEndPoint.Parse(args[1]) : null;
             var udpEchoServer = new UdpEchoServer(serverEp);
             return udpEchoServer.StartAsync();
         }
 
-        else
-        {
-            Console.WriteLine("first parameter can be client or server.");
-        }
+        Console.WriteLine("first parameter can be client or server.");
 
         return Task.CompletedTask;
     }

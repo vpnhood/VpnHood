@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Android.Content;
 using Android.Content.PM;
-using Android.Views;
 using Android.Service.QuickSettings;
+using Android.Views;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Client.App.Droid.GooglePlay;
 
 namespace VpnHood.Client.App.Droid;
 
@@ -46,7 +47,7 @@ public class MainActivity : AndroidAppWebViewMainActivity
     {
 #if  GOOGLE_PLAY
         // ReSharper disable once RedundantNameQualifier
-        return new VpnHood.Client.App.Droid.GooglePlay.GooglePlayAppUpdaterService(this);
+        return new GooglePlayAppUpdaterService(this);
 #else
         return null;
 #endif

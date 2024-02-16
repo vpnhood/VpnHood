@@ -67,7 +67,7 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
         if (e.RequestCode != SignInIntentId)
             return;
 
-        GoogleSignIn.GetSignedInAccountFromIntentAsync(e.Data).ContinueWith((task) =>
+        GoogleSignIn.GetSignedInAccountFromIntentAsync(e.Data).ContinueWith(task =>
         {
             if (task.IsCompletedSuccessfully) _taskCompletionSource?.TrySetResult(task.Result);
             else if (task.IsCanceled) _taskCompletionSource?.TrySetCanceled();

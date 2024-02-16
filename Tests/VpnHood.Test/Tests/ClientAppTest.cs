@@ -38,7 +38,7 @@ public class ClientAppTest : TestBase
                 HostPort = 443,
                 Secret = randomId.ToByteArray(),
                 CreatedTime = DateTime.UtcNow,
-                IsValidHostName = false,
+                IsValidHostName = false
             }
         };
 
@@ -102,7 +102,7 @@ public class ClientAppTest : TestBase
             {
                 Token = CreateToken(),
                 ClientProfileName = "Hi",
-                ClientProfileId = Guid.NewGuid(),
+                ClientProfileId = Guid.NewGuid()
             });
 
         });
@@ -269,7 +269,7 @@ public class ClientAppTest : TestBase
                 new IpRange(TestConstants.PingV4Address1),
                 new IpRange(TestConstants.NsEndPoint1.Address),
                 new IpRange(TestConstants.UdpV4EndPoint1.Address),
-                new IpRange(TestConstants.UdpV6EndPoint1.Address),
+                new IpRange(TestConstants.UdpV6EndPoint1.Address)
             });
 
         // ************

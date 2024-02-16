@@ -1,8 +1,9 @@
-﻿using System.Runtime.InteropServices;
-using VpnHood.Server.SystemInformation;
-using System.Diagnostics;
-using VpnHood.Common.Logging;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.Logging;
+using VpnHood.Server.SystemInformation;
+
 #pragma warning disable CA1416
 
 // ReSharper disable MemberCanBePrivate.Local

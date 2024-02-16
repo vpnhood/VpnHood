@@ -76,10 +76,10 @@ public class GooglePlayBillingService: IAppBillingService
 
         var subscriptionPlans = plans
             .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
-            .Select(plan => new SubscriptionPlan()
+            .Select(plan => new SubscriptionPlan
             {
                 SubscriptionPlanId = plan.BasePlanId,
-                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice,
+                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice
             })
             .ToArray();
 

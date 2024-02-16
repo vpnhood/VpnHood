@@ -25,12 +25,12 @@ public class AppAccountService(
         var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false);
         var subscriptionPlanId = activeSubscription.SingleOrDefault()?.LastOrder;
 
-        var appAccount = new AppAccount()
+        var appAccount = new AppAccount
         {
             UserId = currentUser.UserId,
             Name = currentUser.Name,
             Email = currentUser.Email,
-            SubscriptionPlanId = subscriptionPlanId?.ProviderPlanId,
+            SubscriptionPlanId = subscriptionPlanId?.ProviderPlanId
         };
         return appAccount;
     }
@@ -40,11 +40,11 @@ public class AppAccountService(
         var httpClient = authenticationService.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId);
-        var appSubscriptionOrder = new AppSubscriptionOrder()
+        var appSubscriptionOrder = new AppSubscriptionOrder
         {
             SubscriptionId = subscriptionOrder.SubscriptionId,
             ProviderPlanId = subscriptionOrder.ProviderPlanId,
-            IsProcessed = subscriptionOrder.IsProcessed,
+            IsProcessed = subscriptionOrder.IsProcessed
         };
         return appSubscriptionOrder;
     }

@@ -12,7 +12,6 @@ public class TaskCollection : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-
     public void Add(Task task)
     {
         _tasks.TryAdd(task, true);

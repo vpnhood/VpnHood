@@ -1,28 +1,33 @@
-﻿namespace VpnHood.Client.App.Droid.GooglePlay;
+﻿using Xamarin.Google.Android.Play.Core.Tasks;
+using Exception = Java.Lang.Exception;
+using Object = Java.Lang.Object;
+using Task = Xamarin.Google.Android.Play.Core.Tasks.Task;
 
-public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
-    Xamarin.Google.Android.Play.Core.Tasks.IOnSuccessListener,
-    Xamarin.Google.Android.Play.Core.Tasks.IOnFailureListener
+namespace VpnHood.Client.App.Droid.GooglePlay;
+
+public class GooglePlayTaskCompleteListener<T> : Object,
+    IOnSuccessListener,
+    IOnFailureListener
 {
     private readonly TaskCompletionSource<T> _taskCompletionSource;
     public Task<T> Task => _taskCompletionSource.Task;
 
-    public GooglePlayTaskCompleteListener(Xamarin.Google.Android.Play.Core.Tasks.Task appUpdateInfo)
+    public GooglePlayTaskCompleteListener(Task appUpdateInfo)
     {
         _taskCompletionSource = new TaskCompletionSource<T>();
         appUpdateInfo.AddOnSuccessListener(this);
         appUpdateInfo.AddOnFailureListener(this);
     }
 
-    public void OnSuccess(Java.Lang.Object? obj)
+    public void OnSuccess(Object? obj)
     {
         if (obj is T result)
             _taskCompletionSource.TrySetResult(result);
         else
-            _taskCompletionSource.TrySetException(new Exception($"Unexpected type: {obj?.GetType()}."));
+            _taskCompletionSource.TrySetException(new System.Exception($"Unexpected type: {obj?.GetType()}."));
     }
 
-    public void OnFailure(Java.Lang.Exception ex)
+    public void OnFailure(Exception ex)
     {
         _taskCompletionSource.TrySetException(ex);
     }

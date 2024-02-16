@@ -23,7 +23,7 @@ public class TestAccessManager : IAccessManager
         _httpAccessManager = new HttpAccessManager(new HttpAccessManagerOptions(EmbedIoAccessManager.BaseUri, "Bearer"))
         {
             Logger = VhLogger.Instance,
-            LoggerEventId = GeneralEventId.AccessManager,
+            LoggerEventId = GeneralEventId.AccessManager
         };
     }
 
@@ -63,12 +63,12 @@ public class TestAccessManager : IAccessManager
         return _httpAccessManager.Session_Create(sessionRequestEx);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
     {
         return _httpAccessManager.Session_AddUsage(sessionId, traffic);
     }
 
-    public Task<SessionResponseBase> Session_Close(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
         return _httpAccessManager.Session_Close(sessionId, traffic);
     }

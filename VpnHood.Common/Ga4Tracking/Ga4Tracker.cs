@@ -101,7 +101,7 @@ public class Ga4Tracker
 
             // event
             ("en", ga4Event.EventName), // event name
-            ("_ee", "1"), // External Event
+            ("_ee", "1") // External Event
 
             // Reference: https://www.thyngster.com/ga4-measurement-protocol-cheatsheet/
             //("up.foo_string", "1.1"), //User Property String
@@ -177,7 +177,7 @@ public class Ga4Tracker
             ClientId = ClientId,
             UserId = UserId,
             Events = gaEventArray,
-            UserProperties = userProperties != null && userProperties.Any() ? userProperties.ToDictionary(p => p.Key, p => new Ga4MeasurementPayload.UserProperty { Value = p.Value }) : null,
+            UserProperties = userProperties != null && userProperties.Any() ? userProperties.ToDictionary(p => p.Key, p => new Ga4MeasurementPayload.UserProperty { Value = p.Value }) : null
         };
 
         var baseUri = IsDebugEndPoint ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");

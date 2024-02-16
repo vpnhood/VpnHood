@@ -306,7 +306,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
-            if (xVersion==2) binaryStreamType = BinaryStreamType.Custom;
+            if (xVersion == 2) binaryStreamType = BinaryStreamType.Custom;
 
             // read api key
             if (!CheckApiKeyAuthorization(authorization))
@@ -315,26 +315,26 @@ internal class ServerHost : IAsyncDisposable, IJob
                 if (authorization != "ApiKey")
                     throw new UnauthorizedAccessException();
 
-                await sslStream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
+                await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken);
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
             // use binary stream only for authenticated clients
-            await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
+            await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken);
 
             switch (binaryStreamType)
             {
                 case BinaryStreamType.Custom:
-                {
-                    await sslStream.DisposeAsync(); // dispose Ssl
-                    var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
-                    var secret = Convert.FromBase64String(xSecret);
-                    return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
-                }
-                
+                    {
+                        await sslStream.DisposeAsync(); // dispose Ssl
+                        var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
+                        var secret = Convert.FromBase64String(xSecret);
+                        return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
+                    }
+
                 case BinaryStreamType.Standard:
                     return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseClientStream);
-                
+
                 case BinaryStreamType.None:
                     return new TcpClientStream(tcpClient, sslStream, streamId);
 
@@ -347,7 +347,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             //always return BadRequest 
             if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
-            var response = ex is UnauthorizedAccessException ? HttpResponses.GetUnauthorized() : HttpResponses.GetBadRequest();
+            var response = ex is UnauthorizedAccessException ? HttpResponseBuilder.Unauthorized() : HttpResponseBuilder.BadRequest();
             await sslStream.WriteAsync(response, cancellationToken);
             throw;
         }
@@ -444,14 +444,14 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             // reply the error to caller if it is SessionException
             // Should not reply anything when user is unknown
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(ex.SessionResponseBase),
+            await StreamUtil.WriteJsonAsync(clientStream.Stream, ex.SessionResponse,
                 cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
             else
-                VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
-                    "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponseBase.ErrorCode);
+                VhLogger.Instance.LogInformation(ex.SessionResponse.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
+                    "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponse.ErrorCode);
 
             await clientStream.DisposeAsync();
         }
@@ -466,7 +466,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();
@@ -591,13 +591,16 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
+        var udpPort = 
+            UdpEndPoints.SingleOrDefault(x => x.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.Port ??
+            UdpEndPoints.SingleOrDefault(x => x.Address.Equals(IPAddressUtil.GetAnyIpAddress(ipEndPointPair.LocalEndPoint.AddressFamily)))?.Port;
+
         var helloResponse = new HelloResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            TcpEndPoints = sessionResponse.TcpEndPoints,
-            UdpEndPoints = sessionResponse.UdpEndPoints,
+            UdpPort = udpPort,
             GaMeasurementId = sessionResponse.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,
@@ -629,7 +632,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponseBase(SessionErrorCode.Ok), cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponse(SessionErrorCode.Ok), cancellationToken);
         await clientStream.DisposeAsync(false);
 
         // must be last

@@ -1,6 +1,18 @@
+# v3.3.470
+### Client
+* Feature: Update UI when the server does not support UDP tunnel
+* Fix: Crash when pressing "Disconnect" while connecting
+* Fix: Remove "No data has been received" message before connection is established
+* Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
+
+### Server
+* Fix: Crash when pressing "Disconnect" while connecting
+* Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
+* Feature: Support HTTP-01 DNS challenge to auto-verify domains
+
 # v3.3.463
 ### Client
-* Fix: The "Connect" button for free public server does not work under certain circumstances
+* Fix: The "Connect" button for free public servers does not work under certain circumstances
 
 # v3.3.462
 ### Client

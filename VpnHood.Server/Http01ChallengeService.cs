@@ -21,6 +21,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
 
         try
         {
+            IsStarted = true;
             foreach (var ipAddress in ipAddresses)
             {
                 var ipEndPoint = new IPEndPoint(ipAddress, 80);
@@ -43,17 +44,17 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
 
     private async Task AcceptTcpClient(TcpListener tcpListener, CancellationToken cancellationToken)
     {
-        try
+        while (IsStarted && !cancellationToken.IsCancellationRequested)
         {
-            while (true)
+            using var client = await tcpListener.AcceptTcpClientAsync();
+            try
             {
-                using var client = await tcpListener.AcceptTcpClientAsync();
                 await HandleRequest(client, token, keyAuthorization, cancellationToken);
             }
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(GeneralEventId.Acme, ex, "Could not process the ACME request.");
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(GeneralEventId.Acme, ex, "Could not process the ACME request.");
+            }
         }
     }
 
@@ -70,7 +71,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         var isMatched = requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == expectedUrl;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Acme, "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
-        
+
         var response = (isMatched)
             ? HttpResponseBuilder.Http01(keyAuthorization)
             : HttpResponseBuilder.BadRequest();

@@ -1,5 +1,5 @@
-﻿using PacketDotNet;
-using System.Net;
+﻿using System.Net;
+using PacketDotNet;
 using VpnHood.Common.Net;
 
 namespace VpnHood.Server;

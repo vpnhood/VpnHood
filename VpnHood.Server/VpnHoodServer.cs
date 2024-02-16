@@ -282,7 +282,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             TunnelSpeed = new Traffic
             {
                 Sent = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Sent),
-                Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received),
+                Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received)
             },
             ConfigCode = _lastConfigCode,
             ConfigError = _lastConfigError?.ToJson()
@@ -320,15 +320,15 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         var useProperties = new Dictionary<string, object>
         {
             { "server_version", ServerVersion },
-            { "access_manager", AccessManager.GetType().Name },
+            { "access_manager", AccessManager.GetType().Name }
         };
 
         return SessionManager.GaTracker.Track(new Ga4TagEvent
         {
             EventName = Ga4TagEvents.SessionStart,
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
-                { "access_manager", AccessManager.GetType().Name },
+                { "access_manager", AccessManager.GetType().Name }
             }
         }, useProperties);
     }

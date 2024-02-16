@@ -3,10 +3,13 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Graphics.Drawables;
 using Android.Service.QuickSettings;
+using Java.Lang;
 using Java.Util.Functions;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Droid.Common.Utils;
 using VpnHood.Common.Logging;
+using Exception = System.Exception;
+using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -122,9 +125,9 @@ public class QuickLaunchTileService : TileService
     }
 
     private class AddTileServiceHandler(TaskCompletionSource<int> taskCompletionSource) 
-        : Java.Lang.Object, IConsumer
+        : Object, IConsumer
     {
-        public void Accept(Java.Lang.Object? obj)
+        public void Accept(Object? obj)
         {
             obj ??= 0;
             taskCompletionSource.TrySetResult((int)obj);
@@ -156,7 +159,7 @@ public class QuickLaunchTileService : TileService
         var icon = Icon.CreateWithResource(context, iconId);
 
         statusBarManager.RequestAddTileService(
-            new ComponentName(context, Java.Lang.Class.FromType(typeof(QuickLaunchTileService))),
+            new ComponentName(context, Class.FromType(typeof(QuickLaunchTileService))),
             appName, icon,
             context.MainExecutor!,
             new AddTileServiceHandler(taskCompletionSource));

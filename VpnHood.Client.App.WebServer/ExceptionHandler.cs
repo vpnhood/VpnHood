@@ -15,7 +15,7 @@ internal static class ExceptionHandler
             var apiError = new ApiError(apiException.ExceptionTypeName ?? nameof(ApiException), ex.Message)
             {
                 TypeFullName = apiException.ExceptionTypeFullName,
-                InnerMessage = apiException.InnerException?.Message,
+                InnerMessage = apiException.InnerException?.Message
             };
 
             foreach (var key in apiException.Data)

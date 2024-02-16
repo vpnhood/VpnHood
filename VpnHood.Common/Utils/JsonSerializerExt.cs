@@ -31,7 +31,7 @@ public static class JsonSerializerExt
     {
         options ??= JsonSerializerOptions.Default;
 
-        if (!SPopulateMap.TryGetValue(options, out JsonSerializerOptions? populateResolverOptions))
+        if (!SPopulateMap.TryGetValue(options, out var populateResolverOptions))
         {
             JsonSerializer.Serialize(value: 0, options); // Force a serialization to mark options as read-only
             Debug.Assert(options.TypeInfoResolver != null);

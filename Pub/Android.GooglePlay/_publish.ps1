@@ -40,7 +40,7 @@ $json = @{
 	GooglePlayUrl = "https://play.google.com/store/apps/details?id=com.vpnhood.client.android";
 	ReleaseDate = "$releaseDate";
 	DeprecatedVersion = "$deprecatedVersion";
-	NotificationDelay = "14.00:00:00";
+	NotificationDelay = "7.00:00:00";
 };
 $json | ConvertTo-Json | Out-File "$module_infoFile" -Encoding ASCII;
 

@@ -5,26 +5,17 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Access.Messaging;
 
-public class SessionRequestEx : SessionRequest
+public class SessionRequestEx 
 {
-    [JsonConstructor]
-    public SessionRequestEx(string requestId, string tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
-        : base(0, requestId, tokenId, clientInfo, encryptedClientId)
-    {
-        HostEndPoint = hostEndPoint;
-    }
-
-    public SessionRequestEx(SessionRequest obj, IPEndPoint hostEndPoint)
-        : base(obj)
-    {
-        HostEndPoint = hostEndPoint;
-    }
+    public required string TokenId { get; init; }
+    public required ClientInfo ClientInfo { get; init; }
+    public required byte[] EncryptedClientId { get; init; }
 
     [JsonConverter(typeof(IPEndPointConverter))]
-    public IPEndPoint HostEndPoint { get; set; }
+    public required IPEndPoint HostEndPoint { get; set; }
 
     [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress? ClientIp { get; set; }
+    public required  IPAddress? ClientIp { get; set; }
 
-    public string? ExtraData { get; set; }
+    public required string? ExtraData { get; set; }
 }

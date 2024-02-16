@@ -76,10 +76,10 @@ public class GooglePlayBillingService: IAppBillingService
 
         var subscriptionPlans = plans
             .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
-            .Select(plan => new SubscriptionPlan()
+            .Select(plan => new SubscriptionPlan
             {
                 SubscriptionPlanId = plan.BasePlanId,
-                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice,
+                PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice
             })
             .ToArray();
 
@@ -116,9 +116,17 @@ public class GooglePlayBillingService: IAppBillingService
         if (billingResult.ResponseCode != BillingResponseCode.Ok)
             throw CreateBillingResultException(billingResult);
 
-        _taskCompletionSource = new TaskCompletionSource<string>();
-        var orderId = await _taskCompletionSource.Task;
-        return orderId;
+        try
+        {
+            _taskCompletionSource = new TaskCompletionSource<string>();
+            var orderId = await _taskCompletionSource.Task;
+            return orderId;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            throw;
+        }
     }
 
     private async Task EnsureConnected()

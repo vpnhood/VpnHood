@@ -74,35 +74,41 @@ public static class StreamUtil
         return ret;
     }
 
-    public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken,
+    public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken, int maxLength = 0xFFFF)
+    {
+        var message = await ReadMessage(stream, cancellationToken, maxLength);
+        var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
+        return ret;
+    }
+
+    public static async Task<string> ReadMessage(Stream stream, CancellationToken cancellationToken,
         int maxLength = 0xFFFF)
     {
         // read length
         var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken)
-                     ?? throw new Exception($"Could not read {typeof(T).Name}");
+                     ?? throw new Exception("Could not read message.");
 
         // check unauthorized exception
         if (Encoding.UTF8.GetString(buffer) == "HTTP") //: HTTP/1.1 401
             throw new UnauthorizedAccessException();
 
         // check json size
-        var jsonSize = BitConverter.ToInt32(buffer);
-        if (jsonSize == 0)
+        var messageSize = BitConverter.ToInt32(buffer);
+        if (messageSize == 0)
             throw new Exception("json length is zero!");
 
-        if (jsonSize > maxLength)
+        if (messageSize > maxLength)
             throw new Exception(
-                $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
+                $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
-        buffer = await ReadWaitForFillAsync(stream, jsonSize, cancellationToken);
+        buffer = await ReadWaitForFillAsync(stream, messageSize, cancellationToken);
         if (buffer == null)
             throw new Exception("Could not read Message Length!");
 
         // serialize the request
-        var json = Encoding.UTF8.GetString(buffer);
-        var ret = JsonSerializer.Deserialize<T>(json) ?? throw new Exception("Could not read Message!");
-        return ret;
+        var message = Encoding.UTF8.GetString(buffer);
+        return message;
     }
 
     private static byte[] ObjectToJsonBuffer(object obj)

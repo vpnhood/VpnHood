@@ -47,10 +47,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
     }
 
-    private static bool ValidateRequest(SessionRequest sessionRequest, FileAccessManager.AccessItem accessItem)
+    private static bool ValidateRequest(SessionRequestEx sessionRequestEx, FileAccessManager.AccessItem accessItem)
     {
-        var encryptClientId = VhUtil.EncryptClientId(sessionRequest.ClientInfo.ClientId, accessItem.Token.Secret);
-        return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
+        var encryptClientId = VhUtil.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, accessItem.Token.Secret);
+        return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
     }
 
     public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
@@ -62,7 +62,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
-        var session = new Session()
+        var session = new Session
         {
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,

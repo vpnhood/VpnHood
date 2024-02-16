@@ -66,8 +66,8 @@ public class FileAccessManager : IAccessManager
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
-        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
-            throw new Exception("PublicEndPoints must has not been configured.");
+        if (!publicEndPoints.Any() || publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
+            throw new Exception("PublicEndPoints has not been configured properly.");
 
         var serverToken = new ServerToken
         {
@@ -149,13 +149,6 @@ public class FileAccessManager : IAccessManager
         if (ServerConfig.ReplyAccessKey)
             ret.AccessKey = accessItem.Token.ToAccessKey();
 
-        // set endpoints
-        ret.TcpEndPoints = [sessionRequestEx.HostEndPoint];
-        ret.UdpEndPoints = ServerConfig.UdpEndPointsValue
-            .Where(x => x.AddressFamily == sessionRequestEx.HostEndPoint.AddressFamily)
-            .Select(x => new IPEndPoint(sessionRequestEx.HostEndPoint.Address, x.Port))
-            .ToArray();
-
         return ret;
     }
 
@@ -186,27 +179,27 @@ public class FileAccessManager : IAccessManager
         return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, false);
     }
 
-    public Task<SessionResponseBase> Session_Close(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, true);
     }
 
-    private async Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
+    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
     {
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
-            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         accessItem.AccessUsage.Traffic += traffic;
         await WriteAccessItemUsage(accessItem);
@@ -215,7 +208,7 @@ public class FileAccessManager : IAccessManager
             SessionController.CloseSession(sessionId);
 
         var res = SessionController.GetSession(sessionId, accessItem, null);
-        var ret = new SessionResponseBase(res.ErrorCode)
+        var ret = new SessionResponse(res.ErrorCode)
         {
             AccessUsage = res.AccessUsage,
             ErrorMessage = res.ErrorMessage,
@@ -286,11 +279,6 @@ public class FileAccessManager : IAccessManager
         var aes = Aes.Create();
         aes.KeySize = 128;
         aes.GenerateKey();
-
-        // PublicEndPoints
-        var publicEndPoints = ServerConfig.PublicEndPoints ?? ServerConfig.TcpEndPointsValue;
-        if (publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
-            throw new Exception("PublicEndPoints must has not been configured.");
 
         // create AccessItem
         var accessItem = new AccessItem

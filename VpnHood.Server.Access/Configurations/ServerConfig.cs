@@ -29,6 +29,7 @@ public class ServerConfig
     public string ConfigCode { get; set; } = string.Empty;
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
+    public DnsChallenge? DnsChallenge { get; set; }
 
     // Inherit
     [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
@@ -49,6 +50,7 @@ public class ServerConfig
         if (obj.ServerSecret != null) ServerSecret = obj.ServerSecret;
         if (obj.MinCompletionPortThreads != null) MinCompletionPortThreads = obj.MinCompletionPortThreads;
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
+        if (obj.DnsChallenge!= null) DnsChallenge = obj.DnsChallenge;
     }
 
     public void ApplyDefaults()

@@ -80,7 +80,7 @@ public class ServerApp : IDisposable
             ApiSecret = string.Empty,
             ClientId = anonyClientId,
             SessionId = Guid.NewGuid().ToString(),
-            IsEnabled = AppSettings.AllowAnonymousTracker,
+            IsEnabled = AppSettings.AllowAnonymousTracker
         };
 
         // create access server
@@ -206,7 +206,7 @@ public class ServerApp : IDisposable
     private void StartServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Run the server (default command)";
-        cmdApp.OnExecuteAsync(async (cancellationToken) =>
+        cmdApp.OnExecuteAsync(async cancellationToken =>
         {
             // LogAnonymizer is on by default
             VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;

@@ -1,5 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.App;
 using VpnHood.Common.Utils;
 

@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Collections;
-using VpnHood.Tunneling.Factory;
 using VpnHood.Common.JobController;
-using VpnHood.Tunneling.Exceptions;
 using VpnHood.Common.Logging;
+using VpnHood.Tunneling.Exceptions;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Tunneling;
 
@@ -55,7 +55,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
         var isNewLocalEndPoint = false;
 
         // add the remote endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ =>
         {
             isNewRemoteEndPoint = true;
             return new TimeoutItem<bool>(true);

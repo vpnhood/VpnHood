@@ -261,7 +261,7 @@ public class ServerTest : TestBase
                 IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
                 PacketCaptureExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
                 PacketCaptureIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
-                IncludeLocalNetwork = false,
+                IncludeLocalNetwork = false
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
             UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
@@ -273,7 +273,7 @@ public class ServerTest : TestBase
                 TrackIcmp = false,
                 TrackLocalPort = true,
                 TrackTcp = false,
-                TrackUdp = true,
+                TrackUdp = true
             },
             SessionOptions = new SessionOptions
             {

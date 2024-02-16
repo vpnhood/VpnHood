@@ -86,7 +86,7 @@ public static class StreamUtil
     {
         // read length
         var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken)
-                     ?? throw new Exception($"Could not read message.");
+                     ?? throw new Exception("Could not read message.");
 
         // check unauthorized exception
         if (Encoding.UTF8.GetString(buffer) == "HTTP") //: HTTP/1.1 401

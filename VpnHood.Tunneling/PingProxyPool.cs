@@ -70,7 +70,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
         var isNewRemoteEndPoint = false;
 
         // add the endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ =>
         {
             isNewRemoteEndPoint = true;
             return new TimeoutItem<bool>(true);

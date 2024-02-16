@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
@@ -11,7 +12,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Tunneling;
-using EmbedIO;
+
 // ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
@@ -197,7 +198,7 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions
         {
-            UseUdpChannel = true,
+            UseUdpChannel = true
         });
 
         var tasks = new List<Task>();

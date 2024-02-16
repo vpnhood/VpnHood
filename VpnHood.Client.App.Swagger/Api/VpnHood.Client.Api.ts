@@ -208,6 +208,117 @@ export class AccountClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    getSubscriptionOrderByProviderOrderId(providerOrderId: string, cancelToken?: CancelToken): Promise<AppSubscriptionOrder> {
+        let url_ = this.baseUrl + "/api/account/subscription-order-by-provider-order-id?";
+        if (providerOrderId === undefined || providerOrderId === null)
+            throw new Error("The parameter 'providerOrderId' must be defined and cannot be null.");
+        else
+            url_ += "providerOrderId=" + encodeURIComponent("" + providerOrderId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSubscriptionOrderByProviderOrderId(_response);
+        });
+    }
+
+    protected processGetSubscriptionOrderByProviderOrderId(response: AxiosResponse): Promise<AppSubscriptionOrder> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppSubscriptionOrder.fromJS(resultData200);
+            return Promise.resolve<AppSubscriptionOrder>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppSubscriptionOrder>(null as any);
+    }
+
+    getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
+        let url_ = this.baseUrl + "/api/account/access-keys?";
+        if (subscriptionId === undefined || subscriptionId === null)
+            throw new Error("The parameter 'subscriptionId' must be defined and cannot be null.");
+        else
+            url_ += "subscriptionId=" + encodeURIComponent("" + subscriptionId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAccessKeys(_response);
+        });
+    }
+
+    protected processGetAccessKeys(response: AxiosResponse): Promise<string[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(item);
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<string[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<string[]>(null as any);
+    }
 }
 
 export class AppClient {
@@ -1159,6 +1270,50 @@ export interface IAppAccount {
     subscriptionPlanId?: string | null;
 }
 
+export class AppSubscriptionOrder implements IAppSubscriptionOrder {
+    providerPlanId!: string;
+    subscriptionId!: string;
+    isProcessed!: boolean;
+
+    constructor(data?: IAppSubscriptionOrder) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : <any>null;
+            this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : <any>null;
+            this.isProcessed = _data["isProcessed"] !== undefined ? _data["isProcessed"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppSubscriptionOrder {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppSubscriptionOrder();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : <any>null;
+        data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : <any>null;
+        data["isProcessed"] = this.isProcessed !== undefined ? this.isProcessed : <any>null;
+        return data;
+    }
+}
+
+export interface IAppSubscriptionOrder {
+    providerPlanId: string;
+    subscriptionId: string;
+    isProcessed: boolean;
+}
+
 export class AppConfig implements IAppConfig {
     features!: AppFeatures;
     settings!: AppSettings;
@@ -1576,6 +1731,7 @@ export class AppState implements IAppState {
     isWaitingForAd!: boolean;
     versionStatus!: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
+    isUdpChannelSupported?: boolean | null;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1612,6 +1768,7 @@ export class AppState implements IAppState {
             this.isWaitingForAd = _data["isWaitingForAd"] !== undefined ? _data["isWaitingForAd"] : <any>null;
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
             this.lastPublishInfo = _data["lastPublishInfo"] ? PublishInfo.fromJS(_data["lastPublishInfo"]) : <any>null;
+            this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
         }
     }
 
@@ -1643,6 +1800,7 @@ export class AppState implements IAppState {
         data["isWaitingForAd"] = this.isWaitingForAd !== undefined ? this.isWaitingForAd : <any>null;
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
         data["lastPublishInfo"] = this.lastPublishInfo ? this.lastPublishInfo.toJSON() : <any>null;
+        data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         return data;
     }
 }
@@ -1667,6 +1825,7 @@ export interface IAppState {
     isWaitingForAd: boolean;
     versionStatus: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
+    isUdpChannelSupported?: boolean | null;
 }
 
 export enum AppConnectionState {

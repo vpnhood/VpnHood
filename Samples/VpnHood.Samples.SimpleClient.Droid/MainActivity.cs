@@ -1,5 +1,4 @@
-﻿
-using VpnHood.Client.Device.Droid;
+﻿using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
 using VpnHood.Common;
 

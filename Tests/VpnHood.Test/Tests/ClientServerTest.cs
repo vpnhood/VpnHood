@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
@@ -11,7 +12,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Tunneling;
-using EmbedIO;
+
 // ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
@@ -197,7 +198,7 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = TestHelper.CreateClient(token, options: new ClientOptions
         {
-            UseUdpChannel = true,
+            UseUdpChannel = true
         });
 
         var tasks = new List<Task>();
@@ -502,15 +503,7 @@ public class ClientServerTest : TestBase
         // ----------
         var token = TestHelper.CreateAccessToken(fileAccessManager);
         await using var client = TestHelper.CreateClient(token, autoConnect: false);
-        try
-        {
-            await client.Connect();
-            Assert.Fail("Exception expected!");
-        }
-        catch (MaintenanceException)
-        {
-            // ignored
-        }
+        await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
 
         Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
         Assert.AreEqual(ClientState.Disposed, client.State);
@@ -527,15 +520,7 @@ public class ClientServerTest : TestBase
         // ----------
         testAccessManager.EmbedIoAccessManager.Stop();
         await using var client3 = TestHelper.CreateClient(token, autoConnect: false);
-        try
-        {
-            await client3.Connect();
-            Assert.Fail("Exception expected!");
-        }
-        catch (MaintenanceException)
-        {
-            // ignored
-        }
+        await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
         await TestHelper.WaitForClientStateAsync(client3, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client3.SessionStatus.ErrorCode);
@@ -552,15 +537,7 @@ public class ClientServerTest : TestBase
         // ----------
         testAccessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
         await using var client5 = TestHelper.CreateClient(token, autoConnect: false);
-        try
-        {
-            await client5.Connect();
-            Assert.Fail("Exception expected!");
-        }
-        catch (MaintenanceException)
-        {
-            // ignored
-        }
+        await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientStateAsync(client5, ClientState.Disposed);
         Assert.AreEqual(SessionErrorCode.Maintenance, client5.SessionStatus.ErrorCode);
@@ -765,5 +742,19 @@ public class ClientServerTest : TestBase
 
         // wait for free the used connections 
         await VhTestUtil.AssertEqualsWait(3, () => client.Stat.ConnectorStat.FreeConnectionCount);
+    }
+
+    [TestMethod]
+    public async Task IsUdpChannelSupported_must_be_false_when_server_return_udp_port_zero()
+    {
+        // Create Server
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.UdpEndPoints = [];
+        await using var server = TestHelper.CreateServer(options: fileAccessManagerOptions);
+        var token = TestHelper.CreateAccessToken(server);
+
+        // Create Client
+        await using var client = TestHelper.CreateClient(token, options: TestHelper.CreateClientOptions(useUdp: true));
+        Assert.IsFalse(client.Stat.IsUdpChannelSupported);
     }
 }

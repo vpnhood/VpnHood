@@ -143,7 +143,7 @@ public class AppAuthenticationService : IAppAuthenticationService
     private async Task SignUpToVpnHoodStore(string idToken)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-        ApiKey = await authenticationClient.SignUpAsync(new SignUpRequest()
+        ApiKey = await authenticationClient.SignUpAsync(new SignUpRequest
         {
             IdToken = idToken,
             RefreshTokenType = RefreshTokenType.None

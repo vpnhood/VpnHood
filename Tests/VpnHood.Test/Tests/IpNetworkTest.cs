@@ -38,7 +38,7 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("128.0.0.0 - 192.167.255.255"),
             IpRange.Parse("192.169.0.0 - 255.255.255.255"),
             IpRange.Parse(":: - 99:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
-            IpRange.Parse("AA::01:0000 - FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
+            IpRange.Parse("AA::01:0000 - FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF")
         };
 
         CollectionAssert.AreEqual(expected, inverted.ToArray());
@@ -109,7 +109,7 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("190.190.10.0 - 190.190.11.0"), //ignore
             IpRange.Parse("30.30.10.50 - 30.30.10.100"),
             IpRange.Parse("20.20.10.50 - 20.20.10.55"),
-            IpRange.Parse("20.20.10.60 - 20.20.10.100"),
+            IpRange.Parse("20.20.10.60 - 20.20.10.100")
         };
 
         var ipRanges2 = new[]
@@ -118,7 +118,7 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("192.168.10.0 - 192.168.255.255"),
             IpRange.Parse("190.190.11.1 - 190.190.11.50"), //ignore
             IpRange.Parse("30.30.10.70 - 30.30.10.110"),
-            IpRange.Parse("20.20.10.0 - 20.20.10.90"),
+            IpRange.Parse("20.20.10.0 - 20.20.10.90")
         };
 
         // Expected

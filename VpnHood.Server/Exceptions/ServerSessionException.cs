@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -34,10 +34,10 @@ public class ServerSessionException : SessionException, ISelfLog
     public ServerSessionException(
         IPEndPoint remoteEndPoint,
         Session session,
-        SessionResponseBase sessionResponseBase,
+        SessionResponse sessionResponse,
         string requestId
         )
-        : base(sessionResponseBase)
+        : base(sessionResponse)
     {
         RemoteEndPoint = remoteEndPoint;
         SessionId = session.SessionId;
@@ -47,9 +47,9 @@ public class ServerSessionException : SessionException, ISelfLog
 
     public ServerSessionException(
         IPEndPoint remoteEndPoint,
-        SessionResponseBase sessionResponseBase,
-        SessionRequest sessionRequest)
-    : base(sessionResponseBase)
+        SessionResponse sessionResponse,
+        HelloRequest sessionRequest)
+    : base(sessionResponse)
     {
         RemoteEndPoint = remoteEndPoint;
         TokenId = sessionRequest.TokenId;
@@ -59,9 +59,9 @@ public class ServerSessionException : SessionException, ISelfLog
 
     public ServerSessionException(
         IPEndPoint remoteEndPoint,
-        SessionResponseBase sessionResponseBase,
+        SessionResponse sessionResponse,
         RequestBase requestBase)
-        : base(sessionResponseBase)
+        : base(sessionResponse)
     {
         RemoteEndPoint = remoteEndPoint;
         SessionId = requestBase.SessionId;
@@ -69,7 +69,7 @@ public class ServerSessionException : SessionException, ISelfLog
     }
 
     protected virtual LogLevel LogLevel => LogLevel.Information;
-    protected virtual EventId EventId => SessionResponseBase.ErrorCode is SessionErrorCode.GeneralError
+    protected virtual EventId EventId => SessionResponse.ErrorCode is SessionErrorCode.GeneralError
         ? GeneralEventId.Tcp
         : GeneralEventId.Session;
 
@@ -78,6 +78,6 @@ public class ServerSessionException : SessionException, ISelfLog
         VhLogger.Instance.Log(LogLevel, EventId, this,
             "{Message} SessionId: {SessionId}, RequestId: {RequestId}, ClientIp: {ClientIp}, TokenId: {TokenId}, SessionErrorCode: {SessionErrorCode}",
             Message, VhLogger.FormatSessionId(SessionId), RequestId, VhLogger.Format(RemoteEndPoint.Address),
-            VhLogger.FormatId(TokenId), SessionResponseBase.ErrorCode);
+            VhLogger.FormatId(TokenId), SessionResponse.ErrorCode);
     }
 }

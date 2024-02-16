@@ -1,14 +1,15 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
+using VpnHood.Tunneling;
 using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Server;
 
-public class Http01ChallengeService(IPAddress[] ipAddresses) : IDisposable
+public class Http01ChallengeService(IPAddress[] ipAddresses, string token, string keyAuthorization) : IDisposable
 {
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly List<TcpListener> _tcpListeners = [];
     private bool _disposed;
     public bool IsStarted { get; private set; }
@@ -18,50 +19,42 @@ public class Http01ChallengeService(IPAddress[] ipAddresses) : IDisposable
         if (IsStarted) throw new InvalidOperationException("The HTTP-01 Challenge Service has already been started.");
         if (_disposed) throw new ObjectDisposedException(nameof(Http01ChallengeService));
 
-        foreach (var ipAddress in ipAddresses)
+        try
         {
-            var ipEndPoint = new IPEndPoint(ipAddress, 80);
-            VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
+            foreach (var ipAddress in ipAddresses)
+            {
+                var ipEndPoint = new IPEndPoint(ipAddress, 80);
+                VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
 
-            var listener = new TcpListener(ipEndPoint);
-            listener.Start();
-            _tcpListeners.Add(listener);
+                var listener = new TcpListener(ipEndPoint);
+                listener.Start();
+                _tcpListeners.Add(listener);
+            }
+
+            var listenTasks = _tcpListeners.Select(x => AcceptTcpClient(x, _cancellationTokenSource.Token));
+            return Task.WhenAll(listenTasks);
         }
-
-        var listenTasks = _tcpListeners.Select(AcceptTcpClient);
-        return Task.WhenAll(listenTasks);
+        catch
+        {
+            Stop();
+            throw;
+        }
     }
 
-    private async Task AcceptTcpClient(TcpListener tcpListener)
+    private async Task AcceptTcpClient(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         try
         {
             while (true)
             {
                 using var client = await tcpListener.AcceptTcpClientAsync();
-                //HandleRequest(client, token, keyAuthorization);
+                await HandleRequest(client, token, keyAuthorization, cancellationToken);
             }
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not process HTTP-01 request.");
+            VhLogger.Instance.LogError(GeneralEventId.Acme, ex, "Could not process the ACME request.");
         }
-    }
-
-    private static byte[] BuildHttp01Response(string challengeCode)
-    {
-        var header =
-            "HTTP/1.1 200\r\n" +
-            "Server: Kestrel\r\n" +
-            $"Date: {DateTime.UtcNow:r}\r\n" +
-            "Content-Type: text/plain\r\n" +
-            $"Content-Length: {challengeCode.Length}\r\n" +
-            "Connection: close\r\n";
-
-        var body = $"{challengeCode}\r\n";
-
-        var ret = header + "\r\n" + body;
-        return Encoding.UTF8.GetBytes(ret);
     }
 
     private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization, CancellationToken cancellationToken)
@@ -71,20 +64,25 @@ public class Http01ChallengeService(IPAddress[] ipAddresses) : IDisposable
             ?? throw new Exception("Connection has been closed before receiving any request.");
 
         if (!headers.Any()) return;
-        var requestPart = headers[HttpUtil.HttpRequestKey];
-        var requestParts = requestPart.Split(' ');
-        var url = "/ok";
+        var request = headers[HttpUtil.HttpRequestKey];
+        var requestParts = request.Split(' ');
+        var expectedUrl = $"/.well-known/acme-challenge/{token}";
+        var isMatched = requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == expectedUrl;
 
-        if (requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == url)
-        {
-            var response = BuildHttp01Response("sss");
-            await stream.WriteAsync(response, 0, response.Length, cancellationToken);
-        }
+        VhLogger.Instance.LogInformation(GeneralEventId.Acme, "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
+        
+        var response = (isMatched)
+            ? HttpResponseBuilder.Http01(keyAuthorization)
+            : HttpResponseBuilder.BadRequest();
+
+        await stream.WriteAsync(response, 0, response.Length, cancellationToken);
+        await stream.FlushAsync(cancellationToken);
     }
 
-    public void Stop()
+    // use dispose
+    private void Stop()
     {
-        if (!IsStarted || _disposed) 
+        if (!IsStarted || _disposed)
             return;
 
         foreach (var listener in _tcpListeners)
@@ -100,15 +98,16 @@ public class Http01ChallengeService(IPAddress[] ipAddresses) : IDisposable
         }
 
         _tcpListeners.Clear();
+        _cancellationTokenSource.Cancel();
         IsStarted = false;
     }
 
     public void Dispose()
     {
-        if (_disposed) 
+        if (_disposed)
             return;
 
-        if (IsStarted) 
+        if (IsStarted)
             Stop();
 
         _disposed = true;

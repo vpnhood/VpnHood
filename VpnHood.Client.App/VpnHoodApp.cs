@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.IO.Compression;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
@@ -125,7 +126,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
-            UpdateInfoUrl = options.UpdateInfoUrl,
+            UpdateInfoUrl = options.UpdateInfoUrl
         };
 
         _instance = this;
@@ -315,8 +316,8 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         try
         {
             var ipAddress =
-                await IPAddressUtil.GetPublicIpAddress(System.Net.Sockets.AddressFamily.InterNetwork) ??
-                await IPAddressUtil.GetPublicIpAddress(System.Net.Sockets.AddressFamily.InterNetworkV6);
+                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork) ??
+                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
 
             if (ipAddress == null)
                 return null;
@@ -389,7 +390,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             new ConnectOptions
             {
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
-                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off,
+                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
             });
 
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);

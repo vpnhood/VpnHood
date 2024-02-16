@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Tunneling;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
 
@@ -16,7 +17,7 @@ internal static class TestSocketProtector
 
     public static bool IsProtectedPacket(IPPacket ipPacket)
     {
-        if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
+        if (ipPacket.Protocol == ProtocolType.Tcp)
         {
             lock (TcpProtected)
             {

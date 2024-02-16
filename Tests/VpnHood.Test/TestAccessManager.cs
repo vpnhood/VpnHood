@@ -23,7 +23,7 @@ public class TestAccessManager : IAccessManager
         _httpAccessManager = new HttpAccessManager(new HttpAccessManagerOptions(EmbedIoAccessManager.BaseUri, "Bearer"))
         {
             Logger = VhLogger.Instance,
-            LoggerEventId = GeneralEventId.AccessManager,
+            LoggerEventId = GeneralEventId.AccessManager
         };
     }
 

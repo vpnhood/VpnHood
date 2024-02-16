@@ -55,7 +55,7 @@ public class ContextMenu : IDisposable
         String = 0,
         ByPosition = 0x400,
         Separator = 0x800,
-        Remove = 0x1000,
+        Remove = 0x1000
     }
 
     public ContextMenu()

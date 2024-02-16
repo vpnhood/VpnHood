@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Common.Converters;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Logging;
@@ -18,7 +19,7 @@ public static class VhLogger
         set
         {
             _instance = value;
-            JobController.JobRunner.Default.Logger = value;
+            JobRunner.Default.Logger = value;
         }
     }
 

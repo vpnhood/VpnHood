@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 

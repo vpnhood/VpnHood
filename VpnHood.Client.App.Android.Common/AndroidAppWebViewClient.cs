@@ -1,5 +1,6 @@
 ﻿using Android.Content;
 using Android.Webkit;
+using Uri = Android.Net.Uri;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -12,7 +13,7 @@ internal class AndroidAppWebViewClient : WebViewClient
         if (webView == null || url == null)
             return false;
 
-        var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
+        var intent = new Intent(Intent.ActionView, Uri.Parse(url));
         intent.SetFlags(ActivityFlags.NewTask);
         Application.Context.StartActivity(intent);
 

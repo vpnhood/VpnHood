@@ -14,7 +14,7 @@ public class ActivityEvent : Activity, IActivityEvent
         {
             RequestCode = requestCode,
             ResultCode = resultCode,
-            Data = data,
+            Data = data
         });
 
         base.OnActivityResult(requestCode, resultCode, data);

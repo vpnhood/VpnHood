@@ -24,6 +24,7 @@ public static class GeneralEventId
     public static EventId TcpLife = new((int)EventCode.TcpLife, nameof(TcpLife));
     public static EventId Test = new((int)EventCode.Test, nameof(Test));
     public static EventId UdpSign = new((int)EventCode.UdpSign, nameof(UdpSign));
+    public static EventId Acme = new((int)EventCode.Acme, nameof(Acme));
 
     private enum EventCode
     {
@@ -46,6 +47,7 @@ public static class GeneralEventId
         SessionTrack,
         Request,
         TcpLife,
+        Acme,
         Test,
     }
 }

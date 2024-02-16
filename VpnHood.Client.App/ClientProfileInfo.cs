@@ -2,7 +2,6 @@
 using VpnHood.Common;
 using VpnHood.Common.Utils;
 
-
 namespace VpnHood.Client.App;
 
 [SuppressMessage("ReSharper", "UnusedMember.Global")]

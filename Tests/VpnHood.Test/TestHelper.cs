@@ -225,7 +225,7 @@ internal static class TestHelper
                 SyncCacheSize = 50,
                 SyncInterval = TimeSpan.FromMilliseconds(100)
             },
-            LogAnonymizer = false,
+            LogAnonymizer = false
         };
         return options;
     }
@@ -261,7 +261,7 @@ internal static class TestHelper
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
             NetFilter = NetFilter,
-            PublicIpDiscovery = false, //it slows down our tests
+            PublicIpDiscovery = false //it slows down our tests
         };
 
         // Create server
@@ -367,7 +367,7 @@ internal static class TestHelper
         {
             AppDataFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            LoadCountryIpGroups = false,
+            LoadCountryIpGroups = false
         };
         return appOptions;
     }
@@ -392,12 +392,15 @@ internal static class TestHelper
     public static SessionRequestEx CreateSessionRequestEx(Token token, Guid? clientId = null)
     {
         clientId ??= Guid.NewGuid();
-
-        return new SessionRequestEx("access:" + Guid.NewGuid(),
-            token.TokenId,
-            new ClientInfo { ClientId = clientId.Value },
-            hostEndPoint: token.ServerToken.HostEndPoints!.First(),
-            encryptedClientId: VhUtil.EncryptClientId(clientId.Value, token.Secret));
+        return new SessionRequestEx
+        {
+            TokenId = token.TokenId,
+            ClientInfo = new ClientInfo { ClientId = clientId.Value },
+            HostEndPoint = token.ServerToken.HostEndPoints!.First(),
+            EncryptedClientId = VhUtil.EncryptClientId(clientId.Value, token.Secret),
+            ClientIp = null,
+            ExtraData = null
+        };
     }
 
     private static bool _isInit;

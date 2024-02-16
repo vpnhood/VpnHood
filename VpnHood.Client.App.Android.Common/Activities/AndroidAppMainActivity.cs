@@ -1,7 +1,7 @@
-﻿using Android.Content;
+﻿using Android;
+using Android.Content;
 using Android.Content.PM;
 using Android.Runtime;
-using Android;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;

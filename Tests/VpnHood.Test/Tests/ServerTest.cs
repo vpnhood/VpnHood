@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -16,7 +15,6 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-[SuppressMessage("ReSharper", "DisposeOnUsingVariable")]
 public class ServerTest : TestBase
 {
     [TestMethod]
@@ -29,7 +27,8 @@ public class ServerTest : TestBase
         Assert.IsNotNull(testAccessManager.LastServerInfo);
         Assert.IsTrue(testAccessManager.LastServerInfo.FreeUdpPortV4 > 0);
         Assert.IsTrue(
-            testAccessManager.LastServerInfo.PrivateIpAddresses.All(x => x.AddressFamily != AddressFamily.InterNetworkV6) ||
+            testAccessManager.LastServerInfo.PrivateIpAddresses.All(
+                x => x.AddressFamily != AddressFamily.InterNetworkV6) ||
             testAccessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
 
@@ -71,20 +70,24 @@ public class ServerTest : TestBase
 
         // change tcp end points
         var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Changing access server UdpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
+        VhLogger.Instance.LogTrace(GeneralEventId.Test,
+            "Test: Changing access server UdpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
         fileAccessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
+            () => testAccessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
             VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, fileAccessManager.ServerConfig.TcpEndPoints[0].Port),
             fileAccessManager.ServerConfig.TcpEndPoints[0]);
 
         // change udp end points
         var newUdpEndPoint = VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback);
-        VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
+        VhLogger.Instance.LogTrace(GeneralEventId.Test,
+            "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
         fileAccessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
+            () => testAccessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
             VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, fileAccessManager.ServerConfig.UdpEndPoints[0].Port),
             fileAccessManager.ServerConfig.UdpEndPoints[0]);
@@ -116,19 +119,23 @@ public class ServerTest : TestBase
 
         dateTime = DateTime.Now;
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode, () => testAccessManager.LastServerStatus!.ConfigCode);
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
+            () => testAccessManager.LastServerStatus!.ConfigCode);
 
         CollectionAssert.AreEqual(serverConfig.ServerSecret, server.SessionManager.ServerSecret);
         Assert.IsTrue(testAccessManager.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp, server.SessionManager.TrackingOptions.TrackClientIp);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort, server.SessionManager.TrackingOptions.TrackLocalPort);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp,
+            server.SessionManager.TrackingOptions.TrackClientIp);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort,
+            server.SessionManager.TrackingOptions.TrackLocalPort);
         Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
-        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
+        Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount,
+            server.SessionManager.SessionOptions.MaxDatagramChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
         Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
 
@@ -213,8 +220,8 @@ public class ServerTest : TestBase
         handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         var client = new HttpClient(handler);
         var url = $"https://{token.ServerToken.HostEndPoints!.First()}";
-        
-        var ex = await Assert.ThrowsExceptionAsync<HttpRequestException>(()=>client.GetStringAsync(url));
+
+        var ex = await Assert.ThrowsExceptionAsync<HttpRequestException>(() => client.GetStringAsync(url));
         Assert.AreEqual(ex.StatusCode, HttpStatusCode.Unauthorized);
     }
 
@@ -261,7 +268,7 @@ public class ServerTest : TestBase
                 IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
                 PacketCaptureExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
                 PacketCaptureIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
-                IncludeLocalNetwork = false,
+                IncludeLocalNetwork = false
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
             UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],
@@ -273,7 +280,7 @@ public class ServerTest : TestBase
                 TrackIcmp = false,
                 TrackLocalPort = true,
                 TrackTcp = false,
-                TrackUdp = true,
+                TrackUdp = true
             },
             SessionOptions = new SessionOptions
             {
@@ -299,4 +306,49 @@ public class ServerTest : TestBase
         Assert.AreEqual(JsonSerializer.Serialize(oldServerConfig), JsonSerializer.Serialize(newServerConfig));
     }
 
+    [TestMethod]
+    public async Task DnsChallenge()
+    {
+        VhLogger.IsAnonymousMode = true;
+
+        // create server
+        using var fileAccessManager = TestHelper.CreateFileAccessManager();
+        fileAccessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
+
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        await using var server = TestHelper.CreateServer(testAccessManager);
+
+        // set DnsChallenge
+        var dnsChallenge = new DnsChallenge
+        {
+            KeyAuthorization = "DnsChallenge_KeyAuthorization",
+            Token = "DnsChallenge"
+        };
+        fileAccessManager.ServerConfig.DnsChallenge = dnsChallenge;
+
+        // notify server
+        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
+            () => testAccessManager.LastServerStatus!.ConfigCode);
+
+        // server should listen to port 80 for HTTP-01 challenge
+        var httpClient = new HttpClient();
+        var url = new Uri($"http://{fileAccessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{dnsChallenge.Token}");
+        var keyAuthorization = await httpClient.GetStringAsync(url);
+        Assert.AreEqual(dnsChallenge.KeyAuthorization, keyAuthorization);
+
+        // check invalid url
+        url = new Uri($"http://{fileAccessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
+        var response = await httpClient.GetAsync(url);
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+
+        // remove challenge and notify server
+        fileAccessManager.ServerConfig.DnsChallenge = null;
+        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
+            () => testAccessManager.LastServerStatus!.ConfigCode);
+
+        await Assert.ThrowsExceptionAsync<HttpRequestException>(() => httpClient.GetAsync(url));
+
+    }
 }

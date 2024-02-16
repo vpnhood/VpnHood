@@ -315,12 +315,12 @@ internal class ServerHost : IAsyncDisposable, IJob
                 if (authorization != "ApiKey")
                     throw new UnauthorizedAccessException();
 
-                await sslStream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
+                await sslStream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken);
                 return new TcpClientStream(tcpClient, sslStream, streamId);
             }
 
             // use binary stream only for authenticated clients
-            await sslStream.WriteAsync(HttpResponses.GetOk(), cancellationToken);
+            await sslStream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken);
 
             switch (binaryStreamType)
             {
@@ -347,7 +347,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             //always return BadRequest 
             if (!VhUtil.IsTcpClientHealthy(tcpClient)) throw;
-            var response = ex is UnauthorizedAccessException ? HttpResponses.GetUnauthorized() : HttpResponses.GetBadRequest();
+            var response = ex is UnauthorizedAccessException ? HttpResponseBuilder.Unauthorized() : HttpResponseBuilder.BadRequest();
             await sslStream.WriteAsync(response, cancellationToken);
             throw;
         }
@@ -466,7 +466,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             // return 401 for ANY non SessionException to keep server's anonymity
-            await clientStream.Stream.WriteAsync(HttpResponses.GetUnauthorized(), cancellationToken);
+            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken);
 
             if (ex is ISelfLog loggable)
                 loggable.Log();

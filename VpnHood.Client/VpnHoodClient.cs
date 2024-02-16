@@ -599,7 +599,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 RequestId = Guid.NewGuid() + ":client",
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
-                TokenId = Token.TokenId,
+                TokenId = Token.TokenId
             };
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken);
@@ -796,7 +796,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
-                new ByeRequest()
+                new ByeRequest
                 {
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,

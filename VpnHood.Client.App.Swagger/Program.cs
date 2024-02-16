@@ -21,7 +21,7 @@ public class Program
                 new PrimitiveTypeMapper(typeof(IPAddress), s => { s.Type = JsonObjectType.String; }),
                 new PrimitiveTypeMapper(typeof(IPEndPoint), s => { s.Type = JsonObjectType.String; }),
                 new PrimitiveTypeMapper(typeof(Version), s => { s.Type = JsonObjectType.String; }),
-                new PrimitiveTypeMapper(typeof(IpRange), s => { s.Type = JsonObjectType.String; }),
+                new PrimitiveTypeMapper(typeof(IpRange), s => { s.Type = JsonObjectType.String; })
             };
         });
 

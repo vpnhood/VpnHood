@@ -89,7 +89,7 @@ public class SessionManager : IAsyncDisposable, IJob
             ? VhUtil.JsonDeserialize<SessionExtraData>(sessionResponseEx.ExtraData)
             : new SessionExtraData { ProtocolVersion = 3 };
 
-        var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory, 
+        var session = new Session(_accessManager, sessionResponseEx, NetFilter, _socketFactory,
             SessionOptions, TrackingOptions, extraData);
 
         // add to sessions
@@ -109,13 +109,15 @@ public class SessionManager : IAsyncDisposable, IJob
         // validate the token
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
         var extraData = JsonSerializer.Serialize(new SessionExtraData { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
-        var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
+        var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
             ClientIp = ipEndPointPair.RemoteEndPoint.Address,
-            ExtraData = extraData
+            ExtraData = extraData,
+            ClientInfo = helloRequest.ClientInfo,
+            EncryptedClientId = helloRequest.EncryptedClientId,
+            TokenId = helloRequest.TokenId
         });
-        sessionResponseEx.ExtraData = extraData; //extraData may not return by session creation
 
         // Access Error should not pass to the client in create session
         if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)
@@ -144,7 +146,7 @@ public class SessionManager : IAsyncDisposable, IJob
         return GaTracker.Track(new Ga4TagEvent
         {
             EventName = Ga4TagEvents.PageView,
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
                 { "client_version", clientInfo.ClientVersion  },
                 { "server_version", serverVersion  },
@@ -197,7 +199,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 SessionId = sessionRequest.SessionId,
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
-                ErrorMessage = ex.Message,
+                ErrorMessage = ex.Message
             }, ipEndPointPair, "dead-recovery");
             await session.DisposeAsync();
             throw;
@@ -225,7 +227,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // unexpected close
         if (session.IsDisposed)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-                new SessionResponseBase(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
+                new SessionResponse(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
                 requestBase.RequestId);
 
         return session;
@@ -237,9 +239,9 @@ public class SessionManager : IAsyncDisposable, IJob
         _ = GaTracker?.Track(new Ga4TagEvent
         {
             EventName = "heartbeat",
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
-                { "session_count", Sessions.Count(x=>!x.Value.IsDisposed)  },
+                { "session_count", Sessions.Count(x=>!x.Value.IsDisposed)  }
             }
         });
 

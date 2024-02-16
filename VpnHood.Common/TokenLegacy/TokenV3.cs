@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
@@ -56,7 +56,7 @@ public class TokenV3
             TokenId = TokenId,
             Secret = Secret,
             IsNewVersion = true,
-            ServerToken = new ServerToken()
+            ServerToken = new ServerToken
             {
                 CreatedTime = DateTime.MinValue,
                 IsValidHostName = IsValidHostName,

@@ -32,6 +32,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private readonly ServerConfig? _config;
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
+    private Http01ChallengeService? _http01ChallengeService;
+
     public JobSection JobSection { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
     public SessionManager SessionManager { get; }
@@ -142,6 +144,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo);
+            VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
@@ -153,10 +156,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
             ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
-            VhLogger.IsAnonymousMode = serverConfig.LogAnonymizerValue;
 
-            // Reconfigure
+            // Reconfigure server host
             await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
+
+            // Reconfigure dns challenge
+            StartDnsChallenge(serverConfig.TcpEndPointsValue.Select(x => x.Address), serverConfig.DnsChallenge);
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;
@@ -179,6 +184,24 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await _serverHost.Stop();
             await SendStatusToAccessManager(false);
+        }
+    }
+
+    private void StartDnsChallenge(IEnumerable<IPAddress> ipAddresses, DnsChallenge? dnsChallenge)
+    {
+        _http01ChallengeService?.Dispose();
+        _http01ChallengeService = null;
+        if (dnsChallenge == null)
+            return;
+
+        try
+        {
+            _http01ChallengeService = new Http01ChallengeService(ipAddresses.ToArray(), dnsChallenge.Token, dnsChallenge.KeyAuthorization);
+            _http01ChallengeService.Start();
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not start the Http01ChallengeService.");
         }
     }
 
@@ -282,7 +305,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             TunnelSpeed = new Traffic
             {
                 Sent = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Sent),
-                Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received),
+                Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received)
             },
             ConfigCode = _lastConfigCode,
             ConfigError = _lastConfigError?.ToJson()
@@ -320,15 +343,15 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         var useProperties = new Dictionary<string, object>
         {
             { "server_version", ServerVersion },
-            { "access_manager", AccessManager.GetType().Name },
+            { "access_manager", AccessManager.GetType().Name }
         };
 
         return SessionManager.GaTracker.Track(new Ga4TagEvent
         {
             EventName = Ga4TagEvents.SessionStart,
-            Properties = new Dictionary<string, object>()
+            Properties = new Dictionary<string, object>
             {
-                { "access_manager", AccessManager.GetType().Name },
+                { "access_manager", AccessManager.GetType().Name }
             }
         }, useProperties);
     }
@@ -362,6 +385,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         try { await _sendStatusTask; } catch {/* no error*/ }
         await _serverHost.DisposeAsync(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync();
+        _http01ChallengeService?.Dispose();
 
         if (_autoDisposeAccessManager)
             AccessManager.Dispose();

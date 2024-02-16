@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Android.Content;
 using Android.Content.PM;
-using Android.Views;
 using Android.Service.QuickSettings;
+using Android.Views;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 

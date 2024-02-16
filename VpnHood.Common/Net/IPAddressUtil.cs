@@ -105,7 +105,7 @@ public static class IPAddressUtil
                 ? "https://api4.my-ip.io/v2/ip.json"
                 : "https://api6.my-ip.io/v2/ip.json";
 
-            var handler = new HttpClientHandler() { AllowAutoRedirect = true };
+            var handler = new HttpClientHandler { AllowAutoRedirect = true };
             using var httpClient = new HttpClient(handler);
 
             httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);

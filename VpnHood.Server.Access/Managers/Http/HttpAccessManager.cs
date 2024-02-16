@@ -80,7 +80,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
     }
 
-    public Task<SessionResponseBase> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -88,10 +88,10 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
             { "closeSession",  false}
         };
 
-        return HttpPostAsync<SessionResponseBase>($"sessions/{sessionId}/usage", parameters, traffic);
+        return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);
     }
 
-    public Task<SessionResponseBase> Session_Close(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -99,7 +99,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
             { "closeSession",  true}
         };
 
-        return HttpPostAsync<SessionResponseBase>($"sessions/{sessionId}/usage", parameters, traffic);
+        return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);
     }
 
 

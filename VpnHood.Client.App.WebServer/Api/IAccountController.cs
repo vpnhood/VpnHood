@@ -10,6 +10,6 @@ public interface IAccountController
     Task SignInWithGoogle();
     Task SignOut();
     Task<AppAccount?> Get();
-    Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId(string providerOrderId);
+    Task<bool> IsSubscriptionOrderProcessed(string providerOrderId);
     Task<List<string>> GetAccessKeys(string subscriptionId);
 }

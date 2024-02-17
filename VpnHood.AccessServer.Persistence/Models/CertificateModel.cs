@@ -12,7 +12,6 @@ public class CertificateModel
     public required string Thumbprint { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required bool IsVerified { get; set; }
-    public required string? DnsVerificationText { get; set; }
     public bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }

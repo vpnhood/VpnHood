@@ -279,14 +279,14 @@ public class TestApp : IHttpClientFactory, IDisposable
         var vhToken = Token.FromAccessKey(accessKey);
 
         var secret = vhToken.Secret;
-        var sessionRequestEx = new SessionRequestEx(string.Empty,
-            accessToken.AccessTokenId.ToString(),
-            clientInfo,
-            VhUtil.EncryptClientId(clientInfo.ClientId, secret),
-            hostEndPoint)
+        var sessionRequestEx = new SessionRequestEx
         {
+            ClientInfo = clientInfo,
+            TokenId = accessToken.AccessTokenId.ToString(),
+            EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             ClientIp = clientIp ?? NewIpV4().Result,
-            ExtraData = extraData ?? Guid.NewGuid().ToString()
+            HostEndPoint = hostEndPoint,
+            ExtraData = extraData ?? Guid.NewGuid().ToString(),
         };
 
         return sessionRequestEx;

@@ -9,7 +9,6 @@ public class Certificate
     public required DateTime ExpirationTime { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required bool IsVerified { get; set; }
-    public required string? DnsVerificationText { get; set; }
     public required string Thumbprint { get; set; }
     public byte[]? RawData { get; set; }
 }

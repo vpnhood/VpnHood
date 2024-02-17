@@ -16,7 +16,6 @@ public static class CertificateConverter
             ExpirationTime = model.ExpirationTime,
             IsVerified = model.IsVerified,
             Thumbprint = model.Thumbprint,
-            DnsVerificationText = model.DnsVerificationText,
             SubjectName = model.SubjectName,
             RawData = withRawData ? model.RawData : null
         };

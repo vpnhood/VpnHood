@@ -65,6 +65,12 @@ public class VhContext : DbContext
 
             entity.Property(e => e.ProjectName)
                 .HasMaxLength(200);
+
+            entity
+                .HasOne<LetsEncryptAccount>(e => e.LetsEncryptAccount)
+                .WithOne(d => d.Project)
+                .HasForeignKey<LetsEncryptAccount>(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<IpLockModel>(entity =>

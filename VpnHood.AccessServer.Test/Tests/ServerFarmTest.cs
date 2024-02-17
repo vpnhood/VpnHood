@@ -257,4 +257,11 @@ public class ServerFarmTest
         Assert.AreEqual(token.ServerToken.HostName, farmToken.HostName);
 
     }
+
+    [TestMethod]
+    public Task FarmToken_must_change_by_modifying_certificate()
+    {
+        throw new NotImplementedException();
+    }
+
 }

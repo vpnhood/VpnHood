@@ -68,7 +68,7 @@ public class SessionService(
         return ga4Tracker.Track(ga4Event);
     }
 
-    private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
+    private static bool ValidateTokenRequest(SessionRequestEx sessionRequest, byte[] tokenSecret)
     {
         var encryptClientId = VhUtil.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
@@ -220,6 +220,7 @@ public class SessionService(
 
         var ret = await BuildSessionResponse(session, access);
         ret.ExtraData = session.ExtraData;
+        ret.GaMeasurementId = project.GaMeasurementId;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -239,14 +240,6 @@ public class SessionService(
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode.ToString()
             }.ToAccessKey();
-
-        // update session data
-        ret.GaMeasurementId = project.GaMeasurementId;
-        ret.TcpEndPoints = [bestTcpEndPoint];
-        ret.UdpEndPoints = server.AccessPoints
-            .Where(x => x is { IsPublic: true, UdpPort: > 0 })
-            .Select(x => new IPEndPoint(x.IpAddress, x.UdpPort))
-            .ToArray();
 
         // Add session to database
         var sessionModel = await vhAgentRepo.AddSession(session);
@@ -369,7 +362,7 @@ public class SessionService(
         };
     }
 
-    public async Task<SessionResponseBase> AddUsage(ServerCache server, uint sessionId, Traffic traffic, bool closeSession)
+    public async Task<SessionResponse> AddUsage(ServerCache server, uint sessionId, Traffic traffic, bool closeSession)
     {
         var session = await cacheService.GetSession(server.ServerId, sessionId);
         var access = await cacheService.GetAccess(session.AccessId);
@@ -428,7 +421,7 @@ public class SessionService(
             session.EndTime ??= DateTime.UtcNow;
         }
 
-        return new SessionResponseBase(sessionResponse);
+        return sessionResponse;
     }
 
     public async Task<IPEndPoint?> FindBestServerForDevice(ServerCache currentServer, IPEndPoint currentEndPoint, Guid serverFarmId, Guid deviceId)
@@ -438,19 +431,18 @@ public class SessionService(
         if (!agentOptions.Value.AllowRedirect ||
             (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
-            if (IsServerReady(currentServer))
+            if (currentServer.IsReady)
                 return currentEndPoint;
         }
 
         // get all servers of this farm
         var servers = await cacheService.GetServers();
-        var farmServers = servers.Values
+        var farmServers = servers
             .Where(server =>
                 server.ProjectId == currentServer.ProjectId &&
                 server.ServerFarmId == currentServer.ServerFarmId &&
-                server.AccessPoints.Any(accessPoint =>
-                    accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
-                IsServerReady(server))
+                server.AccessPoints.Any(accessPoint => accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
+                server.IsReady)
             .ToArray();
 
         // find the best free server
@@ -467,20 +459,5 @@ public class SessionService(
         }
 
         return null;
-    }
-
-    private bool IsServerReady(ServerCache server)
-    {
-        var stateResolver = new ServerStateResolver
-        {
-            ServerStatus = server.ServerStatus,
-            LostServerThreshold = agentOptions.Value.LostServerThreshold,
-            ConfigureTime = server.ConfigureTime,
-            ConfigCode = server.ConfigCode,
-            LastConfigCode = server.LastConfigCode,
-            IsEnabled = server.IsEnabled
-        };
-
-        return stateResolver.IsReady;
     }
 }

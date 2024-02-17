@@ -1,5 +1,6 @@
 ﻿using VpnHood.AccessServer.Dtos.Server;
 using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 
@@ -7,17 +8,9 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerConverter
 {
-    public static VpnServer ToDto(this ServerModel model, ServerCache? serverCached, TimeSpan lostServerThreshold)
+    public static VpnServer ToDto(this ServerModel model, ServerCache? serverCached)
     {
-        var stateResolver = new ServerStateResolver
-        {
-            ServerStatus = serverCached?.ServerStatus,
-            LostServerThreshold = lostServerThreshold, 
-            ConfigureTime = model.ConfigureTime,
-            ConfigCode = model.ConfigCode,
-            LastConfigCode = model.LastConfigCode,
-            IsEnabled = model.IsEnabled
-        };
+        var serverState = model.ConfigureTime == null ? ServerState.NotInstalled : ServerState.Lost;
 
         return new VpnServer
         {
@@ -33,7 +26,7 @@ public static class ServerConverter
             OsInfo = model.OsInfo,
             ServerId = model.ServerId,
             ServerStatus = serverCached?.ServerStatus?.ToDto(),
-            ServerState = stateResolver.State,
+            ServerState = serverCached?.ServerState ?? serverState,
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
             LogicalCoreCount = model.LogicalCoreCount,

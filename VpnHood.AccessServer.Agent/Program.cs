@@ -6,7 +6,6 @@ using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using NLog;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
 
@@ -16,9 +15,6 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        // nLog
-        LogManager.Setup();
-
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
         builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
@@ -64,10 +60,6 @@ public class Program
         builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
         builder.Services.AddHostedService<TimedHostedService>();
 
-        // NLog: Setup NLog for Dependency injection
-        //builder.Logging.ClearProviders();
-        //builder.Host.UseNLog();
-
         //---------------------
         // Create App
         //---------------------
@@ -90,7 +82,6 @@ public class Program
         }
 
         await GrayMintApp.RunAsync(webApp, args);
-        LogManager.Shutdown();
     }
    
 }

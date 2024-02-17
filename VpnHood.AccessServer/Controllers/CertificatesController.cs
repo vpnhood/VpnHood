@@ -33,8 +33,6 @@ public class CertificatesController(
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
         await subscriptionService.AuthorizeAddCertificate(projectId);
-        await subscriptionService.AuthorizeCertificateSignRequest(projectId);
-
         var ret = await certificateService.CreateTrusted(projectId, csr);
         return ret;
     }

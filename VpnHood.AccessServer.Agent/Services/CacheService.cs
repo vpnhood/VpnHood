@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Linq;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -50,9 +51,11 @@ public class CacheService(
         await Init();
     }
 
-    public Task<ConcurrentDictionary<Guid, ServerCache>> GetServers()
+    public Task<ServerCache[]> GetServers()
     {
-        return Task.FromResult(Mem.Servers);
+        var servers = Mem.Servers.Values
+            .Select(x => x.UpdateState(appOptions.Value.LostServerThreshold));
+        return Task.FromResult(servers.ToArray());
     }
 
     public async Task<ProjectCache> GetProject(Guid projectId)
@@ -72,7 +75,7 @@ public class CacheService(
     public async Task<ServerCache> GetServer(Guid serverId)
     {
         if (Mem.Servers.TryGetValue(serverId, out var server))
-            return server;
+            return server.UpdateState(appOptions.Value.LostServerThreshold);
 
         using var serversLock = await AsyncLock.LockAsync($"cache_server_{serverId}");
         if (Mem.Servers.TryGetValue(serverId, out server))
@@ -80,7 +83,7 @@ public class CacheService(
 
         server = await vhAgentRepo.GetServer(serverId);
         Mem.Servers.TryAdd(serverId, server);
-        return server;
+        return server.UpdateState(appOptions.Value.LostServerThreshold);
     }
 
     public async Task<ServerFarmCache> GetFarm(Guid farmId)
@@ -144,7 +147,7 @@ public class CacheService(
         access = await vhAgentRepo.GetAccessOrDefault(accessTokenId, deviceId);
         if (access != null)
             Mem.Accesses.TryAdd(access.AccessId, access);
-        
+
         return access;
     }
 

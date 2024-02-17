@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Persistence.Models;
+﻿using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.Persistence.Caches;
 
@@ -19,4 +20,22 @@ public class ServerCache
     public required Guid AuthorizationCode { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
+    public bool IsReady => ServerState is ServerState.Idle or ServerState.Active;
+    public ServerState ServerState { get; set; }
+    public ServerCache UpdateState(TimeSpan lostServerThreshold)
+    {
+        ServerState = CalculateState(lostServerThreshold);
+        return this;
+    }
+
+    private ServerState CalculateState(TimeSpan lostServerThreshold)
+    {
+        if (ConfigureTime == null) return ServerState.NotInstalled;
+        if (ServerStatus == null || ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold)
+            return ServerState.Lost;
+        if (ConfigCode != LastConfigCode) return ServerState.Configuring;
+        if (!IsEnabled) return ServerState.Disabled;
+        if (ServerStatus.SessionCount == 0) return ServerState.Idle;
+        return ServerState.Active;
+    }
 }

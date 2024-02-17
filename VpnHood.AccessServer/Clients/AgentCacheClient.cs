@@ -6,7 +6,7 @@ namespace VpnHood.AccessServer.Clients;
 
 public class AgentCacheClient : ApiClientBase
 {
-    public AgentCacheClient(IHttpClientFactory httpClientFactory) 
+    public AgentCacheClient(IHttpClientFactory httpClientFactory)
         : base(httpClientFactory.CreateClient(AppOptions.AgentHttpClientName))
     {
         JsonSerializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -28,9 +28,14 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", parameters, null);
     }
 
-    public Task<ServerCache[]> GetServers(Guid projectId)
+    public Task<ServerCache[]> GetServers(Guid projectId, Guid? serverFarmId = null)
     {
-        return HttpGetAsync<ServerCache[]>($"/api/cache/projects/{projectId}/servers");
+        var parameters = new Dictionary<string, object?>
+        {
+            [nameof(serverFarmId)] = serverFarmId,
+        };
+
+        return HttpGetAsync<ServerCache[]>($"/api/cache/projects/{projectId}/servers", parameters);
     }
 
     public Task<ServerCache?> GetServer(Guid serverId)

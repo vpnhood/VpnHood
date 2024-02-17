@@ -39,15 +39,23 @@ public class CertificateService(
         if (csr.CommonName.Contains('*'))
             throw new NotSupportedException("Wildcard certificates are not supported.");
 
-        var orderId = signerService.NewOrder(csr);
+        // create LetsEncrypt account if not exists
+        var project = await vhRepo.ProjectGet(projectId, includeLetsEncryptAccount: true);
+        if (project.LetsEncryptAccount == null)
+        {
+            project.LetsEncryptAccount = new LetsEncryptAccount
+            {
+                AccountPem = await signerService.CreateAccount()
+            };
+            await vhRepo.SaveChangesAsync();
+        }
 
         // create a self-signed certificate till we get the real one
         var x509Certificate2 = CertificateUtil.CreateSelfSigned(csr.BuildSubjectName(), DateTime.UtcNow.AddYears(10));
         var certificateModel = await Add(projectId, x509Certificate2);
-        var project = await vhRepo.ProjectGet(projectId);
-        project.CsrCount++;
+
         await vhRepo.SaveChangesAsync();
-        
+
         return certificateModel.ToDto();
     }
 
@@ -71,7 +79,6 @@ public class CertificateService(
             CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
             IssueTime = x509Certificate2.NotBefore.ToUniversalTime(),
             ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
-            DnsVerificationText = null,
             SubjectName = x509Certificate2.Subject,
             IsVerified = x509Certificate2.Verify()
         };

@@ -45,13 +45,6 @@ public class SubscriptionService(
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
     }
 
-    public async Task AuthorizeCertificateSignRequest(Guid projectId)
-    {
-        var project = await vhRepo.ProjectGet(projectId);
-        if (project.CsrCount >= QuotaConstants.CsrCount)
-            throw new QuotaException(nameof(CertificateSigningRequest), QuotaConstants.CsrCount);
-    }
-
     private async Task<bool> IsFreePlan(Guid projectId)
     {
         var project = await vhContext.Projects.SingleAsync(project => project.ProjectId == projectId);

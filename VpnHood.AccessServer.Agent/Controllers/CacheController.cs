@@ -12,11 +12,11 @@ public class CacheController(CacheService cacheService)
     : ControllerBase
 {
     [HttpGet("projects/{projectId}/servers")]
-    public async Task<ServerCache[]> GetServers(Guid projectId)
+    public async Task<ServerCache[]> GetServers(Guid projectId, Guid? serverFarmId = null)
     {
         var servers = (await cacheService.GetServers())
-            .Values
             .Where(x => x.ProjectId == projectId)
+            .Where(x => serverFarmId ==null || x.ServerFarmId == serverFarmId)
             .ToArray();
 
         return servers;

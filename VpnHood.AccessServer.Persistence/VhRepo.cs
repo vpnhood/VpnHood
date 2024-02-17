@@ -181,7 +181,6 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
                 {
                     CertificateId = x.CertificateId,
                     SubjectName = x.SubjectName,
-                    DnsVerificationText = x.DnsVerificationText,
                     CommonName = x.CommonName,
                     CreatedTime = x.CreatedTime,
                     ExpirationTime = x.ExpirationTime,
@@ -215,11 +214,15 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
         await vhContext.SaveChangesAsync();
     }
 
-    public Task<ProjectModel> ProjectGet(Guid projectId)
+    public Task<ProjectModel> ProjectGet(Guid projectId, bool includeLetsEncryptAccount = false)
     {
-        return vhContext.Projects
-            .Where(x => x.ProjectId == projectId)
-            .SingleAsync();
+        var query = vhContext.Projects
+            .Where(x => x.ProjectId == projectId);
+
+        if (includeLetsEncryptAccount)
+            query = query.Include(x => x.LetsEncryptAccount);
+
+        return query.SingleAsync();
     }
 }
 

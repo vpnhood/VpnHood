@@ -77,7 +77,7 @@ public class ServerService(
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
 
-        var serverDto = server.ToDto(null, appOptions.Value.LostServerThreshold);
+        var serverDto = server.ToDto(null);
         return serverDto;
 
     }
@@ -122,7 +122,7 @@ public class ServerService(
 
         await agentCacheClient.InvalidateServer(server.ServerId);
         var serverCached = await agentCacheClient.GetServer(server.ServerId);
-        return server.ToDto(serverCached, appOptions.Value.LostServerThreshold);
+        return server.ToDto(serverCached);
     }
 
     public async Task<ServerData[]> List(Guid projectId,
@@ -158,7 +158,7 @@ public class ServerService(
         var serverDatas = servers
             .Select(serverModel => new ServerData
             {
-                Server = serverModel.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverModel.ServerId), appOptions.Value.LostServerThreshold)
+                Server = serverModel.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverModel.ServerId))
             })
             .ToArray();
 
@@ -280,7 +280,7 @@ public class ServerService(
         // update model ServerStatusEx
         var cachedServers = await agentCacheClient.GetServers(projectId);
         var servers = serverModels
-            .Select(server => server.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == server.ServerId), appOptions.Value.LostServerThreshold))
+            .Select(server => server.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == server.ServerId)))
             .ToArray();
 
         // create usage summary

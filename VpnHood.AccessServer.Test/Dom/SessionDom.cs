@@ -35,22 +35,22 @@ public class SessionDom
         return ret;
     }
 
-    public Task<SessionResponseBase> AddUsage(long traffic = 100)
+    public Task<SessionResponse> AddUsage(long traffic = 100)
     {
         return AddUsage(traffic/2, traffic/2);
     }
 
-    public Task<SessionResponseBase> AddUsage(long sendTraffic, long receivedTraffic)
+    public Task<SessionResponse> AddUsage(long sendTraffic, long receivedTraffic)
     {
         return AddUsage(new Traffic { Sent = sendTraffic, Received = receivedTraffic });
     }
 
-    public Task<SessionResponseBase> AddUsage(Traffic traffic)
+    public Task<SessionResponse> AddUsage(Traffic traffic)
     {
         return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, traffic);
     }
 
-    public Task<SessionResponseBase> CloseSession()
+    public Task<SessionResponse> CloseSession()
     {
         return AgentClient.Session_Close(SessionResponseEx.SessionId, new Traffic());
     }

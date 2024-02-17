@@ -59,8 +59,12 @@ public class ProjectService(
         var project = new ProjectModel
         {
             ProjectId = projectId,
+            ProjectName = null,
             SubscriptionType = SubscriptionType.Free,
             CreatedTime = DateTime.UtcNow,
+            GaApiSecret = null,
+            GaMeasurementId = null,
+            LetsEncryptAccount = null,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
                 serverProfile

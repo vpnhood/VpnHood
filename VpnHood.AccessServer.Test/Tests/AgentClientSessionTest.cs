@@ -109,18 +109,6 @@ public class AgentClientSessionTest
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
 
-        // check HostEndPoints returned by session
-        var publicAccessPoints = farm.DefaultServer.Server.AccessPoints
-            .Where(x => x.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public)
-            .ToArray();
-
-        Assert.IsTrue(sessionResponseEx.TcpEndPoints.Any());
-        Assert.IsTrue(sessionResponseEx.UdpEndPoints.Any());
-        foreach (var tcpEndPoint in sessionResponseEx.TcpEndPoints)
-            Assert.IsTrue(publicAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(tcpEndPoint.Address) && x.TcpPort == tcpEndPoint.Port));
-        foreach (var udpEndPoint in sessionResponseEx.UdpEndPoints)
-            Assert.IsTrue(publicAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(udpEndPoint.Address) && x.UdpPort == udpEndPoint.Port));
-
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
         var device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);

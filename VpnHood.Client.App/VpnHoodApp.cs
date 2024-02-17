@@ -49,6 +49,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
     private VersionStatus _versionStatus = VersionStatus.Unknown;
     private CancellationTokenSource? _connectCts;
+    private DateTime? _connectedTime;
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
@@ -404,6 +405,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             else
                 await Diagnoser.Connect(clientConnect, cancellationToken);
 
+            // set connected time
+            _connectedTime = DateTime.Now;
+
             // update access token if ResponseAccessKey is set
             if (clientConnect.Client.ResponseAccessKey != null)
                 ClientProfileService.UpdateTokenByAccessKey(token, clientConnect.Client.ResponseAccessKey);
@@ -486,7 +490,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             CheckConnectionStateChanged();
 
             // check for any success
-            if (Client != null)
+            if (Client != null && _connectedTime!=null)
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
                 if (_lastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
@@ -521,6 +525,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             _lastSessionStatus = Client?.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
+            _connectedTime = null;
             ClientConnect = null;
             CheckConnectionStateChanged();
         }

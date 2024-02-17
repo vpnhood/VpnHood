@@ -261,10 +261,10 @@ public static class VhUtil
         return size.ToString("0");
     }
 
-    [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
     public static string FormatBits(long bytes)
     {
         bytes *= 8; //convertTo bit
+        // ReSharper disable PossibleLossOfFraction
 
         // Get absolute value
         if (bytes >= 0x40000000) // Gigabyte
@@ -278,6 +278,7 @@ public static class VhUtil
 
         if (bytes > 0) // Kilobyte
             return ((double)bytes).ToString("0 ") + "bps";
+        // ReSharper restore PossibleLossOfFraction
 
         // Byte
         return bytes.ToString("0");

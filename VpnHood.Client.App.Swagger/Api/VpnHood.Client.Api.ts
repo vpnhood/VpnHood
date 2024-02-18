@@ -209,8 +209,8 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getSubscriptionOrderByProviderOrderId(providerOrderId: string, cancelToken?: CancelToken): Promise<AppSubscriptionOrder> {
-        let url_ = this.baseUrl + "/api/account/subscription-order-by-provider-order-id?";
+    isSubscriptionOrderProcessed(providerOrderId: string, cancelToken?: CancelToken): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/account/order-process-state-by-provider-order-id?";
         if (providerOrderId === undefined || providerOrderId === null)
             throw new Error("The parameter 'providerOrderId' must be defined and cannot be null.");
         else
@@ -233,11 +233,11 @@ export class AccountClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetSubscriptionOrderByProviderOrderId(_response);
+            return this.processIsSubscriptionOrderProcessed(_response);
         });
     }
 
-    protected processGetSubscriptionOrderByProviderOrderId(response: AxiosResponse): Promise<AppSubscriptionOrder> {
+    protected processIsSubscriptionOrderProcessed(response: AxiosResponse): Promise<boolean> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -251,14 +251,15 @@ export class AccountClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppSubscriptionOrder.fromJS(resultData200);
-            return Promise.resolve<AppSubscriptionOrder>(result200);
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<boolean>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppSubscriptionOrder>(null as any);
+        return Promise.resolve<boolean>(null as any);
     }
 
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
@@ -1226,7 +1227,8 @@ export class AppAccount implements IAppAccount {
     userId!: string;
     name?: string | null;
     email?: string | null;
-    subscriptionPlanId?: string | null;
+    subscriptionId?: string | null;
+    providerPlanId?: string | null;
 
     constructor(data?: IAppAccount) {
         if (data) {
@@ -1242,7 +1244,8 @@ export class AppAccount implements IAppAccount {
             this.userId = _data["userId"] !== undefined ? _data["userId"] : <any>null;
             this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
             this.email = _data["email"] !== undefined ? _data["email"] : <any>null;
-            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
+            this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : <any>null;
+            this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : <any>null;
         }
     }
 
@@ -1258,7 +1261,8 @@ export class AppAccount implements IAppAccount {
         data["userId"] = this.userId !== undefined ? this.userId : <any>null;
         data["name"] = this.name !== undefined ? this.name : <any>null;
         data["email"] = this.email !== undefined ? this.email : <any>null;
-        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
+        data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : <any>null;
+        data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : <any>null;
         return data;
     }
 }
@@ -1267,51 +1271,8 @@ export interface IAppAccount {
     userId: string;
     name?: string | null;
     email?: string | null;
-    subscriptionPlanId?: string | null;
-}
-
-export class AppSubscriptionOrder implements IAppSubscriptionOrder {
-    providerPlanId!: string;
-    subscriptionId!: string;
-    isProcessed!: boolean;
-
-    constructor(data?: IAppSubscriptionOrder) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : <any>null;
-            this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : <any>null;
-            this.isProcessed = _data["isProcessed"] !== undefined ? _data["isProcessed"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): AppSubscriptionOrder {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppSubscriptionOrder();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : <any>null;
-        data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : <any>null;
-        data["isProcessed"] = this.isProcessed !== undefined ? this.isProcessed : <any>null;
-        return data;
-    }
-}
-
-export interface IAppSubscriptionOrder {
-    providerPlanId: string;
-    subscriptionId: string;
-    isProcessed: boolean;
+    subscriptionId?: string | null;
+    providerPlanId?: string | null;
 }
 
 export class AppConfig implements IAppConfig {

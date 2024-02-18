@@ -38,13 +38,13 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.Authentication.SignOut();
     }
 
-    [Route(HttpVerbs.Get, "/subscription-order-by-provider-order-id")]
-    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId([QueryField] string providerOrderId)
+    [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
+    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
     {
-        return AccountService.GetSubscriptionOrderByProviderOrderId(providerOrderId);
+        return AccountService.IsSubscriptionOrderProcessed(providerOrderId);
     }
 
-    [Route(HttpVerbs.Get, "/access-keys")]
+    [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]
     public Task<List<string>> GetAccessKeys([QueryField] string subscriptionId)
     {
         return AccountService.GetAccessKeys(subscriptionId);

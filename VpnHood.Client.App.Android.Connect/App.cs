@@ -17,7 +17,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions AppOptions => new()
     {
         Resources = VpnHoodAppResource.Resources,
-        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl
+        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
+        UiName = "VpnHoodConnect"
     };
 }
 

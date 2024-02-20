@@ -210,11 +210,10 @@ export class AccountClient {
     }
 
     isSubscriptionOrderProcessed(providerOrderId: string, cancelToken?: CancelToken): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/account/order-process-state-by-provider-order-id?";
+        let url_ = this.baseUrl + "/subscription-orders/providerOrderId:{providerOrderId}/is-processed";
         if (providerOrderId === undefined || providerOrderId === null)
-            throw new Error("The parameter 'providerOrderId' must be defined and cannot be null.");
-        else
-            url_ += "providerOrderId=" + encodeURIComponent("" + providerOrderId) + "&";
+            throw new Error("The parameter 'providerOrderId' must be defined.");
+        url_ = url_.replace("{providerOrderId}", encodeURIComponent("" + providerOrderId));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -263,11 +262,10 @@ export class AccountClient {
     }
 
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
-        let url_ = this.baseUrl + "/api/account/access-keys?";
+        let url_ = this.baseUrl + "/subscriptions/{subscriptionId}/access-keys";
         if (subscriptionId === undefined || subscriptionId === null)
-            throw new Error("The parameter 'subscriptionId' must be defined and cannot be null.");
-        else
-            url_ += "subscriptionId=" + encodeURIComponent("" + subscriptionId) + "&";
+            throw new Error("The parameter 'subscriptionId' must be defined.");
+        url_ = url_.replace("{subscriptionId}", encodeURIComponent("" + subscriptionId));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1346,6 +1344,7 @@ export class AppFeatures implements IAppFeatures {
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     updateInfoUrl?: string | null;
+    uiName?: string | null;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1363,6 +1362,7 @@ export class AppFeatures implements IAppFeatures {
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : <any>null;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
+            this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
         }
     }
 
@@ -1380,6 +1380,7 @@ export class AppFeatures implements IAppFeatures {
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : <any>null;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
+        data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
         return data;
     }
 }
@@ -1390,6 +1391,7 @@ export interface IAppFeatures {
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     updateInfoUrl?: string | null;
+    uiName?: string | null;
 }
 
 export class AppSettings implements IAppSettings {

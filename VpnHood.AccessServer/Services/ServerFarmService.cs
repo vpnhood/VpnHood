@@ -1,26 +1,24 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
+using VpnHood.AccessServer.Dtos.Certificate;
 using VpnHood.AccessServer.Dtos.ServerFarm;
-using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Utils;
+using AccessPointView = VpnHood.AccessServer.Dtos.ServerFarm.AccessPointView;
 
 namespace VpnHood.AccessServer.Services;
 
 public class ServerFarmService(
-    VhContext vhContext,
-    ServerService serverService,
     VhRepo vhRepo,
+    ServerConfigureService serverConfigureService,
     CertificateService certificateService,
-    AgentCacheClient agentCacheClient,
     HttpClient httpClient
     )
 {
@@ -86,50 +84,35 @@ public class ServerFarmService(
 
     public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams createParams)
     {
-        // check user quota
-        if (vhContext.ServerFarms.Count(x => x.ProjectId == projectId && !x.IsDeleted) >= QuotaConstants.ServerFarmCount)
-            throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
-
-        if (createParams.CertificateId == null && createParams.UseHostName)
-            throw new InvalidOperationException($"To set {nameof(createParams.UseHostName)} you must set {nameof(createParams.CertificateId)}.");
-
         // create default name
         createParams.ServerFarmName = createParams.ServerFarmName?.Trim();
         if (string.IsNullOrWhiteSpace(createParams.ServerFarmName)) createParams.ServerFarmName = Resource.NewServerFarmTemplate;
         if (createParams.ServerFarmName.Contains("##"))
         {
-            var names = await vhContext.ServerFarms
-                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-                .Select(x => x.ServerFarmName)
-                .ToArrayAsync();
-
+            var names = await vhRepo.ServerFarmNames(projectId);
             createParams.ServerFarmName = AccessServerUtil.FindUniqueName(createParams.ServerFarmName, names);
         }
 
         // Set ServerProfileId
-        var serverProfile = await vhContext.ServerProfiles
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => (createParams.ServerProfileId == null && x.IsDefault) || x.ServerProfileId == createParams.ServerProfileId);
+        var serverProfile = createParams.ServerProfileId != null
+            ? await vhRepo.ServerProfileGet(projectId, createParams.ServerProfileId.Value)
+            : await vhRepo.ServerProfileGetDefault(projectId);
 
-        // create a certificate if it is not given
-        var certificate = createParams.CertificateId != null
-            ? await vhRepo.CertificateGet(projectId, createParams.CertificateId.Value)
-            : await certificateService.CreateSelfSingedInternal(projectId);
-
+        var serverFarmId = Guid.NewGuid();
         var serverFarm = new ServerFarmModel
         {
             ProjectId = projectId,
             Servers = [],
-            ServerFarmId = Guid.NewGuid(),
+            ServerFarmId = serverFarmId,
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
-            Certificate = certificate,
             CreatedTime = DateTime.UtcNow,
             UseHostName = createParams.UseHostName,
             Secret = VhUtil.GenerateKey(),
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
-            PushTokenToClient = createParams.PushTokenToClient
+            PushTokenToClient = createParams.PushTokenToClient,
+            Certificates = [certificateService.BuildSelfSinged(projectId, serverFarmId, null)]
         };
 
         // update TokenJson
@@ -143,32 +126,19 @@ public class ServerFarmService(
 
     public async Task<ServerFarmData> Update(Guid projectId, Guid serverFarmId, ServerFarmUpdateParams updateParams)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, true, true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
         var reconfigure = false;
 
         // change other properties
         if (updateParams.ServerFarmName != null) serverFarm.ServerFarmName = updateParams.ServerFarmName.Value;
         if (updateParams.UseHostName != null) serverFarm.UseHostName = updateParams.UseHostName;
         if (updateParams.PushTokenToClient != null) serverFarm.PushTokenToClient = updateParams.PushTokenToClient;
-        if (updateParams.UseTokenV4 != null) serverFarm.UseTokenV4 = updateParams.UseTokenV4;
+        if (updateParams.TokenUrl != null) serverFarm.TokenUrl = updateParams.TokenUrl?.ToString();
 
+        // set secret
         if (updateParams.Secret != null && !updateParams.Secret.Value.SequenceEqual(serverFarm.Secret))
         {
             serverFarm.Secret = updateParams.Secret;
-            reconfigure = true;
-        }
-
-        if (updateParams.TokenUrl != null && updateParams.TokenUrl?.ToString() != serverFarm.TokenUrl)
-        {
-            serverFarm.TokenUrl = updateParams.TokenUrl?.ToString();
-            reconfigure = true;
-        }
-
-        if (updateParams.CertificateId != null && serverFarm.CertificateId != updateParams.CertificateId)
-        {
-            // makes sure that the certificate belongs to this project
-            var certificate = await vhRepo.CertificateGet(projectId, updateParams.CertificateId.Value);
-            serverFarm.CertificateId = certificate.CertificateId;
             reconfigure = true;
         }
 
@@ -181,18 +151,11 @@ public class ServerFarmService(
             reconfigure = true;
         }
 
-        // update host token
-        FarmTokenBuilder.UpdateIfChanged(serverFarm);
-
         // update
         await vhRepo.SaveChangesAsync();
 
         // update cache after save
-        if (reconfigure)
-            await serverService.ReconfigServers(projectId, serverFarmId: serverFarmId);
-        else
-            await agentCacheClient.InvalidateProjectServers(projectId, serverFarmId: serverFarmId);
-
+        await serverConfigureService.InvalidateServerFarm(projectId, serverFarmId, reconfigure);
         var ret = (await List(projectId, serverFarmId: serverFarmId)).Single();
         return ret;
     }
@@ -201,31 +164,9 @@ public class ServerFarmService(
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = vhContext.ServerFarms
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
-            .Where(x =>
-                string.IsNullOrEmpty(search) ||
-                x.ServerFarmName.Contains(search) ||
-                x.ServerFarmId.ToString() == search)
-            .Select(x => new
-            {
-                ServerFarm = x,
-                x.ServerProfile!.ServerProfileName,
-                Certificate = new
-                {
-                    x.Certificate!.CommonName,
-                    x.Certificate.ExpirationTime
-                }
-            })
-            .OrderByDescending(x => x.ServerFarm.ServerFarmName)
-            .Skip(recordIndex)
-            .Take(recordCount)
-            .AsNoTracking();
-
-        var serverFarms = await query.ToArrayAsync();
-        var accessPoints = await GetPublicInTokenAccessPoints(serverFarms.Select(x => x.ServerFarm.ServerFarmId));
-        var dtos = serverFarms
+        var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, serverFarmId: serverFarmId, recordIndex: recordIndex, recordCount: recordCount);
+        var accessPoints = await GetPublicInTokenAccessPoints(farmViews.Select(x => x.ServerFarm.ServerFarmId));
+        var dtos = farmViews
             .Select(x => new ServerFarmData
             {
                 ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
@@ -237,33 +178,19 @@ public class ServerFarmService(
         return dtos.ToArray();
     }
 
-    public async Task<ServerFarmAccessPoint[]> GetPublicInTokenAccessPoints(IEnumerable<Guid> farmIds)
+    private async Task<AccessPointView[]> GetPublicInTokenAccessPoints(IEnumerable<Guid> farmIds)
     {
-        var query = vhContext.Servers
-            .Where(x => farmIds.Contains(x.ServerFarmId))
-            .AsNoTracking()
-            .Select(x => new
-            {
-                x.ServerFarmId,
-                x.ServerId,
-                x.ServerName,
-                x.AccessPoints
-            });
+        var farmAccessPoints = await vhRepo.AccessPointListByFarms(farmIds);
+        var items = new List<AccessPointView>();
 
-        var servers = await query
-            .AsNoTracking()
-            .ToArrayAsync();
-
-        var items = new List<ServerFarmAccessPoint>();
-
-        foreach (var server in servers)
-            items.AddRange(server.AccessPoints
-                .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
-                .Select(accessPoint => new ServerFarmAccessPoint
+        foreach (var farmAccessPoint in farmAccessPoints)
+            items.AddRange(farmAccessPoint.AccessPoints
+                .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
+                .Select(accessPoint => new AccessPointView
                 {
-                    ServerFarmId = server.ServerFarmId,
-                    ServerId = server.ServerId,
-                    ServerName = server.ServerName,
+                    ServerFarmId = farmAccessPoint.ServerFarmId,
+                    ServerId = farmAccessPoint.ServerId,
+                    ServerName = farmAccessPoint.ServerName,
                     TcpEndPoint = new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)
                 }));
 
@@ -274,38 +201,13 @@ public class ServerFarmService(
         Guid? serverFarmId = null,
         int recordIndex = 0, int recordCount = int.MaxValue)
     {
-        var query = vhContext.ServerFarms
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
-            .Where(x =>
-                string.IsNullOrEmpty(search) ||
-                x.ServerFarmName.Contains(search) ||
-                x.ServerFarmId.ToString().StartsWith(search))
-            .Select(x => new
-            {
-                ServerFarm = x,
-                x.ServerProfile!.ServerProfileName,
-                Certificate = new 
-                {
-                    x.Certificate!.CommonName,
-                    x.Certificate.ExpirationTime
-                },
-                ServerCount = x.Servers!.Count(y => !y.IsDeleted),
-                AccessTokens = x.AccessTokens!.Select(y => new { y.IsDeleted, y.FirstUsedTime, y.LastUsedTime }).ToArray()
-            });
-
-        // get farms
-        var results = await query
-            .OrderBy(x => x.ServerFarm.ServerFarmName)
-            .Skip(recordIndex)
-            .Take(recordCount)
-            .AsNoTracking()
-            .ToArrayAsync();
+        var farmViews = await vhRepo.ServerFarmListView(projectId, search: search, includeSummary: true,
+            serverFarmId: serverFarmId, recordIndex: recordIndex, recordCount: recordCount);
 
         // create result
-        var accessPoints = await GetPublicInTokenAccessPoints(results.Select(x => x.ServerFarm.ServerFarmId));
+        var accessPoints = await GetPublicInTokenAccessPoints(farmViews.Select(x => x.ServerFarm.ServerFarmId));
         var now = DateTime.UtcNow;
-        var ret = results.Select(x => new ServerFarmData
+        var ret = farmViews.Select(x => new ServerFarmData
         {
             ServerFarm = x.ServerFarm.ToDto(x.ServerProfileName),
             CertificateCommonName = x.Certificate.CommonName,
@@ -313,11 +215,11 @@ public class ServerFarmService(
             AccessPoints = accessPoints.Where(y => y.ServerFarmId == x.ServerFarm.ServerFarmId),
             Summary = new ServerFarmSummary
             {
-                ActiveTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime >= now.AddDays(-7)),
-                InactiveTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.LastUsedTime < now.AddDays(-7)),
-                UnusedTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted && accessToken.FirstUsedTime == null),
-                TotalTokenCount = x.AccessTokens.Count(accessToken => !accessToken.IsDeleted),
-                ServerCount = x.ServerCount
+                ActiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime >= now.AddDays(-7)),
+                InactiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime < now.AddDays(-7)),
+                UnusedTokenCount = x.AccessTokens!.Count(accessToken => accessToken.FirstUsedTime == null),
+                TotalTokenCount = x.AccessTokens!.Count(),
+                ServerCount = x.ServerCount!.Value
             }
         });
 
@@ -326,11 +228,8 @@ public class ServerFarmService(
 
     public async Task Delete(Guid projectId, Guid serverFarmId)
     {
-        var serverFarm = await vhContext.ServerFarms
-            .Include(x => x.Servers!.Where(y => !y.IsDeleted))
-            .Include(x => x.AccessTokens)
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.ProjectId == projectId && x.ServerFarmId == serverFarmId);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId,
+            serverFarmId: serverFarmId, includeServers: true, includeAccessTokens: true);
 
         if (serverFarm.Servers!.Any())
             throw new InvalidOperationException("A farm with a server can not be deleted.");
@@ -339,7 +238,7 @@ public class ServerFarmService(
         foreach (var accessToken in serverFarm.AccessTokens!)
             accessToken.IsDeleted = true;
 
-        await vhContext.SaveChangesAsync();
+        await vhRepo.SaveChangesAsync();
     }
 
     public async Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
@@ -350,5 +249,28 @@ public class ServerFarmService(
 
         var farmToken = FarmTokenBuilder.GetUsableToken(serverFarm);
         return farmToken.Encrypt();
+    }
+
+    public async Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
+    {
+        var farm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificate: true);
+        farm.Certificate = certificateService.BuildByImport(serverFarmId, importParams);
+        await vhRepo.SaveChangesAsync();
+        return farm.Certificate.ToDto();
+    }
+
+    public async Task<Certificate> ReplaceCertificate(Guid projectId, Guid serverFarmId, CertificateCreateParams createParams)
+    {
+        var farm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificate: true);
+        farm.Certificate = certificateService.BuildSelfSinged(serverFarmId, createParams);
+        await vhRepo.SaveChangesAsync();
+        return farm.Certificate!.ToDto();
+    }
+
+    public async Task<Certificate> RenewCertificate(Guid projectId, Guid serverFarmId)
+    {
+        var farm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificate: true);
+        _ = certificateService.Renew(projectId, serverFarmId, CancellationToken.None);
+        return farm.Certificate!.ToDto();
     }
 }

@@ -91,11 +91,6 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
             SupportId = accessToken.SupportCode.ToString()
         };
 
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (!accessToken.ServerFarm!.UseTokenV4)
-            return TokenV3.FromToken(token).ToAccessKey();
-#pragma warning restore CS0618 // Type or member is obsolete
-
         return token.ToAccessKey();
     }
 

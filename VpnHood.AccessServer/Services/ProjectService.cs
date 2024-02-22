@@ -42,18 +42,24 @@ public class ProjectService(
         // Farm
         var serverFarm = new ServerFarmModel
         {
-            Servers = [],
+            ProjectId = projectId,
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
             UseHostName = false,
-            Certificate = await certificateService.CreateSelfSingedInternal(projectId),
+            ServerProfileId = serverProfile.ServerProfileId,
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
-            TokenUrl = null
+            TokenUrl = null,
+            PushTokenToClient = true,
+            Servers = [],
         };
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
+
+        // create certificate
+        var certificate = certificateService.BuildSelfSinged(projectId, serverFarm.ServerFarmId, null);
+        serverFarm.Certificates = [certificate];
 
         // create project
         var project = new ProjectModel

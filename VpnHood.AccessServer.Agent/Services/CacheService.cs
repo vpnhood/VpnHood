@@ -18,7 +18,7 @@ public class CacheService(
     private class MemCache
     {
         public ConcurrentDictionary<Guid, ProjectCache> Projects = new();
-        public ConcurrentDictionary<Guid, ServerFarmCache> Farms = new();
+        public ConcurrentDictionary<Guid, ServerFarmCache> ServerFarms = new();
         public ConcurrentDictionary<Guid, ServerCache> Servers = new();
         public ConcurrentDictionary<long, SessionCache> Sessions = new();
         public ConcurrentDictionary<Guid, AccessCache> Accesses = new();
@@ -38,7 +38,7 @@ public class CacheService(
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
         var agentInit = await vhAgentRepo.GetInitView(minServerUsedTime);
         Mem.Projects = new ConcurrentDictionary<Guid, ProjectCache>(agentInit.Projects.ToDictionary(x => x.ProjectId));
-        Mem.Farms = new ConcurrentDictionary<Guid, ServerFarmCache>(agentInit.Farms.ToDictionary(x => x.ServerFarmId));
+        Mem.ServerFarms = new ConcurrentDictionary<Guid, ServerFarmCache>(agentInit.Farms.ToDictionary(x => x.ServerFarmId));
         Mem.Servers = new ConcurrentDictionary<Guid, ServerCache>(agentInit.Servers.ToDictionary(x => x.ServerId));
         Mem.Sessions = new ConcurrentDictionary<long, SessionCache>(agentInit.Sessions.ToDictionary(x => x.SessionId));
         Mem.Accesses = new ConcurrentDictionary<Guid, AccessCache>(agentInit.Accesses.ToDictionary(x => x.AccessId));
@@ -88,15 +88,15 @@ public class CacheService(
 
     public async Task<ServerFarmCache> GetFarm(Guid farmId)
     {
-        if (Mem.Farms.TryGetValue(farmId, out var farm))
+        if (Mem.ServerFarms.TryGetValue(farmId, out var farm))
             return farm;
 
         using var farmsLock = await AsyncLock.LockAsync($"cache_farm_{farmId}");
-        if (Mem.Farms.TryGetValue(farmId, out farm))
+        if (Mem.ServerFarms.TryGetValue(farmId, out farm))
             return farm;
 
         farm = await vhAgentRepo.GetFarm(farmId);
-        Mem.Farms.TryAdd(farmId, farm);
+        Mem.ServerFarms.TryAdd(farmId, farm);
         return farm;
     }
 
@@ -157,21 +157,35 @@ public class CacheService(
         return Task.CompletedTask;
     }
 
-    public async Task InvalidateProjectServers(Guid projectId,
-        Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public async Task InvalidateServers(Guid? projectId = null, Guid? serverFarmId = null,
+        Guid? serverProfileId = null, Guid? serverId = null)
     {
-        var servers = Mem.Servers.Values.Where(server =>
-            server.ProjectId == projectId &&
-            (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-            (serverProfileId == null || server.ServerProfileId == serverProfileId));
+        var serverIds = Mem.Servers.Values
+            .Where(server => server.ProjectId == projectId || projectId == null)
+            .Where(server => server.ServerFarmId == serverFarmId || serverFarmId == null)
+            .Where(server => server.ServerProfileId == serverProfileId || serverProfileId == null)
+            .Where(server => server.ServerId == serverId || serverId == null)
+            .Select(x => x.ServerId)
+            .ToArray();
 
-        await InvalidateServers(servers.Select(x => x.ServerId).ToArray());
+        await InvalidateServers(serverIds);
     }
 
     public Task InvalidateProject(Guid projectId)
     {
         Mem.Projects.TryRemove(projectId, out _);
         return Task.CompletedTask;
+    }
+
+    public Task InvalidateServerFarm(Guid serverFarmId)
+    {
+        Mem.ServerFarms.TryRemove(serverFarmId, out _);
+        var serverIds = Mem.Servers.Values
+            .Where(x => x.ServerFarmId == serverFarmId)
+            .Select(x => x.ServerId)
+            .ToArray();
+
+        return InvalidateServers(serverIds);
     }
 
     public Task InvalidateServer(Guid serverId)

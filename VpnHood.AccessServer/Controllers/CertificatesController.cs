@@ -8,53 +8,42 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Route("/api/v{version:apiVersion}/projects/{projectId}/certificates")]
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/")]
 [Authorize]
 public class CertificatesController(
     CertificateService certificateService,
-    SubscriptionService subscriptionService) 
+    SubscriptionService subscriptionService)
     : ControllerBase
 {
-    [HttpPost("self-signed")]
+    [HttpPost("server-farms/{serverFarmId:guid}/certificates")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> CreateBySelfSigned(Guid projectId, CertificateSelfSignedParams? createParams = null)
+    public async Task<Certificate> Create(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams = null)
     {
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
         await subscriptionService.AuthorizeAddCertificate(projectId);
 
-        var ret = await certificateService.CreateSelfSinged(projectId, createParams);
-        return ret;
-    }
-
-    [HttpPost("trusted")]
-    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> CreateTrusted(Guid projectId, CertificateSigningRequest csr)
-    {
-        // check user quota
-        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
-        await subscriptionService.AuthorizeAddCertificate(projectId);
-        var ret = await certificateService.CreateTrusted(projectId, csr);
+        var ret = await certificateService.Create(projectId, serverFarmId, createParams);
         return ret;
     }
 
 
-    [HttpPost("import")]
+    [HttpPost("server-farms/{serverFarmId:guid}/certificates/import")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public async Task<Certificate> CreateByImport(Guid projectId, CertificateImportParams importParams)
+    public async Task<Certificate> CreateByImport(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateCertificate");
         await subscriptionService.AuthorizeAddCertificate(projectId);
 
-        var ret = await certificateService.CreateByImport(projectId, importParams);
+        var ret = await certificateService.Import(projectId, serverFarmId, importParams);
         return ret;
     }
 
-    [HttpGet("{certificateId}")]
+    [HttpGet("{certificateId:guid}")]
     [AuthorizeProjectPermission(Permissions.CertificateRead)]
-    public Task<CertificateData> Get(Guid projectId, Guid certificateId, bool includeSummary = false)
+    public Task<Certificate> Get(Guid projectId, Guid certificateId)
     {
-        return certificateService.Get(projectId, certificateId, includeSummary);
+        return certificateService.Get(projectId, certificateId);
     }
 
     [HttpDelete("{certificateId}")]
@@ -66,10 +55,8 @@ public class CertificatesController(
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.CertificateRead)]
-    public Task<IEnumerable<CertificateData>> List(Guid projectId, string? search = null, bool includeSummary = false,
-        int recordIndex = 0, int recordCount = 300)
+    public Task<IEnumerable<Certificate>> List(Guid projectId, Guid serverFarmId)
     {
-        return certificateService.List(projectId, search, includeSummary: includeSummary,
-            recordIndex: recordIndex, recordCount: recordCount);
+        return certificateService.List(projectId, serverFarmId);
     }
 }

@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class CertificateConverter
 {
-    public static Certificate ToDto(this CertificateModel model, bool withRawData = false)
+    public static Certificate ToDto(this CertificateModel model)
     {
         var certificate = new Certificate
         {
@@ -14,10 +14,15 @@ public static class CertificateConverter
             CommonName = model.CommonName,
             IssueTime = model.IssueTime,
             ExpirationTime = model.ExpirationTime,
-            IsVerified = model.IsVerified,
+            IsTrusted = model.IsTrusted,
             Thumbprint = model.Thumbprint,
             SubjectName = model.SubjectName,
-            RawData = withRawData ? model.RawData : null
+            AutoRenew = model.AutoRenew,
+            RenewInprogress = model.RenewInprogress,
+            RenewCount = model.RenewCount,
+            RenewError = model.RenewError,
+            RenewErrorTime = model.RenewErrorTime,
+            RenewErrorCount = model.RenewErrorCount,
         };
         return certificate;
     }

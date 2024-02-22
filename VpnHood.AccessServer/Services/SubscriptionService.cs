@@ -1,7 +1,6 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
 using GrayMint.Authorization.UserManagement.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Dtos.Certificate;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
@@ -22,6 +21,12 @@ public class SubscriptionService(
         if (userRoles.Count(x => x.Role.RoleName == Roles.ProjectOwner.RoleName) >= QuotaConstants.ProjectCount)
             throw new QuotaException(nameof(vhContext.Projects), QuotaConstants.ProjectCount,
                 $"You can not be owner of more than {QuotaConstants.ProjectCount} projects.");
+    }
+
+    public async Task AuthorizeCreateServerFarm(Guid projectId)
+    {
+        if (await IsFreePlan(projectId) && (await vhRepo.ServerFarmNames(projectId)).Length >= QuotaConstants.ServerFarmCount)
+            throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
     }
 
     public async Task AuthorizeCreateServer(Guid projectId)

@@ -11,7 +11,6 @@ public static class ServerFarmConverter
         {
             ServerFarmName = model.ServerFarmName,
             ServerFarmId = model.ServerFarmId,
-            CertificateId = model.CertificateId,
             UseHostName = model.UseHostName,
             CreatedTime = model.CreatedTime,
             ServerProfileId = model.ServerProfileId,
@@ -19,7 +18,6 @@ public static class ServerFarmConverter
             Secret = model.Secret,
             TokenUrl = string.IsNullOrEmpty(model.TokenUrl) ? null : new Uri(model.TokenUrl),
             PushTokenToClient = model.PushTokenToClient,
-            UseTokenV4 = model.UseTokenV4
         };
 
         return dto;

@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class ServerProfileService(
     VhContext vhContext,
-    ServerService serverService)
+    ServerConfigureService serverConfigureService)
 {
     public async Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
     {
@@ -69,7 +69,7 @@ public class ServerProfileService(
         await vhContext.SaveChangesAsync();
 
         // update cache after save
-        await serverService.ReconfigServers(projectId, serverProfileId: serverProfileId);
+        await serverConfigureService.ReconfigServers(projectId, serverProfileId: serverProfileId);
 
         return model.ToDto();
     }

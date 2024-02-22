@@ -13,6 +13,7 @@ using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
+using VpnHood.AccessServer.Services.Acme;
 
 namespace VpnHood.AccessServer;
 
@@ -51,21 +52,22 @@ public class Program
             httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
         });
 
-        builder.Services.AddHttpClient();
-        builder.Services.AddHostedService<TimedHostedService>();
-        builder.Services.AddScoped<VhRepo>();
-        builder.Services.AddScoped<SyncService>();
-        builder.Services.AddScoped<ProjectService>();
-        builder.Services.AddScoped<ServerFarmService>();
-        builder.Services.AddScoped<ServerProfileService>();
-        builder.Services.AddScoped<ServerService>();
-        builder.Services.AddScoped<SubscriptionService>();
-        builder.Services.AddScoped<CertificateService>();
-        builder.Services.AddScoped<CertificateSignerService>();
-        builder.Services.AddScoped<UsageCycleService>();
-        builder.Services.AddScoped<AgentCacheClient>();
-        builder.Services.AddScoped<AgentSystemClient>();
-        builder.Services.AddScoped<AccessTokensService>();
+        builder.Services
+            .AddHttpClient()
+            .AddHostedService<TimedHostedService>()
+            .AddScoped<VhRepo>()
+            .AddScoped<SyncService>()
+            .AddScoped<ProjectService>()
+            .AddScoped<ServerFarmService>()
+            .AddScoped<ServerProfileService>()
+            .AddScoped<ServerService>()
+            .AddScoped<SubscriptionService>()
+            .AddScoped<CertificateService>()
+            .AddScoped<UsageCycleService>()
+            .AddScoped<AgentCacheClient>()
+            .AddScoped<AgentSystemClient>()
+            .AddScoped<AccessTokensService>()
+            .AddSingleton<AcmeOrderFactory>();
 
         // Report Service
         builder.Services.AddVhReportServices(new ReportServiceOptions
@@ -90,7 +92,7 @@ public class Program
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
-        
+
         await GrayMintApp.RunAsync(webApp, args);
     }
 }

@@ -8,7 +8,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerConverter
 {
-    public static VpnServer ToDto(this ServerModel model, ServerCache? serverCached)
+    public static VpnServer ToDto(this ServerModel model, ServerCache? serverCache)
     {
         var serverState = model.ConfigureTime == null ? ServerState.NotInstalled : ServerState.Lost;
 
@@ -25,8 +25,8 @@ public static class ServerConverter
             MachineName = model.MachineName,
             OsInfo = model.OsInfo,
             ServerId = model.ServerId,
-            ServerStatus = serverCached?.ServerStatus?.ToDto(),
-            ServerState = serverCached?.ServerState ?? serverState,
+            ServerStatus = serverCache?.ServerStatus?.ToDto(),
+            ServerState = serverCache?.ServerState ?? serverState,
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
             LogicalCoreCount = model.LogicalCoreCount,

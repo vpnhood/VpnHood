@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Dtos.Server;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
@@ -23,6 +24,7 @@ public class ServerService(
     VhContext vhContext,
     IOptions<AppOptions> appOptions,
     AgentCacheClient agentCacheClient,
+    ServerConfigureService serverConfigureService,
     SubscriptionService subscriptionService,
     AgentSystemClient agentSystemClient)
 {
@@ -89,7 +91,7 @@ public class ServerService(
 
         // validate
         var server = await vhRepo.ServerGet(projectId, serverId);
-        var oldConfigCode = server.ConfigCode;
+        var oldServerFarmId = server.ServerFarmId;
 
         if (updateParams.ServerFarmId != null)
         {
@@ -106,23 +108,20 @@ public class ServerService(
             server.AccessPoints = ValidateAccessPoints(updateParams.AccessPoints);
         }
 
-        // reconfig if required
-        if (updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.AccessPoints != null || updateParams.ServerFarmId != null)
-            server.ConfigCode = Guid.NewGuid();
-
         await vhRepo.SaveChangesAsync();
 
-        // update FarmToken if config has been changed
-        if (oldConfigCode != server.ConfigCode)
+        // reconfig old farm if required
+        if (oldServerFarmId != server.ServerFarmId)
         {
-            var serverFarm = await vhRepo.ServerFarmGet(projectId, server.ServerFarmId, true, true);
+            var serverFarm = await vhRepo.ServerFarmGet(projectId, oldServerFarmId, includeServers: true, includeCertificate: true);
             FarmTokenBuilder.UpdateIfChanged(serverFarm);
             await vhRepo.SaveChangesAsync();
         }
 
-        await agentCacheClient.InvalidateServer(server.ServerId);
-        var serverCached = await agentCacheClient.GetServer(server.ServerId);
-        return server.ToDto(serverCached);
+        // reconfig current server if required
+        var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.ServerFarmId != null;
+        var serverCache = await serverConfigureService.InvalidateServer(projectId, serverId, reconfigure);
+        return server.ToDto(serverCache);
     }
 
     public async Task<ServerData[]> List(Guid projectId,
@@ -299,25 +298,6 @@ public class ServerService(
         return usageSummary;
     }
 
-    public async Task ReconfigServers(Guid projectId, Guid? serverFarmId = null,
-        Guid? serverProfileId = null, Guid? certificateId = null)
-    {
-        var servers = await vhContext.Servers.Where(server =>
-            server.ProjectId == projectId &&
-            (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-            (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId) &&
-            (certificateId == null || server.ServerFarm!.CertificateId == certificateId))
-            .ToArrayAsync();
-
-        foreach (var server in servers)
-            server.ConfigCode = Guid.NewGuid();
-
-        await vhContext.SaveChangesAsync();
-        await agentCacheClient.InvalidateProjectServers(projectId,
-            serverFarmId: serverFarmId,
-            serverProfileId: serverProfileId);
-    }
-
     public async Task Delete(Guid projectId, Guid serverId)
     {
         var server = await vhContext.Servers
@@ -326,17 +306,6 @@ public class ServerService(
 
         server.IsDeleted = true;
         await vhContext.SaveChangesAsync();
-    }
-
-    public async Task Reconfigure(Guid projectId, Guid serverId)
-    {
-        var server = await vhContext.Servers
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.ServerId == serverId);
-
-        server.ConfigCode = Guid.NewGuid();
-        await vhContext.SaveChangesAsync();
-        await agentCacheClient.InvalidateServer(server.ServerId);
     }
 
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
@@ -436,4 +405,8 @@ public class ServerService(
         return script;
     }
 
+    public Task<ServerCache?> Reconfigure(Guid projectId, Guid serverId)
+    {
+        return serverConfigureService.InvalidateServer(projectId: projectId, serverId: serverId, false);
+    }
 }

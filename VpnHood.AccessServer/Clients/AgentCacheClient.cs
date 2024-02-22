@@ -17,25 +17,28 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
     }
 
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
+    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? serverId = null)
     {
         var parameters = new Dictionary<string, object?>
         {
+            [nameof(projectId)] = projectId,
             [nameof(serverFarmId)] = serverFarmId,
-            [nameof(serverProfileId)] = serverProfileId
+            [nameof(serverProfileId)] = serverProfileId,
+            [nameof(serverId)] = serverId
         };
 
-        return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", parameters, null);
+        return HttpPostAsync($"/api/cache/servers/invalidate", parameters, null);
     }
 
     public Task<ServerCache[]> GetServers(Guid projectId, Guid? serverFarmId = null)
     {
         var parameters = new Dictionary<string, object?>
         {
-            [nameof(serverFarmId)] = serverFarmId,
+            [nameof(projectId)] = projectId,
+            [nameof(serverFarmId)] = serverFarmId
         };
 
-        return HttpGetAsync<ServerCache[]>($"/api/cache/projects/{projectId}/servers", parameters);
+        return HttpGetAsync<ServerCache[]>($"/api/cache/servers", parameters);
     }
 
     public Task<ServerCache?> GetServer(Guid serverId)
@@ -43,9 +46,10 @@ public class AgentCacheClient : ApiClientBase
         return HttpGetAsync<ServerCache?>($"/api/cache/servers/{serverId}");
     }
 
-    public Task InvalidateServer(Guid serverId)
+
+    public Task InvalidateServerFarm(Guid serverFarmId)
     {
-        return HttpPostAsync($"/api/cache/servers/{serverId}/invalidate", null, null);
+        return HttpPostAsync($"/api/cache/server-farms/{serverFarmId}/invalidate", null, null);
     }
 
     public Task<SessionCache> GetSession(long sessionId)

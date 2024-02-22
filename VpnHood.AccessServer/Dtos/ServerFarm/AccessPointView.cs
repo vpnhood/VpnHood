@@ -4,7 +4,7 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.Dtos.ServerFarm;
 
-public class ServerFarmAccessPoint
+public class AccessPointView
 {
     public required Guid ServerFarmId { get; init; }
     public required Guid ServerId { get; init; }

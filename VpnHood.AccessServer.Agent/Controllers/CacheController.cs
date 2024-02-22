@@ -11,45 +11,45 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 public class CacheController(CacheService cacheService)
     : ControllerBase
 {
-    [HttpGet("projects/{projectId}/servers")]
-    public async Task<ServerCache[]> GetServers(Guid projectId, Guid? serverFarmId = null)
-    {
-        var servers = (await cacheService.GetServers())
-            .Where(x => x.ProjectId == projectId)
-            .Where(x => serverFarmId ==null || x.ServerFarmId == serverFarmId)
-            .ToArray();
-
-        return servers;
-    }
-
-    [HttpPost("projects/{projectId}/invalidate")]
+    [HttpPost("projects/{projectId:guid}/invalidate")]
     public Task InvalidateProject(Guid projectId)
     {
         return cacheService.InvalidateProject(projectId);
     }
 
-    [HttpPost("projects/{projectId}/invalidate-servers")]
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
-    {
-        return cacheService.InvalidateProjectServers(projectId: projectId, 
-            serverFarmId: serverFarmId, 
-            serverProfileId: serverProfileId);
-    }
-
-    [HttpGet("servers/{serverId}")]
+    [HttpGet("servers/{serverId:guid}")]
     public async Task<ServerCache?> GetServer(Guid serverId)
     {
         var server = await cacheService.GetServer(serverId);
         return server;
     }
 
-    [HttpPost("servers/{serverId}/invalidate")]
-    public Task InvalidateServer(Guid serverId)
+    [HttpGet("projects/servers")]
+    public async Task<ServerCache[]> GetServers(Guid? projectId = null, Guid? serverFarmId = null)
     {
-        return cacheService.InvalidateServer(serverId);
+        var servers = (await cacheService.GetServers())
+            .Where(x => x.ProjectId == projectId || projectId == null)
+            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
+            .ToArray();
+
+        return servers;
     }
 
-    [HttpGet("sessions/{sessionId}")]
+
+    [HttpPost("servers/invalidate")]
+    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? serverId = null)
+    {
+        return cacheService.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId,
+            serverProfileId: serverProfileId, serverId: serverId);
+    }
+
+    [HttpPost("server-farms/{serverFarmId:guid}")]
+    public Task InvalidateServerFarm(Guid serverFarmId)
+    {
+        return cacheService.InvalidateServerFarm(serverFarmId);
+    }
+
+    [HttpGet("sessions/{sessionId:long}")]
     public async Task<SessionCache> GetSession(long sessionId)
     {
         var session = await cacheService.GetSession(null, sessionId);

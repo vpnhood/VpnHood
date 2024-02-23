@@ -25,7 +25,8 @@ public partial class App : Application
             VpnHoodApp.Init(new WinDivertDevice(), new AppOptions
             {
                 Resources = VpnHoodAppResource.Resources,
-                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json")
+                UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
+                IsAddServerSupported = true
             });
 
             // initialize SPA

@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using GrayMint.Common.Generics;
+﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Views;
@@ -8,7 +7,6 @@ namespace VpnHood.AccessServer.Persistence;
 
 public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
 {
-
     public Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
         bool includeServers = false, bool includeCertificate = false, bool includeAccessTokens = false)
     {
@@ -195,7 +193,6 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
             .SingleAsync();
 
         certificate.IsDeleted = true;
-        await vhContext.SaveChangesAsync();
     }
 
     public Task<ProjectModel> ProjectGet(Guid projectId, bool includeLetsEncryptAccount = false)

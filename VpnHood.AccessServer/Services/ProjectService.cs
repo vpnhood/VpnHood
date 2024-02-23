@@ -19,8 +19,7 @@ public class ProjectService(
     SubscriptionService subscriptionService,
     AgentCacheClient agentCacheClient,
     ReportUsageService usageReportService,
-    IRoleProvider roleProvider,
-    CertificateService certificateService)
+    IRoleProvider roleProvider)
 {
     public async Task<Project> Create(string ownerUserId)
     {
@@ -58,7 +57,7 @@ public class ProjectService(
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
 
         // create certificate
-        var certificate = certificateService.BuildSelfSinged(projectId, serverFarm.ServerFarmId, null);
+        var certificate = CertificateHelper.BuildSelfSinged(projectId, serverFarm.ServerFarmId, createParams: null);
         serverFarm.Certificates = [certificate];
 
         // create project

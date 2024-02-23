@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Certificate;
 using VpnHood.AccessServer.Dtos.ServerFarm;
@@ -112,7 +111,7 @@ public class ServerFarmService(
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = createParams.PushTokenToClient,
-            Certificates = [certificateService.BuildSelfSinged(projectId, serverFarmId, null)]
+            Certificates = [CertificateHelper.BuildSelfSinged(projectId, serverFarmId: serverFarmId, createParams: null)]
         };
 
         // update TokenJson
@@ -254,7 +253,7 @@ public class ServerFarmService(
     public async Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
     {
         var farm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificate: true);
-        farm.Certificate = certificateService.BuildByImport(serverFarmId, importParams);
+        farm.Certificate = CertificateHelper.BuildByImport(projectId, serverFarmId: serverFarmId, importParams: importParams);
         await vhRepo.SaveChangesAsync();
         return farm.Certificate.ToDto();
     }
@@ -262,7 +261,7 @@ public class ServerFarmService(
     public async Task<Certificate> ReplaceCertificate(Guid projectId, Guid serverFarmId, CertificateCreateParams createParams)
     {
         var farm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificate: true);
-        farm.Certificate = certificateService.BuildSelfSinged(serverFarmId, createParams);
+        farm.Certificate = CertificateHelper.BuildSelfSinged(projectId, serverFarmId: serverFarmId, createParams: createParams);
         await vhRepo.SaveChangesAsync();
         return farm.Certificate!.ToDto();
     }

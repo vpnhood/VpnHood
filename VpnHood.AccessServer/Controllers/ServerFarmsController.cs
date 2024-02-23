@@ -37,27 +37,6 @@ public class ServerFarmsController(
         return serverFarmService.Update(projectId, serverFarmId, updateParams);
     }
 
-    [HttpPost("{serverFarmId:guid}/certificate/import")]
-    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
-    {
-        return serverFarmService.ImportCertificate(projectId, serverFarmId, importParams);
-    }
-
-    [HttpPost("{serverFarmId:guid}/certificate/replace")]
-    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateCreateParams createParams)
-    {
-        return serverFarmService.ReplaceCertificate(projectId, serverFarmId, createParams);
-    }
-
-    [HttpPost("{serverFarmId:guid}/certificate/renew")]
-    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> RenewCertificate(Guid projectId, Guid serverFarmId)
-    {
-        return serverFarmService.RenewCertificate(projectId, serverFarmId);
-    }
-
     [HttpGet("{serverFarmId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<ServerFarmData> Get(Guid projectId, Guid serverFarmId, bool includeSummary = false)
@@ -96,5 +75,26 @@ public class ServerFarmsController(
     public Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
     {
         return serverFarmService.GetEncryptedToken(projectId, serverFarmId);
+    }
+
+    [HttpPost("{serverFarmId:guid}/certificate/import")]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
+    public Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
+    {
+        return serverFarmService.ImportCertificate(projectId, serverFarmId, importParams);
+    }
+
+    [HttpPost("{serverFarmId:guid}/certificate/replace")]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
+    public Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateCreateParams createParams)
+    {
+        return serverFarmService.ReplaceCertificate(projectId, serverFarmId, createParams);
+    }
+
+    [HttpPost("{serverFarmId:guid}/certificate/renew")]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
+    public Task<Certificate> RenewCertificate(Guid projectId, Guid serverFarmId)
+    {
+        return serverFarmService.RenewCertificate(projectId, serverFarmId);
     }
 }

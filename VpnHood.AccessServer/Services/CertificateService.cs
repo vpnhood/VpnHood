@@ -4,7 +4,6 @@ using VpnHood.AccessServer.Dtos.Certificate;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Services.Acme;
-using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -19,8 +18,15 @@ public class CertificateService(
 
     public async Task<Certificate> Create(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId); // make sure farm belong to this project
-        var certificate = BuildSelfSinged(serverFarm.ProjectId, serverFarm.ServerFarmId, createParams);
+        // make sure farm belong to this project
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
+
+        // remove all farm certificates
+        var certificates = await vhRepo.CertificateList(projectId, serverFarmId: serverFarmId);
+        foreach (var cert in certificates)
+            await vhRepo.CertificateDelete(projectId, cert.CertificateId);
+
+        var certificate = CertificateHelper.BuildSelfSinged(serverFarm.ProjectId, serverFarmId: serverFarm.ServerFarmId, createParams: createParams);
         await vhRepo.AddAsync(certificate);
         await vhRepo.SaveChangesAsync();
         return certificate.ToDto();
@@ -28,8 +34,16 @@ public class CertificateService(
 
     public async Task<Certificate> Import(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId); // make sure farm belong to this project
-        var certificate = BuildByImport(serverFarm.ProjectId, serverFarm.ServerFarmId, importParams);
+        // make sure farm belong to this project
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
+
+        // remove all farm certificates
+        var certificates = await vhRepo.CertificateList(projectId, serverFarmId: serverFarmId);
+        foreach (var cert in certificates)
+            await vhRepo.CertificateDelete(projectId, cert.CertificateId);
+
+        // replace with the new one
+        var certificate = CertificateHelper.BuildByImport(serverFarm.ProjectId, serverFarm.ServerFarmId, importParams);
         await vhRepo.AddAsync(certificate);
         await vhRepo.SaveChangesAsync();
         return certificate.ToDto();
@@ -40,7 +54,9 @@ public class CertificateService(
         var certificate = await vhRepo.CertificateGet(projectId, certificateId);
         if (certificate.IsDefault)
             throw new InvalidOperationException("Default certificate can not be deleted");
+
         await vhRepo.CertificateDelete(projectId, certificateId);
+        await vhRepo.SaveChangesAsync();
     }
 
     public Task<Certificate> Get(Guid projectId, Guid certificateId)
@@ -53,59 +69,6 @@ public class CertificateService(
     {
         var models = await vhRepo.CertificateList(projectId, serverFarmId);
         return models.Select(x => x.ToDto());
-    }
-
-    internal CertificateModel BuildSelfSinged(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams)
-    {
-        // check user quota
-        createParams ??= new CertificateCreateParams
-        {
-            CertificateSigningRequest = new CertificateSigningRequest { CommonName = CertificateUtil.CreateRandomDns() }
-        };
-
-        var expirationTime = createParams.ExpirationTime ?? DateTime.UtcNow.AddYears(Random.Shared.Next(8, 12));
-        var x509Certificate2 = CertificateUtil.CreateSelfSigned(subjectName: createParams.CertificateSigningRequest.BuildSubjectName(), expirationTime);
-        return BuildModel(projectId, serverFarmId, x509Certificate2);
-    }
-
-    public CertificateModel BuildByImport(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
-    {
-        var x509Certificate2 = new X509Certificate2(importParams.RawData, importParams.Password, X509KeyStorageFlags.Exportable);
-        return BuildModel(projectId, serverFarmId, x509Certificate2);
-    }
-
-    private static CertificateModel BuildModel(Guid projectId, Guid serverFarmId, X509Certificate2 x509Certificate2)
-    {
-        var certificate = new CertificateModel
-        {
-            CertificateId = Guid.NewGuid(),
-            ServerFarmId = serverFarmId,
-            ProjectId = projectId,
-            CreatedTime = DateTime.UtcNow,
-            RawData = x509Certificate2.Export(X509ContentType.Pfx),
-            Thumbprint = x509Certificate2.Thumbprint,
-            CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
-            IssueTime = x509Certificate2.NotBefore.ToUniversalTime(),
-            ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
-            SubjectName = x509Certificate2.Subject,
-            IsTrusted = x509Certificate2.Verify(),
-            IsDefault = false,
-            IsDeleted = false,
-            AutoRenew = false,
-            RenewCount = 0,
-            RenewError = null,
-            RenewErrorCount = 0,
-            RenewErrorTime = null,
-            RenewToken = null,
-            RenewKeyAuthorization = null,
-            RenewInprogress = false,
-        };
-
-        if (certificate.CommonName.Contains('*'))
-            throw new NotSupportedException("Wildcard certificates are not supported.");
-
-
-        return certificate;
     }
 
     public async Task Renew(Guid projectId, Guid certificateId, CancellationToken cancellationToken)

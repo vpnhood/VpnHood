@@ -8,4 +8,5 @@ public class AppFeatures
     public required  bool IsIncludeAppsSupported { get; init; }
     public required Uri? UpdateInfoUrl { get; init; }
     public required string? UiName { get; init; }
+    public required bool IsAddServerSupported { get; init; }
 }

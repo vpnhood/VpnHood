@@ -129,6 +129,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             UpdateInfoUrl = options.UpdateInfoUrl,
             UiName = options.UiName,
+            IsAddServerSupported = options.IsAddServerSupported,
         };
 
         _instance = this;

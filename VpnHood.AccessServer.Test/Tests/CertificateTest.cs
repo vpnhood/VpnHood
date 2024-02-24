@@ -1,8 +1,12 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Server;
 using VpnHood.Server.Access;
+using ServerState = VpnHood.AccessServer.Api.ServerState;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -30,7 +34,8 @@ public class CertificateTest
 
         // get
         await farm.Reload();
-        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), farm.ServerFarm.Certificate?.CommonName);
+        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false),
+            farm.ServerFarm.Certificate?.CommonName);
 
         //-----------
         // Create Certificate using subject name
@@ -53,7 +58,8 @@ public class CertificateTest
         });
         Assert.IsFalse(string.IsNullOrEmpty(certificate.Thumbprint));
         Assert.IsFalse(certificate.IsTrusted);
-        Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow.AddDays(6) && certificate.ExpirationTime < DateTime.UtcNow.AddDays(8));
+        Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow.AddDays(6) &&
+                      certificate.ExpirationTime < DateTime.UtcNow.AddDays(8));
         Assert.IsTrue(certificate.IssueTime > DateTime.UtcNow.AddDays(-1));
 
         await farm.Reload();
@@ -65,5 +71,44 @@ public class CertificateTest
         Assert.IsTrue(certificate.SubjectName.Contains($"C={csr.LocationCountry}"));
         Assert.IsTrue(certificate.SubjectName.Contains($"S={csr.LocationState}"));
         Assert.IsTrue(certificate.SubjectName.Contains($"L={csr.LocationCity}"));
+    }
+
+    [TestMethod]
+    public async Task Renew()
+    {
+        // create server and start listen
+        using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback], TestAcmeOrderService.TestToken, TestAcmeOrderService.TestKeyAuthorization);
+        http01ChallengeService.Start();
+
+        // create farm and server
+        var farm = await ServerFarmDom.Create(serverCount: 0);
+        var server = await farm.AddNewServer();
+
+        await server.Reload();
+        Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
+
+    
+        // create new certificate
+        await farm.CertificateReplace(new CertificateCreateParams()
+        {
+            CertificateSigningRequest = new CertificateSigningRequest
+            {
+                CommonName = "localhost"
+            }
+        });
+
+        // wait for server configuring
+        await server.Reload();
+        Assert.AreEqual(ServerState.Configuring, server.Server.ServerState);
+
+        // configure server
+        await server.Configure();
+        await server.Reload();
+        Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
+
+        // renew
+        await farm.CertificateRenew();
+        await farm.Reload();
+        Assert.IsTrue(farm.ServerFarm.Certificate!.IsTrusted);
     }
 }

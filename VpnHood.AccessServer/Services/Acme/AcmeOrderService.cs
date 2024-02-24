@@ -9,7 +9,8 @@ namespace VpnHood.AccessServer.Services.Acme;
 public class AcmeOrderService(
     IOrderContext orderContext,
     IChallengeContext challengeContext,
-    CertificateSigningRequest csr)
+    CertificateSigningRequest csr) 
+    : IAcmeOrderService
 {
     public string KeyAuthorization => challengeContext.KeyAuthz;
     public string Token => challengeContext.Token;

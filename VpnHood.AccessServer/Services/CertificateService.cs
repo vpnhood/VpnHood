@@ -12,7 +12,7 @@ public class CertificateService(
     VhRepo vhRepo,
     HttpClient httpClient,
     ServerConfigureService serverConfigureService,
-    AcmeOrderFactory acmeOrderFactory)
+    IAcmeOrderFactory acmeOrderFactory)
 {
     private readonly string _acmeAccountPem = "-----BEGIN EC PRIVATE KEY-----\r\nMHcCAQEEINeE2cCFoddl9OsZdjuJLerxSEQpJah55CwVJpHb2dbpoAoGCCqGSM49\r\nAwEHoUQDQgAEjSA/K3SIR7aiPjHxhQfA8y2+O5p6EgN2b1C3FmAzd2qMKY4cgTe0\r\nlntFDnWfY/mRqutw4K+m2QTxQlpgFiDpkQ==\r\n-----END EC PRIVATE KEY-----";
     private readonly string _acmeAccountPem2 = "-----BEGIN EC PRIVATE KEY-----\r\nMHcCAQEEIHzqNeXy5j0A4Rw7FuBnlANPk1aQ/WXhH/a3geGw2zrtoAoGCCqGSM49\r\nAwEHoUQDQgAE+SbDquCZ05EvXsJpW4Er4wHKb+eYyQWbmEtf4FutE/A0D1tH1STg\r\nUvtcnB46Ef1DTgPdeDnQbXONLL70YfvlXA==\r\n-----END EC PRIVATE KEY-----\r\n";
@@ -72,10 +72,11 @@ public class CertificateService(
             .ContinueWith(x => x.Result.ToDto());
     }
 
-    public async Task Renew(Guid projectId, Guid certificateId, CancellationToken cancellationToken)
+    public async Task Renew(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
-        var certificate = await vhRepo.CertificateGet(projectId, certificateId, includeProjectAndLetsEncryptAccount: true);
-        await Renew(certificate, cancellationToken);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, 
+            includeCertificates: true, includeProject: true);
+        await Renew(serverFarm.Certificate!, cancellationToken);
     }
 
     private async Task Renew(CertificateModel certificate, CancellationToken cancellationToken)
@@ -106,15 +107,13 @@ public class CertificateService(
 
             // create order
             var acmeOrderService = await acmeOrderFactory.CreateOrder(project.LetsEncryptAccount.AccountPem, csr);
-            certificate.RenewToken = acmeOrderService.Token;
-            certificate.RenewKeyAuthorization = acmeOrderService.KeyAuthorization;
             await vhRepo.SaveChangesAsync();
 
             // wait for farm configuration
             await serverConfigureService.WaitForFarmConfiguration(certificate.ProjectId, certificate.ServerFarmId, cancellationToken);
 
             // validate order by manager
-            await ValidateByManager(certificate);
+            await ValidateByManager(certificate.CommonName, acmeOrderService.Token, acmeOrderService.KeyAuthorization);
 
             // Validate
             while (true)
@@ -146,21 +145,19 @@ public class CertificateService(
         }
         finally
         {
-            certificate.RenewToken = null;
-            certificate.RenewKeyAuthorization = null;
             certificate.RenewInprogress = false;
             await vhRepo.SaveChangesAsync();
         }
     }
 
-    private async Task ValidateByManager(CertificateModel certificate)
+    private static async Task ValidateByManager(string commonName, string token, string keyAuthorization)
     {
-        var url = $"http://{certificate.CommonName}/.well-known/acme-challenge/{certificate.RenewToken}";
+        var httpClient = new HttpClient();
+        var url = $"http://{commonName}/.well-known/acme-challenge/{token}";
         var result = await httpClient.GetStringAsync(url);
-        if (result != certificate.RenewKeyAuthorization)
-            throw new Exception($"{certificate.CommonName} or the farm servers have not been configured properly. ");
+        if (result != keyAuthorization)
+            throw new Exception($"{commonName} or the farm servers have not been configured properly.");
     }
-
     private static CertificateSigningRequest CreateCsrFromCertificate(X509Certificate certificate)
     {
         var subject = certificate.Subject;
@@ -234,8 +231,6 @@ public class CertificateService(
             RenewError = null,
             RenewErrorCount = 0,
             RenewErrorTime = null,
-            RenewToken = null,
-            RenewKeyAuthorization = null,
             RenewInprogress = false,
         };
 

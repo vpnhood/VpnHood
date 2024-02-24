@@ -68,7 +68,7 @@ public class Program
             .AddScoped<AgentCacheClient>()
             .AddScoped<AgentSystemClient>()
             .AddScoped<AccessTokensService>()
-            .AddSingleton<AcmeOrderFactory>();
+            .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
         // Report Service
         builder.Services.AddVhReportServices(new ReportServiceOptions

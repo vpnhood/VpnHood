@@ -11,6 +11,7 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Services.Acme;
 using VpnHood.AccessServer.Test.Helper;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -72,6 +73,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                 {
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
+                    services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
                 });
             });
 

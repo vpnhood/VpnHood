@@ -4,7 +4,7 @@ using VpnHood.AccessServer.Dtos.Certificates;
 
 namespace VpnHood.AccessServer.Services.Acme;
 
-public class AcmeOrderFactory
+public class AcmeOrderFactory : IAcmeOrderFactory
 {
     public async Task<string> CreateNewAccount(string email)
     {
@@ -15,7 +15,7 @@ public class AcmeOrderFactory
         return pemKey;
     }
 
-    public async Task<AcmeOrderService> CreateOrder(string accountPem, CertificateSigningRequest csr)
+    public async Task<IAcmeOrderService> CreateOrder(string accountPem, CertificateSigningRequest csr)
     {
         var accountKey = KeyFactory.FromPem(accountPem);
         var acmeContext = new AcmeContext(WellKnownServers.LetsEncryptStagingV2, accountKey);

@@ -19,8 +19,6 @@ public class CertificateModel
     public required int RenewErrorCount { get; set; }
     public required string? RenewError { get; set; }
     public required DateTime? RenewErrorTime { get; set; }
-    public required string? RenewToken { get; set; }
-    public required string? RenewKeyAuthorization { get; set; }
     public required bool IsDefault { get; set; }
     public required bool IsDeleted { get; set; }
 

@@ -27,12 +27,13 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.2" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.2.1" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.2.1" />
-		<PackageReference Include="coverlet.collector" Version="6.0.0">
+		<PackageReference Include="MSTest.TestAdapter" Version="3.2.2" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.2.2" />
+		<PackageReference Include="coverlet.collector" Version="6.0.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="VpnHood.Server" Version="3.3.470" />
 	</ItemGroup>
 
 	<ItemGroup>

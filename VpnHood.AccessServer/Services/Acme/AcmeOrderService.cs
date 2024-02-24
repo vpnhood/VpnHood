@@ -37,7 +37,7 @@ public class AcmeOrderService(
             OrganizationUnit = csr.OrganizationUnit,
             CountryName = csr.LocationCountry,
             State = csr.LocationState,
-            Locality = csr.LocationCity,
+            Locality = csr.LocationCity
         }, privateKey);
 
 

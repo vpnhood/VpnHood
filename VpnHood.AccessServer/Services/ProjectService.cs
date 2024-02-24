@@ -52,7 +52,7 @@ public class ProjectService(
             TokenJson = null,
             TokenUrl = null,
             PushTokenToClient = true,
-            Servers = [],
+            Servers = []
         };
 
         // create project

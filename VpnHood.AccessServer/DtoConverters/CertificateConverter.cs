@@ -22,7 +22,7 @@ public static class CertificateConverter
             RenewCount = model.RenewCount,
             RenewError = model.RenewError,
             RenewErrorTime = model.RenewErrorTime,
-            RenewErrorCount = model.RenewErrorCount,
+            RenewErrorCount = model.RenewErrorCount
         };
         return certificate;
     }

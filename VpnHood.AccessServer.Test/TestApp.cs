@@ -287,7 +287,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             ClientIp = clientIp ?? NewIpV4().Result,
             HostEndPoint = hostEndPoint,
-            ExtraData = extraData ?? Guid.NewGuid().ToString(),
+            ExtraData = extraData ?? Guid.NewGuid().ToString()
         };
 
         return sessionRequestEx;

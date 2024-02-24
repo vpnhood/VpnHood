@@ -89,7 +89,7 @@ public class CertificateTest
 
     
         // create new certificate
-        await farm.CertificateReplace(new CertificateCreateParams()
+        await farm.CertificateReplace(new CertificateCreateParams
         {
             CertificateSigningRequest = new CertificateSigningRequest
             {

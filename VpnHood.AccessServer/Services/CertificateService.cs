@@ -230,7 +230,7 @@ public class CertificateService(
             RenewError = null,
             RenewErrorCount = 0,
             RenewErrorTime = null,
-            RenewInprogress = false,
+            RenewInprogress = false
         };
 
         if (certificate.CommonName.Contains('*'))

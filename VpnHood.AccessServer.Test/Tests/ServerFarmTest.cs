@@ -255,9 +255,19 @@ public class ServerFarmTest
     }
 
     [TestMethod]
-    public Task FarmToken_must_change_by_modifying_certificate()
+    public async Task FarmToken_must_change_by_modifying_certificate()
     {
-        throw new NotImplementedException();
+        // get farm token
+        var farm = await ServerFarmDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken();
+        var accessKey = await accessTokenDom.GetAccessKey();
+        var token1 = Token.FromAccessKey(accessKey);
+        
+        await farm.CertificateReplace();
+        var accessKey2 = await accessTokenDom.GetAccessKey();
+        var token2 = Token.FromAccessKey(accessKey2);
+
+        Assert.AreNotEqual(token1.ServerToken.HostName, token2.ServerToken.HostName);
     }
 
 }

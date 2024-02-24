@@ -1,5 +1,4 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 

@@ -10,7 +10,6 @@ namespace VpnHood.AccessServer.Services;
 
 public class CertificateService(
     VhRepo vhRepo,
-    HttpClient httpClient,
     ServerConfigureService serverConfigureService,
     IAcmeOrderFactory acmeOrderFactory)
 {

@@ -189,7 +189,7 @@ public class ServerFarmService(
                 ActiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime >= now.AddDays(-7)),
                 InactiveTokenCount = x.AccessTokens!.Count(accessToken => accessToken.LastUsedTime < now.AddDays(-7)),
                 UnusedTokenCount = x.AccessTokens!.Count(accessToken => accessToken.FirstUsedTime == null),
-                TotalTokenCount = x.AccessTokens!.Count(),
+                TotalTokenCount = x.AccessTokens!.Length,
                 ServerCount = x.ServerCount!.Value
             }
         });

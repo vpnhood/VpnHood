@@ -1,8 +1,8 @@
 ﻿using System.Net.Mime;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos.Certificate;
-using VpnHood.AccessServer.Dtos.ServerFarm;
+using VpnHood.AccessServer.Dtos.Certificates;
+using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common.Utils;
@@ -14,12 +14,13 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-farms")]
 public class ServerFarmsController(
     SubscriptionService subscriptionService,
-    ServerFarmService serverFarmService
+    ServerFarmService serverFarmService,
+    CertificateService certificateService
     ) : ControllerBase
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
-    public async Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams? createParams)
+    public async Task<ServerFarmData> Create(Guid projectId, ServerFarmCreateParams? createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateFarm");
@@ -51,7 +52,6 @@ public class ServerFarmsController(
         return serverFarmService.ValidateTokenUrl(projectId, serverFarmId: serverFarmId, cancellationToken);
     }
 
-
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public async Task<ServerFarmData[]> List(Guid projectId, string? search = null, bool includeSummary = false,
@@ -79,22 +79,22 @@ public class ServerFarmsController(
 
     [HttpPost("{serverFarmId:guid}/certificate/import")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
+    public Task<Certificate> CertificateImport(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
     {
-        return serverFarmService.ImportCertificate(projectId, serverFarmId, importParams);
+        return certificateService.Import(projectId, serverFarmId, importParams);
     }
 
     [HttpPost("{serverFarmId:guid}/certificate/replace")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> ImportCertificate(Guid projectId, Guid serverFarmId, CertificateCreateParams createParams)
+    public Task<Certificate> CertificateReplace(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams = null)
     {
-        return serverFarmService.ReplaceCertificate(projectId, serverFarmId, createParams);
+        return certificateService.Replace(projectId, serverFarmId, createParams);
     }
 
     [HttpPost("{serverFarmId:guid}/certificate/renew")]
     [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task<Certificate> RenewCertificate(Guid projectId, Guid serverFarmId)
+    public Task CertificateRenew(Guid projectId, Guid serverFarmId)
     {
-        return serverFarmService.RenewCertificate(projectId, serverFarmId);
+        return certificateService.Renew(projectId, serverFarmId, CancellationToken.None);
     }
 }

@@ -590,25 +590,17 @@ public class AgentServerTest
     {
         var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var certificate1 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams
+        var farm1 = await ServerFarmDom.Create(testApp);
+        await farm1.CertificateReplace(new CertificateCreateParams
         {
-            CertificateSigningRequest = new CertificateSigningRequest{CommonName = dnsName1 }
-        });
-
-        var farm1 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
-        {
-            CertificateId = certificate1.CertificateId
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var certificate2 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams
+        var farm2 = await ServerFarmDom.Create(testApp);
+        await farm2.CertificateReplace(new CertificateCreateParams
         {
-            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2}
-        });
-
-        var farm2 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
-        {
-            CertificateId = certificate2.CertificateId
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
         });
 
         //-----------
@@ -633,19 +625,13 @@ public class AgentServerTest
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 
-        var cert = await farm.TestApp.CertificatesClient.CreateBySelfSignedAsync(farm.TestApp.ProjectId);
-
-        await farm.Update(new ServerFarmUpdateParams
-        {
-            CertificateId = new PatchOfGuid { Value = cert.CertificateId }
-        });
+        await farm.CertificateReplace();
 
         var command1 = await server1.SendStatus();
         var command2 = await server2.SendStatus();
         Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
         Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
     }
-
 
     [TestMethod]
     public async Task Server_UpdateStatus()

@@ -17,14 +17,7 @@ public class CacheController(CacheService cacheService)
         return cacheService.InvalidateProject(projectId);
     }
 
-    [HttpGet("servers/{serverId:guid}")]
-    public async Task<ServerCache?> GetServer(Guid serverId)
-    {
-        var server = await cacheService.GetServer(serverId);
-        return server;
-    }
-
-    [HttpGet("projects/servers")]
+    [HttpGet("servers")]
     public async Task<ServerCache[]> GetServers(Guid? projectId = null, Guid? serverFarmId = null)
     {
         var servers = (await cacheService.GetServers())
@@ -35,6 +28,12 @@ public class CacheController(CacheService cacheService)
         return servers;
     }
 
+    [HttpGet("servers/{serverId:guid}")]
+    public async Task<ServerCache?> GetServer(Guid serverId)
+    {
+        var server = await cacheService.GetServer(serverId);
+        return server;
+    }
 
     [HttpPost("servers/invalidate")]
     public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? serverId = null)
@@ -43,7 +42,7 @@ public class CacheController(CacheService cacheService)
             serverProfileId: serverProfileId, serverId: serverId);
     }
 
-    [HttpPost("server-farms/{serverFarmId:guid}")]
+    [HttpPost("server-farms/{serverFarmId:guid}/invalidate")]
     public Task InvalidateServerFarm(Guid serverFarmId)
     {
         return cacheService.InvalidateServerFarm(serverFarmId);

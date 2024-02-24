@@ -27,7 +27,7 @@ public class AgentCacheClient : ApiClientBase
             [nameof(serverId)] = serverId
         };
 
-        return HttpPostAsync($"/api/cache/servers/invalidate", parameters, null);
+        return HttpPostAsync("/api/cache/servers/invalidate", parameters, null);
     }
 
     public Task<ServerCache[]> GetServers(Guid projectId, Guid? serverFarmId = null)
@@ -38,7 +38,7 @@ public class AgentCacheClient : ApiClientBase
             [nameof(serverFarmId)] = serverFarmId
         };
 
-        return HttpGetAsync<ServerCache[]>($"/api/cache/servers", parameters);
+        return HttpGetAsync<ServerCache[]>("/api/cache/servers", parameters);
     }
 
     public Task<ServerCache?> GetServer(Guid serverId)

@@ -12,13 +12,6 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
-
-        var farm = await ServerFarmDom.Create();
-        await farm.TestApp.CertificatesClient.CreateTrustedAsync(farm.ProjectId, new CertificateSigningRequest
-        {
-            CommonName = "ssss.com"
-        });
-
     }
 
     [TestMethod]

@@ -78,13 +78,10 @@ public class ServerFarmTest
         // check: update 
         //-----------
         var serverProfile2 = await ServerProfileDom.Create(testApp);
-        var certificateClient = testApp.CertificatesClient;
-        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId);
 
         var updateParam = new ServerFarmUpdateParams
         {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
-            CertificateId = new PatchOfGuid { Value = certificate2.CertificateId },
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
             TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
             Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() },
@@ -95,7 +92,6 @@ public class ServerFarmTest
         await farm1.Reload();
         Assert.AreEqual(updateParam.TokenUrl.Value, farm1.ServerFarm.TokenUrl);
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
-        Assert.AreEqual(updateParam.CertificateId.Value, farm1.ServerFarm.CertificateId);
         Assert.AreEqual(updateParam.ServerProfileId.Value, farm1.ServerFarm.ServerProfileId);
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
         CollectionAssert.AreEqual(updateParam.Secret.Value, farm1.ServerFarm.Secret);
@@ -170,7 +166,7 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().CertificateCommonName);
+        Assert.IsNotNull(farms.First().ServerFarm.Certificate?.CommonName);
     }
 
 
@@ -186,7 +182,7 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().CertificateCommonName);
+        Assert.IsNotNull(farms.First().ServerFarm.Certificate?.CommonName);
     }
 
     [TestMethod]

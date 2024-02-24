@@ -6,7 +6,6 @@ using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
@@ -18,6 +17,7 @@ public class ProjectService(
     VhContext vhContext,
     SubscriptionService subscriptionService,
     AgentCacheClient agentCacheClient,
+    CertificateService certificateService,
     ReportUsageService usageReportService,
     IRoleProvider roleProvider)
 {
@@ -54,11 +54,6 @@ public class ProjectService(
             PushTokenToClient = true,
             Servers = [],
         };
-        FarmTokenBuilder.UpdateIfChanged(serverFarm);
-
-        // create certificate
-        var certificate = CertificateHelper.BuildSelfSinged(projectId, serverFarm.ServerFarmId, createParams: null);
-        serverFarm.Certificates = [certificate];
 
         // create project
         var project = new ProjectModel
@@ -130,6 +125,9 @@ public class ProjectService(
 
         await vhContext.Projects.AddAsync(project);
         await vhContext.SaveChangesAsync();
+
+        // create default certificate
+        await certificateService.Replace(serverFarm.ProjectId, serverFarm.ServerFarmId, null);
 
         // make current user the owner
         await roleProvider.AddUserRole(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);

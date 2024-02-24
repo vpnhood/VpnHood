@@ -108,7 +108,12 @@ public class VhContext : DbContext
                 .HasMaxLength(200);
 
             entity
-                .HasIndex(x => new { x.ProjectId, x.ServerFarmId, x.CommonName })
+                .HasIndex(e => new { e.ServerFarmId, e.IsDefault })
+                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.IsDefault)} = 1")
+                .IsUnique();
+
+            entity
+                .HasIndex(x => new { x.ServerFarmId, x.CommonName })
                 .IsUnique()
                 .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0");
 
@@ -261,8 +266,8 @@ public class VhContext : DbContext
             entity
                 .HasOne(e => e.ServerFarm)
                 .WithMany(d => d.Servers)
-                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
-                .HasPrincipalKey(e => new { e.ProjectId, e.ServerFarmId })
+                .HasForeignKey(e => e.ServerFarmId)
+                .HasPrincipalKey(e => e.ServerFarmId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             entity
@@ -335,6 +340,9 @@ public class VhContext : DbContext
         {
             entity
                 .HasKey(e => e.ServerFarmId);
+
+            entity
+                .Ignore(e => e.Certificate);
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerFarmName })

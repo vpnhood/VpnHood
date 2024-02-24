@@ -61,6 +61,7 @@ public class Program
             .AddScoped<ServerFarmService>()
             .AddScoped<ServerProfileService>()
             .AddScoped<ServerService>()
+            .AddScoped<ServerConfigureService>()
             .AddScoped<SubscriptionService>()
             .AddScoped<CertificateService>()
             .AddScoped<UsageCycleService>()

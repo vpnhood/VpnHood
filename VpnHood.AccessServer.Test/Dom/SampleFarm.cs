@@ -32,7 +32,8 @@ public class SampleFarm : ServerFarmDom
 
     public static async Task<SampleFarm> Create(TestApp testApp)
     {
-        var serverFarm = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, new ServerFarmCreateParams());
+        var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, new ServerFarmCreateParams());
+        var serverFarm = serverFarmData.ServerFarm;
 
         // create servers
         var sampleServers = new[]

@@ -225,11 +225,8 @@ public class AccessTokenTest
     public async Task GetAccessKey_ForDomain()
     {
         var testApp = await TestApp.Create();
-        var certificate = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams());
-
         var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
-            CertificateId = certificate.CertificateId,
             UseHostName = true,
             ServerFarmName = Guid.NewGuid().ToString()
         });

@@ -1,8 +1,7 @@
-﻿using VpnHood.AccessServer.Dtos.Server;
+﻿using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Utils;
 
 namespace VpnHood.AccessServer.DtoConverters;
 

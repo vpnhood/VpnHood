@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos.AccessToken;
+﻿using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;

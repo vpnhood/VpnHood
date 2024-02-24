@@ -2,7 +2,7 @@
 using Certes;
 using Certes.Acme;
 using Certes.Acme.Resource;
-using VpnHood.AccessServer.Dtos.Certificate;
+using VpnHood.AccessServer.Dtos.Certificates;
 
 namespace VpnHood.AccessServer.Services.Acme;
 

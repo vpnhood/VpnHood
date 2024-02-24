@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos.ServerFarm;
+﻿using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
@@ -18,6 +18,7 @@ public static class ServerFarmConverter
             Secret = model.Secret,
             TokenUrl = string.IsNullOrEmpty(model.TokenUrl) ? null : new Uri(model.TokenUrl),
             PushTokenToClient = model.PushTokenToClient,
+            Certificate = model.Certificate?.ToDto()
         };
 
         return dto;

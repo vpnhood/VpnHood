@@ -6,7 +6,7 @@ using Renci.SshNet;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Dtos.Server;
+using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
@@ -35,7 +35,8 @@ public class ServerService(
         await subscriptionService.AuthorizeCreateServer(projectId);
 
         // validate
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId, true, true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId, 
+            includeServers: true, includeCertificate: true);
 
         // Resolve Name Template
         var serverName = createParams.ServerName?.Trim();
@@ -407,6 +408,6 @@ public class ServerService(
 
     public Task<ServerCache?> Reconfigure(Guid projectId, Guid serverId)
     {
-        return serverConfigureService.InvalidateServer(projectId: projectId, serverId: serverId, false);
+        return serverConfigureService.InvalidateServer(projectId: projectId, serverId: serverId, reconfigure: true);
     }
 }

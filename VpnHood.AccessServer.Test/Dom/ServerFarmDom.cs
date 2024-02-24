@@ -29,9 +29,9 @@ public class ServerFarmDom
             ServerFarmName = Guid.NewGuid().ToString()
         };
 
-        var serverFarm = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, createParams);
+        var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, createParams);
 
-        var ret = new ServerFarmDom(testApp, serverFarm);
+        var ret = new ServerFarmDom(testApp, serverFarmData.ServerFarm);
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
 
@@ -121,7 +121,22 @@ public class ServerFarmDom
         var serverDom = Servers.First(x =>
             x.Server.AccessPoints.Any(accessPoint => 
                 new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort).Equals(ipEndPoint)));
-
         return serverDom;
     }
+
+    public Task<Certificate> CertificateReplace(CertificateCreateParams? createParams = null)
+    {
+        return TestApp.ServerFarmsClient.CertificateReplaceAsync(ProjectId, ServerFarmId, createParams);
+    }
+
+    public Task<Certificate> CertificateImport(CertificateImportParams importParams)
+    {
+        return TestApp.ServerFarmsClient.CertificateImportAsync(ProjectId, ServerFarmId, importParams);
+    }
+
+    public Task CertificateRenew()
+    {
+        return TestApp.ServerFarmsClient.CertificateRenewAsync(ProjectId, ServerFarmId);
+    }
+
 }

@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos.ServerProfile;
+using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Utils;

@@ -5,17 +5,22 @@ using VpnHood.AccessServer.Persistence.Views;
 
 namespace VpnHood.AccessServer.Persistence;
 
-public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
+public class VhRepo(VhContext vhContext) 
+    : RepoBase(vhContext)
 {
-    public Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServers = false, bool includeCertificate = false, bool includeAccessTokens = false)
+
+    public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
+        bool includeServers = false, bool includeAccessTokens = false,
+        bool includeCertificate = false, bool includeCertificates = false)
     {
         var query = vhContext.ServerFarms
             .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
             .Where(farm => farm.ServerFarmId == serverFarmId);
 
-        if (includeCertificate)
-            query = query.Include(farm => farm.Certificates!.Where(y => y.IsDefault));
+        if (includeCertificates)
+            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
+        else if (includeCertificate)
+            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
 
         if (includeServers)
             query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted));
@@ -23,7 +28,15 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
         if (includeAccessTokens)
             query = query.Include(farm => farm.AccessTokens!.Where(accessToken => !accessToken.IsDeleted));
 
-        return query.SingleAsync();
+        var serverFarm = await query.SingleAsync();
+        FillCertificate(serverFarm);
+        return serverFarm;
+    }
+
+    private static void FillCertificate(ServerFarmModel serverFarmModel)
+    {
+        serverFarmModel.Certificate = serverFarmModel.Certificates?
+            .SingleOrDefault(x => x is { IsDefault: true, IsDeleted: false });
     }
 
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
@@ -161,15 +174,6 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
             accessToken.IsDeleted = true;
     }
 
-    public Task<CertificateModel[]> CertificateList(Guid projectId, Guid? serverFarmId)
-    {
-        var query = vhContext.Certificates
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .Where(x => x.ServerFarmId == serverFarmId);
-
-        return query.ToArrayAsync();
-    }
-
     public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId,
         bool includeProjectAndLetsEncryptAccount = false)
     {
@@ -230,7 +234,7 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
             .ToArrayAsync();
     }
 
-    public Task<ServerFarmView[]> ServerFarmListView(Guid projectId, string? search = null, Guid? serverFarmId = null,
+    public async Task<ServerFarmView[]> ServerFarmListView(Guid projectId, string? search = null, Guid? serverFarmId = null,
         bool includeSummary = false, int recordIndex = 0, int recordCount = int.MaxValue)
     {
         var query = vhContext.Certificates
@@ -245,9 +249,9 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
                 x.ServerFarmId.ToString() == search)
             .Select(x => new ServerFarmView
             {
+                Certificate = x,
                 ServerFarm = x.ServerFarm!,
                 ServerProfileName = x.ServerFarm!.ServerProfile!.ServerProfileName,
-                Certificate = x,
                 ServerCount = includeSummary ? x.ServerFarm.Servers!.Count(y => !y.IsDeleted) : null,
                 AccessTokens = includeSummary
                     ? x.ServerFarm.AccessTokens!
@@ -265,7 +269,11 @@ public class VhRepo(VhContext vhContext) : RepoBase(vhContext)
             .AsSplitQuery()
             .AsNoTracking();
 
-        return query.ToArrayAsync();
+        var results = await query.ToArrayAsync();
+        foreach (var result in results)
+            result.ServerFarm.Certificate = result.Certificate;
+
+        return results;
     }
 }
 

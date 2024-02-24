@@ -373,8 +373,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     }
 
     public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
-        bool includeServersAndAccessPoints = false, bool includeCertificate = false, bool includeCertificates = false,
-        bool includeServerProfile = true)
+        bool includeServersAndAccessPoints = false, bool includeServerProfile = true,
+        bool includeCertificate = false, bool includeCertificates = false
+        )
     {
         var query = vhContext.ServerFarms
             .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
@@ -386,7 +387,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         if (includeCertificates)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));
         else if (includeCertificate)
-            query = query.Include(x => x.Certificates!.Where(y => y.IsDefault && !y.IsDeleted));
+            query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
 
         if (includeServersAndAccessPoints)
             query = query
@@ -401,8 +402,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
     private static void FillCertificate(ServerFarmModel serverFarmModel)
     {
-        ArgumentNullException.ThrowIfNull(serverFarmModel.Certificates);
-        serverFarmModel.Certificate = serverFarmModel.Certificates.Single(x => x.IsDefault);
+        serverFarmModel.Certificate = serverFarmModel.Certificates?.SingleOrDefault(x => x.IsDefault);
     }
 
 
@@ -410,11 +410,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         return vhContext.Servers.FindAsync(serverServerId);
     }
-
-    //private static string ToSqlValue<T>(T? value)
-    //{
-    //    return value?.ToString() ?? "NULL";
-    //}
 
     public async Task AddAndSaveServerStatuses(ServerStatusBaseModel[] serverStatuses)
     {

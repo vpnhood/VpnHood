@@ -3,7 +3,6 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
-using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 
 namespace VpnHood.AccessServer.Services;

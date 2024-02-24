@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos.ServerProfile;
+using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 

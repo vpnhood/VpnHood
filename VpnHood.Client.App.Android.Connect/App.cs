@@ -18,7 +18,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         Resources = VpnHoodAppResource.Resources,
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
-        UiName = "VpnHoodConnect"
+        UiName = "VpnHoodConnect",
+        IsAddServerSupported = false
     };
 }
 

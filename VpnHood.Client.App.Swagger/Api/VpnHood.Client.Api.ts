@@ -1345,6 +1345,7 @@ export class AppFeatures implements IAppFeatures {
     isIncludeAppsSupported!: boolean;
     updateInfoUrl?: string | null;
     uiName?: string | null;
+    isAddServerSupported!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1363,6 +1364,7 @@ export class AppFeatures implements IAppFeatures {
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
+            this.isAddServerSupported = _data["isAddServerSupported"] !== undefined ? _data["isAddServerSupported"] : <any>null;
         }
     }
 
@@ -1381,6 +1383,7 @@ export class AppFeatures implements IAppFeatures {
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
+        data["isAddServerSupported"] = this.isAddServerSupported !== undefined ? this.isAddServerSupported : <any>null;
         return data;
     }
 }
@@ -1392,6 +1395,7 @@ export interface IAppFeatures {
     isIncludeAppsSupported: boolean;
     updateInfoUrl?: string | null;
     uiName?: string | null;
+    isAddServerSupported: boolean;
 }
 
 export class AppSettings implements IAppSettings {

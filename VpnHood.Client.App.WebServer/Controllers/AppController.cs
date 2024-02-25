@@ -78,7 +78,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/add-test-server")]
     public void AddTestServer()
     {
-        App.ClientProfileService.ImportAccessKey(App.Settings.TestServerAccessKey);
+        App.ClientProfileService.ImportAccessKey(App.Settings.PublicAccessKey);
     }
 
     [Route(HttpVerbs.Put, "/user-settings")]

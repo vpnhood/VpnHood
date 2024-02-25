@@ -14,4 +14,5 @@ public class AppOptions
     // ReSharper disable once StringLiteralTypo
     public string? AppGa4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; init; }
+    public bool IsAddServerSupported { get; init; }
 }

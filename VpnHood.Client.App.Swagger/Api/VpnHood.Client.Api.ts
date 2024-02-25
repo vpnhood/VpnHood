@@ -210,7 +210,7 @@ export class AccountClient {
     }
 
     isSubscriptionOrderProcessed(providerOrderId: string, cancelToken?: CancelToken): Promise<boolean> {
-        let url_ = this.baseUrl + "/subscription-orders/providerOrderId:{providerOrderId}/is-processed";
+        let url_ = this.baseUrl + "/api/account/subscription-orders/providerOrderId:{providerOrderId}/is-processed";
         if (providerOrderId === undefined || providerOrderId === null)
             throw new Error("The parameter 'providerOrderId' must be defined.");
         url_ = url_.replace("{providerOrderId}", encodeURIComponent("" + providerOrderId));
@@ -262,7 +262,7 @@ export class AccountClient {
     }
 
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
-        let url_ = this.baseUrl + "/subscriptions/{subscriptionId}/access-keys";
+        let url_ = this.baseUrl + "/api/account/subscriptions/{subscriptionId}/access-keys";
         if (subscriptionId === undefined || subscriptionId === null)
             throw new Error("The parameter 'subscriptionId' must be defined.");
         url_ = url_.replace("{subscriptionId}", encodeURIComponent("" + subscriptionId));

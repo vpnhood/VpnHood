@@ -114,17 +114,17 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
         // add default test public server if not added yet
         RemoveClientProfileByTokenId("1047359c-a107-4e49-8425-c004c41ffb8f"); // old one; deprecated in version v2.0.261 and upper
-        if (Settings.TestServerTokenAutoAdded != Settings.TestServerAccessKey)
+        if (Settings.TestServerTokenAutoAdded != Settings.PublicAccessKey)
         {
-            ClientProfileService.ImportAccessKey(Settings.TestServerAccessKey);
-            Settings.TestServerTokenAutoAdded = Settings.TestServerAccessKey;
+            ClientProfileService.ImportAccessKey(Settings.PublicAccessKey);
+            Settings.TestServerTokenAutoAdded = Settings.PublicAccessKey;
         }
 
         // initialize features
         Features = new AppFeatures
         {
             Version = typeof(VpnHoodApp).Assembly.GetName().Version,
-            TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId,
+            TestServerTokenId = Token.FromAccessKey(Settings.PublicAccessKey).TokenId,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             UpdateInfoUrl = options.UpdateInfoUrl,

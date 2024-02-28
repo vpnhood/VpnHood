@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.WebServer;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.WinDivert;
+
 namespace VpnHood.Client.App.Maui;
 
 public static class MauiProgram
@@ -20,18 +22,16 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        var appProvider = CreateAppProvider();
-        using var spaResource = new MemoryStream(UiResource.SPA);
-        VpnHoodApp.Init(appProvider, new AppOptions());
-        VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);
+        var resources = VpnHoodAppResource.Resources;
+        VpnHoodApp.Init(CreateDevice(), new AppOptions() { Resources = resources });
 
         return builder.Build();
     }
 
-    private static IAppProvider CreateAppProvider()
+    private static IDevice CreateDevice()
     {
 #if WINDOWS
-        return new WinAppProvider();
+        return new WinDivertDevice();
 #elif ANDROID
         return new AppProvider();
 #else

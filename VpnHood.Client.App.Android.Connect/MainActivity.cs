@@ -1,9 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
 using Android.Content;
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
@@ -11,7 +9,8 @@ using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
-[Activity(Label = "@string/app_name",
+[Activity(
+    Label = "@string/app_name",
     Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
     MainLauncher = true,
     Exported = true,
@@ -25,15 +24,14 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
-public class MainActivity : AndroidAppWebViewMainActivity
+public class MainActivity : AndroidAppMainActivity
 {
-    protected override bool ListenToAllIps => AssemblyInfo.ListenToAllIps;
-    protected override int? DefaultSpaPort => AssemblyInfo.DefaultSpaPort;
-
-    protected override IAppUpdaterService CreateAppUpdaterService()
+    protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        return new GooglePlayAppUpdaterService(this);
+        return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
+        {
+            AppUpdaterService = new GooglePlayAppUpdaterService(this)
+        });
     }
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -52,5 +50,4 @@ public class MainActivity : AndroidAppWebViewMainActivity
         VpnHoodApp.Instance.AccountService = null;
         base.OnDestroy();
     }
-
 }

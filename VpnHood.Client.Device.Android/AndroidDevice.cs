@@ -35,9 +35,14 @@ public class AndroidDevice : IDevice
 
     public void Prepare<T>(T activity) where T : Activity, IActivityEvent
     {
+        Prepare(activity, activity);
+    }
+
+    public void Prepare(Activity activity, IActivityEvent activityEvent)
+    {
         _activity = activity;
-        ((IActivityEvent)_activity).OnDestroyEvent += Activity_OnDestroy;
-        ((IActivityEvent)_activity).OnActivityResultEvent += Activity_OnActivityResult;
+        activityEvent.OnDestroyEvent += Activity_OnDestroy;
+        activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
     }
 
     public void InitNotification(Notification notification, int notificationId)
@@ -50,7 +55,7 @@ public class AndroidDevice : IDevice
     {
         const string channelId = "1000";
         var context = Application.Context;
-        var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager 
+        var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager
             ?? throw new Exception("Could not resolve NotificationManager.");
 
         Notification.Builder notificationBuilder;

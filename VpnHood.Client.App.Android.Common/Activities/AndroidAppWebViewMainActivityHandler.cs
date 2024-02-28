@@ -5,14 +5,13 @@ using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
-public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
+public class AndroidAppWebViewMainActivityHandler(Activity activity, AndroidMainActivityWebViewOptions options)
+    : AndroidAppMainActivityHandler(activity, options)
 {
     private bool _isWeViewVisible;
     public WebView? WebView { get; private set; }
-    protected virtual bool ListenToAllIps => false;
-    protected virtual int? DefaultSpaPort => null;
 
-    protected override void OnCreate(Bundle? savedInstanceState)
+    public override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
 
@@ -24,14 +23,13 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         {
             ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
             using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream, DefaultSpaPort, listenToAllIps: ListenToAllIps);
+            VpnHoodAppWebServer.Init(memoryStream, options.DefaultSpaPort, listenToAllIps: options.ListenToAllIps);
         }
 
         InitWebUi();
     }
 
-
-    protected override void OnDestroy()
+    public override void OnDestroy()
     {
         if (VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Dispose();
@@ -41,7 +39,7 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
 
     private void InitSplashScreen()
     {
-        var imageView = new ImageView(this);
+        var imageView = new ImageView(Activity);
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
 
@@ -51,19 +49,19 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
         imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
         if (backgroundColor != null) imageView.SetBackgroundColor(backgroundColor.Value);
-        SetContentView(imageView);
+        Activity.SetContentView(imageView);
 
         // set window background color
         if (backgroundColor != null)
         {
-            Window?.SetStatusBarColor(backgroundColor.Value);
-            Window?.SetNavigationBarColor(backgroundColor.Value);
+            Activity.Window?.SetStatusBarColor(backgroundColor.Value);
+            Activity.Window?.SetNavigationBarColor(backgroundColor.Value);
         }
     }
 
     private void InitWebUi()
     {
-        WebView = new WebView(this);
+        WebView = new WebView(Activity);
         WebView.Settings.JavaScriptEnabled = true;
         WebView.Settings.DomStorageEnabled = true;
         WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
@@ -87,11 +85,11 @@ public abstract class AndroidAppWebViewMainActivity : AndroidAppMainActivity
     {
         if (_isWeViewVisible) return; // prevent double set SetContentView
         if (WebView == null) throw new Exception("WebView has not been loaded yet!");
-        SetContentView(WebView);
+        Activity.SetContentView(WebView);
         _isWeViewVisible = true;
 
         if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
-            Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
+            Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
 
         // request features after loading the webview, so SPA can update the localize the resources
         _ = RequestFeatures();

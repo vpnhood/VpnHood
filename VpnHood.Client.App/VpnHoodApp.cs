@@ -136,29 +136,41 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
         JobRunner.Default.Add(this);
     }
 
-    public AppState State => new()
+    public AppState State
     {
-        ConfigTime = Settings.ConfigTime,
-        ConnectionState = ConnectionState,
-        IsIdle = IsIdle,
-        ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
-        LastActiveClientProfileId = LastActiveClientProfileId,
-        LogExists = IsIdle && File.Exists(LogService.LogFilePath),
-        LastError = _lastError,
-        HasDiagnoseStarted = _hasDiagnoseStarted,
-        HasDisconnectedByUser = _hasDisconnectedByUser,
-        HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _lastError != null),
-        SessionStatus = LastSessionStatus,
-        Speed = Client?.Stat.Speed ?? new Traffic(),
-        AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
-        SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
-        ClientIpGroup = _lastCountryIpGroup,
-        IsWaitingForAd = IsWaitingForAd,
-        VersionStatus = _versionStatus,
-        LastPublishInfo = _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
-        ConnectRequestTime = _connectRequestTime,
-        IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported
-    };
+        get
+        {
+            var connectionState = ConnectionState;
+            return new AppState
+            {
+                ConfigTime = Settings.ConfigTime,
+                ConnectionState = connectionState,
+                IsIdle = IsIdle,
+                CanConnect = connectionState is AppConnectionState.None,
+                CanDisconnect = !_isDisconnecting && (connectionState 
+                    is AppConnectionState.Connected or AppConnectionState.Connecting
+                    or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
+                ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
+                LastActiveClientProfileId = LastActiveClientProfileId,
+                LogExists = IsIdle && File.Exists(LogService.LogFilePath),
+                LastError = _lastError,
+                HasDiagnoseStarted = _hasDiagnoseStarted,
+                HasDisconnectedByUser = _hasDisconnectedByUser,
+                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _lastError != null),
+                SessionStatus = LastSessionStatus,
+                Speed = Client?.Stat.Speed ?? new Traffic(),
+                AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
+                SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
+                ClientIpGroup = _lastCountryIpGroup,
+                IsWaitingForAd = IsWaitingForAd,
+                VersionStatus = _versionStatus,
+                LastPublishInfo =
+                    _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
+                ConnectRequestTime = _connectRequestTime,
+                IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported
+            };
+        }
+    }
 
     public AppConnectionState ConnectionState
     {

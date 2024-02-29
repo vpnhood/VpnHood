@@ -32,7 +32,7 @@ public partial class App : MauiWinUIApplication
 
     protected override MauiApp CreateMauiApp()
     {
-        WinApp.Instance.PreStart(Environment.GetCommandLineArgs());
+        VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
         return MauiProgram.CreateMauiApp(new WinDivertDevice());
     }
 
@@ -43,9 +43,9 @@ public partial class App : MauiWinUIApplication
     public App()
     {
         this.InitializeComponent();
-        WinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-        WinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
-        WinApp.Instance.ExitRequested += ExitRequested;
+        VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
+        VpnHoodWinApp.Instance.ExitRequested += ExitRequested;
 
         Microsoft.Maui.Handlers.WindowHandler.Mapper.AppendToMapping(nameof(IWindow), (handler, _) =>
         {
@@ -74,7 +74,7 @@ public partial class App : MauiWinUIApplication
     {
         base.OnLaunched(args);
      
-        WinApp.Instance.Start();
+        VpnHoodWinApp.Instance.Start();
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
         UpdateIcon();
     }
@@ -95,7 +95,7 @@ public partial class App : MauiWinUIApplication
 
     private void ExitRequested(object? sender, EventArgs e)
     {
-        WinApp.Instance.Dispose();
+        VpnHoodWinApp.Instance.Dispose();
         Exit();
     }
 

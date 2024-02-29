@@ -1,23 +1,26 @@
 ﻿using Android.App;
 using Android.Runtime;
+using VpnHood.Client.App.Droid.Common;
+using VpnHood.Client.App;
+using VpnHood.Client.Device.Droid;
 
-namespace VpnHood.Client.App.Maui;
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
-[Application(Debuggable = true, UsesCleartextTraffic = true)]
-public class MainApplication : MauiApplication
+
+[Application]
+public class MainApplication(IntPtr handle, JniHandleOwnership ownership) 
+    : MauiApplication(handle, ownership)
 {
-    private AppNotification? _notification;
-
-    public MainApplication(IntPtr handle, JniHandleOwnership ownership)
-        : base(handle, ownership)
-    {
-    }
+    private AndroidAppNotification? _appNotification;
 
     protected override MauiApp CreateMauiApp()
     {
-        var mauiApp = MauiProgram.CreateMauiApp();
-        _notification = new AppNotification(this);
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _notification.UpdateNotification();
+        var mauiApp =  MauiProgram.CreateMauiApp(new AndroidDevice());
+        
+        _appNotification = new AndroidAppNotification(this, VpnHoodApp.Instance);
+        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
+        AndroidDevice.Current.InitNotification(_appNotification.Notification, AndroidAppNotification.NotificationId);
+
         return mauiApp;
     }
 }

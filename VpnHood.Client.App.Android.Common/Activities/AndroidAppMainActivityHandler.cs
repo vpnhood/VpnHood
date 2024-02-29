@@ -31,8 +31,7 @@ public class AndroidAppMainActivityHandler(
         // process intent
         ProcessIntent(Activity.Intent);
     }
-
-    protected async Task RequestFeatures()
+    public async Task RequestFeatures()
     {
         // request for adding tile
         if (!VpnHoodApp.Instance.Settings.IsQuickLaunchRequested &&

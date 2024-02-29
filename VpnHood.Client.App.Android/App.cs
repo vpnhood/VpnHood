@@ -12,7 +12,7 @@ namespace VpnHood.Client.App.Droid;
     NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
     SupportsRtl = true, AllowBackup = true)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer) 
-    : AndroidApp(javaReference, transfer)
+    : VpnHoodAndroidApp(javaReference, transfer)
 {
     protected override AppOptions AppOptions => new()
     {

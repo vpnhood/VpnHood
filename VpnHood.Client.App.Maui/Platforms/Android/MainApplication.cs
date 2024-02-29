@@ -17,8 +17,7 @@ public class MainApplication(IntPtr handle, JniHandleOwnership ownership)
     {
         var mauiApp =  MauiProgram.CreateMauiApp(new AndroidDevice());
         
-        _appNotification = new AndroidAppNotification(this, VpnHoodApp.Instance);
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
+        _appNotification = new AndroidAppNotification(VpnHoodApp.Instance);
         AndroidDevice.Current.InitNotification(_appNotification.Notification, AndroidAppNotification.NotificationId);
 
         return mauiApp;

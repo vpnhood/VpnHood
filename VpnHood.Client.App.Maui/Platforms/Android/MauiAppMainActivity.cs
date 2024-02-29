@@ -18,6 +18,9 @@ public abstract class MauiAppMainActivity : MauiAppCompatActivity
         base.OnCreate(savedInstanceState);
         _mainActivityHandler = CreateMainActivityHandler();
         _mainActivityHandler.OnCreate(savedInstanceState);
+
+        // request app permissions and feature such as notification and tile
+        _ = _mainActivityHandler.RequestFeatures();
     }
 
     protected override void OnNewIntent(Intent? intent)

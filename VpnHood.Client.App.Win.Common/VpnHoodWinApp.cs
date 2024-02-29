@@ -11,7 +11,7 @@ using WinNative;
 
 namespace VpnHood.Client.App.Win.Common;
 
-public class WinApp : IDisposable
+public class VpnHoodWinApp : IDisposable
 {
     private const string FileNameAppCommand = "appcommand";
     private Mutex? _instanceMutex;
@@ -28,17 +28,17 @@ public class WinApp : IDisposable
     private int _openMainWindowMenuItemId;
     private int _openMainWindowInBrowserMenuItemId;
     private static VpnHoodApp VhApp => VpnHoodApp.Instance;
-    private static readonly Lazy<WinApp> InstanceFiled = new(() => new WinApp());
+    private static readonly Lazy<VpnHoodWinApp> InstanceFiled = new(() => new VpnHoodWinApp());
 
     public event EventHandler? OpenMainWindowRequested;
     public event EventHandler? OpenMainWindowInBrowserRequested;
     public event EventHandler? ExitRequested;
-    public static WinApp Instance => InstanceFiled.Value;
+    public static VpnHoodWinApp Instance => InstanceFiled.Value;
     public bool ShowWindowAfterStart { get; private set; }
     public bool ConnectAfterStart { get; private set; }
     public bool EnableOpenMainWindow { get; set; } = true;
 
-    private WinApp()
+    private VpnHoodWinApp()
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         _appLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
@@ -77,7 +77,7 @@ public class WinApp : IDisposable
 
     public bool IsAnotherInstanceRunning(string? name = null)
     {
-        name ??= typeof(WinApp).FullName;
+        name ??= typeof(VpnHoodWinApp).FullName;
         _instanceMutex ??= new Mutex(false, name);
 
         // Make single instance

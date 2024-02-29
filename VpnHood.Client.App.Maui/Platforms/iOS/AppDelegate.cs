@@ -1,10 +1,13 @@
 ﻿using Foundation;
 
-namespace VpnHood.Client.App.Maui
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
+
+[Register("AppDelegate")]
+public class AppDelegate : MauiUIApplicationDelegate
 {
-    [Register("AppDelegate")]
-    public class AppDelegate : MauiUIApplicationDelegate
+    protected override MauiApp CreateMauiApp()
     {
-        protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+        // MauiProgram.CreateMauiApp();
+        throw new NotImplementedException("iOS device has not been implemented yet");
     }
 }

@@ -1,61 +1,33 @@
 ﻿using Android.App;
-using Android.Content.PM;
 using Android.Content;
-using Android.Net;
-using VpnHood.Client.Device.Droid;
-using Android.OS;
-using Android.Runtime;
+using Android.Content.PM;
+using Android.Service.QuickSettings;
+using Android.Views;
+using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Client.App.Droid.GooglePlay;
 
-namespace VpnHood.Client.App.Maui;
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
 [Activity(
-    Theme = "@style/Maui.SplashTheme", 
+    Theme = "@style/Maui.SplashTheme",
     MainLauncher = true,
     Exported = true,
-    AlwaysRetainTaskState = true, 
+    WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
+    AlwaysRetainTaskState = true,
     LaunchMode = LaunchMode.SingleInstance,
     ScreenOrientation = ScreenOrientation.Unspecified,
-    ConfigurationChanges =
-        ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
-        ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density |
-        ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
-        ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
+    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
+                           ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
+                           ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
-[IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
-public class MainActivity : MauiAppCompatActivity
+[IntentFilter([TileService.ActionQsTilePreferences])]
+public class MainActivity : MauiAppMainActivity
 {
-    private const int RequestVpnPermission = 10;
-    private AndroidDevice Device => AndroidDevice.Current ?? throw new InvalidOperationException("AndroidDevice has not been initialized.");
-
-    protected override void OnCreate(Bundle? savedInstanceState)
+    protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        base.OnCreate(savedInstanceState);
-
-        // manage VpnPermission
-        Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
-
-    }
-
-    private void Device_OnRequestVpnPermission(object? sender, EventArgs e)
-    {
-        var intent = VpnService.Prepare(this);
-        if (intent == null)
-            Device.VpnPermissionGranted();
-        else
-            StartActivityForResult(intent, RequestVpnPermission);
-    }
-
-    protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
-    {
-        if (requestCode == RequestVpnPermission && resultCode == Result.Ok)
-            Device.VpnPermissionGranted();
-        else
-            Device.VpnPermissionRejected();
-    }
-
-    protected override void OnDestroy()
-    {
-        Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
-        base.OnDestroy();
+        return new AndroidAppMainActivityHandler(this, new AndroidMainActivityOptions
+        {
+            AppUpdaterService = new GooglePlayAppUpdaterService(this)
+        });
     }
 }

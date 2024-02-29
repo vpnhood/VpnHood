@@ -12,7 +12,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     UsesCleartextTraffic = true, // required for localhost
     SupportsRtl = true, AllowBackup = true)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : AndroidApp(javaReference, transfer)
+    : VpnHoodAndroidApp(javaReference, transfer)
 {
     protected override AppOptions AppOptions => new()
     {

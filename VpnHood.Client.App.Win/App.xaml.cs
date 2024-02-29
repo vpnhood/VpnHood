@@ -19,7 +19,7 @@ public partial class App : Application
         try
         {
             // check command line
-            WinApp.Instance.PreStart(e.Args);
+            VpnHoodWinApp.Instance.PreStart(e.Args);
 
             // initialize VpnHoodApp
             VpnHoodApp.Init(new WinDivertDevice(), new AppOptions
@@ -32,13 +32,13 @@ public partial class App : Application
             // initialize SPA
             ArgumentNullException.ThrowIfNull(VpnHoodAppResource.Resources.SpaZipData);
             using var spaResource = new MemoryStream(VpnHoodAppResource.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(spaResource, url: WinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
+            VpnHoodAppWebServer.Init(spaResource, url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
 
             // initialize Win
-            WinApp.Instance.ExitRequested += (_, _) => Shutdown();
-            WinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => WinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
-            WinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-            WinApp.Instance.Start();
+            VpnHoodWinApp.Instance.ExitRequested += (_, _) => Shutdown();
+            VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += (_, _) => VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+            VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+            VpnHoodWinApp.Instance.Start();
         }
         catch (Exception ex)
         {
@@ -63,7 +63,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        WinApp.Instance.Dispose();
+        VpnHoodWinApp.Instance.Dispose();
         if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
         if (VpnHoodApp.IsInit) VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 

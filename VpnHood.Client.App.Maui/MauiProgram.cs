@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Client.App;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.Device;
-using VpnHood.Client.Device.WinDivert;
 
-namespace VpnHood.Client.App.Maui;
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
 public static class MauiProgram
 {
-    public static MauiApp CreateMauiApp()
+    public static MauiApp CreateMauiApp(IDevice vpnHoodDevice)
     {
         var builder = MauiApp.CreateBuilder();
         builder
@@ -23,19 +23,9 @@ public static class MauiProgram
 #endif
 
         var resources = VpnHoodAppResource.Resources;
-        VpnHoodApp.Init(CreateDevice(), new AppOptions() { Resources = resources });
+        resources.Strings.AppName = "VpnHood Client Sample";
+        VpnHoodApp.Init(vpnHoodDevice, new AppOptions() { Resources = resources });
 
         return builder.Build();
-    }
-
-    private static IDevice CreateDevice()
-    {
-#if WINDOWS
-        return new WinDivertDevice();
-#elif ANDROID
-        return new AppProvider();
-#else
-        throw new PlatformNotSupportedException();
-#endif
     }
 }

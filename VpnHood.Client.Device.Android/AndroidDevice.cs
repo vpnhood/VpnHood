@@ -74,10 +74,17 @@ public class AndroidDevice : IDevice
             notificationBuilder = new Notification.Builder(context);
         }
 
+        // get default icon
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        // var appName = Application.Context.ApplicationInfo.LoadLabel(Application.Context.PackageManager ?? throw new Exception("Could not retrieve PackageManager"));
+        if (context.Resources == null) throw new Exception("Could not retrieve context.Resources.");
+        var iconId = appInfo.Icon;
+        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/notification", "drawable", context.PackageName);
+        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/ic_launcher", "drawable", context.PackageName);
+        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/appicon", "drawable", context.PackageName);
+        if (iconId == 0) throw new Exception("Could not retrieve default icon.");
+
         return notificationBuilder
-            .SetSmallIcon(appInfo.Icon)
+            .SetSmallIcon(iconId)
             .SetOngoing(true)
             .Build();
     }

@@ -3,7 +3,7 @@ using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public class AndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
+public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
     : Application(javaReference, transfer)
 {
     private AndroidAppNotification? _appNotification;
@@ -18,8 +18,7 @@ public class AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
             VpnHoodApp.Init(new AndroidDevice(), AppOptions);
 
         // init notification
-        _appNotification = new AndroidAppNotification(this, VpnHoodApp.Instance); 
-        VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => _appNotification.Update();
+        _appNotification = new AndroidAppNotification(VpnHoodApp.Instance); 
         AndroidDevice.Current.InitNotification(_appNotification.Notification, AndroidAppNotification.NotificationId);
     }
 

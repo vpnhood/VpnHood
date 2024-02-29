@@ -5,7 +5,9 @@ using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
-public class AndroidAppWebViewMainActivityHandler(Activity activity, AndroidMainActivityWebViewOptions options)
+public class AndroidAppWebViewMainActivityHandler(
+    Activity activity, 
+    AndroidMainActivityWebViewOptions options)
     : AndroidAppMainActivityHandler(activity, options)
 {
     private bool _isWeViewVisible;

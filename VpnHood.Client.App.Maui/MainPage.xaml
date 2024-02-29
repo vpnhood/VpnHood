@@ -1,13 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:maui="clr-namespace:VpnHood.Client.App.Maui"
-             x:Class="VpnHood.Client.App.Maui.MainPage">
-
-
+             x:Class="VpnHood.Client.Samples.MauiAppSpaSample.MainPage">
 
     <AbsoluteLayout x:Name="MainLayout" AbsoluteLayout.LayoutFlags="All" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand">
-        <maui:AppWebView x:Name="MainWebView" AbsoluteLayout.LayoutFlags="All" AbsoluteLayout.LayoutBounds="0,0,1,1"></maui:AppWebView>
+        <WebView x:Name="MainWebView" AbsoluteLayout.LayoutFlags="All" AbsoluteLayout.LayoutBounds="0,0,1,1"></WebView>
         <Image x:Name="SplashScreen" IsVisible="true"
                AbsoluteLayout.LayoutBounds="0,0,1,1"
                Aspect="Center"
@@ -17,5 +14,4 @@
                VerticalOptions="FillAndExpand"
                HorizontalOptions="FillAndExpand" />
     </AbsoluteLayout>
-
 </ContentPage>

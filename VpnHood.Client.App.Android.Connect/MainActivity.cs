@@ -39,7 +39,7 @@ public class MainActivity : AndroidAppMainActivity
         base.OnCreate(savedInstanceState);
         //Android.Gms.Ads.MobileAds.Initialize(this); // for ads
 
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
+        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(ActivityEvent, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
         VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);

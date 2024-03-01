@@ -9,28 +9,39 @@ using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
-public class AndroidAppMainActivityHandler(
-    Activity activity, 
-    AndroidMainActivityOptions options) 
-    : IActivityEvent
+public class AndroidAppMainActivityHandler 
 {
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
-    private readonly string[] _accessKeySchemes = options.AccessKeySchemes;
-    private readonly string[] _accessKeyMimes = options.AccessKeySchemes;
-    private readonly IAppUpdaterService? _appUpdaterService = options.AppUpdaterService;
+    private readonly string[] _accessKeySchemes;
+    private readonly string[] _accessKeyMimes;
+    private readonly IAppUpdaterService? _appUpdaterService;
     private const int RequestPostNotificationId = 11;
     protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
-    public Activity Activity { get; } = activity;
-    public event EventHandler<ActivityResultEventArgs>? OnActivityResultEvent;
-    public event EventHandler? OnDestroyEvent;
+    protected IActivityEvent ActivityEvent { get; }
 
-    public virtual void OnCreate(Bundle? savedInstanceState)
+    public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options)
     {
-        VpnDevice.Prepare(this);
+        ActivityEvent = activityEvent;
+        _appUpdaterService = options.AppUpdaterService;
+        _accessKeySchemes = options.AccessKeySchemes;
+        _accessKeyMimes = options.AccessKeySchemes;
+        
+        activityEvent.OnCreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
+        activityEvent.OnNewIntentEvent += (_, args) => OnNewIntent(args.Intent);
+        activityEvent.OnRequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
+        activityEvent.OnActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
+        activityEvent.OnKeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
+        activityEvent.OnDestroyEvent += (_, _) => OnDestroy();
+    }
+
+    protected virtual void OnCreate(Bundle? savedInstanceState)
+    {
+        VpnDevice.Prepare(ActivityEvent);
 
         // process intent
-        ProcessIntent(Activity.Intent);
+        ProcessIntent(ActivityEvent.Activity.Intent);
     }
+
     public async Task RequestFeatures()
     {
         // request for adding tile
@@ -39,14 +50,14 @@ public class AndroidAppMainActivityHandler(
         {
             VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
             VpnHoodApp.Instance.Settings.Save();
-            await QuickLaunchTileService.RequestAddTile(Activity);
+            await QuickLaunchTileService.RequestAddTile(ActivityEvent.Activity);
         }
 
         // request for notification
-        if (OperatingSystem.IsAndroidVersionAtLeast(33) && Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
+        if (OperatingSystem.IsAndroidVersionAtLeast(33) && ActivityEvent.Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
         {
             _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
-            Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
+            ActivityEvent.Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
             await _requestPostNotificationsCompletionTask.Task;
         }
 
@@ -56,14 +67,14 @@ public class AndroidAppMainActivityHandler(
             VpnHoodApp.Instance.VersionCheckPostpone(); // postpone check if check succeeded
     }
 
-    public bool OnNewIntent(Intent? intent)
+    protected virtual bool OnNewIntent(Intent? intent)
     {
         return ProcessIntent(intent);
     }
 
     private bool ProcessIntent(Intent? intent)
     {
-        if (intent?.Data == null || Activity.ContentResolver == null)
+        if (intent?.Data == null || ActivityEvent.Activity.ContentResolver == null)
             return false;
 
         // try to add the access key
@@ -77,15 +88,15 @@ public class AndroidAppMainActivityHandler(
             }
 
             // check mime
-            var mimeType = Activity.ContentResolver.GetType(uri);
+            var mimeType = ActivityEvent.Activity.ContentResolver.GetType(uri);
             if (!_accessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase))
             {
-                Toast.MakeText(Activity, VpnHoodApp.Instance.Resources.Strings.MsgUnsupportedContent, ToastLength.Long)?.Show();
+                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgUnsupportedContent, ToastLength.Long)?.Show();
                 return false;
             }
 
             // open stream
-            using var inputStream = Activity.ContentResolver.OpenInputStream(uri);
+            using var inputStream = ActivityEvent.Activity.ContentResolver.OpenInputStream(uri);
             if (inputStream == null)
                 throw new Exception("Can not open the intent file stream.");
 
@@ -100,7 +111,7 @@ public class AndroidAppMainActivityHandler(
         }
         catch
         {
-            Toast.MakeText(Activity, VpnHoodApp.Instance.Resources.Strings.MsgCantReadAccessKey, ToastLength.Long)?.Show();
+            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgCantReadAccessKey, ToastLength.Long)?.Show();
         }
 
         return true;
@@ -118,34 +129,27 @@ public class AndroidAppMainActivityHandler(
             ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profile.ClientProfileName)
             : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profile.ClientProfileName);
 
-        Toast.MakeText(Activity, message, ToastLength.Long)?.Show();
+        Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }
 
-    public void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
+    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
     {
         var postNotificationsIndex = Array.IndexOf(permissions, Manifest.Permission.PostNotifications);
         if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
             _requestPostNotificationsCompletionTask.TrySetResult(grantResults[postNotificationsIndex]);
     }
 
-    public virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
+    protected virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
     {
         return false;
     }
 
-    public virtual void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
+    protected virtual void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
-        OnActivityResultEvent?.Invoke(this, new ActivityResultEventArgs
-        {
-            RequestCode = requestCode,
-            ResultCode = resultCode,
-            Data = data
-        });
     }
 
-    public virtual void OnDestroy()
+    protected virtual void OnDestroy()
     {
-        OnDestroyEvent?.Invoke(this, EventArgs.Empty);
         VpnHoodApp.Instance.AppUpdaterService = null;
     }
 }

@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "SampleClient.Win": {
-      "commandName": "Executable",
-      "executablePath": "dotnet",
-      "commandLineArgs": "VpnHood.Samples.SimpleClient.Win.dll"
-    }
-  }
-}

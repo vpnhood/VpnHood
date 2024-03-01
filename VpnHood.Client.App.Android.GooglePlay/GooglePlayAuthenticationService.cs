@@ -9,28 +9,28 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
 {
     private const int SignInIntentId = 20200;
     private bool _disposed;
-    private Activity? _activity;
+    private IActivityEvent? _activityEvent;
     private readonly GoogleSignInClient _googleSignInClient;
     private TaskCompletionSource<GoogleSignInAccount>? _taskCompletionSource;
 
-    public GooglePlayAuthenticationService(Activity activity, string firebaseClientId)
+    public GooglePlayAuthenticationService(IActivityEvent activityEvent, string firebaseClientId)
     {
-        _activity = activity;
+        _activityEvent = activityEvent;
 
         var googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
             .RequestIdToken(firebaseClientId)
             .RequestEmail()
             .Build();
 
-        _googleSignInClient = GoogleSignIn.GetClient(activity, googleSignInOptions);
+        _googleSignInClient = GoogleSignIn.GetClient(activityEvent.Activity, googleSignInOptions);
 
-        ((IActivityEvent)_activity).OnDestroyEvent += Activity_OnDestroy;
-        ((IActivityEvent)_activity).OnActivityResultEvent += Activity_OnActivityResult;
+        activityEvent.OnDestroyEvent += Activity_OnDestroy;
+        activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
     }
 
-    public static GooglePlayAuthenticationService Create<T>(T activity, string firebaseId) where T : Activity, IActivityEvent
+    public static GooglePlayAuthenticationService Create(IActivityEvent activityEvent, string firebaseId) 
     {
-        return new GooglePlayAuthenticationService(activity, firebaseId);
+        return new GooglePlayAuthenticationService(activityEvent, firebaseId);
     }
 
     public async Task<string> SilentSignIn()
@@ -46,7 +46,7 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         _taskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
-        _activity?.StartActivityForResult(_googleSignInClient.SignInIntent, SignInIntentId);
+        _activityEvent?.Activity.StartActivityForResult(_googleSignInClient.SignInIntent, SignInIntentId);
         var account = await _taskCompletionSource.Task;
 
         if (account.IdToken == null)
@@ -86,6 +86,6 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
         _disposed = true;
 
         _googleSignInClient.Dispose();
-        _activity = null;
+        _activityEvent = null;
     }
 }

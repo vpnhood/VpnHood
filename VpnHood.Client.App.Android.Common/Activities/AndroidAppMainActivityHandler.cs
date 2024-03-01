@@ -20,13 +20,13 @@ public class AndroidAppMainActivityHandler(
     private readonly IAppUpdaterService? _appUpdaterService = options.AppUpdaterService;
     private const int RequestPostNotificationId = 11;
     protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
-    protected Activity Activity { get; } = activity;
+    public Activity Activity { get; } = activity;
     public event EventHandler<ActivityResultEventArgs>? OnActivityResultEvent;
     public event EventHandler? OnDestroyEvent;
 
     public virtual void OnCreate(Bundle? savedInstanceState)
     {
-        VpnDevice.Prepare(Activity, this);
+        VpnDevice.Prepare(this);
 
         // process intent
         ProcessIntent(Activity.Intent);

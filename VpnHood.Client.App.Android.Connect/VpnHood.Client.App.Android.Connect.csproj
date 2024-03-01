@@ -10,7 +10,7 @@
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<PublishTrimmed>False</PublishTrimmed>
 		<RunAOTCompilation>False</RunAOTCompilation>
 	</PropertyGroup>

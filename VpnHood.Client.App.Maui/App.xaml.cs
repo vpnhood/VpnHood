@@ -1,9 +1,8 @@
-﻿using VpnHood.Client.App.Resources;
+﻿using VpnHood.Client.App;
 using VpnHood.Client.App.WebServer;
 
-namespace VpnHood.Client.App.Maui;
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
-// ReSharper disable once RedundantExtendsListEntry
 public partial class App : Application
 {
     public App()
@@ -11,15 +10,14 @@ public partial class App : Application
         InitializeComponent();
 
         MainPage = new MainPage();
-        NavigationPage.SetHasNavigationBar(this, false);
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var window = base.CreateWindow(activationState);
-        window.Width = UiDefaults.WindowSize.Width;
-        window.Height = UiDefaults.WindowSize.Height;
-        window.Title = UiResource.AppName;
+        window.Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
+        window.Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
+        window.Title = VpnHoodApp.Instance.Resources.Strings.AppName;
         return window;
     }
 
@@ -29,11 +27,4 @@ public partial class App : Application
         if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
         if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
     }
-
-    public new static App? Current => (App?)Application.Current;
-
-    public Color? BackgroundColor =>
-        (Resources.TryGetValue("Primary", out var primaryColor) == true)
-            ? primaryColor as Color : null;
-
 }

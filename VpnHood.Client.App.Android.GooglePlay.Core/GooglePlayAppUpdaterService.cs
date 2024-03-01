@@ -6,7 +6,8 @@ using Xamarin.Google.Android.Play.Core.Install.Model;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAppUpdaterService(Activity activity): IAppUpdaterService
+public class GooglePlayAppUpdaterService(Activity activity) 
+    : IAppUpdaterService
 {
     public async Task<bool> Update()
     {

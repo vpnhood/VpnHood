@@ -4,4 +4,5 @@ public interface IActivityEvent
 {
     event EventHandler<ActivityResultEventArgs> OnActivityResultEvent;
     event EventHandler OnDestroyEvent;
+    Activity Activity { get; }
 }

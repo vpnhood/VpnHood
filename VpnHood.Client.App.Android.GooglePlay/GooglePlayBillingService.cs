@@ -51,9 +51,18 @@ public class GooglePlayBillingService: IAppBillingService
     {
         await EnsureConnected();
 
-        var isDeviceSupportSubscription = _billingClient.IsFeatureSupported("subscriptions");//TODO Check parameter
-        if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
-            throw new NotImplementedException();
+        // Check if the purchase subscription is supported on the user's device
+        try
+        {
+            var isDeviceSupportSubscription = _billingClient.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
+            if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
+                throw new Exception("Subscription feature is not supported on this device.");
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError("Could not check supported feature with google play. Error: ", ex);
+            throw;
+        }
 
         // Set list of the created products in the GooglePlay.
         var productDetailsParams = QueryProductDetailsParams.NewBuilder()

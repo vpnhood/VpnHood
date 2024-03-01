@@ -1,27 +1,40 @@
-﻿using Microsoft.Maui.Platform;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Windowing;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Windows.Data.Xml.Dom;
-using AppWindow = Microsoft.UI.Windowing.AppWindow;
-using VpnHood.Client.App.Resources;
-using Windows.UI.Notifications;
-using VpnHood.Client.App.WebServer;
+using Microsoft.UI.Xaml;
+using VpnHood.Client.App.Win.Common;
+using VpnHood.Client.Device.WinDivert;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
 // ReSharper disable once CheckNamespace
-namespace VpnHood.Client.App.Maui.WinUI;
+namespace VpnHood.Client.Samples.MauiAppSpaSample.WinUI;
 
+using Microsoft.Maui.Platform;
+using Microsoft.UI.Windowing;
+using System.Diagnostics;
+using VpnHood.Client.App;
+using VpnHood.Client.App.WebServer;
+using Windows.UI.Notifications;
+
+/// <summary>
+/// Provides application-specific behavior to supplement the default Application class.
+/// </summary>
 // ReSharper disable once RedundantExtendsListEntry
 public partial class App : MauiWinUIApplication
 {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
     private AppWindow? _appWindow;
+
+
+    protected override MauiApp CreateMauiApp()
+    {
+        VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
+        return MauiProgram.CreateMauiApp(new WinDivertDevice());
+    }
 
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code
@@ -29,45 +42,41 @@ public partial class App : MauiWinUIApplication
     /// </summary>
     public App()
     {
-        InitializeComponent();
-        WinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-        WinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
-        WinApp.Instance.ExitRequested += ExitRequested;
+        this.InitializeComponent();
+        VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
+        VpnHoodWinApp.Instance.ExitRequested += ExitRequested;
 
         Microsoft.Maui.Handlers.WindowHandler.Mapper.AppendToMapping(nameof(IWindow), (handler, _) =>
         {
             _appWindow = handler.PlatformView.GetAppWindow();
+
+            //customize WinUI main window
             if (_appWindow != null)
             {
-                var bgColor = Windows.UI.Color.FromArgb(UiDefaults.WindowBackgroundColor.A, UiDefaults.WindowBackgroundColor.R, UiDefaults.WindowBackgroundColor.G, UiDefaults.WindowBackgroundColor.B);
                 _appWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
-                _appWindow.TitleBar.ButtonBackgroundColor = bgColor;
-                _appWindow.TitleBar.BackgroundColor = bgColor;
-                _appWindow.TitleBar.ForegroundColor = bgColor;
                 _appWindow.Closing += AppWindow_Closing;
+
+                var bgColorResource = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
+                if (bgColorResource != null)
+                {
+                    var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R,
+                        bgColorResource.Value.G, bgColorResource.Value.B);
+                    _appWindow.TitleBar.ButtonBackgroundColor = bgColor;
+                    _appWindow.TitleBar.BackgroundColor = bgColor;
+                    _appWindow.TitleBar.ForegroundColor = bgColor;
+                }
             }
         });
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        WinApp.Instance.PreStart(Environment.GetCommandLineArgs());
         base.OnLaunched(args);
-    }
-
-    protected override MauiApp CreateMauiApp()
-    {
-        var mauiApp = MauiProgram.CreateMauiApp();
-        WinApp.Instance.Start();
+     
+        VpnHoodWinApp.Instance.Start();
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
         UpdateIcon();
-        return mauiApp;
-    }
-
-    private static void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
-    {
-        args.Cancel = true;
-        sender.Hide();
     }
 
     private void OpenMainWindowRequested(object? sender, EventArgs e)
@@ -79,9 +88,21 @@ public partial class App : MauiWinUIApplication
             SetForegroundWindow(mainWindowHandle);
     }
 
-    private void OpenMainWindowInBrowserRequested(object? sender, EventArgs e)
+    private static void OpenMainWindowInBrowserRequested(object? sender, EventArgs e)
     {
         Browser.Default.OpenAsync(VpnHoodAppWebServer.Instance.Url, BrowserLaunchMode.External);
+    }
+
+    private void ExitRequested(object? sender, EventArgs e)
+    {
+        VpnHoodWinApp.Instance.Dispose();
+        Exit();
+    }
+
+    private static void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        args.Cancel = true;
+        sender.Hide();
     }
 
     private static void ConnectionStateChanged(object? sender, EventArgs e)
@@ -109,11 +130,5 @@ public partial class App : MauiWinUIApplication
         var badgeNotification = new BadgeNotification(badgeXml);
         var badgeUpdater = BadgeUpdateManager.CreateBadgeUpdaterForApplication();
         badgeUpdater.Update(badgeNotification);
-    }
-    
-    private void ExitRequested(object? sender, EventArgs e)
-    {
-        WinApp.Instance.Dispose();
-        Exit();
     }
 }

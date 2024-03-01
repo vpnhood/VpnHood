@@ -15,7 +15,7 @@ public class AndroidDevice : IDevice
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private TaskCompletionSource<bool> _startServiceTaskSource = new();
     private IPacketCapture? _packetCapture;
-    private Activity? _activity;
+    private IActivityEvent? _activityEvent;
     private const int RequestVpnPermissionId = 20100;
 
     public event EventHandler? OnStartAsService;
@@ -33,14 +33,9 @@ public class AndroidDevice : IDevice
         _current = this;
     }
 
-    public void Prepare<T>(T activity) where T : Activity, IActivityEvent
+    public void Prepare(IActivityEvent activityEvent)
     {
-        Prepare(activity, activity);
-    }
-
-    public void Prepare(Activity activity, IActivityEvent activityEvent)
-    {
-        _activity = activity;
+        _activityEvent = activityEvent;
         activityEvent.OnDestroyEvent += Activity_OnDestroy;
         activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
     }
@@ -125,12 +120,12 @@ public class AndroidDevice : IDevice
     public async Task<IPacketCapture> CreatePacketCapture()
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-        using var prepareIntent = VpnService.Prepare(_activity ?? Application.Context);
+        using var prepareIntent = VpnService.Prepare(_activityEvent?.Activity ?? Application.Context);
         if (prepareIntent != null)
         {
             _grantPermissionTaskSource = new TaskCompletionSource<bool>();
-            if (_activity != null)
-                _activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
+            if (_activityEvent != null)
+                _activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
             else
                 throw new Exception("Please open the app and grant VPN permission to proceed.");
 
@@ -203,7 +198,7 @@ public class AndroidDevice : IDevice
 
     private void Activity_OnDestroy(object? sender, EventArgs e)
     {
-        _activity = null;
+        _activityEvent = null;
         _grantPermissionTaskSource.TrySetResult(false);
     }
 

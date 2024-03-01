@@ -7,6 +7,7 @@ public class ActivityEvent : Activity, IActivityEvent
 {
     public event EventHandler<ActivityResultEventArgs>? OnActivityResultEvent;
     public event EventHandler? OnDestroyEvent;
+    public Activity Activity => this;
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
@@ -24,5 +25,4 @@ public class ActivityEvent : Activity, IActivityEvent
         OnDestroyEvent?.Invoke(this, EventArgs.Empty);
         base.OnDestroy();
     }
-
 }

@@ -24,7 +24,7 @@ public partial class MainWindow : Window
         // initialize main window
         Title = VpnHoodApp.Instance.Resources.Strings.AppName;
         if (backgroundColor != null) Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R, backgroundColor.Value.G, backgroundColor.Value.B));
-        Visibility = WinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
+        Visibility = VpnHoodWinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
         Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
         Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
@@ -32,7 +32,7 @@ public partial class MainWindow : Window
 
         // set window title bar color
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
-        if (backgroundColor != null) WinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
+        if (backgroundColor != null) VpnHoodWinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
         MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp") };
@@ -56,7 +56,7 @@ public partial class MainWindow : Window
 
     private static void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {
-        WinApp.OpenUrlInExternalBrowser(new Uri(e.Uri));
+        VpnHoodWinApp.OpenUrlInExternalBrowser(new Uri(e.Uri));
         e.Handled = true;
     }
 
@@ -72,12 +72,12 @@ public partial class MainWindow : Window
         lock (MainWebView)
         {
             // MainWebView_CoreWebView2InitializationCompleted is called many times
-            if (WinApp.Instance.EnableOpenMainWindow)
+            if (VpnHoodWinApp.Instance.EnableOpenMainWindow)
             {
                 Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
-                WinApp.Instance.EnableOpenMainWindow = false;
-                if (WinApp.Instance.ShowWindowAfterStart)
-                    WinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+                VpnHoodWinApp.Instance.EnableOpenMainWindow = false;
+                if (VpnHoodWinApp.Instance.ShowWindowAfterStart)
+                    VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             }
         }
     }

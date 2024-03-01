@@ -1,11 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Client.App;
 using VpnHood.Client.App.Resources;
-using VpnHood.Client.App.WebServer;
-namespace VpnHood.Client.App.Maui;
+using VpnHood.Client.Device;
+
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
 public static class MauiProgram
 {
-    public static MauiApp CreateMauiApp()
+    public static MauiApp CreateMauiApp(IDevice vpnHoodDevice)
     {
         var builder = MauiApp.CreateBuilder();
         builder
@@ -20,22 +22,10 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        var appProvider = CreateAppProvider();
-        using var spaResource = new MemoryStream(UiResource.SPA);
-        VpnHoodApp.Init(appProvider, new AppOptions());
-        VpnHoodAppWebServer.Init(spaResource, url2: appProvider.AdditionalUiUrl);
+        var resources = VpnHoodAppResource.Resources;
+        resources.Strings.AppName = "VpnHood Client Sample";
+        VpnHoodApp.Init(vpnHoodDevice, new AppOptions() { Resources = resources });
 
         return builder.Build();
-    }
-
-    private static IAppProvider CreateAppProvider()
-    {
-#if WINDOWS
-        return new WinAppProvider();
-#elif ANDROID
-        return new AppProvider();
-#else
-        throw new PlatformNotSupportedException();
-#endif
     }
 }

@@ -14,6 +14,7 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount?> Get()
     {
+        return Task.FromResult((AppAccount?)null);
         return AccountService.GetAccount();
     }
 

@@ -3,17 +3,24 @@ using VpnHood.Client.App.Droid.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-public sealed class AndroidAppNotification(Context context, VpnHoodApp vpnHoodApp) 
-    : IDisposable
+public sealed class AndroidAppNotification : IDisposable
 {
-    public static int NotificationId => 1000;
+    private readonly VpnHoodApp _vpnHoodApp;
     private const string NotificationChannelGeneralId = "general";
     private const string NotificationChannelGeneralName = "General";
-    private readonly Notification.Builder _notificationBuilder = CreateNotificationBuilder(context, vpnHoodApp.Resources);
+    private readonly Notification.Builder _notificationBuilder;
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
-
     public Notification Notification => _notificationBuilder.Build();
+    public static int NotificationId => 1000;
+
+    public AndroidAppNotification(VpnHoodApp vpnHoodApp)
+    {
+        _vpnHoodApp = vpnHoodApp;
+        vpnHoodApp.ConnectionStateChanged += (_, _) => Update();
+        _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resources);
+    }
+
 
     private static PendingIntent CreatePendingIntent(Context context, string name)
     {
@@ -84,13 +91,13 @@ public sealed class AndroidAppNotification(Context context, VpnHoodApp vpnHoodAp
         lock (_stateLock)
         {
             // update only when the state changed
-            var connectionState = vpnHoodApp.ConnectionState;
+            var connectionState = _vpnHoodApp.ConnectionState;
             if (_lastNotifyState == connectionState && !force)
                 return;
 
             // connection status
             // Set subtitle
-            var activeProfileName = vpnHoodApp.GetActiveClientProfile()?.ToInfo().ClientProfileName;
+            var activeProfileName = _vpnHoodApp.GetActiveClientProfile()?.ToInfo().ClientProfileName;
             _notificationBuilder.SetContentTitle(activeProfileName);
             _notificationBuilder.SetSubText(connectionState == AppConnectionState.Connected
                 ? $"{connectionState}"
@@ -104,7 +111,7 @@ public sealed class AndroidAppNotification(Context context, VpnHoodApp vpnHoodAp
 
 
             // show or hide
-            var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService);
+            var notificationManager = (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
             if (notificationManager == null)
                 return;
 

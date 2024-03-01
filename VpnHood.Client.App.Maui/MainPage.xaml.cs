@@ -1,12 +1,22 @@
-﻿using VpnHood.Client.App.WebServer;
+﻿using VpnHood.Client.App;
+using VpnHood.Client.App.WebServer;
 
-namespace VpnHood.Client.App.Maui;
+namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
-public partial class MainPage
+public partial class MainPage : ContentPage
 {
     public MainPage()
     {
         InitializeComponent();
+
+        // Initialize SPA
+        if (!VpnHoodAppWebServer.IsInit)
+        {
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
+            using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
+            VpnHoodAppWebServer.Init(memoryStream);
+        }
+
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url.AbsoluteUri;
         MainWebView.Navigated += MainWebView_Navigated;
     }

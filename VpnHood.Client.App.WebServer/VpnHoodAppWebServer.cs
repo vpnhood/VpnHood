@@ -50,7 +50,7 @@ public class VpnHoodAppWebServer : IDisposable
     }
 
 
-    public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default, 
+    public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default,
         bool listenToAllIps = false)
     {
         var ret = new VpnHoodAppWebServer(zipStream, defaultPort ?? 9090, url, listenToAllIps);
@@ -142,10 +142,16 @@ public class VpnHoodAppWebServer : IDisposable
 
     private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
-        if (data is null) throw new ArgumentNullException(nameof(data));
+        if (data is null)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return;
+        }
+
+        context.Response.StatusCode = (int)HttpStatusCode.OK;
         context.Response.ContentType = MimeType.Json;
         await using var text = context.OpenResponseText(new UTF8Encoding(false));
-        await text.WriteAsync(JsonSerializer.Serialize(data,
+        await text.WriteAsync(JsonSerializer.Serialize(data, 
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 

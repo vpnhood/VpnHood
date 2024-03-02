@@ -1,5 +1,4 @@
-﻿using VpnHood.Client.App;
-using VpnHood.Client.App.WebServer;
+﻿using VpnHood.Client.App.WebServer;
 
 namespace VpnHood.Client.Samples.MauiAppSpaSample;
 

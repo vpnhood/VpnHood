@@ -201,6 +201,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     {
         if (_instance == null) return;
         await Disconnect();
+        Device.Dispose();
         _instance = null;
     }
 

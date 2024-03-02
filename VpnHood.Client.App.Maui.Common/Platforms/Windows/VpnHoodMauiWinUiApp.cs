@@ -3,25 +3,29 @@ using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using VpnHood.Client.App;
 using VpnHood.Client.App.Win.Common;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Maui.Common;
 
-public class VpnHoodMauiWinUiAppHandler 
+internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
 {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     protected AppWindow? AppWindow;
-    public VpnHoodMauiWinUiAppHandler()
+
+    public void Init(VpnHoodApp vpnHoodApp)
     {
         VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());
         VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
         VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
         VpnHoodWinApp.Instance.ExitRequested += ExitRequested;
+        VpnHoodWinApp.Instance.Start();
+        vpnHoodApp.ConnectionStateChanged += ConnectionStateChanged;
+        UpdateIcon();
 
         Microsoft.Maui.Handlers.WindowHandler.Mapper.AppendToMapping(nameof(IWindow), (handler, _) =>
         {
@@ -33,7 +37,7 @@ public class VpnHoodMauiWinUiAppHandler
                 AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
                 AppWindow.Closing += AppWindow_Closing;
 
-                var bgColorResource = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
+                var bgColorResource = vpnHoodApp.Resources.Colors.WindowBackgroundColor;
                 if (bgColorResource != null)
                 {
                     var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R,
@@ -46,12 +50,9 @@ public class VpnHoodMauiWinUiAppHandler
         });
     }
 
-    public void OnLaunched(LaunchActivatedEventArgs args)
+    public IDevice CreateDevice()
     {
-        _ = args;
-        VpnHoodWinApp.Instance.Start();
-        VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
-        UpdateIcon();
+        return new WinDivertDevice();
     }
 
     protected virtual void OpenMainWindowRequested(object? sender, EventArgs e)
@@ -66,6 +67,7 @@ public class VpnHoodMauiWinUiAppHandler
     protected virtual void OpenMainWindowInBrowserRequested(object? sender, EventArgs e)
     {
         //Browser.Default.OpenAsync(VpnHoodAppWebServer.Instance.Url, BrowserLaunchMode.External);
+        throw new NotSupportedException();
     }
 
     protected virtual void ExitRequested(object? sender, EventArgs e)

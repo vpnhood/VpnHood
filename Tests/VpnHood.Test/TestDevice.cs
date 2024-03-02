@@ -25,4 +25,8 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
         var res = new TestPacketCapture(_options);
         return Task.FromResult((IPacketCapture) res);
     }
+
+    public void Dispose()
+    {
+    }
 }

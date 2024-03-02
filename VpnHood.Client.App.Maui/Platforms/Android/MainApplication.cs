@@ -8,18 +8,15 @@ namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
 
 [Application]
-public class MainApplication(IntPtr handle, JniHandleOwnership ownership) 
+public class MainApplication(IntPtr handle, JniHandleOwnership ownership)
     : MauiApplication(handle, ownership)
 {
-    private AndroidAppNotification? _appNotification;
-
     protected override MauiApp CreateMauiApp()
     {
-        var mauiApp =  MauiProgram.CreateMauiApp(new AndroidDevice());
-        
-        _appNotification = new AndroidAppNotification(VpnHoodApp.Instance);
-        AndroidDevice.Current.InitNotification(_appNotification.Notification, AndroidAppNotification.NotificationId);
-
+        var vpnHoodDevice = new AndroidDevice();
+        var mauiApp = MauiProgram.CreateMauiApp(vpnHoodDevice);
+        var appNotification = new AndroidAppNotification(VpnHoodApp.Instance);
+        vpnHoodDevice.InitNotification(appNotification.Notification, AndroidAppNotification.NotificationId);
         return mauiApp;
     }
 }

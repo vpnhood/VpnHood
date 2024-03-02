@@ -30,6 +30,8 @@ public class MainActivity : AndroidAppMainActivity
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
+            DefaultSpaPort = AssemblyInfo.DefaultSpaPort,
+            ListenToAllIps = AssemblyInfo.ListenToAllIps,
             AppUpdaterService = new GooglePlayAppUpdaterService(this)
         });
     }

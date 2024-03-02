@@ -7,16 +7,21 @@ using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.Device.Droid;
 
+public class DeviceNotification
+{
+    public required int NotificationId { get; init; }
+    public required Notification Notification { get; init; }
+}
+
 public class AndroidDevice : IDevice
 {
     private static AndroidDevice? _current;
-    private int _notificationId = 3500;
-    private Notification? _notification;
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private TaskCompletionSource<bool> _startServiceTaskSource = new();
     private IPacketCapture? _packetCapture;
     private IActivityEvent? _activityEvent;
     private const int RequestVpnPermissionId = 20100;
+    private DeviceNotification? _deviceNotification;
 
     public event EventHandler? OnStartAsService;
     public bool IsExcludeAppsSupported => true;
@@ -33,6 +38,11 @@ public class AndroidDevice : IDevice
         _current = this;
     }
 
+    public void InitNotification(DeviceNotification deviceNotification)
+    {
+        _deviceNotification = deviceNotification;
+    }
+
     public void Prepare(IActivityEvent activityEvent)
     {
         _activityEvent = activityEvent;
@@ -40,13 +50,7 @@ public class AndroidDevice : IDevice
         activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
     }
 
-    public void InitNotification(Notification notification, int notificationId)
-    {
-        _notification = notification;
-        _notificationId = notificationId;
-    }
-
-    private static Notification GetDefaultNotification()
+    private static DeviceNotification CreateDefaultNotification()
     {
         const string channelId = "1000";
         var context = Application.Context;
@@ -78,10 +82,16 @@ public class AndroidDevice : IDevice
         if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/appicon", "drawable", context.PackageName);
         if (iconId == 0) throw new Exception("Could not retrieve default icon.");
 
-        return notificationBuilder
+        var notification = notificationBuilder
             .SetSmallIcon(iconId)
             .SetOngoing(true)
             .Build();
+
+        return new DeviceNotification
+        {
+            Notification = notification,
+            NotificationId = 3500
+        };
     }
 
     public DeviceAppInfo[] InstalledApps
@@ -164,8 +174,8 @@ public class AndroidDevice : IDevice
         _startServiceTaskSource.TrySetResult(true);
 
         // set foreground
-        var notification = _notification ?? GetDefaultNotification();
-        packetCapture.StartForeground(_notificationId, notification);
+        _deviceNotification ??= CreateDefaultNotification();
+        packetCapture.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
 
         // fire AutoCreate for always on
         var manual = intent?.GetBooleanExtra("manual", false) ?? false;
@@ -209,6 +219,6 @@ public class AndroidDevice : IDevice
     }
     public void Dispose()
     {
-        _notification?.Dispose();
+        _deviceNotification?.Notification.Dispose();
     }
 }

@@ -6,10 +6,7 @@ namespace VpnHood.Client.App.Maui.Common;
 
 internal class VpnHoodMauiAndroidApp : IVpnHoodMauiApp
 {
-    public IDevice CreateDevice()
-    {
-        return new AndroidDevice();
-    }
+    public IDevice Device { get; } = new AndroidDevice();
 
     public void Init(VpnHoodApp vpnHoodApp)
     {

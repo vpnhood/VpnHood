@@ -11,8 +11,10 @@ public class AndroidAppWebViewMainActivityHandler(
     AndroidMainActivityWebViewOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
+    private readonly bool _requestFeaturesOnCreate = options.RequestFeaturesOnCreate;
     private bool _isWeViewVisible;
     public WebView? WebView { get; private set; }
+    protected override bool RequestFeaturesOnCreate => false; // parent should not do this
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -95,7 +97,8 @@ public class AndroidAppWebViewMainActivityHandler(
             ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
 
         // request features after loading the webview, so SPA can update the localize the resources
-        _ = RequestFeatures();
+        if (_requestFeaturesOnCreate)
+            _ = RequestFeatures();
     }
 
     protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

@@ -6,7 +6,6 @@ namespace VpnHood.Client.App.Droid.Common;
 public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
     : Application(javaReference, transfer)
 {
-    private AndroidAppNotification? _appNotification;
     protected virtual AppOptions AppOptions { get; } = new();
 
     public override void OnCreate()
@@ -14,12 +13,13 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
         base.OnCreate();
 
         //app init
-        if (!VpnHoodApp.IsInit) 
-            VpnHoodApp.Init(new AndroidDevice(), AppOptions);
-
-        // init notification
-        _appNotification = new AndroidAppNotification(VpnHoodApp.Instance); 
-        AndroidDevice.Current.InitNotification(_appNotification.Notification, AndroidAppNotification.NotificationId);
+        if (!VpnHoodApp.IsInit)
+        {
+            var vpnHoodDevice = new AndroidDevice();
+            var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, AppOptions);
+            var appNotification = new AndroidAppNotification(vpnHoodApp);
+            vpnHoodDevice.InitNotification(appNotification.Notification, AndroidAppNotification.NotificationId);
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -27,7 +27,6 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
         if (disposing)
         {
             if (VpnHoodApp.IsInit) _ = VpnHoodApp.Instance.DisposeAsync();
-            _appNotification?.Dispose();
         }
 
         base.Dispose(disposing);

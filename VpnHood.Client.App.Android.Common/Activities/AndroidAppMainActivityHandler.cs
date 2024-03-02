@@ -18,6 +18,7 @@ public class AndroidAppMainActivityHandler
     private const int RequestPostNotificationId = 11;
     protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     protected IActivityEvent ActivityEvent { get; }
+    protected virtual bool RequestFeaturesOnCreate { get; }
 
     public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options)
     {
@@ -25,7 +26,9 @@ public class AndroidAppMainActivityHandler
         _appUpdaterService = options.AppUpdaterService;
         _accessKeySchemes = options.AccessKeySchemes;
         _accessKeyMimes = options.AccessKeySchemes;
-        
+        RequestFeaturesOnCreate = options.RequestFeaturesOnCreate;
+
+
         activityEvent.OnCreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.OnNewIntentEvent += (_, args) => OnNewIntent(args.Intent);
         activityEvent.OnRequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
@@ -40,6 +43,9 @@ public class AndroidAppMainActivityHandler
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
+
+        if (RequestFeaturesOnCreate)
+            _ = RequestFeatures();
     }
 
     public async Task RequestFeatures()

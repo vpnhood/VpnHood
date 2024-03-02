@@ -3,5 +3,4 @@
 	<application>
 		<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-8662231806304184~1740102860" />
 	</application>
-	<uses-sdk />
 </manifest>

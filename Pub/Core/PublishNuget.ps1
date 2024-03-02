@@ -18,7 +18,7 @@ Write-Host
 Write-Host "*** $packageId > Packing..." -BackgroundColor Blue
 rm "$publishDir" -ErrorAction Ignore -Recurse
 $nugetVersion="$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
-dotnet pack "$projectDir" -c "Release" -o "$publishDir" --runtime any -p:Version=$nugetVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+dotnet pack "$projectDir" -c "Release" -o "$publishDir" -p:Version=$nugetVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 if ($LASTEXITCODE -gt 0) { Throw "The pack exited with error code: " + $lastexitcode; }
 
 # publish nuget

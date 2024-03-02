@@ -14,9 +14,8 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.WebServer;
 
-public class VpnHoodAppWebServer : IDisposable
+public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 {
-    private static VpnHoodAppWebServer? _instance;
     private readonly Stream _spaZipStream;
     private string? _indexHtml;
     private EmbedIO.WebServer? _server;
@@ -25,9 +24,7 @@ public class VpnHoodAppWebServer : IDisposable
 
     private VpnHoodAppWebServer(Stream spaZipStream, int defaultPort, Uri? url = default, bool listenOnAllIps = false)
     {
-        if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
         _spaZipStream = spaZipStream;
-        _instance = this;
         Url = url ?? new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, defaultPort)}");
         _listenOnAllIps = listenOnAllIps;
     }
@@ -37,18 +34,11 @@ public class VpnHoodAppWebServer : IDisposable
     public string SpaHash =>
         _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
-    public static VpnHoodAppWebServer Instance => _instance
-        ?? throw new InvalidOperationException($"{nameof(VpnHoodAppWebServer)} has not been initialized yet!");
-
-    public static bool IsInit => _instance != null;
-
     public void Dispose()
     {
         Stop();
-        if (_instance == this)
-            _instance = null;
+        DisposeSingleton();
     }
-
 
     public static VpnHoodAppWebServer Init(Stream zipStream, int? defaultPort = default, Uri? url = default,
         bool listenToAllIps = false)

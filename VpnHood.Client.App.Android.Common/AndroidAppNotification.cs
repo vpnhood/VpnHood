@@ -21,7 +21,7 @@ public sealed class AndroidAppNotification : IDisposable
         _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resources);
     }
 
-    public DeviceNotification DeviceNotification => new()
+    public AndroidDeviceNotification DeviceNotification => new()
     {
         NotificationId = NotificationId,
         Notification = _notificationBuilder.Build()

@@ -207,4 +207,8 @@ public class AndroidDevice : IDevice
         if (e.RequestCode == RequestVpnPermissionId)
             _grantPermissionTaskSource.TrySetResult(e.ResultCode == Result.Ok);
     }
+    public void Dispose()
+    {
+        _notification?.Dispose();
+    }
 }

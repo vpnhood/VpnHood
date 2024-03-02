@@ -7,12 +7,6 @@ using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.Device.Droid;
 
-public class DeviceNotification
-{
-    public required int NotificationId { get; init; }
-    public required Notification Notification { get; init; }
-}
-
 public class AndroidDevice : IDevice
 {
     private static AndroidDevice? _current;
@@ -21,7 +15,7 @@ public class AndroidDevice : IDevice
     private IPacketCapture? _packetCapture;
     private IActivityEvent? _activityEvent;
     private const int RequestVpnPermissionId = 20100;
-    private DeviceNotification? _deviceNotification;
+    private AndroidDeviceNotification? _deviceNotification;
 
     public event EventHandler? OnStartAsService;
     public bool IsExcludeAppsSupported => true;
@@ -38,7 +32,7 @@ public class AndroidDevice : IDevice
         _current = this;
     }
 
-    public void InitNotification(DeviceNotification deviceNotification)
+    public void InitNotification(AndroidDeviceNotification deviceNotification)
     {
         _deviceNotification = deviceNotification;
     }
@@ -50,7 +44,7 @@ public class AndroidDevice : IDevice
         activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
     }
 
-    private static DeviceNotification CreateDefaultNotification()
+    private static AndroidDeviceNotification CreateDefaultNotification()
     {
         const string channelId = "1000";
         var context = Application.Context;
@@ -87,7 +81,7 @@ public class AndroidDevice : IDevice
             .SetOngoing(true)
             .Build();
 
-        return new DeviceNotification
+        return new AndroidDeviceNotification
         {
             Notification = notification,
             NotificationId = 3500

@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Client.App;
+using VpnHood.Client.App.Maui.Common;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.WebServer;
-using VpnHood.Client.Device;
 
 namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
 public static class MauiProgram
 {
-    public static MauiApp CreateMauiApp(IDevice vpnHoodDevice)
+    public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
         builder
@@ -19,19 +19,18 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-#if DEBUG
-        builder.Logging.AddDebug();
-#endif
-
         var resources = VpnHoodAppResource.Resources;
         resources.Strings.AppName = "VpnHood Client Sample";
-        VpnHoodApp.Init(vpnHoodDevice, new AppOptions { Resources = resources });
+        VpnHoodMauiApp.Init(new AppOptions { Resources = resources });
 
         // init web server with spa zip data
         ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
         using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
         VpnHoodAppWebServer.Init(memoryStream);
 
+#if DEBUG
+        builder.Logging.AddDebug();
+#endif
         return builder.Build();
     }
 }

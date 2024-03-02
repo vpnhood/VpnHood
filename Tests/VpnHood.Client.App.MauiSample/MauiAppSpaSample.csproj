@@ -68,19 +68,19 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android34.0'">
-		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+		<ProjectReference Include="..\..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.22621.0'">
-	  <ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
+	  <ProjectReference Include="..\..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Client.App.Maui.Common\VpnHood.Client.App.Maui.Common.csproj" />
-	  <ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
-	  <ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
+	  <ProjectReference Include="..\..\VpnHood.Client.App.Maui.Common\VpnHood.Client.App.Maui.Common.csproj" />
+	  <ProjectReference Include="..\..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
+	  <ProjectReference Include="..\..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 	</ItemGroup>
 
 </Project>

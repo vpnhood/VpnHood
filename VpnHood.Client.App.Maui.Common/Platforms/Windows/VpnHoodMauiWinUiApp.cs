@@ -14,9 +14,9 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
-
+    
     protected AppWindow? AppWindow;
-
+    
     public IDevice Device { get; } = new WinDivertDevice();
 
     public void Init(VpnHoodApp vpnHoodApp)
@@ -50,11 +50,6 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
                 }
             }
         });
-    }
-
-    public IDevice CreateDevice()
-    {
-        return new WinDivertDevice();
     }
 
     protected virtual void OpenMainWindowRequested(object? sender, EventArgs e)

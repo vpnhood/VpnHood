@@ -4,12 +4,12 @@ using Android.Graphics.Drawables;
 using Android.Net;
 using Android.OS;
 using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Device.Droid;
 
-public class AndroidDevice : IDevice
+public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 {
-    private static AndroidDevice? _current;
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private TaskCompletionSource<bool> _startServiceTaskSource = new();
     private IPacketCapture? _packetCapture;
@@ -21,15 +21,16 @@ public class AndroidDevice : IDevice
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
-    public static AndroidDevice Current => _current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
-    public AndroidDevice()
+    private AndroidDevice()
     {
-        if (_current != null)
-            throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created.");
 
-        _current = this;
+    }
+
+    public static AndroidDevice Create()
+    {
+        return new AndroidDevice();
     }
 
     public void InitNotification(AndroidDeviceNotification deviceNotification)

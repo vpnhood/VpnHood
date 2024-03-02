@@ -15,7 +15,7 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
         //app init
         if (!VpnHoodApp.IsInit)
         {
-            var vpnHoodDevice = new AndroidDevice();
+            var vpnHoodDevice = AndroidDevice.Create();
             var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, AppOptions);
             vpnHoodDevice.InitNotification(new AndroidAppNotification(vpnHoodApp).DeviceNotification);
         }

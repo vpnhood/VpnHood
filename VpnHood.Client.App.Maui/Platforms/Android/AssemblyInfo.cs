@@ -5,7 +5,6 @@
 // values defined in project properties. For details of which attributes are included
 // and how to customise this process see: https://aka.ms/assembly-info-properties
 
-using Android;
 using Android.App;
 
 [assembly: UsesFeature("android.software.leanback", Required = false)]
@@ -14,6 +13,4 @@ using Android.App;
 namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
 
-public static class AssemblyInfo
-{
-}
+public static class AssemblyInfo;

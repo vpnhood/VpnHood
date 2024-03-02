@@ -1,5 +1,6 @@
 ﻿using Android.Content;
 using VpnHood.Client.App.Droid.Common.Utils;
+using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -11,8 +12,7 @@ public sealed class AndroidAppNotification : IDisposable
     private readonly Notification.Builder _notificationBuilder;
     private readonly object _stateLock = new();
     private AppConnectionState _lastNotifyState = AppConnectionState.None;
-    public Notification Notification => _notificationBuilder.Build();
-    public static int NotificationId => 1000;
+    public static int NotificationId => 3500;
 
     public AndroidAppNotification(VpnHoodApp vpnHoodApp)
     {
@@ -21,6 +21,11 @@ public sealed class AndroidAppNotification : IDisposable
         _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resources);
     }
 
+    public AndroidDeviceNotification DeviceNotification => new()
+    {
+        NotificationId = NotificationId,
+        Notification = _notificationBuilder.Build()
+    };
 
     private static PendingIntent CreatePendingIntent(Context context, string name)
     {
@@ -41,7 +46,7 @@ public sealed class AndroidAppNotification : IDisposable
         ArgumentNullException.ThrowIfNull(notificationManager);
         ArgumentNullException.ThrowIfNull(context.PackageName);
         ArgumentNullException.ThrowIfNull(context.PackageManager);
-        
+
         // open intent
         var openIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
 
@@ -86,7 +91,7 @@ public sealed class AndroidAppNotification : IDisposable
         return notificationBuilder;
     }
 
-    public void Update(bool force = false)
+    private void Update(bool force = false)
     {
         lock (_stateLock)
         {

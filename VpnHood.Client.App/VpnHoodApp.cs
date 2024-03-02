@@ -20,12 +20,11 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
+public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
     private const string FolderNameProfiles = "profiles";
-    private static VpnHoodApp? _instance;
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
     private readonly string? _appGa4MeasurementId;
@@ -60,8 +59,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public Diagnoser Diagnoser { get; set; } = new();
     public ClientProfile? ActiveClientProfile { get; private set; }
     public Guid LastActiveClientProfileId { get; private set; }
-    public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
-    public static bool IsInit => _instance != null;
     public string AppDataFolderPath { get; }
     public AppSettings Settings { get; }
     public UserSettings UserSettings => Settings.UserSettings;
@@ -77,7 +74,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public IAppUpdaterService? AppUpdaterService { get; set; }
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
-        if (IsInit) throw new InvalidOperationException("VpnHoodApp is already initialized.");
         options ??= new AppOptions();
 #pragma warning disable CS0618 // Type or member is obsolete
         MigrateUserDataFromXamarin(options.AppDataFolderPath); // Deprecated >= 400
@@ -132,7 +128,6 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
             IsAddServerSupported = options.IsAddServerSupported,
         };
 
-        _instance = this;
         JobRunner.Default.Add(this);
     }
 
@@ -199,9 +194,9 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
 
     public async ValueTask DisposeAsync()
     {
-        if (_instance == null) return;
         await Disconnect();
-        _instance = null;
+        Device.Dispose();
+        DisposeSingleton();
     }
 
     public event EventHandler? ClientConnectCreated;

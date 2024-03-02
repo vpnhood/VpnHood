@@ -16,7 +16,6 @@ public class AndroidAppMainActivityHandler
     private readonly string[] _accessKeyMimes;
     private readonly IAppUpdaterService? _appUpdaterService;
     private const int RequestPostNotificationId = 11;
-    protected AndroidDevice VpnDevice => AndroidDevice.Current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     protected IActivityEvent ActivityEvent { get; }
     protected virtual bool RequestFeaturesOnCreate { get; }
 
@@ -39,7 +38,7 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
-        VpnDevice.Prepare(ActivityEvent);
+        AndroidDevice.Instance.Prepare(ActivityEvent);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);

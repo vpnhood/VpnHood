@@ -60,7 +60,7 @@ public class VpnHoodApp : IAsyncDisposable, IIpRangeProvider, IJob
     public Diagnoser Diagnoser { get; set; } = new();
     public ClientProfile? ActiveClientProfile { get; private set; }
     public Guid LastActiveClientProfileId { get; private set; }
-    public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
+    public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet.");
     public static bool IsInit => _instance != null;
     public string AppDataFolderPath { get; }
     public AppSettings Settings { get; }

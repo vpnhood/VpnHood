@@ -51,4 +51,9 @@ public class WinDivertDevice : IDevice
 #endif
         }
     }
+    
+    public void Dispose()
+    {
+    }
+
 }

@@ -9,13 +9,6 @@ public partial class MainPage : ContentPage
     {
         InitializeComponent();
 
-        // Initialize SPA
-        if (!VpnHoodAppWebServer.IsInit)
-        {
-            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
-            using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
-            VpnHoodAppWebServer.Init(memoryStream);
-        }
 
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url.AbsoluteUri;
         MainWebView.Navigated += MainWebView_Navigated;

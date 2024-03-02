@@ -1,11 +1,14 @@
-﻿using Android.Content;
+﻿using Android.App;
+using Android.Content;
 using Android.Content.PM;
+using Android.OS;
 using Android.Runtime;
 using Android.Views;
+using VpnHood.Client.Device.Droid.Utils;
 
-namespace VpnHood.Client.Device.Droid.Utils;
+namespace VpnHood.Client.App.Maui.Common;
 
-public class ActivityEvent : Activity, IActivityEvent
+public class MauiActivityEvent : MauiAppCompatActivity, IActivityEvent
 {
     public event EventHandler<ActivityResultEventArgs>? OnActivityResultEvent;
     public event EventHandler<CreateEventArgs>? OnCreateEvent;

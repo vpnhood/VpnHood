@@ -2,18 +2,21 @@
 using Android.Views;
 using Android.Webkit;
 using VpnHood.Client.App.WebServer;
+using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
 public class AndroidAppWebViewMainActivityHandler(
-    Activity activity, 
+    IActivityEvent activityEvent, 
     AndroidMainActivityWebViewOptions options)
-    : AndroidAppMainActivityHandler(activity, options)
+    : AndroidAppMainActivityHandler(activityEvent, options)
 {
+    private readonly bool _requestFeaturesOnCreate = options.RequestFeaturesOnCreate;
     private bool _isWeViewVisible;
     public WebView? WebView { get; private set; }
+    protected override bool RequestFeaturesOnCreate => false; // parent should not do this
 
-    public override void OnCreate(Bundle? savedInstanceState)
+    protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
 
@@ -31,7 +34,7 @@ public class AndroidAppWebViewMainActivityHandler(
         InitWebUi();
     }
 
-    public override void OnDestroy()
+    protected override void OnDestroy()
     {
         if (VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Dispose();
@@ -41,7 +44,7 @@ public class AndroidAppWebViewMainActivityHandler(
 
     private void InitSplashScreen()
     {
-        var imageView = new ImageView(Activity);
+        var imageView = new ImageView(ActivityEvent.Activity);
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
 
@@ -51,19 +54,19 @@ public class AndroidAppWebViewMainActivityHandler(
         imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
         if (backgroundColor != null) imageView.SetBackgroundColor(backgroundColor.Value);
-        Activity.SetContentView(imageView);
+        ActivityEvent.Activity.SetContentView(imageView);
 
         // set window background color
         if (backgroundColor != null)
         {
-            Activity.Window?.SetStatusBarColor(backgroundColor.Value);
-            Activity.Window?.SetNavigationBarColor(backgroundColor.Value);
+            ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value);
+            ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value);
         }
     }
 
     private void InitWebUi()
     {
-        WebView = new WebView(Activity);
+        WebView = new WebView(ActivityEvent.Activity);
         WebView.Settings.JavaScriptEnabled = true;
         WebView.Settings.DomStorageEnabled = true;
         WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
@@ -87,17 +90,18 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         if (_isWeViewVisible) return; // prevent double set SetContentView
         if (WebView == null) throw new Exception("WebView has not been loaded yet!");
-        Activity.SetContentView(WebView);
+        ActivityEvent.Activity.SetContentView(WebView);
         _isWeViewVisible = true;
 
         if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
-            Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
+            ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
 
         // request features after loading the webview, so SPA can update the localize the resources
-        _ = RequestFeatures();
+        if (_requestFeaturesOnCreate)
+            _ = RequestFeatures();
     }
 
-    public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
+    protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
     {
         if (keyCode == Keycode.Back && WebView?.CanGoBack() == true)
         {

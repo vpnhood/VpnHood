@@ -4,33 +4,38 @@ using Android.Graphics.Drawables;
 using Android.Net;
 using Android.OS;
 using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Device.Droid;
 
-public class AndroidDevice : IDevice
+public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 {
-    private static AndroidDevice? _current;
-    private int _notificationId = 3500;
-    private Notification? _notification;
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private TaskCompletionSource<bool> _startServiceTaskSource = new();
     private IPacketCapture? _packetCapture;
     private IActivityEvent? _activityEvent;
     private const int RequestVpnPermissionId = 20100;
+    private AndroidDeviceNotification? _deviceNotification;
 
     public event EventHandler? OnStartAsService;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
-    public static AndroidDevice Current => _current ?? throw new InvalidOperationException($"{nameof(AndroidDevice)} has not been initialized.");
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
-    public AndroidDevice()
+    private AndroidDevice()
     {
-        if (_current != null)
-            throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created.");
 
-        _current = this;
+    }
+
+    public static AndroidDevice Create()
+    {
+        return new AndroidDevice();
+    }
+
+    public void InitNotification(AndroidDeviceNotification deviceNotification)
+    {
+        _deviceNotification = deviceNotification;
     }
 
     public void Prepare(IActivityEvent activityEvent)
@@ -40,13 +45,7 @@ public class AndroidDevice : IDevice
         activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
     }
 
-    public void InitNotification(Notification notification, int notificationId)
-    {
-        _notification = notification;
-        _notificationId = notificationId;
-    }
-
-    private static Notification GetDefaultNotification()
+    private static AndroidDeviceNotification CreateDefaultNotification()
     {
         const string channelId = "1000";
         var context = Application.Context;
@@ -78,10 +77,16 @@ public class AndroidDevice : IDevice
         if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/appicon", "drawable", context.PackageName);
         if (iconId == 0) throw new Exception("Could not retrieve default icon.");
 
-        return notificationBuilder
+        var notification = notificationBuilder
             .SetSmallIcon(iconId)
             .SetOngoing(true)
             .Build();
+
+        return new AndroidDeviceNotification
+        {
+            Notification = notification,
+            NotificationId = 3500
+        };
     }
 
     public DeviceAppInfo[] InstalledApps
@@ -164,8 +169,8 @@ public class AndroidDevice : IDevice
         _startServiceTaskSource.TrySetResult(true);
 
         // set foreground
-        var notification = _notification ?? GetDefaultNotification();
-        packetCapture.StartForeground(_notificationId, notification);
+        _deviceNotification ??= CreateDefaultNotification();
+        packetCapture.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
 
         // fire AutoCreate for always on
         var manual = intent?.GetBooleanExtra("manual", false) ?? false;
@@ -206,5 +211,10 @@ public class AndroidDevice : IDevice
     {
         if (e.RequestCode == RequestVpnPermissionId)
             _grantPermissionTaskSource.TrySetResult(e.ResultCode == Result.Ok);
+    }
+    public void Dispose()
+    {
+        _deviceNotification?.Notification.Dispose();
+        DisposeSingleton();
     }
 }

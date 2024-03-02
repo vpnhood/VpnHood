@@ -9,7 +9,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     Label = "@string/app_name",
     Icon = "@mipmap/appicon",
     Banner = "@mipmap/banner", // for TV
-    UsesCleartextTraffic = true, // required for localhost
+    NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
     SupportsRtl = true, AllowBackup = true)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)

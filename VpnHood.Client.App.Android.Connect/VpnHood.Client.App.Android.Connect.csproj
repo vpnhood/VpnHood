@@ -37,6 +37,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="xml\network_security_config.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <AndroidResource Include="xml\network_security_config.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
@@ -44,10 +52,6 @@
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="VpnHood.Store.Api" Version="1.0.32" />
 	</ItemGroup>
 
 </Project>

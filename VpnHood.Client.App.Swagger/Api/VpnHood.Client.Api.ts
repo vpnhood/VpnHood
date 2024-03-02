@@ -1699,6 +1699,8 @@ export class AppState implements IAppState {
     versionStatus!: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
     isUdpChannelSupported?: boolean | null;
+    canDisconnect!: boolean;
+    canConnect!: boolean;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1736,6 +1738,8 @@ export class AppState implements IAppState {
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
             this.lastPublishInfo = _data["lastPublishInfo"] ? PublishInfo.fromJS(_data["lastPublishInfo"]) : <any>null;
             this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
+            this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
+            this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
         }
     }
 
@@ -1768,6 +1772,8 @@ export class AppState implements IAppState {
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
         data["lastPublishInfo"] = this.lastPublishInfo ? this.lastPublishInfo.toJSON() : <any>null;
         data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
+        data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
+        data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
         return data;
     }
 }
@@ -1793,6 +1799,8 @@ export interface IAppState {
     versionStatus: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
     isUdpChannelSupported?: boolean | null;
+    canDisconnect: boolean;
+    canConnect: boolean;
 }
 
 export enum AppConnectionState {

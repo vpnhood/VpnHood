@@ -14,7 +14,8 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/")]
     public Task<AppAccount?> Get()
     {
-        return AccountService.GetAccount();
+        return Task.FromResult((AppAccount?)null);
+        //return AccountService.GetAccount();
     }
 
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]

@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Client.Device;
 
-public interface IDevice
+public interface IDevice : IDisposable
 {
     string OsInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }

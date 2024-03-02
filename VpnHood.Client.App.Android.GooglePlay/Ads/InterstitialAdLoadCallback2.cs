@@ -1,4 +1,5 @@
-﻿using Android.Gms.Ads.Interstitial;
+﻿/*
+using Android.Gms.Ads.Interstitial;
 using Android.Runtime;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
@@ -28,3 +29,4 @@ public class InterstitialAdLoadCallback2 : InterstitialAdLoadCallback
     {
     }
 }
+*/

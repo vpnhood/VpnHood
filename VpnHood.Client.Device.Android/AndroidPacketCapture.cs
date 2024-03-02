@@ -168,7 +168,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags,
         int startId)
     {
-        AndroidDevice.Current.OnServiceStartCommand(this, intent);
+        AndroidDevice.Instance.OnServiceStartCommand(this, intent);
         return StartCommandResult.Sticky;
     }
 

@@ -11,4 +11,9 @@ public class Singleton<T> where T : Singleton<T>
         if (IsInit) throw new InvalidOperationException($"{typeof(T).Name} is already initialized.");
         _instance = (T?)this;
     }
+
+    protected void DisposeSingleton()
+    {
+        _instance = null;
+    }
 }

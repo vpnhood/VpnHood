@@ -1,10 +1,10 @@
 ﻿using Android.App;
-using Android.Content;
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.GooglePlay;
+using VpnHood.Client.App.Maui.Common;
 
 namespace VpnHood.Client.Samples.MauiAppSpaSample;
 
@@ -21,7 +21,7 @@ namespace VpnHood.Client.Samples.MauiAppSpaSample;
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
 
 [IntentFilter([TileService.ActionQsTilePreferences])]
-public class MainActivity : MauiAppMainActivity
+public class MainActivity : VpnHoodMauiMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {

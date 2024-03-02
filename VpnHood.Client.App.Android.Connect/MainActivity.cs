@@ -16,7 +16,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     Exported = true,
     WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
     AlwaysRetainTaskState = true,
-    LaunchMode = LaunchMode.SingleInstance,
+    LaunchMode = LaunchMode.SingleInstance, 
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
@@ -41,7 +41,7 @@ public class MainActivity : AndroidAppMainActivity
         base.OnCreate(savedInstanceState);
         //Android.Gms.Ads.MobileAds.Initialize(this); // for ads
 
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(ActivityEvent, AssemblyInfo.FirebaseClientId);
+        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
         VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);

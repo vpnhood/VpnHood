@@ -7,7 +7,7 @@ public class VpnHoodMauiApp : Singleton<VpnHoodMauiApp>
     public static VpnHoodApp Init(AppOptions options)
     {
         var app = CreateApp();
-        var vpnHoodApp =  VpnHoodApp.Init(app.CreateDevice(), options);
+        var vpnHoodApp =  VpnHoodApp.Init(app.Device, options);
         app.Init(vpnHoodApp);
         return vpnHoodApp;
     }

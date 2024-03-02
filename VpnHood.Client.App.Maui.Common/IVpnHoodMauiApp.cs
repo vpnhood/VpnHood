@@ -4,6 +4,6 @@ namespace VpnHood.Client.App.Maui.Common;
 
 internal interface IVpnHoodMauiApp
 {
-    IDevice CreateDevice();
+    IDevice Device { get; }
     void Init(VpnHoodApp vpnHoodApp);
 }

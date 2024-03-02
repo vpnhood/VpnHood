@@ -215,5 +215,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public void Dispose()
     {
         _deviceNotification?.Notification.Dispose();
+        DisposeSingleton();
     }
 }

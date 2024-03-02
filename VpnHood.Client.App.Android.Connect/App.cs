@@ -20,8 +20,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         get
         {
             var resources = VpnHoodAppResource.Resources;
-            resources.Colors.NavigationBarColor = Color.Red;
-            resources.Colors.WindowBackgroundColor = Color.GreenYellow;
+            resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
+            resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32,25,81);
             return new()
             {
                 Resources = VpnHoodAppResource.Resources,

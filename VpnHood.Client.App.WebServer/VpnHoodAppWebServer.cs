@@ -142,7 +142,12 @@ public class VpnHoodAppWebServer : IDisposable
 
     private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
-        if (data is null) throw new ArgumentNullException(nameof(data));
+        if (data is null)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return;
+            //throw new ArgumentNullException(nameof(data));
+        }
 
         context.Response.ContentType = MimeType.Json;
         await using var text = context.OpenResponseText(new UTF8Encoding(false));

@@ -17,6 +17,8 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
 
     protected AppWindow? AppWindow;
 
+    public IDevice Device { get; } = new WinDivertDevice();
+
     public void Init(VpnHoodApp vpnHoodApp)
     {
         VpnHoodWinApp.Instance.PreStart(Environment.GetCommandLineArgs());

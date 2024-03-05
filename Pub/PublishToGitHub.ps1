@@ -26,9 +26,6 @@ if ($isLatest)
 	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 }
 
-# update and push samples nugets
-& "$solutionDir/../VpnHood.Client.Samples/UpdateAndPush.ps1"
-
 # Publishing to GitHub
 Push-Location -Path "$solutionDir";
 

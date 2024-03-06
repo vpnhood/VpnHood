@@ -7,9 +7,9 @@ using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Server;
 
-public class Http01ChallengeService(IPAddress[] ipAddresses, string token, string keyAuthorization) : IDisposable
+public class Http01ChallengeService(IPAddress[] ipAddresses, string token, string keyAuthorization, TimeSpan timeout) : IDisposable
 {
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly CancellationTokenSource _cancellationTokenSource = new(timeout);
     private readonly List<TcpListener> _tcpListeners = [];
     private bool _disposed;
     public bool IsStarted { get; private set; }
@@ -51,7 +51,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not process the ACME request.");
+                VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not process the HTTP-01 challenge.");
             }
         }
     }

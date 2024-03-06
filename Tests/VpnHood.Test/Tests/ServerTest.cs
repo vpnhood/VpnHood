@@ -331,7 +331,6 @@ public class ServerTest : TestBase
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
             () => testAccessManager.LastServerStatus!.ConfigCode);
-        await Task.Delay(1000);
 
         // server should listen to port 80 for HTTP-01 challenge
         var httpClient = new HttpClient();

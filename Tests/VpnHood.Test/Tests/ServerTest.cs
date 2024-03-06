@@ -322,7 +322,8 @@ public class ServerTest : TestBase
         var dnsChallenge = new DnsChallenge
         {
             KeyAuthorization = "DnsChallenge_KeyAuthorization",
-            Token = "DnsChallenge"
+            Token = "DnsChallenge",
+            Timeout = TimeSpan.FromMilliseconds(1)
         };
         fileAccessManager.ServerConfig.DnsChallenge = dnsChallenge;
 
@@ -330,6 +331,7 @@ public class ServerTest : TestBase
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
             () => testAccessManager.LastServerStatus!.ConfigCode);
+        await Task.Delay(1000);
 
         // server should listen to port 80 for HTTP-01 challenge
         var httpClient = new HttpClient();

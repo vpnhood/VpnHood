@@ -196,7 +196,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         try
         {
-            _http01ChallengeService = new Http01ChallengeService(ipAddresses.ToArray(), dnsChallenge.Token, dnsChallenge.KeyAuthorization);
+            _http01ChallengeService = new Http01ChallengeService(ipAddresses.ToArray(), dnsChallenge.Token, dnsChallenge.KeyAuthorization, dnsChallenge.Timeout);
             _http01ChallengeService.Start();
         }
         catch (Exception ex)

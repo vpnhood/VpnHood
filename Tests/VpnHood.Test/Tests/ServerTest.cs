@@ -323,7 +323,7 @@ public class ServerTest : TestBase
         {
             KeyAuthorization = "DnsChallenge_KeyAuthorization",
             Token = "DnsChallenge",
-            Timeout = TimeSpan.FromMilliseconds(1)
+            Timeout = TimeSpan.FromSeconds(60)
         };
         fileAccessManager.ServerConfig.DnsChallenge = dnsChallenge;
 

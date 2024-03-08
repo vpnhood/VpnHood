@@ -35,8 +35,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly SendingPackets _sendingPacket = new();
     private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
-    private readonly IPAddress? _dnsServerIpV4;
-    private readonly IPAddress? _dnsServerIpV6;
+    private IPAddress[] _dnsServersIpV4 = [];
+    private IPAddress[] _dnsServersIpV6 = [];
+    private IPAddress[] _dnsServers = [];
     private readonly IIpRangeProvider? _ipRangeProvider;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
@@ -65,7 +66,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public Guid ClientId { get; }
     public ulong SessionId { get; private set; }
-    public IPAddress[] DnsServers { get; }
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
     public bool ExcludeLocalNetwork { get; }
@@ -79,6 +79,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
+
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -94,8 +95,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
         _allowAnonymousTracker = options.AllowAnonymousTracker;
-        _dnsServerIpV4 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-        _dnsServerIpV6 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
         _packetCapture = packetCapture;
@@ -141,6 +140,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
 #endif
     }
+
+    public IPAddress[] DnsServers
+    {
+        get => _dnsServers;
+        set
+        {
+            _dnsServersIpV4 = value.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+            _dnsServersIpV6 = value.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
+            _dnsServers = value;
+        }
+    }
+
 
     public ClientState State
     {
@@ -482,8 +493,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (ipPacket.Protocol != ProtocolType.Udp) return false;
 
         // find dns server
-        var dnsServer = ipPacket.Version == IPVersion.IPv4 ? _dnsServerIpV4 : _dnsServerIpV6;
-        if (dnsServer == null)
+        var dnsServers = ipPacket.Version == IPVersion.IPv4 ? _dnsServersIpV4 : _dnsServersIpV6;
+        if (dnsServers.Length == 0)
         {
             VhLogger.Instance.LogWarning("There is no DNS server for this Address Family. AddressFamily : {AddressFamily}",
                 ipPacket.DestinationAddress.AddressFamily);
@@ -491,11 +502,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         // manage DNS outgoing packet if requested DNS is not VPN DNS
-        if (outgoing && !ipPacket.DestinationAddress.Equals(dnsServer))
+        if (outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.DestinationAddress)) == -1)
         {
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             if (udpPacket.DestinationPort == 53) //53 is DNS port
             {
+                var dnsServer = dnsServers[0];
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Dns,
                     $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(dnsServer)}");
                 udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
@@ -506,7 +518,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         // manage DNS incoming packet from VPN DNS
-        else if (!outgoing && ipPacket.SourceAddress.Equals(dnsServer))
+        else if (!outgoing && Array.FindIndex(dnsServers, x => x.Equals(ipPacket.SourceAddress)) != -1)
         {
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             var natItem = (NatItemEx?)Nat.Resolve(ipPacket.Version, ProtocolType.Udp, udpPacket.DestinationPort);

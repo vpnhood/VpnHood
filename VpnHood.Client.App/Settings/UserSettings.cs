@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Net;
+﻿using System.Net;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Client.App.Settings;
 
@@ -23,4 +24,5 @@ public class UserSettings
     public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[]? PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
     public bool AllowAnonymousTracker { get; set; } = DefaultClientOptions.AllowAnonymousTracker;
+    public IPAddress[]? DnsServers { get; set; }
 }

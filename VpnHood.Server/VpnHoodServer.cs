@@ -155,7 +155,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
-            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
+            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, 
+                privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Reconfigure server host
             await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
@@ -206,11 +207,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     }
 
     private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
-        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported)
+        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers)
     {
+        var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToArray();
+
         // assign to workers
-        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
-        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
+        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
         netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
 

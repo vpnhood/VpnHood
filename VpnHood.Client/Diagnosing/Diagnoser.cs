@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Logging;
@@ -56,7 +57,7 @@ public class Diagnoser
         {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck(false, false))
+            if (!await NetworkCheck())
                 throw new NoInternetException();
 
             // ping server
@@ -90,6 +91,7 @@ public class Diagnoser
             ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout)
             : Task.FromResult((Exception?)null);
 
+        NsTimeout = 10000; //todo
         var taskUdp = checkUdp
             ? DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout)
             : Task.FromResult((Exception?)null);

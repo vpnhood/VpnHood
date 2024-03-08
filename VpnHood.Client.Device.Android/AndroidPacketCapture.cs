@@ -24,7 +24,7 @@ namespace VpnHood.Client.Device.Droid;
 public class AndroidPacketCapture : VpnService, IPacketCapture
 {
     public const string VpnServiceName = "VhSession";
-    private IPAddress[]? _dnsServers = [IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4")];
+    private IPAddress[]? _dnsServers;
     private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
     private ParcelFileDescriptor? _mInterface;
     private int _mtu;
@@ -62,7 +62,8 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             if (Started)
                 throw new InvalidOperationException(
-                    $"Could not set {nameof(DnsServers)} while {nameof(IPacketCapture)} is started!");
+                    $"Could not set {nameof(DnsServers)} while {nameof(IPacketCapture)} is started.");
+
             _dnsServers = value;
         }
     }
@@ -80,30 +81,15 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         if (AddIpV6Address)
             builder.AddAddress("fd00::1000", 64);
 
-        // dnsServers
-        if (DnsServers is { Length: > 0 })
-        {
-            foreach (var dnsServer in DnsServers)
-                if (dnsServer.AddressFamily != AddressFamily.InterNetworkV6 || AddIpV6Address)
-                    builder.AddDnsServer(dnsServer.ToString());
-        }
-        else
-        {
-            builder
-                .AddDnsServer("8.8.8.8");
-
-            if (AddIpV6Address)
-                builder.AddDnsServer("2001:4860:4860::8888");
-        }
-
-        // Routes
-        var includeNetworks = IncludeNetworks ?? IpNetwork.All;
-        foreach (var network in includeNetworks)
-            builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
-
-        // set mtu
+        // MTU
         if (Mtu != 0)
             builder.SetMtu(Mtu);
+
+        // DNS Servers
+        AddVpnServers(builder);
+
+        // Routes
+        AddRoutes(builder);
 
         // AppFilter
         AddAppFilter(builder);
@@ -170,6 +156,23 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     {
         AndroidDevice.Instance.OnServiceStartCommand(this, intent);
         return StartCommandResult.Sticky;
+    }
+
+    private void AddRoutes(Builder builder)
+    {
+        var includeNetworks = IncludeNetworks ?? IpNetwork.All;
+        foreach (var network in includeNetworks)
+            builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
+    }
+
+    private void AddVpnServers(Builder builder)
+    {
+        var dnsServers = VhUtil.IsNullOrEmpty(DnsServers) ? IPAddressUtil.GoogleDnsServers : DnsServers;
+        if (!AddIpV6Address)
+            dnsServers = dnsServers.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+
+        foreach (var dnsServer in dnsServers)
+            builder.AddDnsServer(dnsServer.ToString());
     }
 
     private void AddAppFilter(Builder builder)

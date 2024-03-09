@@ -84,9 +84,9 @@ public class DnsConfigurationTest
         var token = TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions();
         await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions);
-        
-        Assert.IsTrue(client.Stat.IsDnsServersAccepted);
-        Assert.IsTrue(client.IsInIpRange(serverDnsServers.First()));
+
+        foreach (var serverDnsServer in serverDnsServers)
+            Assert.IsNull(server.SessionManager.NetFilter.BlockedIpRanges.FindInSortedRanges(serverDnsServer));
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
     }
 }

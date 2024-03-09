@@ -45,7 +45,7 @@ public class ServerTest : TestBase
 
         // Create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
 
         // check usage when usage should be 0
         var sessionResponseEx = await testAccessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
@@ -151,7 +151,7 @@ public class ServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
         Assert.IsTrue(fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 
@@ -169,7 +169,7 @@ public class ServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
         await TestHelper.Test_Https();
 
@@ -192,7 +192,7 @@ public class ServerTest : TestBase
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager);
-        await using var client = TestHelper.CreateClient(token1);
+        await using var client = await TestHelper.CreateClient(token1);
 
         await server.DisposeAsync();
         await using var server2 = TestHelper.CreateServer(testAccessManager);
@@ -237,7 +237,7 @@ public class ServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
         fileAccessManager.SessionController.Sessions.Clear();
         await server.SessionManager.SyncSessions();

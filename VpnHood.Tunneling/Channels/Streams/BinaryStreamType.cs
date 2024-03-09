@@ -1,13 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Tunneling.Channels.Streams
+namespace VpnHood.Tunneling.Channels.Streams;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum BinaryStreamType
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum BinaryStreamType
-    {
-        Unknown,
-        None,
-        Custom,
-        Standard
-    }
+    Unknown,
+    None,
+    Custom,
+    Standard
 }

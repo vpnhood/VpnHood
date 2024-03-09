@@ -159,7 +159,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Reconfigure server host
-            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
+            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue, serverConfig.DnsServersValue);
 
             // Reconfigure dns challenge
             StartDnsChallenge(serverConfig.TcpEndPointsValue.Select(x => x.Address), serverConfig.DnsChallenge);

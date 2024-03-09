@@ -215,7 +215,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
         serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
-        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
+        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges).ToArray();
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)

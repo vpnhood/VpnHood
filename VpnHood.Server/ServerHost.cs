@@ -38,6 +38,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public bool IsStarted { get; private set; }
     public IPEndPoint[] TcpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
     public IPEndPoint[] UdpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
+    public IPAddress[]? DnsServers { get; set; }
 
     public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
@@ -179,10 +180,12 @@ internal class ServerHost : IAsyncDisposable, IJob
         IsStarted = false;
     }
 
-    public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
+    public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints, 
+        IPAddress[]? dnsServers)
     {
         // Clear certificate cache
         _sslCertificateManager.ClearCache();
+        DnsServers = dnsServers;
 
         // Restart if endPoints has been changed
         if (IsStarted &&
@@ -616,6 +619,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             // client should wait less to make sure server is not closing the connection
             TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta,
             AccessKey = sessionResponse.AccessKey,
+            DnsServers = DnsServers,
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);

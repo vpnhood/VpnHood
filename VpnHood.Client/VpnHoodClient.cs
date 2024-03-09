@@ -37,7 +37,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private IPAddress[] _dnsServersIpV4 = [];
     private IPAddress[] _dnsServersIpV6 = [];
-    private IPAddress[] _dnsServers = [];
+    private IPAddress[]? _dnsServers = [];
     private readonly IIpRangeProvider? _ipRangeProvider;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
@@ -93,7 +93,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
 
         SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
-        DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
+        DnsServers = options.DnsServers;
         _allowAnonymousTracker = options.AllowAnonymousTracker;
         _minTcpDatagramLifespan = options.MinTcpDatagramTimespan;
         _maxTcpDatagramLifespan = options.MaxTcpDatagramTimespan;
@@ -141,13 +141,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 #endif
     }
 
-    public IPAddress[] DnsServers
+    public IPAddress[]? DnsServers
     {
         get => _dnsServers;
         set
         {
-            _dnsServersIpV4 = value.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
-            _dnsServersIpV6 = value.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
+            _dnsServersIpV4 = value?.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray() ?? [];
+            _dnsServersIpV6 = value?.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray() ?? [];
             _dnsServers = value;
         }
     }
@@ -691,7 +691,27 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Get IncludeIpRange for clientIp
             var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress) : null;
             if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+            {
+                if (DnsServers != null) //add user dns servers to filterIpRanges
+                    filterIpRanges = filterIpRanges.Concat(DnsServers.Select((x => new IpRange(x)))).ToArray();
                 IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges).ToArray();
+            }
+
+            // set DNS after setting IpFilters
+            Stat.IsDnsServersAccepted = VhUtil.IsNullOrEmpty(DnsServers) || DnsServers.Any(IsInIpRange); // no servers means accept default
+            DnsServers = DnsServers?.Where(IsInIpRange).ToArray();
+            if (!Stat.IsDnsServersAccepted)
+                VhLogger.Instance.LogWarning("Client DNS servers have been ignored because the server does not route them.");
+
+            if (VhUtil.IsNullOrEmpty(DnsServers))
+            {
+                DnsServers = VhUtil.IsNullOrEmpty(sessionResponse.DnsServers) ? IPAddressUtil.GoogleDnsServers : sessionResponse.DnsServers;
+                IncludeIpRanges = IncludeIpRanges.Concat(DnsServers.Select(x => new IpRange(x))).Sort().ToArray();
+            }
+
+
+            if (VhUtil.IsNullOrEmpty(DnsServers?.Where(IsInIpRange).ToArray())) // make sure there is at least one DNS server
+                throw new Exception("Could not specify any DNS server. The server is not configured properly.");
 
             // Preparing tunnel
             Tunnel.MaxDatagramChannelCount = sessionResponse.MaxDatagramChannelCount != 0
@@ -968,6 +988,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int DatagramChannelCount => _client.Tunnel.DatagramChannelCount;
         public bool IsUdpMode => _client.Tunnel.IsUdpMode;
         public bool IsUdpChannelSupported => _client.HostUdpEndPoint != null;
+        public bool IsDnsServersAccepted { get; internal set; }
 
         internal ClientStat(VpnHoodClient vpnHoodClient)
         {

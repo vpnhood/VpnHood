@@ -65,4 +65,28 @@ public class DnsConfigurationTest
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
         Assert.IsFalse(client.Stat.IsDnsServersAccepted);
     }
+
+    [TestMethod]
+    public async Task Server_should_not_block_own_dns_servers()
+    {
+        var serverDnsServers = new[] { IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2") };
+
+        // create server
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.DnsServers = serverDnsServers;
+        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions()
+        {
+            IncludeIpRanges = [IpRange.Parse("10.10.10.10-10.10.10.11")]
+        };
+        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        var clientOptions = TestHelper.CreateClientOptions();
+        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions);
+        
+        Assert.IsTrue(client.Stat.IsDnsServersAccepted);
+        Assert.IsTrue(client.IsInIpRange(serverDnsServers.First()));
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
+    }
 }

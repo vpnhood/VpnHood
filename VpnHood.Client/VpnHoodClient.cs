@@ -21,8 +21,6 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
-
-
 public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private bool _disposed;

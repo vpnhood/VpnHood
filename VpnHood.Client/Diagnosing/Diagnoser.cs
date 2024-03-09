@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Logging;

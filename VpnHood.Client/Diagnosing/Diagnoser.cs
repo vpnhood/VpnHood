@@ -90,7 +90,6 @@ public class Diagnoser
             ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout)
             : Task.FromResult((Exception?)null);
 
-        NsTimeout = 10000; //todo
         var taskUdp = checkUdp
             ? DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout)
             : Task.FromResult((Exception?)null);

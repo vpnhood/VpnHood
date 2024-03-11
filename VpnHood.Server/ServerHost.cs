@@ -25,7 +25,6 @@ internal class ServerHost : IAsyncDisposable, IJob
     private const int ServerProtocolVersion = 5;
     private CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
-    private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners;
     private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
     private Task? _listenerTask;
@@ -39,20 +38,20 @@ internal class ServerHost : IAsyncDisposable, IJob
     public IPEndPoint[] TcpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
     public IPEndPoint[] UdpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
     public IPAddress[]? DnsServers { get; set; }
+    public CertificateHostName[] Certificates { get; private set; } = [];
 
-    public ServerHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
+    public ServerHost(SessionManager sessionManager)
     {
-        _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
         _tcpListeners = [];
         _sessionManager = sessionManager;
         JobRunner.Default.Add(this);
     }
 
-    public async Task Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
+    private async Task Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (IsStarted) throw new Exception("ServerHost is already Started!");
-        if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
+        if (tcpEndPoints.Length == 0) throw new ArgumentNullException(nameof(tcpEndPoints), "No TcpEndPoint has been configured.");
 
         _cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _cancellationTokenSource.Token;
@@ -138,7 +137,6 @@ internal class ServerHost : IAsyncDisposable, IJob
 
         VhLogger.Instance.LogTrace("Stopping ServerHost...");
         _cancellationTokenSource.Cancel();
-        _sslCertificateManager.ClearCache();
 
         // UDPs
         VhLogger.Instance.LogTrace("Disposing UdpChannelTransmitters...");
@@ -180,12 +178,14 @@ internal class ServerHost : IAsyncDisposable, IJob
         IsStarted = false;
     }
 
-    public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints, 
-        IPAddress[]? dnsServers)
+    public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints,
+        IPAddress[]? dnsServers, X509Certificate2[] certificates)
     {
+        if (VhUtil.IsNullOrEmpty(certificates)) throw new ArgumentNullException(nameof(certificates), "Certificates has not been configured.");
+
         // Clear certificate cache
-        _sslCertificateManager.ClearCache();
         DnsServers = dnsServers;
+        Certificates = certificates.Select(x => new CertificateHostName(x)).ToArray();
 
         // Restart if endPoints has been changed
         if (IsStarted &&
@@ -247,19 +247,18 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation("TCP Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
     }
 
-    private static async Task<SslStream> AuthenticateAsServerAsync(Stream stream, X509Certificate certificate,
-        CancellationToken cancellationToken)
+    private async Task<SslStream> AuthenticateAsServerAsync(Stream stream, CancellationToken cancellationToken)
     {
         try
         {
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating. CertSubject: {CertSubject}...", certificate.Subject);
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating...");
             var sslStream = new SslStream(stream, true);
             await sslStream.AuthenticateAsServerAsync(
                 new SslServerAuthenticationOptions
                 {
-                    ServerCertificate = certificate,
                     ClientCertificateRequired = false,
-                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                    ServerCertificateSelectionCallback = ServerCertificateSelectionCallback
                 },
                 cancellationToken);
             return sslStream;
@@ -268,6 +267,14 @@ internal class ServerHost : IAsyncDisposable, IJob
         {
             throw new TlsAuthenticateException("TLS Authentication error.", ex);
         }
+    }
+
+    private X509Certificate ServerCertificateSelectionCallback(object sender, string hostname)
+    {
+        var certificate = Certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase)) 
+            ?? Certificates.First();
+
+        return certificate.Certificate;
     }
 
     private bool CheckApiKeyAuthorization(string authorization)
@@ -366,11 +373,8 @@ internal class ServerHost : IAsyncDisposable, IJob
         IClientStream? clientStream = null;
         try
         {
-            // find certificate by ip 
-            var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
-
             // establish SSL
-            var sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), certificate, cancellationToken);
+            var sslStream = await AuthenticateAsServerAsync(tcpClient.GetStream(), cancellationToken);
 
             // create client stream
             clientStream = await CreateClientStream(tcpClient, sslStream, cancellationToken);
@@ -594,7 +598,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
-        var udpPort = 
+        var udpPort =
             UdpEndPoints.SingleOrDefault(x => x.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.Port ??
             UdpEndPoints.SingleOrDefault(x => x.Address.Equals(IPAddressUtil.GetAnyIpAddress(ipEndPointPair.LocalEndPoint.AddressFamily)))?.Port;
 
@@ -699,5 +703,11 @@ internal class ServerHost : IAsyncDisposable, IJob
         _disposed = true;
 
         await Stop();
+    }
+
+    public class CertificateHostName(X509Certificate2 certificate)
+    {
+        public string HostName { get; } = certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Could not get the HostName from the certificate.");
+        public X509Certificate2 Certificate { get; } = certificate;
     }
 }

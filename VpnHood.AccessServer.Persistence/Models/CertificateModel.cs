@@ -16,6 +16,8 @@ public class CertificateModel
     public required bool AutoRenew { get; set; }
     public required int RenewCount { get; set; }
     public required bool RenewInprogress { get; set; }
+    public required string? RenewToken { get; set; }
+    public required string? RenewKeyAuthorization { get; set; }
     public required int RenewErrorCount { get; set; }
     public required string? RenewError { get; set; }
     public required DateTime? RenewErrorTime { get; set; }

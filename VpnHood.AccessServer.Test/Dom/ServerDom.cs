@@ -2,6 +2,7 @@
 using System.Net;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -134,5 +135,14 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     public Task Delete()
     {
         return Client.DeleteAsync(TestApp.ProjectId, ServerId);
+    }
+
+    public async Task WaitForState(ServerState state)
+    {
+        await VhTestUtil.AssertEqualsWait(state, async () =>
+        {
+            await Reload();
+            return Server.ServerState;
+        });
     }
 }

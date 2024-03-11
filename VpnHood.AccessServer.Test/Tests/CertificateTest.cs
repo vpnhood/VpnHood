@@ -3,7 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access;
 using ServerState = VpnHood.AccessServer.Api.ServerState;
@@ -76,12 +76,10 @@ public class CertificateTest
     [TestMethod]
     public async Task Renew()
     {
-        // create server and start listen
-        using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback], TestAcmeOrderService.TestToken, TestAcmeOrderService.TestKeyAuthorization);
-        http01ChallengeService.Start();
-
         // create farm and server
         var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(5);
+        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(5);
         var server = await farm.AddNewServer();
 
         await server.Reload();
@@ -106,9 +104,26 @@ public class CertificateTest
         await server.Reload();
         Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
 
-        // renew
-        await farm.CertificateRenew();
-        await farm.Reload();
-        Assert.IsTrue(farm.ServerFarm.Certificate!.IsTrusted);
+        // renew order
+        _ = farm.CertificateRenew();
+        await server.WaitForState(ServerState.Configuring);
+
+        // configure server
+        await server.Configure(false);
+        Assert.IsNotNull(server.ServerConfig.DnsChallenge);
+        using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback], 
+            server.ServerConfig.DnsChallenge.Token, server.ServerConfig.DnsChallenge.KeyAuthorization, TimeSpan.FromMinutes(1));
+        http01ChallengeService.Start();
+        await server.SendStatus();
+
+        // Wait for server to be idle
+        await server.WaitForState(ServerState.Idle);
+
+        // Wait for signin the certificate
+        await VhTestUtil.AssertEqualsWait(true, async () =>
+        {
+            await farm.Reload();
+            return farm.ServerFarm.Certificate!.IsTrusted;
+        });
     }
 }

@@ -8,11 +8,8 @@ namespace VpnHood.AccessServer.Test.Helper;
 public class TestAcmeOrderService(CertificateSigningRequest csr)
     : IAcmeOrderService
 {
-    public const string TestKeyAuthorization = "test.KeyAuthorization";
-    public const string TestToken = "test.Token";
-
-    public string KeyAuthorization => TestKeyAuthorization;
-    public string Token => TestToken;
+    public string KeyAuthorization { get; } = Guid.NewGuid().ToString();
+    public string Token { get; } = Guid.NewGuid().ToString();
 
     public async Task<X509Certificate2?> Validate()
     {

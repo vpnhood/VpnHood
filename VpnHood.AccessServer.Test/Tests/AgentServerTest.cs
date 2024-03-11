@@ -606,14 +606,16 @@ public class AgentServerTest
         //-----------
         // check: get certificate by publicIp
         //-----------
-        var certBuffer = await farm1.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm1.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
+        await farm1.DefaultServer.Configure();
+        var certBuffer = farm1.DefaultServer.ServerConfig.Certificates.First().RawData;
         var certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(dnsName1, certificate.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // check: get certificate by privateIp
         //-----------
-        certBuffer = await farm2.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
+        await farm2.DefaultServer.Configure();
+        certBuffer = farm2.DefaultServer.ServerConfig.Certificates.First().RawData;
         certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(dnsName2, certificate.GetNameInfo(X509NameType.DnsName, false));
     }

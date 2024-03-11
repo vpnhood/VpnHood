@@ -65,7 +65,9 @@ public class ServerConfigureService(
             if (servers.All(server => server.ServerState != ServerState.Configuring))
                 break;
 
+            //todo
             await Task.Delay(appOptions.Value.ServerUpdateStatusInterval / 3, cancellationToken);
+            //await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
         }
     }
 }

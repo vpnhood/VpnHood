@@ -144,7 +144,7 @@ public class AccessTokenTest
             .Single(x => x.AccessTokenId == accessToken2B.AccessTokenId)
             .Secret;
 
-        var certificateData = await farm2.DefaultServer.AgentClient.GetSslCertificateData(farm2.DefaultServer.ServerConfig.TcpEndPointsValue.First());
+        var certificateData = farm2.DefaultServer.ServerConfig.Certificates.First().RawData;
         var x509Certificate2 = new X509Certificate2(certificateData);
 
         var accessKey = await farm2.TestApp.AccessTokensClient.GetAccessKeyAsync(testApp.ProjectId, accessToken2B.AccessTokenId);

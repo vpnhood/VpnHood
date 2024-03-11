@@ -44,6 +44,7 @@ public class AgentController(AgentService agentService) : ControllerBase
         return  agentService.AddSessionUsage(ServerId, sessionId, closeSession, traffic);
     }
 
+    //todo: deprecated
     [HttpGet("certificates/{hostEndPoint}")]
     public Task<byte[]> GetCertificate(string hostEndPoint)
     {

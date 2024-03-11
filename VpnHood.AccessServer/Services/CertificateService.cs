@@ -90,8 +90,6 @@ public class CertificateService(
         {
             // create Csr from certificate
             certificate.RenewInprogress = true;
-            var x509Certificate = new X509Certificate2(certificate.RawData);
-            var csr = CreateCsrFromCertificate(x509Certificate);
 
             // create account if not exists
             if (project.LetsEncryptAccount?.AccountPem == null)
@@ -105,14 +103,19 @@ public class CertificateService(
             }
 
             // create order
+            var x509Certificate = new X509Certificate2(certificate.RawData);
+            var csr = CreateCsrFromCertificate(x509Certificate);
             var acmeOrderService = await acmeOrderFactory.CreateOrder(project.LetsEncryptAccount.AccountPem, csr);
+            certificate.RenewToken = acmeOrderService.Token;
+            certificate.RenewKeyAuthorization = acmeOrderService.KeyAuthorization;
             await vhRepo.SaveChangesAsync();
 
             // wait for farm configuration
+            await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
             await serverConfigureService.WaitForFarmConfiguration(certificate.ProjectId, certificate.ServerFarmId, cancellationToken);
 
             // validate order by manager
-            await ValidateByManager(certificate.CommonName, acmeOrderService.Token, acmeOrderService.KeyAuthorization);
+            await ValidateByManager(certificate.CommonName, certificate.RenewToken, certificate.RenewKeyAuthorization);
 
             // Validate
             while (true)
@@ -124,6 +127,7 @@ public class CertificateService(
                     certificate.RenewErrorTime = null;
                     certificate.RenewErrorCount = 0;
                     certificate.IsTrusted = true;
+                    certificate.RenewCount++;
                     certificate.RawData = res.Export(X509ContentType.Pfx);
                     certificate.Thumbprint = res.Thumbprint;
                     certificate.ExpirationTime = res.NotAfter;
@@ -144,6 +148,8 @@ public class CertificateService(
         }
         finally
         {
+            certificate.RenewToken = null;
+            certificate.RenewKeyAuthorization = null;
             certificate.RenewInprogress = false;
             await vhRepo.SaveChangesAsync();
         }
@@ -230,7 +236,9 @@ public class CertificateService(
             RenewError = null,
             RenewErrorCount = 0,
             RenewErrorTime = null,
-            RenewInprogress = false
+            RenewInprogress = false,
+            RenewKeyAuthorization = null,
+            RenewToken = null
         };
 
         if (certificate.CommonName.Contains('*'))

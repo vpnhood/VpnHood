@@ -54,13 +54,14 @@ public class AgentService(
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
+    //todo: deprecated
     public async Task<byte[]> GetCertificate(Guid serverId, string hostEndPoint)
     {
         var server = await GetServer(serverId);
         logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
             server.ServerId, hostEndPoint);
 
-        var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeCertificate: true );
+        var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeCertificate: true);
         return serverFarm.Certificate!.RawData;
     }
 
@@ -119,11 +120,10 @@ public class AgentService(
         // check version
         await CheckServerVersion(server, serverInfo.Version.ToString());
         UpdateServerStatus(server, serverInfo.Status, true);
-        
+
         // ready for update
-        var serverModel = await vhAgentRepo.ServerGet(server.ProjectId, serverId, includeFarm: true, includeFarmProfile: true);
-        var serverFarmModel = serverModel.ServerFarm!;
-        var serverProfileModel = serverModel.ServerFarm!.ServerProfile!;
+        var serverModel = await vhAgentRepo.ServerGet(server.ProjectId, serverId);
+        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, serverModel.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
 
         // update cache
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -137,15 +137,13 @@ public class AgentService(
         // calculate access points
         if (serverModel.AutoConfigure)
         {
-            var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, serverModel.ServerFarmId, 
-                includeServersAndAccessPoints: true, includeCertificate: true);
-            var accessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarm.Servers!, serverInfo);
+            var accessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
 
             // check if access points has been changed, then update host token and access points
             if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(serverModel.AccessPoints))
             {
                 serverModel.AccessPoints = accessPoints;
-                FarmTokenBuilder.UpdateIfChanged(serverFarm);
+                FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
             }
         }
 
@@ -154,12 +152,17 @@ public class AgentService(
         await cacheService.InvalidateServer(server.ServerId);
 
         // update cache
-        var serverConfig = GetServerConfig(serverModel, serverFarmModel, serverProfileModel);
+        var serverConfig = GetServerConfig(serverModel, serverFarmModel);
         return serverConfig;
     }
 
-    private ServerConfig GetServerConfig(ServerModel serverModel, ServerFarmModel serverFarmModel, ServerProfileModel serverProfileModel)
+    private ServerConfig GetServerConfig(ServerModel serverModel,
+        ServerFarmModel serverFarmModel)
     {
+        ArgumentNullException.ThrowIfNull(serverFarmModel.ServerProfile);
+        ArgumentNullException.ThrowIfNull(serverFarmModel.Certificate);
+        ArgumentNullException.ThrowIfNull(serverFarmModel.Certificates);
+
         var tcpEndPoints = serverModel.AccessPoints
             .Where(accessPoint => accessPoint.IsListen)
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
@@ -187,11 +190,16 @@ public class AgentService(
             {
                 TcpBufferSize = AgentUtil.GetBestTcpBufferSize(serverModel.TotalMemory)
             },
-            ServerSecret = serverFarmModel.Secret
+            ServerSecret = serverFarmModel.Secret,
+            Certificates = serverFarmModel.Certificates.Select(x => new CertificateData
+            {
+                CommonName = x.CommonName,
+                RawData = x.RawData
+            }).ToArray()
         };
 
         // merge with profile
-        var serverProfileConfigJson = serverProfileModel.ServerConfig;
+        var serverProfileConfigJson = serverFarmModel.ServerProfile.ServerConfig;
         if (!string.IsNullOrEmpty(serverProfileConfigJson))
         {
             try
@@ -218,6 +226,15 @@ public class AgentService(
                 SyncCacheSize = _agentOptions.SyncCacheSize
             }
         });
+
+        // renew certificate
+        if (serverFarmModel.Certificate.RenewInprogress)
+            serverConfig.DnsChallenge = new DnsChallenge
+            {
+                Token = serverFarmModel.Certificate.RenewToken ?? "",
+                KeyAuthorization = serverFarmModel.Certificate.RenewKeyAuthorization ?? ""
+            };
+
         serverConfig.ConfigCode = serverModel.ConfigCode.ToString(); // merge does not apply this
 
         return serverConfig;

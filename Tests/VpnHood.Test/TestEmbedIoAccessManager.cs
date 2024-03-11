@@ -132,13 +132,6 @@ public class TestEmbedIoAccessManager : IDisposable
 
         }
 
-        [Route(HttpVerbs.Get, "/certificates/{hostEndPoint}")]
-        public Task<byte[]> GetSslCertificateData([QueryField] Guid serverId, string hostEndPoint)
-        {
-            _ = serverId;
-            return AccessManager.GetSslCertificateData(IPEndPoint.Parse(hostEndPoint));
-        }
-
         [Route(HttpVerbs.Post, "/status")]
         public async Task<ServerCommand> SendServerStatus([QueryField] Guid serverId)
         {

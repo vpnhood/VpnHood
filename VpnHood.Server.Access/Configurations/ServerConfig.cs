@@ -25,7 +25,6 @@ public class ServerConfig
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
-
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan? UpdateStatusInterval { get; set; }
     public bool? LogAnonymizer { get; set; }
@@ -34,6 +33,7 @@ public class ServerConfig
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
     public DnsChallenge? DnsChallenge { get; set; }
+    public CertificateData[] Certificates { get; set; } = [];
 
     // Inherit
     [JsonIgnore] public IPEndPoint[] TcpEndPointsValue => TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];

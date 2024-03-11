@@ -73,11 +73,6 @@ public class TestAccessManager : IAccessManager
         return _httpAccessManager.Session_Close(sessionId, traffic);
     }
 
-    public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
-    {
-        return _httpAccessManager.GetSslCertificateData(hostEndPoint);
-    }
-
     public void Dispose()
     {
         _httpAccessManager.Dispose();

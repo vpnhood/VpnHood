@@ -4,6 +4,7 @@
 
 ### Server
 * Feature: Configure DNS Servers for the connected clients
+* Update: Support multiple certificates
 * Update: Configure timeout for HTTP-01 DNS challenge 
 * Update: Faster shutdown
 

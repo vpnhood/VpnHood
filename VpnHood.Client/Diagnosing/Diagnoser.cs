@@ -56,7 +56,7 @@ public class Diagnoser
         {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck(false, false))
+            if (!await NetworkCheck())
                 throw new NoInternetException();
 
             // ping server

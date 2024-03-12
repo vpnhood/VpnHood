@@ -1,3 +1,13 @@
+# Upcoming
+### Client
+* Feature: Accept DNS Servers from the connected Server
+
+### Server
+* Feature: Configure DNS Servers for the connected clients
+* Update: Support multiple certificates
+* Update: Configure timeout for HTTP-01 DNS challenge 
+* Update: Faster shutdown
+
 # v3.3.475
 ### Client
 * Feature: Update UI when the server does not support UDP tunnel

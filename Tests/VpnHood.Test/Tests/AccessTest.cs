@@ -30,7 +30,7 @@ public class AccessTest : TestBase
 
         try
         {
-            await using var client1 = TestHelper.CreateClient(token);
+            await using var client1 = await TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token id");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -44,7 +44,7 @@ public class AccessTest : TestBase
 
         try
         {
-            await using var client2 = TestHelper.CreateClient(token);
+            await using var client2 = await TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token secret");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -61,7 +61,7 @@ public class AccessTest : TestBase
         var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
 
         // create client and connect
-        await using var client1 = TestHelper.CreateClient(token, autoConnect: false);
+        await using var client1 = await TestHelper.CreateClient(token, autoConnect: false);
         await Assert.ThrowsExceptionAsync<SessionException>(() => client1.Connect());
         Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
     }
@@ -76,7 +76,7 @@ public class AccessTest : TestBase
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddMilliseconds(500));
 
         // connect and download
-        await using var client = TestHelper.CreateClient(accessToken, throwConnectException: false);
+        await using var client = await TestHelper.CreateClient(accessToken, throwConnectException: false);
 
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
@@ -98,7 +98,7 @@ public class AccessTest : TestBase
         // ----------
         // check: client must disconnect at runtime on traffic overflow
         // ----------
-        await using var client1 = TestHelper.CreateClient(accessToken);
+        await using var client1 = await TestHelper.CreateClient(accessToken);
         Assert.AreEqual(50, client1.SessionStatus.AccessUsage?.MaxTraffic);
 
         // first try should just break the connection
@@ -130,7 +130,7 @@ public class AccessTest : TestBase
         try
         {
             VhLogger.Instance.LogTrace("Test: try to connect with another client.");
-            await using var client2 = TestHelper.CreateClient(accessToken);
+            await using var client2 = await TestHelper.CreateClient(accessToken);
             Assert.Fail("Exception expected! Traffic must been overflowed!");
         }
         catch (AssertFailedException)
@@ -153,12 +153,12 @@ public class AccessTest : TestBase
         var token = TestHelper.CreateAccessToken(server, 2);
 
         // create default token with 2 client count
-        await using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client1 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
         // suppress by yourself
-        await using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: client1.ClientId, options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client2 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: client1.ClientId, clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
@@ -175,16 +175,16 @@ public class AccessTest : TestBase
 
         // suppress by other (MaxTokenClient is 2)
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Creating client3.");
-        await using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client3 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
-        await using var client4 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client4 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
         // create a client with another token
         var accessTokenX = TestHelper.CreateAccessToken(server);
-        await using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(),
-            token: accessTokenX, options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var clientX = await TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(),
+            token: accessTokenX, clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
         // wait for finishing client2
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
@@ -213,15 +213,15 @@ public class AccessTest : TestBase
 
         // client1
         using var packetCapture = TestHelper.CreatePacketCapture();
-        await using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client1 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
-        await using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client2 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
         // suppress by yourself
-        await using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+        await using var client3 = await TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), clientOptions: new ClientOptions { AutoDisposePacketCapture = false });
 
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);

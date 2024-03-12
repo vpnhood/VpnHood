@@ -419,8 +419,8 @@ public class Session : IAsyncDisposable, IJob
             await Sync(true, byUser);
 
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        await Tunnel.DisposeAsync();
-        await _proxyManager.DisposeAsync();
+        _ = Tunnel.DisposeAsync();
+        _ = _proxyManager.DisposeAsync();
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();

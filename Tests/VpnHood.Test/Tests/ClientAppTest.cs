@@ -232,7 +232,7 @@ public class ClientAppTest : TestBase
         using var packetCapture = TestHelper.CreatePacketCapture(new TestDeviceOptions { IsDnsServerSupported = true });
         Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
-        await using var client = TestHelper.CreateClient(token, packetCapture);
+        await using var client = await TestHelper.CreateClient(token, packetCapture);
         await TestHelper.WaitForClientStateAsync(client, ClientState.Connected);
 
         Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });

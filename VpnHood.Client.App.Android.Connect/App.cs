@@ -1,4 +1,5 @@
-﻿using Android.Runtime;
+﻿using System.Drawing;
+using Android.Runtime;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Resources;
@@ -14,12 +15,21 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    protected override AppOptions AppOptions => new()
+    protected override AppOptions AppOptions
     {
-        Resources = VpnHoodAppResource.Resources,
-        UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
-        UiName = "VpnHoodConnect",
-        IsAddServerSupported = false
-    };
+        get
+        {
+            var resources = VpnHoodAppResource.Resources;
+            resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
+            resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32,25,81);
+            return new()
+            {
+                Resources = VpnHoodAppResource.Resources,
+                UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
+                UiName = "VpnHoodConnect",
+                IsAddServerSupported = false
+            };
+        }
+    }
 }
 

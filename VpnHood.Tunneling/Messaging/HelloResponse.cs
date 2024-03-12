@@ -21,6 +21,10 @@ public class HelloResponse : SessionResponse
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicAddress { get; set; }
+    
+    [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
+    public IPAddress[]? DnsServers { get; set; }
+
     public int? UdpPort { get; set; }
     public string ServerVersion { get; set; } = default!;
     public int ServerProtocolVersion { get; set; }

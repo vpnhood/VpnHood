@@ -32,13 +32,13 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
-    [HttpGet("/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
+    [HttpGet("subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
     public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
     {
         throw new NotImplementedException();
     }
 
-    [HttpGet("/subscriptions/{subscriptionId}/access-keys")]
+    [HttpGet("subscriptions/{subscriptionId}/access-keys")]
     public Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         throw new NotImplementedException();

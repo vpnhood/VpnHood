@@ -19,7 +19,7 @@ public static class AssemblyInfo
 
     public static Guid StoreAppId => IsDebugMode
         ? Guid.Parse("3B5543E4-EBAD-4E73-A3CB-4CF26608BC29")
-        : throw new NotImplementedException(); // TODO must implement
+        : Guid.Parse("e7357285-775b-405e-aaca-096b1f95d3d0");
 
     public static bool ListenToAllIps => IsDebugMode;
     public static int? DefaultSpaPort => IsDebugMode ? 9091 : 9090;

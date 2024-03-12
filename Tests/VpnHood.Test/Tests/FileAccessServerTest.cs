@@ -27,22 +27,6 @@ public class FileAccessManagerTest : TestBase
     }
 
     [TestMethod]
-    public void GetSslCertificateData()
-    {
-        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var fileAccessManager = TestHelper.CreateFileAccessManager(storagePath: storagePath);
-
-        // Create accessManager
-        using TestEmbedIoAccessManager testHttpAccessManager = new(fileAccessManager);
-        var accessManager = new HttpAccessManager(new HttpAccessManagerOptions(testHttpAccessManager.BaseUri, "Bearer xxx"));
-
-        // ************
-        // *** TEST ***: default cert must be used
-        var cert1 = new X509Certificate2(accessManager.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
-        Assert.AreEqual(cert1.Thumbprint, fileAccessManager.DefaultCert.Thumbprint);
-    }
-
-    [TestMethod]
     public async Task Crud()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());

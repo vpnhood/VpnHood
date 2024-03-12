@@ -21,7 +21,7 @@ public class NetScanTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
         var tcpClient1 = new TcpClient();
         await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);

@@ -114,6 +114,12 @@ public static class VhUtil
         await task;
     }
 
+    public static bool IsNullOrEmpty<T>([NotNullWhen(false)] IEnumerable<T>? array)
+    {
+        return array == null || !array.Any();
+    }
+
+
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
     {
         return array == null || array.Length == 0;

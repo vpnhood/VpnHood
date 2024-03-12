@@ -9,6 +9,14 @@ namespace VpnHood.Common.Net;
 // ReSharper disable once InconsistentNaming
 public static class IPAddressUtil
 {
+    public static IPAddress[] GoogleDnsServers { get; } =
+    [
+        IPAddress.Parse("8.8.8.8"),
+        IPAddress.Parse("8.4.4.8"),
+        IPAddress.Parse("001:4860:4860::8888"),
+        IPAddress.Parse("2001:4860:4860::8844")
+    ];
+
     public static async Task<IPAddress[]> GetPrivateIpAddresses()
     {
         var ret = new List<IPAddress>();

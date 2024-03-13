@@ -5,10 +5,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Common.Utils;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class VhUtil
 {
     public static bool IsConnectionRefusedException(Exception ex)
@@ -176,6 +177,24 @@ public static class VhUtil
     {
         return JsonSerializer.Deserialize<T>(json, options) ??
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+    }
+
+    public static T? JsonDeserializeFile<T>(string filePath, JsonSerializerOptions? options = null, ILogger? logger = null)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+                return default(T);
+
+            var json = File.ReadAllText(filePath);
+            var appAccount = JsonDeserialize<T>(json, options);
+            return appAccount;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
+            return default(T);
+        }
     }
 
     public static bool JsonEquals(object? obj1, object? obj2)

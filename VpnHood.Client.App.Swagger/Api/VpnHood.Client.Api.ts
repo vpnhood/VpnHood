@@ -72,6 +72,50 @@ export class AccountClient {
         return Promise.resolve<AppAccount>(null as any);
     }
 
+    refresh( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/account";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRefresh(_response);
+        });
+    }
+
+    protected processRefresh(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     isSigninWithGoogleSupported( cancelToken?: CancelToken): Promise<boolean> {
         let url_ = this.baseUrl + "/api/account/is-signin-with-google-supported";
         url_ = url_.replace(/[?&]$/, "");
@@ -1483,6 +1527,7 @@ export class UserSettings implements IUserSettings {
     packetCaptureIncludeIpRanges!: string[];
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker!: boolean;
+    dnsServers?: string[] | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -1551,6 +1596,14 @@ export class UserSettings implements IUserSettings {
                 this.packetCaptureExcludeIpRanges = <any>null;
             }
             this.allowAnonymousTracker = _data["allowAnonymousTracker"] !== undefined ? _data["allowAnonymousTracker"] : <any>null;
+            if (Array.isArray(_data["dnsServers"])) {
+                this.dnsServers = [] as any;
+                for (let item of _data["dnsServers"])
+                    this.dnsServers!.push(item);
+            }
+            else {
+                this.dnsServers = <any>null;
+            }
         }
     }
 
@@ -1600,6 +1653,11 @@ export class UserSettings implements IUserSettings {
                 data["packetCaptureExcludeIpRanges"].push(item);
         }
         data["allowAnonymousTracker"] = this.allowAnonymousTracker !== undefined ? this.allowAnonymousTracker : <any>null;
+        if (Array.isArray(this.dnsServers)) {
+            data["dnsServers"] = [];
+            for (let item of this.dnsServers)
+                data["dnsServers"].push(item);
+        }
         return data;
     }
 }
@@ -1622,6 +1680,7 @@ export interface IUserSettings {
     packetCaptureIncludeIpRanges: string[];
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker: boolean;
+    dnsServers?: string[] | null;
 }
 
 export class AppLogSettings implements IAppLogSettings {

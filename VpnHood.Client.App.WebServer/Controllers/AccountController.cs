@@ -17,6 +17,12 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.GetAccount();
     }
 
+    [Route(HttpVerbs.Post, "/refresh")]
+    public Task Refresh()
+    {
+        return AccountService.Refresh();
+    }
+
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {

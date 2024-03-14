@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ public class CacheService(
     IOptions<AgentOptions> appOptions,
     ILogger<CacheService> logger,
     VhAgentRepo vhAgentRepo)
+    : IGrayMintJob
 {
     private class MemCache
     {
@@ -397,5 +399,10 @@ public class CacheService(
             .ToArray();
 
         return Task.FromResult(activeSessions);
+    }
+
+    public Task RunJob(CancellationToken cancellationToken)
+    {
+        return SaveChanges();
     }
 }

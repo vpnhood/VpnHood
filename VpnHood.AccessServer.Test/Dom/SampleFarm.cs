@@ -13,7 +13,7 @@ public class SampleFarm : ServerFarmDom
         AccessToken publicToken2,
         AccessToken privateToken1,
         AccessToken privateToken2) 
-        : base(testApp, serverFarm)
+        : base(testApp, serverFarm, false)
     {
         Server1 = server1;
         Server2 = server2;

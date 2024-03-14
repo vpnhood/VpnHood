@@ -2,9 +2,12 @@ using System.Text.Json;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.Jobs;
+using GrayMint.Common.JobController;
 using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
@@ -16,9 +19,22 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        var agentOptions = builder.Configuration.GetSection("App").Get<AgentOptions>() ?? throw new Exception("Could not read AgentOptions.");
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
         builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
         builder.Services.AddGrayMintSwagger("VpnHood Agent Server", false);
+        builder.Services.AddGrayMintJob<CacheService>(new GrayMintJobOptions
+        {
+            DueTime = agentOptions.SaveCacheInterval,
+            Interval = agentOptions.SaveCacheInterval,
+            ExecuteOnShutdown = true
+        });
+
+        // logger
+        builder.Logging.AddSimpleConsole(c =>
+        {
+            c.TimestampFormat = "[HH:mm:ss] ";
+        });
 
         //Authentication
         builder.Services
@@ -58,7 +74,7 @@ public class Program
         builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<AgentService>();
         builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
-        builder.Services.AddHostedService<TimedHostedService>();
+        //builder.Services.AddHostedService<TimedHostedService>();
 
         //---------------------
         // Create App
@@ -83,5 +99,5 @@ public class Program
 
         await GrayMintApp.RunAsync(webApp, args);
     }
-   
+
 }

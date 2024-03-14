@@ -11,7 +11,7 @@ using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Test;
 
-public class AgentTestApp
+public class AgentTestApp : IDisposable
 {
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
     public IServiceScope AgentScope { get; }
@@ -52,5 +52,10 @@ public class AgentTestApp
         var grayMintAuthentication = scope.ServiceProvider.GetRequiredService<GrayMintAuthentication>();
         var authorization = grayMintAuthentication.CreateAuthenticationHeader(claimIdentity).Result;
         return authorization;
+    }
+
+    public void Dispose()
+    {
+        AgentApp.Dispose();
     }
 }

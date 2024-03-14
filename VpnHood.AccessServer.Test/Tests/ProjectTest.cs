@@ -127,7 +127,7 @@ public class ProjectTest
     [TestMethod]
     public async Task GetUsage()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom1 = await farm.CreateAccessToken();
         var accessTokenDom2 = await farm.CreateAccessToken();
 

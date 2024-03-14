@@ -225,7 +225,7 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Reconfigure_all_servers_on_update_server_profile()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();
         var serverProfileDom = await ServerProfileDom.Create(farm.TestApp);
@@ -243,7 +243,7 @@ public class ServerFarmTest
     [TestMethod]
     public async Task GetFarmToken()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var encFarmToken = await farm.Client.GetEncryptedTokenAsync(farm.ProjectId, farm.ServerFarmId);
         var accessToken = await farm.CreateAccessToken();
         var farmToken = ServerToken.Decrypt(farm.ServerFarm.Secret, encFarmToken);
@@ -258,7 +258,7 @@ public class ServerFarmTest
     public async Task FarmToken_must_change_by_modifying_certificate()
     {
         // get farm token
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
         var accessKey = await accessTokenDom.GetAccessKey();
         var token1 = Token.FromAccessKey(accessKey);

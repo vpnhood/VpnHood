@@ -19,7 +19,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 14
@@ -39,7 +39,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 0
@@ -59,7 +59,7 @@ public class AgentClientSessionTest
     public async Task Push_token_to_client()
     {
         var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = false};
-        var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken();
 
         // ------------
@@ -81,7 +81,7 @@ public class AgentClientSessionTest
     public async Task Session_Create_success()
     {
         var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = true };
-        var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 100,
@@ -230,7 +230,7 @@ public class AgentClientSessionTest
         var testApp = await TestApp.Create();
         testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
         testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
-        var sampleFarm1 = await SampleFarm.Create(testApp);
+        using var sampleFarm1 = await SampleFarm.Create(testApp);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.CloseSession();
         Assert.AreEqual(SessionErrorCode.Ok, responseBase.ErrorCode);
@@ -263,8 +263,8 @@ public class AgentClientSessionTest
     public async Task Session_Bombard()
     {
         var testApp = await TestApp.Create();
-        var sampleFarm1 = await SampleFarm.Create(testApp);
-        var sampleFarm2 = await SampleFarm.Create(testApp);
+        using var sampleFarm1 = await SampleFarm.Create(testApp);
+        using var sampleFarm2 = await SampleFarm.Create(testApp);
 
         var createSessionTasks = new List<Task<SessionDom>>();
         for (var i = 0; i < 50; i++)
@@ -311,7 +311,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_Public()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(isPublic: true);
         var sessionDom1 = await accessTokenDom.CreateSession();
 
@@ -404,7 +404,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(isPublic: false);
         var sessionDom1 = await accessTokenDom.CreateSession();
 
@@ -447,7 +447,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task AccessUsage_Inserted()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         // create token
         var sampleAccessToken = await farm.CreateAccessToken();

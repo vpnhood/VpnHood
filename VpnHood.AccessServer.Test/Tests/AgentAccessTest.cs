@@ -28,7 +28,7 @@ public class AgentAccessTest
     [TestMethod]
     public async Task Access_token_expired_by_expiration_date()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         // create accessTokenModel
         var accessTokenDom = await farm.CreateAccessToken(

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -10,7 +11,7 @@ public class CacheTest
     [TestMethod]
     public async Task Auto_Flush()
     {
-        var testApp = await TestApp.Create(appSettings: new Dictionary<string, string?>
+        using var testApp = await TestApp.Create(appSettings: new Dictionary<string, string?>
         {
             ["App:SaveCacheInterval"] = "00:00:00.100"
         });
@@ -19,11 +20,9 @@ public class CacheTest
         var accessTokenDom = await farmDom.CreateAccessToken(true);
         var sessionDom = await accessTokenDom.CreateSession();
         await sessionDom.CloseSession();
-        await Task.Delay(1000);
 
-        Assert.IsTrue(
-            await testApp.VhContext.Sessions.AnyAsync(x =>
-                x.SessionId == sessionDom.SessionId && x.EndTime != null),
+        await VhTestUtil.AssertEqualsWait(true, 
+            async () => await testApp.VhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom.SessionId && x.EndTime != null), 
             "Session has not been synced yet.");
     }
 

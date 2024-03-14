@@ -17,7 +17,7 @@ public class ServerTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var oldConfigCode = farm.DefaultServer.ServerConfig.ConfigCode;
         await farm.DefaultServer.Client.ReconfigureAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
@@ -126,7 +126,7 @@ public class ServerTest
     [TestMethod]
     public async Task Quota()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         QuotaConstants.ServerCount = farm.Servers.Count; //update quota
 
         try
@@ -143,7 +143,7 @@ public class ServerTest
     [TestMethod]
     public async Task GetInstallManual()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var install = await farm.DefaultServer.Client.GetInstallManualAsync(farm.ProjectId, farm.DefaultServer.ServerId);
 
         var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
@@ -157,7 +157,7 @@ public class ServerTest
     [TestMethod]
     public async Task ServerInstallByUserName()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         try
         {
             await farm.DefaultServer.Client.InstallBySshUserPasswordAsync(farm.ProjectId, farm.DefaultServer.ServerId,
@@ -226,7 +226,7 @@ public class ServerTest
     [TestMethod]
     public async Task Fail_make_sure_the_deleted_server_AccessPoints_not_exists_in_the_token()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
 
         // get first server token
         var server1Dom = await farm.AddNewServer();
@@ -259,7 +259,7 @@ public class ServerTest
     [TestMethod]
     public async Task GetStatusSummary()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
         farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 
@@ -305,7 +305,7 @@ public class ServerTest
     [TestMethod]
     public async Task GetStatusHistory()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var res = await farm.TestApp.ServersClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
@@ -314,7 +314,7 @@ public class ServerTest
     public async Task Crud_AccessPoints()
     {
         var testApp = await TestApp.Create();
-        var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
 
         var accessPoint1 = await testApp.NewAccessPoint();
         var accessPoint2 = await testApp.NewAccessPoint();

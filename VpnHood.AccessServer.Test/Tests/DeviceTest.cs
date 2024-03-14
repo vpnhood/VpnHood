@@ -36,7 +36,7 @@ public class DeviceTest
     [TestMethod]
     public async Task Locked()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
         var clientId = Guid.NewGuid();
         await farm.DefaultServer.CreateSession(accessTokenDom.AccessToken, clientId);

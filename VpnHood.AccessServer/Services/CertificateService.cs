@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using Microsoft.Extensions.Logging;
+using System.Security.AccessControl;
+using System.Security.Cryptography.X509Certificates;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Persistence;
@@ -10,12 +12,10 @@ namespace VpnHood.AccessServer.Services;
 
 public class CertificateService(
     VhRepo vhRepo,
+    ILogger<CertificateService> logger,
     ServerConfigureService serverConfigureService,
     IAcmeOrderFactory acmeOrderFactory)
 {
-    private readonly string _acmeAccountPem = "-----BEGIN EC PRIVATE KEY-----\r\nMHcCAQEEINeE2cCFoddl9OsZdjuJLerxSEQpJah55CwVJpHb2dbpoAoGCCqGSM49\r\nAwEHoUQDQgAEjSA/K3SIR7aiPjHxhQfA8y2+O5p6EgN2b1C3FmAzd2qMKY4cgTe0\r\nlntFDnWfY/mRqutw4K+m2QTxQlpgFiDpkQ==\r\n-----END EC PRIVATE KEY-----";
-    private readonly string _acmeAccountPem2 = "-----BEGIN EC PRIVATE KEY-----\r\nMHcCAQEEIHzqNeXy5j0A4Rw7FuBnlANPk1aQ/WXhH/a3geGw2zrtoAoGCCqGSM49\r\nAwEHoUQDQgAE+SbDquCZ05EvXsJpW4Er4wHKb+eYyQWbmEtf4FutE/A0D1tH1STg\r\nUvtcnB46Ef1DTgPdeDnQbXONLL70YfvlXA==\r\n-----END EC PRIVATE KEY-----\r\n";
-
     public async Task<Certificate> Replace(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams)
     {
         // make sure farm belong to this project
@@ -28,7 +28,7 @@ public class CertificateService(
         var certificate = BuildSelfSinged(serverFarm.ProjectId, serverFarmId: serverFarm.ServerFarmId, createParams: createParams);
         await vhRepo.AddAsync(certificate);
         await vhRepo.SaveChangesAsync();
-        
+
         // invalidate farm cache
         await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
 
@@ -73,7 +73,7 @@ public class CertificateService(
 
     public async Task Renew(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, 
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId,
             includeCertificates: true, includeProject: true);
         await Renew(serverFarm.Certificate!, cancellationToken);
     }
@@ -89,11 +89,13 @@ public class CertificateService(
         try
         {
             // create Csr from certificate
+            logger.LogInformation("Renewing certificate. ProjectId: {ProjectId}, CommonName: {CommonName}", project.ProjectId, certificate.CommonName);
             certificate.RenewInprogress = true;
 
             // create account if not exists
             if (project.LetsEncryptAccount?.AccountPem == null)
             {
+                logger.LogInformation("Creating acme account. ProjectId: {ProjectId}", project.ProjectId);
                 var accountPem = await acmeOrderFactory.CreateNewAccount($"project-{project.ProjectId}@vpnhood.com");
                 project.LetsEncryptAccount = new LetsEncryptAccount
                 {
@@ -115,11 +117,13 @@ public class CertificateService(
             await serverConfigureService.WaitForFarmConfiguration(certificate.ProjectId, certificate.ServerFarmId, cancellationToken);
 
             // validate order by manager
-            await ValidateByManager(certificate.CommonName, certificate.RenewToken, certificate.RenewKeyAuthorization);
+            logger.LogInformation("Validating certificate by the access server. ProjectId: {ProjectId}, CommonName: {CommonName}", project.ProjectId, certificate.CommonName);
+            await ValidateByAccessServer(certificate.CommonName, certificate.RenewToken, certificate.RenewKeyAuthorization);
 
             // Validate
             while (true)
             {
+                logger.LogInformation("Validating certificate by the provider. ProjectId: {ProjectId}, CommonName: {CommonName}", project.ProjectId, certificate.CommonName);
                 var res = await acmeOrderService.Validate();
                 if (res != null)
                 {
@@ -137,6 +141,7 @@ public class CertificateService(
                     break;
                 }
 
+                logger.LogInformation("Acme validate in pending. CommonName: {CommonName}", certificate.CommonName);
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
         }
@@ -155,7 +160,7 @@ public class CertificateService(
         }
     }
 
-    private static async Task ValidateByManager(string commonName, string token, string keyAuthorization)
+    private static async Task ValidateByAccessServer(string commonName, string token, string keyAuthorization)
     {
         var httpClient = new HttpClient();
         var url = $"http://{commonName}/.well-known/acme-challenge/{token}";

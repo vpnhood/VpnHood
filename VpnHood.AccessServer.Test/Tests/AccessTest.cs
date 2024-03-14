@@ -16,7 +16,7 @@ public class AccessTest
     [TestMethod]
     public async Task Get()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(true);
 
         var sessionDom = await accessTokenDom.CreateSession();

@@ -105,7 +105,7 @@ public class AgentServerTest
     public async Task Configure_when_AutoConfigure_is_on()
     {
         // create serverInfo
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer();
         var publicInTokenAccessPoints1 = await Configure_auto_update_accessPoints_on_internal(serverDom);
         var publicInTokenAccessPoints2 = await Configure_auto_update_accessPoints_on_internal(serverDom);
@@ -174,7 +174,7 @@ public class AgentServerTest
     public async Task Configure_manual_UDP_return_nothing_when_port_is_minus_one()
     {
         // create serverInfo
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
             AutoConfigure = new PatchOfBoolean { Value = false },
@@ -190,7 +190,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Configure_UDP_for_first_time_only()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer(false);
 
         // create serverInfo and configure
@@ -222,7 +222,7 @@ public class AgentServerTest
     public async Task Configure()
     {
         var farmCreateParams = new ServerFarmCreateParams { TokenUrl = new Uri("http://localhost:8080/farm1-token") };
-        var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
+        using var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
         var serverDom = await farm.AddNewServer(false);
 
@@ -288,7 +288,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var testApp = farm.TestApp;
         var serverDom = await farm.AddNewServer(false, false);
 
@@ -351,7 +351,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var testApp = farm.TestApp;
         var serverDom = farm.DefaultServer;
 
@@ -451,7 +451,7 @@ public class AgentServerTest
     public async Task Configure_when_AutoConfigure_is_off()
     {
         // create serverInfo
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessPoints = farm.DefaultServer.Server.AccessPoints.ToArray();
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
@@ -472,7 +472,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
@@ -521,7 +521,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Fail_Configure_by_old_version()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         farm.DefaultServer.ServerInfo.Version = Version.Parse("0.0.1");
 
         //Configure
@@ -623,7 +623,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig_all_servers_after_farm_certificate_changed()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 
@@ -638,7 +638,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Server_UpdateStatus()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var testApp = farm.TestApp;
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();

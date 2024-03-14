@@ -36,7 +36,7 @@ public class SyncTest
     [TestMethod]
     public async Task Sync_ServerStatuses()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer(false);
         var vhContext = farm.TestApp.VhContext;
         var vhReportContext = farm.TestApp.VhReportContext;
@@ -64,7 +64,7 @@ public class SyncTest
     [TestMethod]
     public async Task Sync_AccessUsages()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var testApp = farm.TestApp;
 
         // init
@@ -97,7 +97,7 @@ public class SyncTest
     [TestMethod]
     public async Task Sync_Sessions()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var tokenDom = await farm.CreateAccessToken();
 
         farm.TestApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);

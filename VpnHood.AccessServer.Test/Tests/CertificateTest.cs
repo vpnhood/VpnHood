@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access;
@@ -16,7 +17,7 @@ public class CertificateTest
     [TestMethod]
     public async Task Crud()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         //-----------
         // Create Certificate using RawData
@@ -77,7 +78,7 @@ public class CertificateTest
     public async Task Renew()
     {
         // create farm and server
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(5);
         farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(5);
         var server = await farm.AddNewServer();
@@ -85,7 +86,6 @@ public class CertificateTest
         await server.Reload();
         Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
 
-    
         // create new certificate
         await farm.CertificateReplace(new CertificateCreateParams
         {
@@ -111,7 +111,8 @@ public class CertificateTest
         // configure server
         await server.Configure(false);
         Assert.IsNotNull(server.ServerConfig.DnsChallenge);
-        using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback], 
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback],
             server.ServerConfig.DnsChallenge.Token, server.ServerConfig.DnsChallenge.KeyAuthorization, TimeSpan.FromMinutes(1));
         http01ChallengeService.Start();
         await server.SendStatus();

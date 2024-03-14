@@ -142,7 +142,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             UdpPort = udpPort ?? ipEndPoint.Port,
             IpAddress = ipEndPoint.Address.ToString(),
             TcpPort = ipEndPoint.Port,
-            AccessPointMode = AccessPointMode.PublicInToken,
+            AccessPointMode = accessPointMode,
             IsListen = isListen
         };
     }
@@ -333,5 +333,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     {
         Scope.Dispose();
         HttpClient.Dispose();
+        AgentTestApp.Dispose();
+        WebApp.Dispose();
     }
 }

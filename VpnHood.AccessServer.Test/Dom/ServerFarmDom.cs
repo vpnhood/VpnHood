@@ -1,11 +1,11 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using VpnHood.AccessServer.Api;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
-public class ServerFarmDom
+public class ServerFarmDom : IDisposable
 {
+    private readonly bool _autoDisposeApp;
     public TestApp TestApp { get; }
     public ServerFarm ServerFarm { get; private set; }
     public List<ServerDom> Servers { get; private set; } = [];
@@ -15,14 +15,16 @@ public class ServerFarmDom
     public ServerDom DefaultServer => Servers.First();
     public ServerFarmsClient Client => TestApp.ServerFarmsClient;
 
-    protected ServerFarmDom(TestApp testApp, ServerFarm serverFarm)
+    protected ServerFarmDom(TestApp testApp, ServerFarm serverFarm, bool autoDisposeApp)
     {
+        _autoDisposeApp = autoDisposeApp;
         TestApp = testApp;
         ServerFarm = serverFarm;
     }
 
     public static async Task<ServerFarmDom> Create(TestApp? testApp = default, ServerFarmCreateParams? createParams = default, int serverCount = 1)
     {
+        var autoDisposeApp = testApp == null;
         testApp ??= await TestApp.Create();
         createParams ??= new ServerFarmCreateParams
         {
@@ -30,19 +32,17 @@ public class ServerFarmDom
         };
 
         var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, createParams);
-
-        var ret = new ServerFarmDom(testApp, serverFarmData.ServerFarm);
+        var ret = new ServerFarmDom(testApp, serverFarmData.ServerFarm, autoDisposeApp);
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
 
         return ret;
     }
 
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static async Task<ServerFarmDom> Attach(TestApp testApp, Guid serverFarmId)
     {
         var serverFarmData = await testApp.ServerFarmsClient.GetAsync(testApp.ProjectId, serverFarmId);
-        var serverFarm = new ServerFarmDom(testApp, serverFarmData.ServerFarm);
+        var serverFarm = new ServerFarmDom(testApp, serverFarmData.ServerFarm, false);
         await serverFarm.ReattachServers();
         return serverFarm;
     }
@@ -139,4 +139,9 @@ public class ServerFarmDom
         return TestApp.ServerFarmsClient.CertificateRenewAsync(ProjectId, ServerFarmId);
     }
 
+    public void Dispose()
+    {
+        if (_autoDisposeApp)
+            TestApp.Dispose();
+    }
 }

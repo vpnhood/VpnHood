@@ -55,6 +55,7 @@ public class AppAuthenticationService : IAppAuthenticationService
                 return;
             }
 
+            Directory.CreateDirectory(Path.GetDirectoryName(ApiKeyFilePath)!);
             File.WriteAllText(ApiKeyFilePath, JsonSerializer.Serialize(value));
         }
     }

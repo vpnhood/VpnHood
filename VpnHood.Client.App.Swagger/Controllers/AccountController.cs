@@ -14,7 +14,7 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
     
-    [HttpPost]
+    [HttpPost("refresh")]
     public Task Refresh()
     {
         throw new NotImplementedException();

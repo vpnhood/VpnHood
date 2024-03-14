@@ -115,6 +115,8 @@ public class CertificateTest
         using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback],
             server.ServerConfig.DnsChallenge.Token, server.ServerConfig.DnsChallenge.KeyAuthorization, TimeSpan.FromMinutes(1));
         http01ChallengeService.Start();
+        await Task.Delay(500); // wait for listening before server send the request 
+
         await server.SendStatus();
 
         // Wait for server to be idle

@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Security.AccessControl;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Persistence;
@@ -119,6 +117,7 @@ public class CertificateService(
             // validate order by manager
             logger.LogInformation("Validating certificate by the access server. ProjectId: {ProjectId}, CommonName: {CommonName}", project.ProjectId, certificate.CommonName);
             await ValidateByAccessServer(certificate.CommonName, certificate.RenewToken, certificate.RenewKeyAuthorization);
+            logger.LogInformation("zzzzzzzzzz");
 
             // Validate
             while (true)

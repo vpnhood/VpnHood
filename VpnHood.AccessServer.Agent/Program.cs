@@ -3,11 +3,9 @@ using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Jobs;
-using GrayMint.Common.JobController;
 using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
@@ -26,8 +24,7 @@ public class Program
         builder.Services.AddGrayMintJob<CacheService>(new GrayMintJobOptions
         {
             DueTime = agentOptions.SaveCacheInterval,
-            Interval = agentOptions.SaveCacheInterval,
-            ExecuteOnShutdown = true
+            Interval = agentOptions.SaveCacheInterval
         });
 
         // logger
@@ -74,7 +71,6 @@ public class Program
         builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<AgentService>();
         builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
-        //builder.Services.AddHostedService<TimedHostedService>();
 
         //---------------------
         // Create App

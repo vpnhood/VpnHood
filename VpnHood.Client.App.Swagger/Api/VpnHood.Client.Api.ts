@@ -73,7 +73,7 @@ export class AccountClient {
     }
 
     refresh( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/account";
+        let url_ = this.baseUrl + "/api/account/refresh";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {

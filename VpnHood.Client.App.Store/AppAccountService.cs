@@ -56,6 +56,7 @@ public class AppAccountService(
             ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
         };
 
+        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(appAccount));
         return appAccount;
     }

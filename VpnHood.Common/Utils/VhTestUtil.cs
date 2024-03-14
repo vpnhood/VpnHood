@@ -1,14 +1,12 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Common.Utils;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class VhTestUtil
 {
-    private class AssertException : Exception
+    public class AssertException : Exception
     {
         public AssertException(string? message = null)
             : base(message)
@@ -35,12 +33,17 @@ public static class VhTestUtil
         return false;
     }
 
-    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
+    public static Task<bool> WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
+    {
+        return WaitForValue(expectedValue, valueFactory(), timeout);
+    }
+
+    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Task<TValue?> task, int timeout = 5000)
     {
         const int waitTime = 100;
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
-            if (Equals(expectedValue, await valueFactory()))
+            if (Equals(expectedValue, await task))
                 return true;
 
             await Task.Delay(waitTime);
@@ -63,12 +66,19 @@ public static class VhTestUtil
         AssertEquals(expectedValue, valueFactory(), message);
     }
 
-    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory,
+    public static Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory,
         string? message = null, int timeout = 5000)
     {
-        await WaitForValue(expectedValue, valueFactory, timeout);
-        AssertEquals(expectedValue, await valueFactory(), message);
+        return AssertEqualsWait(expectedValue, valueFactory(), message, timeout);
     }
+
+    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Task<TValue?> task,
+        string? message = null, int timeout = 5000)
+    {
+        var result = await WaitForValue(expectedValue, task, timeout);
+        AssertEquals(expectedValue, result, message);
+    }
+
 
     public static Task AssertApiException(HttpStatusCode expectedStatusCode, Task task, string? message = null)
     {

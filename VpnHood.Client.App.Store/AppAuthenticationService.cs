@@ -137,6 +137,8 @@ public class AppAuthenticationService : IAppAuthenticationService
         {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
                 await SignUpToVpnHoodStore(idToken);
+            else
+                throw;
         }
     }
 

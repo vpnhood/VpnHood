@@ -12,6 +12,8 @@
 namespace VpnHood.Client.App.Droid.Properties;
 public static class AssemblyInfo
 {
+    public static bool ListenToAllIps => IsDebugMode;
+    public static int? DefaultSpaPort => IsDebugMode ? 9581 : 9580;
     public static Uri UpdateInfoUrl
     {
         get
@@ -20,6 +22,17 @@ public static class AssemblyInfo
             return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android.json");
 #else
             return new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json");
+#endif
+        }
+    }
+    public static bool IsDebugMode
+    {
+        get
+        {
+#if DEBUG 
+            return true;
+#else
+            return false;
 #endif
         }
     }

@@ -13,7 +13,7 @@ public class CertificateModel
     public required string Thumbprint { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required bool IsTrusted { get; set; }
-    public required bool AutoRenew { get; set; }
+    public required bool AutoValidate { get; set; }
     public required int RenewCount { get; set; }
     public required bool RenewInprogress { get; set; }
     public required string? RenewToken { get; set; }

@@ -10,7 +10,7 @@ public class Certificate
     public required DateTime CreatedTime { get; init; }
     public required string Thumbprint { get; init; }
     public required bool IsTrusted { get; init; }
-    public required bool AutoRenew { get; init; }
+    public required bool AutoValidate { get; init; }
     public required int RenewCount { get; init; }
     public required bool RenewInprogress { get; init; }
     public required int RenewErrorCount { get; init; }

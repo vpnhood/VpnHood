@@ -17,7 +17,7 @@ public static class CertificateConverter
             IsTrusted = model.IsTrusted,
             Thumbprint = model.Thumbprint,
             SubjectName = model.SubjectName,
-            AutoRenew = model.AutoRenew,
+            AutoValidate = model.AutoValidate,
             RenewInprogress = model.RenewInprogress,
             RenewCount = model.RenewCount,
             RenewError = model.RenewError,

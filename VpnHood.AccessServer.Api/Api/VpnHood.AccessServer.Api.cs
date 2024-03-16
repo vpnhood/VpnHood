@@ -8052,8 +8052,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isTrusted")]
         public bool IsTrusted { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("autoRenew")]
-        public bool AutoRenew { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("autoValidate")]
+        public bool AutoValidate { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("renewCount")]
         public int RenewCount { get; set; } = default!;

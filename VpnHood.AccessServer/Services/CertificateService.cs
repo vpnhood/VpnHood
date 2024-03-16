@@ -235,7 +235,7 @@ public class CertificateService(
             IsTrusted = x509Certificate2.Verify(),
             IsDefault = true,
             IsDeleted = false,
-            AutoRenew = false,
+            AutoValidate = false,
             RenewCount = 0,
             RenewError = null,
             RenewErrorCount = 0,

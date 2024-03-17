@@ -134,11 +134,6 @@ public class ServerFarmDom : IDisposable
         return TestApp.ServerFarmsClient.CertificateImportAsync(ProjectId, ServerFarmId, importParams);
     }
 
-    public Task CertificateRenew()
-    {
-        return TestApp.ServerFarmsClient.CertificateRenewAsync(ProjectId, ServerFarmId);
-    }
-
     public void Dispose()
     {
         if (_autoDisposeApp)

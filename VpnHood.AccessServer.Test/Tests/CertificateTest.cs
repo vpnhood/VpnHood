@@ -75,7 +75,7 @@ public class CertificateTest
     }
 
     [TestMethod]
-    public async Task Renew()
+    public async Task Validate()
     {
         // create farm and server
         using var farm = await ServerFarmDom.Create(serverCount: 0);
@@ -105,7 +105,7 @@ public class CertificateTest
         Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
 
         // renew order
-        _ = farm.CertificateRenew();
+        await farm.Update(new ServerFarmUpdateParams { AutoValidateCertificate = new PatchOfBoolean { Value = true } });
         await server.WaitForState(ServerState.Configuring);
 
         // configure server

@@ -18,11 +18,11 @@ public static class CertificateConverter
             Thumbprint = model.Thumbprint,
             SubjectName = model.SubjectName,
             AutoValidate = model.AutoValidate,
-            RenewInprogress = model.RenewInprogress,
-            RenewCount = model.RenewCount,
-            RenewError = model.RenewError,
-            RenewErrorTime = model.RenewErrorTime,
-            RenewErrorCount = model.RenewErrorCount
+            ValidateInprogress = model.ValidateInprogress,
+            ValidateCount = model.ValidateCount,
+            ValidateError = model.ValidateError,
+            ValidateErrorTime = model.ValidateErrorTime,
+            ValidateErrorCount = model.ValidateErrorCount
         };
         return certificate;
     }

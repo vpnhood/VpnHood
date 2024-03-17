@@ -90,11 +90,4 @@ public class ServerFarmsController(
     {
         return certificateService.Replace(projectId, serverFarmId, createParams);
     }
-
-    [HttpPost("{serverFarmId:guid}/certificate/renew")]
-    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
-    public Task CertificateRenew(Guid projectId, Guid serverFarmId)
-    {
-        return certificateService.Renew(projectId, serverFarmId, CancellationToken.None);
-    }
 }

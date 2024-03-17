@@ -14,13 +14,13 @@ public class CertificateModel
     public required DateTime CreatedTime { get; set; }
     public required bool IsTrusted { get; set; }
     public required bool AutoValidate { get; set; }
-    public required int RenewCount { get; set; }
-    public required bool RenewInprogress { get; set; }
-    public required string? RenewToken { get; set; }
-    public required string? RenewKeyAuthorization { get; set; }
-    public required int RenewErrorCount { get; set; }
-    public required string? RenewError { get; set; }
-    public required DateTime? RenewErrorTime { get; set; }
+    public required int ValidateCount { get; set; }
+    public required bool ValidateInprogress { get; set; }
+    public required string? ValidateToken { get; set; }
+    public required string? ValidateKeyAuthorization { get; set; }
+    public required int ValidateErrorCount { get; set; }
+    public required string? ValidateError { get; set; }
+    public required DateTime? ValidateErrorTime { get; set; }
     public required bool IsDefault { get; set; }
     public required bool IsDeleted { get; set; }
 

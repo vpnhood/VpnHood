@@ -3691,81 +3691,6 @@ namespace VpnHood.AccessServer.Api
             }
         }
 
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task CertificateRenewAsync(System.Guid projectId, System.Guid serverFarmId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
-        {
-            if (projectId == null)
-                throw new System.ArgumentNullException("projectId");
-
-            if (serverFarmId == null)
-                throw new System.ArgumentNullException("serverFarmId");
-
-            var client_ = _httpClient;
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
-                    request_.Method = new System.Net.Http.HttpMethod("POST");
-
-                    var urlBuilder_ = new System.Text.StringBuilder();
-                
-                    // Operation Path: "api/v1/projects/{projectId}/server-farms/{serverFarmId}/certificate/renew"
-                    urlBuilder_.Append("api/v1/projects/");
-                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/server-farms/");
-                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/certificate/renew");
-
-                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
-
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-
-                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
-
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
-                        foreach (var item_ in response_.Headers)
-                            headers_[item_.Key] = item_.Value;
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-
-                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
-
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
-                        {
-                            return;
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -8055,20 +7980,20 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("autoValidate")]
         public bool AutoValidate { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("renewCount")]
-        public int RenewCount { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("validateCount")]
+        public int ValidateCount { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("renewInprogress")]
-        public bool RenewInprogress { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("validateInprogress")]
+        public bool ValidateInprogress { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("renewErrorCount")]
-        public int RenewErrorCount { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("validateErrorCount")]
+        public int ValidateErrorCount { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("renewError")]
-        public string? RenewError { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("validateError")]
+        public string? ValidateError { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("renewErrorTime")]
-        public System.DateTime? RenewErrorTime { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("validateErrorTime")]
+        public System.DateTime? ValidateErrorTime { get; set; } = default!;
 
     }
 
@@ -8157,6 +8082,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
         public PatchOfBoolean? PushTokenToClient { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("autoValidateCertificate")]
+        public PatchOfBoolean? AutoValidateCertificate { get; set; } = default!;
 
     }
 

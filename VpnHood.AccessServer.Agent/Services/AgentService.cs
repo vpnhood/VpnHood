@@ -228,11 +228,11 @@ public class AgentService(
         });
 
         // renew certificate
-        if (serverFarmModel.Certificate.RenewInprogress)
+        if (serverFarmModel.Certificate.ValidateInprogress)
             serverConfig.DnsChallenge = new DnsChallenge
             {
-                Token = serverFarmModel.Certificate.RenewToken ?? "",
-                KeyAuthorization = serverFarmModel.Certificate.RenewKeyAuthorization ?? ""
+                Token = serverFarmModel.Certificate.ValidateToken ?? "",
+                KeyAuthorization = serverFarmModel.Certificate.ValidateKeyAuthorization ?? ""
             };
 
         serverConfig.ConfigCode = serverModel.ConfigCode.ToString(); // merge does not apply this

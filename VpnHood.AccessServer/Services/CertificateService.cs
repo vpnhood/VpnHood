@@ -69,26 +69,26 @@ public class CertificateService(
             .ContinueWith(x => x.Result.ToDto());
     }
 
-    public async Task Renew(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
+    public async Task Validate(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId,
             includeCertificates: true, includeProject: true);
-        await Renew(serverFarm.Certificate!, cancellationToken);
+        await Validate(serverFarm.Certificate!, cancellationToken);
     }
 
-    private async Task Renew(CertificateModel certificate, CancellationToken cancellationToken)
+    private async Task Validate(CertificateModel certificate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(certificate.Project);
         ArgumentNullException.ThrowIfNull(certificate.ServerFarm);
         var project = certificate.Project;
-        if (certificate.RenewInprogress)
+        if (certificate.ValidateInprogress)
             return;
 
         try
         {
             // create Csr from certificate
             logger.LogInformation("Renewing certificate. ProjectId: {ProjectId}, CommonName: {CommonName}", project.ProjectId, certificate.CommonName);
-            certificate.RenewInprogress = true;
+            certificate.ValidateInprogress = true;
 
             // create account if not exists
             if (project.LetsEncryptAccount?.AccountPem == null)
@@ -106,8 +106,8 @@ public class CertificateService(
             var x509Certificate = new X509Certificate2(certificate.RawData);
             var csr = CreateCsrFromCertificate(x509Certificate);
             var acmeOrderService = await acmeOrderFactory.CreateOrder(project.LetsEncryptAccount.AccountPem, csr);
-            certificate.RenewToken = acmeOrderService.Token;
-            certificate.RenewKeyAuthorization = acmeOrderService.KeyAuthorization;
+            certificate.ValidateToken = acmeOrderService.Token;
+            certificate.ValidateKeyAuthorization = acmeOrderService.KeyAuthorization;
             await vhRepo.SaveChangesAsync();
 
             // wait for farm configuration
@@ -116,8 +116,7 @@ public class CertificateService(
 
             // validate order by manager
             logger.LogInformation("Validating certificate by the access server. ProjectId: {ProjectId}, CommonName: {CommonName}", project.ProjectId, certificate.CommonName);
-            await ValidateByAccessServer(certificate.CommonName, certificate.RenewToken, certificate.RenewKeyAuthorization);
-            logger.LogInformation("zzzzzzzzzz");
+            await ValidateByAccessServer(certificate.CommonName, certificate.ValidateToken, certificate.ValidateKeyAuthorization);
 
             // Validate
             while (true)
@@ -126,11 +125,12 @@ public class CertificateService(
                 var res = await acmeOrderService.Validate();
                 if (res != null)
                 {
-                    certificate.RenewError = null;
-                    certificate.RenewErrorTime = null;
-                    certificate.RenewErrorCount = 0;
+                    certificate.ValidateError = null;
+                    certificate.ValidateErrorTime = null;
+                    certificate.ValidateErrorCount = 0;
+                    certificate.ValidateCount++;
+                    certificate.AutoValidate = true;
                     certificate.IsTrusted = true;
-                    certificate.RenewCount++;
                     certificate.RawData = res.Export(X509ContentType.Pfx);
                     certificate.Thumbprint = res.Thumbprint;
                     certificate.ExpirationTime = res.NotAfter;
@@ -146,15 +146,15 @@ public class CertificateService(
         }
         catch (Exception ex)
         {
-            certificate.RenewError = ex.Message;
-            certificate.RenewErrorTime = DateTime.UtcNow;
-            certificate.RenewErrorCount++;
+            certificate.ValidateError = ex.Message;
+            certificate.ValidateErrorTime = DateTime.UtcNow;
+            certificate.ValidateErrorCount++;
         }
         finally
         {
-            certificate.RenewToken = null;
-            certificate.RenewKeyAuthorization = null;
-            certificate.RenewInprogress = false;
+            certificate.ValidateToken = null;
+            certificate.ValidateKeyAuthorization = null;
+            certificate.ValidateInprogress = false;
             await vhRepo.SaveChangesAsync();
         }
     }
@@ -236,13 +236,13 @@ public class CertificateService(
             IsDefault = true,
             IsDeleted = false,
             AutoValidate = false,
-            RenewCount = 0,
-            RenewError = null,
-            RenewErrorCount = 0,
-            RenewErrorTime = null,
-            RenewInprogress = false,
-            RenewKeyAuthorization = null,
-            RenewToken = null
+            ValidateCount = 0,
+            ValidateError = null,
+            ValidateErrorCount = 0,
+            ValidateErrorTime = null,
+            ValidateInprogress = false,
+            ValidateKeyAuthorization = null,
+            ValidateToken = null
         };
 
         if (certificate.CommonName.Contains('*'))

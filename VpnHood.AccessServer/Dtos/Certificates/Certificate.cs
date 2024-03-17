@@ -11,9 +11,9 @@ public class Certificate
     public required string Thumbprint { get; init; }
     public required bool IsTrusted { get; init; }
     public required bool AutoValidate { get; init; }
-    public required int RenewCount { get; init; }
-    public required bool RenewInprogress { get; init; }
-    public required int RenewErrorCount { get; init; }
-    public required string? RenewError { get; init; }
-    public required DateTime? RenewErrorTime { get; init; }
+    public required int ValidateCount { get; init; }
+    public required bool ValidateInprogress { get; set; }
+    public required int ValidateErrorCount { get; init; }
+    public required string? ValidateError { get; init; }
+    public required DateTime? ValidateErrorTime { get; init; }
 }

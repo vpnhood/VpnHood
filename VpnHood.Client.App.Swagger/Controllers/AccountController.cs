@@ -13,6 +13,12 @@ public class AccountController : ControllerBase, IAccountController
     {
         throw new NotImplementedException();
     }
+    
+    [HttpPost("refresh")]
+    public Task Refresh()
+    {
+        throw new NotImplementedException();
+    }
 
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()

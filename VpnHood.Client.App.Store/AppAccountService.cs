@@ -1,24 +1,44 @@
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
 public class AppAccountService(
-    IAppAuthenticationService authenticationService, 
+    IAppAuthenticationService authenticationService,
     IAppBillingService? billingService,
-    Guid storeAppId) 
+    Guid storeAppId)
     : IAppAccountService, IDisposable
 {
     public IAppAuthenticationService Authentication => authenticationService;
     public IAppBillingService? Billing => billingService;
+    private AppAccount? _appAccount;
+    private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
 
     public async Task<AppAccount?> GetAccount()
     {
         if (authenticationService.UserId == null)
             return null;
 
+        _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+        if (_appAccount != null)
+            return _appAccount;
+
+        _appAccount = await GetAccountFromServer();
+
+        return _appAccount;
+    }
+
+    public async Task Refresh()
+    {
+        _appAccount = await GetAccountFromServer();
+    }
+
+    private async Task<AppAccount> GetAccountFromServer()
+    {
         var httpClient = authenticationService.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
         var currentUser = await authenticationClient.GetCurrentUserAsync();
@@ -35,6 +55,9 @@ public class AppAccountService(
             SubscriptionId = subscriptionLastOrder?.SubscriptionId,
             ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
         };
+
+        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
+        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(appAccount));
         return appAccount;
     }
 
@@ -55,7 +78,8 @@ public class AppAccountService(
                 // Order process complete
                 return subscriptionOrder.IsProcessed;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 VhLogger.Instance.LogWarning(ex, ex.Message);
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }

@@ -114,7 +114,6 @@ public class VhContext : DbContext
 
             entity
                 .HasIndex(x => new { x.ServerFarmId, x.CommonName })
-                .IsUnique()
                 .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0");
 
             entity

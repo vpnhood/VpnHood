@@ -8,7 +8,7 @@ public class AcmeOrderFactory : IAcmeOrderFactory
 {
     public async Task<string> CreateNewAccount(string email)
     {
-        var acmeContext = new AcmeContext(WellKnownServers.LetsEncryptStagingV2);
+        var acmeContext = new AcmeContext(WellKnownServers.LetsEncryptV2);
         var accountContext = await acmeContext.NewAccount(null, true);
         await acmeContext.Authorization(accountContext.Location).Challenges();
         var pemKey = acmeContext.AccountKey.ToPem();

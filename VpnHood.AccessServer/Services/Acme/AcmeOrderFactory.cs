@@ -18,7 +18,7 @@ public class AcmeOrderFactory : IAcmeOrderFactory
     public async Task<IAcmeOrderService> CreateOrder(string accountPem, CertificateSigningRequest csr)
     {
         var accountKey = KeyFactory.FromPem(accountPem);
-        var acmeContext = new AcmeContext(WellKnownServers.LetsEncryptStagingV2, accountKey);
+        var acmeContext = new AcmeContext(WellKnownServers.LetsEncryptV2, accountKey);
         var orderContext = await acmeContext.NewOrder([csr.CommonName]);
 
         var authorizations = await orderContext.Authorizations();

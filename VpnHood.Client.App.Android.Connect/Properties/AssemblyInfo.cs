@@ -22,7 +22,7 @@ public static class AssemblyInfo
         : Guid.Parse("e7357285-775b-405e-aaca-096b1f95d3d0");
 
     public static bool ListenToAllIps => IsDebugMode;
-    public static int? DefaultSpaPort => IsDebugMode ? 9091 : 9090;
+    public static int? DefaultSpaPort => IsDebugMode ? 9571 : 9570;
 
     // ReSharper disable StringLiteralTypo
     public static string FirebaseClientId => "216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com";

@@ -11,14 +11,19 @@ public class VhRepo(VhContext vhContext)
 
     public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
         bool includeServers = false, bool includeAccessTokens = false,
-        bool includeCertificate = false, bool includeCertificates = false, bool includeProject = false)
+        bool includeCertificate = false, bool includeCertificates = false, bool includeProject = false, 
+        bool includeLetsEncryptAccount = false)
     {
         var query = vhContext.ServerFarms
             .Where(farm => farm.ProjectId == projectId && !farm.IsDeleted)
             .Where(farm => farm.ServerFarmId == serverFarmId);
 
         if (includeProject)
+        {
             query = query.Include(x => x.Project);
+            if (includeLetsEncryptAccount)
+                query = query.Include(x => x.Project!.LetsEncryptAccount);
+        }
 
         if (includeCertificates)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted));

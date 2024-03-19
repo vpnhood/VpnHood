@@ -72,7 +72,7 @@ public class CertificateService(
     public async Task Validate(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId,
-            includeCertificates: true, includeProject: true);
+            includeCertificates: true, includeProject: true, includeLetsEncryptAccount: true);
         await Validate(serverFarm.Certificate!, cancellationToken);
     }
 

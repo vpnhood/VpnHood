@@ -33,23 +33,18 @@ public static class VhTestUtil
         return false;
     }
 
-    public static Task<bool> WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
-    {
-        return WaitForValue(expectedValue, valueFactory(), timeout);
-    }
-
-    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Task<TValue?> task, int timeout = 5000)
+    private static async Task WaitForValue<TValue>(object? expectedValue, Task<TValue?> task, int timeout = 5000)
     {
         const int waitTime = 100;
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
             if (Equals(expectedValue, await task))
-                return true;
+                return;
 
             await Task.Delay(waitTime);
         }
 
-        return false;
+        throw new TimeoutException();
     }
 
     private static void AssertEquals(object? expected, object? actual, string? message)
@@ -75,8 +70,8 @@ public static class VhTestUtil
     public static async Task AssertEqualsWait<TValue>(object? expectedValue, Task<TValue?> task,
         string? message = null, int timeout = 5000)
     {
-        var result = await WaitForValue(expectedValue, task, timeout);
-        AssertEquals(expectedValue, result, message);
+        await WaitForValue(expectedValue, task, timeout);
+        AssertEquals(expectedValue, await task, message);
     }
 
 

@@ -7954,10 +7954,6 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string CommonName { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("subjectName")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string SubjectName { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("issueTime")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime IssueTime { get; set; } = default!;

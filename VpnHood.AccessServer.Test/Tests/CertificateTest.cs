@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
@@ -17,7 +18,7 @@ public class CertificateTest
     [TestMethod]
     public async Task Crud()
     {
-        using var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create(serverCount: 1);
 
         //-----------
         // Create Certificate using RawData
@@ -64,14 +65,16 @@ public class CertificateTest
         Assert.IsTrue(certificate.IssueTime > DateTime.UtcNow.AddDays(-1));
 
         await farm.Reload();
-        certificate = farm.ServerFarm.Certificate!;
-        Assert.AreEqual(csr.CommonName, certificate.CommonName);
-        Assert.IsTrue(certificate.SubjectName.Contains($"CN={csr.CommonName}"));
-        Assert.IsTrue(certificate.SubjectName.Contains($"O={csr.Organization}"));
-        Assert.IsTrue(certificate.SubjectName.Contains($"OU={csr.OrganizationUnit}"));
-        Assert.IsTrue(certificate.SubjectName.Contains($"C={csr.LocationCountry}"));
-        Assert.IsTrue(certificate.SubjectName.Contains($"S={csr.LocationState}"));
-        Assert.IsTrue(certificate.SubjectName.Contains($"L={csr.LocationCity}"));
+        var server = await farm.AddNewServer();
+        var  x509Certificate2 = new X509Certificate2(server.ServerConfig.Certificates.First().RawData);
+
+        var subject = x509Certificate2.Subject;
+        Assert.AreEqual(csr.CommonName, Regex.Match(subject, @"CN=([^,]+)").Groups[1].Value);
+        Assert.AreEqual(csr.Organization, Regex.Match(subject, @"O=([^,]+)").Groups[1].Value);
+        Assert.AreEqual(csr.OrganizationUnit, Regex.Match(subject, @"OU=([^,]+)").Groups[1].Value);
+        Assert.AreEqual(csr.LocationCountry, Regex.Match(subject, @"C=([^,]+)").Groups[1].Value);
+        Assert.AreEqual(csr.LocationState, Regex.Match(subject, @"S=([^,]+)").Groups[1].Value);
+        Assert.AreEqual(csr.LocationCity, Regex.Match(subject, @"L=([^,]+)").Groups[1].Value);
     }
 
     [TestMethod]

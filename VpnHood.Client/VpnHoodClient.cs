@@ -534,7 +534,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return false;
     }
 
-    private bool ShouldManageDatagramChannels => UseUdpChannel != Tunnel.IsUdpMode || Tunnel.DatagramChannelCount < _maxDatagramChannelCount;
+    private bool ShouldManageDatagramChannels =>
+        UseUdpChannel != Tunnel.IsUdpMode || 
+        (!UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount);
 
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
     {

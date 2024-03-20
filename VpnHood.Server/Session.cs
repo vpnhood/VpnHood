@@ -43,7 +43,6 @@ public class Session : IAsyncDisposable, IJob
     private readonly EventReporter _filterReporter = new(VhLogger.Instance, "Some requests has been blocked.", GeneralEventId.NetProtect);
     private readonly Traffic _syncTraffic = new();
     private int _tcpConnectWaitCount;
-    private readonly JobSection _syncJobSection;
 
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
@@ -52,7 +51,7 @@ public class Session : IAsyncDisposable, IJob
     public UdpChannel? UdpChannel => Tunnel.UdpChannel;
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
-    public JobSection JobSection { get; } = new();
+    public JobSection JobSection { get; }
     public SessionExtraData SessionExtraData { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (Tunnel.IsUdpMode ? 0 : Tunnel.DatagramChannelCount);
@@ -92,7 +91,7 @@ public class Session : IAsyncDisposable, IJob
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
-        _syncJobSection = new JobSection(options.SyncIntervalValue);
+        JobSection = new JobSection(options.SyncIntervalValue);
         SessionExtraData = sessionExtraData;
         SessionResponse = sessionResponse;
         SessionId = sessionResponse.SessionId;
@@ -109,8 +108,7 @@ public class Session : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
-        using var jobLock = _syncJobSection.Enter();
-        return Sync(jobLock.IsEntered, false);
+        return Sync(true, false);
     }
 
     public bool UseUdpChannel
@@ -182,7 +180,7 @@ public class Session : IAsyncDisposable, IJob
             Received = Tunnel.Traffic.Sent - _syncTraffic.Received // Intentionally Reversed: receiving from tunnel means sending for client
         };
 
-        var shouldSync = closeSession || (force && traffic.Total > 0) || traffic.Total >= _syncCacheSize;
+        var shouldSync = closeSession || force || traffic.Total >= _syncCacheSize;
         if (!shouldSync)
             return;
 

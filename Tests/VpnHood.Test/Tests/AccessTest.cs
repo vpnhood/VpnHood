@@ -73,7 +73,7 @@ public class AccessTest : TestBase
         await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create a short expiring token
-        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddMinutes(-1));
+        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
         // connect and download
         await using var client = await TestHelper.CreateClient(accessToken, throwConnectException: false);

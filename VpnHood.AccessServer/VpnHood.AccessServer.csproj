@@ -20,32 +20,24 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.155</Version>
+		<Version>3.0.162</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Authorization" Version="3.0.102" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.183" />
-		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.183" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.183" />
+		<PackageReference Include="Certes" Version="3.0.4" />
+		<PackageReference Include="GrayMint.Authorization" Version="3.0.107" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.194" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.194" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.194" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
-		<PackageReference Include="SSH.NET" Version="2023.0.1" />
+		<PackageReference Include="SSH.NET" Version="2024.0.0" />
+		<PackageReference Include="VpnHood.Server.Access" Version="3.3.477-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj" />
 		<ProjectReference Include="..\VpnHood.AccessServer.Report\VpnHood.AccessServer.Report.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Reference Include="VpnHood.Common">
-			<HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
-		</Reference>
-		<Reference Include="VpnHood.Server.Access">
-			<HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 
 	<ItemGroup>

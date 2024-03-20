@@ -1,6 +1,7 @@
 # Upcoming
 ### Client
 * Feature: Accept DNS Servers from the connected Server
+* Update: Improve UDP performance
 
 ### Server
 * Feature: Configure DNS Servers for the connected clients

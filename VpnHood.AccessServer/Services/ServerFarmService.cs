@@ -17,6 +17,7 @@ public class ServerFarmService(
     VhRepo vhRepo,
     ServerConfigureService serverConfigureService,
     CertificateService certificateService,
+    CertificateValidatorService certificateValidatorService,
     HttpClient httpClient
     )
 {
@@ -161,7 +162,7 @@ public class ServerFarmService(
 
         // validate certificate
         if (validateCertificate)
-            _  = certificateService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
+            _  = certificateValidatorService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
 
         // update cache after save
         var ret = await Get(projectId, serverFarmId, false);

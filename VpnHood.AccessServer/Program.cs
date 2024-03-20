@@ -64,6 +64,7 @@ public class Program
             .AddScoped<ServerConfigureService>()
             .AddScoped<SubscriptionService>()
             .AddScoped<CertificateService>()
+            .AddScoped<CertificateValidatorService>()
             .AddScoped<UsageCycleService>()
             .AddScoped<AgentCacheClient>()
             .AddScoped<AgentSystemClient>()

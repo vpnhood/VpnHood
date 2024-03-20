@@ -10,8 +10,9 @@ namespace VpnHood.AccessServer.Services;
 
 public class CertificateService(
     VhRepo vhRepo,
-    ILogger<CertificateService> logger,
     ServerConfigureService serverConfigureService,
+    IServiceScopeFactory serviceScopeFactory,
+    ILogger<CertificateService> logger,
     IAcmeOrderFactory acmeOrderFactory)
 {
     public async Task<Certificate> Replace(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams)
@@ -69,19 +70,25 @@ public class CertificateService(
             .ContinueWith(x => x.Result.ToDto());
     }
 
-    public async Task Validate(Guid projectId, Guid serverFarmId, CancellationToken cancellationToken)
+    public async Task ValidateJob(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
     {
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId,
-            includeCertificates: true, includeProject: true, includeLetsEncryptAccount: true);
-        await Validate(serverFarm.Certificate!, cancellationToken);
+        await using var scope = serviceScopeFactory.CreateAsyncScope();
+        var certificateService = scope.ServiceProvider.GetRequiredService<CertificateService>();
+        await certificateService.Validate(projectId, serverFarmId, force, cancellationToken);
     }
 
-    private async Task Validate(CertificateModel certificate, CancellationToken cancellationToken)
+    private async Task Validate(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
+    {
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true, includeProject: true, includeLetsEncryptAccount: true);
+        var certificate = serverFarm.Certificate!;
+        await Validate(certificate, force, cancellationToken);
+    }
+
+    private async Task Validate(CertificateModel certificate, bool force, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(certificate.Project);
-        ArgumentNullException.ThrowIfNull(certificate.ServerFarm);
         var project = certificate.Project;
-        if (certificate.ValidateInprogress)
+        if (!force && certificate.ValidateInprogress)
             return;
 
         try
@@ -136,7 +143,7 @@ public class CertificateService(
                     certificate.ExpirationTime = res.NotAfter;
                     certificate.IssueTime = res.NotBefore;
 
-                    await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarm.ServerFarmId, true);
+                    await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
                     break;
                 }
 

@@ -15,7 +15,6 @@ namespace VpnHood.AccessServer.Services;
 
 public class ServerFarmService(
     VhRepo vhRepo,
-    IServiceScopeFactory serviceScopeFactory,
     ServerConfigureService serverConfigureService,
     CertificateService certificateService,
     HttpClient httpClient
@@ -151,27 +150,21 @@ public class ServerFarmService(
         var validateCertificate = false;
         if (updateParams.AutoValidateCertificate != null && updateParams.AutoValidateCertificate != serverFarm.Certificate.AutoValidate)
         {
+            validateCertificate = updateParams.AutoValidateCertificate.Value;
             serverFarm.Certificate.AutoValidate = updateParams.AutoValidateCertificate.Value;
-            validateCertificate = serverFarm.Certificate.AutoValidate;
+            serverFarm.Certificate.ValidateInprogress = updateParams.AutoValidateCertificate.Value;
         }
 
         // update
         await vhRepo.SaveChangesAsync();
+        await serverConfigureService.InvalidateServerFarm(projectId, serverFarmId, reconfigure);
 
         // validate certificate
         if (validateCertificate)
-        {
-            var scope = serviceScopeFactory.CreateAsyncScope();
-            _ = scope.ServiceProvider.GetRequiredService<CertificateService>().Validate(projectId, serverFarmId, CancellationToken.None);
-        }
-
+            _  = certificateService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
 
         // update cache after save
-        await serverConfigureService.InvalidateServerFarm(projectId, serverFarmId, reconfigure);
         var ret = await Get(projectId, serverFarmId, false);
-        if (validateCertificate)
-            ret.ServerFarm.Certificate!.ValidateInprogress = true;
-
         return ret;
     }
 

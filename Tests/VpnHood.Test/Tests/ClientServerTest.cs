@@ -221,21 +221,21 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Testing by UdpChannel.");
-        await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
+        await TestTunnel(server, client);
 
         // switch to tcp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
-        await TestTunnel(server, client);
         await VhTestUtil.AssertEqualsWait(false, () => client.Stat.IsUdpMode);
+        await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
-        await TestTunnel(server, client);
         await VhTestUtil.AssertEqualsWait(true, () => client.Stat.IsUdpMode);
+        await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
     }
 

@@ -1,9 +1,7 @@
 ﻿using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Managers.File;
-using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.Test.Tests;
 

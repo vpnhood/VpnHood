@@ -19,26 +19,12 @@ public static class VhTestUtil
         }
     }
 
-    public static async Task<bool> WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
+    private static async Task WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
     {
         const int waitTime = 100;
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
             if (Equals(expectedValue, valueFactory()))
-                return true;
-
-            await Task.Delay(waitTime);
-        }
-
-        return false;
-    }
-
-    private static async Task WaitForValue<TValue>(object? expectedValue, Task<TValue?> task, int timeout = 5000)
-    {
-        const int waitTime = 100;
-        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
-        {
-            if (Equals(expectedValue, await task))
                 return;
 
             await Task.Delay(waitTime);
@@ -46,6 +32,21 @@ public static class VhTestUtil
 
         throw new TimeoutException();
     }
+
+    private static async Task WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
+    {
+        const int waitTime = 100;
+        for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
+        {
+            if (Equals(expectedValue, await valueFactory()))
+                return;
+
+            await Task.Delay(waitTime);
+        }
+
+        throw new TimeoutException();
+    }
+
 
     private static void AssertEquals(object? expected, object? actual, string? message)
     {
@@ -61,19 +62,19 @@ public static class VhTestUtil
         AssertEquals(expectedValue, valueFactory(), message);
     }
 
-    public static Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory,
+    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory,
         string? message = null, int timeout = 5000)
     {
-        return AssertEqualsWait(expectedValue, valueFactory(), message, timeout);
+        await WaitForValue(expectedValue, valueFactory, timeout);
+        AssertEquals(expectedValue, await valueFactory(), message);
     }
 
     public static async Task AssertEqualsWait<TValue>(object? expectedValue, Task<TValue?> task,
         string? message = null, int timeout = 5000)
     {
-        await WaitForValue(expectedValue, task, timeout);
+        await WaitForValue(expectedValue, () => task, timeout);
         AssertEquals(expectedValue, await task, message);
     }
-
 
     public static Task AssertApiException(HttpStatusCode expectedStatusCode, Task task, string? message = null)
     {

@@ -90,7 +90,7 @@ public class IpLockTest
     [TestMethod]
     public async Task lock_unlock_ip()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken();
 
         var clientIp = await farm.TestApp.NewIpV4();

@@ -32,7 +32,7 @@ public class ProjectTest
         {
             GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         var project1C = await projectsClient.GetAsync(projectId);
@@ -47,7 +47,7 @@ public class ProjectTest
         updateParams = new ProjectUpdateParams
         {
             GaMeasurementId = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            GaApiSecret = new PatchOfString { Value = Guid.NewGuid().ToString() }
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         project1C = await projectsClient.GetAsync(projectId);
@@ -78,18 +78,18 @@ public class ProjectTest
     [TestMethod]
     public async Task Invalidate_agent_cache_after_update()
     {
-        var sampler = await ServerFarmDom.Create();
-        var sampleAccessToken = await sampler.CreateAccessToken();
-        await sampleAccessToken.CreateSession();
+        var farmDom = await ServerFarmDom.Create();
+        var accessTokenDom = await farmDom.CreateAccessToken();
+        await accessTokenDom.CreateSession();
 
-        var newProjectName = Guid.NewGuid().ToString();
-        await sampler.TestApp.ProjectsClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
+        var gaApiSecret = Guid.NewGuid().ToString();
+        await farmDom.TestApp.ProjectsClient.UpdateAsync(farmDom.ProjectId, new ProjectUpdateParams
         {
-            ProjectName = new PatchOfString { Value = newProjectName }
+            GaApiSecret = new PatchOfString { Value = gaApiSecret }
         });
 
-        var server = await sampler.TestApp.AgentTestApp.CacheService.GetServer(sampler.Servers[0].ServerId);
-        Assert.AreEqual(newProjectName, server.Project?.ProjectName);
+        var project = await farmDom.TestApp.AgentTestApp.CacheService.GetProject(farmDom.ProjectId);
+        Assert.AreEqual(gaApiSecret, project.GaApiSecret);
     }
 
     [TestMethod]
@@ -127,7 +127,7 @@ public class ProjectTest
     [TestMethod]
     public async Task GetUsage()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom1 = await farm.CreateAccessToken();
         var accessTokenDom2 = await farm.CreateAccessToken();
 

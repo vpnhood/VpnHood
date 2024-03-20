@@ -1,25 +1,19 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
 using GrayMint.Authorization.UserManagement.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Services;
 
 public class SubscriptionService(
     VhContext vhContext,
+    VhRepo vhRepo,
     IRoleAuthorizationProvider roleProvider,
     IUserProvider userProvider)
 {
-    private async Task<ProjectModel> GetProject(Guid projectId)
-    {
-        var project = await vhContext.Projects.FindAsync(projectId);
-        return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");
-    }
-
     public async Task AuthorizeCreateProject(string userId)
     {
         var user = await userProvider.Get(userId); // make sure the user is registered
@@ -27,6 +21,12 @@ public class SubscriptionService(
         if (userRoles.Count(x => x.Role.RoleName == Roles.ProjectOwner.RoleName) >= QuotaConstants.ProjectCount)
             throw new QuotaException(nameof(vhContext.Projects), QuotaConstants.ProjectCount,
                 $"You can not be owner of more than {QuotaConstants.ProjectCount} projects.");
+    }
+
+    public async Task AuthorizeCreateServerFarm(Guid projectId)
+    {
+        if (await IsFreePlan(projectId) && (await vhRepo.ServerFarmNames(projectId)).Length >= QuotaConstants.ServerFarmCount)
+            throw new QuotaException(nameof(VhContext.ServerFarms), QuotaConstants.ServerFarmCount);
     }
 
     public async Task AuthorizeCreateServer(Guid projectId)
@@ -50,7 +50,6 @@ public class SubscriptionService(
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
     }
 
-
     private async Task<bool> IsFreePlan(Guid projectId)
     {
         var project = await vhContext.Projects.SingleAsync(project => project.ProjectId == projectId);
@@ -59,7 +58,7 @@ public class SubscriptionService(
 
     public async Task VerifyUsageQueryPermission(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime)
     {
-        var project = await GetProject(projectId);
+        var project = await vhRepo.ProjectGet(projectId);
         usageBeginTime ??= DateTime.UtcNow;
         usageEndTime ??= DateTime.UtcNow;
         var requestTimeSpan = usageEndTime - usageBeginTime;

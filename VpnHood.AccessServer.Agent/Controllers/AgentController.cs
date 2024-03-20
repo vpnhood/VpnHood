@@ -39,11 +39,12 @@ public class AgentController(AgentService agentService) : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public Task<SessionResponseBase> AddSessionUsage(uint sessionId, bool closeSession, Traffic traffic)
+    public Task<SessionResponse> AddSessionUsage(uint sessionId, bool closeSession, Traffic traffic)
     {
         return  agentService.AddSessionUsage(ServerId, sessionId, closeSession, traffic);
     }
 
+    //todo: deprecated
     [HttpGet("certificates/{hostEndPoint}")]
     public Task<byte[]> GetCertificate(string hostEndPoint)
     {

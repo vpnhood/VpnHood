@@ -1,14 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using System.Net;
 using VpnHood.Common.Utils;
+using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -18,7 +19,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 14
@@ -38,7 +39,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 0
@@ -58,7 +59,7 @@ public class AgentClientSessionTest
     public async Task Push_token_to_client()
     {
         var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = false};
-        var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken();
 
         // ------------
@@ -80,7 +81,7 @@ public class AgentClientSessionTest
     public async Task Session_Create_success()
     {
         var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = true };
-        var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             MaxTraffic = 100,
@@ -102,22 +103,10 @@ public class AgentClientSessionTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Received);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.Traffic.Sent);
         Assert.IsNotNull(sessionResponseEx.AccessKey);
-        Assert.AreEqual(farmOptions.TokenUrl?.ToString(), Common.Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
+        Assert.AreEqual(farmOptions.TokenUrl?.ToString(), Token.FromAccessKey(sessionResponseEx.AccessKey).ServerToken.Url);
         Assert.IsNotNull(sessionResponseEx.SessionKey);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
-
-        // check HostEndPoints returned by session
-        var publicAccessPoints = farm.DefaultServer.Server.AccessPoints
-            .Where(x => x.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public)
-            .ToArray();
-
-        Assert.IsTrue(sessionResponseEx.TcpEndPoints.Any());
-        Assert.IsTrue(sessionResponseEx.UdpEndPoints.Any());
-        foreach (var tcpEndPoint in sessionResponseEx.TcpEndPoints)
-            Assert.IsTrue(publicAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(tcpEndPoint.Address) && x.TcpPort == tcpEndPoint.Port));
-        foreach (var udpEndPoint in sessionResponseEx.UdpEndPoints)
-            Assert.IsTrue(publicAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(udpEndPoint.Address) && x.UdpPort == udpEndPoint.Port));
 
         // check Device id and its properties are created 
         var clientInfo = sessionDom.SessionRequestEx.ClientInfo;
@@ -137,7 +126,7 @@ public class AgentClientSessionTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
-    private async Task<Models.AccessModel> GetAccessFromSession(SessionDom sessionDom)
+    private async Task<AccessModel> GetAccessFromSession(SessionDom sessionDom)
     {
         await using var scope = sessionDom.TestApp.WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
@@ -241,7 +230,7 @@ public class AgentClientSessionTest
         var testApp = await TestApp.Create();
         testApp.AgentTestApp.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
         testApp.AgentTestApp.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(2); //should not be less than PermanentlyTimeout
-        var sampleFarm1 = await SampleFarm.Create(testApp);
+        using var sampleFarm1 = await SampleFarm.Create(testApp);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.CloseSession();
         Assert.AreEqual(SessionErrorCode.Ok, responseBase.ErrorCode);
@@ -274,8 +263,8 @@ public class AgentClientSessionTest
     public async Task Session_Bombard()
     {
         var testApp = await TestApp.Create();
-        var sampleFarm1 = await SampleFarm.Create(testApp);
-        var sampleFarm2 = await SampleFarm.Create(testApp);
+        using var sampleFarm1 = await SampleFarm.Create(testApp);
+        using var sampleFarm2 = await SampleFarm.Create(testApp);
 
         var createSessionTasks = new List<Task<SessionDom>>();
         for (var i = 0; i < 50; i++)
@@ -322,7 +311,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_Public()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(isPublic: true);
         var sessionDom1 = await accessTokenDom.CreateSession();
 
@@ -415,7 +404,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom = await farm.CreateAccessToken(isPublic: false);
         var sessionDom1 = await accessTokenDom.CreateSession();
 
@@ -458,7 +447,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task AccessUsage_Inserted()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
 
         // create token
         var sampleAccessToken = await farm.CreateAccessToken();

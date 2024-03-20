@@ -13,7 +13,7 @@ public class SampleFarm : ServerFarmDom
         AccessToken publicToken2,
         AccessToken privateToken1,
         AccessToken privateToken2) 
-        : base(testApp, serverFarm)
+        : base(testApp, serverFarm, false)
     {
         Server1 = server1;
         Server2 = server2;
@@ -32,7 +32,8 @@ public class SampleFarm : ServerFarmDom
 
     public static async Task<SampleFarm> Create(TestApp testApp)
     {
-        var serverFarm = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, new ServerFarmCreateParams());
+        var serverFarmData = await testApp.ServerFarmsClient.CreateAsync(testApp.ProjectId, new ServerFarmCreateParams());
+        var serverFarm = serverFarmData.ServerFarm;
 
         // create servers
         var sampleServers = new[]

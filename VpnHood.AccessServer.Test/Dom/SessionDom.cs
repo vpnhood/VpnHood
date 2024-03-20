@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Messaging;
 using AccessToken = VpnHood.AccessServer.Api.AccessToken;
@@ -35,22 +35,22 @@ public class SessionDom
         return ret;
     }
 
-    public Task<SessionResponseBase> AddUsage(long traffic = 100)
+    public Task<SessionResponse> AddUsage(long traffic = 100)
     {
         return AddUsage(traffic/2, traffic/2);
     }
 
-    public Task<SessionResponseBase> AddUsage(long sendTraffic, long receivedTraffic)
+    public Task<SessionResponse> AddUsage(long sendTraffic, long receivedTraffic)
     {
         return AddUsage(new Traffic { Sent = sendTraffic, Received = receivedTraffic });
     }
 
-    public Task<SessionResponseBase> AddUsage(Traffic traffic)
+    public Task<SessionResponse> AddUsage(Traffic traffic)
     {
         return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, traffic);
     }
 
-    public Task<SessionResponseBase> CloseSession()
+    public Task<SessionResponse> CloseSession()
     {
         return AgentClient.Session_Close(SessionResponseEx.SessionId, new Traffic());
     }
@@ -60,7 +60,7 @@ public class SessionDom
         SessionResponseEx = await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
     }
 
-    public Task<Session> GetSessionFromCache()
+    public Task<SessionCache> GetSessionFromCache()
     {
         return TestApp.AgentCacheClient.GetSession(SessionId);
     }

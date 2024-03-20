@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Test",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer", "VpnHood.AccessServer\VpnHood.AccessServer.csproj", "{831503A5-B1BB-4962-AAD4-E7A3007AA201}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Common", "VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj", "{1DFC7D5D-2628-4BEC-948C-1E14CF80572F}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Agent", "VpnHood.AccessServer.Agent\VpnHood.AccessServer.Agent.csproj", "{AD8A6B70-857D-405F-9778-D5B963121E30}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Api", "VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj", "{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}"
@@ -18,8 +16,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{DA70AC51-F97F-47CF-B732-3C76D1A27C32}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Persistence", "VpnHood.AccessServer.Persistence\VpnHood.AccessServer.Persistence.csproj", "{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Dtos", "VpnHood.AccessServer.Dtos\VpnHood.AccessServer.Dtos.csproj", "{CAD62004-4357-4754-87F3-47CC82FA3292}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6BD0DD0E-2032-47E0-BEF9-7C145F942CEF}"
 	ProjectSection(SolutionItems) = preProject
@@ -42,10 +38,6 @@ Global
 		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1DFC7D5D-2628-4BEC-948C-1E14CF80572F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1DFC7D5D-2628-4BEC-948C-1E14CF80572F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1DFC7D5D-2628-4BEC-948C-1E14CF80572F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1DFC7D5D-2628-4BEC-948C-1E14CF80572F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AD8A6B70-857D-405F-9778-D5B963121E30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AD8A6B70-857D-405F-9778-D5B963121E30}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AD8A6B70-857D-405F-9778-D5B963121E30}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -62,10 +54,6 @@ Global
 		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B59925C-4740-4FE9-A8FC-8CD40E0AA4F2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CAD62004-4357-4754-87F3-47CC82FA3292}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CAD62004-4357-4754-87F3-47CC82FA3292}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CAD62004-4357-4754-87F3-47CC82FA3292}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CAD62004-4357-4754-87F3-47CC82FA3292}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

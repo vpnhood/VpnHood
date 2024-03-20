@@ -1,17 +1,17 @@
-﻿using GrayMint.Authorization.Authentications;
+﻿using System.Net.Http.Headers;
+using System.Security.Claims;
+using GrayMint.Authorization.Authentications;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
 using Microsoft.IdentityModel.JsonWebTokens;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Agent.Services;
-using System.Net.Http.Headers;
 
 namespace VpnHood.AccessServer.Test;
 
-public class AgentTestApp
+public class AgentTestApp : IDisposable
 {
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
     public IServiceScope AgentScope { get; }
@@ -26,6 +26,7 @@ public class AgentTestApp
             {
                 foreach (var appSetting in appSettings)
                     builder.UseSetting(appSetting.Key, appSetting.Value);
+                builder.UseSetting(nameof(AgentOptions.AllowRedirect), "false");
 
                 builder.UseEnvironment(environment);
                 builder.ConfigureServices(services =>
@@ -35,7 +36,7 @@ public class AgentTestApp
             });
         
         AgentScope = AgentApp.Services.CreateScope();
-        AgentOptions.AllowRedirect = false; //todo move to settings
+        AgentOptions.AllowRedirect = false;
         
         HttpClient = AgentApp.CreateClient();
         HttpClient.DefaultRequestHeaders.Authorization = GetAuthenticationHeaderValue(AgentApp.Services);
@@ -51,5 +52,10 @@ public class AgentTestApp
         var grayMintAuthentication = scope.ServiceProvider.GetRequiredService<GrayMintAuthentication>();
         var authorization = grayMintAuthentication.CreateAuthenticationHeader(claimIdentity).Result;
         return authorization;
+    }
+
+    public void Dispose()
+    {
+        AgentApp.Dispose();
     }
 }

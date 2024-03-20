@@ -1,23 +1,34 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Net.Mime;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Mime;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Certificates;
+using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("/api/v{version:apiVersion}/projects/{projectId}/server-farms")]
-public class ServerFarmsController(ServerFarmService serverFarmService) : ControllerBase
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/server-farms")]
+public class ServerFarmsController(
+    SubscriptionService subscriptionService,
+    ServerFarmService serverFarmService,
+    CertificateService certificateService
+    ) : ControllerBase
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ServerFarmWrite)]
-    public Task<ServerFarm> Create(Guid projectId, ServerFarmCreateParams? createParams)
+    public async Task<ServerFarmData> Create(Guid projectId, ServerFarmCreateParams? createParams)
     {
+        // check user quota
+        using var singleRequest = await AsyncLock.LockAsync($"{projectId}_CreateFarm");
+        await subscriptionService.AuthorizeCreateServerFarm(projectId);
+
         createParams ??= new ServerFarmCreateParams();
-        return serverFarmService.Create(projectId, createParams);
+        var serverFarm = await serverFarmService.Create(projectId, createParams);
+        return serverFarm;
     }
 
     [HttpPatch("{serverFarmId:guid}")]
@@ -40,7 +51,6 @@ public class ServerFarmsController(ServerFarmService serverFarmService) : Contro
     {
         return serverFarmService.ValidateTokenUrl(projectId, serverFarmId: serverFarmId, cancellationToken);
     }
-
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
@@ -65,5 +75,19 @@ public class ServerFarmsController(ServerFarmService serverFarmService) : Contro
     public Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
     {
         return serverFarmService.GetEncryptedToken(projectId, serverFarmId);
+    }
+
+    [HttpPost("{serverFarmId:guid}/certificate/import")]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
+    public Task<Certificate> CertificateImport(Guid projectId, Guid serverFarmId, CertificateImportParams importParams)
+    {
+        return certificateService.Import(projectId, serverFarmId, importParams);
+    }
+
+    [HttpPost("{serverFarmId:guid}/certificate/replace")]
+    [AuthorizeProjectPermission(Permissions.CertificateWrite)]
+    public Task<Certificate> CertificateReplace(Guid projectId, Guid serverFarmId, CertificateCreateParams? createParams = null)
+    {
+        return certificateService.Replace(projectId, serverFarmId, createParams);
     }
 }

@@ -1,10 +1,9 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 
@@ -12,7 +11,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class ServerProfileService(
     VhContext vhContext,
-    ServerService serverService)
+    ServerConfigureService serverConfigureService)
 {
     public async Task<ServerProfile> Create(Guid projectId, ServerProfileCreateParams? createParams = null)
     {
@@ -28,7 +27,7 @@ public class ServerProfileService(
                 .Select(x => x.ServerProfileName)
                 .ToArrayAsync();
 
-            createParams.ServerProfileName = AccessUtil.FindUniqueName(createParams.ServerProfileName, names);
+            createParams.ServerProfileName = AccessServerUtil.FindUniqueName(createParams.ServerProfileName, names);
         }
 
         var serverProfile = new ServerProfileModel
@@ -70,7 +69,7 @@ public class ServerProfileService(
         await vhContext.SaveChangesAsync();
 
         // update cache after save
-        await serverService.ReconfigServers(projectId, serverProfileId: serverProfileId);
+        await serverConfigureService.ReconfigServers(projectId, serverProfileId: serverProfileId);
 
         return model.ToDto();
     }
@@ -109,7 +108,7 @@ public class ServerProfileService(
             .ThenBy(x => x.ServerProfileName)
             .Select(x => new ServerProfileData
             {
-                ServerProfile = x.ToDto(),
+                ServerProfile = x.ToDto()
             });
 
         // get farms
@@ -137,7 +136,7 @@ public class ServerProfileService(
                 serverProfileData.Summary = new ServerProfileSummary
                 {
                     ServerCount = summaries.Count(x => x.ServerId != null),
-                    ServerFarmCount = summaries.DistinctBy(x => x.ServerFarmId).Count(),
+                    ServerFarmCount = summaries.DistinctBy(x => x.ServerFarmId).Count()
                 };
             }
         }

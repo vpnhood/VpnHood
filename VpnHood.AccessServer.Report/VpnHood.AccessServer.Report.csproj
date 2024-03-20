@@ -18,18 +18,14 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.154</Version>
+		<Version>3.0.162</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.183" />
-		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.183" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.192" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.192" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
 	</ItemGroup>
 
 </Project>

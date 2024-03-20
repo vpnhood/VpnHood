@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;

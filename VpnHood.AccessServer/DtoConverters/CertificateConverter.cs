@@ -1,11 +1,11 @@
-﻿using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+﻿using VpnHood.AccessServer.Dtos.Certificates;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
 public static class CertificateConverter
 {
-    public static Certificate ToDto(this CertificateModel model, bool withRawData = false)
+    public static Certificate ToDto(this CertificateModel model)
     {
         var certificate = new Certificate
         {
@@ -14,9 +14,14 @@ public static class CertificateConverter
             CommonName = model.CommonName,
             IssueTime = model.IssueTime,
             ExpirationTime = model.ExpirationTime,
-            IsVerified = model.IsVerified,
+            IsTrusted = model.IsTrusted,
             Thumbprint = model.Thumbprint,
-            RawData = withRawData ? model.RawData : null
+            AutoValidate = model.AutoValidate,
+            ValidateInprogress = model.ValidateInprogress,
+            ValidateCount = model.ValidateCount,
+            ValidateError = model.ValidateError,
+            ValidateErrorTime = model.ValidateErrorTime,
+            ValidateErrorCount = model.ValidateErrorCount
         };
         return certificate;
     }

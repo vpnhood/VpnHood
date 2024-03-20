@@ -8,7 +8,7 @@ git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
 
 # swtich to main branch
-git --git-dir=$gitDir --work-tree=$solutionDir checkout master
+git --git-dir=$gitDir --work-tree=$solutionDir checkout main
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir merge development;
 git --git-dir=$gitDir --work-tree=$solutionDir push;

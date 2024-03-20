@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using ServerStatusHistory = VpnHood.AccessServer.Dtos.ServerStatusHistory;
+using ServerStatusHistory = VpnHood.AccessServer.Report.Views.ServerStatusHistory;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -12,7 +12,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/servers")]
 public class ServersController(
-    UsageReportService usageReportService,
+    ReportUsageService reportUsageService,
     ServerService serverService,
     SubscriptionService subscriptionService)
     : ControllerBase
@@ -97,7 +97,7 @@ public class ServersController(
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var ret = await usageReportService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
+        var ret = await reportUsageService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
         return ret;
     }
 }

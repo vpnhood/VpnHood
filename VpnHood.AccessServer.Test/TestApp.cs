@@ -1,23 +1,25 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
-using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
-using VpnHood.Common.Utils;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Report.Persistence;
+using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Services.Acme;
 using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
-using VpnHood.AccessServer.Api;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
+using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test;
@@ -34,7 +36,6 @@ public class TestApp : IHttpClientFactory, IDisposable
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public ServerFarmsClient ServerFarmsClient => new(HttpClient);
     public ServersClient ServersClient => new(HttpClient);
-    public CertificatesClient CertificatesClient => new(HttpClient);
     public AccessTokensClient AccessTokensClient => new(HttpClient);
     public ProjectsClient ProjectsClient => new(HttpClient);
     public IpLocksClient IpLocksClient => new(HttpClient);
@@ -72,6 +73,7 @@ public class TestApp : IHttpClientFactory, IDisposable
                 {
                     services.AddScoped<IAuthorizationProvider, TestAuthorizationProvider>();
                     services.AddSingleton<IHttpClientFactory>(this);
+                    services.AddSingleton<IAcmeOrderFactory, TestAcmeOrderFactory>();
                 });
             });
 
@@ -140,7 +142,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             UdpPort = udpPort ?? ipEndPoint.Port,
             IpAddress = ipEndPoint.Address.ToString(),
             TcpPort = ipEndPoint.Port,
-            AccessPointMode = AccessPointMode.PublicInToken,
+            AccessPointMode = accessPointMode,
             IsListen = isListen
         };
     }
@@ -278,13 +280,13 @@ public class TestApp : IHttpClientFactory, IDisposable
         var vhToken = Token.FromAccessKey(accessKey);
 
         var secret = vhToken.Secret;
-        var sessionRequestEx = new SessionRequestEx(string.Empty,
-            accessToken.AccessTokenId.ToString(),
-            clientInfo,
-            VhUtil.EncryptClientId(clientInfo.ClientId, secret),
-            hostEndPoint)
+        var sessionRequestEx = new SessionRequestEx
         {
+            ClientInfo = clientInfo,
+            TokenId = accessToken.AccessTokenId.ToString(),
+            EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             ClientIp = clientIp ?? NewIpV4().Result,
+            HostEndPoint = hostEndPoint,
             ExtraData = extraData ?? Guid.NewGuid().ToString()
         };
 
@@ -295,7 +297,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     {
         var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId).Result;
 
-        var options = new Server.Access.Managers.Http.HttpAccessManagerOptions(
+        var options = new HttpAccessManagerOptions(
             installManual.AppSettings.HttpAccessManager.BaseUrl,
             installManual.AppSettings.HttpAccessManager.Authorization);
 
@@ -331,5 +333,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     {
         Scope.Dispose();
         HttpClient.Dispose();
+        AgentTestApp.Dispose();
+        WebApp.Dispose();
     }
 }

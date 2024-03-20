@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Persistence;
+
 // ReSharper disable UnusedMember.Local
 // ReSharper disable NotAccessedField.Local
 

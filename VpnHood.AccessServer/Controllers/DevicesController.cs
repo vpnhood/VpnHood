@@ -5,6 +5,7 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 
@@ -15,7 +16,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize]
 public class DevicesController(
     VhContext vhContext,
-    UsageReportService usageReportService,
+    ReportUsageService reportUsageService,
     SubscriptionService subscriptionService)
     : ControllerBase
 {
@@ -79,7 +80,7 @@ public class DevicesController(
             .OrderByDescending(device => device.ModifiedTime)
             .Select(device => new DeviceData
             {
-                Device = device.ToDto(),
+                Device = device.ToDto()
             });
 
         var results = await query
@@ -92,7 +93,7 @@ public class DevicesController(
         if (usageBeginTime != null)
         {
             var deviceIds = results.Select(x => x.Device.DeviceId).ToArray();
-            var usages = await usageReportService.GetDevicesUsage(projectId, deviceIds,
+            var usages = await reportUsageService.GetDevicesUsage(projectId, deviceIds,
                 null, null, usageBeginTime, usageEndTime);
 
             foreach (var result in results)
@@ -112,7 +113,7 @@ public class DevicesController(
     {
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var usagesDictionary = await usageReportService.GetDevicesUsage(projectId,
+        var usagesDictionary = await reportUsageService.GetDevicesUsage(projectId,
             accessTokenId: accessTokenId, serverFarmId: serverFarmId);
 
         var usages = usagesDictionary
@@ -122,7 +123,7 @@ public class DevicesController(
             .Select(x => new
             {
                 DeviceId = x.Key,
-                Traffic = x.Value,
+                Traffic = x.Value
             })
             .ToArray();
 

@@ -2,16 +2,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Report.Models;
 
 namespace VpnHood.AccessServer.Report.Persistence;
 
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext(DbContextOptions<VhReportContext> options) : DbContext(options)
 {
-    public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
-    public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
-    public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
+    public virtual DbSet<ServerStatusArchive> ServerStatuses { get; set; } = default!;
+    public virtual DbSet<AccessUsageArchive> AccessUsages { get; set; } = default!;
+    public virtual DbSet<SessionArchive> Sessions { get; set; } = default!;
 
     public async Task<IDbContextTransaction?> WithNoLockTransaction()
     {
@@ -39,9 +39,7 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
     {
         base.OnModelCreating(modelBuilder);
 
-        //modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
-
-        modelBuilder.Entity<ServerStatusModel>(entity =>
+        modelBuilder.Entity<ServerStatusArchive>(entity =>
         {
             entity.HasKey(e => e.ServerStatusId);
 
@@ -76,13 +74,9 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
                     e.TunnelSendSpeed,
                     e.TunnelReceiveSpeed
                 });
-
-            entity.Ignore(x => x.Project);
-            entity.Ignore(x => x.Server);
-            entity.Ignore(x => x.IsLast);
         });
 
-        modelBuilder.Entity<AccessUsageModel>(entity =>
+        modelBuilder.Entity<AccessUsageArchive>(entity =>
         {
             entity.HasKey(e => e.AccessUsageId);
 
@@ -113,7 +107,7 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
         });
 
 
-        modelBuilder.Entity<SessionModel>(entity =>
+        modelBuilder.Entity<SessionArchive>(entity =>
         {
             entity.HasKey(e => e.SessionId);
 
@@ -130,13 +124,6 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
 
             entity.Property(e => e.ClientVersion)
                 .HasMaxLength(20);
-
-            entity.Ignore(e => e.Server);
-            entity.Ignore(e => e.Device);
-            entity.Ignore(e => e.Access);
-            entity.Ignore(e => e.IsArchived);
-            entity.Ignore(e => e.SessionKey);
-            entity.Ignore(e => e.ExtraData);
         });
 
         // ReSharper disable once InvocationIsSkipped

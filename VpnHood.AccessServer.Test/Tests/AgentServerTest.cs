@@ -2,11 +2,11 @@
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.AccessServer.Utils;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -33,7 +33,7 @@ public class AgentServerTest
             "Duplicate listener!");
 
         //-----------
-        // check: Configure with AutoUpdate is true (ServerModel.ServerFarmId is set)
+        // check: Configure with AutoUpdate is true (ServerReportModel.ServerFarmId is set)
         //-----------
         await serverDom.Reload();
         var accessPoints = serverDom.Server.AccessPoints.ToArray();
@@ -105,7 +105,7 @@ public class AgentServerTest
     public async Task Configure_when_AutoConfigure_is_on()
     {
         // create serverInfo
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer();
         var publicInTokenAccessPoints1 = await Configure_auto_update_accessPoints_on_internal(serverDom);
         var publicInTokenAccessPoints2 = await Configure_auto_update_accessPoints_on_internal(serverDom);
@@ -174,7 +174,7 @@ public class AgentServerTest
     public async Task Configure_manual_UDP_return_nothing_when_port_is_minus_one()
     {
         // create serverInfo
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
             AutoConfigure = new PatchOfBoolean { Value = false },
@@ -190,7 +190,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Configure_UDP_for_first_time_only()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var serverDom = await farm.AddNewServer(false);
 
         // create serverInfo and configure
@@ -222,7 +222,7 @@ public class AgentServerTest
     public async Task Configure()
     {
         var farmCreateParams = new ServerFarmCreateParams { TokenUrl = new Uri("http://localhost:8080/farm1-token") };
-        var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
+        using var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
         var serverDom = await farm.AddNewServer(false);
 
@@ -288,7 +288,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task AutoConfig_should_not_remove_access_point_by_empty_address_family()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var testApp = farm.TestApp;
         var serverDom = await farm.AddNewServer(false, false);
 
@@ -351,7 +351,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var testApp = farm.TestApp;
         var serverDom = farm.DefaultServer;
 
@@ -451,7 +451,7 @@ public class AgentServerTest
     public async Task Configure_when_AutoConfigure_is_off()
     {
         // create serverInfo
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessPoints = farm.DefaultServer.Server.AccessPoints.ToArray();
         await farm.DefaultServer.Update(new ServerUpdateParams
         {
@@ -472,7 +472,7 @@ public class AgentServerTest
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
@@ -521,25 +521,16 @@ public class AgentServerTest
     [TestMethod]
     public async Task Fail_Configure_by_old_version()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         farm.DefaultServer.ServerInfo.Version = Version.Parse("0.0.1");
 
         //Configure
-        try
-        {
-            await farm.DefaultServer.Configure();
-            Assert.Fail($"{nameof(NotSupportedException)} was expected.");
-        }
-        catch (ApiException e)
-        {
-            Assert.AreEqual(nameof(NotSupportedException), e.ExceptionTypeName);
-
-            await farm.DefaultServer.Reload();
-            Assert.IsTrue(farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
-        }
+        await VhTestUtil.AssertApiException<NotSupportedException>(farm.DefaultServer.Configure());
+        await farm.DefaultServer.Reload();
+        Assert.IsTrue(farm.DefaultServer.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
 
         // LastConfigError must be removed after successful configuration
-        farm.DefaultServer.ServerInfo.Version = ServerUtil.MinServerVersion;
+        farm.DefaultServer.ServerInfo.Version = AgentOptions.MinServerVersion;
         await farm.DefaultServer.Configure();
         await farm.DefaultServer.Reload();
         Assert.IsNull(farm.DefaultServer.Server.LastConfigError);
@@ -599,79 +590,55 @@ public class AgentServerTest
     {
         var testApp = await TestApp.Create();
         var dnsName1 = $"{Guid.NewGuid()}.com";
-        var certificate1 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName1}" });
-        var farm1 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
+        var farm1 = await ServerFarmDom.Create(testApp);
+        await farm1.CertificateReplace(new CertificateCreateParams
         {
-            CertificateId = certificate1.CertificateId
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName1 }
         });
 
         var dnsName2 = $"{Guid.NewGuid()}.com";
-        var certificate2 = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams { SubjectName = $"CN={dnsName2}" });
-        var farm2 = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
+        var farm2 = await ServerFarmDom.Create(testApp);
+        await farm2.CertificateReplace(new CertificateCreateParams
         {
-            CertificateId = certificate2.CertificateId
+            CertificateSigningRequest = new CertificateSigningRequest { CommonName = dnsName2 }
         });
 
         //-----------
         // check: get certificate by publicIp
         //-----------
-        var certBuffer = await farm1.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm1.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
+        await farm1.DefaultServer.Configure();
+        var certBuffer = farm1.DefaultServer.ServerConfig.Certificates.First().RawData;
         var certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(dnsName1, certificate.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // check: get certificate by privateIp
         //-----------
-        certBuffer = await farm2.DefaultServer.AgentClient.GetSslCertificateData(new IPEndPoint(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First(), 443));
+        await farm2.DefaultServer.Configure();
+        certBuffer = farm2.DefaultServer.ServerConfig.Certificates.First().RawData;
         certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(dnsName2, certificate.GetNameInfo(X509NameType.DnsName, false));
     }
 
     [TestMethod]
-    public async Task Reconfig_all_servers_after_certificate_replaced()
-    {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
-        var server1 = await farm.AddNewServer();
-        var server2 = await farm.AddNewServer();
-
-        var cert = await farm.TestApp.CertificatesClient.GetAsync(farm.TestApp.ProjectId, farm.ServerFarm.CertificateId);
-        await farm.TestApp.CertificatesClient.ReplaceBySelfSignedAsync(farm.TestApp.ProjectId, cert.Certificate.CertificateId, new CertificateSelfSignedParams
-        {
-            SubjectName = "CN=" + cert.Certificate.CommonName
-        });
-
-        var command1 = await server1.SendStatus();
-        var command2 = await server2.SendStatus();
-        Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
-        Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
-    }
-
-    [TestMethod]
     public async Task Reconfig_all_servers_after_farm_certificate_changed()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var server1 = await farm.AddNewServer();
         var server2 = await farm.AddNewServer();
 
-        var cert = await farm.TestApp.CertificatesClient.CreateBySelfSignedAsync(farm.TestApp.ProjectId,
-            new CertificateSelfSignedParams { SubjectName = $"CN={Guid.NewGuid()}.com" });
-
-        await farm.Update(new ServerFarmUpdateParams
-        {
-            CertificateId = new PatchOfGuid { Value = cert.CertificateId }
-        });
+        await farm.CertificateReplace();
 
         var command1 = await server1.SendStatus();
         var command2 = await server2.SendStatus();
         Assert.AreNotEqual(command1.ConfigCode, server1.ServerConfig.ConfigCode);
         Assert.AreNotEqual(command2.ConfigCode, server2.ServerConfig.ConfigCode);
     }
-
 
     [TestMethod]
     public async Task Server_UpdateStatus()
     {
-        var farm = await ServerFarmDom.Create(serverCount: 0);
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
         var testApp = farm.TestApp;
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();

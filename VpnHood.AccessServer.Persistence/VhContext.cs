@@ -1,14 +1,13 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.Persistence;
 
 public class VhContext : DbContext
 {
     public const int MaxDescriptionLength = 1000;
-
     public virtual DbSet<ProjectModel> Projects { get; set; } = default!;
     public virtual DbSet<AccessTokenModel> AccessTokens { get; set; } = default!;
     public virtual DbSet<AccessModel> Accesses { get; set; } = default!;
@@ -55,65 +54,108 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<ProjectModel>(entity =>
         {
-            entity.HasKey(e => e.ProjectId);
+            entity
+                .HasKey(e => e.ProjectId);
 
-            entity.Property(e => e.GaMeasurementId)
-                .HasMaxLength(50);
-            
-            entity.Property(e => e.GaApiSecret)
+            entity
+                .Property(e => e.GaMeasurementId)
                 .HasMaxLength(50);
 
-            entity.Property(e => e.ProjectName)
+            entity
+                .Property(e => e.GaApiSecret)
+                .HasMaxLength(50);
+
+            entity
+                .Property(e => e.ProjectName)
                 .HasMaxLength(200);
+
+            entity
+                .HasOne(e => e.LetsEncryptAccount)
+                .WithOne(d => d.Project)
+                .HasForeignKey<LetsEncryptAccount>(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<IpLockModel>(entity =>
         {
-            entity.HasKey(e => new { e.ProjectId, e.IpAddress });
+            entity
+                .HasKey(e => new { e.ProjectId, e.IpAddress });
 
-            entity.Property(e => e.IpAddress)
+            entity
+                .Property(e => e.IpAddress)
                 .HasMaxLength(40);
 
-            entity.Property(e => e.Description)
+            entity
+                .Property(e => e.Description)
                 .HasMaxLength(MaxDescriptionLength);
         });
 
         modelBuilder.Entity<CertificateModel>(entity =>
         {
-            entity.HasKey(e => e.CertificateId);
+            entity
+                .HasKey(e => e.CertificateId);
 
-            entity.Property(e => e.IsVerified)
+            entity
+                .Property(e => e.IsTrusted)
                 .HasDefaultValue(false);
 
-            entity.Property(e => e.CommonName)
+            entity
+                .Property(e => e.CommonName)
                 .HasMaxLength(200);
 
-            entity.Property(e => e.Thumbprint)
+            entity
+                .Property(e => e.Thumbprint)
                 .HasMaxLength(200);
 
+            entity
+                .HasIndex(e => new { e.ServerFarmId, e.IsDefault })
+                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.IsDefault)} = 1")
+                .IsUnique();
+
+            entity
+                .HasIndex(x => new { x.ServerFarmId, x.CommonName })
+                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0");
+
+            entity
+                .HasOne(e => e.Project)
+                .WithMany(d => d.Certificates)
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity
+                .HasOne(e => e.ServerFarm)
+                .WithMany(d => d.Certificates)
+                .HasForeignKey(e => e.ServerFarmId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<AccessTokenModel>(entity =>
         {
-            entity.HasKey(e => e.AccessTokenId);
+            entity
+                .HasKey(e => e.AccessTokenId);
 
-            entity.HasIndex(e => new { e.ProjectId, e.SupportCode })
+            entity
+                .HasIndex(e => new { e.ProjectId, e.SupportCode })
                 .IsUnique();
 
             entity.Property(e => e.AccessTokenName)
                 .HasMaxLength(50);
 
-            entity.Property(e => e.Secret)
+            entity
+                .Property(e => e.Secret)
                 .HasMaxLength(16)
                 .IsFixedLength();
 
-            entity.Property(e => e.Url)
+            entity
+                .Property(e => e.Url)
                 .HasMaxLength(255);
 
-            entity.Property(e => e.IsDeleted)
+            entity
+                .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
-            entity.HasOne(e => e.Project)
+            entity
+                .HasOne(e => e.Project)
                 .WithMany(d => d.AccessTokens)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
@@ -121,27 +163,37 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<DeviceModel>(entity =>
         {
-            entity.HasKey(e => e.DeviceId);
+            entity
+                .HasKey(e => e.DeviceId);
 
-            entity.HasIndex(e => new { e.ProjectId, e.ClientId })
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ClientId })
                 .IsUnique();
 
-            entity.HasIndex(e => new { e.ProjectId, e.CreatedTime });
-            entity.HasIndex(e => new { e.ProjectId, e.ModifiedTime });
+            entity
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime });
 
-            entity.Property(e => e.IpAddress)
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ModifiedTime });
+
+            entity
+                .Property(e => e.IpAddress)
                 .HasMaxLength(50);
 
-            entity.Property(e => e.Country)
+            entity
+                .Property(e => e.Country)
                 .HasMaxLength(10);
 
-            entity.Property(e => e.ClientVersion)
+            entity
+                .Property(e => e.ClientVersion)
                 .HasMaxLength(20);
 
-            entity.Property(e => e.UserAgent)
+            entity
+                .Property(e => e.UserAgent)
                 .HasMaxLength(500);
 
-            entity.HasOne(e => e.Project)
+            entity
+                .HasOne(e => e.Project)
                 .WithMany(d => d.Devices)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
@@ -149,9 +201,11 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<PublicCycleModel>(entity =>
         {
-            entity.HasKey(e => e.PublicCycleId);
+            entity
+                .HasKey(e => e.PublicCycleId);
 
-            entity.Property(e => e.PublicCycleId)
+            entity
+                .Property(e => e.PublicCycleId)
                 .HasMaxLength(12)
                 .IsFixedLength();
         });
@@ -160,56 +214,67 @@ public class VhContext : DbContext
         {
             entity.HasKey(e => e.ServerId);
 
-            entity.HasIndex(e => new { e.ProjectId, e.ServerName })
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ServerName })
                 .HasFilter($"{nameof(ServerModel.IsDeleted)} = 0")
                 .IsUnique();
 
-            entity.Property(e => e.LastConfigError)
+            entity
+                .Property(e => e.LastConfigError)
                 .HasMaxLength(2000);
 
-            entity.Property(e => e.ServerName)
+            entity
+                .Property(e => e.ServerName)
                 .HasMaxLength(100);
 
-            entity.Property(e => e.OsInfo)
+            entity
+                .Property(e => e.OsInfo)
                 .HasMaxLength(500);
 
-            entity.Property(e => e.Version)
+            entity
+                .Property(e => e.Version)
                 .HasMaxLength(100);
 
-            entity.Property(e => e.EnvironmentVersion)
+            entity
+                .Property(e => e.EnvironmentVersion)
                 .HasMaxLength(100);
 
-            entity.Property(e => e.MachineName)
+            entity
+                .Property(e => e.MachineName)
                 .HasMaxLength(100);
 
-            entity.Property(e => e.LastConfigError)
+            entity
+                .Property(e => e.LastConfigError)
                 .HasMaxLength(2000);
 
-            entity.Property(e => e.ManagementSecret)
+            entity
+                .Property(e => e.ManagementSecret)
                 .HasMaxLength(16)
                 .IsFixedLength();
 
-            entity.Property(e => e.IsDeleted)
+            entity
+                .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
-            entity.HasOne(e => e.Project)
+            entity
+                .HasOne(e => e.Project)
                 .WithMany(d => d.Servers)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.ServerFarm)
+            entity
+                .HasOne(e => e.ServerFarm)
                 .WithMany(d => d.Servers)
-                .HasForeignKey(e => new { e.ProjectId, e.ServerFarmId })
-                .HasPrincipalKey(e => new { e.ProjectId, e.ServerFarmId })
+                .HasForeignKey(e => e.ServerFarmId)
+                .HasPrincipalKey(e => e.ServerFarmId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.Ignore(e => e.ServerStatus);
-
-            entity.OwnsMany(e => e.AccessPoints, ap =>
-            {
-                ap.ToTable(nameof(ServerModel.AccessPoints));
-                ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
-            });
+            entity
+                .OwnsMany(e => e.AccessPoints, ap =>
+                {
+                    ap.ToTable(nameof(ServerModel.AccessPoints));
+                    ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
+                });
 
             //entity.Property(e => e.AccessPoints)
             //    .HasColumnType("varchar(200)")
@@ -225,7 +290,8 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<ServerStatusModel>(entity =>
         {
-            entity.HasKey(e => e.ServerStatusId);
+            entity
+                .HasKey(e => e.ServerStatusId);
 
             entity
                 .Property(e => e.ServerStatusId)
@@ -253,7 +319,7 @@ public class VhContext : DbContext
                     e.TunnelSendSpeed,
                     e.TunnelReceiveSpeed,
                     e.IsConfigure,
-                    e.CreatedTime,
+                    e.CreatedTime
                 })
                 .IsUnique()
                 .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");
@@ -262,7 +328,8 @@ public class VhContext : DbContext
                 .HasIndex(e => new { e.CreatedTime })
                 .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");
 
-            entity.HasOne(e => e.Project)
+            entity
+                .HasOne(e => e.Project)
                 .WithMany(d => d.ServerStatuses)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
@@ -270,73 +337,84 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<ServerFarmModel>(entity =>
         {
-            entity.HasKey(e => e.ServerFarmId);
+            entity
+                .HasKey(e => e.ServerFarmId);
 
-            entity.HasIndex(e => new { e.ProjectId, e.ServerFarmName })
+            entity
+                .Ignore(e => e.Certificate);
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ServerFarmName })
                 .HasFilter($"{nameof(ServerFarmModel.IsDeleted)} = 0")
                 .IsUnique();
 
-            entity.Property(e => e.PushTokenToClient)
+            entity
+                .Property(e => e.PushTokenToClient)
                 .HasDefaultValue(false);
 
-            entity.Property(e => e.UseTokenV4)
-                .HasDefaultValue(false);
-
-            entity.Property(e => e.ServerFarmName)
+            entity
+                .Property(e => e.ServerFarmName)
                 .HasMaxLength(100);
 
-            entity.Property(e => e.UseHostName)
+            entity
+                .Property(e => e.UseHostName)
                 .HasDefaultValue(false);
 
-            entity.Property(e => e.TokenJson)
+            entity
+                .Property(e => e.TokenJson)
                 .HasMaxLength(4000);
 
-            entity.Property(e => e.IsDeleted)
+            entity
+                .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
-            entity.Property(e => e.Secret)
+            entity
+                .Property(e => e.Secret)
                 .HasMaxLength(16)
                 .IsFixedLength();
 
-            entity.HasOne(e => e.Project)
+            entity
+                .HasOne(e => e.Project)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.ServerProfile)
+            entity
+                .HasOne(e => e.ServerProfile)
                 .WithMany(d => d.ServerFarms)
                 .HasForeignKey(e => new { e.ProjectId, e.ServerProfileId })
                 .HasPrincipalKey(e => new { e.ProjectId, e.ServerProfileId })
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity.HasOne(e => e.Certificate)
-                .WithMany(d => d.ServerFarms)
-                .HasForeignKey(e => new { e.ProjectId, e.CertificateId })
-                .HasPrincipalKey(e => new { e.ProjectId, e.CertificateId })
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<AccessModel>(entity =>
         {
-            entity.HasKey(e => e.AccessId);
+            entity
+                .HasKey(e => e.AccessId);
 
-            entity.HasIndex(e => new { e.AccessTokenId, e.DeviceId })
+            entity
+                .HasIndex(e => new { e.AccessTokenId, e.DeviceId })
                 .IsUnique()
                 .HasFilter(null); //required to prevent EF created filtered index
 
-            entity.Property(e => e.Description)
+            entity
+                .Property(e => e.Description)
                 .HasMaxLength(MaxDescriptionLength);
 
-            entity.Property(e => e.LastCycleTraffic)
+            entity
+                .Property(e => e.LastCycleTraffic)
                 .HasComputedColumnSql($"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
 
-            entity.HasIndex(e => new { e.CycleTraffic }); // for resetting cycles
+            entity
+                .HasIndex(e => new { e.CycleTraffic }); // for resetting cycles
 
-            entity.Property(e => e.CycleTraffic)
+            entity
+                .Property(e => e.CycleTraffic)
                 .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
-            entity.Property(e => e.TotalTraffic)
+            entity
+                .Property(e => e.TotalTraffic)
                 .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)}");
 
             entity.HasOne(e => e.Device)
@@ -347,33 +425,43 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<SessionModel>(entity =>
         {
-            entity.HasKey(e => e.SessionId);
+            entity
+                .HasKey(e => e.SessionId);
 
             //index for finding other active sessions of an AccessId
-            entity.HasIndex(e => e.AccessId)
+            entity
+                .HasIndex(e => e.AccessId)
                 .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
 
-            entity.HasIndex(e => new { e.EndTime }); //for sync 
+            entity
+                .HasIndex(e => new { e.EndTime }); //for sync 
 
-            entity.Property(e => e.IsArchived);
+            entity
+                .Property(e => e.IsArchived);
 
-            entity.Property(e => e.SessionId)
+            entity
+                .Property(e => e.SessionId)
                 .ValueGeneratedOnAdd();
 
-            entity.Property(e => e.DeviceIp)
+            entity
+                .Property(e => e.DeviceIp)
                 .HasMaxLength(50);
 
-            entity.Property(e => e.Country)
+            entity
+                .Property(e => e.Country)
                 .HasMaxLength(10);
 
-            entity.Property(e => e.ClientVersion)
+            entity
+                .Property(e => e.ClientVersion)
                 .HasMaxLength(20);
 
-            entity.Property(e => e.SessionKey)
+            entity
+                .Property(e => e.SessionKey)
                 .HasMaxLength(16)
                 .IsFixedLength();
 
-            entity.Property(e => e.ExtraData)
+            entity
+                .Property(e => e.ExtraData)
                 .HasMaxLength(100);
 
             entity.Property(e => e.ErrorMessage)
@@ -398,25 +486,32 @@ public class VhContext : DbContext
 
         modelBuilder.Entity<ServerProfileModel>(entity =>
         {
-            entity.HasKey(x => x.ServerProfileId);
+            entity
+                .HasKey(x => x.ServerProfileId);
 
-            entity.HasIndex(e => new { e.ProjectId, e.ServerProfileName })
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ServerProfileName })
                 .IsUnique();
 
-            entity.HasIndex(e => new { e.ProjectId, e.IsDefault })
+            entity
+                .HasIndex(e => new { e.ProjectId, e.IsDefault })
                 .HasFilter($"{nameof(ServerProfileModel.IsDefault)} = 1")
                 .IsUnique();
 
-            entity.Property(x => x.ServerProfileName)
+            entity
+                .Property(x => x.ServerProfileName)
                 .HasMaxLength(200);
 
-            entity.Property(x => x.ServerConfig)
+            entity
+                .Property(x => x.ServerConfig)
                 .HasMaxLength(4000);
 
-            entity.Property(x => x.IsDefault)
+            entity
+                .Property(x => x.IsDefault)
                 .HasDefaultValue(false);
 
-            entity.Property(x => x.IsDeleted)
+            entity
+                .Property(x => x.IsDeleted)
                 .HasDefaultValue(false);
         });
     }

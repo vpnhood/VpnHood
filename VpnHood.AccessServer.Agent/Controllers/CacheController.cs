@@ -1,66 +1,58 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
-using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Persistence.Caches;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/cache")]
 [Authorize(AgentPolicy.SystemPolicy)]
-public class CacheController(CacheService cacheService, IOptions<AgentOptions> agentOptions)
+public class CacheController(CacheService cacheService)
     : ControllerBase
 {
-    private readonly AgentOptions _agentOptions = agentOptions.Value;
-
-    [HttpGet("projects/{projectId}/servers")]
-    public async Task<VpnServer[]> GetServers(Guid projectId)
-    {
-        var servers = (await cacheService.GetServers())
-            .Values
-            .Where(x => x.ProjectId == projectId)
-            .Select(x => x.ToDto(_agentOptions.LostServerThreshold))
-            .ToArray();
-
-        return servers;
-    }
-
-    [HttpPost("projects/{projectId}/invalidate")]
+    [HttpPost("projects/{projectId:guid}/invalidate")]
     public Task InvalidateProject(Guid projectId)
     {
         return cacheService.InvalidateProject(projectId);
     }
 
-    [HttpPost("projects/{projectId}/invalidate-servers")]
-    public Task InvalidateProjectServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? certificateId = null)
+    [HttpGet("servers")]
+    public async Task<ServerCache[]> GetServers(Guid? projectId = null, Guid? serverFarmId = null)
     {
-        return cacheService.InvalidateProjectServers(projectId: projectId, 
-            serverFarmId: serverFarmId, 
-            serverProfileId: serverProfileId,
-            certificateId: certificateId);
+        var servers = (await cacheService.GetServers())
+            .Where(x => x.ProjectId == projectId || projectId == null)
+            .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
+            .ToArray();
+
+        return servers;
     }
 
-    [HttpGet("servers/{serverId}")]
-    public async Task<VpnServer?> GetServer(Guid serverId)
+    [HttpGet("servers/{serverId:guid}")]
+    public async Task<ServerCache?> GetServer(Guid serverId)
     {
-        var serverModel = await cacheService.GetServer(serverId);
-        var server = serverModel.ToDto(_agentOptions.LostServerThreshold);
+        var server = await cacheService.GetServer(serverId);
         return server;
     }
 
-    [HttpPost("servers/{serverId}/invalidate")]
-    public Task InvalidateServer(Guid serverId)
+    [HttpPost("servers/invalidate")]
+    public Task InvalidateServers(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null, Guid? serverId = null)
     {
-        return cacheService.InvalidateServer(serverId);
+        return cacheService.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId,
+            serverProfileId: serverProfileId, serverId: serverId);
     }
 
-    [HttpGet("sessions/{sessionId}")]
-    public async Task<Session> GetSession(long sessionId)
+    [HttpPost("server-farms/{serverFarmId:guid}/invalidate")]
+    public Task InvalidateServerFarm(Guid serverFarmId)
+    {
+        return cacheService.InvalidateServerFarm(serverFarmId);
+    }
+
+    [HttpGet("sessions/{sessionId:long}")]
+    public async Task<SessionCache> GetSession(long sessionId)
     {
         var session = await cacheService.GetSession(null, sessionId);
-        return session.ToDto();
+        return session;
     }
 
     [HttpPost("sessions/invalidate")]

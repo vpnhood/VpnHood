@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.AccessServer.Api;
 using System.Net;
+using VpnHood.AccessServer.Api;
+using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -45,14 +47,14 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
                 SessionCount = server.ServerStatus?.SessionCount ?? 0,
                 TcpConnectionCount = server.ServerStatus?.TcpConnectionCount ?? 0,
                 ThreadCount = server.ServerStatus?.ThreadCount ?? 0,
-                TunnelSpeed = new Common.Messaging.Traffic
+                TunnelSpeed = new Traffic
                 {
                     Sent = server.ServerStatus?.TunnelReceiveSpeed ?? 0,
-                    Received = server.ServerStatus?.TunnelSendSpeed ?? 0,
+                    Received = server.ServerStatus?.TunnelSendSpeed ?? 0
                 },
                 ConfigError = server.LastConfigError,
                 UdpConnectionCount = server.ServerStatus?.UdpConnectionCount ?? 0,
-                UsedMemory = server is { TotalMemory: { }, ServerStatus.AvailableMemory: { } }
+                UsedMemory = server is { TotalMemory: not null, ServerStatus.AvailableMemory: not null }
                     ? server.TotalMemory.Value - server.ServerStatus.AvailableMemory.Value
                     : 0
             }
@@ -133,5 +135,14 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     public Task Delete()
     {
         return Client.DeleteAsync(TestApp.ProjectId, ServerId);
+    }
+
+    public async Task WaitForState(ServerState state)
+    {
+        await VhTestUtil.AssertEqualsWait(state, async () =>
+        {
+            await Reload();
+            return Server.ServerState;
+        });
     }
 }

@@ -1,5 +1,5 @@
 ﻿using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -16,7 +16,7 @@ public static class DeviceConverter
             IpAddress = model.IpAddress,
             LockedTime = model.LockedTime,
             ModifiedTime = model.ModifiedTime,
-            UserAgent = model.UserAgent,
+            UserAgent = model.UserAgent
         };
         return device;
     }

@@ -20,19 +20,20 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.141</Version>
+		<Version>3.0.162</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.1" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-		<PackageReference Include="MSTest.TestAdapter" Version="3.2.0" />
-		<PackageReference Include="MSTest.TestFramework" Version="3.2.0" />
-		<PackageReference Include="coverlet.collector" Version="6.0.0">
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.3" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.2.2" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.2.2" />
+		<PackageReference Include="coverlet.collector" Version="6.0.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="VpnHood.Server" Version="3.3.477-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Services;
 
@@ -22,7 +23,7 @@ public class SyncService(
         while (true)
         {
             // fetch new items
-            logger.LogTrace(AccessEventId.Archive, "Loading old AccessUsages from agent database...");
+            logger.LogTrace("Loading old AccessUsages from agent database...");
             var items = await vhContext
                 .AccessUsages
                 .OrderBy(x => x.AccessUsageId)
@@ -34,11 +35,10 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items);
+            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
 
             // remove synced items
-            logger.LogInformation(AccessEventId.Archive, 
-                "Removing old synced AccessUsages from agent database. Count: {Count}", items.Length);
+            logger.LogInformation("Removing old synced AccessUsages from agent database. Count: {Count}", items.Length);
 
             var ids = items.Select(x => x.AccessUsageId);
             await vhContext.AccessUsages
@@ -60,7 +60,7 @@ public class SyncService(
         while (true)
         {
             // fetch new items
-            logger.LogTrace(AccessEventId.Archive, "Loading old ServerStatuses from agent database...");
+            logger.LogTrace("Loading old ServerStatuses from agent database...");
             var items = await vhContext
                 .ServerStatuses
                 .Where(x => !x.IsLast)
@@ -72,10 +72,10 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items);
+            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
 
             // remove synced items
-            logger.LogInformation(AccessEventId.Archive, "Removing old synced ServerStatuses from agent database. Count: {Count}", items.Length);
+            logger.LogInformation("Removing old synced ServerStatuses from agent database. Count: {Count}", items.Length);
             var ids = items.Select(x => x.ServerStatusId);
             await vhContext.ServerStatuses
                 .Where(x => ids.Contains(x.ServerStatusId))
@@ -93,7 +93,7 @@ public class SyncService(
         while (true)
         {
             // fetch new items
-            logger.LogTrace(AccessEventId.Archive, "Loading old Sessions from agent database...");
+            logger.LogTrace("Loading old Sessions from agent database...");
             var items = await vhContext
                 .Sessions.Where(x => x.IsArchived)
                 .OrderBy(x => x.SessionId)
@@ -104,9 +104,9 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items);
+            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
 
-            logger.LogInformation(AccessEventId.Archive, $"Removing old synced Sessions from agent database. Count: {items.Length}");
+            logger.LogInformation($"Removing old synced Sessions from agent database. Count: {items.Length}");
             var ids = items.Select(x => x.SessionId);
             await vhContext.Sessions
                 .Where(x => ids.Contains(x.SessionId))

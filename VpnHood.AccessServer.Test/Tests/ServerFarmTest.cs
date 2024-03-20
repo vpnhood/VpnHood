@@ -1,9 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using GrayMint.Common.Exceptions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Client;
-using GrayMint.Common.Exceptions;
 using VpnHood.Common;
+using VpnHood.Common.Client;
 using VpnHood.Common.Utils;
 using Token = VpnHood.Common.Token;
 
@@ -45,7 +45,7 @@ public class ServerFarmTest
                         IpAddress = publicIp1.ToString(),
                         TcpPort = 443,
                         IsListen = true,
-                        UdpPort = 443,
+                        UdpPort = 443
                     },
                     new AccessPoint
                     {
@@ -53,7 +53,7 @@ public class ServerFarmTest
                         IpAddress = publicIp2.ToString(),
                         TcpPort = 443,
                         IsListen = true,
-                        UdpPort = 443,
+                        UdpPort = 443
                     }
                 }
             }
@@ -78,24 +78,20 @@ public class ServerFarmTest
         // check: update 
         //-----------
         var serverProfile2 = await ServerProfileDom.Create(testApp);
-        var certificateClient = testApp.CertificatesClient;
-        var certificate2 = await certificateClient.CreateBySelfSignedAsync(farm1.ProjectId,
-            new CertificateSelfSignedParams { SubjectName = "CN=fff.com" });
+
         var updateParam = new ServerFarmUpdateParams
         {
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
-            CertificateId = new PatchOfGuid { Value = certificate2.CertificateId },
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
             TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
             Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() },
-            PushTokenToClient = new PatchOfBoolean { Value = true },
+            PushTokenToClient = new PatchOfBoolean { Value = true }
         };
 
         await testApp.ServerFarmsClient.UpdateAsync(farm1.ProjectId, farm1.ServerFarmId, updateParam);
         await farm1.Reload();
         Assert.AreEqual(updateParam.TokenUrl.Value, farm1.ServerFarm.TokenUrl);
         Assert.AreEqual(updateParam.ServerFarmName.Value, farm1.ServerFarm.ServerFarmName);
-        Assert.AreEqual(updateParam.CertificateId.Value, farm1.ServerFarm.CertificateId);
         Assert.AreEqual(updateParam.ServerProfileId.Value, farm1.ServerFarm.ServerProfileId);
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
         CollectionAssert.AreEqual(updateParam.Secret.Value, farm1.ServerFarm.Secret);
@@ -170,8 +166,7 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().Certificate);
-        Assert.IsNull(farms.First().Certificate.RawData);
+        Assert.IsNotNull(farms.First().ServerFarm.Certificate?.CommonName);
     }
 
 
@@ -187,8 +182,7 @@ public class ServerFarmTest
         Assert.AreEqual(3, farms.Count);
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm1.ServerFarmId));
         Assert.IsTrue(farms.Any(x => x.ServerFarm.ServerFarmId == farm2.ServerFarmId));
-        Assert.IsNotNull(farms.First().Certificate);
-        Assert.IsNull(farms.First().Certificate.RawData);
+        Assert.IsNotNull(farms.First().ServerFarm.Certificate?.CommonName);
     }
 
     [TestMethod]
@@ -231,7 +225,7 @@ public class ServerFarmTest
     [TestMethod]
     public async Task Reconfigure_all_servers_on_update_server_profile()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var serverDom1 = await farm.AddNewServer();
         var serverDom2 = await farm.AddNewServer();
         var serverProfileDom = await ServerProfileDom.Create(farm.TestApp);
@@ -249,7 +243,7 @@ public class ServerFarmTest
     [TestMethod]
     public async Task GetFarmToken()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var encFarmToken = await farm.Client.GetEncryptedTokenAsync(farm.ProjectId, farm.ServerFarmId);
         var accessToken = await farm.CreateAccessToken();
         var farmToken = ServerToken.Decrypt(farm.ServerFarm.Secret, encFarmToken);
@@ -259,4 +253,21 @@ public class ServerFarmTest
         Assert.AreEqual(token.ServerToken.HostName, farmToken.HostName);
 
     }
+
+    [TestMethod]
+    public async Task FarmToken_must_change_by_modifying_certificate()
+    {
+        // get farm token
+        using var farm = await ServerFarmDom.Create();
+        var accessTokenDom = await farm.CreateAccessToken();
+        var accessKey = await accessTokenDom.GetAccessKey();
+        var token1 = Token.FromAccessKey(accessKey);
+        
+        await farm.CertificateReplace();
+        var accessKey2 = await accessTokenDom.GetAccessKey();
+        var token2 = Token.FromAccessKey(accessKey2);
+
+        Assert.AreNotEqual(token1.ServerToken.HostName, token2.ServerToken.HostName);
+    }
+
 }

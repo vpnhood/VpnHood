@@ -1,35 +1,34 @@
 ﻿using System.Net;
 using System.Security.Authentication;
 using Ga4.Ga4Tracking;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Messaging;
+using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
 public class SessionService(
     ILogger<SessionService> logger,
+    ILogger<SessionService.NewAccess> newAccessLogger,
     IOptions<AgentOptions> agentOptions,
     IMemoryCache memoryCache,
     CacheService cacheService,
-    VhContext vhContext)
+    VhRepo vhRepo,
+    VhAgentRepo vhAgentRepo)
 {
-    private readonly AgentOptions _agentOptions = agentOptions.Value;
-
-    private static Task TrackUsage(ulong sessionId, ServerModel server, AccessTokenModel accessToken, DeviceModel device, Traffic traffic)
+    public class NewAccess;
+    private static Task TrackUsage(ProjectCache project, ServerCache server,
+        SessionCache session, AccessCache access, Traffic traffic)
     {
-        var project = server.Project;
-        if (project == null)
-            return Task.CompletedTask;
-
         if (string.IsNullOrEmpty(project.GaMeasurementId) || string.IsNullOrEmpty(project.GaApiSecret))
             return Task.CompletedTask;
 
@@ -37,45 +36,45 @@ public class SessionService(
         {
             MeasurementId = project.GaMeasurementId,
             ApiSecret = project.GaApiSecret,
-            UserAgent = device.UserAgent ?? "",
-            ClientId = device.ClientId.ToString(),
-            SessionId = sessionId.ToString(),
-            UserId = accessToken.AccessTokenId.ToString(),
+            UserAgent = session.UserAgent ?? "",
+            ClientId = session.ClientId.ToString(),
+            SessionId = session.ServerId.ToString(),
+            UserId = access.AccessTokenId.ToString(),
             SessionCount = 1
         };
 
         var ga4Event = new Ga4TagEvent
         {
             EventName = Ga4TagEvents.PageView,
-            DocumentLocation = $"{server.ServerFarm?.ServerFarmName}/{server.ServerName}",
-            DocumentTitle = $"{server.ServerFarm?.ServerFarmName}",
-            Properties = new Dictionary<string, object>()
+            DocumentLocation = $"{server.ServerFarmName}/{server.ServerName}",
+            DocumentTitle = $"{server.ServerFarmName}",
+            Properties = new Dictionary<string, object>
             {
-                {"DeviceId", device.DeviceId},
-                {"TokenId", accessToken.AccessTokenId},
-                {"TokenCode", accessToken.SupportCode},
+                {"DeviceId", session.DeviceId},
+                {"TokenId", access.AccessTokenId},
+                {"TokenCode", access.AccessTokenSupportCode},
                 {"ServerId", server.ServerId},
                 {"FarmId", server.ServerFarmId},
                 {"Traffic", Math.Round(traffic.Total / 1_000_000d)},
                 {"Sent", Math.Round(traffic.Sent / 1_000_000d)},
-                {"Received", Math.Round(traffic.Received / 1_000_000d)},
+                {"Received", Math.Round(traffic.Received / 1_000_000d)}
             }
         };
 
-        if (!string.IsNullOrEmpty(accessToken.AccessTokenName)) ga4Event.Properties.Add("TokenName", accessToken.AccessTokenName);
+        if (!string.IsNullOrEmpty(access.AccessTokenName)) ga4Event.Properties.Add("TokenName", access.AccessTokenName);
         if (!string.IsNullOrEmpty(server.ServerName)) ga4Event.Properties.Add("ServerName", server.ServerName);
-        if (!string.IsNullOrEmpty(server.ServerFarm?.ServerFarmName)) ga4Event.Properties.Add("FarmName", server.ServerFarm.ServerFarmName);
+        if (!string.IsNullOrEmpty(server.ServerFarmName)) ga4Event.Properties.Add("FarmName", server.ServerFarmName);
 
         return ga4Tracker.Track(ga4Event);
     }
 
-    private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
+    private static bool ValidateTokenRequest(SessionRequestEx sessionRequest, byte[] tokenSecret)
     {
         var encryptClientId = VhUtil.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> CreateSession(ServerModel server, SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> CreateSession(ServerCache server, SessionRequestEx sessionRequestEx)
     {
         // validate argument
         if (server.AccessPoints == null)
@@ -87,13 +86,10 @@ public class SessionService(
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
-        var accessedTime = DateTime.UtcNow;
+        var project = await cacheService.GetProject(server.ProjectId);
 
-        // Get accessTokenModel and check projectId
-        var accessToken = await vhContext.AccessTokens
-            .Include(x => x.ServerFarm)
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.AccessTokenId == Guid.Parse(sessionRequestEx.TokenId));
+        // Get accessTokenModel
+        var accessToken = await vhRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId), true);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
@@ -127,7 +123,8 @@ public class SessionService(
         }
 
         // check is Ip Locked
-        if (clientIp != null && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == projectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
+        var ipLock = clientIp != null ? await vhAgentRepo.IpLockFind(projectId, clientIp.ToString()) : null;
+        if (ipLock?.LockedTime != null)
             return new SessionResponseEx(SessionErrorCode.AccessLocked)
             {
                 ErrorMessage = "Your access has been locked! Please contact the support."
@@ -135,7 +132,7 @@ public class SessionService(
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
-        var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
+        var device = await vhAgentRepo.DeviceFind(projectId, clientInfo.ClientId); 
         if (device == null)
         {
             device = new DeviceModel
@@ -149,7 +146,7 @@ public class SessionService(
                 CreatedTime = DateTime.UtcNow,
                 ModifiedTime = DateTime.UtcNow
             };
-            await vhContext.Devices.AddAsync(device);
+            device = await vhRepo.AddAsync(device);
         }
         else
         {
@@ -168,32 +165,23 @@ public class SessionService(
 
         // multiple requests may be already queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        using var accessLock = await GrayMint.Common.Utils.AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
+        using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
         var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
-        if (access != null) accessLock.Dispose();
-
-        // Update or Create Access
         if (access == null)
         {
-            access = new AccessModel
-            {
-                AccessId = Guid.NewGuid(),
-                AccessTokenId = accessToken.AccessTokenId,
-                DeviceId = deviceId,
-                CreatedTime = DateTime.UtcNow,
-                LastUsedTime = DateTime.UtcNow,
-            };
-
-            logger.LogInformation($"New Access has been activated! AccessId: {access.AccessId}.");
-            await vhContext.Accesses.AddAsync(access);
+            access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
+            newAccessLogger.LogInformation(
+                "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
+                access.AccessId, project.ProjectName, accessToken.ServerFarm?.ServerFarmName);
         }
-
-        // set access time
-        access.AccessToken = accessToken;
-        access.LastUsedTime = DateTime.UtcNow;
+        else
+        {
+            accessLock.Dispose(); // access is already exists so the next call will not create new
+        }
+        access.LastUsedTime = DateTime.UtcNow; // update used time
 
         // check supported version
-        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(ServerUtil.MinClientVersion) < 0)
+        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(AgentOptions.MinClientVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another server if everything was ok
@@ -206,16 +194,17 @@ public class SessionService(
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestTcpEndPoint };
 
         // create session
-        var session = new SessionModel
+        var session = new SessionCache
         {
+            SessionId = 0,
             ProjectId = device.ProjectId,
+            AccessId = access.AccessId,
+            DeviceId = device.DeviceId,
             SessionKey = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             LastUsedTime = DateTime.UtcNow,
-            AccessId = access.AccessId,
             DeviceIp = clientIpToStore,
-            DeviceId = device.DeviceId,
-            ClientVersion = device.ClientVersion,
+            ClientVersion = clientInfo.ClientVersion,
             EndTime = null,
             ServerId = serverId,
             ExtraData = sessionRequestEx.ExtraData,
@@ -223,13 +212,15 @@ public class SessionService(
             SuppressedTo = SessionSuppressType.None,
             ErrorCode = SessionErrorCode.Ok,
             ErrorMessage = null,
-
-            Access = access,
-            Device = device,
+            Country = null,
+            IsArchived = false,
+            UserAgent = device.UserAgent,
+            ClientId = device.ClientId
         };
 
-        var ret = await BuildSessionResponse(session, accessedTime);
+        var ret = await BuildSessionResponse(session, access);
         ret.ExtraData = session.ExtraData;
+        ret.GaMeasurementId = project.GaMeasurementId;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -247,33 +238,23 @@ public class SessionService(
                 Secret = accessToken.Secret,
                 TokenId = accessToken.AccessTokenId.ToString(),
                 Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportCode.ToString(),
+                SupportId = accessToken.SupportCode.ToString()
             }.ToAccessKey();
 
-        // update session data
-        ret.GaMeasurementId = server.Project?.GaMeasurementId;
-        ret.TcpEndPoints = [bestTcpEndPoint];
-        ret.UdpEndPoints = server.AccessPoints
-            .Where(x => x is { IsPublic: true, UdpPort: > 0 })
-            .Select(x => new IPEndPoint(x.IpAddress, x.UdpPort))
-            .ToArray();
+        // Add session to database
+        var sessionModel = await vhAgentRepo.AddSession(session);
+        await vhAgentRepo.SaveChangesAsync();
+        session.SessionId = sessionModel.SessionId;
 
-        // Add session
-        session.Access = null;
-        session.Device = null;
-        await vhContext.Sessions.AddAsync(session);
-        await vhContext.SaveChangesAsync();
-
-        session.Access = access;
-        session.Device = device;
+        // Add session to cache
         await cacheService.AddSession(session);
-        logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.SessionId);
+        logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.SessionId);
 
-        ret.SessionId = (uint)session.SessionId;
+        ret.SessionId = (ulong)session.SessionId;
         return ret;
     }
 
-    public async Task<SessionResponseEx> GetSession(ServerModel server, uint sessionId, string hostEndPoint, string? clientIp)
+    public async Task<SessionResponseEx> GetSession(ServerCache server, uint sessionId, string hostEndPoint, string? clientIp)
     {
         _ = clientIp; //we don't use it now
         _ = hostEndPoint; //we don't use it now
@@ -281,31 +262,28 @@ public class SessionService(
         try
         {
             var session = await cacheService.GetSession(server.ServerId, sessionId);
+            var access = await cacheService.GetAccess(session.AccessId);
+            access.LastUsedTime = DateTime.UtcNow;
 
             // build response
-            var ret = await BuildSessionResponse(session, DateTime.UtcNow);
+            var ret = await BuildSessionResponse(session, access);
             ret.ExtraData = session.ExtraData;
-            logger.LogInformation(AccessEventId.Session,
-                "Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId, session.EndTime);
+            logger.LogInformation("Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId, session.EndTime);
             return ret;
         }
         catch (KeyNotFoundException)
         {
-            logger.LogWarning(AccessEventId.Session,
-                "Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}",
+            logger.LogWarning("Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}",
                 sessionId, server.ServerId);
             throw;
         }
     }
 
-    private async Task<SessionResponseEx> BuildSessionResponse(SessionModel session, DateTime accessTime)
+    private async Task<SessionResponseEx> BuildSessionResponse(
+        SessionBaseModel session, AccessCache access)
     {
-        var access = session.Access!;
-        var accessToken = session.Access!.AccessToken!;
-
         // update session
-        access.LastUsedTime = accessTime;
-        session.LastUsedTime = accessTime;
+        session.LastUsedTime = access.LastUsedTime;
 
         // create common accessUsage
         var accessUsage = new AccessUsage
@@ -313,11 +291,11 @@ public class SessionService(
             Traffic = new Traffic
             {
                 Sent = access.TotalSentTraffic - access.LastCycleSentTraffic,
-                Received = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic,
+                Received = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic
             },
-            MaxClientCount = accessToken.MaxDevice,
-            MaxTraffic = accessToken.MaxTraffic,
-            ExpirationTime = accessToken.ExpirationTime,
+            MaxClientCount = access.MaxDevice,
+            MaxTraffic = access.MaxTraffic,
+            ExpirationTime = access.ExpirationTime,
             ActiveClientCount = 0
         };
 
@@ -367,7 +345,7 @@ public class SessionService(
                 }
             }
 
-            accessUsage.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
+            accessUsage.ActiveClientCount = access.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
         }
 
         // build result
@@ -384,19 +362,18 @@ public class SessionService(
         };
     }
 
-    public async Task<SessionResponseBase> AddUsage(ServerModel server, uint sessionId, Traffic traffic, bool closeSession)
+    public async Task<SessionResponse> AddUsage(ServerCache server, uint sessionId, Traffic traffic, bool closeSession)
     {
         var session = await cacheService.GetSession(server.ServerId, sessionId);
-        var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
-        var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessTokenModel is not loaded by cache.");
-        var accessedTime = DateTime.UtcNow;
+        var access = await cacheService.GetAccess(session.AccessId);
+        var project = await cacheService.GetProject(session.ProjectId);
 
         // check projectId
-        if (accessToken.ProjectId != server.ProjectId)
+        if (session.ProjectId != server.ProjectId)
             throw new AuthenticationException();
 
         // update access if session is open
-        logger.LogInformation(AccessEventId.AddUsage,
+        logger.LogInformation(
             "AddUsage to a session. SessionId: {SessionId}, " +
             "SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {Total}, " +
             "EndTime: {EndTime}.",
@@ -410,6 +387,8 @@ public class SessionService(
         // insert AccessUsageLog
         cacheService.AddSessionUsage(new AccessUsageModel
         {
+            AccessTokenId = access.AccessTokenId,
+            ServerFarmId = server.ServerFarmId,
             ReceivedTraffic = traffic.Received,
             SentTraffic = traffic.Sent,
             TotalReceivedTraffic = access.TotalReceivedTraffic,
@@ -421,20 +400,18 @@ public class SessionService(
             AccessId = session.AccessId,
             SessionId = session.SessionId,
             ProjectId = server.ProjectId,
-            ServerId = server.ServerId,
-            AccessTokenId = accessToken.AccessTokenId,
-            ServerFarmId = accessToken.ServerFarmId,
+            ServerId = server.ServerId
         });
 
-        _ = TrackUsage(sessionId, server, accessToken, session.Device!, traffic);
+        _ = TrackUsage(project, server, session, access, traffic);
 
         // build response
-        var sessionResponse = await BuildSessionResponse(session, accessedTime);
+        var sessionResponse = await BuildSessionResponse(session, access);
 
         // close session
         if (closeSession)
         {
-            logger.LogInformation(AccessEventId.Session,
+            logger.LogInformation(
                 "Session has been closed by user. SessionId: {SessionId}, ResponseCode: {ResponseCode}",
                 sessionId, sessionResponse.ErrorCode);
 
@@ -444,29 +421,28 @@ public class SessionService(
             session.EndTime ??= DateTime.UtcNow;
         }
 
-        return new SessionResponseBase(sessionResponse);
+        return sessionResponse;
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServer, IPEndPoint currentEndPoint, Guid serverFarmId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(ServerCache currentServer, IPEndPoint currentEndPoint, Guid serverFarmId, Guid deviceId)
     {
         // prevent re-redirect if device has already redirected to this serverModel
         var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}";
-        if (!_agentOptions.AllowRedirect ||
+        if (!agentOptions.Value.AllowRedirect ||
             (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
-            if (IsServerReady(currentServer))
+            if (currentServer.IsReady)
                 return currentEndPoint;
         }
 
         // get all servers of this farm
         var servers = await cacheService.GetServers();
-        var farmServers = servers.Values
+        var farmServers = servers
             .Where(server =>
                 server.ProjectId == currentServer.ProjectId &&
                 server.ServerFarmId == currentServer.ServerFarmId &&
-                server.AccessPoints.Any(accessPoint =>
-                    accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
-                IsServerReady(server))
+                server.AccessPoints.Any(accessPoint => accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
+                server.IsReady)
             .ToArray();
 
         // find the best free server
@@ -483,10 +459,5 @@ public class SessionService(
         }
 
         return null;
-    }
-
-    private bool IsServerReady(ServerModel currentServerModel)
-    {
-        return ServerUtil.IsServerReady(currentServerModel, _agentOptions.LostServerThreshold);
     }
 }

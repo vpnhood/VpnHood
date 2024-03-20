@@ -144,7 +144,7 @@ public class AccessTokenTest
             .Single(x => x.AccessTokenId == accessToken2B.AccessTokenId)
             .Secret;
 
-        var certificateData = await farm2.DefaultServer.AgentClient.GetSslCertificateData(farm2.DefaultServer.ServerConfig.TcpEndPointsValue.First());
+        var certificateData = farm2.DefaultServer.ServerConfig.Certificates.First().RawData;
         var x509Certificate2 = new X509Certificate2(certificateData);
 
         var accessKey = await farm2.TestApp.AccessTokensClient.GetAccessKeyAsync(testApp.ProjectId, accessToken2B.AccessTokenId);
@@ -190,7 +190,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task GetAccessKey_fail_if_server_token_not_usable()
     {
-        var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
         {
             UseHostName = false,
             ServerFarmName = Guid.NewGuid().ToString()
@@ -203,7 +203,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task GetAccessKey_ForIp()
     {
-        var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
         {
             UseHostName = false,
             ServerFarmName = Guid.NewGuid().ToString()
@@ -225,11 +225,8 @@ public class AccessTokenTest
     public async Task GetAccessKey_ForDomain()
     {
         var testApp = await TestApp.Create();
-        var certificate = await testApp.CertificatesClient.CreateBySelfSignedAsync(testApp.ProjectId, new CertificateSelfSignedParams());
-
-        var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
+        using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
-            CertificateId = certificate.CertificateId,
             UseHostName = true,
             ServerFarmName = Guid.NewGuid().ToString()
         });
@@ -250,7 +247,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Quota()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         await farm.CreateAccessToken();
         var accessTokens = await farm.TestApp.AccessTokensClient.ListAsync(farm.ProjectId);
 
@@ -310,7 +307,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task List()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var accessTokenDom1 = await farm.CreateAccessToken(true);
         var accessTokenDom2 = await farm.CreateAccessToken();
 
@@ -350,7 +347,7 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Delete_Many()
     {
-        var farm = await ServerFarmDom.Create();
+        using var farm = await ServerFarmDom.Create();
         var tokens1 = await farm.TestApp.AccessTokensClient.ListAsync(farm.ProjectId);
 
         var accessTokenDom1 = await farm.CreateAccessToken();

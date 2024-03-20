@@ -1,5 +1,5 @@
 ﻿using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
@@ -14,7 +14,7 @@ public static class ProjectConverter
             GaApiSecret = model.GaApiSecret,
             GaMeasurementId = model.GaMeasurementId,
             SubscriptionType = model.SubscriptionType,
-            CreatedTime = model.CreatedTime,
+            CreatedTime = model.CreatedTime
         };
         return project;
     }

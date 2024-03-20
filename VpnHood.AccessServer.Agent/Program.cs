@@ -1,16 +1,14 @@
 using System.Text.Json;
-using GrayMint.Common.AspNetCore;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Persistence;
-using VpnHood.AccessServer.Agent.Services;
-using NLog;
-using Microsoft.AspNetCore.Authorization;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
+using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
-using NLog.Web;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.Services;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -18,13 +16,22 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        // nLog
-        LogManager.Setup();
-
         var builder = WebApplication.CreateBuilder(args);
+        var agentOptions = builder.Configuration.GetSection("App").Get<AgentOptions>() ?? throw new Exception("Could not read AgentOptions.");
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
         builder.Services.AddGrayMintCommonServices(new RegisterServicesOptions());
         builder.Services.AddGrayMintSwagger("VpnHood Agent Server", false);
+        builder.Services.AddGrayMintJob<CacheService>(new GrayMintJobOptions
+        {
+            DueTime = agentOptions.SaveCacheInterval,
+            Interval = agentOptions.SaveCacheInterval
+        });
+
+        // logger
+        builder.Logging.AddSimpleConsole(c =>
+        {
+            c.TimestampFormat = "[HH:mm:ss] ";
+        });
 
         //Authentication
         builder.Services
@@ -51,23 +58,19 @@ public class Program
                 options.AddPolicy(AgentPolicy.VpnServerPolicy, policy);
             });
 
+        // DbContext
         builder.Services
-            .AddScoped<VhRepo>()
             .AddDbContextPool<VhContext>(options =>
             {
-                options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
 
+        builder.Services.AddScoped<VhRepo>();
+        builder.Services.AddScoped<VhAgentRepo>();
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<AgentService>();
         builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
-        builder.Services.AddHostedService<TimedHostedService>();
-
-        // NLog: Setup NLog for Dependency injection
-        builder.Logging.ClearProviders();
-        builder.Host.UseNLog();
 
         //---------------------
         // Create App
@@ -91,7 +94,6 @@ public class Program
         }
 
         await GrayMintApp.RunAsync(webApp, args);
-        LogManager.Shutdown();
     }
-   
+
 }

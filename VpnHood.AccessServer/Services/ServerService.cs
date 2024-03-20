@@ -1,17 +1,21 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.AccessServer.Persistence;
 using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Clients;
 using Microsoft.Extensions.Options;
+using Renci.SshNet;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.Common.Utils;
+using VpnHood.AccessServer.Dtos.Servers;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Persistence.Utils;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
-using Renci.SshNet;
+using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -20,6 +24,7 @@ public class ServerService(
     VhContext vhContext,
     IOptions<AppOptions> appOptions,
     AgentCacheClient agentCacheClient,
+    ServerConfigureService serverConfigureService,
     SubscriptionService subscriptionService,
     AgentSystemClient agentSystemClient)
 {
@@ -30,15 +35,16 @@ public class ServerService(
         await subscriptionService.AuthorizeCreateServer(projectId);
 
         // validate
-        var serverFarm = await vhRepo.GetServerFarm(projectId, createParams.ServerFarmId, true, true);
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId, 
+            includeServers: true, includeCertificate: true);
 
         // Resolve Name Template
         var serverName = createParams.ServerName?.Trim();
         if (string.IsNullOrWhiteSpace(serverName)) serverName = Resource.NewServerTemplate;
         if (serverName.Contains("##"))
         {
-            var names = await vhRepo.GetServerNames(projectId);
-            serverName = AccessUtil.FindUniqueName(serverName, names);
+            var names = await vhRepo.ServerGetNames(projectId);
+            serverName = AccessServerUtil.FindUniqueName(serverName, names);
         }
 
         var server = new ServerModel
@@ -54,6 +60,17 @@ public class ServerService(
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? Array.Empty<AccessPoint>()),
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
+            Description = null,
+            LastConfigCode = null,
+            LastConfigError = null,
+            LogicalCoreCount = null,
+            OsInfo = null,
+            TotalMemory = null,
+            Version = null,
+            ConfigureTime = null,
+            EnvironmentVersion = null,
+            MachineName = null,
+            IsDeleted = false
         };
 
         // add server and update FarmToken
@@ -63,8 +80,7 @@ public class ServerService(
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
 
-
-        var serverDto = server.ToDto(appOptions.Value.LostServerThreshold);
+        var serverDto = server.ToDto(null);
         return serverDto;
 
     }
@@ -75,13 +91,13 @@ public class ServerService(
             throw new ArgumentException($"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set", nameof(updateParams));
 
         // validate
-        var server = await vhRepo.GetServer(projectId, serverId);
-        var oldConfigCode = server.ConfigCode;
+        var server = await vhRepo.ServerGet(projectId, serverId);
+        var oldServerFarmId = server.ServerFarmId;
 
         if (updateParams.ServerFarmId != null)
         {
             // make sure new farm belong to this account
-            var serverFarm = await vhRepo.GetServerFarm(projectId, updateParams.ServerFarmId);
+            var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = VhUtil.GenerateKey();
@@ -93,23 +109,20 @@ public class ServerService(
             server.AccessPoints = ValidateAccessPoints(updateParams.AccessPoints);
         }
 
-        // reconfig if required
-        if (updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.AccessPoints != null || updateParams.ServerFarmId != null)
-            server.ConfigCode = Guid.NewGuid();
-
         await vhRepo.SaveChangesAsync();
 
-        // update FarmToken if config has been changed
-        if (oldConfigCode != server.ConfigCode)
+        // reconfig old farm if required
+        if (oldServerFarmId != server.ServerFarmId)
         {
-            var serverFarm = await vhRepo.GetServerFarm(projectId, server.ServerFarmId, true, true);
+            var serverFarm = await vhRepo.ServerFarmGet(projectId, oldServerFarmId, includeServers: true, includeCertificate: true);
             FarmTokenBuilder.UpdateIfChanged(serverFarm);
             await vhRepo.SaveChangesAsync();
         }
 
-        await agentCacheClient.InvalidateServer(server.ServerId);
-        var serverCache = await agentCacheClient.GetServer(server.ServerId);
-        return serverCache ?? server.ToDto(appOptions.Value.LostServerThreshold);
+        // reconfig current server if required
+        var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.ServerFarmId != null;
+        var serverCache = await serverConfigureService.InvalidateServer(projectId, serverId, reconfigure);
+        return server.ToDto(serverCache);
     }
 
     public async Task<ServerData[]> List(Guid projectId,
@@ -134,42 +147,20 @@ public class ServerService(
                 x.ServerFarmId.ToString() == search);
 
         var servers = await query
-            .AsNoTracking()
             .OrderBy(x => x.ServerId)
             .Skip(recordIndex)
             .Take(recordCount)
+            .AsNoTracking()
             .ToArrayAsync();
 
-        // update all status
-        var serverStatus = await vhContext.ServerStatuses
-            .AsNoTracking()
-            .Where(serverStatus =>
-                serverStatus.IsLast && serverStatus.ProjectId == projectId &&
-                (serverId == null || serverStatus.ServerId == serverId) &&
-                (serverFarmId == null || serverStatus.Server!.ServerFarmId == serverFarmId))
-            .ToDictionaryAsync(x => x.ServerId);
-
-        foreach (var serverModel in servers)
-            if (serverStatus.TryGetValue(serverModel.ServerId, out var serverStatusEx))
-                serverModel.ServerStatus = serverStatusEx;
-
         // create Dto
+        var cachedServers = await agentCacheClient.GetServers(projectId);
         var serverDatas = servers
             .Select(serverModel => new ServerData
             {
-                Server = serverModel.ToDto(appOptions.Value.LostServerThreshold)
+                Server = serverModel.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == serverModel.ServerId))
             })
             .ToArray();
-
-        // update from cache
-        var cachedServers = await agentCacheClient.GetServers(projectId);
-        foreach (var serverData in serverDatas)
-        {
-            var cachedServer = cachedServers.SingleOrDefault(x => x.ServerId == serverData.Server.ServerId);
-            if (cachedServer == null) continue;
-            serverData.Server.ServerStatus = cachedServer.ServerStatus;
-            serverData.Server.ServerState = cachedServer.ServerState;
-        }
 
         // update server status if it is lost
         foreach (var serverData in serverDatas.Where(x => x.Server.ServerState is ServerState.Lost or ServerState.NotInstalled))
@@ -287,13 +278,10 @@ public class ServerService(
             .ToArrayAsync();
 
         // update model ServerStatusEx
-        var servers = serverModels
-            .Select(server => server.ToDto(appOptions.Value.LostServerThreshold))
-            .ToArray();
-
-        // update status from cache
         var cachedServers = await agentCacheClient.GetServers(projectId);
-        ServerUtil.UpdateByCache(servers, cachedServers);
+        var servers = serverModels
+            .Select(server => server.ToDto(cachedServers.FirstOrDefault(x => x.ServerId == server.ServerId)))
+            .ToArray();
 
         // create usage summary
         var usageSummary = new ServersStatusSummary
@@ -305,30 +293,10 @@ public class ServerService(
             LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
             SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
             TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
-            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
+            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed)
         };
 
         return usageSummary;
-    }
-
-    public async Task ReconfigServers(Guid projectId, Guid? serverFarmId = null,
-        Guid? serverProfileId = null, Guid? certificateId = null)
-    {
-        var servers = await vhContext.Servers.Where(server =>
-            server.ProjectId == projectId &&
-            (serverFarmId == null || server.ServerFarmId == serverFarmId) &&
-            (serverProfileId == null || server.ServerFarm!.ServerProfileId == serverProfileId) &&
-            (certificateId == null || server.ServerFarm!.CertificateId == certificateId))
-            .ToArrayAsync();
-
-        foreach (var server in servers)
-            server.ConfigCode = Guid.NewGuid();
-
-        await vhContext.SaveChangesAsync();
-        await agentCacheClient.InvalidateProjectServers(projectId,
-            serverFarmId: serverFarmId,
-            serverProfileId: serverProfileId,
-            certificateId: certificateId);
     }
 
     public async Task Delete(Guid projectId, Guid serverId)
@@ -341,22 +309,11 @@ public class ServerService(
         await vhContext.SaveChangesAsync();
     }
 
-    public async Task Reconfigure(Guid projectId, Guid serverId)
-    {
-        var server = await vhContext.Servers
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.ServerId == serverId);
-
-        server.ConfigCode = Guid.NewGuid();
-        await vhContext.SaveChangesAsync();
-        await agentCacheClient.InvalidateServer(server.ServerId);
-    }
-
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
+        var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
@@ -367,13 +324,13 @@ public class ServerService(
         await using var keyStream = new MemoryStream(installParams.UserPrivateKey);
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase);
 
-        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
+        var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
     }
 
-    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? loginPassword)
+    private static async Task InstallBySsh(ServerInstallAppSettings appSettings, ConnectionInfo connectionInfo, string? loginPassword)
     {
         using var sshClient = new SshClient(connectionInfo);
         sshClient.Connect();
@@ -449,4 +406,8 @@ public class ServerService(
         return script;
     }
 
+    public Task<ServerCache?> Reconfigure(Guid projectId, Guid serverId)
+    {
+        return serverConfigureService.InvalidateServer(projectId: projectId, serverId: serverId, reconfigure: true);
+    }
 }

@@ -1,14 +1,15 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
-using VpnHood.AccessServer.DtoConverters;
-using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Security;
-using VpnHood.Common.Utils;
-using VpnHood.AccessServer.Persistence;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
-using VpnHood.AccessServer.Utils;
+using VpnHood.AccessServer.Report.Views;
+using VpnHood.AccessServer.Security;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -16,9 +17,9 @@ public class ProjectService(
     VhContext vhContext,
     SubscriptionService subscriptionService,
     AgentCacheClient agentCacheClient,
-    UsageReportService usageReportService,
-    IRoleProvider roleProvider,
-    CertificateService certificateService)
+    CertificateService certificateService,
+    ReportUsageService usageReportService,
+    IRoleProvider roleProvider)
 {
     public async Task<Project> Create(string ownerUserId)
     {
@@ -34,43 +35,49 @@ public class ProjectService(
             ServerProfileName = Resource.DefaultServerProfile,
             IsDefault = true,
             IsDeleted = false,
-            CreatedTime = DateTime.UtcNow,
+            CreatedTime = DateTime.UtcNow
         };
 
         // Farm
         var serverFarm = new ServerFarmModel
         {
-            Servers = [],
+            ProjectId = projectId,
             ServerFarmId = Guid.NewGuid(),
             ServerFarmName = "Server Farm 1",
             UseHostName = false,
-            Certificate = await certificateService.CreateSelfSingedInternal(projectId),
+            ServerProfileId = serverProfile.ServerProfileId,
             ServerProfile = serverProfile,
             Secret = VhUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
-            TokenUrl = null
+            TokenUrl = null,
+            PushTokenToClient = true,
+            Servers = []
         };
-        FarmTokenBuilder.UpdateIfChanged(serverFarm);
 
         // create project
         var project = new ProjectModel
         {
             ProjectId = projectId,
+            ProjectName = null,
             SubscriptionType = SubscriptionType.Free,
             CreatedTime = DateTime.UtcNow,
+            GaApiSecret = null,
+            GaMeasurementId = null,
+            LetsEncryptAccount = null,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
-                serverProfile,
+                serverProfile
             },
             ServerFarms = new HashSet<ServerFarmModel>
             {
-                serverFarm,
+                serverFarm
             },
             AccessTokens = new HashSet<AccessTokenModel>
             {
                 new()
                 {
+                    ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
                     ServerFarm = serverFarm,
                     AccessTokenName = "Public",
@@ -79,12 +86,23 @@ public class ProjectService(
                     IsPublic = true,
                     IsEnabled= true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow
+                    CreatedTime= DateTime.UtcNow,
+                    ModifiedTime = DateTime.UtcNow,
+                    ExpirationTime = null,
+                    LastUsedTime = null,
+                    MaxDevice = 0,
+                    MaxTraffic = 0,
+                    Lifetime = 0,
+                    Url = null,
+                    FirstUsedTime = null,
+                    ServerFarmId = serverFarm.ServerFarmId
                 },
 
                 new()
                 {
+                    ProjectId = projectId,
                     AccessTokenId = Guid.NewGuid(),
+                    ServerFarmId = serverFarm.ServerFarmId ,
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
@@ -93,13 +111,23 @@ public class ProjectService(
                     Secret = VhUtil.GenerateKey(),
                     IsEnabled= true,
                     IsDeleted = false,
-                    CreatedTime= DateTime.UtcNow
+                    CreatedTime= DateTime.UtcNow,
+                    ModifiedTime = DateTime.UtcNow,
+                    FirstUsedTime = null,
+                    ExpirationTime = null,
+                    LastUsedTime = null,
+                    MaxTraffic = 0,
+                    Lifetime = 0,
+                    Url = null
                 }
             }
         };
 
         await vhContext.Projects.AddAsync(project);
         await vhContext.SaveChangesAsync();
+
+        // create default certificate
+        await certificateService.Replace(serverFarm.ProjectId, serverFarm.ServerFarmId, null);
 
         // make current user the owner
         await roleProvider.AddUserRole(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);

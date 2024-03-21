@@ -5,6 +5,7 @@ using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
+using VpnHood.Client.App.Droid.GooglePlay.Ads;
 using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
@@ -44,6 +45,7 @@ public class MainActivity : AndroidAppMainActivity
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
+        //GooglePlayAdService.InitAds(this, "ca-app-pub-3940256099942544/1033173712");
         VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 

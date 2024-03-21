@@ -113,6 +113,11 @@ public class VhContext : DbContext
                 .IsUnique();
 
             entity
+                .HasIndex(e => new { e.AutoValidate, e.ExpirationTime })
+                .IncludeProperties(e => new { e.ValidateErrorCount })
+                .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0 and {nameof(CertificateModel.AutoValidate)} = 1");
+
+            entity
                 .HasIndex(x => new { x.ServerFarmId, x.CommonName })
                 .HasFilter($"{nameof(CertificateModel.IsDeleted)} = 0");
 

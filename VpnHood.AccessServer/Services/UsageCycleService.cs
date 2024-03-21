@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using GrayMint.Common.AspNetCore.Jobs;
+using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
@@ -8,7 +9,8 @@ namespace VpnHood.AccessServer.Services;
 public class UsageCycleService(
     ILogger<UsageCycleService> logger,
     VhContext vhContext,
-    AgentCacheClient agentCacheClient)
+    AgentCacheClient agentCacheClient) 
+    : IGrayMintJob
 {
     private string? _lastCycleIdCache;
 
@@ -29,7 +31,7 @@ public class UsageCycleService(
         if (_lastCycleIdCache == CurrentCycleId)
             return;
 
-        logger.LogTrace("Checking usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
+        logger.LogInformation("Checking usage cycles. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
 
         // check is current cycle already processed from db
         if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
@@ -60,4 +62,10 @@ public class UsageCycleService(
         logger.LogInformation("All usage cycles has been reset. CurrentCycleId: {CurrentCycleId}", CurrentCycleId);
 
     }
+
+    public Task RunJob(CancellationToken cancellationToken)
+    {
+        return UpdateCycle();
+    }
+
 }

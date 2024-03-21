@@ -5,7 +5,7 @@ using VpnHood.AccessServer.Persistence.Views;
 
 namespace VpnHood.AccessServer.Persistence;
 
-public class VhRepo(VhContext vhContext) 
+public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
 {
 
@@ -308,6 +308,21 @@ public class VhRepo(VhContext vhContext)
             result.ServerFarm.Certificate = result.Certificate;
 
         return results;
+    }
+
+    public async Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount, TimeSpan retryInterval)
+    {
+        var expirationTime = DateTime.UtcNow + expireBy;
+        var errorTime = DateTime.UtcNow - retryInterval;
+
+        var certificates = await vhContext.Certificates
+            .Where(x => !x.IsDeleted && x.AutoValidate)
+            .Where(x => x.ValidateErrorCount < maxErrorCount)
+            .Where(x => x.ValidateErrorTime < errorTime)
+            .Where(x => x.ExpirationTime < expirationTime || !x.IsTrusted)
+            .ToArrayAsync();
+
+        return certificates;
     }
 }
 

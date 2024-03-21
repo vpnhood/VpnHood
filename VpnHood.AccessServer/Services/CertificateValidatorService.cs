@@ -1,5 +1,8 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using GrayMint.Common.AspNetCore.Jobs;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos.Certificates;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Services.Acme;
@@ -9,9 +12,11 @@ namespace VpnHood.AccessServer.Services;
 public class CertificateValidatorService(
     VhRepo vhRepo,
     ServerConfigureService serverConfigureService,
+    IOptions<CertificateValidatorOptions> certificateValidatorOptions,
     IServiceScopeFactory serviceScopeFactory,
     ILogger<CertificateService> logger,
     IAcmeOrderFactory acmeOrderFactory)
+    : IGrayMintJob
 {
     public async Task ValidateJob(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
     {
@@ -149,4 +154,18 @@ public class CertificateValidatorService(
         return csr;
     }
 
+    public async Task RunJob(CancellationToken cancellationToken)
+    {
+        // retryInterval is 90% AutoValidate interval to make sure we don't miss it
+        var certificates = await vhRepo.CertificateExpiringList(
+            certificateValidatorOptions.Value.ExpirationThreshold,
+            certificateValidatorOptions.Value.MaxRetry,
+            certificateValidatorOptions.Value.Interval * 0.9); 
+
+        var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 10 };
+        await Parallel.ForEachAsync(certificates, parallelOptions, async (certificate, ct) =>
+        {
+            await Validate(certificate.ProjectId, certificate.ServerFarmId, true, ct);
+        });
+    }
 }

@@ -3,11 +3,13 @@ using System.Text.Json;
 using GrayMint.Authorization;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
@@ -21,12 +23,19 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        // nLog
         var builder = WebApplication.CreateBuilder(args);
 
         // app options
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
+        var certificateValidatorOptions = builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ?? new CertificateValidatorOptions();
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+        builder.Services.Configure<CertificateValidatorOptions>(builder.Configuration.GetSection("CertificateValidator"));
+
+        // logger
+        builder.Logging.AddSimpleConsole(c =>
+        {
+            c.TimestampFormat = "[HH:mm:ss] ";
+        });
 
         // Graymint
         builder.Services
@@ -52,9 +61,29 @@ public class Program
             httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
         });
 
+        // Update Cycle every 1 hour
+        builder.Services
+            .AddGrayMintJob<CertificateValidatorService>(
+                new GrayMintJobOptions // validate certificate every 24 hours
+                {
+                    DueTime = certificateValidatorOptions.Due,
+                    Interval = certificateValidatorOptions.Interval
+                })
+            .AddGrayMintJob<UsageCycleService>(
+                new GrayMintJobOptions
+                {
+                    DueTime = appOptions.AutoMaintenanceInterval,
+                    Interval = appOptions.AutoMaintenanceInterval
+                })
+            .AddGrayMintJob<SyncService>(
+                new GrayMintJobOptions
+                {
+                    DueTime = appOptions.AutoMaintenanceInterval,
+                    Interval = appOptions.AutoMaintenanceInterval
+                });
+
         builder.Services
             .AddHttpClient()
-            .AddHostedService<TimedHostedService>()
             .AddScoped<VhRepo>()
             .AddScoped<SyncService>()
             .AddScoped<ProjectService>()

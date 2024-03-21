@@ -5,9 +5,11 @@ using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Persistence;
 using VpnHood.AccessServer.Security;
@@ -45,6 +47,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
+    public ILogger<TestApp> Logger => Scope.ServiceProvider.GetRequiredService<ILogger<TestApp>>();
 
     public ApiKey SystemAdminApiKey { get; private set; } = default!;
     public AuthenticationHeaderValue SystemAdminAuthorization => new(SystemAdminApiKey.AccessToken.Scheme, SystemAdminApiKey.AccessToken.Value);

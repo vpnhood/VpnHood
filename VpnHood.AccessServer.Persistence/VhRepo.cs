@@ -318,7 +318,8 @@ public class VhRepo(VhContext vhContext)
         var certificates = await vhContext.Certificates
             .Where(x => !x.IsDeleted && x.AutoValidate)
             .Where(x => x.ValidateErrorCount < maxErrorCount)
-            .Where(x => x.ExpirationTime < expirationTime && x.ValidateErrorTime < errorTime)
+            .Where(x => x.ValidateErrorTime < errorTime)
+            .Where(x => x.ExpirationTime < expirationTime || !x.IsTrusted)
             .ToArrayAsync();
 
         return certificates;

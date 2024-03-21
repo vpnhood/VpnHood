@@ -1,8 +1,11 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -66,7 +69,7 @@ public class CertificateTest
 
         await farm.Reload();
         var server = await farm.AddNewServer();
-        var  x509Certificate2 = new X509Certificate2(server.ServerConfig.Certificates.First().RawData);
+        var x509Certificate2 = new X509Certificate2(server.ServerConfig.Certificates.First().RawData);
 
         var subject = x509Certificate2.Subject;
         Assert.AreEqual(csr.CommonName, Regex.Match(subject, @"CN=([^,]+)").Groups[1].Value);
@@ -82,8 +85,8 @@ public class CertificateTest
     {
         // create farm and server
         using var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(5);
-        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(5);
+        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(3);
+        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(3);
         var server = await farm.AddNewServer();
 
         await server.Reload();
@@ -116,7 +119,8 @@ public class CertificateTest
         Assert.IsNotNull(server.ServerConfig.DnsChallenge);
         VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback],
-            server.ServerConfig.DnsChallenge.Token, server.ServerConfig.DnsChallenge.KeyAuthorization, TimeSpan.FromMinutes(1));
+            server.ServerConfig.DnsChallenge.Token, server.ServerConfig.DnsChallenge.KeyAuthorization,
+            TimeSpan.FromMinutes(1));
         http01ChallengeService.Start();
         await Task.Delay(500); // wait for listening before server send the request 
 
@@ -131,5 +135,91 @@ public class CertificateTest
             await farm.Reload();
             return farm.ServerFarm.Certificate!.IsTrusted;
         });
+    }
+
+    [TestMethod]
+    public async Task ValidateJob()
+    {
+        var testApp = await TestApp.Create(new Dictionary<string, string?>
+        {
+            [$"CertificateValidator:{nameof(CertificateValidatorOptions.Interval)}"] = TimeSpan.FromSeconds(1).ToString(),
+            [$"CertificateValidator:{nameof(CertificateValidatorOptions.Due)}"] = TimeSpan.FromSeconds(1).ToString(),
+        });
+
+        await testApp.VhContext.Certificates.ExecuteDeleteAsync();
+
+        // create farm and server
+        using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(4);
+        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(4);
+        Assert.IsNotNull(farm.ServerFarm.Certificate);
+        var server = await farm.AddNewServer();
+
+        // create new certificate
+        await farm.CertificateReplace(new CertificateCreateParams
+        {
+            CertificateSigningRequest = new CertificateSigningRequest
+            {
+                CommonName = "localhost"
+            }
+        });
+
+        // configure server to the latest config
+        await server.Configure();
+        Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
+
+        // set AutoValidate 
+        await farm.Update(new ServerFarmUpdateParams { AutoValidateCertificate = new PatchOfBoolean { Value = true } });
+        await server.WaitForState(ServerState.Configuring);
+        await server.Configure();
+        await server.WaitForState(ServerState.Idle);
+
+        // wait for auto validate to fail
+        testApp.Logger.LogInformation("Test: Waiting for validation to fail.");
+        await VhTestUtil.AssertEqualsWait(false, async () =>
+        {
+            await farm.Reload();
+            return string.IsNullOrEmpty(farm.ServerFarm.Certificate.ValidateError);
+        });
+        Assert.IsFalse(farm.ServerFarm.Certificate.ValidateInprogress);
+        Assert.IsTrue(farm.ServerFarm.Certificate.ValidateErrorCount > 0);
+        Assert.IsNotNull(farm.ServerFarm.Certificate.ValidateErrorTime);
+        Assert.AreEqual(0, farm.ServerFarm.Certificate.ValidateCount);
+
+        // wait for auto validating
+        testApp.Logger.LogInformation("Test: Waiting for ValidateInprogress to be true.");
+        await VhTestUtil.AssertEqualsWait(true, async () =>
+        {
+            await farm.Reload();
+            return farm.ServerFarm.Certificate.ValidateInprogress;
+        });
+
+
+        testApp.Logger.LogInformation("Test: start http01 challenge.");
+        // start http01 challenge
+        await server.Configure(false);
+        Assert.IsNotNull(server.ServerConfig.DnsChallenge);
+        using var http01ChallengeService = new Http01ChallengeService([IPAddress.Loopback],
+            server.ServerConfig.DnsChallenge.Token, server.ServerConfig.DnsChallenge.KeyAuthorization,
+            TimeSpan.FromMinutes(1));
+        http01ChallengeService.Start();
+        await Task.Delay(500); // wait for listening before server send the request 
+
+        await server.SendStatus();
+
+        // wait for auto validating
+        testApp.Logger.LogInformation("Test: Waiting for ValidateInprogress to be false.");
+        Assert.IsNotNull(farm.ServerFarm.Certificate);
+        await VhTestUtil.AssertEqualsWait(false, async () =>
+        {
+            await farm.Reload();
+            return farm.ServerFarm.Certificate.ValidateInprogress;
+        });
+        Assert.IsTrue(farm.ServerFarm.Certificate.IsTrusted);
+        Assert.IsNull(farm.ServerFarm.Certificate.ValidateErrorTime);
+        Assert.IsFalse(farm.ServerFarm.Certificate.ValidateInprogress);
+        Assert.AreEqual(0, farm.ServerFarm.Certificate.ValidateErrorCount);
+        Assert.AreEqual(1, farm.ServerFarm.Certificate.ValidateCount);
+        Assert.IsNull(farm.ServerFarm.Certificate.ValidateError);
     }
 }

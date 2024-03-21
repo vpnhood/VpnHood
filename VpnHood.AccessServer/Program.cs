@@ -9,6 +9,7 @@ using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
@@ -22,12 +23,19 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        // nLog
         var builder = WebApplication.CreateBuilder(args);
 
         // app options
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
+        var certificateValidatorOptions = builder.Configuration.GetSection("CertificateValidator").Get<CertificateValidatorOptions>() ?? new CertificateValidatorOptions();
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+        builder.Services.Configure<CertificateValidatorOptions>(builder.Configuration.GetSection("CertificateValidator"));
+
+        // logger
+        builder.Logging.AddSimpleConsole(c =>
+        {
+            c.TimestampFormat = "[HH:mm:ss] ";
+        });
 
         // Graymint
         builder.Services
@@ -58,8 +66,8 @@ public class Program
             .AddGrayMintJob<CertificateValidatorService>(
                 new GrayMintJobOptions // validate certificate every 24 hours
                 {
-                    DueTime = TimeSpan.FromSeconds(5),
-                    Interval = TimeSpan.FromHours(24)
+                    DueTime = certificateValidatorOptions.Due,
+                    Interval = certificateValidatorOptions.Interval
                 })
             .AddGrayMintJob<UsageCycleService>(
                 new GrayMintJobOptions

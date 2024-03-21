@@ -3,7 +3,7 @@
 public class AppOptions
 {
     public const string AgentHttpClientName = "AgentHttpClient";
-    public TimeSpan? AutoMaintenanceInterval { get; set; }
+    public TimeSpan AutoMaintenanceInterval { get; set; } = TimeSpan.FromMinutes(60);
     public Uri AgentUrl { get; set; } = default!;
     public Uri? AgentUrlPrivate { get; set; }
     public string AgentSystemAuthorization { get; set; } = default!;

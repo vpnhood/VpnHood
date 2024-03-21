@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using GrayMint.Common.AspNetCore.Jobs;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
@@ -12,6 +13,7 @@ public class CertificateValidatorService(
     IServiceScopeFactory serviceScopeFactory,
     ILogger<CertificateService> logger,
     IAcmeOrderFactory acmeOrderFactory)
+    : IGrayMintJob
 {
     public async Task ValidateJob(Guid projectId, Guid serverFarmId, bool force, CancellationToken cancellationToken)
     {
@@ -149,4 +151,13 @@ public class CertificateValidatorService(
         return csr;
     }
 
+    public async Task RunJob(CancellationToken cancellationToken)
+    {
+        var certificates = await vhRepo.CertificateExpiringList(TimeSpan.FromDays(30), 5, TimeSpan.FromHours(23));
+        var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 10 };
+        await Parallel.ForEachAsync(certificates, parallelOptions, async (certificate, ct) =>
+        {
+            await Validate(certificate.ProjectId, certificate.ServerFarmId, true, ct);
+        });
+    }
 }

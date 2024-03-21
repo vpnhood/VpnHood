@@ -3,6 +3,7 @@ using System.Text.Json;
 using GrayMint.Authorization;
 using GrayMint.Authorization.RoleManagement.RoleProviders.Dtos;
 using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -52,9 +53,29 @@ public class Program
             httpClient.DefaultRequestHeaders.Authorization = AuthenticationHeaderValue.Parse(appOptions.AgentSystemAuthorization);
         });
 
+        // Update Cycle every 1 hour
+        builder.Services
+            .AddGrayMintJob<CertificateValidatorService>(
+                new GrayMintJobOptions // validate certificate every 24 hours
+                {
+                    DueTime = TimeSpan.FromSeconds(5),
+                    Interval = TimeSpan.FromHours(24)
+                })
+            .AddGrayMintJob<UsageCycleService>(
+                new GrayMintJobOptions
+                {
+                    DueTime = appOptions.AutoMaintenanceInterval,
+                    Interval = appOptions.AutoMaintenanceInterval
+                })
+            .AddGrayMintJob<SyncService>(
+                new GrayMintJobOptions
+                {
+                    DueTime = appOptions.AutoMaintenanceInterval,
+                    Interval = appOptions.AutoMaintenanceInterval
+                });
+
         builder.Services
             .AddHttpClient()
-            .AddHostedService<TimedHostedService>()
             .AddScoped<VhRepo>()
             .AddScoped<SyncService>()
             .AddScoped<ProjectService>()

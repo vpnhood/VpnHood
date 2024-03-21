@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using GrayMint.Common.AspNetCore.Jobs;
+using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report.Services;
@@ -9,13 +10,23 @@ public class SyncService(
     ILogger<SyncService> logger,
     ReportWriterService reportWriterService,
     VhContext vhContext)
+    : IGrayMintJob
 {
     public int BatchCount { get; set; } = 1000;
     public async Task Sync()
     {
+        logger.LogInformation("Start syncing the report database...");
+
         await SyncServerStatuses();
         await SyncAccessUsages();
         await SyncSessions();
+
+        logger.LogInformation("Finish syncing the report database.");
+    }
+
+    public Task RunJob(CancellationToken cancellationToken)
+    {
+        return Sync();
     }
 
     private async Task SyncAccessUsages()

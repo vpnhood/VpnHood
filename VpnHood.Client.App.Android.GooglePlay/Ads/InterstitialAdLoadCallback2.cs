@@ -1,13 +1,15 @@
-﻿/*
+﻿
+using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 using Android.Runtime;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 
 // fix google ad library problem
-public class InterstitialAdLoadCallback2 : InterstitialAdLoadCallback
+public class InterstitialAdLoadCallback2(Activity activity) : InterstitialAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
+    private InterstitialAd? _mInterstitialAd;
 
     // ReSharper disable once UnusedMember.Local
     private static Delegate GetOnAdLoadedHandler()
@@ -27,6 +29,13 @@ public class InterstitialAdLoadCallback2 : InterstitialAdLoadCallback
     [Register("onAdLoaded", "(Lcom/google/android/gms/ads/interstitial/InterstitialAd;)V", "GetOnAdLoadedHandler")]
     public virtual void OnAdLoaded(InterstitialAd interstitialAd)
     {
+        _mInterstitialAd = interstitialAd;
+        base.OnAdLoaded(interstitialAd);
+    }
+
+    public override void OnAdFailedToLoad(LoadAdError loadAdError)
+    {
+        _mInterstitialAd = null;
+        base.OnAdFailedToLoad(loadAdError);
     }
 }
-*/

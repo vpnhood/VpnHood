@@ -135,6 +135,11 @@ public class CertificateTest
             await farm.Reload();
             return farm.ServerFarm.Certificate!.IsTrusted;
         });
+
+        // Create a token and make sure it is valid and there is no CertificateHash
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsNull(token.ServerToken.CertificateHash);
     }
 
     [TestMethod]

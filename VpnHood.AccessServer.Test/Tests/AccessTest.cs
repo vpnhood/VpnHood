@@ -1,12 +1,14 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
 public class AccessTest
 {
+   
     [TestMethod]
     public async Task Foo()
     {

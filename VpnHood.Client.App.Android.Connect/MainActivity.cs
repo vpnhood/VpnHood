@@ -40,18 +40,24 @@ public class MainActivity : AndroidAppMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        //Android.Gms.Ads.MobileAds.Initialize(this); // for ads
 
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
-        //GooglePlayAdService.InitAds(this, "ca-app-pub-3940256099942544/1033173712");
+        var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnit);
+
+        if (VpnHoodApp.Instance.IsIdle && VpnHoodApp.Instance.ActiveClientProfile?.Token.IsAdRequired == true)
+            _ = googlePlayAdService.LoadRewardedAd(CancellationToken.None);
+
+
+        VpnHoodApp.Instance.AppAdService = googlePlayAdService;
         VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 
     protected override void OnDestroy()
     {
         VpnHoodApp.Instance.AccountService = null;
+        VpnHoodApp.Instance.AppAdService = null;
         base.OnDestroy();
     }
 }

@@ -24,6 +24,9 @@ public class Token
 
     [JsonPropertyName("sec")]
     public required byte[] Secret { get; set; }
+    
+    [JsonPropertyName("ad")]
+    public bool IsAdRequired { get; set; }
 
     [JsonPropertyName("ser")]
     public required ServerToken ServerToken { get; set; }

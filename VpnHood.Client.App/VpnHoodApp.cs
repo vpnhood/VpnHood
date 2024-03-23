@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -52,7 +53,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
-    public bool IsWaitingForAd { get; set; }
+    public bool IsWaitingForAd { get; private set; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
@@ -72,6 +73,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public AppResources Resources { get; }
     public IAppAccountService? AccountService { get; set; }
     public IAppUpdaterService? AppUpdaterService { get; set; }
+    public IAppAdService? AppAdService { get; set; }
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         options ??= new AppOptions();
@@ -260,6 +262,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _hasAnyDataArrived = false;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
+            IsWaitingForAd = false;
             _hasDiagnoseStarted = diagnose;
             _connectRequestTime = DateTime.Now;
             CheckConnectionStateChanged();
@@ -310,6 +313,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _connectCts?.Dispose();
             _connectCts = null;
             _isConnecting = false;
+            IsWaitingForAd = false;
             CheckConnectionStateChanged();
         }
     }
@@ -358,7 +362,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         if (_hasDiagnoseStarted)
             VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
 
-        // get token
+        // show token info
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
         // dump user settings
@@ -367,6 +371,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
         // save settings
         Settings.Save();
+
+        // Show ad if required
+        //todo: add test
+        string? adData = null;
+        if (token.IsAdRequired)
+        {
+            if (AppAdService == null) throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
+            IsWaitingForAd = true;
+            adData = await AppAdService.ShowAd(cancellationToken) ?? throw new AdException("This server requires a display ad but could not display it.");
+            IsWaitingForAd = false;
+        }
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
@@ -386,7 +401,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DropUdpPackets,
-            AppGa4MeasurementId = _appGa4MeasurementId
+            AppGa4MeasurementId = _appGa4MeasurementId,
+            AdData = adData
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;

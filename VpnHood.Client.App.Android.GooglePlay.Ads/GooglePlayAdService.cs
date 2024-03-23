@@ -29,14 +29,14 @@ public class GooglePlayAdService(
 
             _rewardedAdLoadCallback = new MyRewardedAdLoadCallback();
             var adRequest = new AdRequest.Builder().Build();
-            RewardedAd.Load(activity, rewardedAdUnitId, adRequest, _rewardedAdLoadCallback);
+            activity.RunOnUiThread(() => RewardedAd.Load(activity, rewardedAdUnitId, adRequest, _rewardedAdLoadCallback));
 
             var cancellationTask = new TaskCompletionSource();
-            cancellationToken.Register(() => cancellationTask.SetResult());
+            cancellationToken.Register(cancellationTask.SetResult);
             await Task.WhenAny(_rewardedAdLoadCallback.Task, cancellationTask.Task);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rewardedAd =  await _rewardedAdLoadCallback.Task;
+            var rewardedAd = await _rewardedAdLoadCallback.Task;
             _lastRewardedAdLoadTime = DateTime.Now;
             return rewardedAd;
         }
@@ -67,7 +67,7 @@ public class GooglePlayAdService(
 
         // wait for earn reward or dismiss
         var cancellationTask = new TaskCompletionSource();
-        cancellationToken.Register(() => cancellationTask.SetResult());
+        cancellationToken.Register(cancellationTask.SetResult);
         await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask, cancellationTask.Task);
         cancellationToken.ThrowIfCancellationRequested();
 

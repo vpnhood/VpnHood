@@ -156,12 +156,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
-            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, 
+            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Reconfigure server host
-            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue, 
-                serverConfig.DnsServersValue, serverConfig.Certificates.Select(x=>new X509Certificate2(x.RawData)).ToArray());
+            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue,
+                serverConfig.DnsServersValue, serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData)).ToArray());
 
             // Reconfigure dns challenge
             StartDnsChallenge(serverConfig.TcpEndPointsValue.Select(x => x.Address), serverConfig.DnsChallenge);
@@ -261,7 +261,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
         return VhLogger.IsAnonymousMode
-            ? VhUtil.RedactJsonValue(json, [nameof(ServerConfig.ServerSecret)])
+            ? VhUtil.RedactJsonValue(json, [
+                nameof(ServerConfig.ServerSecret), 
+                nameof(CertificateData.RawData),
+                nameof(ServerConfig.TcpEndPoints),
+                nameof(ServerConfig.UdpEndPoints),
+            ])
             : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
     }
 

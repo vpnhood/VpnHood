@@ -1,5 +1,6 @@
 using Android.Content;
 using Android.Content.PM;
+using Android.Gms.Ads;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
@@ -40,17 +41,18 @@ public class MainActivity : AndroidAppMainActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
+        
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
-        var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnit);
+        
+        // TODO enable for production with ad
+        /*var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnitId);
 
-        if (VpnHoodApp.Instance.IsIdle && VpnHoodApp.Instance.ActiveClientProfile?.Token.IsAdRequired == true)
+        if (VpnHoodApp.Instance.IsIdle && VpnHoodApp.Instance.ActiveClientProfile?.Token.IsAdRequired == true || true)
             _ = googlePlayAdService.LoadRewardedAd(CancellationToken.None);
 
-
-        VpnHoodApp.Instance.AppAdService = googlePlayAdService;
+        VpnHoodApp.Instance.AppAdService = googlePlayAdService;*/
         VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 

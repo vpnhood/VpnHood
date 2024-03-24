@@ -274,7 +274,7 @@ public class VhRepo(VhContext vhContext)
                     ValidateToken = x.ValidateToken,
                     IssueTime = x.IssueTime,
                     ExpirationTime = x.ExpirationTime,
-                    IsTrusted = x.IsTrusted,
+                    IsValidated = x.IsValidated,
                     Thumbprint = x.Thumbprint,
                     CommonName = x.CommonName,
                     CertificateId = x.CertificateId,
@@ -319,7 +319,7 @@ public class VhRepo(VhContext vhContext)
             .Where(x => !x.IsDeleted && x.AutoValidate)
             .Where(x => x.ValidateErrorCount < maxErrorCount)
             .Where(x => x.ValidateErrorTime < errorTime)
-            .Where(x => x.ExpirationTime < expirationTime || !x.IsTrusted)
+            .Where(x => x.ExpirationTime < expirationTime || !x.IsValidated)
             .ToArrayAsync();
 
         return certificates;

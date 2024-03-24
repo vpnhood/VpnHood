@@ -85,7 +85,7 @@ public class CertificateValidatorService(
                     certificate.ValidateErrorCount = 0;
                     certificate.ValidateCount++;
                     certificate.AutoValidate = true;
-                    certificate.IsTrusted = true;
+                    certificate.IsValidated = true;
                     certificate.RawData = res.Export(X509ContentType.Pfx);
                     certificate.Thumbprint = res.Thumbprint;
                     certificate.ExpirationTime = res.NotAfter;

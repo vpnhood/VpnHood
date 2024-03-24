@@ -7970,8 +7970,8 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Thumbprint { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isTrusted")]
-        public bool IsTrusted { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("isValidated")]
+        public bool IsValidated { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("autoValidate")]
         public bool AutoValidate { get; set; } = default!;

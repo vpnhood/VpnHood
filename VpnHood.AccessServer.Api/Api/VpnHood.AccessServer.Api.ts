@@ -5548,7 +5548,7 @@ export class Certificate implements ICertificate {
     expirationTime!: Date;
     createdTime!: Date;
     thumbprint!: string;
-    isTrusted!: boolean;
+    isValidated!: boolean;
     autoValidate!: boolean;
     validateCount!: number;
     validateInprogress!: boolean;
@@ -5573,7 +5573,7 @@ export class Certificate implements ICertificate {
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.thumbprint = _data["thumbprint"] !== undefined ? _data["thumbprint"] : <any>null;
-            this.isTrusted = _data["isTrusted"] !== undefined ? _data["isTrusted"] : <any>null;
+            this.isValidated = _data["isValidated"] !== undefined ? _data["isValidated"] : <any>null;
             this.autoValidate = _data["autoValidate"] !== undefined ? _data["autoValidate"] : <any>null;
             this.validateCount = _data["validateCount"] !== undefined ? _data["validateCount"] : <any>null;
             this.validateInprogress = _data["validateInprogress"] !== undefined ? _data["validateInprogress"] : <any>null;
@@ -5598,7 +5598,7 @@ export class Certificate implements ICertificate {
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["thumbprint"] = this.thumbprint !== undefined ? this.thumbprint : <any>null;
-        data["isTrusted"] = this.isTrusted !== undefined ? this.isTrusted : <any>null;
+        data["isValidated"] = this.isValidated !== undefined ? this.isValidated : <any>null;
         data["autoValidate"] = this.autoValidate !== undefined ? this.autoValidate : <any>null;
         data["validateCount"] = this.validateCount !== undefined ? this.validateCount : <any>null;
         data["validateInprogress"] = this.validateInprogress !== undefined ? this.validateInprogress : <any>null;
@@ -5616,7 +5616,7 @@ export interface ICertificate {
     expirationTime: Date;
     createdTime: Date;
     thumbprint: string;
-    isTrusted: boolean;
+    isValidated: boolean;
     autoValidate: boolean;
     validateCount: number;
     validateInprogress: boolean;

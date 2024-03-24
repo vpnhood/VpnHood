@@ -52,7 +52,7 @@ public static class FarmTokenBuilder
         // create token
         var serverToken = new ServerToken
         {
-            CertificateHash = serverFarm.Certificate.IsTrusted ? null : x509Certificate.GetCertHash(),
+            CertificateHash = serverFarm.Certificate.IsValidated ? null : x509Certificate.GetCertHash(),
             HostName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
             HostEndPoints = accessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
             Secret = serverFarm.Secret,

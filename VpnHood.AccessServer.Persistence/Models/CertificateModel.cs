@@ -11,7 +11,7 @@ public class CertificateModel
     public required DateTime ExpirationTime { get; set; }
     public required string Thumbprint { get; set; }
     public required DateTime CreatedTime { get; set; }
-    public required bool IsTrusted { get; set; }
+    public required bool IsValidated { get; set; }
     public required bool AutoValidate { get; set; }
     public required int ValidateCount { get; set; }
     public required bool ValidateInprogress { get; set; }

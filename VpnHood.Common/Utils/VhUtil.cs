@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Logging;
 
 namespace VpnHood.Common.Utils;
 
@@ -352,7 +351,15 @@ public static class VhUtil
     {
         foreach (var key in keys)
         {
-            var pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
+            // array
+            var jsonLength = json.Length;
+            var pattern = @"""key""\s*:\s*\[[^\]]*\]".Replace("key", key);
+            json = Regex.Replace(json, pattern, $"\"{key}\": [\"***\"]");
+            if (jsonLength != json.Length)
+                continue;
+
+            // single
+            pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
             json = Regex.Replace(json, pattern, " \"***\"");
         }
 

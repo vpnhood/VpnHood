@@ -61,9 +61,12 @@ public class GooglePlayAdService(
         var fullScreenContentCallback = new MyFullScreenContentCallback();
         var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
 
-        rewardedAd.SetServerSideVerificationOptions(serverSideVerificationOptions);
-        rewardedAd.FullScreenContentCallback = fullScreenContentCallback;
-        rewardedAd.Show(activity, userEarnedRewardListener);
+        activity.RunOnUiThread(() =>
+        {
+            rewardedAd.SetServerSideVerificationOptions(serverSideVerificationOptions);
+            rewardedAd.FullScreenContentCallback = fullScreenContentCallback;
+            rewardedAd.Show(activity, userEarnedRewardListener);
+        });
 
         // wait for earn reward or dismiss
         var cancellationTask = new TaskCompletionSource();

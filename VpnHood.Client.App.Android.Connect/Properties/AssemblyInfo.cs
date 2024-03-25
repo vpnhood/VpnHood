@@ -26,7 +26,9 @@ public static class AssemblyInfo
 
     // ReSharper disable StringLiteralTypo
     public static string FirebaseClientId => "216585339900-pc0j9nlkl15gqbtp95da1j6gvttm8aol.apps.googleusercontent.com";
-    public static string RewardedAdUnit => "ca-app-pub-3940256099942544/1033173712";
+    
+    // TODO change for production
+    public static string RewardedAdUnitId => "ca-app-pub-3940256099942544/5224354917";
     // ReSharper restore StringLiteralTypo
 
     public static bool IsDebugMode

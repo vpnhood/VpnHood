@@ -375,7 +375,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // Show ad if required
         //todo: add test
         string? adData = null;
-        if (token.IsAdRequired)
+        if (token.IsAdRequired || true)
         {
             if (AppAdService == null) throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
             IsWaitingForAd = true;

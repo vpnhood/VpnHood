@@ -1,5 +1,6 @@
 ﻿using Android.Content;
 using Android.Content.PM;
+using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 
@@ -7,18 +8,19 @@ namespace VpnHood.Client.Device.Droid.Utils;
 
 public class ActivityEvent : Activity, IActivityEvent
 {
-    public event EventHandler<ActivityResultEventArgs>? OnActivityResultEvent;
-    public event EventHandler<CreateEventArgs>? OnCreateEvent;
-    public event EventHandler<NewIntentEventArgs>? OnNewIntentEvent;
-    public event EventHandler<RequestPermissionsResultArgs>? OnRequestPermissionsResultEvent;
-    public event EventHandler<KeyDownArgs>? OnKeyDownEvent;
-    public event EventHandler? OnDestroyEvent;
+    public event EventHandler<ActivityResultEventArgs>? ActivityResultEvent;
+    public event EventHandler<CreateEventArgs>? CreateEvent;
+    public event EventHandler<NewIntentEventArgs>? NewIntentEvent;
+    public event EventHandler<RequestPermissionsResultArgs>? RequestPermissionsResultEvent;
+    public event EventHandler<KeyDownArgs>? KeyDownEvent;
+    public event EventHandler<Configuration>? ConfigurationChangedEvent;
+    public event EventHandler? DestroyEvent;
     public Activity Activity => this;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        OnCreateEvent?.Invoke(this, new CreateEventArgs
+        CreateEvent?.Invoke(this, new CreateEventArgs
         {
             SavedInstanceState = savedInstanceState
         });
@@ -26,7 +28,7 @@ public class ActivityEvent : Activity, IActivityEvent
 
     protected override void OnNewIntent(Intent? intent)
     {
-        OnNewIntentEvent?.Invoke(this, new NewIntentEventArgs
+        NewIntentEvent?.Invoke(this, new NewIntentEventArgs
         {
             Intent = intent
         });
@@ -34,7 +36,7 @@ public class ActivityEvent : Activity, IActivityEvent
 
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
     {
-        OnRequestPermissionsResultEvent?.Invoke(this, new RequestPermissionsResultArgs
+        RequestPermissionsResultEvent?.Invoke(this, new RequestPermissionsResultArgs
         {
             RequestCode = requestCode,
             Permissions = permissions,
@@ -52,13 +54,13 @@ public class ActivityEvent : Activity, IActivityEvent
             KeyEvent = e
         };
 
-        OnKeyDownEvent?.Invoke(this, args);
+        KeyDownEvent?.Invoke(this, args);
         return args.IsHandled ? args.IsHandled : base.OnKeyDown(keyCode, e);
     }
 
     protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
-        OnActivityResultEvent?.Invoke(this, new ActivityResultEventArgs
+        ActivityResultEvent?.Invoke(this, new ActivityResultEventArgs
         {
             RequestCode = requestCode,
             ResultCode = resultCode,
@@ -70,7 +72,13 @@ public class ActivityEvent : Activity, IActivityEvent
 
     protected override void OnDestroy()
     {
-        OnDestroyEvent?.Invoke(this, EventArgs.Empty);
+        DestroyEvent?.Invoke(this, EventArgs.Empty);
         base.OnDestroy();
+    }
+
+    public override void OnConfigurationChanged(Configuration newConfig)
+    {
+        base.OnConfigurationChanged(newConfig);
+        ConfigurationChangedEvent?.Invoke(this, newConfig);
     }
 }

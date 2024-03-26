@@ -17,7 +17,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     private const int RequestVpnPermissionId = 20100;
     private AndroidDeviceNotification? _deviceNotification;
 
-    public event EventHandler? OnStartAsService;
+    public event EventHandler? StartedAsService;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
@@ -41,8 +41,8 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public void Prepare(IActivityEvent activityEvent)
     {
         _activityEvent = activityEvent;
-        activityEvent.OnDestroyEvent += Activity_OnDestroy;
-        activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
+        activityEvent.DestroyEvent += Activity_OnDestroy;
+        activityEvent.ActivityResultEvent += Activity_OnActivityResult;
     }
 
     private static AndroidDeviceNotification CreateDefaultNotification()
@@ -122,6 +122,17 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
+    public bool IsSetLocalesSupported => OperatingSystem.IsAndroidVersionAtLeast(34);
+    public void SetLocales(string[] localeCodes)
+    {
+        if (!IsSetLocalesSupported)
+            throw new NotSupportedException("SetLocales is not supported on this device.");
+
+        if (Application.Context.GetSystemService(Context.LocaleService) is LocaleManager localeManager)
+            localeManager.OverrideLocaleConfig = new LocaleConfig(LocaleList.ForLanguageTags(string.Join(",", localeCodes)));
+    }
+
+
     public async Task<IPacketCapture> CreatePacketCapture()
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
@@ -175,7 +186,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         // fire AutoCreate for always on
         var manual = intent?.GetBooleanExtra("manual", false) ?? false;
         if (!manual)
-            OnStartAsService?.Invoke(this, EventArgs.Empty);
+            StartedAsService?.Invoke(this, EventArgs.Empty);
     }
 
     private static string EncodeToBase64(Drawable drawable, int quality)
@@ -212,6 +223,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         if (e.RequestCode == RequestVpnPermissionId)
             _grantPermissionTaskSource.TrySetResult(e.ResultCode == Result.Ok);
     }
+
     public void Dispose()
     {
         _deviceNotification?.Notification.Dispose();

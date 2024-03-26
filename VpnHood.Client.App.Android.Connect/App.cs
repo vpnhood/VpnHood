@@ -21,12 +21,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         get
         {
-            var resources = VpnHoodAppResource.Resources;
+            var resources = DefaultAppResource.Resource;
             resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
             resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
             return new AppOptions
             {
-                Resources = VpnHoodAppResource.Resources,
+                Resource = DefaultAppResource.Resource,
                 UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
                 UiName = "VpnHoodConnect",
                 IsAddServerSupported = false

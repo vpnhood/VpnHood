@@ -1,17 +1,19 @@
 ﻿using Android.Content;
 using Android.Content.PM;
+using Android.Content.Res;
 using Android.Views;
 
 namespace VpnHood.Client.Device.Droid.Utils;
 
 public interface IActivityEvent
 {
-    event EventHandler<ActivityResultEventArgs> OnActivityResultEvent;
-    event EventHandler<CreateEventArgs> OnCreateEvent;
-    event EventHandler<NewIntentEventArgs> OnNewIntentEvent;
-    event EventHandler<RequestPermissionsResultArgs> OnRequestPermissionsResultEvent;
-    event EventHandler<KeyDownArgs> OnKeyDownEvent;
-    event EventHandler OnDestroyEvent;
+    event EventHandler<ActivityResultEventArgs> ActivityResultEvent;
+    event EventHandler<CreateEventArgs> CreateEvent;
+    event EventHandler<NewIntentEventArgs> NewIntentEvent;
+    event EventHandler<RequestPermissionsResultArgs> RequestPermissionsResultEvent;
+    event EventHandler<KeyDownArgs> KeyDownEvent;
+    event EventHandler DestroyEvent;
+    public event EventHandler<Configuration>? ConfigurationChangedEvent;
     Activity Activity { get; }
 }
 

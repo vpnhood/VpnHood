@@ -18,6 +18,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
+using static VpnHood.Client.App.AppResource;
 
 namespace VpnHood.Client.App;
 
@@ -70,25 +71,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
-    public AppResources Resources { get; }
+    public AppResource Resource { get; }
     public IAppAccountService? AccountService { get; set; }
     public IAppUpdaterService? AppUpdaterService { get; set; }
     public IAppAdService? AppAdService { get; set; }
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         options ??= new AppOptions();
-#pragma warning disable CS0618 // Type or member is obsolete
-        MigrateUserDataFromXamarin(options.AppDataFolderPath); // Deprecated >= 400
-#pragma warning restore CS0618 // Type or member is obsolete
         Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
-        Resources = options.Resources;
+        Resource = options.Resource;
 
         Device = device;
-        device.OnStartAsService += Device_OnStartAsService;
+        device.StartedAsService += DeviceOnStartedAsService;
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
-        Settings.OnSaved += Settings_OnSaved;
+        Settings.Saved += Settings_OnSaved;
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
@@ -215,7 +213,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             ClientProfileService.Remove(clientProfile.ClientProfileId);
     }
 
-    private void Device_OnStartAsService(object sender, EventArgs e)
+    private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
         var clientProfile =
             GetDefaultClientProfile()
@@ -350,7 +348,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? userAgent, CancellationToken cancellationToken)
     {
-        packetCapture.OnStopped += PacketCapture_OnStopped;
+        packetCapture.Stopped += PacketCapture_OnStopped;
 
         // log general info
         VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
@@ -375,7 +373,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // Show ad if required
         //todo: add test
         string? adData = null;
-        if (token.IsAdRequired || true)
+        if (token.IsAdRequired)
         {
             if (AppAdService == null) throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
             IsWaitingForAd = true;
@@ -576,7 +574,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             {
                 _initializingState++;
                 CheckConnectionStateChanged();
-                await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
+                await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
                 using var zipArchive = new ZipArchive(memZipStream);
                 var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
                 await _ipGroupManager.InitByIp2LocationZipStream(entry);
@@ -720,19 +718,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             : ClientProfileService.FindById(LastActiveClientProfileId);
     }
 
-    [Obsolete("Deprecated >= 400", false)]
-    private static void MigrateUserDataFromXamarin(string folderPath)
+    public void InitUi(AppUiConfig uiConfig)
     {
-        try
-        {
-            var oldPath = Path.Combine(Path.GetDirectoryName(folderPath)!, ".local", "share", "VpnHood");
-            if (Directory.Exists(oldPath) && !Directory.Exists(folderPath))
-                Directory.Move(oldPath, folderPath);
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex, "Could not migrate user data from Xamarin.");
-        }
-    }
 
+        if (uiConfig.Locales != null && Device.IsSetLocalesSupported)
+            Device.SetLocales(uiConfig.Locales);
+            
+        if (uiConfig.Strings!=null)
+            Resource.Strings = new AppStrings();
+    }
+}
+
+public class AppUiConfig
+{
+    public string[]? Locales { get; init; }
+    public AppStrings? Strings { get; init; }
 }

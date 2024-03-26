@@ -24,14 +24,14 @@ public partial class App : Application
             // initialize VpnHoodApp
             VpnHoodApp.Init(new WinDivertDevice(), new AppOptions
             {
-                Resources = VpnHoodAppResource.Resources,
+                Resource = DefaultAppResource.Resource,
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
                 IsAddServerSupported = true
             });
 
             // initialize SPA
-            ArgumentNullException.ThrowIfNull(VpnHoodAppResource.Resources.SpaZipData);
-            using var spaResource = new MemoryStream(VpnHoodAppResource.Resources.SpaZipData);
+            ArgumentNullException.ThrowIfNull(DefaultAppResource.Resource.SpaZipData);
+            using var spaResource = new MemoryStream(DefaultAppResource.Resource.SpaZipData);
             VpnHoodAppWebServer.Init(spaResource, url: VpnHoodWinApp.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), 80), "myvpnhood"));
 
             // initialize Win

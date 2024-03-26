@@ -21,7 +21,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
     private readonly long _cryptorPosBase = isServer ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
     private readonly List<IPPacket> _receivedIpPackets = [];
 
-    public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
     public string ChannelId { get; } = Guid.NewGuid().ToString();
     public bool IsStream => false;
 
@@ -102,7 +102,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
                 _receivedIpPackets.Add(ipPacket);
             }
 
-            OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(_receivedIpPackets.ToArray(), this));
+            PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(_receivedIpPackets.ToArray(), this));
             LastActivityTime = FastDateTime.Now;
             _receivedIpPackets.Clear();
 

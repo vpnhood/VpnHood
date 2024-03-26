@@ -1,6 +1,7 @@
 ﻿using Android;
 using Android.Content;
 using Android.Content.PM;
+using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 using VpnHood.Client.App.Abstractions;
@@ -34,6 +35,7 @@ public class AndroidAppMainActivityHandler
         activityEvent.ActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
         activityEvent.KeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
         activityEvent.DestroyEvent += (_, _) => OnDestroy();
+        activityEvent.ConfigurationChangedEvent += (_, args) => OnConfigurationChanged(args);
     }
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
@@ -151,6 +153,11 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
+    }
+
+    protected virtual void OnConfigurationChanged(Configuration args)
+    {
+        VpnHoodApp.Instance.InitUi();
     }
 
     protected virtual void OnDestroy()

@@ -6,13 +6,10 @@ public class WinDivertDevice : IDevice
     public event EventHandler? StartedAsService;
 #pragma warning restore 0067
 
-    public string OsInfo =>
-        Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-
+    public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+    public IDeviceCultureService? CultureService => null;
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsLogToConsoleSupported => true;
-    public bool IsSetLocalesSupported => false;
-
     public bool IsIncludeAppsSupported => IsDebugMode;
 
     public DeviceAppInfo[] InstalledApps
@@ -39,11 +36,6 @@ public class WinDivertDevice : IDevice
     {
         var res = (IPacketCapture)new WinDivertPacketCapture();
         return Task.FromResult(res);
-    }
-
-    public void SetLocales(string[] localeCodes)
-    {
-        throw new NotSupportedException();
     }
 
     private static bool IsDebugMode

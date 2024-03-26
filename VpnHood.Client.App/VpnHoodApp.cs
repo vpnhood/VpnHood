@@ -72,7 +72,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
     public AppResource Resource { get; }
-    public IAppAccountService? AccountService { get; set; }
+    public IAppAccountService? AppAccountService { get; set; }
     public IAppUpdaterService? AppUpdaterService { get; set; }
     public IAppAdService? AppAdService { get; set; }
     private VpnHoodApp(IDevice device, AppOptions? options = default)
@@ -86,7 +86,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
-        Settings.Saved += Settings_OnSaved;
+        Settings.Saved += Settings_Saved;
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
@@ -128,6 +128,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsAddServerSupported = options.IsAddServerSupported,
         };
 
+        // initialize culture
+        InitCulture();
         JobRunner.Default.Add(this);
     }
 
@@ -142,7 +144,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
-                CanDisconnect = !_isDisconnecting && (connectionState 
+                CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
@@ -162,7 +164,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 LastPublishInfo =
                     _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
                 ConnectRequestTime = _connectRequestTime,
-                IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported
+                IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
+                CultureCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
             };
         }
     }
@@ -232,7 +235,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _hasDisconnectedByUser = false;
     }
 
-    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false, 
+    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
         // set default profileId to clientProfileId if not set
@@ -316,11 +319,33 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private void Settings_OnSaved(object sender, EventArgs e)
+    private void InitCulture()
+    {
+        // use culture in the System App Settings
+        if (Device.CultureService?.IsSelectedCulturesSupported == true)
+        {
+            var firstSelected = Device.CultureService?.SelectedCultures.FirstOrDefault();
+            CultureInfo.CurrentUICulture = (firstSelected != null)
+                ? CultureInfo.GetCultureInfoByIetfLanguageTag(firstSelected)
+                : CultureInfo.InstalledUICulture;
+        }
+        else
+        {
+            // use culture in the UserSettings
+            CultureInfo.CurrentUICulture = UserSettings.CultureCode != null
+                ? CultureInfo.GetCultureInfo(UserSettings.CultureCode)
+                : CultureInfo.InstalledUICulture;
+        }
+
+        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture;
+    }
+
+    private void Settings_Saved(object sender, EventArgs e)
     {
         if (Client == null) return;
         Client.UseUdpChannel = UserSettings.UseUdpChannel;
         Client.DropUdpPackets = UserSettings.DropUdpPackets;
+        InitCulture();
     }
 
     private async Task<string?> GetClientCountry()
@@ -443,7 +468,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
             // try to update token from url after connection or error if ResponseAccessKey is not set
             if (clientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
-                _ = ClientProfileService.UpdateTokenFromUrl(token); 
+                _ = ClientProfileService.UpdateTokenFromUrl(token);
         }
     }
 
@@ -513,7 +538,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             CheckConnectionStateChanged();
 
             // check for any success
-            if (Client != null && _connectedTime!=null)
+            if (Client != null && _connectedTime != null)
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
                 if (_lastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
@@ -718,14 +743,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             : ClientProfileService.FindById(LastActiveClientProfileId);
     }
 
-    public void InitUi(AppUiConfig uiConfig)
+    public void InitUi(AppUiConfig? uiConfig = null)
     {
+        uiConfig ??= new AppUiConfig();
 
-        if (uiConfig.Locales != null && Device.IsSetLocalesSupported)
-            Device.SetLocales(uiConfig.Locales);
-            
-        if (uiConfig.Strings!=null)
+        if (uiConfig.Locales != null && Device.CultureService?.IsAvailableCultureSupported == true)
+            Device.CultureService.AvailableCultures = uiConfig.Locales;
+
+        if (uiConfig.Strings != null)
             Resource.Strings = new AppStrings();
+
+        InitCulture();
     }
 }
 

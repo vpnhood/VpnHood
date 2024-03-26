@@ -25,6 +25,7 @@ public class AppSettings
     }
     // ReSharper restore StringLiteralTypo
 
+    internal int Version { get; private set; } = 1;
     public bool IsQuickLaunchAdded { get; set; } 
     public bool IsQuickLaunchRequested { get; set; }
     public DateTime ConfigTime { get; set; } = DateTime.Now;
@@ -55,8 +56,10 @@ public class AppSettings
         {
             var json = File.ReadAllText(settingsFilePath, Encoding.UTF8);
             var ret = JsonSerializer.Deserialize<AppSettings>(json) ??
-                      throw new FormatException(
-                          $"Could not deserialize {nameof(AppSettings)} from {settingsFilePath}");
+                      throw new FormatException($"Could not deserialize {nameof(AppSettings)} from {settingsFilePath}");
+
+            if (ret.Version < 2) ret.UserSettings.CultureCode = null;
+            ret.Version = 2;
             ret.SettingsFilePath = settingsFilePath;
             return ret;
         }

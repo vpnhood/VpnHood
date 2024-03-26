@@ -9,12 +9,8 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
 #pragma warning disable 0067
     public event EventHandler? StartedAsService;
 #pragma warning restore 0067
-
-
-    public string OsInfo =>
-        Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-
-    public bool IsSetLocalesSupported => false;
+    public IDeviceCultureService? CultureService => null;
+    public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsLogToConsoleSupported => true;
@@ -26,12 +22,6 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
         var res = new TestPacketCapture(_options);
         return Task.FromResult((IPacketCapture)res);
     }
-
-    public void SetLocales(string[] localeCodes)
-    {
-        throw new NotSupportedException();
-    }
-
     public void Dispose()
     {
     }

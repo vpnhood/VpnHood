@@ -124,11 +124,21 @@ internal class AppController : WebApiController, IAppController
         App.ClientProfileService.Update(clientProfile);
     }
 
+    [Route(HttpVerbs.Patch, "/init-ui")]
+    // ReSharper disable once RedundantAssignment
+    public async Task InitUi(AppUiConfig uiConfig)
+    {
+        uiConfig = await GetRequestDataAsync<AppUiConfig>();
+        App.InitUi(uiConfig);
+    }
+
+
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
         if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
             await App.Disconnect(true);
+
         App.ClientProfileService.Remove(clientProfileId);
     }
 
@@ -141,5 +151,4 @@ internal class AppController : WebApiController, IAppController
             throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
         return res;
     }
-
 }

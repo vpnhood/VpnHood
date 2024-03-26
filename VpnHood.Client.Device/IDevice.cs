@@ -2,12 +2,13 @@
 
 public interface IDevice : IDisposable
 {
-    string OsInfo { get; }
-    DeviceAppInfo[] InstalledApps { get; }
+    event EventHandler StartedAsService;
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsLogToConsoleSupported { get; }
-    event EventHandler OnStartAsService;
+    bool IsSetLocalesSupported { get; }
+    string OsInfo { get; }
+    DeviceAppInfo[] InstalledApps { get; }
     Task<IPacketCapture> CreatePacketCapture();
-    
+    void SetLocales(string[] localeCodes);
 }

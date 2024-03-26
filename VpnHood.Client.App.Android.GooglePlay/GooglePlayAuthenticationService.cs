@@ -24,8 +24,8 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
 
         _googleSignInClient = GoogleSignIn.GetClient(activityEvent.Activity, googleSignInOptions);
 
-        activityEvent.OnDestroyEvent += Activity_OnDestroy;
-        activityEvent.OnActivityResultEvent += Activity_OnActivityResult;
+        activityEvent.DestroyEvent += Activity_OnDestroy;
+        activityEvent.ActivityResultEvent += Activity_OnActivityResult;
     }
 
     public static GooglePlayAuthenticationService Create(IActivityEvent activityEvent, string firebaseId) 

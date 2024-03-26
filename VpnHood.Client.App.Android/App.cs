@@ -16,7 +16,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 {
     protected override AppOptions AppOptions => new()
     {
-        Resources = VpnHoodAppResource.Resources,
+        Resource = DefaultAppResource.Resource,
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
         IsAddServerSupported = true
     };

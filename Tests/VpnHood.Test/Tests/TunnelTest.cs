@@ -119,7 +119,7 @@ public class TunnelTest : TestBase
         serverUdpChannel.Start();
 
         var serverReceivedPackets = Array.Empty<IPPacket>();
-        serverUdpChannel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
+        serverUdpChannel.PacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
         {
             serverReceivedPackets = e.IpPackets.ToArray();
             _ = serverUdpChannel.SendPacket(e.IpPackets);
@@ -132,7 +132,7 @@ public class TunnelTest : TestBase
         clientUdpChannel.Start();
 
         var clientReceivedPackets = Array.Empty<IPPacket>();
-        clientUdpChannel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
+        clientUdpChannel.PacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
         {
             clientReceivedPackets = e.IpPackets.ToArray();
             waitHandle.Set();

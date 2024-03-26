@@ -34,7 +34,7 @@ public class AppSettings
     public string? TestServerTokenAutoAdded { get; set; }
     public DateTime? LastUpdateCheckTime { get; set; }
 
-    public event EventHandler? OnSaved;
+    public event EventHandler? Saved;
     private readonly object _saveLock = new();
 
     public void Save()
@@ -46,7 +46,7 @@ public class AppSettings
             File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
         }
 
-        OnSaved?.Invoke(this, EventArgs.Empty);
+        Saved?.Invoke(this, EventArgs.Empty);
     }
 
     internal static AppSettings Load(string settingsFilePath)

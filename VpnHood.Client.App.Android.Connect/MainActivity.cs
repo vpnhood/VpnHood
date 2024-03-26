@@ -1,12 +1,10 @@
 using Android.Content;
 using Android.Content.PM;
-using Android.Gms.Ads;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
-using VpnHood.Client.App.Droid.GooglePlay.Ads;
 using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
@@ -53,12 +51,12 @@ public class MainActivity : AndroidAppMainActivity
             _ = googlePlayAdService.LoadRewardedAd(CancellationToken.None);
 
         VpnHoodApp.Instance.AppAdService = googlePlayAdService;*/
-        VpnHoodApp.Instance.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
+        VpnHoodApp.Instance.AppAccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 
     protected override void OnDestroy()
     {
-        VpnHoodApp.Instance.AccountService = null;
+        VpnHoodApp.Instance.AppAccountService = null;
         VpnHoodApp.Instance.AppAdService = null;
         base.OnDestroy();
     }

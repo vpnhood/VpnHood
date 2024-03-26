@@ -6,9 +6,8 @@ public interface IDevice : IDisposable
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsLogToConsoleSupported { get; }
-    bool IsSetLocalesSupported { get; }
     string OsInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
     Task<IPacketCapture> CreatePacketCapture();
-    void SetLocales(string[] localeCodes);
+    IDeviceCultureService? CultureService { get; }
 }

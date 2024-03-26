@@ -30,8 +30,8 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private int _mtu;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
 
-    public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
-    public event EventHandler? OnStopped;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler? Stopped;
     public bool Started => _mInterface != null;
     public IpNetwork[]? IncludeNetworks { get; set; }
     public bool CanSendPacketToOutbound => false;
@@ -249,7 +249,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     {
         try
         {
-            OnPacketReceivedFromInbound?.Invoke(this, 
+            PacketReceivedFromInbound?.Invoke(this, 
                 new PacketReceivedEventArgs([ipPacket], this));
         }
         catch (Exception ex)
@@ -265,7 +265,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         base.OnDestroy(); // must be called first
 
         Close();
-        OnStopped?.Invoke(this, EventArgs.Empty);
+        Stopped?.Invoke(this, EventArgs.Empty);
     }
 
     private void Close()

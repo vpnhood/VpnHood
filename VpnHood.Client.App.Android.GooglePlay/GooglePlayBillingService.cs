@@ -60,7 +60,7 @@ public class GooglePlayBillingService: IAppBillingService
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError("Could not check supported feature with google play. Error: ", ex);
+            VhLogger.Instance.LogError(ex, "Could not check supported feature with google play.");
             throw;
         }
 
@@ -100,7 +100,7 @@ public class GooglePlayBillingService: IAppBillingService
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError("Could not get products from google play. Error: ",ex);
+            VhLogger.Instance.LogError(ex, "Could not get products from google play.");
             throw;
         }
     }
@@ -143,7 +143,7 @@ public class GooglePlayBillingService: IAppBillingService
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError("Could not get order id from google play LaunchBillingFlow. Error: ", ex);
+            VhLogger.Instance.LogError(ex, "Could not get order id from google play LaunchBillingFlow.");
             throw;
         }
     }
@@ -162,7 +162,7 @@ public class GooglePlayBillingService: IAppBillingService
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError("Could not start connection to google play. Error: ",ex);
+            VhLogger.Instance.LogError(ex, "Could not start connection to google play.");
             throw;
         }
     }

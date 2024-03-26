@@ -127,8 +127,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
 
         // init packetCapture cancellation
-        packetCapture.OnStopped += PacketCapture_OnStopped;
-        packetCapture.OnPacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
+        packetCapture.Stopped += PacketCapture_OnStopped;
+        packetCapture.PacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -909,8 +909,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
         // disposing PacketCapture. Must be at end for graceful shutdown
-        _packetCapture.OnStopped -= PacketCapture_OnStopped;
-        _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
+        _packetCapture.Stopped -= PacketCapture_OnStopped;
+        _packetCapture.PacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
         if (_autoDisposePacketCapture)
         {
             VhLogger.Instance.LogTrace("Disposing the PacketCapture...");

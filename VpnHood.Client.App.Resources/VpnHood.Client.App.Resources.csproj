@@ -35,18 +35,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
+		<Compile Update="EmbeddedResource.Designer.cs">
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
+			<DependentUpon>EmbeddedResource.resx</DependentUpon>
 		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Update="Resource.resx">
+		<EmbeddedResource Update="EmbeddedResource.resx">
 			<SubType>Designer</SubType>
 			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+			<LastGenOutput>EmbeddedResource.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
 	</ItemGroup>
 

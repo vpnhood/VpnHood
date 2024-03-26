@@ -7,8 +7,8 @@ namespace VpnHood.Client.Device;
 
 public interface IPacketCapture : IDisposable
 {
-    event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
-    event EventHandler OnStopped;
+    event EventHandler<PacketReceivedEventArgs> PacketReceivedFromInbound;
+    event EventHandler Stopped;
     bool Started { get; }
     bool IsDnsServersSupported { get; }
     IPAddress[]? DnsServers { get; set; }

@@ -131,7 +131,7 @@ public class Tunnel : IJob, IAsyncDisposable
             throw new ObjectDisposedException(nameof(Tunnel));
 
         //should not be called in lock; its behaviour is unexpected
-        datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
+        datagramChannel.PacketReceived += Channel_OnPacketReceived;
         datagramChannel.Start();
 
         // add to channel list

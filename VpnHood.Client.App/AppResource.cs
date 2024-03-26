@@ -2,7 +2,7 @@
 
 namespace VpnHood.Client.App;
 
-public class AppResources
+public class AppResource
 {
     public byte[]? SpaZipData { get; set; }
     public Size WindowSize { get; set; } = new(400, 700);

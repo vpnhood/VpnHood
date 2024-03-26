@@ -7,6 +7,7 @@ using VpnHood.Client.App.Win.Common;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.WinDivert;
 
+// ReSharper disable once CheckNamespace
 namespace VpnHood.Client.App.Maui.Common;
 
 internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
@@ -39,7 +40,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
                 AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
                 AppWindow.Closing += AppWindow_Closing;
 
-                var bgColorResource = vpnHoodApp.Resources.Colors.WindowBackgroundColor;
+                var bgColorResource = vpnHoodApp.Resource.Colors.WindowBackgroundColor;
                 if (bgColorResource != null)
                 {
                     var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R,

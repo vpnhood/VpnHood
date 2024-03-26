@@ -3,7 +3,7 @@
 public class WinDivertDevice : IDevice
 {
 #pragma warning disable 0067
-    public event EventHandler? OnStartAsService;
+    public event EventHandler? StartedAsService;
 #pragma warning restore 0067
 
     public string OsInfo =>
@@ -11,6 +11,7 @@ public class WinDivertDevice : IDevice
 
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsLogToConsoleSupported => true;
+    public bool IsSetLocalesSupported => false;
 
     public bool IsIncludeAppsSupported => IsDebugMode;
 
@@ -40,6 +41,11 @@ public class WinDivertDevice : IDevice
         return Task.FromResult(res);
     }
 
+    public void SetLocales(string[] localeCodes)
+    {
+        throw new NotSupportedException();
+    }
+
     private static bool IsDebugMode
     {
         get
@@ -51,7 +57,7 @@ public class WinDivertDevice : IDevice
 #endif
         }
     }
-    
+
     public void Dispose()
     {
     }

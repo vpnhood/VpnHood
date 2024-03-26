@@ -26,8 +26,8 @@ public class AndroidAppWebViewMainActivityHandler(
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit)
         {
-            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resources.SpaZipData);
-            using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
+            ArgumentNullException.ThrowIfNull(VpnHoodApp.Instance.Resource.SpaZipData);
+            using var memoryStream = new MemoryStream(VpnHoodApp.Instance.Resource.SpaZipData);
             VpnHoodAppWebServer.Init(memoryStream, options.DefaultSpaPort, listenToAllIps: options.ListenToAllIps);
         }
 
@@ -46,7 +46,7 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         var imageView = new ImageView(ActivityEvent.Activity);
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
+        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
 
         // set splash screen background color
         var icon = appInfo.LoadIcon(Application.Context.PackageManager);
@@ -72,8 +72,8 @@ public class AndroidAppWebViewMainActivityHandler(
         WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
         WebView.Settings.SetSupportMultipleWindows(true);
         WebView.SetLayerType(LayerType.Hardware, null);
-        if (VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor != null)
-            WebView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
+        if (VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor != null)
+            WebView.SetBackgroundColor(VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor.Value.ToAndroidColor());
 
         var webViewClient = new AndroidAppWebViewClient();
         webViewClient.PageLoaded += WebViewClient_PageLoaded;
@@ -93,8 +93,8 @@ public class AndroidAppWebViewMainActivityHandler(
         ActivityEvent.Activity.SetContentView(WebView);
         _isWeViewVisible = true;
 
-        if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
-            ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor.Value.ToAndroidColor());
+        if (VpnHoodApp.Instance.Resource.Colors.NavigationBarColor != null)
+            ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resource.Colors.NavigationBarColor.Value.ToAndroidColor());
 
         // request features after loading the webview, so SPA can update the localize the resources
         if (_requestFeaturesOnCreate)

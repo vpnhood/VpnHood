@@ -18,7 +18,7 @@ public sealed class AndroidAppNotification : IDisposable
     {
         _vpnHoodApp = vpnHoodApp;
         vpnHoodApp.ConnectionStateChanged += (_, _) => Update();
-        _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resources);
+        _notificationBuilder = _notificationBuilder = CreateNotificationBuilder(Application.Context, _vpnHoodApp.Resource);
     }
 
     public AndroidDeviceNotification DeviceNotification => new()
@@ -37,7 +37,7 @@ public sealed class AndroidAppNotification : IDisposable
         return pendingIntent;
     }
 
-    private static Notification.Builder CreateNotificationBuilder(Context context, AppResources appResources)
+    private static Notification.Builder CreateNotificationBuilder(Context context, AppResource appResource)
     {
         Notification.Builder notificationBuilder;
 
@@ -72,14 +72,14 @@ public sealed class AndroidAppNotification : IDisposable
 
         var pendingOpenIntent = PendingIntent.GetActivity(context, 0, openIntent, PendingIntentFlags.Immutable);
         notificationBuilder.SetContentIntent(pendingOpenIntent);
-        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResources.Strings.Disconnect, CreatePendingIntent(context, "disconnect")).Build());
-        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResources.Strings.Manage, pendingOpenIntent).Build());
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResource.Strings.Disconnect, CreatePendingIntent(context, "disconnect")).Build());
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, appResource.Strings.Manage, pendingOpenIntent).Build());
 
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
         notificationBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
-        if (appResources.Colors.WindowBackgroundColor != null)
-            notificationBuilder.SetColor(appResources.Colors.WindowBackgroundColor.Value.ToAndroidColor());
+        if (appResource.Colors.WindowBackgroundColor != null)
+            notificationBuilder.SetColor(appResource.Colors.WindowBackgroundColor.Value.ToAndroidColor());
 
         // set the required small icon
         ArgumentNullException.ThrowIfNull(context.ApplicationInfo);

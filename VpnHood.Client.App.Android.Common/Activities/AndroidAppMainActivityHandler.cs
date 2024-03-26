@@ -28,12 +28,12 @@ public class AndroidAppMainActivityHandler
         RequestFeaturesOnCreate = options.RequestFeaturesOnCreate;
 
 
-        activityEvent.OnCreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
-        activityEvent.OnNewIntentEvent += (_, args) => OnNewIntent(args.Intent);
-        activityEvent.OnRequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
-        activityEvent.OnActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
-        activityEvent.OnKeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
-        activityEvent.OnDestroyEvent += (_, _) => OnDestroy();
+        activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
+        activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
+        activityEvent.RequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
+        activityEvent.ActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
+        activityEvent.KeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
+        activityEvent.DestroyEvent += (_, _) => OnDestroy();
     }
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
@@ -96,7 +96,7 @@ public class AndroidAppMainActivityHandler
             var mimeType = ActivityEvent.Activity.ContentResolver.GetType(uri);
             if (!_accessKeyMimes.Contains(mimeType, StringComparer.OrdinalIgnoreCase))
             {
-                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgUnsupportedContent, ToastLength.Long)?.Show();
+                Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgUnsupportedContent, ToastLength.Long)?.Show();
                 return false;
             }
 
@@ -116,7 +116,7 @@ public class AndroidAppMainActivityHandler
         }
         catch
         {
-            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resources.Strings.MsgCantReadAccessKey, ToastLength.Long)?.Show();
+            Toast.MakeText(ActivityEvent.Activity, VpnHoodApp.Instance.Resource.Strings.MsgCantReadAccessKey, ToastLength.Long)?.Show();
         }
 
         return true;
@@ -131,8 +131,8 @@ public class AndroidAppMainActivityHandler
 
         var isNew = profiles.Any(x => x.ClientProfileId == profile.ClientProfileId);
         var message = isNew
-            ? string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyAdded, profile.ClientProfileName)
-            : string.Format(VpnHoodApp.Instance.Resources.Strings.MsgAccessKeyUpdated, profile.ClientProfileName);
+            ? string.Format(VpnHoodApp.Instance.Resource.Strings.MsgAccessKeyAdded, profile.ClientProfileName)
+            : string.Format(VpnHoodApp.Instance.Resource.Strings.MsgAccessKeyUpdated, profile.ClientProfileName);
 
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }

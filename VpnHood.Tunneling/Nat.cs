@@ -14,7 +14,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
     private bool _disposed;
     private DateTime _lastCleanupTime = FastDateTime.Now;
 
-    public event EventHandler<NatEventArgs>? OnNatItemRemoved;
+    public event EventHandler<NatEventArgs>? NatItemRemoved;
     public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
     public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -76,7 +76,7 @@ public class Nat(bool isDestinationSensitive) : IDisposable
         }
 
         VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
-        OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
+        NatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
     }
     private ushort GetFreeNatId(IPVersion ipVersion, ProtocolType protocol)
     {

@@ -22,6 +22,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+    public IDeviceCultureService CultureService => new AndroidDeviceCultureService();
 
     private AndroidDevice()
     {
@@ -122,17 +123,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    public bool IsSetLocalesSupported => OperatingSystem.IsAndroidVersionAtLeast(34);
-    public void SetLocales(string[] localeCodes)
-    {
-        if (!IsSetLocalesSupported)
-            throw new NotSupportedException("SetLocales is not supported on this device.");
-
-        if (Application.Context.GetSystemService(Context.LocaleService) is LocaleManager localeManager)
-            localeManager.OverrideLocaleConfig = new LocaleConfig(LocaleList.ForLanguageTags(string.Join(",", localeCodes)));
-    }
-
-
     public async Task<IPacketCapture> CreatePacketCapture()
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
@@ -173,6 +163,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         return _packetCapture;
     }
+
 
     internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
     {

@@ -26,4 +26,5 @@ public class AppState
     public required bool? IsUdpChannelSupported { get; init; }
     public required bool CanDisconnect { get; init; }
     public required bool CanConnect { get; init; }
+    public required string CultureCode { get; init; }
 }

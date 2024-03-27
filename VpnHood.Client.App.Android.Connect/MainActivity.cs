@@ -43,7 +43,7 @@ public class MainActivity : AndroidAppMainActivity
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
         var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
-        
+
         // TODO enable for production with ad
         /*var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnitId);
 
@@ -51,11 +51,13 @@ public class MainActivity : AndroidAppMainActivity
             _ = googlePlayAdService.LoadRewardedAd(CancellationToken.None);
 
         VpnHoodApp.Instance.AppAdService = googlePlayAdService;*/
+        VpnHoodApp.Instance.AppUpdaterService = new GooglePlayAppUpdaterService(this);
         VpnHoodApp.Instance.AppAccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 
     protected override void OnDestroy()
     {
+        VpnHoodApp.Instance.AppUpdaterService = null;
         VpnHoodApp.Instance.AppAccountService = null;
         VpnHoodApp.Instance.AppAdService = null;
         base.OnDestroy();

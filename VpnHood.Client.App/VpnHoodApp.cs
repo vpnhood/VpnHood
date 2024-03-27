@@ -18,7 +18,6 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
-using static VpnHood.Client.App.AppResource;
 
 namespace VpnHood.Client.App;
 
@@ -54,6 +53,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
+    public event EventHandler? UiHasChanged;
     public bool IsWaitingForAd { get; private set; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
@@ -324,10 +324,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // use culture in the System App Settings
         if (Device.CultureService?.IsSelectedCulturesSupported == true)
         {
-            var firstSelected = Device.CultureService?.SelectedCultures.FirstOrDefault();
+            var firstSelected = Device.CultureService.SelectedCultures?.FirstOrDefault();
             CultureInfo.CurrentUICulture = (firstSelected != null)
                 ? CultureInfo.GetCultureInfoByIetfLanguageTag(firstSelected)
                 : CultureInfo.InstalledUICulture;
+
+            // sync UserSettings from the System App Settings
+            UserSettings.CultureCode = firstSelected?.Split("-").FirstOrDefault();
         }
         else
         {
@@ -345,6 +348,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         if (Client == null) return;
         Client.UseUdpChannel = UserSettings.UseUdpChannel;
         Client.DropUdpPackets = UserSettings.DropUdpPackets;
+
+        // sync culture to system app settings
+        if (Device.CultureService?.IsSelectedCulturesSupported == true)
+            Device.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : null;
+
         InitCulture();
     }
 
@@ -743,22 +751,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             : ClientProfileService.FindById(LastActiveClientProfileId);
     }
 
-    public void InitUi(AppUiConfig? uiConfig = null)
+    public void UpdateUi()
     {
-        uiConfig ??= new AppUiConfig();
-
-        if (uiConfig.Locales != null && Device.CultureService?.IsAvailableCultureSupported == true)
-            Device.CultureService.AvailableCultures = uiConfig.Locales;
-
-        if (uiConfig.Strings != null)
-            Resource.Strings = new AppStrings();
-
+        UiHasChanged?.Invoke(this, EventArgs.Empty);
         InitCulture();
     }
-}
-
-public class AppUiConfig
-{
-    public string[]? Locales { get; init; }
-    public AppStrings? Strings { get; init; }
 }

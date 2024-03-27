@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using EmbedIO;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
@@ -103,6 +104,18 @@ public class AppController : ControllerBase, IAppController
 
     [HttpDelete("client-profiles/{clientProfileId}")]
     public Task DeleteClientProfile(Guid clientProfileId)
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPut("cultures")]
+    public Task SetCultures(string[] cultureCodes)
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPatch("ui-config")]
+    public Task ConfigureUi(UiConfig uiConfig)
     {
         throw new NotImplementedException();
     }

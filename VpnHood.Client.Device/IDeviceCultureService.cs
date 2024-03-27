@@ -3,7 +3,8 @@
 public interface IDeviceCultureService
 {
     bool IsSelectedCulturesSupported { get; }
-    bool IsAvailableCultureSupported { get; }
-    string[] SelectedCultures { get; set; }
-    string[] AvailableCultures { get; set; }
+    bool IsAppCulturesSupported { get; }
+    string[] SystemCultures { get; }
+    string[]? SelectedCultures { get; set; }
+    string[]? AppCultures { get; set; }
 }

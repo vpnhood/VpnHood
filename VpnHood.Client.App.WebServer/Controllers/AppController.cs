@@ -124,12 +124,28 @@ internal class AppController : WebApiController, IAppController
         App.ClientProfileService.Update(clientProfile);
     }
 
-    [Route(HttpVerbs.Patch, "/init-ui")]
+    [Route(HttpVerbs.Put, "/cultures")]
     // ReSharper disable once RedundantAssignment
-    public async Task InitUi(AppUiConfig uiConfig)
+    public async Task SetCultures(string[] cultureCodes)
     {
-        uiConfig = await GetRequestDataAsync<AppUiConfig>();
-        App.InitUi(uiConfig);
+        cultureCodes = await GetRequestDataAsync<string[]>();
+
+        if (App.Device.CultureService?.IsAppCulturesSupported == true)
+            App.Device.CultureService.AppCultures = cultureCodes;
+        
+        App.UpdateUi();
+    }
+
+    [Route(HttpVerbs.Patch, "/ui-config")]
+    // ReSharper disable once RedundantAssignment
+    public async Task ConfigureUi(UiConfig uiConfig)
+    {
+        uiConfig = await GetRequestDataAsync<UiConfig>();
+        
+        if (uiConfig.Strings != null)
+            App.Resource.Strings = uiConfig.Strings;
+
+        App.UpdateUi();
     }
 
 

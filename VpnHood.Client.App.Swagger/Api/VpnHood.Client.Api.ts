@@ -1141,6 +1141,102 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    setCultures(cultureCodes: string[], cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/cultures";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(cultureCodes);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSetCultures(_response);
+        });
+    }
+
+    protected processSetCultures(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    configureUi(uiConfig: UiConfig, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/ui-config";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(uiConfig);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processConfigureUi(_response);
+        });
+    }
+
+    protected processConfigureUi(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class BillingClient {
@@ -1443,6 +1539,7 @@ export interface IAppFeatures {
 }
 
 export class AppSettings implements IAppSettings {
+    version!: number;
     isQuickLaunchAdded!: boolean;
     isQuickLaunchRequested!: boolean;
     configTime!: Date;
@@ -1466,6 +1563,7 @@ export class AppSettings implements IAppSettings {
 
     init(_data?: any) {
         if (_data) {
+            this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.isQuickLaunchAdded = _data["isQuickLaunchAdded"] !== undefined ? _data["isQuickLaunchAdded"] : <any>null;
             this.isQuickLaunchRequested = _data["isQuickLaunchRequested"] !== undefined ? _data["isQuickLaunchRequested"] : <any>null;
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
@@ -1486,6 +1584,7 @@ export class AppSettings implements IAppSettings {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["version"] = this.version !== undefined ? this.version : <any>null;
         data["isQuickLaunchAdded"] = this.isQuickLaunchAdded !== undefined ? this.isQuickLaunchAdded : <any>null;
         data["isQuickLaunchRequested"] = this.isQuickLaunchRequested !== undefined ? this.isQuickLaunchRequested : <any>null;
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
@@ -1499,6 +1598,7 @@ export class AppSettings implements IAppSettings {
 }
 
 export interface IAppSettings {
+    version: number;
     isQuickLaunchAdded: boolean;
     isQuickLaunchRequested: boolean;
     configTime: Date;
@@ -1511,7 +1611,7 @@ export interface IAppSettings {
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
-    cultureCode!: string;
+    cultureCode?: string | null;
     defaultClientProfileId?: string | null;
     maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
@@ -1664,7 +1764,7 @@ export class UserSettings implements IUserSettings {
 
 export interface IUserSettings {
     logging: AppLogSettings;
-    cultureCode: string;
+    cultureCode?: string | null;
     defaultClientProfileId?: string | null;
     maxReconnectCount: number;
     maxDatagramChannelCount: number;
@@ -1760,6 +1860,7 @@ export class AppState implements IAppState {
     isUdpChannelSupported?: boolean | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
+    cultureCode!: string;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1799,6 +1900,7 @@ export class AppState implements IAppState {
             this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
+            this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
         }
     }
 
@@ -1833,6 +1935,7 @@ export class AppState implements IAppState {
         data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
+        data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         return data;
     }
 }
@@ -1860,6 +1963,7 @@ export interface IAppState {
     isUdpChannelSupported?: boolean | null;
     canDisconnect: boolean;
     canConnect: boolean;
+    cultureCode: string;
 }
 
 export enum AppConnectionState {
@@ -2308,6 +2412,1046 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
 export interface IClientProfileUpdateParams {
     name?: string | null;
+}
+
+export class UiConfig implements IUiConfig {
+    colors?: AppColors | null;
+    strings?: AppStrings | null;
+    icons?: AppIcons | null;
+
+    constructor(data?: IUiConfig) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.colors = _data["colors"] ? AppColors.fromJS(_data["colors"]) : <any>null;
+            this.strings = _data["strings"] ? AppStrings.fromJS(_data["strings"]) : <any>null;
+            this.icons = _data["icons"] ? AppIcons.fromJS(_data["icons"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): UiConfig {
+        data = typeof data === 'object' ? data : {};
+        let result = new UiConfig();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["colors"] = this.colors ? this.colors.toJSON() : <any>null;
+        data["strings"] = this.strings ? this.strings.toJSON() : <any>null;
+        data["icons"] = this.icons ? this.icons.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IUiConfig {
+    colors?: AppColors | null;
+    strings?: AppStrings | null;
+    icons?: AppIcons | null;
+}
+
+export class AppColors implements IAppColors {
+    navigationBarColor?: Color | null;
+    windowBackgroundColor?: Color | null;
+
+    constructor(data?: IAppColors) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.navigationBarColor = _data["navigationBarColor"] ? Color.fromJS(_data["navigationBarColor"]) : <any>null;
+            this.windowBackgroundColor = _data["windowBackgroundColor"] ? Color.fromJS(_data["windowBackgroundColor"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppColors {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppColors();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["navigationBarColor"] = this.navigationBarColor ? this.navigationBarColor.toJSON() : <any>null;
+        data["windowBackgroundColor"] = this.windowBackgroundColor ? this.windowBackgroundColor.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IAppColors {
+    navigationBarColor?: Color | null;
+    windowBackgroundColor?: Color | null;
+}
+
+export class Color implements IColor {
+    transparent!: Color;
+    aliceBlue!: Color;
+    antiqueWhite!: Color;
+    aqua!: Color;
+    aquamarine!: Color;
+    azure!: Color;
+    beige!: Color;
+    bisque!: Color;
+    black!: Color;
+    blanchedAlmond!: Color;
+    blue!: Color;
+    blueViolet!: Color;
+    brown!: Color;
+    burlyWood!: Color;
+    cadetBlue!: Color;
+    chartreuse!: Color;
+    chocolate!: Color;
+    coral!: Color;
+    cornflowerBlue!: Color;
+    cornsilk!: Color;
+    crimson!: Color;
+    cyan!: Color;
+    darkBlue!: Color;
+    darkCyan!: Color;
+    darkGoldenrod!: Color;
+    darkGray!: Color;
+    darkGreen!: Color;
+    darkKhaki!: Color;
+    darkMagenta!: Color;
+    darkOliveGreen!: Color;
+    darkOrange!: Color;
+    darkOrchid!: Color;
+    darkRed!: Color;
+    darkSalmon!: Color;
+    darkSeaGreen!: Color;
+    darkSlateBlue!: Color;
+    darkSlateGray!: Color;
+    darkTurquoise!: Color;
+    darkViolet!: Color;
+    deepPink!: Color;
+    deepSkyBlue!: Color;
+    dimGray!: Color;
+    dodgerBlue!: Color;
+    firebrick!: Color;
+    floralWhite!: Color;
+    forestGreen!: Color;
+    fuchsia!: Color;
+    gainsboro!: Color;
+    ghostWhite!: Color;
+    gold!: Color;
+    goldenrod!: Color;
+    gray!: Color;
+    green!: Color;
+    greenYellow!: Color;
+    honeydew!: Color;
+    hotPink!: Color;
+    indianRed!: Color;
+    indigo!: Color;
+    ivory!: Color;
+    khaki!: Color;
+    lavender!: Color;
+    lavenderBlush!: Color;
+    lawnGreen!: Color;
+    lemonChiffon!: Color;
+    lightBlue!: Color;
+    lightCoral!: Color;
+    lightCyan!: Color;
+    lightGoldenrodYellow!: Color;
+    lightGreen!: Color;
+    lightGray!: Color;
+    lightPink!: Color;
+    lightSalmon!: Color;
+    lightSeaGreen!: Color;
+    lightSkyBlue!: Color;
+    lightSlateGray!: Color;
+    lightSteelBlue!: Color;
+    lightYellow!: Color;
+    lime!: Color;
+    limeGreen!: Color;
+    linen!: Color;
+    magenta!: Color;
+    maroon!: Color;
+    mediumAquamarine!: Color;
+    mediumBlue!: Color;
+    mediumOrchid!: Color;
+    mediumPurple!: Color;
+    mediumSeaGreen!: Color;
+    mediumSlateBlue!: Color;
+    mediumSpringGreen!: Color;
+    mediumTurquoise!: Color;
+    mediumVioletRed!: Color;
+    midnightBlue!: Color;
+    mintCream!: Color;
+    mistyRose!: Color;
+    moccasin!: Color;
+    navajoWhite!: Color;
+    navy!: Color;
+    oldLace!: Color;
+    olive!: Color;
+    oliveDrab!: Color;
+    orange!: Color;
+    orangeRed!: Color;
+    orchid!: Color;
+    paleGoldenrod!: Color;
+    paleGreen!: Color;
+    paleTurquoise!: Color;
+    paleVioletRed!: Color;
+    papayaWhip!: Color;
+    peachPuff!: Color;
+    peru!: Color;
+    pink!: Color;
+    plum!: Color;
+    powderBlue!: Color;
+    purple!: Color;
+    rebeccaPurple!: Color;
+    red!: Color;
+    rosyBrown!: Color;
+    royalBlue!: Color;
+    saddleBrown!: Color;
+    salmon!: Color;
+    sandyBrown!: Color;
+    seaGreen!: Color;
+    seaShell!: Color;
+    sienna!: Color;
+    silver!: Color;
+    skyBlue!: Color;
+    slateBlue!: Color;
+    slateGray!: Color;
+    snow!: Color;
+    springGreen!: Color;
+    steelBlue!: Color;
+    tan!: Color;
+    teal!: Color;
+    thistle!: Color;
+    tomato!: Color;
+    turquoise!: Color;
+    violet!: Color;
+    wheat!: Color;
+    white!: Color;
+    whiteSmoke!: Color;
+    yellow!: Color;
+    yellowGreen!: Color;
+    r!: number;
+    g!: number;
+    b!: number;
+    a!: number;
+    isKnownColor!: boolean;
+    isEmpty!: boolean;
+    isNamedColor!: boolean;
+    isSystemColor!: boolean;
+    nameAndARGBValue!: string;
+    name!: string;
+    value!: number;
+
+    constructor(data?: IColor) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.transparent = new Color();
+            this.aliceBlue = new Color();
+            this.antiqueWhite = new Color();
+            this.aqua = new Color();
+            this.aquamarine = new Color();
+            this.azure = new Color();
+            this.beige = new Color();
+            this.bisque = new Color();
+            this.black = new Color();
+            this.blanchedAlmond = new Color();
+            this.blue = new Color();
+            this.blueViolet = new Color();
+            this.brown = new Color();
+            this.burlyWood = new Color();
+            this.cadetBlue = new Color();
+            this.chartreuse = new Color();
+            this.chocolate = new Color();
+            this.coral = new Color();
+            this.cornflowerBlue = new Color();
+            this.cornsilk = new Color();
+            this.crimson = new Color();
+            this.cyan = new Color();
+            this.darkBlue = new Color();
+            this.darkCyan = new Color();
+            this.darkGoldenrod = new Color();
+            this.darkGray = new Color();
+            this.darkGreen = new Color();
+            this.darkKhaki = new Color();
+            this.darkMagenta = new Color();
+            this.darkOliveGreen = new Color();
+            this.darkOrange = new Color();
+            this.darkOrchid = new Color();
+            this.darkRed = new Color();
+            this.darkSalmon = new Color();
+            this.darkSeaGreen = new Color();
+            this.darkSlateBlue = new Color();
+            this.darkSlateGray = new Color();
+            this.darkTurquoise = new Color();
+            this.darkViolet = new Color();
+            this.deepPink = new Color();
+            this.deepSkyBlue = new Color();
+            this.dimGray = new Color();
+            this.dodgerBlue = new Color();
+            this.firebrick = new Color();
+            this.floralWhite = new Color();
+            this.forestGreen = new Color();
+            this.fuchsia = new Color();
+            this.gainsboro = new Color();
+            this.ghostWhite = new Color();
+            this.gold = new Color();
+            this.goldenrod = new Color();
+            this.gray = new Color();
+            this.green = new Color();
+            this.greenYellow = new Color();
+            this.honeydew = new Color();
+            this.hotPink = new Color();
+            this.indianRed = new Color();
+            this.indigo = new Color();
+            this.ivory = new Color();
+            this.khaki = new Color();
+            this.lavender = new Color();
+            this.lavenderBlush = new Color();
+            this.lawnGreen = new Color();
+            this.lemonChiffon = new Color();
+            this.lightBlue = new Color();
+            this.lightCoral = new Color();
+            this.lightCyan = new Color();
+            this.lightGoldenrodYellow = new Color();
+            this.lightGreen = new Color();
+            this.lightGray = new Color();
+            this.lightPink = new Color();
+            this.lightSalmon = new Color();
+            this.lightSeaGreen = new Color();
+            this.lightSkyBlue = new Color();
+            this.lightSlateGray = new Color();
+            this.lightSteelBlue = new Color();
+            this.lightYellow = new Color();
+            this.lime = new Color();
+            this.limeGreen = new Color();
+            this.linen = new Color();
+            this.magenta = new Color();
+            this.maroon = new Color();
+            this.mediumAquamarine = new Color();
+            this.mediumBlue = new Color();
+            this.mediumOrchid = new Color();
+            this.mediumPurple = new Color();
+            this.mediumSeaGreen = new Color();
+            this.mediumSlateBlue = new Color();
+            this.mediumSpringGreen = new Color();
+            this.mediumTurquoise = new Color();
+            this.mediumVioletRed = new Color();
+            this.midnightBlue = new Color();
+            this.mintCream = new Color();
+            this.mistyRose = new Color();
+            this.moccasin = new Color();
+            this.navajoWhite = new Color();
+            this.navy = new Color();
+            this.oldLace = new Color();
+            this.olive = new Color();
+            this.oliveDrab = new Color();
+            this.orange = new Color();
+            this.orangeRed = new Color();
+            this.orchid = new Color();
+            this.paleGoldenrod = new Color();
+            this.paleGreen = new Color();
+            this.paleTurquoise = new Color();
+            this.paleVioletRed = new Color();
+            this.papayaWhip = new Color();
+            this.peachPuff = new Color();
+            this.peru = new Color();
+            this.pink = new Color();
+            this.plum = new Color();
+            this.powderBlue = new Color();
+            this.purple = new Color();
+            this.rebeccaPurple = new Color();
+            this.red = new Color();
+            this.rosyBrown = new Color();
+            this.royalBlue = new Color();
+            this.saddleBrown = new Color();
+            this.salmon = new Color();
+            this.sandyBrown = new Color();
+            this.seaGreen = new Color();
+            this.seaShell = new Color();
+            this.sienna = new Color();
+            this.silver = new Color();
+            this.skyBlue = new Color();
+            this.slateBlue = new Color();
+            this.slateGray = new Color();
+            this.snow = new Color();
+            this.springGreen = new Color();
+            this.steelBlue = new Color();
+            this.tan = new Color();
+            this.teal = new Color();
+            this.thistle = new Color();
+            this.tomato = new Color();
+            this.turquoise = new Color();
+            this.violet = new Color();
+            this.wheat = new Color();
+            this.white = new Color();
+            this.whiteSmoke = new Color();
+            this.yellow = new Color();
+            this.yellowGreen = new Color();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.transparent = _data["transparent"] ? Color.fromJS(_data["transparent"]) : new Color();
+            this.aliceBlue = _data["aliceBlue"] ? Color.fromJS(_data["aliceBlue"]) : new Color();
+            this.antiqueWhite = _data["antiqueWhite"] ? Color.fromJS(_data["antiqueWhite"]) : new Color();
+            this.aqua = _data["aqua"] ? Color.fromJS(_data["aqua"]) : new Color();
+            this.aquamarine = _data["aquamarine"] ? Color.fromJS(_data["aquamarine"]) : new Color();
+            this.azure = _data["azure"] ? Color.fromJS(_data["azure"]) : new Color();
+            this.beige = _data["beige"] ? Color.fromJS(_data["beige"]) : new Color();
+            this.bisque = _data["bisque"] ? Color.fromJS(_data["bisque"]) : new Color();
+            this.black = _data["black"] ? Color.fromJS(_data["black"]) : new Color();
+            this.blanchedAlmond = _data["blanchedAlmond"] ? Color.fromJS(_data["blanchedAlmond"]) : new Color();
+            this.blue = _data["blue"] ? Color.fromJS(_data["blue"]) : new Color();
+            this.blueViolet = _data["blueViolet"] ? Color.fromJS(_data["blueViolet"]) : new Color();
+            this.brown = _data["brown"] ? Color.fromJS(_data["brown"]) : new Color();
+            this.burlyWood = _data["burlyWood"] ? Color.fromJS(_data["burlyWood"]) : new Color();
+            this.cadetBlue = _data["cadetBlue"] ? Color.fromJS(_data["cadetBlue"]) : new Color();
+            this.chartreuse = _data["chartreuse"] ? Color.fromJS(_data["chartreuse"]) : new Color();
+            this.chocolate = _data["chocolate"] ? Color.fromJS(_data["chocolate"]) : new Color();
+            this.coral = _data["coral"] ? Color.fromJS(_data["coral"]) : new Color();
+            this.cornflowerBlue = _data["cornflowerBlue"] ? Color.fromJS(_data["cornflowerBlue"]) : new Color();
+            this.cornsilk = _data["cornsilk"] ? Color.fromJS(_data["cornsilk"]) : new Color();
+            this.crimson = _data["crimson"] ? Color.fromJS(_data["crimson"]) : new Color();
+            this.cyan = _data["cyan"] ? Color.fromJS(_data["cyan"]) : new Color();
+            this.darkBlue = _data["darkBlue"] ? Color.fromJS(_data["darkBlue"]) : new Color();
+            this.darkCyan = _data["darkCyan"] ? Color.fromJS(_data["darkCyan"]) : new Color();
+            this.darkGoldenrod = _data["darkGoldenrod"] ? Color.fromJS(_data["darkGoldenrod"]) : new Color();
+            this.darkGray = _data["darkGray"] ? Color.fromJS(_data["darkGray"]) : new Color();
+            this.darkGreen = _data["darkGreen"] ? Color.fromJS(_data["darkGreen"]) : new Color();
+            this.darkKhaki = _data["darkKhaki"] ? Color.fromJS(_data["darkKhaki"]) : new Color();
+            this.darkMagenta = _data["darkMagenta"] ? Color.fromJS(_data["darkMagenta"]) : new Color();
+            this.darkOliveGreen = _data["darkOliveGreen"] ? Color.fromJS(_data["darkOliveGreen"]) : new Color();
+            this.darkOrange = _data["darkOrange"] ? Color.fromJS(_data["darkOrange"]) : new Color();
+            this.darkOrchid = _data["darkOrchid"] ? Color.fromJS(_data["darkOrchid"]) : new Color();
+            this.darkRed = _data["darkRed"] ? Color.fromJS(_data["darkRed"]) : new Color();
+            this.darkSalmon = _data["darkSalmon"] ? Color.fromJS(_data["darkSalmon"]) : new Color();
+            this.darkSeaGreen = _data["darkSeaGreen"] ? Color.fromJS(_data["darkSeaGreen"]) : new Color();
+            this.darkSlateBlue = _data["darkSlateBlue"] ? Color.fromJS(_data["darkSlateBlue"]) : new Color();
+            this.darkSlateGray = _data["darkSlateGray"] ? Color.fromJS(_data["darkSlateGray"]) : new Color();
+            this.darkTurquoise = _data["darkTurquoise"] ? Color.fromJS(_data["darkTurquoise"]) : new Color();
+            this.darkViolet = _data["darkViolet"] ? Color.fromJS(_data["darkViolet"]) : new Color();
+            this.deepPink = _data["deepPink"] ? Color.fromJS(_data["deepPink"]) : new Color();
+            this.deepSkyBlue = _data["deepSkyBlue"] ? Color.fromJS(_data["deepSkyBlue"]) : new Color();
+            this.dimGray = _data["dimGray"] ? Color.fromJS(_data["dimGray"]) : new Color();
+            this.dodgerBlue = _data["dodgerBlue"] ? Color.fromJS(_data["dodgerBlue"]) : new Color();
+            this.firebrick = _data["firebrick"] ? Color.fromJS(_data["firebrick"]) : new Color();
+            this.floralWhite = _data["floralWhite"] ? Color.fromJS(_data["floralWhite"]) : new Color();
+            this.forestGreen = _data["forestGreen"] ? Color.fromJS(_data["forestGreen"]) : new Color();
+            this.fuchsia = _data["fuchsia"] ? Color.fromJS(_data["fuchsia"]) : new Color();
+            this.gainsboro = _data["gainsboro"] ? Color.fromJS(_data["gainsboro"]) : new Color();
+            this.ghostWhite = _data["ghostWhite"] ? Color.fromJS(_data["ghostWhite"]) : new Color();
+            this.gold = _data["gold"] ? Color.fromJS(_data["gold"]) : new Color();
+            this.goldenrod = _data["goldenrod"] ? Color.fromJS(_data["goldenrod"]) : new Color();
+            this.gray = _data["gray"] ? Color.fromJS(_data["gray"]) : new Color();
+            this.green = _data["green"] ? Color.fromJS(_data["green"]) : new Color();
+            this.greenYellow = _data["greenYellow"] ? Color.fromJS(_data["greenYellow"]) : new Color();
+            this.honeydew = _data["honeydew"] ? Color.fromJS(_data["honeydew"]) : new Color();
+            this.hotPink = _data["hotPink"] ? Color.fromJS(_data["hotPink"]) : new Color();
+            this.indianRed = _data["indianRed"] ? Color.fromJS(_data["indianRed"]) : new Color();
+            this.indigo = _data["indigo"] ? Color.fromJS(_data["indigo"]) : new Color();
+            this.ivory = _data["ivory"] ? Color.fromJS(_data["ivory"]) : new Color();
+            this.khaki = _data["khaki"] ? Color.fromJS(_data["khaki"]) : new Color();
+            this.lavender = _data["lavender"] ? Color.fromJS(_data["lavender"]) : new Color();
+            this.lavenderBlush = _data["lavenderBlush"] ? Color.fromJS(_data["lavenderBlush"]) : new Color();
+            this.lawnGreen = _data["lawnGreen"] ? Color.fromJS(_data["lawnGreen"]) : new Color();
+            this.lemonChiffon = _data["lemonChiffon"] ? Color.fromJS(_data["lemonChiffon"]) : new Color();
+            this.lightBlue = _data["lightBlue"] ? Color.fromJS(_data["lightBlue"]) : new Color();
+            this.lightCoral = _data["lightCoral"] ? Color.fromJS(_data["lightCoral"]) : new Color();
+            this.lightCyan = _data["lightCyan"] ? Color.fromJS(_data["lightCyan"]) : new Color();
+            this.lightGoldenrodYellow = _data["lightGoldenrodYellow"] ? Color.fromJS(_data["lightGoldenrodYellow"]) : new Color();
+            this.lightGreen = _data["lightGreen"] ? Color.fromJS(_data["lightGreen"]) : new Color();
+            this.lightGray = _data["lightGray"] ? Color.fromJS(_data["lightGray"]) : new Color();
+            this.lightPink = _data["lightPink"] ? Color.fromJS(_data["lightPink"]) : new Color();
+            this.lightSalmon = _data["lightSalmon"] ? Color.fromJS(_data["lightSalmon"]) : new Color();
+            this.lightSeaGreen = _data["lightSeaGreen"] ? Color.fromJS(_data["lightSeaGreen"]) : new Color();
+            this.lightSkyBlue = _data["lightSkyBlue"] ? Color.fromJS(_data["lightSkyBlue"]) : new Color();
+            this.lightSlateGray = _data["lightSlateGray"] ? Color.fromJS(_data["lightSlateGray"]) : new Color();
+            this.lightSteelBlue = _data["lightSteelBlue"] ? Color.fromJS(_data["lightSteelBlue"]) : new Color();
+            this.lightYellow = _data["lightYellow"] ? Color.fromJS(_data["lightYellow"]) : new Color();
+            this.lime = _data["lime"] ? Color.fromJS(_data["lime"]) : new Color();
+            this.limeGreen = _data["limeGreen"] ? Color.fromJS(_data["limeGreen"]) : new Color();
+            this.linen = _data["linen"] ? Color.fromJS(_data["linen"]) : new Color();
+            this.magenta = _data["magenta"] ? Color.fromJS(_data["magenta"]) : new Color();
+            this.maroon = _data["maroon"] ? Color.fromJS(_data["maroon"]) : new Color();
+            this.mediumAquamarine = _data["mediumAquamarine"] ? Color.fromJS(_data["mediumAquamarine"]) : new Color();
+            this.mediumBlue = _data["mediumBlue"] ? Color.fromJS(_data["mediumBlue"]) : new Color();
+            this.mediumOrchid = _data["mediumOrchid"] ? Color.fromJS(_data["mediumOrchid"]) : new Color();
+            this.mediumPurple = _data["mediumPurple"] ? Color.fromJS(_data["mediumPurple"]) : new Color();
+            this.mediumSeaGreen = _data["mediumSeaGreen"] ? Color.fromJS(_data["mediumSeaGreen"]) : new Color();
+            this.mediumSlateBlue = _data["mediumSlateBlue"] ? Color.fromJS(_data["mediumSlateBlue"]) : new Color();
+            this.mediumSpringGreen = _data["mediumSpringGreen"] ? Color.fromJS(_data["mediumSpringGreen"]) : new Color();
+            this.mediumTurquoise = _data["mediumTurquoise"] ? Color.fromJS(_data["mediumTurquoise"]) : new Color();
+            this.mediumVioletRed = _data["mediumVioletRed"] ? Color.fromJS(_data["mediumVioletRed"]) : new Color();
+            this.midnightBlue = _data["midnightBlue"] ? Color.fromJS(_data["midnightBlue"]) : new Color();
+            this.mintCream = _data["mintCream"] ? Color.fromJS(_data["mintCream"]) : new Color();
+            this.mistyRose = _data["mistyRose"] ? Color.fromJS(_data["mistyRose"]) : new Color();
+            this.moccasin = _data["moccasin"] ? Color.fromJS(_data["moccasin"]) : new Color();
+            this.navajoWhite = _data["navajoWhite"] ? Color.fromJS(_data["navajoWhite"]) : new Color();
+            this.navy = _data["navy"] ? Color.fromJS(_data["navy"]) : new Color();
+            this.oldLace = _data["oldLace"] ? Color.fromJS(_data["oldLace"]) : new Color();
+            this.olive = _data["olive"] ? Color.fromJS(_data["olive"]) : new Color();
+            this.oliveDrab = _data["oliveDrab"] ? Color.fromJS(_data["oliveDrab"]) : new Color();
+            this.orange = _data["orange"] ? Color.fromJS(_data["orange"]) : new Color();
+            this.orangeRed = _data["orangeRed"] ? Color.fromJS(_data["orangeRed"]) : new Color();
+            this.orchid = _data["orchid"] ? Color.fromJS(_data["orchid"]) : new Color();
+            this.paleGoldenrod = _data["paleGoldenrod"] ? Color.fromJS(_data["paleGoldenrod"]) : new Color();
+            this.paleGreen = _data["paleGreen"] ? Color.fromJS(_data["paleGreen"]) : new Color();
+            this.paleTurquoise = _data["paleTurquoise"] ? Color.fromJS(_data["paleTurquoise"]) : new Color();
+            this.paleVioletRed = _data["paleVioletRed"] ? Color.fromJS(_data["paleVioletRed"]) : new Color();
+            this.papayaWhip = _data["papayaWhip"] ? Color.fromJS(_data["papayaWhip"]) : new Color();
+            this.peachPuff = _data["peachPuff"] ? Color.fromJS(_data["peachPuff"]) : new Color();
+            this.peru = _data["peru"] ? Color.fromJS(_data["peru"]) : new Color();
+            this.pink = _data["pink"] ? Color.fromJS(_data["pink"]) : new Color();
+            this.plum = _data["plum"] ? Color.fromJS(_data["plum"]) : new Color();
+            this.powderBlue = _data["powderBlue"] ? Color.fromJS(_data["powderBlue"]) : new Color();
+            this.purple = _data["purple"] ? Color.fromJS(_data["purple"]) : new Color();
+            this.rebeccaPurple = _data["rebeccaPurple"] ? Color.fromJS(_data["rebeccaPurple"]) : new Color();
+            this.red = _data["red"] ? Color.fromJS(_data["red"]) : new Color();
+            this.rosyBrown = _data["rosyBrown"] ? Color.fromJS(_data["rosyBrown"]) : new Color();
+            this.royalBlue = _data["royalBlue"] ? Color.fromJS(_data["royalBlue"]) : new Color();
+            this.saddleBrown = _data["saddleBrown"] ? Color.fromJS(_data["saddleBrown"]) : new Color();
+            this.salmon = _data["salmon"] ? Color.fromJS(_data["salmon"]) : new Color();
+            this.sandyBrown = _data["sandyBrown"] ? Color.fromJS(_data["sandyBrown"]) : new Color();
+            this.seaGreen = _data["seaGreen"] ? Color.fromJS(_data["seaGreen"]) : new Color();
+            this.seaShell = _data["seaShell"] ? Color.fromJS(_data["seaShell"]) : new Color();
+            this.sienna = _data["sienna"] ? Color.fromJS(_data["sienna"]) : new Color();
+            this.silver = _data["silver"] ? Color.fromJS(_data["silver"]) : new Color();
+            this.skyBlue = _data["skyBlue"] ? Color.fromJS(_data["skyBlue"]) : new Color();
+            this.slateBlue = _data["slateBlue"] ? Color.fromJS(_data["slateBlue"]) : new Color();
+            this.slateGray = _data["slateGray"] ? Color.fromJS(_data["slateGray"]) : new Color();
+            this.snow = _data["snow"] ? Color.fromJS(_data["snow"]) : new Color();
+            this.springGreen = _data["springGreen"] ? Color.fromJS(_data["springGreen"]) : new Color();
+            this.steelBlue = _data["steelBlue"] ? Color.fromJS(_data["steelBlue"]) : new Color();
+            this.tan = _data["tan"] ? Color.fromJS(_data["tan"]) : new Color();
+            this.teal = _data["teal"] ? Color.fromJS(_data["teal"]) : new Color();
+            this.thistle = _data["thistle"] ? Color.fromJS(_data["thistle"]) : new Color();
+            this.tomato = _data["tomato"] ? Color.fromJS(_data["tomato"]) : new Color();
+            this.turquoise = _data["turquoise"] ? Color.fromJS(_data["turquoise"]) : new Color();
+            this.violet = _data["violet"] ? Color.fromJS(_data["violet"]) : new Color();
+            this.wheat = _data["wheat"] ? Color.fromJS(_data["wheat"]) : new Color();
+            this.white = _data["white"] ? Color.fromJS(_data["white"]) : new Color();
+            this.whiteSmoke = _data["whiteSmoke"] ? Color.fromJS(_data["whiteSmoke"]) : new Color();
+            this.yellow = _data["yellow"] ? Color.fromJS(_data["yellow"]) : new Color();
+            this.yellowGreen = _data["yellowGreen"] ? Color.fromJS(_data["yellowGreen"]) : new Color();
+            this.r = _data["r"] !== undefined ? _data["r"] : <any>null;
+            this.g = _data["g"] !== undefined ? _data["g"] : <any>null;
+            this.b = _data["b"] !== undefined ? _data["b"] : <any>null;
+            this.a = _data["a"] !== undefined ? _data["a"] : <any>null;
+            this.isKnownColor = _data["isKnownColor"] !== undefined ? _data["isKnownColor"] : <any>null;
+            this.isEmpty = _data["isEmpty"] !== undefined ? _data["isEmpty"] : <any>null;
+            this.isNamedColor = _data["isNamedColor"] !== undefined ? _data["isNamedColor"] : <any>null;
+            this.isSystemColor = _data["isSystemColor"] !== undefined ? _data["isSystemColor"] : <any>null;
+            this.nameAndARGBValue = _data["nameAndARGBValue"] !== undefined ? _data["nameAndARGBValue"] : <any>null;
+            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Color {
+        data = typeof data === 'object' ? data : {};
+        let result = new Color();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["transparent"] = this.transparent ? this.transparent.toJSON() : <any>null;
+        data["aliceBlue"] = this.aliceBlue ? this.aliceBlue.toJSON() : <any>null;
+        data["antiqueWhite"] = this.antiqueWhite ? this.antiqueWhite.toJSON() : <any>null;
+        data["aqua"] = this.aqua ? this.aqua.toJSON() : <any>null;
+        data["aquamarine"] = this.aquamarine ? this.aquamarine.toJSON() : <any>null;
+        data["azure"] = this.azure ? this.azure.toJSON() : <any>null;
+        data["beige"] = this.beige ? this.beige.toJSON() : <any>null;
+        data["bisque"] = this.bisque ? this.bisque.toJSON() : <any>null;
+        data["black"] = this.black ? this.black.toJSON() : <any>null;
+        data["blanchedAlmond"] = this.blanchedAlmond ? this.blanchedAlmond.toJSON() : <any>null;
+        data["blue"] = this.blue ? this.blue.toJSON() : <any>null;
+        data["blueViolet"] = this.blueViolet ? this.blueViolet.toJSON() : <any>null;
+        data["brown"] = this.brown ? this.brown.toJSON() : <any>null;
+        data["burlyWood"] = this.burlyWood ? this.burlyWood.toJSON() : <any>null;
+        data["cadetBlue"] = this.cadetBlue ? this.cadetBlue.toJSON() : <any>null;
+        data["chartreuse"] = this.chartreuse ? this.chartreuse.toJSON() : <any>null;
+        data["chocolate"] = this.chocolate ? this.chocolate.toJSON() : <any>null;
+        data["coral"] = this.coral ? this.coral.toJSON() : <any>null;
+        data["cornflowerBlue"] = this.cornflowerBlue ? this.cornflowerBlue.toJSON() : <any>null;
+        data["cornsilk"] = this.cornsilk ? this.cornsilk.toJSON() : <any>null;
+        data["crimson"] = this.crimson ? this.crimson.toJSON() : <any>null;
+        data["cyan"] = this.cyan ? this.cyan.toJSON() : <any>null;
+        data["darkBlue"] = this.darkBlue ? this.darkBlue.toJSON() : <any>null;
+        data["darkCyan"] = this.darkCyan ? this.darkCyan.toJSON() : <any>null;
+        data["darkGoldenrod"] = this.darkGoldenrod ? this.darkGoldenrod.toJSON() : <any>null;
+        data["darkGray"] = this.darkGray ? this.darkGray.toJSON() : <any>null;
+        data["darkGreen"] = this.darkGreen ? this.darkGreen.toJSON() : <any>null;
+        data["darkKhaki"] = this.darkKhaki ? this.darkKhaki.toJSON() : <any>null;
+        data["darkMagenta"] = this.darkMagenta ? this.darkMagenta.toJSON() : <any>null;
+        data["darkOliveGreen"] = this.darkOliveGreen ? this.darkOliveGreen.toJSON() : <any>null;
+        data["darkOrange"] = this.darkOrange ? this.darkOrange.toJSON() : <any>null;
+        data["darkOrchid"] = this.darkOrchid ? this.darkOrchid.toJSON() : <any>null;
+        data["darkRed"] = this.darkRed ? this.darkRed.toJSON() : <any>null;
+        data["darkSalmon"] = this.darkSalmon ? this.darkSalmon.toJSON() : <any>null;
+        data["darkSeaGreen"] = this.darkSeaGreen ? this.darkSeaGreen.toJSON() : <any>null;
+        data["darkSlateBlue"] = this.darkSlateBlue ? this.darkSlateBlue.toJSON() : <any>null;
+        data["darkSlateGray"] = this.darkSlateGray ? this.darkSlateGray.toJSON() : <any>null;
+        data["darkTurquoise"] = this.darkTurquoise ? this.darkTurquoise.toJSON() : <any>null;
+        data["darkViolet"] = this.darkViolet ? this.darkViolet.toJSON() : <any>null;
+        data["deepPink"] = this.deepPink ? this.deepPink.toJSON() : <any>null;
+        data["deepSkyBlue"] = this.deepSkyBlue ? this.deepSkyBlue.toJSON() : <any>null;
+        data["dimGray"] = this.dimGray ? this.dimGray.toJSON() : <any>null;
+        data["dodgerBlue"] = this.dodgerBlue ? this.dodgerBlue.toJSON() : <any>null;
+        data["firebrick"] = this.firebrick ? this.firebrick.toJSON() : <any>null;
+        data["floralWhite"] = this.floralWhite ? this.floralWhite.toJSON() : <any>null;
+        data["forestGreen"] = this.forestGreen ? this.forestGreen.toJSON() : <any>null;
+        data["fuchsia"] = this.fuchsia ? this.fuchsia.toJSON() : <any>null;
+        data["gainsboro"] = this.gainsboro ? this.gainsboro.toJSON() : <any>null;
+        data["ghostWhite"] = this.ghostWhite ? this.ghostWhite.toJSON() : <any>null;
+        data["gold"] = this.gold ? this.gold.toJSON() : <any>null;
+        data["goldenrod"] = this.goldenrod ? this.goldenrod.toJSON() : <any>null;
+        data["gray"] = this.gray ? this.gray.toJSON() : <any>null;
+        data["green"] = this.green ? this.green.toJSON() : <any>null;
+        data["greenYellow"] = this.greenYellow ? this.greenYellow.toJSON() : <any>null;
+        data["honeydew"] = this.honeydew ? this.honeydew.toJSON() : <any>null;
+        data["hotPink"] = this.hotPink ? this.hotPink.toJSON() : <any>null;
+        data["indianRed"] = this.indianRed ? this.indianRed.toJSON() : <any>null;
+        data["indigo"] = this.indigo ? this.indigo.toJSON() : <any>null;
+        data["ivory"] = this.ivory ? this.ivory.toJSON() : <any>null;
+        data["khaki"] = this.khaki ? this.khaki.toJSON() : <any>null;
+        data["lavender"] = this.lavender ? this.lavender.toJSON() : <any>null;
+        data["lavenderBlush"] = this.lavenderBlush ? this.lavenderBlush.toJSON() : <any>null;
+        data["lawnGreen"] = this.lawnGreen ? this.lawnGreen.toJSON() : <any>null;
+        data["lemonChiffon"] = this.lemonChiffon ? this.lemonChiffon.toJSON() : <any>null;
+        data["lightBlue"] = this.lightBlue ? this.lightBlue.toJSON() : <any>null;
+        data["lightCoral"] = this.lightCoral ? this.lightCoral.toJSON() : <any>null;
+        data["lightCyan"] = this.lightCyan ? this.lightCyan.toJSON() : <any>null;
+        data["lightGoldenrodYellow"] = this.lightGoldenrodYellow ? this.lightGoldenrodYellow.toJSON() : <any>null;
+        data["lightGreen"] = this.lightGreen ? this.lightGreen.toJSON() : <any>null;
+        data["lightGray"] = this.lightGray ? this.lightGray.toJSON() : <any>null;
+        data["lightPink"] = this.lightPink ? this.lightPink.toJSON() : <any>null;
+        data["lightSalmon"] = this.lightSalmon ? this.lightSalmon.toJSON() : <any>null;
+        data["lightSeaGreen"] = this.lightSeaGreen ? this.lightSeaGreen.toJSON() : <any>null;
+        data["lightSkyBlue"] = this.lightSkyBlue ? this.lightSkyBlue.toJSON() : <any>null;
+        data["lightSlateGray"] = this.lightSlateGray ? this.lightSlateGray.toJSON() : <any>null;
+        data["lightSteelBlue"] = this.lightSteelBlue ? this.lightSteelBlue.toJSON() : <any>null;
+        data["lightYellow"] = this.lightYellow ? this.lightYellow.toJSON() : <any>null;
+        data["lime"] = this.lime ? this.lime.toJSON() : <any>null;
+        data["limeGreen"] = this.limeGreen ? this.limeGreen.toJSON() : <any>null;
+        data["linen"] = this.linen ? this.linen.toJSON() : <any>null;
+        data["magenta"] = this.magenta ? this.magenta.toJSON() : <any>null;
+        data["maroon"] = this.maroon ? this.maroon.toJSON() : <any>null;
+        data["mediumAquamarine"] = this.mediumAquamarine ? this.mediumAquamarine.toJSON() : <any>null;
+        data["mediumBlue"] = this.mediumBlue ? this.mediumBlue.toJSON() : <any>null;
+        data["mediumOrchid"] = this.mediumOrchid ? this.mediumOrchid.toJSON() : <any>null;
+        data["mediumPurple"] = this.mediumPurple ? this.mediumPurple.toJSON() : <any>null;
+        data["mediumSeaGreen"] = this.mediumSeaGreen ? this.mediumSeaGreen.toJSON() : <any>null;
+        data["mediumSlateBlue"] = this.mediumSlateBlue ? this.mediumSlateBlue.toJSON() : <any>null;
+        data["mediumSpringGreen"] = this.mediumSpringGreen ? this.mediumSpringGreen.toJSON() : <any>null;
+        data["mediumTurquoise"] = this.mediumTurquoise ? this.mediumTurquoise.toJSON() : <any>null;
+        data["mediumVioletRed"] = this.mediumVioletRed ? this.mediumVioletRed.toJSON() : <any>null;
+        data["midnightBlue"] = this.midnightBlue ? this.midnightBlue.toJSON() : <any>null;
+        data["mintCream"] = this.mintCream ? this.mintCream.toJSON() : <any>null;
+        data["mistyRose"] = this.mistyRose ? this.mistyRose.toJSON() : <any>null;
+        data["moccasin"] = this.moccasin ? this.moccasin.toJSON() : <any>null;
+        data["navajoWhite"] = this.navajoWhite ? this.navajoWhite.toJSON() : <any>null;
+        data["navy"] = this.navy ? this.navy.toJSON() : <any>null;
+        data["oldLace"] = this.oldLace ? this.oldLace.toJSON() : <any>null;
+        data["olive"] = this.olive ? this.olive.toJSON() : <any>null;
+        data["oliveDrab"] = this.oliveDrab ? this.oliveDrab.toJSON() : <any>null;
+        data["orange"] = this.orange ? this.orange.toJSON() : <any>null;
+        data["orangeRed"] = this.orangeRed ? this.orangeRed.toJSON() : <any>null;
+        data["orchid"] = this.orchid ? this.orchid.toJSON() : <any>null;
+        data["paleGoldenrod"] = this.paleGoldenrod ? this.paleGoldenrod.toJSON() : <any>null;
+        data["paleGreen"] = this.paleGreen ? this.paleGreen.toJSON() : <any>null;
+        data["paleTurquoise"] = this.paleTurquoise ? this.paleTurquoise.toJSON() : <any>null;
+        data["paleVioletRed"] = this.paleVioletRed ? this.paleVioletRed.toJSON() : <any>null;
+        data["papayaWhip"] = this.papayaWhip ? this.papayaWhip.toJSON() : <any>null;
+        data["peachPuff"] = this.peachPuff ? this.peachPuff.toJSON() : <any>null;
+        data["peru"] = this.peru ? this.peru.toJSON() : <any>null;
+        data["pink"] = this.pink ? this.pink.toJSON() : <any>null;
+        data["plum"] = this.plum ? this.plum.toJSON() : <any>null;
+        data["powderBlue"] = this.powderBlue ? this.powderBlue.toJSON() : <any>null;
+        data["purple"] = this.purple ? this.purple.toJSON() : <any>null;
+        data["rebeccaPurple"] = this.rebeccaPurple ? this.rebeccaPurple.toJSON() : <any>null;
+        data["red"] = this.red ? this.red.toJSON() : <any>null;
+        data["rosyBrown"] = this.rosyBrown ? this.rosyBrown.toJSON() : <any>null;
+        data["royalBlue"] = this.royalBlue ? this.royalBlue.toJSON() : <any>null;
+        data["saddleBrown"] = this.saddleBrown ? this.saddleBrown.toJSON() : <any>null;
+        data["salmon"] = this.salmon ? this.salmon.toJSON() : <any>null;
+        data["sandyBrown"] = this.sandyBrown ? this.sandyBrown.toJSON() : <any>null;
+        data["seaGreen"] = this.seaGreen ? this.seaGreen.toJSON() : <any>null;
+        data["seaShell"] = this.seaShell ? this.seaShell.toJSON() : <any>null;
+        data["sienna"] = this.sienna ? this.sienna.toJSON() : <any>null;
+        data["silver"] = this.silver ? this.silver.toJSON() : <any>null;
+        data["skyBlue"] = this.skyBlue ? this.skyBlue.toJSON() : <any>null;
+        data["slateBlue"] = this.slateBlue ? this.slateBlue.toJSON() : <any>null;
+        data["slateGray"] = this.slateGray ? this.slateGray.toJSON() : <any>null;
+        data["snow"] = this.snow ? this.snow.toJSON() : <any>null;
+        data["springGreen"] = this.springGreen ? this.springGreen.toJSON() : <any>null;
+        data["steelBlue"] = this.steelBlue ? this.steelBlue.toJSON() : <any>null;
+        data["tan"] = this.tan ? this.tan.toJSON() : <any>null;
+        data["teal"] = this.teal ? this.teal.toJSON() : <any>null;
+        data["thistle"] = this.thistle ? this.thistle.toJSON() : <any>null;
+        data["tomato"] = this.tomato ? this.tomato.toJSON() : <any>null;
+        data["turquoise"] = this.turquoise ? this.turquoise.toJSON() : <any>null;
+        data["violet"] = this.violet ? this.violet.toJSON() : <any>null;
+        data["wheat"] = this.wheat ? this.wheat.toJSON() : <any>null;
+        data["white"] = this.white ? this.white.toJSON() : <any>null;
+        data["whiteSmoke"] = this.whiteSmoke ? this.whiteSmoke.toJSON() : <any>null;
+        data["yellow"] = this.yellow ? this.yellow.toJSON() : <any>null;
+        data["yellowGreen"] = this.yellowGreen ? this.yellowGreen.toJSON() : <any>null;
+        data["r"] = this.r !== undefined ? this.r : <any>null;
+        data["g"] = this.g !== undefined ? this.g : <any>null;
+        data["b"] = this.b !== undefined ? this.b : <any>null;
+        data["a"] = this.a !== undefined ? this.a : <any>null;
+        data["isKnownColor"] = this.isKnownColor !== undefined ? this.isKnownColor : <any>null;
+        data["isEmpty"] = this.isEmpty !== undefined ? this.isEmpty : <any>null;
+        data["isNamedColor"] = this.isNamedColor !== undefined ? this.isNamedColor : <any>null;
+        data["isSystemColor"] = this.isSystemColor !== undefined ? this.isSystemColor : <any>null;
+        data["nameAndARGBValue"] = this.nameAndARGBValue !== undefined ? this.nameAndARGBValue : <any>null;
+        data["name"] = this.name !== undefined ? this.name : <any>null;
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IColor {
+    transparent: Color;
+    aliceBlue: Color;
+    antiqueWhite: Color;
+    aqua: Color;
+    aquamarine: Color;
+    azure: Color;
+    beige: Color;
+    bisque: Color;
+    black: Color;
+    blanchedAlmond: Color;
+    blue: Color;
+    blueViolet: Color;
+    brown: Color;
+    burlyWood: Color;
+    cadetBlue: Color;
+    chartreuse: Color;
+    chocolate: Color;
+    coral: Color;
+    cornflowerBlue: Color;
+    cornsilk: Color;
+    crimson: Color;
+    cyan: Color;
+    darkBlue: Color;
+    darkCyan: Color;
+    darkGoldenrod: Color;
+    darkGray: Color;
+    darkGreen: Color;
+    darkKhaki: Color;
+    darkMagenta: Color;
+    darkOliveGreen: Color;
+    darkOrange: Color;
+    darkOrchid: Color;
+    darkRed: Color;
+    darkSalmon: Color;
+    darkSeaGreen: Color;
+    darkSlateBlue: Color;
+    darkSlateGray: Color;
+    darkTurquoise: Color;
+    darkViolet: Color;
+    deepPink: Color;
+    deepSkyBlue: Color;
+    dimGray: Color;
+    dodgerBlue: Color;
+    firebrick: Color;
+    floralWhite: Color;
+    forestGreen: Color;
+    fuchsia: Color;
+    gainsboro: Color;
+    ghostWhite: Color;
+    gold: Color;
+    goldenrod: Color;
+    gray: Color;
+    green: Color;
+    greenYellow: Color;
+    honeydew: Color;
+    hotPink: Color;
+    indianRed: Color;
+    indigo: Color;
+    ivory: Color;
+    khaki: Color;
+    lavender: Color;
+    lavenderBlush: Color;
+    lawnGreen: Color;
+    lemonChiffon: Color;
+    lightBlue: Color;
+    lightCoral: Color;
+    lightCyan: Color;
+    lightGoldenrodYellow: Color;
+    lightGreen: Color;
+    lightGray: Color;
+    lightPink: Color;
+    lightSalmon: Color;
+    lightSeaGreen: Color;
+    lightSkyBlue: Color;
+    lightSlateGray: Color;
+    lightSteelBlue: Color;
+    lightYellow: Color;
+    lime: Color;
+    limeGreen: Color;
+    linen: Color;
+    magenta: Color;
+    maroon: Color;
+    mediumAquamarine: Color;
+    mediumBlue: Color;
+    mediumOrchid: Color;
+    mediumPurple: Color;
+    mediumSeaGreen: Color;
+    mediumSlateBlue: Color;
+    mediumSpringGreen: Color;
+    mediumTurquoise: Color;
+    mediumVioletRed: Color;
+    midnightBlue: Color;
+    mintCream: Color;
+    mistyRose: Color;
+    moccasin: Color;
+    navajoWhite: Color;
+    navy: Color;
+    oldLace: Color;
+    olive: Color;
+    oliveDrab: Color;
+    orange: Color;
+    orangeRed: Color;
+    orchid: Color;
+    paleGoldenrod: Color;
+    paleGreen: Color;
+    paleTurquoise: Color;
+    paleVioletRed: Color;
+    papayaWhip: Color;
+    peachPuff: Color;
+    peru: Color;
+    pink: Color;
+    plum: Color;
+    powderBlue: Color;
+    purple: Color;
+    rebeccaPurple: Color;
+    red: Color;
+    rosyBrown: Color;
+    royalBlue: Color;
+    saddleBrown: Color;
+    salmon: Color;
+    sandyBrown: Color;
+    seaGreen: Color;
+    seaShell: Color;
+    sienna: Color;
+    silver: Color;
+    skyBlue: Color;
+    slateBlue: Color;
+    slateGray: Color;
+    snow: Color;
+    springGreen: Color;
+    steelBlue: Color;
+    tan: Color;
+    teal: Color;
+    thistle: Color;
+    tomato: Color;
+    turquoise: Color;
+    violet: Color;
+    wheat: Color;
+    white: Color;
+    whiteSmoke: Color;
+    yellow: Color;
+    yellowGreen: Color;
+    r: number;
+    g: number;
+    b: number;
+    a: number;
+    isKnownColor: boolean;
+    isEmpty: boolean;
+    isNamedColor: boolean;
+    isSystemColor: boolean;
+    nameAndARGBValue: string;
+    name: string;
+    value: number;
+}
+
+export class AppStrings implements IAppStrings {
+    appName!: string;
+    disconnect!: string;
+    connect!: string;
+    disconnected!: string;
+    exit!: string;
+    manage!: string;
+    msgAccessKeyAdded!: string;
+    msgAccessKeyUpdated!: string;
+    msgCantReadAccessKey!: string;
+    msgUnsupportedContent!: string;
+    open!: string;
+    openInBrowser!: string;
+
+    constructor(data?: IAppStrings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.appName = _data["appName"] !== undefined ? _data["appName"] : <any>null;
+            this.disconnect = _data["disconnect"] !== undefined ? _data["disconnect"] : <any>null;
+            this.connect = _data["connect"] !== undefined ? _data["connect"] : <any>null;
+            this.disconnected = _data["disconnected"] !== undefined ? _data["disconnected"] : <any>null;
+            this.exit = _data["exit"] !== undefined ? _data["exit"] : <any>null;
+            this.manage = _data["manage"] !== undefined ? _data["manage"] : <any>null;
+            this.msgAccessKeyAdded = _data["msgAccessKeyAdded"] !== undefined ? _data["msgAccessKeyAdded"] : <any>null;
+            this.msgAccessKeyUpdated = _data["msgAccessKeyUpdated"] !== undefined ? _data["msgAccessKeyUpdated"] : <any>null;
+            this.msgCantReadAccessKey = _data["msgCantReadAccessKey"] !== undefined ? _data["msgCantReadAccessKey"] : <any>null;
+            this.msgUnsupportedContent = _data["msgUnsupportedContent"] !== undefined ? _data["msgUnsupportedContent"] : <any>null;
+            this.open = _data["open"] !== undefined ? _data["open"] : <any>null;
+            this.openInBrowser = _data["openInBrowser"] !== undefined ? _data["openInBrowser"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppStrings {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppStrings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["appName"] = this.appName !== undefined ? this.appName : <any>null;
+        data["disconnect"] = this.disconnect !== undefined ? this.disconnect : <any>null;
+        data["connect"] = this.connect !== undefined ? this.connect : <any>null;
+        data["disconnected"] = this.disconnected !== undefined ? this.disconnected : <any>null;
+        data["exit"] = this.exit !== undefined ? this.exit : <any>null;
+        data["manage"] = this.manage !== undefined ? this.manage : <any>null;
+        data["msgAccessKeyAdded"] = this.msgAccessKeyAdded !== undefined ? this.msgAccessKeyAdded : <any>null;
+        data["msgAccessKeyUpdated"] = this.msgAccessKeyUpdated !== undefined ? this.msgAccessKeyUpdated : <any>null;
+        data["msgCantReadAccessKey"] = this.msgCantReadAccessKey !== undefined ? this.msgCantReadAccessKey : <any>null;
+        data["msgUnsupportedContent"] = this.msgUnsupportedContent !== undefined ? this.msgUnsupportedContent : <any>null;
+        data["open"] = this.open !== undefined ? this.open : <any>null;
+        data["openInBrowser"] = this.openInBrowser !== undefined ? this.openInBrowser : <any>null;
+        return data;
+    }
+}
+
+export interface IAppStrings {
+    appName: string;
+    disconnect: string;
+    connect: string;
+    disconnected: string;
+    exit: string;
+    manage: string;
+    msgAccessKeyAdded: string;
+    msgAccessKeyUpdated: string;
+    msgCantReadAccessKey: string;
+    msgUnsupportedContent: string;
+    open: string;
+    openInBrowser: string;
+}
+
+export class AppIcons implements IAppIcons {
+    badgeConnectedIcon?: IconData | null;
+    badgeConnectingIcon?: IconData | null;
+    systemTrayConnectedIcon?: IconData | null;
+    systemTrayConnectingIcon?: IconData | null;
+    systemTrayDisconnectedIcon?: IconData | null;
+
+    constructor(data?: IAppIcons) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.badgeConnectedIcon = _data["badgeConnectedIcon"] ? IconData.fromJS(_data["badgeConnectedIcon"]) : <any>null;
+            this.badgeConnectingIcon = _data["badgeConnectingIcon"] ? IconData.fromJS(_data["badgeConnectingIcon"]) : <any>null;
+            this.systemTrayConnectedIcon = _data["systemTrayConnectedIcon"] ? IconData.fromJS(_data["systemTrayConnectedIcon"]) : <any>null;
+            this.systemTrayConnectingIcon = _data["systemTrayConnectingIcon"] ? IconData.fromJS(_data["systemTrayConnectingIcon"]) : <any>null;
+            this.systemTrayDisconnectedIcon = _data["systemTrayDisconnectedIcon"] ? IconData.fromJS(_data["systemTrayDisconnectedIcon"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppIcons {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppIcons();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["badgeConnectedIcon"] = this.badgeConnectedIcon ? this.badgeConnectedIcon.toJSON() : <any>null;
+        data["badgeConnectingIcon"] = this.badgeConnectingIcon ? this.badgeConnectingIcon.toJSON() : <any>null;
+        data["systemTrayConnectedIcon"] = this.systemTrayConnectedIcon ? this.systemTrayConnectedIcon.toJSON() : <any>null;
+        data["systemTrayConnectingIcon"] = this.systemTrayConnectingIcon ? this.systemTrayConnectingIcon.toJSON() : <any>null;
+        data["systemTrayDisconnectedIcon"] = this.systemTrayDisconnectedIcon ? this.systemTrayDisconnectedIcon.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IAppIcons {
+    badgeConnectedIcon?: IconData | null;
+    badgeConnectingIcon?: IconData | null;
+    systemTrayConnectedIcon?: IconData | null;
+    systemTrayConnectingIcon?: IconData | null;
+    systemTrayDisconnectedIcon?: IconData | null;
+}
+
+export class IconData implements IIconData {
+    data!: string;
+
+    constructor(data?: IIconData) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.data = _data["data"] !== undefined ? _data["data"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): IconData {
+        data = typeof data === 'object' ? data : {};
+        let result = new IconData();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["data"] = this.data !== undefined ? this.data : <any>null;
+        return data;
+    }
+}
+
+export interface IIconData {
+    data: string;
 }
 
 export class SubscriptionPlan implements ISubscriptionPlan {

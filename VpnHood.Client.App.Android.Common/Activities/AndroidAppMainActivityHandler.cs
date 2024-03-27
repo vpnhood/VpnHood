@@ -157,7 +157,7 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnConfigurationChanged(Configuration args)
     {
-        VpnHoodApp.Instance.InitUi();
+        VpnHoodApp.Instance.UpdateUi();
     }
 
     protected virtual void OnDestroy()

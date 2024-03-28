@@ -165,7 +165,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                     _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
-                CultureCode = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+                CultureCode = CultureInfo.DefaultThreadCurrentUICulture.TwoLetterISOLanguageName
             };
         }
     }
@@ -340,14 +340,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 : CultureInfo.InstalledUICulture;
         }
 
-        CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
     }
 
     private void Settings_Saved(object sender, EventArgs e)
     {
-        if (Client == null) return;
-        Client.UseUdpChannel = UserSettings.UseUdpChannel;
-        Client.DropUdpPackets = UserSettings.DropUdpPackets;
+        if (Client != null)
+        {
+            Client.UseUdpChannel = UserSettings.UseUdpChannel;
+            Client.DropUdpPackets = UserSettings.DropUdpPackets;
+        }
 
         // sync culture to system app settings
         if (Device.CultureService?.IsSelectedCulturesSupported == true)

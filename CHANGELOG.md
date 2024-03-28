@@ -1,6 +1,7 @@
 # Upcoming
 ### Client
 * Feature: Accept DNS Servers from the connected Server
+* Feature: Multi-language Support (Arabic, Chinese, English, Farsi, Portuguese, Russian, Spanish)
 * Update: Improve UDP performance
 
 ### Server

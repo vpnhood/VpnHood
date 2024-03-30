@@ -1,6 +1,5 @@
 ﻿using Android.Content;
 using Android.Webkit;
-using Uri = Android.Net.Uri;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -13,7 +12,12 @@ internal class AndroidAppWebViewClient : WebViewClient
         if (webView == null || url == null)
             return false;
 
-        var intent = new Intent(Intent.ActionView, Uri.Parse(url));
+        // ignore root
+        var uri = new Uri(url);
+        if (uri.AbsolutePath == "/" || string.IsNullOrEmpty(uri.AbsolutePath))
+            return false;
+
+        var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
         intent.SetFlags(ActivityFlags.NewTask);
         Application.Context.StartActivity(intent);
 
@@ -23,7 +27,10 @@ internal class AndroidAppWebViewClient : WebViewClient
     // used for Window.Open such as SendReport
     public override bool ShouldOverrideUrlLoading(WebView? webView, IWebResourceRequest? request)
     {
-        return ShouldOverrideUrlLoading(webView, request?.Url?.ToString());
+        if (request == null || request.IsForMainFrame) 
+            return false;
+
+        return ShouldOverrideUrlLoading(webView, request.Url?.ToString());
     }
 
     public override void OnPageFinished(WebView? view, string? url)

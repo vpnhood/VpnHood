@@ -28,4 +28,5 @@ public class AppState
     public required bool CanConnect { get; init; }
     public required string CultureCode { get; init; }
     public required string SystemCultureCode { get; init; }
+    public required string SystemCultureNativeName { get; init; }
 }

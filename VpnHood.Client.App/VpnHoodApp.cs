@@ -169,7 +169,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
                 CultureCode = CultureInfo.DefaultThreadCurrentUICulture.TwoLetterISOLanguageName,
-                SystemCultureCode = SystemCulture.TwoLetterISOLanguageName
+                SystemCultureCode = SystemCulture.TwoLetterISOLanguageName,
+                SystemCultureNativeName = SystemCulture.NativeName
             };
         }
     }

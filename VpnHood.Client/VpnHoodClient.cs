@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -838,6 +839,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
+        }
+    }
+
+    public async Task SendAdReward(string? adData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
+                new AdRewardRequest
+                {
+                    RequestId = Guid.NewGuid() + ":client",
+                    AdData = adData
+                },
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
+            throw;
         }
     }
 

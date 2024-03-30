@@ -43,6 +43,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private AppConnectionState _lastConnectionState;
     private int _initializingState;
     private readonly TimeSpan _versionCheckInterval;
+
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
@@ -54,6 +55,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
+    public CultureInfo SystemCulture { get; private set; }
     public bool IsWaitingForAd { get; private set; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
@@ -85,6 +87,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         device.StartedAsService += DeviceOnStartedAsService;
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
+        SystemCulture = CultureInfo.InstalledUICulture;
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.Saved += Settings_Saved;
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
@@ -165,7 +168,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                     _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
-                CultureCode = CultureInfo.DefaultThreadCurrentUICulture.TwoLetterISOLanguageName
+                CultureCode = CultureInfo.DefaultThreadCurrentUICulture.TwoLetterISOLanguageName,
+                SystemCultureCode = SystemCulture.TwoLetterISOLanguageName
             };
         }
     }
@@ -324,16 +328,24 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // use culture in the System App Settings
         if (Device.CultureService?.IsSelectedCulturesSupported == true)
         {
+            // set system culture
+            var systemCultureCode = Device.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault() 
+                                    ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
+            SystemCulture = new CultureInfo(systemCultureCode);
+                            
             var firstSelected = Device.CultureService.SelectedCultures?.FirstOrDefault();
             CultureInfo.CurrentUICulture = (firstSelected != null)
-                ? CultureInfo.GetCultureInfoByIetfLanguageTag(firstSelected)
-                : CultureInfo.InstalledUICulture;
+                ? new CultureInfo(firstSelected)
+                : SystemCulture;
 
             // sync UserSettings from the System App Settings
             UserSettings.CultureCode = firstSelected?.Split("-").FirstOrDefault();
         }
         else
         {
+            // set system culture
+            SystemCulture = CultureInfo.InstalledUICulture;
+
             // use culture in the UserSettings
             CultureInfo.CurrentUICulture = UserSettings.CultureCode != null
                 ? CultureInfo.GetCultureInfo(UserSettings.CultureCode)
@@ -406,15 +418,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         Settings.Save();
 
         // Show ad if required
-        //todo: add test
-        string? adData = null;
-        if (token.IsAdRequired)
-        {
-            if (AppAdService == null) throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
-            IsWaitingForAd = true;
-            adData = await AppAdService.ShowAd(cancellationToken) ?? throw new AdException("This server requires a display ad but could not display it.");
-            IsWaitingForAd = false;
-        }
+        var adData = token.IsAdRequired ? await ShowAd(CancellationToken.None) : null;
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
@@ -472,6 +476,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
             // check version after first connection
             _ = VersionCheck();
+
+            // Show ad if it is required and does not show yet
+            if (token.IsAdRequired && string.IsNullOrEmpty(adData))
+            {
+                adData = await ShowAd(cancellationToken);
+                await ClientConnect.Client.SendAdReward(adData, cancellationToken);
+            }
         }
         finally
         {
@@ -479,6 +490,27 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             // try to update token from url after connection or error if ResponseAccessKey is not set
             if (clientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
                 _ = ClientProfileService.UpdateTokenFromUrl(token);
+        }
+    }
+
+    private async Task<string?> ShowAd(CancellationToken cancellationToken)
+    {
+        if (AppAdService == null) 
+            throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
+
+        IsWaitingForAd = true;
+        try
+        {
+            var adData = await AppAdService.ShowAd(cancellationToken) ?? throw new AdException("This server requires a display ad but could not display it.");
+            return adData;
+        }
+        catch (Exception ex) when (ex is not AdException)
+        {
+            throw new AdException("This server requires a display ad but could not display it. " + ex.Message, ex);
+        }
+        finally
+        {
+            IsWaitingForAd = false;
         }
     }
 

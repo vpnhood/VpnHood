@@ -13,8 +13,18 @@ internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    [Route(HttpVerbs.Post, "/config")]
-    public Task<AppConfig> Configure(ConfigParams configParams)
+    [Route(HttpVerbs.Patch, "/configure")]
+    public Task Configure(ConfigParams configParams)
+    {
+        App.Device.CultureService.AvailableCultures = configParams.AvailableCultures;
+        if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
+
+        App.UpdateUi();
+        return GetConfig();
+    }
+
+    [Route(HttpVerbs.Get, "/config")]
+    public Task<AppConfig> GetConfig()
     {
         var ret = new AppConfig
         {
@@ -22,16 +32,13 @@ internal class AppController : WebApiController, IAppController
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
-            CultureInfos = configParams.CultureCodes
+            CultureInfos = App.Device.CultureService.AvailableCultures
                 .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
                 .ToArray()
         };
 
-        if (App.Device.CultureService?.IsAppCulturesSupported == true)
-            App.Device.CultureService.AppCultures = configParams.CultureCodes;
-
-        App.UpdateUi();
         return Task.FromResult(ret);
+
     }
 
     [Route(HttpVerbs.Get, "/state")]
@@ -131,19 +138,6 @@ internal class AppController : WebApiController, IAppController
 
         App.ClientProfileService.Update(clientProfile);
     }
-
-    [Route(HttpVerbs.Patch, "/configure-ui")]
-    // ReSharper disable once RedundantAssignment
-    public async Task ConfigureUi(UiConfig uiConfig)
-    {
-        uiConfig = await GetRequestDataAsync<UiConfig>();
-
-        if (uiConfig.Strings != null)
-            App.Resource.Strings = uiConfig.Strings;
-
-        App.UpdateUi();
-    }
-
 
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)

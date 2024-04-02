@@ -2,5 +2,6 @@
 
 public class ConfigParams
 {
-    public string[] CultureCodes { get; init; } = [];
+    public string[] AvailableCultures { get; init; } = [];
+    public AppResource.AppStrings? Strings { get; init; }
 }

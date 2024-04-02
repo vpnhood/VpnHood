@@ -7,7 +7,7 @@ public class WinDivertDevice : IDevice
 #pragma warning restore 0067
 
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-    public IDeviceCultureService? CultureService => null;
+    public IDeviceCultureService CultureService { get; } = new DeviceCultureService();
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsLogToConsoleSupported => true;
     public bool IsIncludeAppsSupported => IsDebugMode;

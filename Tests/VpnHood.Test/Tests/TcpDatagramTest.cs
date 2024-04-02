@@ -45,7 +45,7 @@ public class TcpDatagramChannelTest : TestBase
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IPPacket? lastServerReceivedPacket = null;
-        serverTunnel.OnPacketReceived += (_, args) =>
+        serverTunnel.PacketReceived += (_, args) =>
         {
             lastServerReceivedPacket = args.IpPackets.Last();
         };

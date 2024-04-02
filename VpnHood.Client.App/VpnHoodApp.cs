@@ -327,14 +327,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private void InitCulture()
     {
         // use culture in the System App Settings
-        if (Device.CultureService?.IsSelectedCulturesSupported == true)
+        if (Device.CultureService.IsSelectedCulturesSupported)
         {
             // set system culture
             var systemCultureCode = Device.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault() 
                                     ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
             SystemCulture = new CultureInfo(systemCultureCode);
-                            
-            var firstSelected = Device.CultureService.SelectedCultures?.FirstOrDefault();
+               
+            // set app culture
+            var firstSelected = Device.CultureService.SelectedCultures.FirstOrDefault();
             CultureInfo.CurrentUICulture = (firstSelected != null)
                 ? new CultureInfo(firstSelected)
                 : SystemCulture;
@@ -365,8 +366,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
 
         // sync culture to system app settings
-        if (Device.CultureService?.IsSelectedCulturesSupported == true)
-            Device.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : null;
+        if (Device.CultureService.IsSelectedCulturesSupported)
+            Device.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
 
         InitCulture();
     }

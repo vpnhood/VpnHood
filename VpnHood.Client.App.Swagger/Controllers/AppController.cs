@@ -1,5 +1,4 @@
 using System.Net.Mime;
-using EmbedIO;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
@@ -11,8 +10,8 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 [Route("api/app")]
 public class AppController : ControllerBase, IAppController
 {
-    [HttpGet("config")]
-    public Task<AppConfig> GetConfig()
+    [HttpGet("configure")]
+    public Task<AppConfig> Configure(ConfigParams configParams)
     {
         throw new NotImplementedException();
     }
@@ -108,13 +107,8 @@ public class AppController : ControllerBase, IAppController
         throw new NotImplementedException();
     }
 
-    [HttpPut("cultures")]
-    public Task SetCultures(string[] cultureCodes)
-    {
-        throw new NotImplementedException();
-    }
 
-    [HttpPatch("ui-config")]
+    [HttpPatch("configure-ui")]
     public Task ConfigureUi(UiConfig uiConfig)
     {
         throw new NotImplementedException();

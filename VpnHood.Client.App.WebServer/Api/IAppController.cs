@@ -7,7 +7,7 @@ namespace VpnHood.Client.App.WebServer.Api;
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
 public interface IAppController
 {
-    Task<AppConfig> GetConfig();
+    Task<AppConfig> Configure(ConfigParams configParams);
     Task<AppState> GetState();
     Task Connect(Guid? clientProfileId = null);
     Task Diagnose(Guid? clientProfileId = null);

@@ -1,9 +1,6 @@
-﻿using VpnHood.Common.Messaging;
-
-namespace VpnHood.Tunneling.Messaging;
-
+﻿namespace VpnHood.Tunneling.Messaging;
 public class AdRewardRequest()
-    : ClientRequest((byte)Messaging.RequestCode.RewardAd)
+    : RequestBase(Messaging.RequestCode.AdReward)
 {
     public string? AdData { get; init; }
 }

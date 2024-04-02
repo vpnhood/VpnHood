@@ -9,6 +9,7 @@ using VpnHood.Client.Exceptions;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;

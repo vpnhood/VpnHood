@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Client;
 using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;

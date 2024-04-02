@@ -13,17 +13,24 @@ internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    [Route(HttpVerbs.Get, "/config")]
-    public Task<AppConfig> GetConfig()
+    [Route(HttpVerbs.Post, "/config")]
+    public Task<AppConfig> Configure(ConfigParams configParams)
     {
         var ret = new AppConfig
         {
             Features = App.Features,
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
-            State = App.State
+            State = App.State,
+            CultureInfos = configParams.CultureCodes
+                .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
+                .ToArray()
         };
 
+        if (App.Device.CultureService?.IsAppCulturesSupported == true)
+            App.Device.CultureService.AppCultures = configParams.CultureCodes;
+
+        App.UpdateUi();
         return Task.FromResult(ret);
     }
 
@@ -125,25 +132,7 @@ internal class AppController : WebApiController, IAppController
         App.ClientProfileService.Update(clientProfile);
     }
 
-    [Route(HttpVerbs.Put, "/cultures")]
-    // ReSharper disable once RedundantAssignment
-    public async Task<UiCultureInfo[]> SetCultures(string[] cultureCodes)
-    {
-        cultureCodes = await GetRequestDataAsync<string[]>();
-
-        if (App.Device.CultureService?.IsAppCulturesSupported == true)
-            App.Device.CultureService.AppCultures = cultureCodes;
-
-        App.UpdateUi();
-
-        var uiCultureInfos = cultureCodes
-            .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
-            .ToArray();
-        
-        return uiCultureInfos;
-    }
-
-    [Route(HttpVerbs.Patch, "/ui-config")]
+    [Route(HttpVerbs.Patch, "/configure-ui")]
     // ReSharper disable once RedundantAssignment
     public async Task ConfigureUi(UiConfig uiConfig)
     {

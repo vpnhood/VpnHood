@@ -5,7 +5,7 @@ namespace VpnHood.Client.App.WebServer.Api;
 
 public interface IAppController
 {
-    Task Configure(ConfigParams configParams);
+    Task<AppConfig> Configure(ConfigParams configParams);
     Task<AppConfig> GetConfig();
     Task<AppState> GetState();
     Task Connect(Guid? clientProfileId = null);

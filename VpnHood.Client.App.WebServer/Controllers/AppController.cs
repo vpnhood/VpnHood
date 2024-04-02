@@ -14,7 +14,7 @@ internal class AppController : WebApiController, IAppController
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
     [Route(HttpVerbs.Patch, "/configure")]
-    public Task Configure(ConfigParams configParams)
+    public Task<AppConfig> Configure(ConfigParams configParams)
     {
         App.Device.CultureService.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
@@ -32,7 +32,7 @@ internal class AppController : WebApiController, IAppController
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
-            CultureInfos = App.Device.CultureService.AvailableCultures
+            AvailableCultureInfos = App.Device.CultureService.AvailableCultures
                 .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
                 .ToArray()
         };

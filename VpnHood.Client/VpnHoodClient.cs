@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -122,7 +121,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Tunnel
         Tunnel = new Tunnel();
-        Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+        Tunnel.PacketReceived += Tunnel_OnPacketReceived;
 
         // create proxy host
         _clientHost = new ClientHost(this, options.TcpProxyCatcherAddressIpV4, options.TcpProxyCatcherAddressIpV6);
@@ -954,7 +953,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Tunnel
         VhLogger.Instance.LogTrace("Disposing Tunnel...");
-        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
         await Tunnel.DisposeAsync();
 
         VhLogger.Instance.LogTrace("Disposing ProxyManager...");

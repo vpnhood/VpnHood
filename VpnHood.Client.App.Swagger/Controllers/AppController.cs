@@ -10,8 +10,14 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 [Route("api/app")]
 public class AppController : ControllerBase, IAppController
 {
-    [HttpGet("configure")]
-    public Task<AppConfig> Configure(ConfigParams configParams)
+    [HttpPatch("configure")]
+    public Task Configure(ConfigParams configParams)
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpGet("config")]
+    public Task<AppConfig> GetConfig()
     {
         throw new NotImplementedException();
     }
@@ -103,13 +109,6 @@ public class AppController : ControllerBase, IAppController
 
     [HttpDelete("client-profiles/{clientProfileId}")]
     public Task DeleteClientProfile(Guid clientProfileId)
-    {
-        throw new NotImplementedException();
-    }
-
-
-    [HttpPatch("configure-ui")]
-    public Task ConfigureUi(UiConfig uiConfig)
     {
         throw new NotImplementedException();
     }

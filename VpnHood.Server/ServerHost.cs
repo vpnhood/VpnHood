@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -527,6 +528,10 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await ProcessUdpPacketRequest(clientStream, cancellationToken);
                 break;
 
+            case RequestCode.AdReward:
+                await ProcessAdRewardRequest(clientStream, cancellationToken);
+                break;
+
             case RequestCode.Bye:
                 await ProcessBye(clientStream, cancellationToken);
                 break;
@@ -628,6 +633,14 @@ internal class ServerHost : IAsyncDisposable, IJob
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
         await clientStream.DisposeAsync();
+    }
+
+    private async Task ProcessAdRewardRequest(IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardAd request...");
+        var request = await ReadRequest<AdRewardRequest>(clientStream, cancellationToken);
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
+        await session.ProcessAdRewardRequest(request);
     }
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)

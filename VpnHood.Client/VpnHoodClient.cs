@@ -850,6 +850,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 new AdRewardRequest
                 {
                     RequestId = Guid.NewGuid() + ":client",
+                    SessionId = SessionId,
+                    SessionKey = SessionKey,
                     AdData = adData
                 },
                 cancellationToken);

@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Common.JobController;
+﻿using VpnHood.Common.JobController;
+
+namespace VpnHood.Common.Jobs;
 
 public interface IJob
 {

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 
 namespace VpnHood.Common.Collections;
 

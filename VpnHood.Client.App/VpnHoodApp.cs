@@ -12,6 +12,7 @@ using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;

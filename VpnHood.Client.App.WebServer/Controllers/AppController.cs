@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
@@ -126,14 +127,20 @@ internal class AppController : WebApiController, IAppController
 
     [Route(HttpVerbs.Put, "/cultures")]
     // ReSharper disable once RedundantAssignment
-    public async Task SetCultures(string[] cultureCodes)
+    public async Task<UiCultureInfo[]> SetCultures(string[] cultureCodes)
     {
         cultureCodes = await GetRequestDataAsync<string[]>();
 
         if (App.Device.CultureService?.IsAppCulturesSupported == true)
             App.Device.CultureService.AppCultures = cultureCodes;
-        
+
         App.UpdateUi();
+
+        var uiCultureInfos = cultureCodes
+            .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
+            .ToArray();
+        
+        return uiCultureInfos;
     }
 
     [Route(HttpVerbs.Patch, "/ui-config")]
@@ -141,7 +148,7 @@ internal class AppController : WebApiController, IAppController
     public async Task ConfigureUi(UiConfig uiConfig)
     {
         uiConfig = await GetRequestDataAsync<UiConfig>();
-        
+
         if (uiConfig.Strings != null)
             App.Resource.Strings = uiConfig.Strings;
 

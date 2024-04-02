@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using VpnHood.Common.JobController;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Utils;
 

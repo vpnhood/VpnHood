@@ -7,7 +7,6 @@ using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.JobController;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;

@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.JobController;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;

@@ -11,7 +11,7 @@ namespace VpnHood.Client.App.Swagger.Controllers;
 public class AppController : ControllerBase, IAppController
 {
     [HttpPatch("configure")]
-    public Task Configure(ConfigParams configParams)
+    public Task<AppConfig> Configure(ConfigParams configParams)
     {
         throw new NotImplementedException();
     }

@@ -28,7 +28,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
-    public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
     public Traffic Speed { get; } = new();
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public JobSection JobSection { get; } = new();
@@ -230,7 +230,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
         try
         {
-            OnPacketReceived?.Invoke(sender, e);
+            PacketReceived?.Invoke(sender, e);
         }
         catch (Exception ex)
         {
@@ -318,7 +318,7 @@ public class Tunnel : IJob, IAsyncDisposable
                             VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {MtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
                             _packetQueue.TryDequeue(out ipPacket);
                             var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, MtuNoFragment);
-                            OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));
+                            PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs([replyPacket], channel));
                             continue;
                         }
 

@@ -97,7 +97,7 @@ public class Session : IAsyncDisposable, IJob
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
         Tunnel = new Tunnel(new TunnelOptions { MaxDatagramChannelCount = options.MaxDatagramChannelCountValue });
-        Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+        Tunnel.PacketReceived += Tunnel_OnPacketReceived;
 
         // ReSharper disable once MergeIntoPattern
         if (options.NetScanLimit != null && options.NetScanTimeout != null)
@@ -421,7 +421,7 @@ public class Session : IAsyncDisposable, IJob
         if (sync)
             await Sync(true, byUser);
 
-        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+        Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
         _ = Tunnel.DisposeAsync();
         _ = _proxyManager.DisposeAsync();
         _netScanExceptionReporter.Dispose();

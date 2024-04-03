@@ -43,10 +43,10 @@ public partial class MainWindow : Window
 
         // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
-        VpnHoodApp.Instance.AppUpdaterService = new WinAppUpdaterService();
+        VpnHoodApp.Instance.Services.UpdaterService = new WinAppUpdaterService();
 
         if (VpnHoodApp.Instance.VersionCheckRequired)
-            VpnHoodApp.Instance.AppUpdaterService.Update().ContinueWith(res =>
+            VpnHoodApp.Instance.Services.UpdaterService.Update().ContinueWith(res =>
             {
                 if (res.Result)
                     VpnHoodApp.Instance.VersionCheckPostpone();

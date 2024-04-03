@@ -69,7 +69,7 @@ public class AndroidAppMainActivityHandler
         }
 
         // Check for update
-        VpnHoodApp.Instance.AppUpdaterService = _appUpdaterService;
+        VpnHoodApp.Instance.Services.UpdaterService = _appUpdaterService;
         if (VpnHoodApp.Instance.VersionCheckRequired && _appUpdaterService != null && await _appUpdaterService.Update())
             VpnHoodApp.Instance.VersionCheckPostpone(); // postpone check if check succeeded
     }
@@ -162,6 +162,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        VpnHoodApp.Instance.AppUpdaterService = null;
+        VpnHoodApp.Instance.Services.UpdaterService = null;
     }
 }

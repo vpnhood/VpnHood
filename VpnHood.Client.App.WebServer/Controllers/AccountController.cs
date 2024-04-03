@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 
 internal class AccountController : WebApiController, IAccountController
 {
-    public IAppAccountService AccountService => VpnHoodApp.Instance.AppAccountService
+    public IAppAccountService AccountService => VpnHoodApp.Instance.Services.AccountService
         ?? throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/")]
@@ -26,7 +26,7 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
-        return VpnHoodApp.Instance.AppAccountService?.Authentication.IsSignInWithGoogleSupported ?? false;
+        return VpnHoodApp.Instance.Services.AccountService?.Authentication.IsSignInWithGoogleSupported ?? false;
     }
 
     [Route(HttpVerbs.Post, "/signin-with-google")]

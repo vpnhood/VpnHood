@@ -51,15 +51,15 @@ public class MainActivity : AndroidAppMainActivity
             _ = googlePlayAdService.LoadRewardedAd(CancellationToken.None);
 
         VpnHoodApp.Instance.AppAdService = googlePlayAdService;*/
-        VpnHoodApp.Instance.AppUpdaterService = new GooglePlayAppUpdaterService(this);
-        VpnHoodApp.Instance.AppAccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
+        VpnHoodApp.Instance.Services.UpdaterService = new GooglePlayAppUpdaterService(this);
+        VpnHoodApp.Instance.Services.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
     }
 
     protected override void OnDestroy()
     {
-        VpnHoodApp.Instance.AppUpdaterService = null;
-        VpnHoodApp.Instance.AppAccountService = null;
-        VpnHoodApp.Instance.AppAdService = null;
+        VpnHoodApp.Instance.Services.UpdaterService = null;
+        VpnHoodApp.Instance.Services.AccountService = null;
+        VpnHoodApp.Instance.Services.AdService = null;
         base.OnDestroy();
     }
 }

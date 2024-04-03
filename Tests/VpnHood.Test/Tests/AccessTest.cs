@@ -13,13 +13,9 @@ namespace VpnHood.Test.Tests;
 public class AccessTest : TestBase
 {
     [TestMethod]
-    public async Task Foo()
+    public Task Foo()
     {
-        SemaphoreSlim semaphore = new(0, 1);
-        var cancellationTokenSource = new CancellationTokenSource(1000);
-        await semaphore.WaitAsync(TimeSpan.FromSeconds(100), cancellationTokenSource.Token);
-
-        //return Task.Delay(0);
+        return Task.Delay(0);
     }
 
     [TestMethod]

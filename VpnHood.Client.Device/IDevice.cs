@@ -9,5 +9,5 @@ public interface IDevice : IDisposable
     string OsInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
     Task<IPacketCapture> CreatePacketCapture();
-    IDeviceCultureService CultureService { get; }
+    ICultureService? CultureService { get; }
 }

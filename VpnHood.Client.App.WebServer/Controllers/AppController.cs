@@ -16,7 +16,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Patch, "/configure")]
     public Task<AppConfig> Configure(ConfigParams configParams)
     {
-        App.Device.CultureService.AvailableCultures = configParams.AvailableCultures;
+        App.Services.CultureService.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
 
         App.UpdateUi();
@@ -32,7 +32,7 @@ internal class AppController : WebApiController, IAppController
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
-            AvailableCultureInfos = App.Device.CultureService.AvailableCultures
+            AvailableCultureInfos = App.Services.CultureService.AvailableCultures
                 .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
                 .ToArray()
         };

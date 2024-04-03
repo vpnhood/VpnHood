@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
@@ -74,9 +73,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
     public AppResource Resource { get; }
-    public IAppAccountService? AppAccountService { get; set; }
-    public IAppUpdaterService? AppUpdaterService { get; set; }
-    public IAppAdService? AppAdService { get; set; }
+    public AppServices Services { get; }
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         options ??= new AppOptions();
@@ -131,7 +128,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsAddServerSupported = options.IsAddServerSupported,
         };
 
-        // initialize culture
+        // initialize services
+        Services = new AppServices
+        {
+            CultureService = device.CultureService ?? new AppCultureService(this)
+        };
+
+        // initialize
         InitCulture();
         JobRunner.Default.Add(this);
     }
@@ -326,35 +329,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private void InitCulture()
     {
-        // use culture in the System App Settings
-        if (Device.CultureService.IsSelectedCulturesSupported)
-        {
-            // set system culture
-            var systemCultureCode = Device.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault() 
-                                    ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
-            SystemCulture = new CultureInfo(systemCultureCode);
-               
-            // set app culture
-            var firstSelected = Device.CultureService.SelectedCultures.FirstOrDefault();
-            CultureInfo.CurrentUICulture = (firstSelected != null)
-                ? new CultureInfo(firstSelected)
-                : SystemCulture;
+        // set system culture
+        var systemCultureCode =
+            Services.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
+            ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
+        SystemCulture = new CultureInfo(systemCultureCode);
 
-            // sync UserSettings from the System App Settings
-            UserSettings.CultureCode = firstSelected?.Split("-").FirstOrDefault();
-        }
-        else
-        {
-            // set system culture
-            SystemCulture = CultureInfo.InstalledUICulture;
-
-            // use culture in the UserSettings
-            CultureInfo.CurrentUICulture = UserSettings.CultureCode != null
-                ? CultureInfo.GetCultureInfo(UserSettings.CultureCode)
-                : CultureInfo.InstalledUICulture;
-        }
-
+        // set default culture
+        var firstSelected = Services.CultureService.SelectedCultures.FirstOrDefault();
+        CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(Services.CultureService.SelectedCultures.FirstOrDefault() ?? "en");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
+
+        // sync UserSettings from the System App Settings
+        UserSettings.CultureCode = firstSelected?.Split("-").FirstOrDefault();
     }
 
     private void Settings_Saved(object sender, EventArgs e)
@@ -365,10 +353,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             Client.DropUdpPackets = UserSettings.DropUdpPackets;
         }
 
-        // sync culture to system app settings
-        if (Device.CultureService.IsSelectedCulturesSupported)
-            Device.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
-
+        // sync culture to app settings
+        Services.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
         InitCulture();
     }
 
@@ -497,13 +483,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private async Task<string?> ShowAd(CancellationToken cancellationToken)
     {
-        if (AppAdService == null) 
+        if (Services.AdService == null)
             throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
 
         IsWaitingForAd = true;
         try
         {
-            var adData = await AppAdService.ShowAd(cancellationToken) ?? throw new AdException("This server requires a display ad but could not display it.");
+            var adData = await Services.AdService.ShowAd(cancellationToken) ?? throw new AdException("This server requires a display ad but could not display it.");
             return adData;
         }
         catch (Exception ex) when (ex is not AdException)
@@ -672,11 +658,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             return;
 
         // check version by app container
-        if (AppUpdaterService != null)
+        if (Services.UpdaterService != null)
         {
             try
             {
-                if (await AppUpdaterService.Update())
+                if (await Services.UpdaterService.Update())
                 {
                     _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
                     VersionCheckRequired = false;

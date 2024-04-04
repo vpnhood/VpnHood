@@ -36,7 +36,6 @@ public class MainActivity : AndroidAppMainActivity
 
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        var a = CultureInfo.InstalledUICulture;
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AssemblyInfo.DefaultSpaPort,

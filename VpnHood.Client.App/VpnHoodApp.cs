@@ -54,7 +54,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
-    public CultureInfo SystemCulture { get; private set; }
     public bool IsWaitingForAd { get; private set; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
@@ -84,7 +83,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         device.StartedAsService += DeviceOnStartedAsService;
 
         AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
-        SystemCulture = CultureInfo.InstalledUICulture;
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.Saved += Settings_Saved;
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
@@ -171,9 +169,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                     _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
-                CultureCode = CultureInfo.DefaultThreadCurrentUICulture.TwoLetterISOLanguageName,
-                SystemCultureCode = SystemCulture.TwoLetterISOLanguageName,
-                SystemCultureNativeName = SystemCulture.NativeName
+                CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture),
+                SystemUiCultureInfo = new UiCultureInfo(SystemUICulture),
             };
         }
     }
@@ -327,17 +324,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
+    public CultureInfo SystemUICulture => new (
+        Services.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
+        ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName);
+
     private void InitCulture()
     {
-        // set system culture
-        var systemCultureCode =
-            Services.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
-            ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
-        SystemCulture = new CultureInfo(systemCultureCode);
-
         // set default culture
         var firstSelected = Services.CultureService.SelectedCultures.FirstOrDefault();
-        CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemCulture;
+        CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemUICulture;
         CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(Services.CultureService.SelectedCultures.FirstOrDefault() ?? "en");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 

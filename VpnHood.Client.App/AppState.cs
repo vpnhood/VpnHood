@@ -26,7 +26,6 @@ public class AppState
     public required bool? IsUdpChannelSupported { get; init; }
     public required bool CanDisconnect { get; init; }
     public required bool CanConnect { get; init; }
-    public required string CultureCode { get; init; }
-    public required string SystemCultureCode { get; init; }
-    public required string SystemCultureNativeName { get; init; }
+    public required UiCultureInfo CurrentUiCultureInfo { get; init; }
+    public required UiCultureInfo SystemUiCultureInfo { get; init; }
 }

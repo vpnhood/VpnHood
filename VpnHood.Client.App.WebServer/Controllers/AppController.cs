@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
@@ -34,7 +35,7 @@ internal class AppController : WebApiController, IAppController
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
             AvailableCultureInfos = App.Services.CultureService.AvailableCultures
-                .Select(x => new UiCultureInfo { Code = x, NativeName = new CultureInfo(x).NativeName })
+                .Select(x => new UiCultureInfo(x))
                 .ToArray()
         };
 

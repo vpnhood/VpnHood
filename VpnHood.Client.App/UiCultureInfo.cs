@@ -10,5 +10,5 @@ public class UiCultureInfo(CultureInfo cultureInfo)
     }
 
     public string Code { get; } = cultureInfo.TwoLetterISOLanguageName;
-    public string NativeName { get; } = cultureInfo.TwoLetterISOLanguageName;
+    public string NativeName { get; } = cultureInfo.NativeName;
 }

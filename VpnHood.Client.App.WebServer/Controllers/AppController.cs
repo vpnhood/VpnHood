@@ -14,13 +14,14 @@ internal class AppController : WebApiController, IAppController
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
     [Route(HttpVerbs.Patch, "/configure")]
-    public Task<AppConfig> Configure(ConfigParams configParams)
+    public async Task<AppConfig> Configure(ConfigParams configParams)
     {
+        configParams = await GetRequestDataAsync<ConfigParams>();
         App.Services.CultureService.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
 
         App.UpdateUi();
-        return GetConfig();
+        return await GetConfig();
     }
 
     [Route(HttpVerbs.Get, "/config")]

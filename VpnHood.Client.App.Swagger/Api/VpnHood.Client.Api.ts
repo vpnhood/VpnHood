@@ -1832,9 +1832,8 @@ export class AppState implements IAppState {
     isUdpChannelSupported?: boolean | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
-    cultureCode!: string;
-    systemCultureCode!: string;
-    systemCultureNativeName!: string;
+    currentUiCultureInfo!: UiCultureInfo;
+    systemUiCultureInfo!: UiCultureInfo;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1847,6 +1846,8 @@ export class AppState implements IAppState {
             this.speed = new Traffic();
             this.sessionTraffic = new Traffic();
             this.accountTraffic = new Traffic();
+            this.currentUiCultureInfo = new UiCultureInfo();
+            this.systemUiCultureInfo = new UiCultureInfo();
         }
     }
 
@@ -1874,9 +1875,8 @@ export class AppState implements IAppState {
             this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
-            this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
-            this.systemCultureCode = _data["systemCultureCode"] !== undefined ? _data["systemCultureCode"] : <any>null;
-            this.systemCultureNativeName = _data["systemCultureNativeName"] !== undefined ? _data["systemCultureNativeName"] : <any>null;
+            this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
+            this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
         }
     }
 
@@ -1911,9 +1911,8 @@ export class AppState implements IAppState {
         data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
-        data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
-        data["systemCultureCode"] = this.systemCultureCode !== undefined ? this.systemCultureCode : <any>null;
-        data["systemCultureNativeName"] = this.systemCultureNativeName !== undefined ? this.systemCultureNativeName : <any>null;
+        data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
+        data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
         return data;
     }
 }
@@ -1941,9 +1940,8 @@ export interface IAppState {
     isUdpChannelSupported?: boolean | null;
     canDisconnect: boolean;
     canConnect: boolean;
-    cultureCode: string;
-    systemCultureCode: string;
-    systemCultureNativeName: string;
+    currentUiCultureInfo: UiCultureInfo;
+    systemUiCultureInfo: UiCultureInfo;
 }
 
 export enum AppConnectionState {
@@ -2244,6 +2242,46 @@ export interface IPublishInfo {
     notificationDelay: string;
 }
 
+export class UiCultureInfo implements IUiCultureInfo {
+    code!: string;
+    nativeName!: string;
+
+    constructor(data?: IUiCultureInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.code = _data["code"] !== undefined ? _data["code"] : <any>null;
+            this.nativeName = _data["nativeName"] !== undefined ? _data["nativeName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): UiCultureInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new UiCultureInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["code"] = this.code !== undefined ? this.code : <any>null;
+        data["nativeName"] = this.nativeName !== undefined ? this.nativeName : <any>null;
+        return data;
+    }
+}
+
+export interface IUiCultureInfo {
+    code: string;
+    nativeName: string;
+}
+
 export class ClientProfileInfo implements IClientProfileInfo {
     clientProfileId!: string;
     clientProfileName!: string;
@@ -2312,46 +2350,6 @@ export interface IClientProfileInfo {
     supportId?: string | null;
     hostNames: string[];
     isValidHostName: boolean;
-}
-
-export class UiCultureInfo implements IUiCultureInfo {
-    code!: string;
-    nativeName!: string;
-
-    constructor(data?: IUiCultureInfo) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.code = _data["code"] !== undefined ? _data["code"] : <any>null;
-            this.nativeName = _data["nativeName"] !== undefined ? _data["nativeName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): UiCultureInfo {
-        data = typeof data === 'object' ? data : {};
-        let result = new UiCultureInfo();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["code"] = this.code !== undefined ? this.code : <any>null;
-        data["nativeName"] = this.nativeName !== undefined ? this.nativeName : <any>null;
-        return data;
-    }
-}
-
-export interface IUiCultureInfo {
-    code: string;
-    nativeName: string;
 }
 
 export class ConfigParams implements IConfigParams {

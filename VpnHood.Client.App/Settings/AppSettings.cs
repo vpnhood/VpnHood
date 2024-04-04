@@ -25,7 +25,7 @@ public class AppSettings
     }
     // ReSharper restore StringLiteralTypo
 
-    internal int Version { get; private set; } = 1;
+    public int Version { get; private set; } = 1;
     public bool IsQuickLaunchAdded { get; set; } 
     public bool IsQuickLaunchRequested { get; set; }
     public DateTime ConfigTime { get; set; } = DateTime.Now;

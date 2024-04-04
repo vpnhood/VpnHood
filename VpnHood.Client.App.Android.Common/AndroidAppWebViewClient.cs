@@ -27,7 +27,7 @@ internal class AndroidAppWebViewClient : WebViewClient
     // used for Window.Open such as SendReport
     public override bool ShouldOverrideUrlLoading(WebView? webView, IWebResourceRequest? request)
     {
-        if (request == null || request.IsForMainFrame) 
+        if (request == null || request.Url.Port != -1) 
             return false;
 
         return ShouldOverrideUrlLoading(webView, request.Url?.ToString());

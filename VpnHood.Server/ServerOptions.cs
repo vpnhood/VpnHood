@@ -7,13 +7,14 @@ namespace VpnHood.Server;
 
 public class ServerOptions
 {
-    public SocketFactory SocketFactory { get; set; } = new();
-    public Ga4Tracker? GaTracker { get; set; }
-    public ISystemInfoProvider? SystemInfoProvider { get; set; }
-    public INetFilter NetFilter { get; set; } = new NetFilter();
-    public bool AutoDisposeAccessManager { get; set; } = true;
-    public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
-    public string StoragePath { get; set; } = Directory.GetCurrentDirectory();
-    public bool PublicIpDiscovery { get; set; } = true;
-    public ServerConfig? Config { get; set; }
+    public SocketFactory SocketFactory { get; init; } = new();
+    public Ga4Tracker? GaTracker { get; init; }
+    public ISystemInfoProvider? SystemInfoProvider { get; init; }
+    public INetFilter NetFilter { get; init; } = new NetFilter();
+    public bool AutoDisposeAccessManager { get; init; } = true;
+    public TimeSpan ConfigureInterval { get; init; } = TimeSpan.FromSeconds(60);
+    public string StoragePath { get; init; } = Directory.GetCurrentDirectory();
+    public bool PublicIpDiscovery { get; init; } = true;
+    public ServerConfig? Config { get; init; }
+    public TimeSpan CleanupInterval { get; init; } = TimeSpan.FromMinutes(10);
 }

@@ -6,10 +6,16 @@ namespace VpnHood.Client.App.Droid.Common;
 internal class AndroidAppWebViewClient : WebViewClient
 {
     public event EventHandler? PageLoaded;
+    private string? _mainHost;
+
+    private bool IsMainHost(string? url)
+    {
+        return _mainHost != null && url != null && _mainHost.Equals(new Uri(url).Host, StringComparison.OrdinalIgnoreCase);
+    }
 
     public override bool ShouldOverrideUrlLoading(WebView? webView, string? url)
     {
-        if (webView == null || url == null)
+        if (webView == null || url == null || IsMainHost(url))
             return false;
 
         // ignore root
@@ -27,15 +33,13 @@ internal class AndroidAppWebViewClient : WebViewClient
     // used for Window.Open such as SendReport
     public override bool ShouldOverrideUrlLoading(WebView? webView, IWebResourceRequest? request)
     {
-        if (request == null || request.Url.Port != -1) 
-            return false;
-
-        return ShouldOverrideUrlLoading(webView, request.Url?.ToString());
+        return ShouldOverrideUrlLoading(webView, request?.Url?.ToString());
     }
 
     public override void OnPageFinished(WebView? view, string? url)
     {
         base.OnPageFinished(view, url);
+        _mainHost ??= url != null ? new Uri(url).Host : null;
         PageLoaded?.Invoke(this, EventArgs.Empty);
     }
 }

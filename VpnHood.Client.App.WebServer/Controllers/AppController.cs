@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
@@ -12,6 +14,17 @@ internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
+    [Route(HttpVerbs.Patch, "/configure")]
+    public async Task<AppConfig> Configure(ConfigParams configParams)
+    {
+        configParams = await GetRequestDataAsync<ConfigParams>();
+        App.Services.CultureService.AvailableCultures = configParams.AvailableCultures;
+        if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
+
+        App.UpdateUi();
+        return await GetConfig();
+    }
+
     [Route(HttpVerbs.Get, "/config")]
     public Task<AppConfig> GetConfig()
     {
@@ -20,10 +33,14 @@ internal class AppController : WebApiController, IAppController
             Features = App.Features,
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
-            State = App.State
+            State = App.State,
+            AvailableCultureInfos = App.Services.CultureService.AvailableCultures
+                .Select(x => new UiCultureInfo(x))
+                .ToArray()
         };
 
         return Task.FromResult(ret);
+
     }
 
     [Route(HttpVerbs.Get, "/state")]
@@ -78,7 +95,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/add-test-server")]
     public void AddTestServer()
     {
-        App.ClientProfileService.ImportAccessKey(App.Settings.TestServerAccessKey);
+        App.ClientProfileService.ImportAccessKey(App.Settings.PublicAccessKey);
     }
 
     [Route(HttpVerbs.Put, "/user-settings")]
@@ -129,6 +146,7 @@ internal class AppController : WebApiController, IAppController
     {
         if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
             await App.Disconnect(true);
+
         App.ClientProfileService.Remove(clientProfileId);
     }
 
@@ -141,5 +159,4 @@ internal class AppController : WebApiController, IAppController
             throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
         return res;
     }
-
 }

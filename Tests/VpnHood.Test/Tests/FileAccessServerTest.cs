@@ -1,9 +1,7 @@
 ﻿using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Managers.File;
-using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.Test.Tests;
 
@@ -24,22 +22,6 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(fileAccessManager.ServerConfig.TcpEndPointsValue.First().Port, accessItem.Token.ServerToken.HostPort);
         Assert.AreEqual(fileAccessManager.ServerConfig.IsValidHostName, accessItem.Token.ServerToken.IsValidHostName);
         Assert.IsNull(accessItem.Token.ServerToken.CertificateHash);
-    }
-
-    [TestMethod]
-    public void GetSslCertificateData()
-    {
-        var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var fileAccessManager = TestHelper.CreateFileAccessManager(storagePath: storagePath);
-
-        // Create accessManager
-        using TestEmbedIoAccessManager testHttpAccessManager = new(fileAccessManager);
-        var accessManager = new HttpAccessManager(new HttpAccessManagerOptions(testHttpAccessManager.BaseUri, "Bearer xxx"));
-
-        // ************
-        // *** TEST ***: default cert must be used
-        var cert1 = new X509Certificate2(accessManager.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
-        Assert.AreEqual(cert1.Thumbprint, fileAccessManager.DefaultCert.Thumbprint);
     }
 
     [TestMethod]

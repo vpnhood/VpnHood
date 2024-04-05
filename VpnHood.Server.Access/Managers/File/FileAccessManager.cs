@@ -18,7 +18,6 @@ public class FileAccessManager : IAccessManager
 {
     private const string FileExtToken = ".token";
     private const string FileExtUsage = ".usage";
-    private readonly string _sslCertificatesPassword;
     private ServerToken _serverToken;
     public FileAccessManagerOptions ServerConfig { get; }
     public string StoragePath { get; }
@@ -35,25 +34,28 @@ public class FileAccessManager : IAccessManager
 
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
-        _sslCertificatesPassword = options.SslCertificatesPassword ?? "";
         SessionController = new FileAccessManagerSessionController();
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = System.IO.File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, _sslCertificatesPassword, X509KeyStorageFlags.Exportable)
-            : CreateSelfSignedCertificate(defaultCertFile, _sslCertificatesPassword);
+            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty , X509KeyStorageFlags.Exportable)
+            : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
+
+        ServerConfig.Certificates =
+        [
+            new CertificateData
+            {
+                CommonName = DefaultCert.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Could not get the HostName from the certificate."),
+                RawData = DefaultCert.Export(X509ContentType.Pfx)
+            }
+        ];
 
         // get or create server secret
         ServerConfig.ServerSecret ??= LoadServerSecret();
 
         // get server token
         _serverToken = GetAndUpdateServerToken();
-
-        //Migrate old tokens
-#pragma warning disable CS0618 // Type or member is obsolete
-        FileAccessManagerLegacyV3.MigrateLegacyTokensV3(storagePath);
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public void ClearCache()
@@ -131,12 +133,6 @@ public class FileAccessManager : IAccessManager
         return Task.FromResult((ServerConfig)ServerConfig);
     }
 
-    public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
-    {
-        var cert = GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx);
-        return Task.FromResult(cert);
-    }
-
     public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
@@ -144,7 +140,7 @@ public class FileAccessManager : IAccessManager
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
-        
+
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
             ret.AccessKey = accessItem.Token.ToAccessKey();
@@ -382,14 +378,6 @@ public class FileAccessManager : IAccessManager
         var fileName = GetUsageFileName(accessItem.Token.TokenId);
         using var fileLock = await AsyncLock.LockAsync(fileName);
         await System.IO.File.WriteAllTextAsync(fileName, json);
-    }
-
-    private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)
-    {
-        var certFilePath = GetCertFilePath(hostEndPoint);
-        if (returnDefaultIfNotFound && !System.IO.File.Exists(certFilePath))
-            return DefaultCert;
-        return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
     }
 
     public class AccessItem

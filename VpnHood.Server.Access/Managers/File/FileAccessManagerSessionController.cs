@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Messaging;
@@ -113,7 +113,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         if (session.ErrorCode == SessionErrorCode.Ok)
         {
             // check token expiration
-            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < FastDateTime.Now)
+            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 

@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -24,10 +24,11 @@ public class SessionManager : IAsyncDisposable, IJob
     private readonly SocketFactory _socketFactory;
     private byte[] _serverSecret;
     private bool _disposed;
+    private readonly JobSection _heartbeatSection = new(TimeSpan.FromMinutes(10));
 
     public string ApiKey { get; private set; }
     public INetFilter NetFilter { get; }
-    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(10));
+    public JobSection JobSection { get; }
     public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
@@ -44,26 +45,28 @@ public class SessionManager : IAsyncDisposable, IJob
         }
     }
 
-    public SessionManager(IAccessManager accessManager,
+    internal SessionManager(IAccessManager accessManager,
         INetFilter netFilter,
         SocketFactory socketFactory,
         Ga4Tracker? gaTracker,
-        Version serverVersion)
+        Version serverVersion,
+        SessionManagerOptions options)
     {
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        GaTracker = gaTracker;
         _serverSecret = VhUtil.GenerateKey(128);
+        GaTracker = gaTracker;
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
+        JobSection = new JobSection(options.CleanupInterval, nameof(SessionManager));
         JobRunner.Default.Add(this);
     }
 
     public async Task SyncSessions()
     {
         // launch all syncs
-        var syncTasks = Sessions.Values.Select(x => (x.SessionId, Task: x.Sync()));
+        var syncTasks = Sessions.Values.Select(x => (x.SessionId, Task: JobRunner.RunNow(x)));
 
         // wait for all
         foreach (var syncTask in syncTasks)
@@ -107,8 +110,10 @@ public class SessionManager : IAsyncDisposable, IJob
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
-        VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}", VhLogger.FormatId(helloRequest.TokenId));
-        var extraData = JsonSerializer.Serialize(new SessionExtraData { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
+        VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}",
+            VhLogger.FormatId(helloRequest.TokenId));
+        var extraData = JsonSerializer.Serialize(new SessionExtraData
+            { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
         var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
@@ -116,12 +121,14 @@ public class SessionManager : IAsyncDisposable, IJob
             ExtraData = extraData,
             ClientInfo = helloRequest.ClientInfo,
             EncryptedClientId = helloRequest.EncryptedClientId,
-            TokenId = helloRequest.TokenId
+            TokenId = helloRequest.TokenId,
+            AdData = helloRequest.AdData
         });
 
         // Access Error should not pass to the client in create session
         if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)
-            throw new ServerUnauthorizedAccessException(sessionResponseEx.ErrorMessage ?? "Access Error.", ipEndPointPair, helloRequest);
+            throw new ServerUnauthorizedAccessException(sessionResponseEx.ErrorMessage ?? "Access Error.",
+                ipEndPointPair, helloRequest);
 
         if (sessionResponseEx.ErrorCode != SessionErrorCode.Ok)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponseEx, helloRequest);
@@ -132,7 +139,8 @@ public class SessionManager : IAsyncDisposable, IJob
         // Anonymous Report to GA
         _ = GaTrackNewSession(helloRequest.ClientInfo);
 
-        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session,
+            $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponseEx;
     }
 
@@ -148,10 +156,10 @@ public class SessionManager : IAsyncDisposable, IJob
             EventName = Ga4TagEvents.PageView,
             Properties = new Dictionary<string, object>
             {
-                { "client_version", clientInfo.ClientVersion  },
-                { "server_version", serverVersion  },
-                { Ga4TagProperties.PageTitle , $"server_version/{serverVersion}"},
-                { Ga4TagProperties.PageLocation, $"server_version/{serverVersion}"}
+                { "client_version", clientInfo.ClientVersion },
+                { "server_version", serverVersion },
+                { Ga4TagProperties.PageTitle, $"server_version/{serverVersion}" },
+                { Ga4TagProperties.PageLocation, $"server_version/{serverVersion}" }
             }
         });
     }
@@ -175,7 +183,8 @@ public class SessionManager : IAsyncDisposable, IJob
 
             // Check session key for recovery
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
-                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
+                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair,
+                    sessionRequest.SessionId);
 
             // session is authorized, so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
@@ -183,14 +192,16 @@ public class SessionManager : IAsyncDisposable, IJob
 
             // create the session even if it contains error to prevent many calls
             session = await CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery");
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Session has been recovered. SessionId: {SessionId}",
+            VhLogger.Instance.LogInformation(GeneralEventId.Session,
+                "Session has been recovered. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
             return session;
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Could not recover a session. SessionId: {SessionId}",
+            VhLogger.Instance.LogInformation(GeneralEventId.Session,
+                "Could not recover a session. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
             // Create a dead session if it is not created
@@ -222,7 +233,8 @@ public class SessionManager : IAsyncDisposable, IJob
         }
 
         if (session.SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse, requestBase.RequestId);
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponse,
+                requestBase.RequestId);
 
         // unexpected close
         if (session.IsDisposed)
@@ -233,28 +245,43 @@ public class SessionManager : IAsyncDisposable, IJob
         return session;
     }
 
-    public Task RunJob()
+    public async Task RunJob()
     {
         // anonymous heart_beat reporter
-        _ = GaTracker?.Track(new Ga4TagEvent
+        await _heartbeatSection.Enter(SendHeartbeat);
+
+        // clean disposed sessions
+        await Cleanup();
+    }
+
+    private Task SendHeartbeat()
+    {
+        if (GaTracker == null)
+            return Task.CompletedTask;
+
+        return GaTracker.Track(new Ga4TagEvent
         {
             EventName = "heartbeat",
             Properties = new Dictionary<string, object>
             {
-                { "session_count", Sessions.Count(x=>!x.Value.IsDisposed)  }
+                { "session_count", Sessions.Count(x => !x.Value.IsDisposed) }
             }
         });
-
-        // clean disposed sessions
-        return Cleanup();
     }
 
-    private readonly AsyncLock _cleanupLock = new();
+    private async Task CloseExpiredSessions()
+    {
+        var utcNow = DateTime.UtcNow;
+        var timeoutSessions = Sessions.Values
+            .Where(x => !x.IsDisposed && x.SessionResponse.AccessUsage?.ExpirationTime < utcNow);
+
+        foreach (var session in timeoutSessions)
+            await session.Sync();
+    }
+
     private async Task Cleanup()
     {
-        using var cleaningLock = await _cleanupLock.LockAsync(TimeSpan.Zero);
-        if (!cleaningLock.Succeeded)
-            return;
+        await CloseExpiredSessions();
 
         // find expired or dead sessions
         VhLogger.Instance.LogTrace("Cleaning up the expired sessions.");
@@ -289,6 +316,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private readonly AsyncLock _disposeLock = new();
     private ValueTask? _disposeTask;
+
     public ValueTask DisposeAsync()
     {
         lock (_disposeLock)

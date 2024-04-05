@@ -1,68 +1,102 @@
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
 public class AppAccountService(
-    IAppAuthenticationService authenticationService, 
+    IAppAuthenticationService authenticationService,
     IAppBillingService? billingService,
-    Guid storeAppId) 
+    Guid storeAppId)
     : IAppAccountService, IDisposable
 {
     public IAppAuthenticationService Authentication => authenticationService;
     public IAppBillingService? Billing => billingService;
+    private AppAccount? _appAccount;
+    private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
 
     public async Task<AppAccount?> GetAccount()
     {
         if (authenticationService.UserId == null)
             return null;
 
+        _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+        if (_appAccount != null)
+            return _appAccount;
+
+        _appAccount = await GetAccountFromServer();
+
+        return _appAccount;
+    }
+
+    public async Task Refresh()
+    {
+        _appAccount = await GetAccountFromServer();
+    }
+
+    private async Task<AppAccount> GetAccountFromServer()
+    {
         var httpClient = authenticationService.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
         var currentUser = await authenticationClient.GetCurrentUserAsync();
 
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false);
-        var subscriptionPlanId = activeSubscription.SingleOrDefault()?.LastOrder;
+        var subscriptionLastOrder = activeSubscription.SingleOrDefault()?.LastOrder;
 
         var appAccount = new AppAccount
         {
             UserId = currentUser.UserId,
             Name = currentUser.Name,
             Email = currentUser.Email,
-            SubscriptionPlanId = subscriptionPlanId?.ProviderPlanId
+            SubscriptionId = subscriptionLastOrder?.SubscriptionId,
+            ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
         };
+
+        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
+        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(appAccount));
         return appAccount;
     }
 
-    public async Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId(string providerOrderId)
+    // Check order state 'isProcessed' for 6 time
+    public async Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
     {
         var httpClient = authenticationService.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
-        var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId);
-        var appSubscriptionOrder = new AppSubscriptionOrder
+
+        for (var counter = 0; counter < 5; counter++)
         {
-            SubscriptionId = subscriptionOrder.SubscriptionId,
-            ProviderPlanId = subscriptionOrder.ProviderPlanId,
-            IsProcessed = subscriptionOrder.IsProcessed
-        };
-        return appSubscriptionOrder;
+            try
+            {
+                var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId);
+                if (subscriptionOrder.IsProcessed == false)
+                    throw new Exception("Order has not processed yet.");
+
+                // Order process complete
+                return subscriptionOrder.IsProcessed;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogWarning(ex, ex.Message);
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+        }
+        return false;
     }
 
     public async Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         var httpClient = authenticationService.HttpClient;
-        var subscriptionsClient = new SubscriptionsClient(httpClient);
-        var subscriptionData = await subscriptionsClient.GetAsync(storeAppId, Guid.Parse(subscriptionId), true);
-        var subscriptionAccessTokens = subscriptionData.AccessTokens;
-        if (subscriptionAccessTokens == null)
-            throw new Exception("The subscription does not have any AccessToken.");
+        var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
+        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId));
 
         var accessKeyList = new List<string>();
-        var accessTokensClient = new AccessTokensClient(httpClient);
-        foreach (var accessToken in subscriptionAccessTokens)
+        foreach (var accessToken in accessTokens)
         {
-            var accessKey = await accessTokensClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId);
+            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId);
             accessKeyList.Add(accessKey);
         }
 

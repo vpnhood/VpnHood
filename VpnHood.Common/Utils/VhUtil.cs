@@ -5,10 +5,10 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Common.Utils;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public static class VhUtil
 {
     public static bool IsConnectionRefusedException(Exception ex)
@@ -114,6 +114,12 @@ public static class VhUtil
         await task;
     }
 
+    public static bool IsNullOrEmpty<T>([NotNullWhen(false)] IEnumerable<T>? array)
+    {
+        return array == null || !array.Any();
+    }
+
+
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
     {
         return array == null || array.Length == 0;
@@ -170,6 +176,24 @@ public static class VhUtil
     {
         return JsonSerializer.Deserialize<T>(json, options) ??
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+    }
+
+    public static T? JsonDeserializeFile<T>(string filePath, JsonSerializerOptions? options = null, ILogger? logger = null)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+                return default(T);
+
+            var json = File.ReadAllText(filePath);
+            var appAccount = JsonDeserialize<T>(json, options);
+            return appAccount;
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
+            return default(T);
+        }
     }
 
     public static bool JsonEquals(object? obj1, object? obj2)
@@ -261,10 +285,10 @@ public static class VhUtil
         return size.ToString("0");
     }
 
-    [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
     public static string FormatBits(long bytes)
     {
         bytes *= 8; //convertTo bit
+        // ReSharper disable PossibleLossOfFraction
 
         // Get absolute value
         if (bytes >= 0x40000000) // Gigabyte
@@ -278,6 +302,7 @@ public static class VhUtil
 
         if (bytes > 0) // Kilobyte
             return ((double)bytes).ToString("0 ") + "bps";
+        // ReSharper restore PossibleLossOfFraction
 
         // Byte
         return bytes.ToString("0");
@@ -326,7 +351,15 @@ public static class VhUtil
     {
         foreach (var key in keys)
         {
-            var pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
+            // array
+            var jsonLength = json.Length;
+            var pattern = @"""key""\s*:\s*\[[^\]]*\]".Replace("key", key);
+            json = Regex.Replace(json, pattern, $"\"{key}\": [\"***\"]");
+            if (jsonLength != json.Length)
+                continue;
+
+            // single
+            pattern = "(?<=\"key\":)[^,|}|\r]+(?=,|}|\r)".Replace("key", key);
             json = Regex.Replace(json, pattern, " \"***\"");
         }
 

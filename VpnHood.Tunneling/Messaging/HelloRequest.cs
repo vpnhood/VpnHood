@@ -8,5 +8,5 @@ public class HelloRequest()
     public required string TokenId { get; init; }
     public required ClientInfo ClientInfo { get; init; }
     public required byte[] EncryptedClientId { get; init; }
-
+    public string? AdData { get; init; }
 }

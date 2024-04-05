@@ -49,8 +49,13 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         AccessManager = accessManager;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        SessionManager = new SessionManager(accessManager, options.NetFilter, options.SocketFactory, options.GaTracker, ServerVersion);
         JobSection = new JobSection(options.ConfigureInterval);
+        SessionManager = new SessionManager(accessManager,
+            options.NetFilter,
+            options.SocketFactory,
+            options.GaTracker,
+            ServerVersion,
+            new SessionManagerOptions{ CleanupInterval = options.CleanupInterval });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
@@ -262,7 +267,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
         return VhLogger.IsAnonymousMode
             ? VhUtil.RedactJsonValue(json, [
-                nameof(ServerConfig.ServerSecret), 
+                nameof(ServerConfig.ServerSecret),
                 nameof(CertificateData.RawData),
                 nameof(ServerConfig.TcpEndPoints),
                 nameof(ServerConfig.UdpEndPoints),

@@ -16,7 +16,7 @@ public class NetProtectTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
         try
         {
@@ -40,7 +40,7 @@ public class NetProtectTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
         await TestHelper.Test_Https();
         await TestHelper.Test_Https();

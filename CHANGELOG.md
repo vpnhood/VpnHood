@@ -1,8 +1,25 @@
-# v3.3.470
+# v4.3.485
+### Client
+* Feature: Accept DNS Servers from the connected Server
+* Feature: Multi-language Support (Arabic, Chinese, English, Farsi, Portuguese, Russian, Spanish)
+* Feature: Support Billing integration
+* Feature: Implement Google Billing
+* Feature: Support Interface for Account integration
+* Feature: Implement VpnHood Store Account
+* Update: Improve UDP performance
+* Update: Prpare to migrate VpnHood public servers to VpnHood Connect
+
+### Server
+* Feature: Configure DNS Servers for the connected clients
+* Update: Support multiple certificates
+* Update: Configure timeout for HTTP-01 DNS challenge 
+* Update: Faster shutdown
+
+# v3.3.475
 ### Client
 * Feature: Update UI when the server does not support UDP tunnel
 * Fix: Crash when pressing "Disconnect" while connecting
-* Fix: Remove "No data has been received" message before connection is established
+* Fix: Remove the "No data has been received" message before the connection is established
 * Update: Protocol Changed: Server sends UdpPort instead of UdpEndPoints
 
 ### Server

@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 
 internal class BillingController : WebApiController, IBillingController
 {
-    public IAppBillingService BillingService => VpnHoodApp.Instance.AccountService?.Billing
+    public IAppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.Billing
         ?? throw new Exception("Billing service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/subscription-plans")]

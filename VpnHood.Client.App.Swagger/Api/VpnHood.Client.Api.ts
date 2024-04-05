@@ -72,6 +72,50 @@ export class AccountClient {
         return Promise.resolve<AppAccount>(null as any);
     }
 
+    refresh( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/account/refresh";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRefresh(_response);
+        });
+    }
+
+    protected processRefresh(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     isSigninWithGoogleSupported( cancelToken?: CancelToken): Promise<boolean> {
         let url_ = this.baseUrl + "/api/account/is-signin-with-google-supported";
         url_ = url_.replace(/[?&]$/, "");
@@ -209,12 +253,11 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getSubscriptionOrderByProviderOrderId(providerOrderId: string, cancelToken?: CancelToken): Promise<AppSubscriptionOrder> {
-        let url_ = this.baseUrl + "/api/account/subscription-order-by-provider-order-id?";
+    isSubscriptionOrderProcessed(providerOrderId: string, cancelToken?: CancelToken): Promise<boolean> {
+        let url_ = this.baseUrl + "/api/account/subscription-orders/providerOrderId:{providerOrderId}/is-processed";
         if (providerOrderId === undefined || providerOrderId === null)
-            throw new Error("The parameter 'providerOrderId' must be defined and cannot be null.");
-        else
-            url_ += "providerOrderId=" + encodeURIComponent("" + providerOrderId) + "&";
+            throw new Error("The parameter 'providerOrderId' must be defined.");
+        url_ = url_.replace("{providerOrderId}", encodeURIComponent("" + providerOrderId));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -233,11 +276,11 @@ export class AccountClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetSubscriptionOrderByProviderOrderId(_response);
+            return this.processIsSubscriptionOrderProcessed(_response);
         });
     }
 
-    protected processGetSubscriptionOrderByProviderOrderId(response: AxiosResponse): Promise<AppSubscriptionOrder> {
+    protected processIsSubscriptionOrderProcessed(response: AxiosResponse): Promise<boolean> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -251,22 +294,22 @@ export class AccountClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppSubscriptionOrder.fromJS(resultData200);
-            return Promise.resolve<AppSubscriptionOrder>(result200);
+                result200 = resultData200 !== undefined ? resultData200 : <any>null;
+    
+            return Promise.resolve<boolean>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppSubscriptionOrder>(null as any);
+        return Promise.resolve<boolean>(null as any);
     }
 
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
-        let url_ = this.baseUrl + "/api/account/access-keys?";
+        let url_ = this.baseUrl + "/api/account/subscriptions/{subscriptionId}/access-keys";
         if (subscriptionId === undefined || subscriptionId === null)
-            throw new Error("The parameter 'subscriptionId' must be defined and cannot be null.");
-        else
-            url_ += "subscriptionId=" + encodeURIComponent("" + subscriptionId) + "&";
+            throw new Error("The parameter 'subscriptionId' must be defined.");
+        url_ = url_.replace("{subscriptionId}", encodeURIComponent("" + subscriptionId));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -332,6 +375,58 @@ export class AppClient {
 
         this.baseUrl = baseUrl ?? "";
 
+    }
+
+    configure(configParams: ConfigParams, cancelToken?: CancelToken): Promise<AppConfig> {
+        let url_ = this.baseUrl + "/api/app/configure";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(configParams);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PATCH",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processConfigure(_response);
+        });
+    }
+
+    protected processConfigure(response: AxiosResponse): Promise<AppConfig> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppConfig.fromJS(resultData200);
+            return Promise.resolve<AppConfig>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppConfig>(null as any);
     }
 
     getConfig( cancelToken?: CancelToken): Promise<AppConfig> {
@@ -1226,7 +1321,8 @@ export class AppAccount implements IAppAccount {
     userId!: string;
     name?: string | null;
     email?: string | null;
-    subscriptionPlanId?: string | null;
+    subscriptionId?: string | null;
+    providerPlanId?: string | null;
 
     constructor(data?: IAppAccount) {
         if (data) {
@@ -1242,7 +1338,8 @@ export class AppAccount implements IAppAccount {
             this.userId = _data["userId"] !== undefined ? _data["userId"] : <any>null;
             this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
             this.email = _data["email"] !== undefined ? _data["email"] : <any>null;
-            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : <any>null;
+            this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : <any>null;
+            this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : <any>null;
         }
     }
 
@@ -1258,7 +1355,8 @@ export class AppAccount implements IAppAccount {
         data["userId"] = this.userId !== undefined ? this.userId : <any>null;
         data["name"] = this.name !== undefined ? this.name : <any>null;
         data["email"] = this.email !== undefined ? this.email : <any>null;
-        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : <any>null;
+        data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : <any>null;
+        data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : <any>null;
         return data;
     }
 }
@@ -1267,51 +1365,8 @@ export interface IAppAccount {
     userId: string;
     name?: string | null;
     email?: string | null;
-    subscriptionPlanId?: string | null;
-}
-
-export class AppSubscriptionOrder implements IAppSubscriptionOrder {
-    providerPlanId!: string;
-    subscriptionId!: string;
-    isProcessed!: boolean;
-
-    constructor(data?: IAppSubscriptionOrder) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : <any>null;
-            this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : <any>null;
-            this.isProcessed = _data["isProcessed"] !== undefined ? _data["isProcessed"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): AppSubscriptionOrder {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppSubscriptionOrder();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : <any>null;
-        data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : <any>null;
-        data["isProcessed"] = this.isProcessed !== undefined ? this.isProcessed : <any>null;
-        return data;
-    }
-}
-
-export interface IAppSubscriptionOrder {
-    providerPlanId: string;
-    subscriptionId: string;
-    isProcessed: boolean;
+    subscriptionId?: string | null;
+    providerPlanId?: string | null;
 }
 
 export class AppConfig implements IAppConfig {
@@ -1319,6 +1374,7 @@ export class AppConfig implements IAppConfig {
     settings!: AppSettings;
     state!: AppState;
     clientProfileInfos!: ClientProfileInfo[];
+    availableCultureInfos!: UiCultureInfo[];
 
     constructor(data?: IAppConfig) {
         if (data) {
@@ -1332,6 +1388,7 @@ export class AppConfig implements IAppConfig {
             this.settings = new AppSettings();
             this.state = new AppState();
             this.clientProfileInfos = [];
+            this.availableCultureInfos = [];
         }
     }
 
@@ -1347,6 +1404,14 @@ export class AppConfig implements IAppConfig {
             }
             else {
                 this.clientProfileInfos = <any>null;
+            }
+            if (Array.isArray(_data["availableCultureInfos"])) {
+                this.availableCultureInfos = [] as any;
+                for (let item of _data["availableCultureInfos"])
+                    this.availableCultureInfos!.push(UiCultureInfo.fromJS(item));
+            }
+            else {
+                this.availableCultureInfos = <any>null;
             }
         }
     }
@@ -1368,6 +1433,11 @@ export class AppConfig implements IAppConfig {
             for (let item of this.clientProfileInfos)
                 data["clientProfileInfos"].push(item.toJSON());
         }
+        if (Array.isArray(this.availableCultureInfos)) {
+            data["availableCultureInfos"] = [];
+            for (let item of this.availableCultureInfos)
+                data["availableCultureInfos"].push(item.toJSON());
+        }
         return data;
     }
 }
@@ -1377,6 +1447,7 @@ export interface IAppConfig {
     settings: AppSettings;
     state: AppState;
     clientProfileInfos: ClientProfileInfo[];
+    availableCultureInfos: UiCultureInfo[];
 }
 
 export class AppFeatures implements IAppFeatures {
@@ -1385,6 +1456,8 @@ export class AppFeatures implements IAppFeatures {
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     updateInfoUrl?: string | null;
+    uiName?: string | null;
+    isAddServerSupported!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1402,6 +1475,8 @@ export class AppFeatures implements IAppFeatures {
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : <any>null;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
+            this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
+            this.isAddServerSupported = _data["isAddServerSupported"] !== undefined ? _data["isAddServerSupported"] : <any>null;
         }
     }
 
@@ -1419,6 +1494,8 @@ export class AppFeatures implements IAppFeatures {
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : <any>null;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
+        data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
+        data["isAddServerSupported"] = this.isAddServerSupported !== undefined ? this.isAddServerSupported : <any>null;
         return data;
     }
 }
@@ -1429,9 +1506,12 @@ export interface IAppFeatures {
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     updateInfoUrl?: string | null;
+    uiName?: string | null;
+    isAddServerSupported: boolean;
 }
 
 export class AppSettings implements IAppSettings {
+    version!: number;
     isQuickLaunchAdded!: boolean;
     isQuickLaunchRequested!: boolean;
     configTime!: Date;
@@ -1455,6 +1535,7 @@ export class AppSettings implements IAppSettings {
 
     init(_data?: any) {
         if (_data) {
+            this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.isQuickLaunchAdded = _data["isQuickLaunchAdded"] !== undefined ? _data["isQuickLaunchAdded"] : <any>null;
             this.isQuickLaunchRequested = _data["isQuickLaunchRequested"] !== undefined ? _data["isQuickLaunchRequested"] : <any>null;
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
@@ -1475,6 +1556,7 @@ export class AppSettings implements IAppSettings {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["version"] = this.version !== undefined ? this.version : <any>null;
         data["isQuickLaunchAdded"] = this.isQuickLaunchAdded !== undefined ? this.isQuickLaunchAdded : <any>null;
         data["isQuickLaunchRequested"] = this.isQuickLaunchRequested !== undefined ? this.isQuickLaunchRequested : <any>null;
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
@@ -1488,6 +1570,7 @@ export class AppSettings implements IAppSettings {
 }
 
 export interface IAppSettings {
+    version: number;
     isQuickLaunchAdded: boolean;
     isQuickLaunchRequested: boolean;
     configTime: Date;
@@ -1500,7 +1583,7 @@ export interface IAppSettings {
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
-    cultureCode!: string;
+    cultureCode?: string | null;
     defaultClientProfileId?: string | null;
     maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
@@ -1516,6 +1599,7 @@ export class UserSettings implements IUserSettings {
     packetCaptureIncludeIpRanges!: string[];
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker!: boolean;
+    dnsServers?: string[] | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -1584,6 +1668,14 @@ export class UserSettings implements IUserSettings {
                 this.packetCaptureExcludeIpRanges = <any>null;
             }
             this.allowAnonymousTracker = _data["allowAnonymousTracker"] !== undefined ? _data["allowAnonymousTracker"] : <any>null;
+            if (Array.isArray(_data["dnsServers"])) {
+                this.dnsServers = [] as any;
+                for (let item of _data["dnsServers"])
+                    this.dnsServers!.push(item);
+            }
+            else {
+                this.dnsServers = <any>null;
+            }
         }
     }
 
@@ -1633,13 +1725,18 @@ export class UserSettings implements IUserSettings {
                 data["packetCaptureExcludeIpRanges"].push(item);
         }
         data["allowAnonymousTracker"] = this.allowAnonymousTracker !== undefined ? this.allowAnonymousTracker : <any>null;
+        if (Array.isArray(this.dnsServers)) {
+            data["dnsServers"] = [];
+            for (let item of this.dnsServers)
+                data["dnsServers"].push(item);
+        }
         return data;
     }
 }
 
 export interface IUserSettings {
     logging: AppLogSettings;
-    cultureCode: string;
+    cultureCode?: string | null;
     defaultClientProfileId?: string | null;
     maxReconnectCount: number;
     maxDatagramChannelCount: number;
@@ -1655,6 +1752,7 @@ export interface IUserSettings {
     packetCaptureIncludeIpRanges: string[];
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker: boolean;
+    dnsServers?: string[] | null;
 }
 
 export class AppLogSettings implements IAppLogSettings {
@@ -1732,6 +1830,10 @@ export class AppState implements IAppState {
     versionStatus!: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
     isUdpChannelSupported?: boolean | null;
+    canDisconnect!: boolean;
+    canConnect!: boolean;
+    currentUiCultureInfo!: UiCultureInfo;
+    systemUiCultureInfo!: UiCultureInfo;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1744,6 +1846,8 @@ export class AppState implements IAppState {
             this.speed = new Traffic();
             this.sessionTraffic = new Traffic();
             this.accountTraffic = new Traffic();
+            this.currentUiCultureInfo = new UiCultureInfo();
+            this.systemUiCultureInfo = new UiCultureInfo();
         }
     }
 
@@ -1769,6 +1873,10 @@ export class AppState implements IAppState {
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
             this.lastPublishInfo = _data["lastPublishInfo"] ? PublishInfo.fromJS(_data["lastPublishInfo"]) : <any>null;
             this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
+            this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
+            this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
+            this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
+            this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
         }
     }
 
@@ -1801,6 +1909,10 @@ export class AppState implements IAppState {
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
         data["lastPublishInfo"] = this.lastPublishInfo ? this.lastPublishInfo.toJSON() : <any>null;
         data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
+        data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
+        data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
+        data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
+        data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
         return data;
     }
 }
@@ -1826,6 +1938,10 @@ export interface IAppState {
     versionStatus: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
     isUdpChannelSupported?: boolean | null;
+    canDisconnect: boolean;
+    canConnect: boolean;
+    currentUiCultureInfo: UiCultureInfo;
+    systemUiCultureInfo: UiCultureInfo;
 }
 
 export enum AppConnectionState {
@@ -2126,6 +2242,46 @@ export interface IPublishInfo {
     notificationDelay: string;
 }
 
+export class UiCultureInfo implements IUiCultureInfo {
+    code!: string;
+    nativeName!: string;
+
+    constructor(data?: IUiCultureInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.code = _data["code"] !== undefined ? _data["code"] : <any>null;
+            this.nativeName = _data["nativeName"] !== undefined ? _data["nativeName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): UiCultureInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new UiCultureInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["code"] = this.code !== undefined ? this.code : <any>null;
+        data["nativeName"] = this.nativeName !== undefined ? this.nativeName : <any>null;
+        return data;
+    }
+}
+
+export interface IUiCultureInfo {
+    code: string;
+    nativeName: string;
+}
+
 export class ClientProfileInfo implements IClientProfileInfo {
     clientProfileId!: string;
     clientProfileName!: string;
@@ -2194,6 +2350,140 @@ export interface IClientProfileInfo {
     supportId?: string | null;
     hostNames: string[];
     isValidHostName: boolean;
+}
+
+export class ConfigParams implements IConfigParams {
+    availableCultures!: string[];
+    strings?: AppStrings | null;
+
+    constructor(data?: IConfigParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.availableCultures = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["availableCultures"])) {
+                this.availableCultures = [] as any;
+                for (let item of _data["availableCultures"])
+                    this.availableCultures!.push(item);
+            }
+            else {
+                this.availableCultures = <any>null;
+            }
+            this.strings = _data["strings"] ? AppStrings.fromJS(_data["strings"]) : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ConfigParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new ConfigParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.availableCultures)) {
+            data["availableCultures"] = [];
+            for (let item of this.availableCultures)
+                data["availableCultures"].push(item);
+        }
+        data["strings"] = this.strings ? this.strings.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IConfigParams {
+    availableCultures: string[];
+    strings?: AppStrings | null;
+}
+
+export class AppStrings implements IAppStrings {
+    appName!: string;
+    disconnect!: string;
+    connect!: string;
+    disconnected!: string;
+    exit!: string;
+    manage!: string;
+    msgAccessKeyAdded!: string;
+    msgAccessKeyUpdated!: string;
+    msgCantReadAccessKey!: string;
+    msgUnsupportedContent!: string;
+    open!: string;
+    openInBrowser!: string;
+
+    constructor(data?: IAppStrings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.appName = _data["appName"] !== undefined ? _data["appName"] : <any>null;
+            this.disconnect = _data["disconnect"] !== undefined ? _data["disconnect"] : <any>null;
+            this.connect = _data["connect"] !== undefined ? _data["connect"] : <any>null;
+            this.disconnected = _data["disconnected"] !== undefined ? _data["disconnected"] : <any>null;
+            this.exit = _data["exit"] !== undefined ? _data["exit"] : <any>null;
+            this.manage = _data["manage"] !== undefined ? _data["manage"] : <any>null;
+            this.msgAccessKeyAdded = _data["msgAccessKeyAdded"] !== undefined ? _data["msgAccessKeyAdded"] : <any>null;
+            this.msgAccessKeyUpdated = _data["msgAccessKeyUpdated"] !== undefined ? _data["msgAccessKeyUpdated"] : <any>null;
+            this.msgCantReadAccessKey = _data["msgCantReadAccessKey"] !== undefined ? _data["msgCantReadAccessKey"] : <any>null;
+            this.msgUnsupportedContent = _data["msgUnsupportedContent"] !== undefined ? _data["msgUnsupportedContent"] : <any>null;
+            this.open = _data["open"] !== undefined ? _data["open"] : <any>null;
+            this.openInBrowser = _data["openInBrowser"] !== undefined ? _data["openInBrowser"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppStrings {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppStrings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["appName"] = this.appName !== undefined ? this.appName : <any>null;
+        data["disconnect"] = this.disconnect !== undefined ? this.disconnect : <any>null;
+        data["connect"] = this.connect !== undefined ? this.connect : <any>null;
+        data["disconnected"] = this.disconnected !== undefined ? this.disconnected : <any>null;
+        data["exit"] = this.exit !== undefined ? this.exit : <any>null;
+        data["manage"] = this.manage !== undefined ? this.manage : <any>null;
+        data["msgAccessKeyAdded"] = this.msgAccessKeyAdded !== undefined ? this.msgAccessKeyAdded : <any>null;
+        data["msgAccessKeyUpdated"] = this.msgAccessKeyUpdated !== undefined ? this.msgAccessKeyUpdated : <any>null;
+        data["msgCantReadAccessKey"] = this.msgCantReadAccessKey !== undefined ? this.msgCantReadAccessKey : <any>null;
+        data["msgUnsupportedContent"] = this.msgUnsupportedContent !== undefined ? this.msgUnsupportedContent : <any>null;
+        data["open"] = this.open !== undefined ? this.open : <any>null;
+        data["openInBrowser"] = this.openInBrowser !== undefined ? this.openInBrowser : <any>null;
+        return data;
+    }
+}
+
+export interface IAppStrings {
+    appName: string;
+    disconnect: string;
+    connect: string;
+    disconnected: string;
+    exit: string;
+    manage: string;
+    msgAccessKeyAdded: string;
+    msgAccessKeyUpdated: string;
+    msgCantReadAccessKey: string;
+    msgUnsupportedContent: string;
+    open: string;
+    openInBrowser: string;
 }
 
 export class DeviceAppInfo implements IDeviceAppInfo {

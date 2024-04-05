@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -21,7 +21,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private bool _isCloseSent;
     private bool _isCloseReceived;
 
-    public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+    public event EventHandler<ChannelPacketReceivedEventArgs>? PacketReceived;
     public JobSection JobSection { get; } = new();
     public string ChannelId { get; }
     public bool Connected { get; private set; }
@@ -148,7 +148,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
                 // fire new packets
                 if (ipPackets.Length > 0)
-                    OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
+                    PacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
             }
         }
         catch (Exception ex)

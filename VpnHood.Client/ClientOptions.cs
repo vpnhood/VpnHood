@@ -16,11 +16,7 @@ public class ClientOptions
     /// </summary>
     public IPAddress TcpProxyCatcherAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
 
-    public IPAddress[] DnsServers { get; set; } =
-    [
-        IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4"),
-        IPAddress.Parse("2001:4860:4860::8888"), IPAddress.Parse("2001:4860:4860::8844")
-    ];
+    public IPAddress[]? DnsServers { get; set; }
 
     public bool AutoDisposePacketCapture { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
@@ -38,6 +34,8 @@ public class ClientOptions
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool DropUdpPackets { get; set; }
     public string? AppGa4MeasurementId { get; set; }
+    public string? AdData { get; init; }
+
 
 #if DEBUG
     public int ProtocolVersion { get; set; }

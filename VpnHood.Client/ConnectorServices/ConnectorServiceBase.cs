@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
@@ -172,6 +172,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         if (certificate == null!) // for android 6 (API 23)
             return true;
 
+        //todo: remove
         // check maintenance certificate
         var parts = certificate.Subject.Split(",");
         if (parts.Any(x => x.Trim().Equals("OU=MT", StringComparison.OrdinalIgnoreCase)))

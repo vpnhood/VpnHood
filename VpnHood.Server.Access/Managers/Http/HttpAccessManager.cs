@@ -102,12 +102,6 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);
     }
 
-
-    public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
-    {
-        return HttpGetAsync<byte[]>($"certificates/{hostEndPoint}");
-    }
-
     public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         return HttpPostAsync<ServerCommand>("status", null, serverStatus);

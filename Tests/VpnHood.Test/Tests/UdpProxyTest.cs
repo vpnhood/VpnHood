@@ -167,7 +167,7 @@ public class UdpProxyTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
 
         // create udpClients and send packets
         var udpClients = new List<UdpClient>();

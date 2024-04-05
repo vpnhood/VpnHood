@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.Client.App.Win.Common
+namespace VpnHood.Client.App.Win.Common;
+
+public class WinAppUpdaterService : IAppUpdaterService
 {
-    public class WinAppUpdaterService : IAppUpdaterService
+    // return false if the app update system does not work
+    public async Task<bool> Update()
     {
-        // return false if the app update system does not work
-        public async Task<bool> Update()
-        {
             // launch updater if exists
             var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
                                    throw new Exception("Could not get the parent of Assembly location.");
@@ -38,5 +38,4 @@ namespace VpnHood.Client.App.Win.Common
             // https://www.advancedinstaller.com/user-guide/updater.html#updater-return-codes
             return process.ExitCode is 0 or -536870895;
         }
-    }
 }

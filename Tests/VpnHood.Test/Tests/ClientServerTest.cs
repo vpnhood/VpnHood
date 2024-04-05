@@ -41,7 +41,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
-        await using var client = TestHelper.CreateClient(token1);
+        await using var client = await TestHelper.CreateClient(token1);
         await TestHelper.Test_Https();
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
@@ -62,7 +62,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = false });
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = false });
 
         await TestTunnel(server, client);
 
@@ -84,7 +84,7 @@ public class ClientServerTest : TestBase
         await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
         {
             DropUdpPackets = true,
             MaxDatagramChannelCount = 6
@@ -116,7 +116,7 @@ public class ClientServerTest : TestBase
         // --------
         // Check: Client MaxDatagramChannelCount larger than server
         // --------
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
         {
             UseUdpChannel = false,
             MaxDatagramChannelCount = 6
@@ -136,7 +136,7 @@ public class ClientServerTest : TestBase
         // --------
         // Check: Client MaxDatagramChannelCount smaller than server
         // --------
-        await using var client2 = TestHelper.CreateClient(token, options: new ClientOptions
+        await using var client2 = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
         {
             UseUdpChannel = false,
             MaxDatagramChannelCount = 1
@@ -162,7 +162,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
     }
 
     [TestMethod]
@@ -173,7 +173,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
         {
             UseUdpChannel = false,
             MaxDatagramChannelCount = 4
@@ -196,7 +196,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
         {
             UseUdpChannel = true
         });
@@ -219,23 +219,23 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Testing by UdpChannel.");
-        await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
+        await TestTunnel(server, client);
 
         // switch to tcp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch to DatagramChannel.");
         client.UseUdpChannel = false;
-        await VhTestUtil.WaitForValue(false, () => client.Stat.IsUdpMode);
         await TestTunnel(server, client);
+        await VhTestUtil.AssertEqualsWait(false, () => client.Stat.IsUdpMode);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         client.UseUdpChannel = true;
-        await VhTestUtil.WaitForValue(true, () => client.Stat.IsUdpMode);
         await TestTunnel(server, client);
+        await VhTestUtil.AssertEqualsWait(true, () => client.Stat.IsUdpMode);
         Assert.IsTrue(client.UseUdpChannel);
     }
 
@@ -251,7 +251,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
         await TestTunnel(server, client);
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
     }
@@ -344,7 +344,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         using var packetCapture = TestHelper.CreatePacketCapture();
-        await using var client = TestHelper.CreateClient(token, packetCapture);
+        await using var client = await TestHelper.CreateClient(token, packetCapture);
 
         packetCapture.StopCapture();
         await TestHelper.WaitForClientStateAsync(client, ClientState.Disposed);
@@ -357,8 +357,8 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client = TestHelper.CreateClient(token,
-            options: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
+        await using var client = await TestHelper.CreateClient(token,
+            clientOptions: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
         await TestHelper.Test_Https();
 
         await server.DisposeAsync();
@@ -399,7 +399,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using (TestHelper.CreateClient(token))
+        await using (await TestHelper.CreateClient(token))
         {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
@@ -407,7 +407,7 @@ public class ClientServerTest : TestBase
         }
 
         // create client
-        await using (TestHelper.CreateClient(token))
+        await using (await TestHelper.CreateClient(token))
         {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
@@ -426,7 +426,7 @@ public class ClientServerTest : TestBase
         await using var stream = tcpClient.GetStream();
 
         // create client
-        await using var client1 = TestHelper.CreateClient(token);
+        await using var client1 = await TestHelper.CreateClient(token);
 
         try
         {
@@ -451,7 +451,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // connect
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // close session
@@ -502,7 +502,7 @@ public class ClientServerTest : TestBase
         // Check: MaintenanceMode is expected
         // ----------
         var token = TestHelper.CreateAccessToken(fileAccessManager);
-        await using var client = TestHelper.CreateClient(token, autoConnect: false);
+        await using var client = await TestHelper.CreateClient(token, autoConnect: false);
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
 
         Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
@@ -512,14 +512,14 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         testAccessManager.EmbedIoAccessManager.Start();
-        await using var client2 = TestHelper.CreateClient(token);
+        await using var client2 = await TestHelper.CreateClient(token);
         await TestHelper.WaitForClientStateAsync(client2, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode after server started by stopping the server
         // ----------
         testAccessManager.EmbedIoAccessManager.Stop();
-        await using var client3 = TestHelper.CreateClient(token, autoConnect: false);
+        await using var client3 = await TestHelper.CreateClient(token, autoConnect: false);
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
         await TestHelper.WaitForClientStateAsync(client3, ClientState.Disposed);
@@ -529,14 +529,14 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         testAccessManager.EmbedIoAccessManager.Start();
-        await using var client4 = TestHelper.CreateClient(token);
+        await using var client4 = await TestHelper.CreateClient(token);
         await TestHelper.WaitForClientStateAsync(client4, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode by replying 404 from access-server
         // ----------
         testAccessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
-        await using var client5 = TestHelper.CreateClient(token, autoConnect: false);
+        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false);
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientStateAsync(client5, ClientState.Disposed);
@@ -546,7 +546,7 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         testAccessManager.EmbedIoAccessManager.HttpException = null;
-        await using var client6 = TestHelper.CreateClient(token);
+        await using var client6 = await TestHelper.CreateClient(token);
         await TestHelper.WaitForClientStateAsync(client6, ClientState.Connected);
     }
 
@@ -603,8 +603,8 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using var client = TestHelper.CreateClient(token, autoConnect: false,
-            options: new ClientOptions { ProtocolVersion = 1 });
+        await using var client = await TestHelper.CreateClient(token, autoConnect: false,
+            clientOptions: new ClientOptions { ProtocolVersion = 1 });
 
         try
         {
@@ -632,7 +632,7 @@ public class ClientServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
         using var httpClient = new HttpClient();
         _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4441");
@@ -649,14 +649,13 @@ public class ClientServerTest : TestBase
     public async Task Server_limit_by_Max_TcpChannel()
     {
         // create access server
-        // create access server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount = 2;
         await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token);
 
         using var tcpClient1 = new TcpClient();
         using var tcpClient2 = new TcpClient();
@@ -684,7 +683,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: TestHelper.CreateClientOptions(useUdp: true));
+        await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
         var lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         var lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
 
@@ -754,7 +753,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = TestHelper.CreateClient(token, options: TestHelper.CreateClientOptions(useUdp: true));
+        await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
         Assert.IsFalse(client.Stat.IsUdpChannelSupported);
     }
 }

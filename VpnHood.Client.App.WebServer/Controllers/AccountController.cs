@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 
 internal class AccountController : WebApiController, IAccountController
 {
-    public IAppAccountService AccountService => VpnHoodApp.Instance.AccountService
+    public IAppAccountService AccountService => VpnHoodApp.Instance.Services.AccountService
         ?? throw new Exception("Account service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/")]
@@ -17,10 +17,16 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.GetAccount();
     }
 
+    [Route(HttpVerbs.Post, "/refresh")]
+    public Task Refresh()
+    {
+        return AccountService.Refresh();
+    }
+
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
-        return VpnHoodApp.Instance.AccountService?.Authentication.IsSignInWithGoogleSupported ?? false;
+        return VpnHoodApp.Instance.Services.AccountService?.Authentication.IsSignInWithGoogleSupported ?? false;
     }
 
     [Route(HttpVerbs.Post, "/signin-with-google")]
@@ -38,14 +44,14 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.Authentication.SignOut();
     }
 
-    [Route(HttpVerbs.Get, "/subscription-order-by-provider-order-id")]
-    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId([QueryField] string providerOrderId)
+    [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
+    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
     {
-        return AccountService.GetSubscriptionOrderByProviderOrderId(providerOrderId);
+        return AccountService.IsSubscriptionOrderProcessed(providerOrderId);
     }
 
-    [Route(HttpVerbs.Get, "/access-keys")]
-    public Task<List<string>> GetAccessKeys([QueryField] string subscriptionId)
+    [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]
+    public Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         return AccountService.GetAccessKeys(subscriptionId);
     }

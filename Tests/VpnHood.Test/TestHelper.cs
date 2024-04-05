@@ -7,7 +7,7 @@ using VpnHood.Client.App;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -294,32 +294,32 @@ internal static class TestHelper
         };
     }
 
-    public static VpnHoodClient CreateClient(Token token,
+    public static async Task<VpnHoodClient> CreateClient(Token token,
         IPacketCapture? packetCapture = default,
         TestDeviceOptions? deviceOptions = default,
         Guid? clientId = default,
         bool autoConnect = true,
-        ClientOptions? options = default,
+        ClientOptions? clientOptions = default,
         bool throwConnectException = true)
     {
         packetCapture ??= CreatePacketCapture(deviceOptions);
         clientId ??= Guid.NewGuid();
-        options ??= CreateClientOptions();
-        if (options.ConnectTimeout == new ClientOptions().ConnectTimeout) options.ConnectTimeout = TimeSpan.FromSeconds(3);
-        options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        options.ExcludeLocalNetwork = false;
+        clientOptions ??= CreateClientOptions();
+        if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout) clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
+        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientOptions.ExcludeLocalNetwork = false;
 
         var client = new VpnHoodClient(
             packetCapture,
             clientId.Value,
             token,
-            options);
+            clientOptions);
 
         // test starting the client
         try
         {
             if (autoConnect)
-                Task.Run(() => client.Connect(), CancellationToken.None).GetAwaiter().GetResult();
+                await client.Connect();
         }
         catch (Exception)
         {

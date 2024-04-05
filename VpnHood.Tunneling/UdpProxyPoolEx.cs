@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Collections;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling.Exceptions;
 using VpnHood.Tunneling.Factory;

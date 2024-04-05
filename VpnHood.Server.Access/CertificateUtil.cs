@@ -112,7 +112,6 @@ public static class CertificateUtil
         var certificate = certRequest.Create(authorityCertificate, DateTimeOffset.Now, notAfter.Value, serial);
         certificate = certificate.CopyWithPrivateKey(rsa);
 
-
         return certificate;
     }
 }

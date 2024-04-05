@@ -19,7 +19,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.470</Version>
+		<Version>4.3.485</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -35,18 +35,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="Resource.Designer.cs">
+		<Compile Update="EmbeddedResource.Designer.cs">
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
-			<DependentUpon>Resource.resx</DependentUpon>
+			<DependentUpon>EmbeddedResource.resx</DependentUpon>
 		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Update="Resource.resx">
+		<EmbeddedResource Update="EmbeddedResource.resx">
 			<SubType>Designer</SubType>
 			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resource.Designer.cs</LastGenOutput>
+			<LastGenOutput>EmbeddedResource.Designer.cs</LastGenOutput>
 		</EmbeddedResource>
 	</ItemGroup>
 

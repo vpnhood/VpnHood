@@ -5,12 +5,12 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>457</ApplicationVersion>
-		<ApplicationDisplayVersion>3.3.457</ApplicationDisplayVersion>
+		<ApplicationVersion>480</ApplicationVersion>
+		<ApplicationDisplayVersion>3.3.480</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<PublishTrimmed>False</PublishTrimmed>
 		<RunAOTCompilation>False</RunAOTCompilation>
 	</PropertyGroup>
@@ -30,13 +30,22 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.450</Version>
+		<Version>3.3.480</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="xml\network_security_config.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <AndroidResource Include="xml\network_security_config.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Ads\VpnHood.Client.App.Android.GooglePlay.Ads.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
@@ -44,10 +53,6 @@
 		<ProjectReference Include="..\VpnHood.Client.App.WebServer\VpnHood.Client.App.WebServer.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="VpnHood.Store.Api" Version="1.0.30-alpha" />
 	</ItemGroup>
 
 </Project>

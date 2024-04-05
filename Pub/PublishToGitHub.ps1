@@ -1,5 +1,8 @@
 . "$PSScriptRoot/Core/Common.ps1"
 
+# update maui nugets
+Push-Location -Path "$solutionDir/VpnHood.Client.App.Maui.Common";
+
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
 
@@ -22,9 +25,6 @@ if ($isLatest)
 {
 	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 }
-
-# replace all final version to current repo
-UpdateRepoVersionInFile;
 
 # Publishing to GitHub
 Push-Location -Path "$solutionDir";

@@ -1,12 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.JobController;
+using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -48,14 +49,19 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         AccessManager = accessManager;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-        SessionManager = new SessionManager(accessManager, options.NetFilter, options.SocketFactory, options.GaTracker, ServerVersion);
         JobSection = new JobSection(options.ConfigureInterval);
+        SessionManager = new SessionManager(accessManager,
+            options.NetFilter,
+            options.SocketFactory,
+            options.GaTracker,
+            ServerVersion,
+            new SessionManagerOptions{ CleanupInterval = options.CleanupInterval });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _serverHost = new ServerHost(SessionManager, new SslCertificateManager(AccessManager));
+        _serverHost = new ServerHost(SessionManager);
 
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
         JobRunner.Default.Add(this);
@@ -155,10 +161,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
-            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions, allServerIps, isIpV6Supported);
+            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions,
+                privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Reconfigure server host
-            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue);
+            await _serverHost.Configure(serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue,
+                serverConfig.DnsServersValue, serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData)).ToArray());
 
             // Reconfigure dns challenge
             StartDnsChallenge(serverConfig.TcpEndPointsValue.Select(x => x.Address), serverConfig.DnsChallenge);
@@ -196,7 +204,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         try
         {
-            _http01ChallengeService = new Http01ChallengeService(ipAddresses.ToArray(), dnsChallenge.Token, dnsChallenge.KeyAuthorization);
+            _http01ChallengeService = new Http01ChallengeService(ipAddresses.ToArray(), dnsChallenge.Token, dnsChallenge.KeyAuthorization, dnsChallenge.Timeout);
             _http01ChallengeService.Start();
         }
         catch (Exception ex)
@@ -206,13 +214,15 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     }
 
     private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
-        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported)
+        IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers)
     {
+        var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToArray();
+
         // assign to workers
-        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().ToArray();
-        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().ToArray();
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
+        serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
-        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ToArray();
+        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges).ToArray();
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)
@@ -256,7 +266,12 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         var json = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
         return VhLogger.IsAnonymousMode
-            ? VhUtil.RedactJsonValue(json, [nameof(ServerConfig.ServerSecret)])
+            ? VhUtil.RedactJsonValue(json, [
+                nameof(ServerConfig.ServerSecret),
+                nameof(CertificateData.RawData),
+                nameof(ServerConfig.TcpEndPoints),
+                nameof(ServerConfig.UdpEndPoints),
+            ])
             : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
     }
 

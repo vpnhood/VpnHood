@@ -113,7 +113,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         if (session.ErrorCode == SessionErrorCode.Ok)
         {
             // check token expiration
-            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < FastDateTime.Now)
+            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 

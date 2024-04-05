@@ -21,7 +21,7 @@ public class RewardedAdLoadCallback : global::Android.Gms.Ads.Rewarded.RewardedA
     }
 
     // ReSharper disable once StringLiteralTypo
-    [Register("onAdLoaded", "(Lcom/google/android/gms/ads/rewarded/RewardedAd;)V", "GetOnAdLoadedHandler")]
+    //[Register("onAdLoaded", "(Lcom/google/android/gms/ads/rewarded/RewardedAd;)V", "GetOnAdLoadedHandler")]
     public virtual void OnAdLoaded(global::Android.Gms.Ads.Rewarded.RewardedAd rewardedAd)
     {
     }

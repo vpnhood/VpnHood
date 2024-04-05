@@ -19,7 +19,7 @@ public class AppSettings
             var assembly = Assembly.GetExecutingAssembly();
             var publicAccessKeyTag = assembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(attr => attr.Key == "PublicAccessKey")?.Value;
             return string.IsNullOrWhiteSpace(publicAccessKeyTag)
-                ? "vh://eyJuYW1lIjoiVnBuSG9vZCBHbG9iYWwgU2VydmVycyIsInYiOjMsInNpZCI6MTAxMCwidGlkIjoiNWFhY2VjNTUtNWNhYy00NTdhLWFjYWQtMzk3Njk2OTIzNmY4Iiwic2VjIjoiNXcraUhNZXcwQTAzZ3c0blNnRFAwZz09IiwiaXN2IjpmYWxzZSwiaG5hbWUiOiJtby5naXdvd3l2eS5uZXQiLCJocG9ydCI6MCwiY2giOiIzZ1hPSGU1ZWN1aUM5cStzYk83aGxMb2tRYkE9IiwicGIiOmZhbHNlLCJ1cmwiOm51bGwsImVwIjpbIjUxLjgxLjIxMC4xNjQ6NDQzIiwiWzI2MDQ6MmRjMDoyMDI6MzAwOjo1Y2VdOjQ0MyJdfQ=="
+                ? "vh://eyJ2Ijo0LCJuYW1lIjoiVnBuSG9vZCBHbG9iYWwgU2VydmVycyIsInNpZCI6IjEwMTAiLCJ0aWQiOiI1YWFjZWM1NS01Y2FjLTQ1N2EtYWNhZC0zOTc2OTY5MjM2ZjgiLCJzZWMiOiI1dytpSE1ldzBBMDNndzRuU2dEUDBnPT0iLCJzZXIiOnsiY3QiOiIyMDI0LTA0LTA1VDA3OjI5OjI2WiIsImhuYW1lIjoibW8uZ2l3b3d5dnkubmV0IiwiaHBvcnQiOjAsImlzdiI6ZmFsc2UsInNlYyI6InZhQnFVOVJDM1FIYVc0eEY1aWJZRnc9PSIsImNoIjoiM2dYT0hlNWVjdWlDOXErc2JPN2hsTG9rUWJBPSIsInVybCI6Imh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS92cG5ob29kL1Zwbkhvb2QuRmFybUtleXMvbWFpbi9GcmVlX2VuY3J5cHRlZF90b2tlbi50eHQiLCJlcCI6WyI1MS44MS44MS4yNTA6NDQzIiwiWzI2MDQ6MmRjMDoxMDE6MjAwOjo5M2VdOjQ0MyJdfX0="
                 : publicAccessKeyTag;
         }
     }

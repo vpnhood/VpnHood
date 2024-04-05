@@ -15,7 +15,7 @@ public class AppAuthenticationService : IAppAuthenticationService
     private readonly IAppAuthenticationExternalService? _externalAuthenticationService;
     private readonly HttpClient _httpClientWithoutAuth;
     private ApiKey? _apiKey;
-    public static string AccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account.json");
+    private static string ApiKeyFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "apiKey.json");
     public bool IsSignInWithGoogleSupported => _externalAuthenticationService != null;
 
     public string? UserId => ApiKey?.UserId;
@@ -39,7 +39,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         if (ignoreSslVerification) handlerWithoutAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClientWithoutAuth = new HttpClient(handlerWithoutAuth) { BaseAddress = storeBaseUrl };
 
-        _apiKey = LoadApiKey(AccountFilePath);
+        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
     }
 
     private ApiKey? ApiKey
@@ -50,12 +50,13 @@ public class AppAuthenticationService : IAppAuthenticationService
             _apiKey = value;
             if (value == null)
             {
-                if (File.Exists(AccountFilePath))
-                    File.Delete(AccountFilePath);
+                if (File.Exists(ApiKeyFilePath))
+                    File.Delete(ApiKeyFilePath);
                 return;
             }
 
-            File.WriteAllText(AccountFilePath, JsonSerializer.Serialize(value));
+            Directory.CreateDirectory(Path.GetDirectoryName(ApiKeyFilePath)!);
+            File.WriteAllText(ApiKeyFilePath, JsonSerializer.Serialize(value));
         }
     }
 
@@ -115,8 +116,9 @@ public class AppAuthenticationService : IAppAuthenticationService
     public async Task SignOut()
     {
         ApiKey = null;
-        if (File.Exists(AccountFilePath))
-            File.Delete(AccountFilePath);
+        if (File.Exists(ApiKeyFilePath))
+            File.Delete(ApiKeyFilePath);
+        
 
         if (_externalAuthenticationService != null)
             await _externalAuthenticationService.SignOut();
@@ -137,6 +139,8 @@ public class AppAuthenticationService : IAppAuthenticationService
         {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
                 await SignUpToVpnHoodStore(idToken);
+            else
+                throw;
         }
     }
 
@@ -148,24 +152,6 @@ public class AppAuthenticationService : IAppAuthenticationService
             IdToken = idToken,
             RefreshTokenType = RefreshTokenType.None
         });
-    }
-
-    private static ApiKey? LoadApiKey(string accountFilePath)
-    {
-        try
-        {
-            if (!File.Exists(accountFilePath))
-                return null;
-
-            var json = File.ReadAllText(accountFilePath);
-            var apiKey = VhUtil.JsonDeserialize<ApiKey>(json);
-            return apiKey;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex, "Could not read ApiKey file.");
-            return null;
-        }
     }
 
     public void Dispose()

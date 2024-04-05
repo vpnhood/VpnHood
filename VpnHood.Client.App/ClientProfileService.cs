@@ -124,44 +124,8 @@ public class ClientProfileService
 
     }
 
-    [Obsolete("Temporary and will be removed by March 1 2024")]
-    private async Task<bool> UpdateTokenFromUrlV3(Token token)
+   public async Task<bool> UpdateTokenFromUrl(Token token)
     {
-        // allow update from v3 to v4
-        VhLogger.Instance.LogInformation("Trying to get new token from token url v3, Url: {Url}", token.ServerToken.Url);
-        try
-        {
-            using var client = new HttpClient();
-            var accessKey = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20));
-            var newToken = Token.FromAccessKey(accessKey);
-            if (newToken.TokenId != token.TokenId)
-            {
-                VhLogger.Instance.LogInformation("Token has not been updated.");
-                return false;
-            }
-
-            //update store
-            token = newToken;
-            ImportAccessToken(token);
-            VhLogger.Instance.LogInformation("Token has been updated. TokenId: {TokenId}, SupportId: {SupportId}",
-                VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
-            return true;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex, "Could not update token from token url.");
-            return false;
-        }
-
-    }
-
-    public async Task<bool> UpdateTokenFromUrl(Token token)
-    {
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (token.ServerToken.Secret == null)
-            return await UpdateTokenFromUrlV3(token);
-#pragma warning restore CS0618 // Type or member is obsolete
-
         if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
             return false;
 

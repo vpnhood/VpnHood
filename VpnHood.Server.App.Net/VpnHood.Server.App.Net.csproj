@@ -22,7 +22,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.470</Version>
+		<Version>4.3.485</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<AssemblyName>VpnHoodServer</AssemblyName>
 	</PropertyGroup>
@@ -47,7 +47,7 @@
 		</Content>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.0" />
+		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
 		<PackageReference Include="NLog" Version="5.2.8" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />

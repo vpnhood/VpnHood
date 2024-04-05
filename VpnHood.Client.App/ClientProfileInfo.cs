@@ -1,10 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.Common;
+﻿using VpnHood.Common;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public class ClientProfileInfo(ClientProfile clientProfile)
 {
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;

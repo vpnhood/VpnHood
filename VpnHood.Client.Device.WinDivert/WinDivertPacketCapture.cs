@@ -32,8 +32,8 @@ public class WinDivertPacketCapture : IPacketCapture
 
     }
 
-    public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
-    public event EventHandler? OnStopped;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler? Stopped;
 
     public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
@@ -135,7 +135,7 @@ public class WinDivertPacketCapture : IPacketCapture
             return;
 
         _device.StopCapture();
-        OnStopped?.Invoke(this, EventArgs.Empty);
+        Stopped?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()
@@ -163,7 +163,7 @@ public class WinDivertPacketCapture : IPacketCapture
         try
         {
             var eventArgs = new PacketReceivedEventArgs([ipPacket], this);
-            OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
+            PacketReceivedFromInbound?.Invoke(this, eventArgs);
         }
         catch (Exception ex)
         {

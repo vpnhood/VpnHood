@@ -4,7 +4,8 @@ param(
 	[Parameter(Mandatory=$true)][object]$winClient,
 	[Parameter(Mandatory=$true)][object]$android, 
 	[Parameter(Mandatory=$true)][object]$server,
-	[Parameter(Mandatory=$true)][object]$distribute
+	[Parameter(Mandatory=$true)][object]$distribute,
+	[Parameter(Mandatory=$true)][object]$samples
 	);
 
 $nugets = $nugets -eq "1";
@@ -13,6 +14,7 @@ $androidConnect = $androidConnect -eq "1";
 $distribute = $distribute -eq "1";
 $winClient = $winClient -eq "1";
 $server = $server -eq "1";
+$samples = $samples -eq "1";
 
 . "$PSScriptRoot/Core/Common.ps1" -bump $bump
 
@@ -38,6 +40,8 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 & "$solutionDir/VpnHood.Client.App.Android.Common/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App.Android.GooglePlay/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App.Android.GooglePlay.Core/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App.Win.Common/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App.Maui.Common/_publish.ps1";
 
 & "$solutionDir/VpnHood.Server/_publish.ps1";
 & "$solutionDir/VpnHood.Server.Access/_publish.ps1";
@@ -75,4 +79,11 @@ if ($androidConnect)
 if ($distribute)
 {
 	& "$PSScriptRoot/PublishToGitHub.ps1";
+}
+
+
+# update and push samples nugets
+if ($samples)
+{
+	& "$solutionDir/../VpnHood.Client.Samples/UpdateAndPush.ps1";
 }

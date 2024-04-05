@@ -13,6 +13,12 @@ public class AccountController : ControllerBase, IAccountController
     {
         throw new NotImplementedException();
     }
+    
+    [HttpPost("refresh")]
+    public Task Refresh()
+    {
+        throw new NotImplementedException();
+    }
 
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
@@ -32,13 +38,13 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
-    [HttpGet("subscription-order-by-provider-order-id")]
-    public Task<AppSubscriptionOrder> GetSubscriptionOrderByProviderOrderId(string providerOrderId)
+    [HttpGet("subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
+    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
     {
         throw new NotImplementedException();
     }
 
-    [HttpGet("access-keys")]
+    [HttpGet("subscriptions/{subscriptionId}/access-keys")]
     public Task<List<string>> GetAccessKeys(string subscriptionId)
     {
         throw new NotImplementedException();

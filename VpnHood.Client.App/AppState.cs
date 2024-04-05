@@ -24,4 +24,8 @@ public class AppState
     public required VersionStatus VersionStatus { get; init; }
     public required PublishInfo? LastPublishInfo { get; init; }
     public required bool? IsUdpChannelSupported { get; init; }
+    public required bool CanDisconnect { get; init; }
+    public required bool CanConnect { get; init; }
+    public required UiCultureInfo CurrentUiCultureInfo { get; init; }
+    public required UiCultureInfo SystemUiCultureInfo { get; init; }
 }

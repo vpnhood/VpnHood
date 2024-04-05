@@ -12,7 +12,7 @@ public sealed class AsyncLock
         public bool Succeeded { get; }
     }
 
-    private class SemaphoreSlimEx(int initialCount, int maxCount) 
+    private class SemaphoreSlimEx(int initialCount, int maxCount)
         : SemaphoreSlim(initialCount, maxCount)
     {
         public int ReferenceCount { get; set; }
@@ -26,10 +26,12 @@ public sealed class AsyncLock
 
         public void Dispose()
         {
-            if (_disposed || !Succeeded) return;
+            if (_disposed) return;
             _disposed = true;
 
-            semaphoreSlimEx.Release();
+            if (Succeeded)
+                semaphoreSlimEx.Release();
+
             lock (SemaphoreSlims)
             {
                 semaphoreSlimEx.ReferenceCount--;
@@ -65,7 +67,15 @@ public sealed class AsyncLock
             semaphoreSlim.ReferenceCount++;
         }
 
-        var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken);
-        return new SemaphoreLock(semaphoreSlim, succeeded, name);
+        try
+        {
+            var succeeded = await semaphoreSlim.WaitAsync(timeout, cancellationToken);
+            return new SemaphoreLock(semaphoreSlim, succeeded, name);
+        }
+        catch
+        {
+            semaphoreSlim.ReferenceCount--;
+            throw;
+        }
     }
 }

@@ -1,13 +1,13 @@
 ﻿namespace VpnHood.Client.Device;
 
-public interface IDevice
+public interface IDevice : IDisposable
 {
-    string OsInfo { get; }
-    DeviceAppInfo[] InstalledApps { get; }
+    event EventHandler StartedAsService;
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsLogToConsoleSupported { get; }
-    event EventHandler OnStartAsService;
+    string OsInfo { get; }
+    DeviceAppInfo[] InstalledApps { get; }
     Task<IPacketCapture> CreatePacketCapture();
-    
+    ICultureService? CultureService { get; }
 }

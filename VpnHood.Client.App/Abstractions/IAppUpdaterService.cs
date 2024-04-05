@@ -1,7 +1,6 @@
-﻿namespace VpnHood.Client.App.Abstractions
+﻿namespace VpnHood.Client.App.Abstractions;
+
+public interface IAppUpdaterService
 {
-    public interface IAppUpdaterService
-    {
-        Task<bool> Update();
-    }
+    Task<bool> Update();
 }

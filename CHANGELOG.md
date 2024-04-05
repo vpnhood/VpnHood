@@ -2,6 +2,10 @@
 ### Client
 * Feature: Accept DNS Servers from the connected Server
 * Feature: Multi-language Support (Arabic, Chinese, English, Farsi, Portuguese, Russian, Spanish)
+* Feature: Support Billing integration
+* Feature: Implement Google Billing
+* Feature: Support Interface for Account integration
+* Feature: Implement VpnHood Store Account
 * Update: Improve UDP performance
 
 ### Server

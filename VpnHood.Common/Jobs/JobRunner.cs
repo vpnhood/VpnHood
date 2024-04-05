@@ -153,4 +153,9 @@ public class JobRunner
         _timer?.Dispose();
         _timer = null;
     }
+
+    public static Task RunNow(IJob job)
+    {
+        return job.JobSection.Enter(job.RunJob, true);
+    }
 }

@@ -7,7 +7,7 @@
 * Feature: Support Interface for Account integration
 * Feature: Implement VpnHood Store Account
 * Update: Improve UDP performance
-* Update: Prpare to migrate VpnHood public servers to VpnHood Connect
+* Update: Prepare to migrate VpnHood public servers to VpnHood Connect
 
 ### Server
 * Feature: Configure DNS Servers for the connected clients

@@ -172,6 +172,15 @@ namespace VpnHood.Client.App {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to This server requires a display Ad but could not display it..
+        /// </summary>
+        internal static string MsgCantShowAd {
+            get {
+                return ResourceManager.GetString("MsgCantShowAd", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Unsupported file type..
         /// </summary>
         internal static string MsgUnsupportedContent {

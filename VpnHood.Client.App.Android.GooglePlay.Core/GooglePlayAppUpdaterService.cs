@@ -2,7 +2,9 @@
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
+using Xamarin.Google.Android.Play.Core.AppUpdate.Testing;
 using Xamarin.Google.Android.Play.Core.Install.Model;
+using static Android.Icu.Text.IDNA;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -18,12 +20,17 @@ public class GooglePlayAppUpdaterService(Activity activity)
             var updateAvailability = appUpdateInfo.UpdateAvailability();
 
             // postpone check if check succeeded
-            if (updateAvailability == UpdateAvailability.UpdateAvailable &&
-                appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
+            if (updateAvailability == UpdateAvailability.UpdateAvailable && appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
             {
-                appUpdateManager.StartUpdateFlowForResult(
-                    appUpdateInfo, activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build(), 0);
-                return true;
+                appUpdateManager.StartUpdateFlow(appUpdateInfo, activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
+
+                var appUpdateStatus = appUpdateInfo.InstallStatus();
+                if (appUpdateStatus == InstallStatus.Downloaded)
+                {
+                    var installUpdateStatus = appUpdateManager.CompleteUpdate();
+                    appUpdateManager.Dispose();
+                    return installUpdateStatus.IsComplete;
+                }
             }
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google

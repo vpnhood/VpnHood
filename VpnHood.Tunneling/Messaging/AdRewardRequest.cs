@@ -2,5 +2,5 @@
 public class AdRewardRequest()
     : RequestBase(Messaging.RequestCode.AdReward)
 {
-    public string? AdData { get; init; }
+    public required string AdData { get; init; }
 }

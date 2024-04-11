@@ -175,17 +175,18 @@ public class FileAccessManager : IAccessManager
         return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
-        return Session_AddUsage(sessionId, traffic, false);
+        return Session_AddUsage(sessionId, traffic, adData, false);
     }
 
     public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
-        return Session_AddUsage(sessionId, traffic, true);
+        return Session_AddUsage(sessionId, traffic, adData: null, closeSession: true);
     }
 
-    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
+    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
+        bool closeSession)
     {
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
@@ -211,6 +212,8 @@ public class FileAccessManager : IAccessManager
             SuppressedBy = res.SuppressedBy
         };
 
+
+        _ = adData; //ad validation has not been implemented on File Access Server
         return ret;
     }
 

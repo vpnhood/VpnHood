@@ -30,7 +30,7 @@ $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android
-$nodeName = "Android.$packageFileTitle";
+$nodeName = "Android.$packageFileTitle.$distribution";
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
 $keystorePass = $credentials.$nodeName.KeyStorePass
 $keystoreAlias = $credentials.$nodeName.KeyStoreAlias
@@ -56,7 +56,7 @@ if ($apk)
 	dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:ApplicationId=$packageId `
-		/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 	 
 	# publish info
 	$json = @{

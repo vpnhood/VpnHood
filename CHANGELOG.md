@@ -1,3 +1,11 @@
+# Upcoming
+### Client
+* Android: Fix Google Play Update
+* Fix: Ad service
+
+### Server
+* Feature: Ad reward service
+
 # v4.3.485
 ### Client
 * Feature: Accept DNS Servers from the connected Server

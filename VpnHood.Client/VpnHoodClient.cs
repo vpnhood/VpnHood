@@ -833,7 +833,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     RequestId = Guid.NewGuid() + ":client",
                     SessionId = SessionId,
                     SessionKey = SessionKey
-
                 },
                 cancellationToken);
         }
@@ -847,7 +846,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try
         {
-            await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
+            await using var requestResult = await SendRequest<SessionResponse>(
                 new AdRewardRequest
                 {
                     RequestId = Guid.NewGuid() + ":client",

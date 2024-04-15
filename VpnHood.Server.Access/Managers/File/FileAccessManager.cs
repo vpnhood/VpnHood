@@ -139,6 +139,9 @@ public class FileAccessManager : IAccessManager
         if (accessItem == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
+        if (!IsValidAd(sessionRequestEx.AdData))
+            sessionRequestEx.AdData = null;
+
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
         // update accesskey
@@ -185,9 +188,9 @@ public class FileAccessManager : IAccessManager
         return Session_AddUsage(sessionId, traffic, adData: null, closeSession: true);
     }
 
-    protected virtual TimeSpan? GetAddSessionExpiration(string? adData)
+    protected virtual bool IsValidAd(string? adData)
     {
-        return null;
+        return true; // this server does not validate ad at server side
     }
 
     private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
@@ -210,9 +213,8 @@ public class FileAccessManager : IAccessManager
             SessionController.CloseSession(sessionId);
 
         // manage adData for simulation
-        var addSessionExpiration = GetAddSessionExpiration(adData);
-        if (addSessionExpiration != null)
-            SessionController.AddSessionExpiration(sessionId, addSessionExpiration.Value);
+        if (IsValidAd(adData))
+            SessionController.Sessions[sessionId].ExpirationTime = null;
 
         var res = SessionController.GetSession(sessionId, accessItem, null);
         var ret = new SessionResponse(res.ErrorCode)
@@ -222,8 +224,6 @@ public class FileAccessManager : IAccessManager
             SuppressedBy = res.SuppressedBy
         };
 
-
-        _ = adData; //ad validation has not been implemented on this File Access Server
         return ret;
     }
 

@@ -199,9 +199,14 @@ internal static class TestHelper
         return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime);
     }
 
+    public static string CreateAccessManagerWorkingDir()
+    {
+        return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
+    }
+
     public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null)
     {
-        storagePath ??= Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
+        storagePath ??= CreateAccessManagerWorkingDir();
         options ??= CreateFileAccessManagerOptions();
         return new FileAccessManager(storagePath, options);
     }

@@ -39,7 +39,7 @@ public class FileAccessManager : IAccessManager
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = System.IO.File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty , X509KeyStorageFlags.Exportable)
+            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty, X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
         ServerConfig.Certificates =
@@ -110,13 +110,13 @@ public class FileAccessManager : IAccessManager
         return Convert.FromBase64String(System.IO.File.ReadAllText(serverSecretFile));
     }
 
-    public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
+    public virtual Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         ServerStatus = serverStatus;
         return Task.FromResult(new ServerCommand(ServerConfig.ConfigCode));
     }
 
-    public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
+    public virtual Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
@@ -133,7 +133,7 @@ public class FileAccessManager : IAccessManager
         return Task.FromResult((ServerConfig)ServerConfig);
     }
 
-    public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
         if (accessItem == null)
@@ -148,7 +148,7 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
-    public async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         _ = hostEndPoint;
         _ = clientIp;
@@ -175,14 +175,19 @@ public class FileAccessManager : IAccessManager
         return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
+    public virtual Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
         return Session_AddUsage(sessionId, traffic, adData, false);
     }
 
-    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
+    public virtual Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
         return Session_AddUsage(sessionId, traffic, adData: null, closeSession: true);
+    }
+
+    protected virtual TimeSpan? GetAddSessionExpiration(string? adData)
+    {
+        return null;
     }
 
     private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
@@ -204,6 +209,11 @@ public class FileAccessManager : IAccessManager
         if (closeSession)
             SessionController.CloseSession(sessionId);
 
+        // manage adData for simulation
+        var addSessionExpiration = GetAddSessionExpiration(adData);
+        if (addSessionExpiration != null)
+            SessionController.AddSessionExpiration(sessionId, addSessionExpiration.Value);
+
         var res = SessionController.GetSession(sessionId, accessItem, null);
         var ret = new SessionResponse(res.ErrorCode)
         {
@@ -213,11 +223,11 @@ public class FileAccessManager : IAccessManager
         };
 
 
-        _ = adData; //ad validation has not been implemented on File Access Server
+        _ = adData; //ad validation has not been implemented on this File Access Server
         return ret;
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         SessionController.Dispose();
     }
@@ -272,7 +282,8 @@ public class FileAccessManager : IAccessManager
         int maxClientCount = 1,
         string? tokenName = null,
         int maxTrafficByteCount = 0,
-        DateTime? expirationTime = null)
+        DateTime? expirationTime = null,
+        bool isAdRequired = false)
     {
         // generate key
         var aes = Aes.Create();
@@ -291,7 +302,8 @@ public class FileAccessManager : IAccessManager
                 Secret = aes.Key,
                 Name = tokenName,
                 SupportId = null,
-                ServerToken = _serverToken
+                ServerToken = _serverToken,
+                IsAdRequired = isAdRequired
             }
         };
 

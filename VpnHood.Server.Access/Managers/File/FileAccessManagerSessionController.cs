@@ -11,6 +11,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 {
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
+    private readonly TimeSpan _adRequiredTimeout = TimeSpan.FromMinutes(4);
     private uint _lastSessionId;
 
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
@@ -59,7 +60,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
             return new SessionResponseEx(SessionErrorCode.AccessError)
-            { ErrorMessage = "Could not validate the request!" };
+            { ErrorMessage = "Could not validate the request." };
 
         // create a new session
         var session = new Session
@@ -72,7 +73,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
-            ExtraData = sessionRequestEx.ExtraData
+            ExtraData = sessionRequestEx.ExtraData,
+            ExpirationTime = accessItem.Token.IsAdRequired && string.IsNullOrEmpty(sessionRequestEx.AdData) 
+                ? DateTime.UtcNow + _adRequiredTimeout 
+                : null
         };
 
         //create response
@@ -89,8 +93,22 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem,
-        IPEndPoint? hostEndPoint)
+    public void AddSessionExpiration(ulong sessionId, TimeSpan timeSpan)
+    {
+        if (!Sessions.TryGetValue(sessionId, out var session))
+            return;
+
+        if (timeSpan == TimeSpan.MaxValue)
+        {
+            session.ExpirationTime = null;
+            return;
+        }
+
+        session.ExpirationTime ??= DateTime.UtcNow;
+        session.ExpirationTime += timeSpan;
+    }
+
+    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem, IPEndPoint? hostEndPoint)
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
@@ -116,6 +134,11 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
+
+            // session expiration
+            if (session.ExpirationTime != null && session.ExpirationTime < DateTime.UtcNow)
+                return new SessionResponseEx(SessionErrorCode.AccessExpired)
+                    { AccessUsage = accessUsage, ErrorMessage = "Session Expired!" };
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
@@ -158,6 +181,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
                 }
             }
 
+            // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
+            if (session.ExpirationTime!=null && (accessUsage.ExpirationTime ==null || session.ExpirationTime < accessUsage.ExpirationTime))
+                accessUsage.ExpirationTime = session.ExpirationTime.Value;
+
             accessUsage.ActiveClientCount = otherSessions
                 .GroupBy(x=>x.ClientInfo.ClientId)
                 .Count();
@@ -197,6 +224,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         public DateTime CreatedTime { get; internal set; } = FastDateTime.Now;
         public DateTime LastUsedTime { get; internal set; } = FastDateTime.Now;
         public DateTime? EndTime { get; internal set; }
+        public DateTime? ExpirationTime { get; set; } 
         public bool IsAlive => EndTime == null;
         public SessionSuppressType SuppressedBy { get; internal set; }
         public SessionSuppressType SuppressedTo { get; internal set; }

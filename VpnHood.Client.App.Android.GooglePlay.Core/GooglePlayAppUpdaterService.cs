@@ -9,10 +9,9 @@ namespace VpnHood.Client.App.Droid.GooglePlay;
 
 public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
 {
-    private readonly TaskCompletionSource<int> _taskCompletionSource = new();
     public async Task<bool> Update()
     {
-        var appUpdateManager =  AppUpdateManagerFactory.Create(activity);
+        using var appUpdateManager = AppUpdateManagerFactory.Create(activity);
         try
         {
             var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
@@ -30,12 +29,8 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
                 throw new Exception("Could not start update flow.");
 
             // Set listener to check download state
-            appUpdateManager.RegisterListener(new GooglePlayDownloadStateListener(_taskCompletionSource));
-            var downloadState = await _taskCompletionSource.Task;
-
-            // Download failed
-            if (downloadState != InstallStatus.Downloaded)
-                return false;
+            using var googlePlayDownloadStateListener = new GooglePlayDownloadCompleteListener(appUpdateManager);
+            await googlePlayDownloadStateListener.WaitForCompletion();
 
             // Start install downloaded update
             var installUpdateTask = appUpdateManager.CompleteUpdate();
@@ -45,44 +40,67 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
             if (installUpdateStatus.IntValue() != -1)
                 throw new Exception("Could not complete update.");
 
-            // Set listener to check installation state
-            var installState = await _taskCompletionSource.Task;
-            // TODO Check for unregister
-            //appUpdateManager.UnregisterListener(GooglePlayDownloadStateListener);
-            appUpdateManager.Dispose();
-
-            return installState == InstallStatus.Installed;
+            return true;
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(ex, "Could not check for new version.");
+            VhLogger.Instance.LogWarning(ex, "Could update the app using Google Play.");
             return false;
         }
     }
 
-    public class GooglePlayDownloadStateListener(TaskCompletionSource<int> taskCompletionSource) : Java.Lang.Object, IInstallStateUpdatedListener
+    public class GooglePlayDownloadCompleteListener
+        : Java.Lang.Object, IInstallStateUpdatedListener
     {
+        private readonly TaskCompletionSource _taskCompletionSource = new();
+        private readonly IAppUpdateManager _appUpdateManager;
+
+        public Task WaitForCompletion()
+        {
+            return _taskCompletionSource.Task;
+        } 
+
+        public  GooglePlayDownloadCompleteListener(IAppUpdateManager appUpdateManager)
+        {
+            appUpdateManager.RegisterListener(this);
+            _appUpdateManager = appUpdateManager;
+        }
+
         public void OnStateUpdate(InstallState state)
         {
             var status = state.InstallStatus();
             switch (status)
             {
-                case InstallStatus.Downloaded:
-                    taskCompletionSource.TrySetResult(status);
-                    break;
                 case InstallStatus.Installed:
-                    taskCompletionSource.TrySetResult(status);
+                case InstallStatus.Downloaded:
+                    _taskCompletionSource.TrySetResult();
                     break;
+
                 case InstallStatus.Canceled:
-                    taskCompletionSource.SetCanceled();
+                    _taskCompletionSource.SetCanceled();
                     break;
+
                 case InstallStatus.Failed:
-                    taskCompletionSource.TrySetException(new Exception("Download Failed."));
+                    _taskCompletionSource.TrySetException(new Exception("Download failed."));
                     break;
+
                 case InstallStatus.Unknown:
-                    taskCompletionSource.TrySetException(new Exception("Unknown status."));
+                    _taskCompletionSource.TrySetException(new Exception("Unknown status for download."));
                     break;
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (!_taskCompletionSource.Task.IsCompleted)
+                    _taskCompletionSource.TrySetCanceled();
+
+                _appUpdateManager.UnregisterListener(this);
+            }
+
+            base.Dispose(disposing);
         }
     }
 }

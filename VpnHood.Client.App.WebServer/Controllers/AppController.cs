@@ -1,6 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
+﻿using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;

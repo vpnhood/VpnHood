@@ -80,11 +80,12 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
     }
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
         var parameters = new Dictionary<string, object?>
         {
             { "sessionId",  sessionId},
+            { "adData",  adData},
             { "closeSession",  false}
         };
 

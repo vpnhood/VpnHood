@@ -42,10 +42,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ConnectorService _connectorService;
     private readonly bool _allowAnonymousTracker;
     private readonly string? _appGa4MeasurementId;
+    private readonly string? _adData;
     private Traffic _helloTraffic = new();
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
-
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
     private bool _useUdpChannel;
@@ -103,6 +103,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         _useUdpChannel = options.UseUdpChannel;
+        _adData = options.AdData;
         // todo remove
         //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
 
@@ -611,7 +612,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 RequestId = Guid.NewGuid() + ":client",
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
-                TokenId = Token.TokenId
+                TokenId = Token.TokenId,
+                AdData = _adData
             };
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken);

@@ -841,7 +841,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public async Task SendAdReward(string? adData, CancellationToken cancellationToken)
+    public async Task SendAdReward(string adData, CancellationToken cancellationToken)
     {
         try
         {
@@ -857,7 +857,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the bye request.");
+            VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the AdReward request.");
             throw;
         }
     }

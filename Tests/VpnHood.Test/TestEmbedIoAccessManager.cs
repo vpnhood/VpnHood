@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using EmbedIO;
@@ -12,6 +11,7 @@ using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Messaging;
+// ReSharper disable UnusedMember.Local
 
 namespace VpnHood.Test;
 
@@ -72,7 +72,6 @@ public class TestEmbedIoAccessManager : IDisposable
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 
-    [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private class ApiController(TestEmbedIoAccessManager embedIoAccessManager) : WebApiController
     {
         private IAccessManager AccessManager => embedIoAccessManager.FileAccessManager;
@@ -121,13 +120,14 @@ public class TestEmbedIoAccessManager : IDisposable
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId, [QueryField] bool closeSession)
+        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId, 
+            [QueryField] bool closeSession, [QueryField] string? adData)
         {
             _ = serverId;
             var traffic = await GetRequestDataAsync<Traffic>();
             var res = closeSession
                 ? await AccessManager.Session_Close(sessionId, traffic)
-                : await AccessManager.Session_AddUsage(sessionId, traffic);
+                : await AccessManager.Session_AddUsage(sessionId, traffic, adData);
             return res;
 
         }

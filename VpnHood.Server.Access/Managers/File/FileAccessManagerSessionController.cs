@@ -93,21 +93,6 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         return ret;
     }
 
-    public void AddSessionExpiration(ulong sessionId, TimeSpan timeSpan)
-    {
-        if (!Sessions.TryGetValue(sessionId, out var session))
-            return;
-
-        if (timeSpan == TimeSpan.MaxValue)
-        {
-            session.ExpirationTime = null;
-            return;
-        }
-
-        session.ExpirationTime ??= DateTime.UtcNow;
-        session.ExpirationTime += timeSpan;
-    }
-
     public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem, IPEndPoint? hostEndPoint)
     {
         // check existence

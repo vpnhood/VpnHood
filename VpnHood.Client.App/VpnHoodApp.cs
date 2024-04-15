@@ -401,7 +401,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         Settings.Save();
 
         // Show ad if required
-        var adData = token.IsAdRequired ? await ShowAd($"hello:{Guid.NewGuid()}", CancellationToken.None) : null;
+        var adData = token.IsAdRequired ? await ShowAd(CancellationToken.None) : null;
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
@@ -463,7 +463,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             // Show ad if it is required and does not show yet
             if (token.IsAdRequired && string.IsNullOrEmpty(adData))
             {
-                adData = await ShowAd($"sid:{clientConnect.Client.SessionId}", cancellationToken);
+                adData = await ShowAd(cancellationToken);
+                if (string.IsNullOrEmpty(adData))
+                    throw new AdException("Could not display the require ad.");
+                
                 await ClientConnect.Client.SendAdReward(adData, cancellationToken);
             }
         }
@@ -476,7 +479,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private async Task<string> ShowAd(string requestId, CancellationToken cancellationToken)
+    private async Task<string?> ShowAd(CancellationToken cancellationToken)
     {
         if (Services.AdService == null)
             throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
@@ -484,12 +487,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         IsWaitingForAd = true;
         try
         {
-            var adData = await Services.AdService.ShowAd(cancellationToken) ?? throw new AdException(Resource.Strings.MsgCantShowAd);
-            return adData;
+            return await Services.AdService.ShowAd(cancellationToken);
         }
-        catch (Exception ex) when (ex is not AdException)
+        catch (Exception ex)
         {
-            throw new AdException(Resource.Strings.MsgCantShowAd, ex);
+            VhLogger.Instance.LogInformation(ex, "Error in displaying the ad.");
+            return null;
         }
         finally
         {

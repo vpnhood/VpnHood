@@ -1,4 +1,5 @@
-﻿using Xamarin.Google.Android.Play.Core.Tasks;
+﻿using Xamarin.Google.Android.Play.Core.Install;
+using Xamarin.Google.Android.Play.Core.Tasks;
 using Exception = Java.Lang.Exception;
 using Object = Java.Lang.Object;
 using Task = Xamarin.Google.Android.Play.Core.Tasks.Task;
@@ -7,16 +8,17 @@ namespace VpnHood.Client.App.Droid.GooglePlay;
 
 public class GooglePlayTaskCompleteListener<T> : Object,
     IOnSuccessListener,
-    IOnFailureListener
+    IOnFailureListener,
+    IOnCompleteListener
 {
     private readonly TaskCompletionSource<T> _taskCompletionSource;
     public Task<T> Task => _taskCompletionSource.Task;
 
-    public GooglePlayTaskCompleteListener(Task appUpdateInfo)
+    public GooglePlayTaskCompleteListener(Task googlePlayTask)
     {
         _taskCompletionSource = new TaskCompletionSource<T>();
-        appUpdateInfo.AddOnSuccessListener(this);
-        appUpdateInfo.AddOnFailureListener(this);
+        googlePlayTask.AddOnSuccessListener(this);
+        googlePlayTask.AddOnFailureListener(this);
     }
 
     public void OnSuccess(Object? obj)
@@ -30,5 +32,10 @@ public class GooglePlayTaskCompleteListener<T> : Object,
     public void OnFailure(Exception ex)
     {
         _taskCompletionSource.TrySetException(ex);
+    }
+
+    public void OnComplete(Task p0)
+    {
+        
     }
 }

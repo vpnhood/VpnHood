@@ -75,17 +75,17 @@ if ($apk)
 # ------------- aab
 if ($aab)
 {
-	# set app icon
-	$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
-	$appIconXmlDoc.save($appIconXml);
+# set app icon
+$appIconXmlNode.SetAttribute("android:drawable", "@mipmap/appicon_background");
+$appIconXmlDoc.save($appIconXml);
 
-	# update variables
-	$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
-	$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
-	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
-	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
+# update variables
+$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
+$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
+$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
+$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
 	dotnet build $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:ApplicationId=$packageId `

@@ -30,7 +30,7 @@ $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android
-$nodeName = "Android.$packageFileTitle";
+$nodeName = "Android.$packageFileTitle.$distribution";
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
 $keystorePass = $credentials.$nodeName.KeyStorePass
 $keystoreAlias = $credentials.$nodeName.KeyStoreAlias
@@ -53,23 +53,23 @@ if ($apk)
 	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
 
 	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
-dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
-/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-/p:ApplicationId=$packageId `
-/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
-
-# publish info
-$json = @{
-Version = $versionParam;
-UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
-PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
-GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
-ReleaseDate = "$releaseDate";
-DeprecatedVersion = "$deprecatedVersion";
-NotificationDelay = "03.00:00:00";
-};
-$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
+	dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
+		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+		/p:ApplicationId=$packageId `
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+	 
+	# publish info
+	$json = @{
+		Version = $versionParam; 
+		UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
+		PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+		InstallationPageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+		GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
+		ReleaseDate = "$releaseDate";
+		DeprecatedVersion = "$deprecatedVersion";
+		NotificationDelay = "03.00:00:00";
+	};
+	$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
 }
 
 # ------------- aab

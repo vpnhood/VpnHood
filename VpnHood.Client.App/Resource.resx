@@ -157,6 +157,9 @@
   <data name="MsgUnsupportedContent" xml:space="preserve">
     <value>Unsupported file type.</value>
   </data>
+	<data name="MsgCantShowAd" xml:space="preserve">
+    <value>This server requires a display Ad but could not display it.</value>
+  </data>
   <data name="Open" xml:space="preserve">
     <value>Open</value>
   </data>

@@ -100,7 +100,7 @@ public class FileAccessManagerTest : TestBase
     }
 
     [TestMethod]
-    public void AddUsage()
+    public async Task AddUsage()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
         var accessManager1 = TestHelper.CreateFileAccessManager(storagePath: storagePath);
@@ -110,46 +110,46 @@ public class FileAccessManagerTest : TestBase
         var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
 
         // create a session
-        var sessionResponse = accessManager1.Session_Create(sessionRequestEx1).Result;
+        var sessionResponse = await accessManager1.Session_Create(sessionRequestEx1);
         Assert.IsNotNull(sessionResponse, "access has not been retrieved");
 
         // ************
         // *** TEST ***: add sent and receive bytes
-        var response = accessManager1.Session_AddUsage(sessionResponse.SessionId,
-            new Traffic { Sent = 20, Received = 10 }).Result;
+        var response = await accessManager1.Session_AddUsage(sessionResponse.SessionId,
+            new Traffic { Sent = 20, Received = 10 }, null);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(20, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(10, response.AccessUsage?.Traffic.Received);
 
-        response = accessManager1.Session_AddUsage(sessionResponse.SessionId,
-            new Traffic { Sent = 20, Received = 10 }).Result;
+        response = await accessManager1.Session_AddUsage(sessionResponse.SessionId,
+            new Traffic { Sent = 20, Received = 10 }, null);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
 
-        response = accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
-            sessionRequestEx1.ClientIp).Result;
+        response = await accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
+            sessionRequestEx1.ClientIp);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(40, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(20, response.AccessUsage?.Traffic.Received);
 
         // close session
-        response = accessManager1.Session_Close(sessionResponse.SessionId,
-            new Traffic { Sent = 20, Received = 10 }).Result;
+        response = await accessManager1.Session_Close(sessionResponse.SessionId,
+            new Traffic { Sent = 20, Received = 10 });
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
 
         // check is session closed
-        response = accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
-            sessionRequestEx1.ClientIp).Result;
+        response = await accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
+            sessionRequestEx1.ClientIp);
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
 
         // check restore
         var accessManager2 = TestHelper.CreateFileAccessManager(storagePath: storagePath);
-        response = accessManager2.Session_Create(sessionRequestEx1).Result;
+        response = await accessManager2.Session_Create(sessionRequestEx1);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);

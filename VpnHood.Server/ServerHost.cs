@@ -639,7 +639,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardAd request...");
         var request = await ReadRequest<AdRewardRequest>(clientStream, cancellationToken);
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-        await session.ProcessAdRewardRequest(request);
+        await session.ProcessAdRewardRequest(request, clientStream ,cancellationToken);
     }
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)

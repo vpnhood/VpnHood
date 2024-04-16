@@ -22,6 +22,9 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
             if (updateAvailability != UpdateAvailability.UpdateAvailable || !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
                 return false;
 
+            appUpdateManager.StartUpdateFlowForResult(appUpdateInfo, activity,
+                AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build(), 500);
+
             // Show Google Play update dialog
             var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
             var updateFlowResult = await new GooglePlayTaskCompleteListener<Java.Lang.Integer>(updateFlowPlayTask).Task;

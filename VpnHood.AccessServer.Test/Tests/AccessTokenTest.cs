@@ -290,18 +290,10 @@ public class AccessTokenTest
         var farm2 = await ServerFarmDom.Create();
 
         var accessTokenDom1 = await farm1.CreateAccessToken();
-        try
+        await VhTestUtil.AssertApiException<NotExistsException>(accessTokenDom1.Update(new AccessTokenUpdateParams
         {
-            await accessTokenDom1.Update(new AccessTokenUpdateParams
-            {
-                ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
-            });
-            Assert.Fail("KeyNotFoundException is expected!");
-        }
-        catch (ApiException ex)
-        {
-            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
-        }
+            ServerFarmId = new PatchOfGuid { Value = farm2.ServerFarmId }
+        }));
     }
 
     [TestMethod]

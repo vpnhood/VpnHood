@@ -27,7 +27,7 @@ public class SessionService(
 {
     public class NewAccess;
     private static Task TrackUsage(ProjectCache project, ServerCache server,
-        SessionCache session, AccessCache access, Traffic traffic)
+        SessionCache session, AccessCache access, Traffic traffic, bool adReward)
     {
         if (string.IsNullOrEmpty(project.GaMeasurementId) || string.IsNullOrEmpty(project.GaApiSecret))
             return Task.CompletedTask;
@@ -57,8 +57,9 @@ public class SessionService(
                 {"FarmId", server.ServerFarmId},
                 {"Traffic", Math.Round(traffic.Total / 1_000_000d)},
                 {"Sent", Math.Round(traffic.Sent / 1_000_000d)},
-                {"Received", Math.Round(traffic.Received / 1_000_000d)}
-            }
+                {"Received", Math.Round(traffic.Received / 1_000_000d)},
+                {"adReward", adReward}
+        }
         };
 
         if (!string.IsNullOrEmpty(access.AccessTokenName)) ga4Event.Properties.Add("TokenName", access.AccessTokenName);
@@ -132,7 +133,7 @@ public class SessionService(
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
-        var device = await vhAgentRepo.DeviceFind(projectId, clientInfo.ClientId); 
+        var device = await vhAgentRepo.DeviceFind(projectId, clientInfo.ClientId);
         if (device == null)
         {
             device = new DeviceModel
@@ -193,6 +194,13 @@ public class SessionService(
         if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestTcpEndPoint)))
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestTcpEndPoint };
 
+        // validate ad
+        if (!string.IsNullOrEmpty(sessionRequestEx.AdData) && !cacheService.RemoveAd(projectId, sessionRequestEx.AdData))
+            return new SessionResponseEx(SessionErrorCode.AdError)
+            {
+                ErrorMessage = "Invalid Ad. Please contact support."
+            };
+
         // create session
         var session = new SessionCache
         {
@@ -215,7 +223,10 @@ public class SessionService(
             Country = null,
             IsArchived = false,
             UserAgent = device.UserAgent,
-            ClientId = device.ClientId
+            ClientId = device.ClientId,
+            IsAdReward = !string.IsNullOrEmpty(sessionRequestEx.AdData),
+            AdExpirationTime = accessToken.IsAdRequired && string.IsNullOrEmpty(sessionRequestEx.AdData)
+                ? DateTime.UtcNow + agentOptions.Value.AdTimeout : null
         };
 
         var ret = await BuildSessionResponse(session, access);
@@ -307,6 +318,11 @@ public class SessionService(
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
+            // check token expiration
+            if (session.AdExpirationTime != null && session.AdExpirationTime < DateTime.UtcNow)
+                return new SessionResponseEx(SessionErrorCode.AdError)
+                { AccessUsage = accessUsage, ErrorMessage = "The reward for watching an ad has not been granted within the expected timeframe." };
+
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
                 accessUsage.Traffic.Total > accessUsage.MaxTraffic)
@@ -362,7 +378,8 @@ public class SessionService(
         };
     }
 
-    public async Task<SessionResponse> AddUsage(ServerCache server, uint sessionId, Traffic traffic, bool closeSession)
+    public async Task<SessionResponse> AddUsage(ServerCache server, uint sessionId, Traffic traffic,
+        bool closeSession, string? adData)
     {
         var session = await cacheService.GetSession(server.ServerId, sessionId);
         var access = await cacheService.GetAccess(session.AccessId);
@@ -372,12 +389,20 @@ public class SessionService(
         if (session.ProjectId != server.ProjectId)
             throw new AuthenticationException();
 
+        // validate ad
+        var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
+        if (!string.IsNullOrEmpty(adData) && !cacheService.RemoveAd(session.ProjectId, adData))
+            return new SessionResponseEx(SessionErrorCode.AdError)
+            {
+                ErrorMessage = "Invalid Ad. Please contact support."
+            };
+
         // update access if session is open
         logger.LogInformation(
             "AddUsage to a session. SessionId: {SessionId}, " +
             "SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {Total}, " +
-            "EndTime: {EndTime}.",
-            sessionId, traffic.Sent, traffic.Received, VhUtil.FormatBytes(traffic.Total), session.EndTime);
+            "EndTime: {EndTime}. AdReward: {AdReward}",
+            sessionId, traffic.Sent, traffic.Received, VhUtil.FormatBytes(traffic.Total), session.EndTime, adReward);
 
         // add usage to access
         access.TotalReceivedTraffic += traffic.Received;
@@ -400,10 +425,16 @@ public class SessionService(
             AccessId = session.AccessId,
             SessionId = session.SessionId,
             ProjectId = server.ProjectId,
-            ServerId = server.ServerId
+            ServerId = server.ServerId,
+            IsAdReward = adReward
         });
 
-        _ = TrackUsage(project, server, session, access, traffic);
+        // give ad reward
+        if (adReward)
+            session.AdExpirationTime = null;
+
+        // track
+        _ = TrackUsage(project, server, session, access, traffic, adReward);
 
         // build response
         var sessionResponse = await BuildSessionResponse(session, access);

@@ -19,6 +19,7 @@ public class AccessTokenModel
     public required DateTime? LastUsedTime { get; set; }
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; set; }
+    public required bool IsAdRequired { get; set; }
     public required bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }

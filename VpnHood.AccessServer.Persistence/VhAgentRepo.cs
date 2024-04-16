@@ -78,6 +78,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ExtraData = x.ExtraData,
                     CreatedTime = x.CreatedTime,
                     LastUsedTime = x.LastUsedTime,
+                    AdExpirationTime = x.AdExpirationTime,
                     ClientVersion = x.ClientVersion,
                     EndTime = x.EndTime,
                     ErrorCode = x.ErrorCode,
@@ -89,7 +90,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ClientId = x.Device!.ClientId,
                     UserAgent = x.Device.UserAgent,
                     Country = x.Device.Country,
-                    DeviceIp = x.DeviceIp
+                    DeviceIp = x.DeviceIp,
+                    IsAdReward = x.IsAdReward
                 },
                 Access = new AccessCache
                 {
@@ -296,6 +298,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             ExtraData = session.ExtraData,
             CreatedTime = session.CreatedTime,
             LastUsedTime = session.LastUsedTime,
+            AdExpirationTime = session.AdExpirationTime,
             ClientVersion = session.ClientVersion,
             EndTime = session.EndTime,
             ErrorCode = session.ErrorCode,
@@ -305,7 +308,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             SuppressedTo = session.SuppressedTo,
             IsArchived = session.IsArchived,
             Country = session.Country,
-            DeviceIp = session.DeviceIp
+            DeviceIp = session.DeviceIp,
+            IsAdReward = session.IsAdReward
         };
 
         var entry = vhContext.Sessions.Attach(model);

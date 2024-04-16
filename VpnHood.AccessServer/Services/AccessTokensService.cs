@@ -10,7 +10,9 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
-public class AccessTokensService(ReportUsageService reportUsageService, VhRepo vhRepo)
+public class AccessTokensService(
+    ReportUsageService reportUsageService, 
+    VhRepo vhRepo)
 {
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
@@ -38,7 +40,8 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
             IsEnabled = true,
             IsDeleted = false,
             FirstUsedTime = null,
-            LastUsedTime = null
+            LastUsedTime = null,
+            IsAdRequired = createParams.IsAdRequired
         };
 
         await vhRepo.AddAsync(accessToken);
@@ -62,6 +65,7 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
         if (updateParams.Url != null) accessToken.Url = updateParams.Url;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
+        if (updateParams.IsAdRequired != null) accessToken.IsAdRequired = updateParams.IsAdRequired;
         if (updateParams.ServerFarmId != null)
         {
             accessToken.ServerFarmId = updateParams.ServerFarmId;
@@ -70,6 +74,8 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
 
         if (vhRepo.HasChanges())
             accessToken.ModifiedTime = DateTime.UtcNow;
+
+        // update caches
 
         await vhRepo.SaveChangesAsync();
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);

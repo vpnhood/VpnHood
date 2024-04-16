@@ -45,9 +45,9 @@ public class SessionDom
         return AddUsage(new Traffic { Sent = sendTraffic, Received = receivedTraffic });
     }
 
-    public Task<SessionResponse> AddUsage(Traffic traffic)
+    public Task<SessionResponse> AddUsage(Traffic traffic, string? adData = null)
     {
-        return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, traffic);
+        return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, traffic, adData);
     }
 
     public Task<SessionResponse> CloseSession()

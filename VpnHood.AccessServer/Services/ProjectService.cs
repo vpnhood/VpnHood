@@ -63,6 +63,7 @@ public class ProjectService(
             SubscriptionType = SubscriptionType.Free,
             CreatedTime = DateTime.UtcNow,
             GaApiSecret = null,
+            GoogleAdSecret = Convert.ToHexString(VhUtil.GenerateKey(128)),
             GaMeasurementId = null,
             LetsEncryptAccount = null,
             ServerProfiles = new HashSet<ServerProfileModel>
@@ -84,6 +85,7 @@ public class ProjectService(
                     SupportCode = 1000,
                     Secret = VhUtil.GenerateKey(),
                     IsPublic = true,
+                    IsAdRequired = false,
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow,
@@ -106,6 +108,7 @@ public class ProjectService(
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
+                    IsAdRequired = false,
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = VhUtil.GenerateKey(),
@@ -147,6 +150,7 @@ public class ProjectService(
         if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
         if (updateParams.GaMeasurementId != null) project.GaMeasurementId = updateParams.GaMeasurementId;
         if (updateParams.GaApiSecret != null) project.GaApiSecret = updateParams.GaApiSecret;
+        if (updateParams.GoogleAdSecret != null) project.GoogleAdSecret = updateParams.GoogleAdSecret;
         await vhContext.SaveChangesAsync();
         await agentCacheClient.InvalidateProject(projectId);
 

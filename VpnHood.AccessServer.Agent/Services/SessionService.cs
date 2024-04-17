@@ -369,7 +369,8 @@ public class SessionService(
             },
             MaxClientCount = access.MaxDevice,
             MaxTraffic = access.MaxTraffic,
-            ExpirationTime = access.ExpirationTime,
+            ExpirationTime = access.ExpirationTime == null || session.AdExpirationTime < access.ExpirationTime 
+                ? session.AdExpirationTime : access.ExpirationTime,
             ActiveClientCount = activeSession.Count(x => x.EndTime == null)
         };
 

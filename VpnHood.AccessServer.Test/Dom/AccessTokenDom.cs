@@ -14,17 +14,17 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
     public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null, AddressFamily addressFamily = AddressFamily.InterNetwork,
-        bool assertError = true, bool autoRedirect = false)
+        bool assertError = true, bool autoRedirect = false, string? adData = null)
     {
         // get server ip
         var accessKey = await GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
         var serverEndPoint = token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
-        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, autoRedirect);
+        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, autoRedirect, adData);
     }
 
     public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null, IPAddress? clientIp = null,
-        bool assertError = true, bool autoRedirect = false)
+        bool assertError = true, bool autoRedirect = false, string? adData = null)
     {
         // find server of the farm that listen to token EndPoint
         var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId);
@@ -38,8 +38,9 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,
             serverEndPoint,
-            clientId,
-            clientIp
+            clientId: clientId,
+            clientIp: clientIp,
+            adData: adData
         );
 
         // create session

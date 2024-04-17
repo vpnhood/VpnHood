@@ -317,7 +317,7 @@ public class SessionService(
         }
 
         // check traffic
-        if (access.MaxTraffic != 0 && access.TotalTraffic > access.MaxTraffic)
+        if (access.MaxTraffic != 0 && access.TotalSentTraffic + access.CycleReceivedTraffic > access.MaxTraffic)
         {
             session.Close(SessionErrorCode.AccessTrafficOverflow, "All traffic quota has been consumed.");
             return;

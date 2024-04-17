@@ -34,6 +34,10 @@ public class AdTest
         farm1.TestApp.AgentTestApp.CacheService.AddAd(farm1.ProjectId, adData);
         sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
         Assert.IsNull(sessionResponse.AccessUsage?.ExpirationTime);
+
+        //wrong or used ad should close the session
+        sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
+        Assert.AreEqual(SessionErrorCode.AdError, sessionResponse.ErrorCode);
     }
 
     [TestMethod]

@@ -403,7 +403,7 @@ public class SessionService(
         var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
         if (!string.IsNullOrEmpty(adData) && !cacheService.RemoveAd(session.ProjectId, adData))
         {
-            session.Close(SessionErrorCode.Ok, "Invalid Ad. Please contact support.");
+            session.Close(SessionErrorCode.AdError, "Invalid Ad. Please contact support.");
             return await BuildSessionResponse(session, access);
         }
 

@@ -24,6 +24,16 @@ public class SessionBaseModel
     public required bool IsAdReward { get; set; }
     public required string? ErrorMessage { get; set; }
     public required string? ExtraData { get; set; }
+
+    public void Close(SessionErrorCode errorCode, string errorMessage)
+    {
+        if (ErrorCode != SessionErrorCode.Ok)
+            return; // Already closed
+
+        ErrorCode = errorCode;
+        ErrorMessage = errorMessage;
+        EndTime = DateTime.UtcNow;
+    }
 }
 
 public class SessionModel : SessionBaseModel

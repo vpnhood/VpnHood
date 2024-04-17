@@ -290,8 +290,74 @@ public class SessionService(
         }
     }
 
-    private async Task<SessionResponseEx> BuildSessionResponse(
-        SessionBaseModel session, AccessCache access)
+    private static void BuildSessionResponseHelper(SessionBaseModel session, AccessCache access, 
+        AccessUsage accessUsage, SessionBaseModel[] otherSessions)
+    {
+        if (!access.IsAccessTokenEnabled)
+        {
+            session.ErrorCode = SessionErrorCode.SessionClosed;
+            session.ErrorMessage = "Session has been closed.";
+            return;
+        }
+
+        // check token expiration
+        if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
+        {
+            session.ErrorCode = SessionErrorCode.AccessExpired;
+            session.ErrorMessage = "Access has been expired.";
+            return;
+        }
+
+        // check ad expiration
+        if (session.AdExpirationTime != null && session.AdExpirationTime < DateTime.UtcNow)
+        {
+            session.ErrorCode = SessionErrorCode.AdError;
+            session.ErrorMessage = "The reward for watching an ad has not been granted within the expected timeframe.";
+            return;
+        }
+
+        // check traffic
+        if (accessUsage.MaxTraffic != 0 && accessUsage.Traffic.Total > accessUsage.MaxTraffic)
+        {
+            session.ErrorCode = SessionErrorCode.AccessTrafficOverflow;
+            session.ErrorMessage = "All traffic quota has been consumed.";
+            return;
+        }
+
+        // suppressedTo yourself
+        var selfSessions = otherSessions.Where(x =>
+            x.DeviceId == session.DeviceId && x.SessionId != session.SessionId).ToArray();
+        if (selfSessions.Any())
+        {
+            session.SuppressedTo = SessionSuppressType.YourSelf;
+            foreach (var selfSession in selfSessions)
+            {
+                selfSession.SuppressedBy = SessionSuppressType.YourSelf;
+                selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
+                selfSession.EndTime = DateTime.UtcNow;
+            }
+        }
+
+        // suppressedTo others by MaxClientCount
+        if (accessUsage.MaxClientCount != 0)
+        {
+            var otherSessions2 = otherSessions
+                .Where(x => x.DeviceId != session.DeviceId && x.SessionId != session.SessionId)
+                .OrderBy(x => x.CreatedTime).ToArray();
+            for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
+            {
+                var otherSession = otherSessions2[i];
+                otherSession.SuppressedBy = SessionSuppressType.Other;
+                otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
+                otherSession.EndTime = DateTime.UtcNow;
+                session.SuppressedTo = SessionSuppressType.Other;
+            }
+        }
+
+        accessUsage.ActiveClientCount = access.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
+    }
+
+    private async Task<SessionResponseEx> BuildSessionResponse(SessionBaseModel session, AccessCache access)
     {
         // update session
         session.LastUsedTime = access.LastUsedTime;
@@ -312,57 +378,11 @@ public class SessionService(
 
         // validate session status
         if (session.ErrorCode == SessionErrorCode.Ok)
-        {
-            // check token expiration
-            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
-                return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
-
-            // check token expiration
-            if (session.AdExpirationTime != null && session.AdExpirationTime < DateTime.UtcNow)
-                return new SessionResponseEx(SessionErrorCode.AdError)
-                { AccessUsage = accessUsage, ErrorMessage = "The reward for watching an ad has not been granted within the expected timeframe." };
-
-            // check traffic
-            if (accessUsage.MaxTraffic != 0 &&
-                accessUsage.Traffic.Total > accessUsage.MaxTraffic)
-                return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
-
-            var otherSessions = await cacheService.GetActiveSessions(session.AccessId);
-
-            // suppressedTo yourself
-            var selfSessions = otherSessions.Where(x =>
-                x.DeviceId == session.DeviceId && x.SessionId != session.SessionId).ToArray();
-            if (selfSessions.Any())
-            {
-                session.SuppressedTo = SessionSuppressType.YourSelf;
-                foreach (var selfSession in selfSessions)
-                {
-                    selfSession.SuppressedBy = SessionSuppressType.YourSelf;
-                    selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    selfSession.EndTime = DateTime.UtcNow;
-                }
-            }
-
-            // suppressedTo others by MaxClientCount
-            if (accessUsage.MaxClientCount != 0)
-            {
-                var otherSessions2 = otherSessions
-                    .Where(x => x.DeviceId != session.DeviceId && x.SessionId != session.SessionId)
-                    .OrderBy(x => x.CreatedTime).ToArray();
-                for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
-                {
-                    var otherSession = otherSessions2[i];
-                    otherSession.SuppressedBy = SessionSuppressType.Other;
-                    otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    otherSession.EndTime = DateTime.UtcNow;
-                    session.SuppressedTo = SessionSuppressType.Other;
-                }
-            }
-
-            accessUsage.ActiveClientCount = access.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
-        }
+            BuildSessionResponseHelper(session, access, accessUsage, await cacheService.GetActiveSessions(session.AccessId));
+       
+        // set session EndTime if it is closed and not set yet
+        if (session.ErrorCode != SessionErrorCode.Ok)
+            session.EndTime ??= DateTime.UtcNow;
 
         // build result
         return new SessionResponseEx(session.ErrorCode)
@@ -392,10 +412,14 @@ public class SessionService(
         // validate ad
         var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
         if (!string.IsNullOrEmpty(adData) && !cacheService.RemoveAd(session.ProjectId, adData))
-            return new SessionResponseEx(SessionErrorCode.AdError)
+        {
+            if (session.ErrorCode == SessionErrorCode.Ok)
             {
-                ErrorMessage = "Invalid Ad. Please contact support."
-            };
+                session.ErrorCode = SessionErrorCode.AdError;
+                session.ErrorMessage = "Invalid Ad. Please contact support.";
+            }
+            return await BuildSessionResponse(session, access);
+        }
 
         // update access if session is open
         logger.LogInformation(

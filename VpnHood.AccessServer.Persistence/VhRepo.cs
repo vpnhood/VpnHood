@@ -141,7 +141,7 @@ public class VhRepo(VhContext vhContext)
         return ret;
     }
 
-    public async Task AccessTokenDelete(Guid projectId, Guid[] accessTokenIds)
+    public async Task<Guid[]> AccessTokenDelete(Guid projectId, Guid[] accessTokenIds)
     {
         var accessTokens = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
@@ -150,6 +150,8 @@ public class VhRepo(VhContext vhContext)
 
         foreach (var accessToken in accessTokens)
             accessToken.IsDeleted = true;
+
+        return accessTokens.Select(x=>x.AccessTokenId).ToArray();
     }
 
     public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId,

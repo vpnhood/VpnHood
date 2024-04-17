@@ -211,9 +211,13 @@ public class CacheService(
         return InvalidateServers([serverId]);
     }
 
-    public Task InvalidateAccessToken(Guid serverId)
+    public Task InvalidateAccessToken(Guid accessTokenId)
     {
-        throw new NotImplementedException();
+        var items = Mem.Accesses.Where(x => x.Value.AccessTokenId == accessTokenId);
+        foreach (var item in items)
+            Mem.Accesses.TryRemove(item);
+
+        return Task.CompletedTask;
     }
 
     public async Task InvalidateServers(Guid[] serverIds)

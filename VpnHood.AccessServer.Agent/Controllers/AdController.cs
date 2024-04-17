@@ -5,18 +5,22 @@ using VpnHood.AccessServer.Agent.Services;
 namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
-[Route("/api/ad")]
+[Route("/api/ad/projects/{projectId:guid}")]
 [Authorize(AgentPolicy.SystemPolicy)]
 public class AdController(
-    CacheService cacheService,
-    SessionService sessionService) 
+    CacheService cacheService) 
     : ControllerBase
 {
-    [HttpPost("{projectId:guid}/{adSecret}")]
-    public Task GoogleAdReceiver(Guid projectId, string adSecret)
+    [HttpGet("{adSecret}")]
+    public async Task GoogleAdReceiver(Guid projectId, string adSecret, 
+        [FromQuery(Name = "custom_data")] string? customData, [FromQuery(Name = "reward_item")] string? rewardItem)
     {
-        //todo
-        cacheService.AddAd(projectId, "adData");
-        return Task.CompletedTask;
+        var project = await cacheService.GetProject(projectId);
+        if (project.GoogleAdSecret != adSecret)
+            throw new UnauthorizedAccessException($"The {nameof(project.GoogleAdSecret)} does not match to project.");
+
+        _ = rewardItem; // not used yet
+        if (!string.IsNullOrEmpty(customData) && customData.Length < 150)
+            cacheService.AddAd(projectId, customData);
     }
 }

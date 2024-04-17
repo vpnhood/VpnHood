@@ -10,6 +10,7 @@ public class AccessCache : AccessBaseModel
     public required long MaxTraffic { get; init; }
     public required DateTime? ExpirationTime { get; init; }
     public required bool IsPublic { get; init; }
+    public required bool IsAccessTokenEnabled { get; init; }
 
     public AccessModel ToModel()
     {

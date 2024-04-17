@@ -1,4 +1,5 @@
 ﻿using GrayMint.Common.Generics;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence;
@@ -12,6 +13,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class AccessTokensService(
     ReportUsageService reportUsageService, 
+    AgentCacheClient agentCacheClient,
     VhRepo vhRepo)
 {
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
@@ -75,9 +77,10 @@ public class AccessTokensService(
         if (vhRepo.HasChanges())
             accessToken.ModifiedTime = DateTime.UtcNow;
 
-        // update caches
-
+        // save and update caches
         await vhRepo.SaveChangesAsync();
+        await agentCacheClient.InvalidateAccessToken(accessTokenId);
+
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
@@ -146,7 +149,10 @@ public class AccessTokensService(
 
     public async Task Delete(Guid projectId, Guid[] accessTokenIds)
     {
-        await vhRepo.AccessTokenDelete(projectId, accessTokenIds);
+        var deletedAccessTokenIds = await vhRepo.AccessTokenDelete(projectId, accessTokenIds);
         await vhRepo.SaveChangesAsync();
+
+        foreach (var accessTokenId in deletedAccessTokenIds)
+            await agentCacheClient.InvalidateAccessToken(accessTokenId);
     }
 }

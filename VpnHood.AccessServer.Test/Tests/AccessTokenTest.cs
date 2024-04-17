@@ -33,9 +33,6 @@ public class AccessTokenTest
     [TestMethod]
     public async Task Crud()
     {
-        //-----------
-        // Check: Should not create a session with deleted access key
-        //-----------
         var farm1 = await ServerFarmDom.Create();
         var testApp = farm1.TestApp;
 
@@ -354,5 +351,65 @@ public class AccessTokenTest
         Assert.IsFalse(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom1.AccessTokenId));
         Assert.IsFalse(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom2.AccessTokenId));
         Assert.IsTrue(tokens2.Items.Any(x => x.AccessToken.AccessTokenId == accessTokenDom3.AccessTokenId));
+    }
+
+    [TestMethod]
+    public async Task Update_should_invalidate_its_cache()
+    {
+        var farm1 = await ServerFarmDom.Create();
+
+        // create access token
+        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
+        {
+            ServerFarmId = farm1.ServerFarmId,
+            AccessTokenName = "tokenName1",
+            Url = "https://foo.com/accessKey1",
+            MaxDevice = 12,
+            Lifetime = 13,
+            ExpirationTime = null
+        });
+
+        // create session
+        var sessionDom = await accessTokenDom1.CreateSession();
+        await sessionDom.AddUsage(); // make sure it comes into cache
+
+        // update after creating session
+        var expirationTime1 = DateTime.Today.AddDays(5);
+        await accessTokenDom1.Update(
+            new AccessTokenUpdateParams
+            {
+                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 },
+            });
+
+        // add usage to create the new expiration
+        var sessionResponse =  await sessionDom.AddUsage();
+        Assert.AreEqual(expirationTime1, sessionResponse.AccessUsage?.ExpirationTime);
+    }
+
+
+    [TestMethod]
+    public async Task Delete_should_invalidate_its_cache()
+    {
+        var farm1 = await ServerFarmDom.Create();
+
+        // create access token
+        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
+        {
+            ServerFarmId = farm1.ServerFarmId,
+            AccessTokenName = "tokenName1",
+            Url = "https://foo.com/accessKey1",
+            MaxDevice = 12,
+            Lifetime = 13,
+            ExpirationTime = null
+        });
+
+        // create session
+        var sessionDom = await accessTokenDom1.CreateSession();
+        await sessionDom.AddUsage(); // make sure it comes into cache
+
+        // delete access token
+        await accessTokenDom1.TestApp.AccessTokensClient.DeleteAsync(farm1.ProjectId, accessTokenDom1.AccessTokenId);
+        var sessionResponse = await sessionDom.AddUsage();
+        Assert.AreEqual(SessionErrorCode.SessionClosed, sessionResponse.ErrorCode);
     }
 }

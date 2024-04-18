@@ -10,5 +10,6 @@ public class Project
     public required SubscriptionType SubscriptionType { get; init; }
     public required string? GaMeasurementId { get; init; }
     public required string? GaApiSecret { get; init; }
-    public required string AdSecret { get; init; }
+    public required string AdRewardSecret { get; init; }
+    public required Uri AdRewardUrl { get; init; }
 }

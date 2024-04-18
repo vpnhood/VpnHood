@@ -11,13 +11,13 @@ public class AdController(
     CacheService cacheService) 
     : ControllerBase
 {
-    [HttpGet("{adSecret}")]
-    public async Task RewardAd(Guid projectId, string adSecret, 
+    [HttpGet("{adRewardSecret}")]
+    public async Task RewardAd(Guid projectId, string adRewardSecret, 
         [FromQuery(Name = "custom_data")] string? customData, [FromQuery(Name = "reward_item")] string? rewardItem)
     {
         var project = await cacheService.GetProject(projectId);
-        if (project.AdSecret != adSecret)
-            throw new UnauthorizedAccessException($"The {nameof(project.AdSecret)} does not match to project.");
+        if (project.AdRewardSecret != adRewardSecret)
+            throw new UnauthorizedAccessException($"The {nameof(project.AdRewardSecret)} does not match to project.");
 
         _ = rewardItem; // not used yet
         if (!string.IsNullOrEmpty(customData) && customData.Length < 150)

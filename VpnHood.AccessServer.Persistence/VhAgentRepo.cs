@@ -57,7 +57,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ProjectId = x.Server.ProjectId,
                     GaApiSecret = x.Server.Project.GaApiSecret,
                     ProjectName = x.Server.Project.ProjectName,
-                    AdSecret = x.Server.Project.AdSecret
+                    AdRewardSecret = x.Server.Project.AdRewardSecret
                 }
             })
             .AsNoTracking()
@@ -190,7 +190,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ProjectName = project.ProjectName,
                 GaMeasurementId = project.GaMeasurementId,
                 GaApiSecret = project.GaApiSecret,
-                AdSecret = project.AdSecret
+                AdRewardSecret = project.AdRewardSecret
             })
             .AsNoTracking()
             .SingleAsync();

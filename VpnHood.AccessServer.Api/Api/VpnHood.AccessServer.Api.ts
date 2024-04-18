@@ -5320,7 +5320,8 @@ export class Project implements IProject {
     subscriptionType!: SubscriptionType;
     gaMeasurementId?: string | null;
     gaApiSecret?: string | null;
-    adSecret!: string;
+    adRewardSecret!: string;
+    adRewardUrl!: string;
 
     constructor(data?: IProject) {
         if (data) {
@@ -5339,7 +5340,8 @@ export class Project implements IProject {
             this.subscriptionType = _data["subscriptionType"] !== undefined ? _data["subscriptionType"] : <any>null;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : <any>null;
             this.gaApiSecret = _data["gaApiSecret"] !== undefined ? _data["gaApiSecret"] : <any>null;
-            this.adSecret = _data["adSecret"] !== undefined ? _data["adSecret"] : <any>null;
+            this.adRewardSecret = _data["adRewardSecret"] !== undefined ? _data["adRewardSecret"] : <any>null;
+            this.adRewardUrl = _data["adRewardUrl"] !== undefined ? _data["adRewardUrl"] : <any>null;
         }
     }
 
@@ -5358,7 +5360,8 @@ export class Project implements IProject {
         data["subscriptionType"] = this.subscriptionType !== undefined ? this.subscriptionType : <any>null;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : <any>null;
         data["gaApiSecret"] = this.gaApiSecret !== undefined ? this.gaApiSecret : <any>null;
-        data["adSecret"] = this.adSecret !== undefined ? this.adSecret : <any>null;
+        data["adRewardSecret"] = this.adRewardSecret !== undefined ? this.adRewardSecret : <any>null;
+        data["adRewardUrl"] = this.adRewardUrl !== undefined ? this.adRewardUrl : <any>null;
         return data;
     }
 }
@@ -5370,7 +5373,8 @@ export interface IProject {
     subscriptionType: SubscriptionType;
     gaMeasurementId?: string | null;
     gaApiSecret?: string | null;
-    adSecret: string;
+    adRewardSecret: string;
+    adRewardUrl: string;
 }
 
 export enum SubscriptionType {
@@ -5382,7 +5386,7 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
     projectName?: PatchOfString | null;
     gaMeasurementId?: PatchOfString | null;
     gaApiSecret?: PatchOfString | null;
-    adSecret?: PatchOfString | null;
+    adRewardSecret?: PatchOfString | null;
 
     constructor(data?: IProjectUpdateParams) {
         if (data) {
@@ -5398,7 +5402,7 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
             this.projectName = _data["projectName"] ? PatchOfString.fromJS(_data["projectName"]) : <any>null;
             this.gaMeasurementId = _data["gaMeasurementId"] ? PatchOfString.fromJS(_data["gaMeasurementId"]) : <any>null;
             this.gaApiSecret = _data["gaApiSecret"] ? PatchOfString.fromJS(_data["gaApiSecret"]) : <any>null;
-            this.adSecret = _data["adSecret"] ? PatchOfString.fromJS(_data["adSecret"]) : <any>null;
+            this.adRewardSecret = _data["adRewardSecret"] ? PatchOfString.fromJS(_data["adRewardSecret"]) : <any>null;
         }
     }
 
@@ -5414,7 +5418,7 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
         data["projectName"] = this.projectName ? this.projectName.toJSON() : <any>null;
         data["gaMeasurementId"] = this.gaMeasurementId ? this.gaMeasurementId.toJSON() : <any>null;
         data["gaApiSecret"] = this.gaApiSecret ? this.gaApiSecret.toJSON() : <any>null;
-        data["adSecret"] = this.adSecret ? this.adSecret.toJSON() : <any>null;
+        data["adRewardSecret"] = this.adRewardSecret ? this.adRewardSecret.toJSON() : <any>null;
         return data;
     }
 }
@@ -5423,7 +5427,7 @@ export interface IProjectUpdateParams {
     projectName?: PatchOfString | null;
     gaMeasurementId?: PatchOfString | null;
     gaApiSecret?: PatchOfString | null;
-    adSecret?: PatchOfString | null;
+    adRewardSecret?: PatchOfString | null;
 }
 
 export class ServerFarmData implements IServerFarmData {

@@ -7885,9 +7885,13 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("gaApiSecret")]
         public string? GaApiSecret { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("adSecret")]
+        [System.Text.Json.Serialization.JsonPropertyName("adRewardSecret")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string AdSecret { get; set; } = default!;
+        public string AdRewardSecret { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("adRewardUrl")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Uri AdRewardUrl { get; set; } = default!;
 
     }
 
@@ -7916,8 +7920,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("gaApiSecret")]
         public PatchOfString? GaApiSecret { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("adSecret")]
-        public PatchOfString? AdSecret { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adRewardSecret")]
+        public PatchOfString? AdRewardSecret { get; set; } = default!;
 
     }
 

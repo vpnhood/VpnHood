@@ -400,9 +400,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // save settings
         Settings.Save();
 
-        // Show ad if required
-        var adData = token.IsAdRequired ? await ShowAd(CancellationToken.None) : null;
-
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
@@ -421,8 +418,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DropUdpPackets,
-            AppGa4MeasurementId = _appGa4MeasurementId,
-            AdData = adData
+            AppGa4MeasurementId = _appGa4MeasurementId
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
@@ -461,9 +457,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _ = VersionCheck();
 
             // Show ad if it is required and does not show yet
-            if (token.IsAdRequired && string.IsNullOrEmpty(adData))
+            if (token.IsAdRequired)
             {
-                adData = await ShowAd(cancellationToken);
+                var adData = await ShowAd(cancellationToken);
                 if (string.IsNullOrEmpty(adData))
                     throw new AdException("Could not display the require ad.");
                 

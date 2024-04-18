@@ -441,7 +441,10 @@ public class SessionService(
 
         // give ad reward
         if (adReward)
+        {
             session.AdExpirationTime = null;
+            session.IsAdReward = true;
+        }
 
         // track
         _ = TrackUsage(project, server, session, access, traffic, adReward);

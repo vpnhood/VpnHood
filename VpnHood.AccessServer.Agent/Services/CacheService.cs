@@ -259,6 +259,7 @@ public class CacheService(
             oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
             oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
             oldUsage.CreatedTime = accessUsage.CreatedTime;
+            oldUsage.IsAdReward |= accessUsage.IsAdReward;
         }
     }
 

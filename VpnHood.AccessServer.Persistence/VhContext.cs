@@ -66,6 +66,10 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
 
             entity
+                .Property(e => e.AdRewardSecret)
+                .HasMaxLength(50);
+
+            entity
                 .Property(e => e.ProjectName)
                 .HasMaxLength(200);
 

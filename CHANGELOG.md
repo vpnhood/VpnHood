@@ -1,7 +1,7 @@
-# Upcoming
+# v4.3.489
 ### Client
-* Android: Fix Google Play Update
 * Fix: Ad service
+* Android: Fix Google Play Update
 
 ### Server
 * Feature: Ad reward service

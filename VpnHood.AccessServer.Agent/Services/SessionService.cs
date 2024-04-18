@@ -246,7 +246,8 @@ public class SessionService(
                 Secret = accessToken.Secret,
                 TokenId = accessToken.AccessTokenId.ToString(),
                 Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportCode.ToString()
+                SupportId = accessToken.SupportCode.ToString(),
+                IsAdRequired = accessToken.IsAdRequired
             }.ToAccessKey();
 
         // Add session to database

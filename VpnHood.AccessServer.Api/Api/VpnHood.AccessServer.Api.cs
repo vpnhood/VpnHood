@@ -7526,6 +7526,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
+        public bool IsAdRequired { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
 

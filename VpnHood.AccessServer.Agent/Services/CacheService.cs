@@ -170,7 +170,7 @@ public class CacheService(
 
     private void CleanupAds()
     {
-        var oldItems = Mem.Ads.Where(x => x.Value < DateTime.UtcNow - agentOptions.Value.AdTimeout);
+        var oldItems = Mem.Ads.Where(x => x.Value < DateTime.UtcNow - agentOptions.Value.AdRewardTimeout);
         foreach (var item in oldItems)
             Mem.Ads.TryRemove(item);
     }

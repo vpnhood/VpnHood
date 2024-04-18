@@ -223,7 +223,7 @@ public class SessionService(
             ClientId = device.ClientId,
             IsAdReward = !string.IsNullOrEmpty(sessionRequestEx.AdData),
             AdExpirationTime = accessToken.IsAdRequired && string.IsNullOrEmpty(sessionRequestEx.AdData)
-                ? DateTime.UtcNow + agentOptions.Value.AdTimeout : null
+                ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
         };
 
         var ret = await BuildSessionResponse(session, access);

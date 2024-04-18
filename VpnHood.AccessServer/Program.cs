@@ -130,7 +130,7 @@ public class Program
         {
             var scope = webApp.Services.CreateAsyncScope();
             await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
-            var projects = await context.Projects.Where(x => x.AdRewardSecret == null).ToArrayAsync();
+            var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
             foreach (var project in projects)
                 project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
                     .Replace("/", "")

@@ -4330,6 +4330,7 @@ export class AccessToken implements IAccessToken {
     url?: string | null;
     isPublic!: boolean;
     isEnabled!: boolean;
+    isAdRequired!: boolean;
     expirationTime?: Date | null;
     createdTime!: Date;
     modifiedTime!: Date;
@@ -4359,6 +4360,7 @@ export class AccessToken implements IAccessToken {
             this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
+            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.modifiedTime = _data["modifiedTime"] ? new Date(_data["modifiedTime"].toString()) : <any>null;
@@ -4388,6 +4390,7 @@ export class AccessToken implements IAccessToken {
         data["url"] = this.url !== undefined ? this.url : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
+        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["modifiedTime"] = this.modifiedTime ? this.modifiedTime.toISOString() : <any>null;
@@ -4410,6 +4413,7 @@ export interface IAccessToken {
     url?: string | null;
     isPublic: boolean;
     isEnabled: boolean;
+    isAdRequired: boolean;
     expirationTime?: Date | null;
     createdTime: Date;
     modifiedTime: Date;

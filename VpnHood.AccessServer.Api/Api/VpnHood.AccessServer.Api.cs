@@ -7629,7 +7629,7 @@ namespace VpnHood.AccessServer.Api
         public string? Url { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
-        public bool IsEnabled { get; set; } = default!;
+        public bool? IsEnabled { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;

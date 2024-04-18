@@ -19,7 +19,8 @@ public class AdTest
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
             Url = "https://foo.com/accessKey1",
-            IsAdRequired = true
+            IsAdRequired = true,
+            IsEnabled = true
         });
 
 
@@ -53,7 +54,8 @@ public class AdTest
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
             Url = "https://foo.com/accessKey1",
-            IsAdRequired = true
+            IsAdRequired = true,
+            IsEnabled = true
         });
 
         // create session

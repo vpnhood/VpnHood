@@ -4555,7 +4555,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     maxDevice!: number;
     expirationTime?: Date | null;
     url?: string | null;
-    isEnabled!: boolean;
+    isEnabled?: boolean | null;
     isPublic!: boolean;
     isAdRequired!: boolean;
 
@@ -4620,7 +4620,7 @@ export interface IAccessTokenCreateParams {
     maxDevice: number;
     expirationTime?: Date | null;
     url?: string | null;
-    isEnabled: boolean;
+    isEnabled?: boolean | null;
     isPublic: boolean;
     isAdRequired: boolean;
 }

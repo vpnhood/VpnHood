@@ -38,7 +38,7 @@ public class AccessTokensService(
             Secret = createParams.Secret ?? VhUtil.GenerateKey(),
             SupportCode = supportCode,
             IsAdRequired = createParams.IsAdRequired,
-            IsEnabled = createParams.IsEnabled,
+            IsEnabled = createParams.IsEnabled ?? true,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
             IsDeleted = false,

@@ -49,7 +49,8 @@ public class AccessTokenTest
             MaxTraffic = 11,
             MaxDevice = 12,
             Lifetime = 13,
-            ExpirationTime = expirationTime1
+            ExpirationTime = expirationTime1,
+            IsEnabled = true,
         });
         Assert.AreNotEqual(0, accessTokenDom1.AccessToken.SupportCode);
         Assert.AreEqual("tokenName1", accessTokenDom1.AccessToken.AccessTokenName);
@@ -72,7 +73,8 @@ public class AccessTokenTest
             MaxDevice = 22,
             Lifetime = 23,
             ExpirationTime = expirationTime2,
-            IsPublic = true
+            IsPublic = true,
+            IsEnabled = true,
         });
         Assert.AreNotEqual(0, accessTokenDom2.AccessToken.SupportCode);
         Assert.AreEqual("tokenName2", accessTokenDom2.AccessToken.AccessTokenName);
@@ -366,7 +368,8 @@ public class AccessTokenTest
             Url = "https://foo.com/accessKey1",
             MaxDevice = 12,
             Lifetime = 13,
-            ExpirationTime = null
+            ExpirationTime = null,
+            IsEnabled = true
         });
 
         // create session
@@ -400,7 +403,8 @@ public class AccessTokenTest
             Url = "https://foo.com/accessKey1",
             MaxDevice = 12,
             Lifetime = 13,
-            ExpirationTime = null
+            ExpirationTime = null,
+            IsEnabled = true
         });
 
         // create session

@@ -4555,6 +4555,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     maxDevice!: number;
     expirationTime?: Date | null;
     url?: string | null;
+    isEnabled!: boolean;
     isPublic!: boolean;
     isAdRequired!: boolean;
 
@@ -4578,6 +4579,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
             this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
+            this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
         }
@@ -4601,6 +4603,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
         data["url"] = this.url !== undefined ? this.url : <any>null;
+        data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         return data;
@@ -4617,6 +4620,7 @@ export interface IAccessTokenCreateParams {
     maxDevice: number;
     expirationTime?: Date | null;
     url?: string | null;
+    isEnabled: boolean;
     isPublic: boolean;
     isAdRequired: boolean;
 }

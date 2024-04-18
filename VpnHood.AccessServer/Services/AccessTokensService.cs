@@ -37,13 +37,13 @@ public class AccessTokensService(
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? VhUtil.GenerateKey(),
             SupportCode = supportCode,
+            IsAdRequired = createParams.IsAdRequired,
             IsEnabled = createParams.IsEnabled,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
             IsDeleted = false,
             FirstUsedTime = null,
             LastUsedTime = null,
-            IsAdRequired = createParams.IsAdRequired
         };
 
         await vhRepo.AddAsync(accessToken);

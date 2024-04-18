@@ -7628,6 +7628,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("url")]
         public string? Url { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
+        public bool IsEnabled { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 

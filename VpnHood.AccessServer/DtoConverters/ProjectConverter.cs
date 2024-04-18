@@ -12,8 +12,8 @@ public static class ProjectConverter
             ProjectId = model.ProjectId,
             ProjectName = model.ProjectName,
             GaApiSecret = model.GaApiSecret,
-            GoogleAdSecret = model.GoogleAdSecret,
             GaMeasurementId = model.GaMeasurementId,
+            AdSecret = model.AdSecret,
             SubscriptionType = model.SubscriptionType,
             CreatedTime = model.CreatedTime
         };

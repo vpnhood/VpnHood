@@ -27,6 +27,10 @@ public class ProjectService(
         using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
         await subscriptionService.AuthorizeCreateProject(ownerUserId);
         var projectId = Guid.NewGuid();
+        var adSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+            .Replace("/", "")
+            .Replace("+", "")
+            .Replace("=", "");
 
         // ServerProfile
         var serverProfile = new ServerProfileModel
@@ -63,8 +67,8 @@ public class ProjectService(
             SubscriptionType = SubscriptionType.Free,
             CreatedTime = DateTime.UtcNow,
             GaApiSecret = null,
-            GoogleAdSecret = Convert.ToHexString(VhUtil.GenerateKey(128)),
             GaMeasurementId = null,
+            AdSecret = adSecret,
             LetsEncryptAccount = null,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
@@ -150,7 +154,7 @@ public class ProjectService(
         if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
         if (updateParams.GaMeasurementId != null) project.GaMeasurementId = updateParams.GaMeasurementId;
         if (updateParams.GaApiSecret != null) project.GaApiSecret = updateParams.GaApiSecret;
-        if (updateParams.GoogleAdSecret != null) project.GoogleAdSecret = updateParams.GoogleAdSecret;
+        if (updateParams.AdSecret != null) project.AdSecret = updateParams.AdSecret;
         await vhContext.SaveChangesAsync();
         await agentCacheClient.InvalidateProject(projectId);
 

@@ -31,7 +31,7 @@ public class AdTest
         var sessionResponse = await sessionDom.AddUsage();
         Assert.IsTrue(sessionResponse.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
         var adData = Guid.NewGuid().ToString();
-        farm1.TestApp.AgentTestApp.CacheService.AddAd(farm1.ProjectId, adData);
+        farm1.TestApp.AgentTestApp.CacheService.RewardAd(farm1.ProjectId, adData);
         sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
         Assert.IsNull(sessionResponse.AccessUsage?.ExpirationTime);
 
@@ -45,7 +45,7 @@ public class AdTest
     {
         var farm1 = await ServerFarmDom.Create();
         var adData = Guid.NewGuid().ToString();
-        farm1.TestApp.AgentTestApp.CacheService.AddAd(farm1.ProjectId, adData);
+        farm1.TestApp.AgentTestApp.CacheService.RewardAd(farm1.ProjectId, adData);
 
         // create token
         var accessTokenDom = await farm1.CreateAccessToken(new AccessTokenCreateParams
@@ -55,7 +55,6 @@ public class AdTest
             Url = "https://foo.com/accessKey1",
             IsAdRequired = true
         });
-
 
         // create session
         var sessionDom = await accessTokenDom.CreateSession(adData: adData);

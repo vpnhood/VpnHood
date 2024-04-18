@@ -5320,7 +5320,7 @@ export class Project implements IProject {
     subscriptionType!: SubscriptionType;
     gaMeasurementId?: string | null;
     gaApiSecret?: string | null;
-    googleAdSecret!: string;
+    adSecret!: string;
 
     constructor(data?: IProject) {
         if (data) {
@@ -5339,7 +5339,7 @@ export class Project implements IProject {
             this.subscriptionType = _data["subscriptionType"] !== undefined ? _data["subscriptionType"] : <any>null;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : <any>null;
             this.gaApiSecret = _data["gaApiSecret"] !== undefined ? _data["gaApiSecret"] : <any>null;
-            this.googleAdSecret = _data["googleAdSecret"] !== undefined ? _data["googleAdSecret"] : <any>null;
+            this.adSecret = _data["adSecret"] !== undefined ? _data["adSecret"] : <any>null;
         }
     }
 
@@ -5358,7 +5358,7 @@ export class Project implements IProject {
         data["subscriptionType"] = this.subscriptionType !== undefined ? this.subscriptionType : <any>null;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : <any>null;
         data["gaApiSecret"] = this.gaApiSecret !== undefined ? this.gaApiSecret : <any>null;
-        data["googleAdSecret"] = this.googleAdSecret !== undefined ? this.googleAdSecret : <any>null;
+        data["adSecret"] = this.adSecret !== undefined ? this.adSecret : <any>null;
         return data;
     }
 }
@@ -5370,7 +5370,7 @@ export interface IProject {
     subscriptionType: SubscriptionType;
     gaMeasurementId?: string | null;
     gaApiSecret?: string | null;
-    googleAdSecret: string;
+    adSecret: string;
 }
 
 export enum SubscriptionType {
@@ -5382,7 +5382,7 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
     projectName?: PatchOfString | null;
     gaMeasurementId?: PatchOfString | null;
     gaApiSecret?: PatchOfString | null;
-    googleAdSecret?: PatchOfString | null;
+    adSecret?: PatchOfString | null;
 
     constructor(data?: IProjectUpdateParams) {
         if (data) {
@@ -5398,7 +5398,7 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
             this.projectName = _data["projectName"] ? PatchOfString.fromJS(_data["projectName"]) : <any>null;
             this.gaMeasurementId = _data["gaMeasurementId"] ? PatchOfString.fromJS(_data["gaMeasurementId"]) : <any>null;
             this.gaApiSecret = _data["gaApiSecret"] ? PatchOfString.fromJS(_data["gaApiSecret"]) : <any>null;
-            this.googleAdSecret = _data["googleAdSecret"] ? PatchOfString.fromJS(_data["googleAdSecret"]) : <any>null;
+            this.adSecret = _data["adSecret"] ? PatchOfString.fromJS(_data["adSecret"]) : <any>null;
         }
     }
 
@@ -5414,7 +5414,7 @@ export class ProjectUpdateParams implements IProjectUpdateParams {
         data["projectName"] = this.projectName ? this.projectName.toJSON() : <any>null;
         data["gaMeasurementId"] = this.gaMeasurementId ? this.gaMeasurementId.toJSON() : <any>null;
         data["gaApiSecret"] = this.gaApiSecret ? this.gaApiSecret.toJSON() : <any>null;
-        data["googleAdSecret"] = this.googleAdSecret ? this.googleAdSecret.toJSON() : <any>null;
+        data["adSecret"] = this.adSecret ? this.adSecret.toJSON() : <any>null;
         return data;
     }
 }
@@ -5423,7 +5423,7 @@ export interface IProjectUpdateParams {
     projectName?: PatchOfString | null;
     gaMeasurementId?: PatchOfString | null;
     gaApiSecret?: PatchOfString | null;
-    googleAdSecret?: PatchOfString | null;
+    adSecret?: PatchOfString | null;
 }
 
 export class ServerFarmData implements IServerFarmData {

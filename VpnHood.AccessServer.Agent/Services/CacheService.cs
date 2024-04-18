@@ -158,7 +158,7 @@ public class CacheService(
         return Task.CompletedTask;
     }
 
-    public void AddAd(Guid projectId, string adData)
+    public void RewardAd(Guid projectId, string adData)
     {
         Mem.Ads.TryAdd($"{projectId}/{adData}", DateTime.UtcNow);
     }

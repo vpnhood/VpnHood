@@ -451,7 +451,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
             // update access token if ResponseAccessKey is set
             if (clientConnect.Client.ResponseAccessKey != null)
-                ClientProfileService.UpdateTokenByAccessKey(token, clientConnect.Client.ResponseAccessKey);
+                token = ClientProfileService.UpdateTokenByAccessKey(token, clientConnect.Client.ResponseAccessKey);
 
             // check version after first connection
             _ = VersionCheck();

@@ -16,6 +16,7 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Services.Acme;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer;
 
@@ -123,6 +124,20 @@ public class Program
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
+
+        // migrate
+        //todo
+        {
+            var scope = webApp.Services.CreateAsyncScope();
+            await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
+            var projects = await context.Projects.Where(x => x.AdRewardSecret == null).ToArrayAsync();
+            foreach (var project in projects)
+                project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+                    .Replace("/", "")
+                    .Replace("+", "")
+                    .Replace("=", "");
+            await context.SaveChangesAsync();
+        }
 
         await GrayMintApp.RunAsync(webApp, args);
     }

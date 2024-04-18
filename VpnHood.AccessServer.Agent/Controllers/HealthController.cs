@@ -11,18 +11,13 @@ public class HealthController(
     ILogger<SystemController> logger)
     : ControllerBase
 {
-    [HttpGet("Foo")]
+    [HttpGet("Status")]
     [AllowAnonymous]
-    public async Task<string> Foo()
+    public async Task<string> Status() //it is foo
     {
-        await cacheService.GetServer(Guid.Parse("c3520778-dba2-4b70-a91d-a602b000734d"));
-
+        _ = cacheService;
+        _ = logger;
         await Task.Delay(0);
-        logger.LogInformation("");
-        logger.LogInformation("_______________________");
-        logger.LogInformation("Information log");
-        logger.LogWarning("Warning log");
-        //_logger.LogError("Error log");
         return "OK";
     }
 }

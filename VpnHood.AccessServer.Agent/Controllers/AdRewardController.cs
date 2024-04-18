@@ -5,15 +5,16 @@ using VpnHood.AccessServer.Agent.Services;
 namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
-[Route("/api/ad/projects/{projectId:guid}/")]
+[Route("/api/projects/{projectId:guid}/ad-rewards")]
 [Authorize(AgentPolicy.SystemPolicy)]
-public class AdController(
+public class AdRewardController(
     CacheService cacheService) 
     : ControllerBase
 {
     [HttpGet("{adRewardSecret}")]
+    [AllowAnonymous]
     public async Task RewardAd(Guid projectId, string adRewardSecret, 
-        [FromQuery(Name = "custom_data")] string? customData, [FromQuery(Name = "reward_item")] string? rewardItem)
+        [FromQuery(Name = "custom_data")] string? customData, [FromQuery(Name = "reward_item")] string? rewardItem = null)
     {
         var project = await cacheService.GetProject(projectId);
         if (project.AdRewardSecret != adRewardSecret)

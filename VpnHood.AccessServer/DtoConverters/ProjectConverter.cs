@@ -13,8 +13,8 @@ public static class ProjectConverter
             ProjectName = model.ProjectName,
             GaApiSecret = model.GaApiSecret,
             GaMeasurementId = model.GaMeasurementId,
-            AdRewardSecret = model.AdRewardSecret,
-            AdRewardUrl = new Uri(agentUrl, $"api/ad/projects/{model.ProjectId}/{model.AdRewardSecret}"),
+            AdRewardSecret = model.AdRewardSecret ?? "", //todo
+            AdRewardUrl = new Uri(agentUrl, $"api/projects/{model.ProjectId}/ad-rewards/{model.AdRewardSecret}"),
             SubscriptionType = model.SubscriptionType,
             CreatedTime = model.CreatedTime
         };

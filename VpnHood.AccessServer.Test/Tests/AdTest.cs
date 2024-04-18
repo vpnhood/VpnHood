@@ -23,6 +23,9 @@ public class AdTest
             IsEnabled = true
         });
 
+        // check access token
+        var token = await accessTokenDom.GetToken();
+        Assert.IsTrue(token.IsAdRequired);
 
         // create session
         var sessionDom = await accessTokenDom.CreateSession();

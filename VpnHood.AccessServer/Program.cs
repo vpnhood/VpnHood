@@ -128,15 +128,19 @@ public class Program
         // migrate
         //todo
         {
+            logger.LogInformation("Upgrading..");
             var scope = webApp.Services.CreateAsyncScope();
             await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
+            context.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
             var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
+            logger.LogInformation($"ProjectCount: {projects.Length}..");
             foreach (var project in projects)
                 project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
                     .Replace("/", "")
                     .Replace("+", "")
                     .Replace("=", "");
             await context.SaveChangesAsync();
+            logger.LogInformation($"Finish migrate: {projects.Length}..");
         }
 
         await GrayMintApp.RunAsync(webApp, args);

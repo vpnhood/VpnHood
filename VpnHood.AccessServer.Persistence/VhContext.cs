@@ -67,7 +67,8 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.AdRewardSecret)
-                .HasMaxLength(50);
+                .HasMaxLength(50)
+                .HasDefaultValue(string.Empty); //todo: remove default value
 
             entity
                 .Property(e => e.ProjectName)
@@ -142,6 +143,10 @@ public class VhContext : DbContext
         {
             entity
                 .HasKey(e => e.AccessTokenId);
+
+            entity
+                .Property(e => e.IsAdRequired)
+                .HasDefaultValue(false); //todo: remove default value
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.SupportCode })
@@ -480,6 +485,11 @@ public class VhContext : DbContext
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity
+                .Property(e => e.IsAdReward)
+                .HasDefaultValue(false); //todo: remove default value
+
         });
 
 
@@ -487,6 +497,10 @@ public class VhContext : DbContext
         {
             entity
                 .HasKey(x => x.AccessUsageId);
+
+            entity
+                .Property(e => e.IsAdReward)
+                .HasDefaultValue(false); //todo: remove default value
 
             entity
                 .Property(e => e.AccessUsageId)

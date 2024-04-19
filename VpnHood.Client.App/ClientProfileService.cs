@@ -101,25 +101,25 @@ public class ClientProfileService
         return ret;
     }
 
-    public bool UpdateTokenByAccessKey(Token token, string accessKey)
+    public Token UpdateTokenByAccessKey(Token token, string accessKey)
     {
         try
         {
             var newToken = Token.FromAccessKey(accessKey);
             if (VhUtil.JsonEquals(token, newToken))
-                return false;
+                return token;
 
             if (token.TokenId != newToken.TokenId)
                 throw new Exception("Could not update the token via access key because its token ID is not the same.");
 
             ImportAccessToken(newToken);
             VhLogger.Instance.LogInformation("ServerToken has been updated.");
-            return true;
+            return newToken;
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Could not update token from the given access-key.");
-            return false;
+            return token;
         }
 
     }

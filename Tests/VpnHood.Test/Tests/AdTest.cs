@@ -13,16 +13,12 @@ public class AdTest : TestBase
 {
     private class TestAdService(AdAccessManager accessManager) : IAppAdService
     {
-        public bool FailOnNextTry { get; set; }
         public bool FailAlways { get; set; }
 
         public Task<string> ShowAd(CancellationToken cancellationToken)
         {
-            if (FailOnNextTry || FailAlways)
-            {
-                FailOnNextTry = false;
+            if (FailAlways)
                 throw new Exception("Ad failed");
-            }
 
             var ret = Guid.NewGuid().ToString();
             accessManager.AddAdData(ret);
@@ -54,7 +50,7 @@ public class AdTest : TestBase
     }
 
     [TestMethod]
-    public async Task Session_must_be_closed_after_few_minutes_if_no_ad_is_seen()
+    public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
@@ -94,7 +90,6 @@ public class AdTest : TestBase
         // create client app
         await using var app = TestHelper.CreateClientApp();
         var adService = new TestAdService(fileAccessManager);
-        adService.FailOnNextTry = true;
         app.Services.AdService = adService;
 
         // connect
@@ -117,7 +112,7 @@ public class AdTest : TestBase
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(isAdRequired: true);
         accessItem.Token.ToAccessKey();
-        fileAccessManager.RejectAllAds = true;
+        fileAccessManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
         await using var app = TestHelper.CreateClientApp();
@@ -128,6 +123,7 @@ public class AdTest : TestBase
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
 
+        // asserts
         Assert.IsNotNull(app.State.SessionStatus?.AccessUsage?.ExpirationTime);
         Assert.IsTrue(app.State.SessionStatus.AccessUsage.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
     }

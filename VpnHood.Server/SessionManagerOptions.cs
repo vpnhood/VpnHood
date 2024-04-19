@@ -2,5 +2,5 @@
 
 internal class SessionManagerOptions
 {
-    public TimeSpan CleanupInterval { get; init; } = TimeSpan.FromMinutes(10);
+    public required TimeSpan CleanupInterval { get; init; } 
 }

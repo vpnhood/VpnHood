@@ -797,7 +797,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
 
             // client is disposed meanwhile
-            if (_disposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
+            if (_disposed) 
+                throw new ObjectDisposedException(VhLogger.FormatType(this));
+
             _lastConnectionErrorTime = null;
             State = ClientState.Connected;
             return requestResult;

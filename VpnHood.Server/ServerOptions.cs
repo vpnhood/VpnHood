@@ -16,5 +16,5 @@ public class ServerOptions
     public string StoragePath { get; init; } = Directory.GetCurrentDirectory();
     public bool PublicIpDiscovery { get; init; } = true;
     public ServerConfig? Config { get; init; }
-    public TimeSpan CleanupInterval { get; init; } = TimeSpan.FromMinutes(10);
+    public TimeSpan CleanupInterval { get; init; } = TimeSpan.FromMinutes(1);
 }

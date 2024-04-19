@@ -31,9 +31,6 @@ public class Token
     [JsonPropertyName("ser")]
     public required ServerToken ServerToken { get; set; }
     
-    [JsonIgnore]
-    public bool IsNewVersion { get; internal init; }
-
     public string ToAccessKey()
     {
         var json = JsonSerializer.Serialize(this);

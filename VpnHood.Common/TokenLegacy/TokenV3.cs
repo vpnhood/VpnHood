@@ -55,7 +55,6 @@ public class TokenV3
             SupportId = SupportId.ToString(),
             TokenId = TokenId,
             Secret = Secret,
-            IsNewVersion = true,
             ServerToken = new ServerToken
             {
                 CreatedTime = DateTime.MinValue,

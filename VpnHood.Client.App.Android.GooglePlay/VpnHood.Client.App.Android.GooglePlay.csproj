@@ -21,7 +21,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.3.489</Version>
+		<Version>4.3.490</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
@@ -41,8 +41,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="120.7.0.2" />
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.1.0" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="120.7.0.3" />
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.1.0.1" />
 	</ItemGroup>
 
 </Project>

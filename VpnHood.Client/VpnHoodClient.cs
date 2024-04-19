@@ -205,9 +205,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async Task Connect(CancellationToken cancellationToken = default)
     {
-        using var scope = VhLogger.Instance.BeginScope("Client");
-        if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
+        if (_disposed)
+            throw new ObjectDisposedException(VhLogger.FormatType(this));
 
+        using var scope = VhLogger.Instance.BeginScope("Client");
         if (State != ClientState.None)
             throw new Exception("Connection is already in progress.");
 
@@ -783,6 +784,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
         where T : SessionResponse
     {
+        if (_disposed) 
+            throw new ObjectDisposedException(VhLogger.FormatType(this));
+
         try
         {
             // create a connection and send the request 
@@ -827,6 +831,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try
         {
+            // don't use SendRequest because it can be disposed
             await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
                 new ByeRequest
                 {

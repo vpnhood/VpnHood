@@ -279,12 +279,9 @@ public class SessionManager : IAsyncDisposable, IJob
             await session.Sync();
     }
 
-    private async Task Cleanup()
+    private async Task RemoveTimeoutSession()
     {
-        await CloseExpiredSessions();
-
-        // find expired or dead sessions
-        VhLogger.Instance.LogTrace("Cleaning up the expired sessions.");
+        VhLogger.Instance.LogTrace("Remove timeout sessions.");
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime)
@@ -295,6 +292,13 @@ public class SessionManager : IAsyncDisposable, IJob
             Sessions.Remove(session.Key, out _);
             await session.Value.DisposeAsync();
         }
+    }
+
+
+    private async Task Cleanup()
+    {
+        await CloseExpiredSessions();
+        await RemoveTimeoutSession();
     }
 
     public Session? GetSessionById(ulong sessionId)

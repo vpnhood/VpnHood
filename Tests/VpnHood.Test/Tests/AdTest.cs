@@ -15,14 +15,13 @@ public class AdTest : TestBase
     {
         public bool FailAlways { get; set; }
 
-        public Task<string> ShowAd(CancellationToken cancellationToken)
+        public Task ShowAd(string customData, CancellationToken cancellationToken)
         {
             if (FailAlways)
                 throw new Exception("Ad failed");
 
-            var ret = Guid.NewGuid().ToString();
-            accessManager.AddAdData(ret);
-            return Task.FromResult(ret);
+            accessManager.AddAdData(customData);
+            return Task.CompletedTask;
         }
 
         public void Dispose()

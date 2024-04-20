@@ -1,5 +1,4 @@
-﻿using Xamarin.Google.Android.Play.Core.Install;
-using Xamarin.Google.Android.Play.Core.Tasks;
+﻿using Xamarin.Google.Android.Play.Core.Tasks;
 using Exception = Java.Lang.Exception;
 using Object = Java.Lang.Object;
 using Task = Xamarin.Google.Android.Play.Core.Tasks.Task;

@@ -459,7 +459,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             // Show ad if it is required and does not show yet
             if (token.IsAdRequired)
             {
-                var adData = await ShowAd(cancellationToken);
+                var adData = await ShowAd(clientConnect.Client.SessionId, cancellationToken);
                 if (string.IsNullOrEmpty(adData))
                     throw new AdException("Could not display the require ad.");
                 
@@ -475,7 +475,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private async Task<string?> ShowAd(CancellationToken cancellationToken)
+    private async Task<string?> ShowAd(ulong sessionId, CancellationToken cancellationToken)
     {
         if (Services.AdService == null)
             throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
@@ -483,7 +483,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         IsWaitingForAd = true;
         try
         {
-            return await Services.AdService.ShowAd(cancellationToken);
+            var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
+            await Services.AdService.ShowAd(customData, cancellationToken);
+            return customData;
         }
         catch (Exception ex)
         {

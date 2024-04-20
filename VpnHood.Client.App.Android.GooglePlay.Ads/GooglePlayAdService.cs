@@ -49,10 +49,9 @@ public class GooglePlayAdService(
         }
     }
 
-    public async Task<string> ShowAd(CancellationToken cancellationToken)
+    public async Task ShowAd(string customData, CancellationToken cancellationToken)
     {
         // create ad custom data
-        var customData = Guid.NewGuid().ToString();
         var rewardedAd = await LoadRewardedAd(cancellationToken);
         var serverSideVerificationOptions = new ServerSideVerificationOptions.Builder()
             .SetCustomData(customData)
@@ -78,7 +77,6 @@ public class GooglePlayAdService(
         if (fullScreenContentCallback.DismissedTask.IsFaulted) throw fullScreenContentCallback.DismissedTask.Exception;
 
         _rewardedAdLoadCallback = null;
-        return customData;
     }
 
     public void Dispose()

@@ -139,9 +139,6 @@ public class FileAccessManager : IAccessManager
         if (accessItem == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
-        if (!IsValidAd(sessionRequestEx.AdData))
-            sessionRequestEx.AdData = null;
-
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
         // update accesskey

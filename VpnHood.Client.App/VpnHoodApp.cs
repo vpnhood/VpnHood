@@ -457,7 +457,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _ = VersionCheck();
 
             // Show ad if it is required and does not show yet
-            if (token.IsAdRequired && false)
+            if (token.IsAdRequired)
             {
                 var adData = await ShowAd(cancellationToken);
                 if (string.IsNullOrEmpty(adData))

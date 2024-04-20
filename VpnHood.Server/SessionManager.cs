@@ -121,8 +121,7 @@ public class SessionManager : IAsyncDisposable, IJob
             ExtraData = extraData,
             ClientInfo = helloRequest.ClientInfo,
             EncryptedClientId = helloRequest.EncryptedClientId,
-            TokenId = helloRequest.TokenId,
-            AdData = helloRequest.AdData
+            TokenId = helloRequest.TokenId
         });
 
         // Access Error should not pass to the client in create session

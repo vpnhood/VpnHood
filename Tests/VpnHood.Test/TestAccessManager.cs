@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access;

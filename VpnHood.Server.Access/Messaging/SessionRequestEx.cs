@@ -18,5 +18,4 @@ public class SessionRequestEx
     public required  IPAddress? ClientIp { get; set; }
 
     public required string? ExtraData { get; set; }
-    public string? AdData { get; set; }
 }

@@ -74,9 +74,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-            ExpirationTime = accessItem.Token.IsAdRequired && string.IsNullOrEmpty(sessionRequestEx.AdData) 
-                ? DateTime.UtcNow + _adRequiredTimeout 
-                : null
+            ExpirationTime = accessItem.Token.IsAdRequired ? DateTime.UtcNow + _adRequiredTimeout : null
         };
 
         //create response

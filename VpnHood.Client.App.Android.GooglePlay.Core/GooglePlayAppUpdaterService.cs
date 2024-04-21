@@ -22,14 +22,16 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
             if (updateAvailability != UpdateAvailability.UpdateAvailable || !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Flexible))
                 return false;
 
+            // Set download listener
+            using var googlePlayDownloadStateListener = new GooglePlayDownloadCompleteListener(appUpdateManager);
+
             // Show Google Play update dialog
             var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
             var updateFlowResult = await new GooglePlayTaskCompleteListener<Java.Lang.Integer>(updateFlowPlayTask).Task;
             if (updateFlowResult.IntValue() != -1)
                 throw new Exception("Could not start update flow.");
 
-            // Set listener to check download state
-            using var googlePlayDownloadStateListener = new GooglePlayDownloadCompleteListener(appUpdateManager);
+            // Wait for download complete
             await googlePlayDownloadStateListener.WaitForCompletion();
 
             // Start install downloaded update

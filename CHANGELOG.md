@@ -1,4 +1,4 @@
-# v4.3.490
+# v4.3.492
 ### Client
 * Fix: Ad service
 * Android: Fix Google Play Update

@@ -285,6 +285,7 @@ public class Session : IAsyncDisposable, IJob
     {
         await Sync(force: true, closeSession: false, adData: request.AdData);
         await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+        await clientStream.DisposeAsync();
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream, CancellationToken cancellationToken)

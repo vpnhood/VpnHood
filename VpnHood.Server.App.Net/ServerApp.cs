@@ -158,7 +158,7 @@ public class ServerApp : IDisposable
 
     private static HttpAccessManager CreateHttpAccessManager(HttpAccessManagerOptions options)
     {
-        VhLogger.Instance.LogInformation("Initializing ResetAccessManager. BaseUrl: {BaseUrl}", options.BaseUrl);
+        VhLogger.Instance.LogInformation("Initializing HttpAccessManager. BaseUrl: {BaseUrl}", options.BaseUrl);
         var httpAccessManager = new HttpAccessManager(options)
         {
             Logger = VhLogger.Instance,

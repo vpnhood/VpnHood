@@ -726,17 +726,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
     {
+        // use TunnelMyCountry
+        if (UserSettings.TunnelClientCountry)
+            return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);
+
+        // Exclude my country
         var ipGroupManager = await GetIpGroupManager();
         _lastCountryIpGroup = await ipGroupManager.FindIpGroup(clientIp, Settings.LastCountryIpGroupId);
         Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
         VhLogger.Instance.LogInformation($"Client Country is: {_lastCountryIpGroup?.IpGroupName}");
 
-        // use TunnelMyCountry
-        if (!UserSettings.TunnelClientCountry)
-            return _lastCountryIpGroup != null ? await GetIncludeIpRanges(FilterMode.Exclude, [_lastCountryIpGroup.IpGroupId]) : null;
-
-        // use advanced options
-        return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);
+        return _lastCountryIpGroup != null
+            ? await GetIncludeIpRanges(FilterMode.Exclude, [_lastCountryIpGroup.IpGroupId])
+            : null;
     }
 
     public Task RunJob()

@@ -36,6 +36,13 @@
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
+	<ItemGroup Condition="'$(Configuration)'=='Debug'">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>PublicAccessKey</_Parameter1>
+			<_Parameter2>$(VPNHOOD_PUBLIC_ACCESSKEY)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
 	<ItemGroup>
 	  <None Remove="xml\network_security_config.xml" />
 	</ItemGroup>

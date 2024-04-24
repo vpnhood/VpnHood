@@ -524,16 +524,12 @@ public class ClientAppTest : TestBase
         // connect
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        _ = app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId);
 
-        await VhTestUtil.AssertEqualsWait(true, () => isTokenRetrieved);
+        Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
         Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
-        Assert.AreNotEqual(AppConnectionState.Connected, app.State.ConnectionState);
-
-        // connect
-        await app.Connect(clientProfile.ClientProfileId);
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
+        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
     }
 
     [TestMethod]

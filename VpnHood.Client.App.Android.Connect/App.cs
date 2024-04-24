@@ -26,6 +26,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
             return new AppOptions
             {
+                AccessKeys = [AssemblyInfo.GlobalServersAccessKey], 
                 Resource = DefaultAppResource.Resource,
                 UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
                 UiName = "VpnHoodConnect",

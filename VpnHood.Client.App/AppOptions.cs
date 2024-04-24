@@ -11,8 +11,8 @@ public class AppOptions
     public Uri? UpdateInfoUrl { get; set; }
     public bool LoadCountryIpGroups { get; set; } = true;
     public AppResource Resource { get; set; } = new();
-    // ReSharper disable once StringLiteralTypo
     public string? AppGa4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
     public bool IsAddServerSupported { get; set; } = true;
+    public string[] AccessKeys { get; set; } = [];
 }

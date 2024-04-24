@@ -14,7 +14,7 @@ public static class CertificateConverter
             CommonName = model.CommonName,
             IssueTime = model.IssueTime,
             ExpirationTime = model.ExpirationTime,
-            IsTrusted = model.IsTrusted,
+            IsValidated = model.IsValidated,
             Thumbprint = model.Thumbprint,
             AutoValidate = model.AutoValidate,
             ValidateInprogress = model.ValidateInprogress,

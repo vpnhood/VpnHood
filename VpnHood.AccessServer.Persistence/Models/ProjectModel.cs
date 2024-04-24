@@ -8,6 +8,7 @@ public class ProjectModel
     public required string? ProjectName { get; set; }
     public required string? GaMeasurementId { get; set; }
     public required string? GaApiSecret { get; set; }
+    public required string AdRewardSecret { get; set; }
     public required SubscriptionType SubscriptionType { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required LetsEncryptAccount? LetsEncryptAccount { get; set; }

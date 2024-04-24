@@ -62,6 +62,12 @@ public class CacheController(CacheService cacheService)
         await cacheService.InvalidateSessions();
     }
 
+    [HttpPost("access-tokens/{accessTokenId}/invalidate")]
+    public async Task InvalidateSessions(Guid accessTokenId)
+    {
+        await cacheService.InvalidateAccessToken(accessTokenId);
+    }
+
 
     [HttpPost("flush")]
     public Task Flush()

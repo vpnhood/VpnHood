@@ -80,7 +80,8 @@ public class ServerFarmDom : IDisposable
             new AccessTokenCreateParams
             {
                 ServerFarmId = ServerFarm.ServerFarmId,
-                IsPublic = isPublic
+                IsPublic = isPublic,
+                IsEnabled = true
             });
 
         return new AccessTokenDom(TestApp, ret);

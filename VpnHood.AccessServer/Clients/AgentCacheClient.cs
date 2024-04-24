@@ -62,6 +62,10 @@ public class AgentCacheClient : ApiClientBase
     {
         return HttpPostAsync("/api/cache/sessions/invalidate", null, null);
     }
+    public Task InvalidateAccessToken(Guid accessTokenId)
+    {
+        return HttpPostAsync($"/api/cache/access-tokens/{accessTokenId}/invalidate", null, null);
+    }
 
     public Task Flush()
     {

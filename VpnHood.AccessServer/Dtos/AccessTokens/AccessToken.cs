@@ -2,21 +2,22 @@
 
 public class AccessToken
 {
-    public Guid ProjectId { get; set; }
-    public Guid AccessTokenId { get; set; }
-    public string? AccessTokenName { get; set; }
-    public int SupportCode { get; set; }
-    public Guid ServerFarmId { get; set; }
-    public string? ServerFarmName { get; set; }
-    public long MaxTraffic { get; set; }
-    public int Lifetime { get; set; }
-    public int MaxDevice { get; set; }
-    public DateTime? FirstUsedTime { get; set; }
-    public DateTime? LastUsedTime { get; set; }
-    public string? Url { get; set; }
-    public bool IsPublic { get; set; }
-    public bool IsEnabled { get; set; }
-    public DateTime? ExpirationTime { get; set; }
-    public DateTime CreatedTime { get; set; }
-    public DateTime ModifiedTime { get; set; }
+    public required Guid ProjectId { get; init; }
+    public required Guid AccessTokenId { get; init; }
+    public required string? AccessTokenName { get; init; }
+    public required int SupportCode { get; init; }
+    public required Guid ServerFarmId { get; init; }
+    public required string? ServerFarmName { get; init; }
+    public required long MaxTraffic { get; init; }
+    public required int Lifetime { get; init; }
+    public required int MaxDevice { get; init; }
+    public required DateTime? FirstUsedTime { get; init; }
+    public required DateTime? LastUsedTime { get; init; }
+    public required string? Url { get; init; }
+    public required bool IsPublic { get; init; }
+    public required bool IsEnabled { get; init; }
+    public required bool IsAdRequired { get; init; }
+    public required DateTime? ExpirationTime { get; init; }
+    public required DateTime CreatedTime { get; init; }
+    public required DateTime ModifiedTime { get; init; }
 }

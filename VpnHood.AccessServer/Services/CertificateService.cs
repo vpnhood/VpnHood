@@ -98,7 +98,7 @@ public class CertificateService(
             CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
             IssueTime = x509Certificate2.NotBefore.ToUniversalTime(),
             ExpirationTime = x509Certificate2.NotAfter.ToUniversalTime(),
-            IsTrusted = x509Certificate2.Verify(),
+            IsValidated = x509Certificate2.Verify(),
             IsDefault = true,
             IsDeleted = false,
             AutoValidate = false,

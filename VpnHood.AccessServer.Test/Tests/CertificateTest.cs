@@ -62,7 +62,7 @@ public class CertificateTest
             ExpirationTime = expirationTime
         });
         Assert.IsFalse(string.IsNullOrEmpty(certificate.Thumbprint));
-        Assert.IsFalse(certificate.IsTrusted);
+        Assert.IsFalse(certificate.IsValidated);
         Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow.AddDays(6) &&
                       certificate.ExpirationTime < DateTime.UtcNow.AddDays(8));
         Assert.IsTrue(certificate.IssueTime > DateTime.UtcNow.AddDays(-1));
@@ -133,8 +133,13 @@ public class CertificateTest
         await VhTestUtil.AssertEqualsWait(true, async () =>
         {
             await farm.Reload();
-            return farm.ServerFarm.Certificate!.IsTrusted;
+            return farm.ServerFarm.Certificate!.IsValidated;
         });
+
+        // Create a token and make sure it is valid and there is no CertificateHash
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsNull(token.ServerToken.CertificateHash);
     }
 
     [TestMethod]
@@ -215,7 +220,7 @@ public class CertificateTest
             await farm.Reload();
             return farm.ServerFarm.Certificate.ValidateInprogress;
         });
-        Assert.IsTrue(farm.ServerFarm.Certificate.IsTrusted);
+        Assert.IsTrue(farm.ServerFarm.Certificate.IsValidated);
         Assert.IsNull(farm.ServerFarm.Certificate.ValidateErrorTime);
         Assert.IsFalse(farm.ServerFarm.Certificate.ValidateInprogress);
         Assert.AreEqual(0, farm.ServerFarm.Certificate.ValidateErrorCount);

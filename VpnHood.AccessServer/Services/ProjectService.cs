@@ -1,8 +1,10 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
@@ -15,6 +17,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class ProjectService(
     VhContext vhContext,
+    IOptions<AppOptions> appOptions,
     SubscriptionService subscriptionService,
     AgentCacheClient agentCacheClient,
     CertificateService certificateService,
@@ -27,6 +30,10 @@ public class ProjectService(
         using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
         await subscriptionService.AuthorizeCreateProject(ownerUserId);
         var projectId = Guid.NewGuid();
+        var adRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+            .Replace("/", "")
+            .Replace("+", "")
+            .Replace("=", "");
 
         // ServerProfile
         var serverProfile = new ServerProfileModel
@@ -64,6 +71,7 @@ public class ProjectService(
             CreatedTime = DateTime.UtcNow,
             GaApiSecret = null,
             GaMeasurementId = null,
+            AdRewardSecret = adRewardSecret,
             LetsEncryptAccount = null,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
@@ -84,6 +92,7 @@ public class ProjectService(
                     SupportCode = 1000,
                     Secret = VhUtil.GenerateKey(),
                     IsPublic = true,
+                    IsAdRequired = false,
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow,
@@ -106,6 +115,7 @@ public class ProjectService(
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
+                    IsAdRequired = false,
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = VhUtil.GenerateKey(),
@@ -131,13 +141,13 @@ public class ProjectService(
 
         // make current user the owner
         await roleProvider.AddUserRole(project.ProjectId.ToString(), Roles.ProjectOwner.RoleId, ownerUserId);
-        return project.ToDto();
+        return project.ToDto(appOptions.Value.AgentUrl);
     }
 
     public async Task<Project> Get(Guid projectId)
     {
         var project = await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
-        return project.ToDto();
+        return project.ToDto(appOptions.Value.AgentUrl);
     }
 
     public async Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
@@ -147,10 +157,11 @@ public class ProjectService(
         if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
         if (updateParams.GaMeasurementId != null) project.GaMeasurementId = updateParams.GaMeasurementId;
         if (updateParams.GaApiSecret != null) project.GaApiSecret = updateParams.GaApiSecret;
+        if (updateParams.AdRewardSecret != null) project.AdRewardSecret = updateParams.AdRewardSecret;
         await vhContext.SaveChangesAsync();
         await agentCacheClient.InvalidateProject(projectId);
 
-        return project.ToDto();
+        return project.ToDto(appOptions.Value.AgentUrl);
     }
 
     public async Task<Project[]> List(string? search = null, int recordIndex = 0, int recordCount = 101)
@@ -167,7 +178,7 @@ public class ProjectService(
             .Take(recordCount)
             .ToArrayAsync();
 
-        return projects.Select(project => project.ToDto()).ToArray();
+        return projects.Select(project => project.ToDto(appOptions.Value.AgentUrl)).ToArray();
     }
 
     public async Task<IEnumerable<Project>> List(IEnumerable<Guid> projectIds)
@@ -178,7 +189,7 @@ public class ProjectService(
             .OrderByDescending(x => x.ProjectName)
             .ToArrayAsync();
 
-        return projects.Select(project => project.ToDto());
+        return projects.Select(project => project.ToDto(appOptions.Value.AgentUrl));
     }
 
     public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,

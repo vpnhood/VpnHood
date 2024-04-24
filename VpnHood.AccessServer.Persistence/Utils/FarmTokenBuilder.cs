@@ -28,16 +28,13 @@ public static class FarmTokenBuilder
         return true;
     }
 
+
     public static ServerToken Build(ServerFarmModel serverFarm)
     {
         ArgumentNullException.ThrowIfNull(serverFarm.Servers);
         ArgumentNullException.ThrowIfNull(serverFarm.Certificate);
+        var x509Certificate = new X509Certificate2(serverFarm.Certificate.RawData);
 
-        return Build(serverFarm, new X509Certificate2(serverFarm.Certificate.RawData));
-    }
-
-    private static ServerToken Build(ServerFarmModel serverFarm, X509Certificate2 x509Certificate)
-    {
         // find all public accessPoints 
         var accessPoints = serverFarm.Servers!
             .SelectMany(server => server.AccessPoints)
@@ -55,7 +52,7 @@ public static class FarmTokenBuilder
         // create token
         var serverToken = new ServerToken
         {
-            CertificateHash = x509Certificate.GetCertHash(),
+            CertificateHash = serverFarm.Certificate.IsValidated ? null : x509Certificate.GetCertHash(),
             HostName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
             HostEndPoints = accessPoints.Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort)).ToArray(),
             Secret = serverFarm.Secret,
@@ -70,7 +67,7 @@ public static class FarmTokenBuilder
 
     private static bool CanUse(ServerToken serverToken)
     {
-        return serverToken is { IsValidHostName: true, HostPort: > 0 } || 
+        return serverToken is { IsValidHostName: true, HostPort: > 0 } ||
                serverToken.HostEndPoints?.Length > 0;
     }
 
@@ -85,7 +82,7 @@ public static class FarmTokenBuilder
 
     public static ServerToken GetUsableToken(ServerFarmModel serverFarm)
     {
-        return TryGetUsableToken(serverFarm) 
+        return TryGetUsableToken(serverFarm)
                ?? throw new InvalidOperationException("The Farm has not been configured or it does not have at least a server with a PublicInToken access points.");
     }
 }

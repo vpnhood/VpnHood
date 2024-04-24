@@ -66,6 +66,10 @@ public class VhContext : DbContext
                 .HasMaxLength(50);
 
             entity
+                .Property(e => e.AdRewardSecret)
+                .HasMaxLength(50);
+
+            entity
                 .Property(e => e.ProjectName)
                 .HasMaxLength(200);
 
@@ -96,7 +100,7 @@ public class VhContext : DbContext
                 .HasKey(e => e.CertificateId);
 
             entity
-                .Property(e => e.IsTrusted)
+                .Property(e => e.IsValidated)
                 .HasDefaultValue(false);
 
             entity

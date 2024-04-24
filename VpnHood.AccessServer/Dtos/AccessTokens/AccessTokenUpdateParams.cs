@@ -17,4 +17,5 @@ public class AccessTokenUpdateParams
 
     public Patch<string>? Url { get; set; }
     public Patch<bool>? IsEnabled { get; set; }
+    public Patch<bool>? IsAdRequired { get; set; }
 }

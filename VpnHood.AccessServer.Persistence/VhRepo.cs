@@ -141,7 +141,7 @@ public class VhRepo(VhContext vhContext)
         return ret;
     }
 
-    public async Task AccessTokenDelete(Guid projectId, Guid[] accessTokenIds)
+    public async Task<Guid[]> AccessTokenDelete(Guid projectId, Guid[] accessTokenIds)
     {
         var accessTokens = await vhContext.AccessTokens
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
@@ -150,6 +150,8 @@ public class VhRepo(VhContext vhContext)
 
         foreach (var accessToken in accessTokens)
             accessToken.IsDeleted = true;
+
+        return accessTokens.Select(x=>x.AccessTokenId).ToArray();
     }
 
     public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId,
@@ -274,7 +276,7 @@ public class VhRepo(VhContext vhContext)
                     ValidateToken = x.ValidateToken,
                     IssueTime = x.IssueTime,
                     ExpirationTime = x.ExpirationTime,
-                    IsTrusted = x.IsTrusted,
+                    IsValidated = x.IsValidated,
                     Thumbprint = x.Thumbprint,
                     CommonName = x.CommonName,
                     CertificateId = x.CertificateId,
@@ -319,7 +321,7 @@ public class VhRepo(VhContext vhContext)
             .Where(x => !x.IsDeleted && x.AutoValidate)
             .Where(x => x.ValidateErrorCount < maxErrorCount)
             .Where(x => x.ValidateErrorTime < errorTime)
-            .Where(x => x.ExpirationTime < expirationTime || !x.IsTrusted)
+            .Where(x => x.ExpirationTime < expirationTime || !x.IsValidated)
             .ToArrayAsync();
 
         return certificates;

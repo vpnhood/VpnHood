@@ -1,4 +1,5 @@
 ﻿using GrayMint.Common.Generics;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Persistence;
@@ -10,7 +11,10 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
-public class AccessTokensService(ReportUsageService reportUsageService, VhRepo vhRepo)
+public class AccessTokensService(
+    ReportUsageService reportUsageService, 
+    AgentCacheClient agentCacheClient,
+    VhRepo vhRepo)
 {
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
@@ -33,12 +37,13 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? VhUtil.GenerateKey(),
             SupportCode = supportCode,
+            IsAdRequired = createParams.IsAdRequired,
+            IsEnabled = createParams.IsEnabled ?? true,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
-            IsEnabled = true,
             IsDeleted = false,
             FirstUsedTime = null,
-            LastUsedTime = null
+            LastUsedTime = null,
         };
 
         await vhRepo.AddAsync(accessToken);
@@ -62,6 +67,7 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
         if (updateParams.Url != null) accessToken.Url = updateParams.Url;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
+        if (updateParams.IsAdRequired != null) accessToken.IsAdRequired = updateParams.IsAdRequired;
         if (updateParams.ServerFarmId != null)
         {
             accessToken.ServerFarmId = updateParams.ServerFarmId;
@@ -71,7 +77,10 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
         if (vhRepo.HasChanges())
             accessToken.ModifiedTime = DateTime.UtcNow;
 
+        // save and update caches
         await vhRepo.SaveChangesAsync();
+        await agentCacheClient.InvalidateAccessToken(accessTokenId);
+
         return accessToken.ToDto(accessToken.ServerFarm?.ServerFarmName);
     }
 
@@ -84,6 +93,7 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
         var token = new Token
         {
             ServerToken = FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm!),
+            IsAdRequired = accessToken.IsAdRequired,
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,
@@ -140,7 +150,10 @@ public class AccessTokensService(ReportUsageService reportUsageService, VhRepo v
 
     public async Task Delete(Guid projectId, Guid[] accessTokenIds)
     {
-        await vhRepo.AccessTokenDelete(projectId, accessTokenIds);
+        var deletedAccessTokenIds = await vhRepo.AccessTokenDelete(projectId, accessTokenIds);
         await vhRepo.SaveChangesAsync();
+
+        foreach (var accessTokenId in deletedAccessTokenIds)
+            await agentCacheClient.InvalidateAccessToken(accessTokenId);
     }
 }

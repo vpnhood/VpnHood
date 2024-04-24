@@ -39,9 +39,9 @@ public class AgentController(AgentService agentService) : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public Task<SessionResponse> AddSessionUsage(uint sessionId, bool closeSession, Traffic traffic)
+    public Task<SessionResponse> AddSessionUsage(uint sessionId, bool closeSession, Traffic traffic, string? adData)
     {
-        return  agentService.AddSessionUsage(ServerId, sessionId, closeSession, traffic);
+        return  agentService.AddSessionUsage(ServerId, sessionId, closeSession, traffic, adData);
     }
 
     //todo: deprecated

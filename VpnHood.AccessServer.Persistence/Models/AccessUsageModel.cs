@@ -12,6 +12,7 @@ public class AccessUsageModel
     public long LastCycleReceivedTraffic { get; set; }
     public long TotalSentTraffic { get; set; }
     public long TotalReceivedTraffic { get; set; }
+    public bool IsAdReward { get; set; }
     public DateTime CreatedTime { get; set; }
 
     public long CycleSentTraffic => TotalSentTraffic - LastCycleSentTraffic;

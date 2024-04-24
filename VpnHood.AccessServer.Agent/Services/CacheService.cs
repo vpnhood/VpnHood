@@ -11,7 +11,7 @@ using VpnHood.Common.Messaging;
 namespace VpnHood.AccessServer.Agent.Services;
 
 public class CacheService(
-    IOptions<AgentOptions> appOptions,
+    IOptions<AgentOptions> agentOptions,
     ILogger<CacheService> logger,
     VhAgentRepo vhAgentRepo)
     : IGrayMintJob
@@ -24,11 +24,11 @@ public class CacheService(
         public ConcurrentDictionary<long, SessionCache> Sessions = new();
         public ConcurrentDictionary<Guid, AccessCache> Accesses = new();
         public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
+        public readonly ConcurrentDictionary<string, DateTime> Ads = new();
         public DateTime LastSavedTime = DateTime.MinValue;
     }
 
     private static MemCache Mem { get; } = new();
-    private readonly AgentOptions _appOptions = appOptions.Value;
 
     public async Task Init(bool force = true)
     {
@@ -55,7 +55,7 @@ public class CacheService(
     public Task<ServerCache[]> GetServers()
     {
         var servers = Mem.Servers.Values
-            .Select(x => x.UpdateState(appOptions.Value.LostServerThreshold));
+            .Select(x => x.UpdateState(agentOptions.Value.LostServerThreshold));
         return Task.FromResult(servers.ToArray());
     }
 
@@ -76,7 +76,7 @@ public class CacheService(
     public async Task<ServerCache> GetServer(Guid serverId)
     {
         if (Mem.Servers.TryGetValue(serverId, out var server))
-            return server.UpdateState(appOptions.Value.LostServerThreshold);
+            return server.UpdateState(agentOptions.Value.LostServerThreshold);
 
         using var serversLock = await AsyncLock.LockAsync($"cache_server_{serverId}");
         if (Mem.Servers.TryGetValue(serverId, out server))
@@ -84,7 +84,7 @@ public class CacheService(
 
         server = await vhAgentRepo.GetServer(serverId);
         Mem.Servers.TryAdd(serverId, server);
-        return server.UpdateState(appOptions.Value.LostServerThreshold);
+        return server.UpdateState(agentOptions.Value.LostServerThreshold);
     }
 
     public async Task<ServerFarmCache> GetFarm(Guid farmId)
@@ -158,6 +158,27 @@ public class CacheService(
         return Task.CompletedTask;
     }
 
+    public void RewardAd(Guid projectId, string adData)
+    {
+        //todo
+        logger.LogInformation("Ad rewarded. ProjectId: {ProjectId}, AdData: {AdData}", projectId, adData);
+        Mem.Ads.TryAdd($"{projectId}/{adData}", DateTime.UtcNow);
+    }
+
+    public bool RemoveAd(Guid projectId, string adData)
+    {
+        //todo
+        logger.LogInformation("Ad removed. ProjectId: {ProjectId}, AdData: {AdData}", projectId, adData);
+        return Mem.Ads.TryRemove($"{projectId}/{adData}", out _);
+    }
+
+    private void CleanupAds()
+    {
+        var oldItems = Mem.Ads.Where(x => x.Value < DateTime.UtcNow - agentOptions.Value.AdRewardTimeout);
+        foreach (var item in oldItems)
+            Mem.Ads.TryRemove(item);
+    }
+
     public async Task InvalidateServers(Guid? projectId = null, Guid? serverFarmId = null,
         Guid? serverProfileId = null, Guid? serverId = null)
     {
@@ -192,6 +213,15 @@ public class CacheService(
     public Task InvalidateServer(Guid serverId)
     {
         return InvalidateServers([serverId]);
+    }
+
+    public Task InvalidateAccessToken(Guid accessTokenId)
+    {
+        var items = Mem.Accesses.Where(x => x.Value.AccessTokenId == accessTokenId);
+        foreach (var item in items)
+            Mem.Accesses.TryRemove(item);
+
+        return Task.CompletedTask;
     }
 
     public async Task InvalidateServers(Guid[] serverIds)
@@ -233,6 +263,7 @@ public class CacheService(
             oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
             oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
             oldUsage.CreatedTime = accessUsage.CreatedTime;
+            oldUsage.IsAdReward |= accessUsage.IsAdReward;
         }
     }
 
@@ -244,7 +275,7 @@ public class CacheService(
             var isUpdated = session.LastUsedTime > Mem.LastSavedTime || session.EndTime > Mem.LastSavedTime;
 
             // check timeout
-            var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
+            var minSessionTime = DateTime.UtcNow - agentOptions.Value.SessionPermanentlyTimeout;
             if (session.EndTime == null && session.LastUsedTime < minSessionTime)
             {
                 if (session.ErrorCode != SessionErrorCode.Ok) logger.LogWarning(
@@ -257,7 +288,7 @@ public class CacheService(
             }
 
             // archive the CloseWait sessions; keep closed session shortly in memory to report the session owner
-            var minCloseWaitTime = DateTime.UtcNow - _appOptions.SessionTemporaryTimeout;
+            var minCloseWaitTime = DateTime.UtcNow - agentOptions.Value.SessionTemporaryTimeout;
             if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime && !session.IsArchived)
             {
                 session.IsArchived = true;
@@ -345,7 +376,7 @@ public class CacheService(
             await vhAgentRepo.SaveChangesAsync();
 
             // cleanup: remove unused accesses
-            var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
+            var minSessionTime = DateTime.UtcNow - agentOptions.Value.SessionPermanentlyTimeout;
             foreach (var accessPair in Mem.Accesses.Where(pair => pair.Value.LastUsedTime < minSessionTime))
                 Mem.Accesses.TryRemove(accessPair);
         }
@@ -370,7 +401,7 @@ public class CacheService(
                 await vhAgentRepo.AddAndSaveServerStatuses(serverStatuses);
 
             //cleanup: remove lost servers
-            var minStatusTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
+            var minStatusTime = DateTime.UtcNow - agentOptions.Value.SessionPermanentlyTimeout;
             foreach (var serverPair in Mem.Servers.Where(pair => pair.Value.ServerStatus?.CreatedTime < minStatusTime))
                 Mem.Servers.TryRemove(serverPair);
 
@@ -403,6 +434,7 @@ public class CacheService(
 
     public Task RunJob(CancellationToken cancellationToken)
     {
+        CleanupAds();
         return SaveChanges();
     }
 }

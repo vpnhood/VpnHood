@@ -38,9 +38,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,
             serverEndPoint,
-            clientId,
-            clientIp
-        );
+            clientId: clientId,
+            clientIp: clientIp);
 
         // create session
         var ret = await SessionDom.Create(

@@ -7,6 +7,7 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -16,6 +17,7 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Services.Acme;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer;
 
@@ -126,4 +128,21 @@ public class Program
 
         await GrayMintApp.RunAsync(webApp, args);
     }
+
+    //private async Task Migrate(ILogger logger, WebApplication webApp)
+    //{
+    //    logger.LogInformation("Upgrading..");
+    //    var scope = webApp.Services.CreateAsyncScope();
+    //    await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
+    //    context.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+    //    var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
+    //    logger.LogInformation($"ProjectCount: {projects.Length}..");
+    //    foreach (var project in projects)
+    //        project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+    //            .Replace("/", "")
+    //            .Replace("+", "")
+    //            .Replace("=", "");
+    //    await context.SaveChangesAsync();
+    //    logger.LogInformation($"Finish migrate: {projects.Length}..");
+    //}
 }

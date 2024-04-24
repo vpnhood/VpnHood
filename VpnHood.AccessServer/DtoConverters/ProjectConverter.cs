@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ProjectConverter
 {
-    public static Project ToDto(this ProjectModel model)
+    public static Project ToDto(this ProjectModel model, Uri agentUrl)
     {
         var project = new Project
         {
@@ -13,6 +13,8 @@ public static class ProjectConverter
             ProjectName = model.ProjectName,
             GaApiSecret = model.GaApiSecret,
             GaMeasurementId = model.GaMeasurementId,
+            AdRewardSecret = model.AdRewardSecret,
+            AdRewardUrl = new Uri(agentUrl, $"api/projects/{model.ProjectId}/ad-rewards/{model.AdRewardSecret}"),
             SubscriptionType = model.SubscriptionType,
             CreatedTime = model.CreatedTime
         };

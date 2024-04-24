@@ -56,7 +56,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     GaMeasurementId = x.Server.Project!.GaMeasurementId,
                     ProjectId = x.Server.ProjectId,
                     GaApiSecret = x.Server.Project.GaApiSecret,
-                    ProjectName = x.Server.Project.ProjectName
+                    ProjectName = x.Server.Project.ProjectName,
+                    AdRewardSecret = x.Server.Project.AdRewardSecret
                 }
             })
             .AsNoTracking()
@@ -78,6 +79,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ExtraData = x.ExtraData,
                     CreatedTime = x.CreatedTime,
                     LastUsedTime = x.LastUsedTime,
+                    AdExpirationTime = x.AdExpirationTime,
                     ClientVersion = x.ClientVersion,
                     EndTime = x.EndTime,
                     ErrorCode = x.ErrorCode,
@@ -89,7 +91,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ClientId = x.Device!.ClientId,
                     UserAgent = x.Device.UserAgent,
                     Country = x.Device.Country,
-                    DeviceIp = x.DeviceIp
+                    DeviceIp = x.DeviceIp,
+                    IsAdReward = x.IsAdReward
                 },
                 Access = new AccessCache
                 {
@@ -111,7 +114,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     AccessTokenName = x.Access.AccessToken.AccessTokenName,
                     MaxDevice = x.Access.AccessToken.MaxDevice,
                     MaxTraffic = x.Access.AccessToken.MaxTraffic,
-                    IsPublic = x.Access.AccessToken.IsPublic
+                    IsPublic = x.Access.AccessToken.IsPublic,
+                    IsAccessTokenEnabled = !x.Access.AccessToken.IsDeleted && x.Access.AccessToken.IsEnabled
                 }
             })
             .AsNoTracking()
@@ -185,7 +189,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ProjectId = project.ProjectId,
                 ProjectName = project.ProjectName,
                 GaMeasurementId = project.GaMeasurementId,
-                GaApiSecret = project.GaApiSecret
+                GaApiSecret = project.GaApiSecret,
+                AdRewardSecret = project.AdRewardSecret
             })
             .AsNoTracking()
             .SingleAsync();
@@ -215,7 +220,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessTokenName = x.AccessToken.AccessTokenName,
                 MaxDevice = x.AccessToken.MaxDevice,
                 MaxTraffic = x.AccessToken.MaxTraffic,
-                IsPublic = x.AccessToken.IsPublic
+                IsPublic = x.AccessToken.IsPublic,
+                IsAccessTokenEnabled = !x.AccessToken.IsDeleted && x.AccessToken.IsEnabled
             })
             .AsNoTracking()
             .SingleAsync();
@@ -245,7 +251,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessTokenName = x.AccessToken.AccessTokenName,
                 MaxDevice = x.AccessToken.MaxDevice,
                 MaxTraffic = x.AccessToken.MaxTraffic,
-                IsPublic = x.AccessToken.IsPublic
+                IsPublic = x.AccessToken.IsPublic,
+                IsAccessTokenEnabled = !x.AccessToken.IsDeleted && x.AccessToken.IsEnabled
             })
             .AsNoTracking()
             .SingleOrDefaultAsync();
@@ -277,7 +284,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             AccessTokenName = accessToken.AccessTokenName,
             MaxDevice = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
-            IsPublic = accessToken.IsPublic
+            IsPublic = accessToken.IsPublic,
+            IsAccessTokenEnabled = accessToken is { IsDeleted: false, IsEnabled: true }
         };
 
         await vhContext.Accesses.AddAsync(access.ToModel());
@@ -296,6 +304,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             ExtraData = session.ExtraData,
             CreatedTime = session.CreatedTime,
             LastUsedTime = session.LastUsedTime,
+            AdExpirationTime = session.AdExpirationTime,
             ClientVersion = session.ClientVersion,
             EndTime = session.EndTime,
             ErrorCode = session.ErrorCode,
@@ -305,7 +314,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             SuppressedTo = session.SuppressedTo,
             IsArchived = session.IsArchived,
             Country = session.Country,
-            DeviceIp = session.DeviceIp
+            DeviceIp = session.DeviceIp,
+            IsAdReward = session.IsAdReward
         };
 
         var entry = vhContext.Sessions.Attach(model);

@@ -6,4 +6,5 @@ public class ProjectCache
     public required string? ProjectName { get; set; }
     public required string? GaMeasurementId { get; init; }
     public required string? GaApiSecret { get; init; }
+    public required string AdRewardSecret { get; init; }
 }

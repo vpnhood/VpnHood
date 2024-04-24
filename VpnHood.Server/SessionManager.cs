@@ -113,7 +113,7 @@ public class SessionManager : IAsyncDisposable, IJob
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}",
             VhLogger.FormatId(helloRequest.TokenId));
         var extraData = JsonSerializer.Serialize(new SessionExtraData
-            { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
+        { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
         var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
@@ -204,8 +204,9 @@ public class SessionManager : IAsyncDisposable, IJob
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
             // Create a dead session if it is not created
-            session = await CreateSessionInternal(new SessionResponseEx(SessionErrorCode.SessionError)
+            session = await CreateSessionInternal(new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.SessionError,
                 SessionId = sessionRequest.SessionId,
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
@@ -238,7 +239,14 @@ public class SessionManager : IAsyncDisposable, IJob
         // unexpected close
         if (session.IsDisposed)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-                new SessionResponse(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
+                new SessionResponse
+                {
+                    ErrorCode = SessionErrorCode.SessionClosed,
+                    ErrorMessage = session.SessionResponse.ErrorMessage,
+                    AccessUsage = session.SessionResponse.AccessUsage,
+                    SuppressedBy = session.SessionResponse.SuppressedBy,
+                    RedirectHostEndPoint = session.SessionResponse.RedirectHostEndPoint
+                },
                 requestBase.RequestId);
 
         return session;

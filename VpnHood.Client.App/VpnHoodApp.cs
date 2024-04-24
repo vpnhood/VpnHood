@@ -107,23 +107,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
-        RemoveClientProfileByTokenId("1047359c-a107-4e49-8425-c004c41ffb8f"); // old one; deprecated in version v2.0.261 and upper
-        if (Settings.TestServerTokenAutoAdded != Settings.PublicAccessKey)
-        {
-            ClientProfileService.ImportAccessKey(Settings.PublicAccessKey);
-            Settings.TestServerTokenAutoAdded = Settings.PublicAccessKey;
-        }
+        ClientProfileService.Remove(Guid.Parse("5aacec55-5cac-457a-acad-3976969236f8")); //remove obsoleted public server
+        foreach (var accessKey in options.AccessKeys)
+            ClientProfileService.ImportAccessKey(accessKey);
 
         // initialize features
         Features = new AppFeatures
         {
             Version = typeof(VpnHoodApp).Assembly.GetName().Version,
-            TestServerTokenId = Token.FromAccessKey(Settings.PublicAccessKey).TokenId,
+            DefaultAccessTokenId = options.AccessKeys.Any() ? Token.FromAccessKey(options.AccessKeys.First()).TokenId : null,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             UpdateInfoUrl = options.UpdateInfoUrl,
             UiName = options.UiName,
-            IsAddServerSupported = options.IsAddServerSupported,
+            IsAddAccessKeySupported = options.IsAddServerSupported,
         };
 
         // initialize services
@@ -214,13 +211,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         return new VpnHoodApp(device, options);
     }
 
-    private void RemoveClientProfileByTokenId(string tokenId)
-    {
-        var clientProfile = ClientProfileService.FindByTokenId(tokenId);
-        if (clientProfile != null)
-            ClientProfileService.Remove(clientProfile.ClientProfileId);
-    }
-
     private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
         var clientProfile =
@@ -274,6 +264,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             CheckConnectionStateChanged();
             LogService.Start(Settings.UserSettings.Logging, diagnose);
 
+            // save settings
+            Settings.Save();
+
+            // log general info
+            VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
+            VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
+            VhLogger.Instance.LogInformation($"OS: {Device.OsInfo}");
+            VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
+            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}", JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
+
+            // it slows down tests and does not need to be logged in normal situation
+            if (diagnose)
+                VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
+
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
             // create cancellationToken
@@ -287,6 +291,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
             // create packet capture
             var packetCapture = await Device.CreatePacketCapture();
+            packetCapture.Stopped += PacketCapture_OnStopped;
+
+            // init packet capture
             if (packetCapture.IsMtuSupported)
                 packetCapture.Mtu = TunnelDefaults.MtuWithoutFragmentation;
 
@@ -298,7 +305,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
             // connect
-            await ConnectInternal(packetCapture, ActiveClientProfile.Token, userAgent, cancellationToken);
+            await ConnectInternal(packetCapture, ActiveClientProfile.Token, userAgent, true, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -324,7 +331,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    public CultureInfo SystemUiCulture => new (
+    public CultureInfo SystemUiCulture => new(
         Services.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
         ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName);
 
@@ -376,29 +383,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? userAgent, CancellationToken cancellationToken)
+    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? userAgent,
+        bool allowUpdateToken, CancellationToken cancellationToken)
     {
-        packetCapture.Stopped += PacketCapture_OnStopped;
-
-        // log general info
-        VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
-        VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
-        VhLogger.Instance.LogInformation($"OS: {Device.OsInfo}");
-        VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
-
-        // it slows down tests and does not need to be logged in normal situation
-        if (_hasDiagnoseStarted)
-            VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
-
         // show token info
         VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
-
-        // dump user settings
-        VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
-            JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
-
-        // save settings
-        Settings.Save();
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
@@ -462,16 +451,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 var adData = await ShowAd(clientConnect.Client.SessionId, cancellationToken);
                 if (string.IsNullOrEmpty(adData))
                     throw new AdException("Could not display the require ad.");
-                
+
                 await ClientConnect.Client.SendAdReward(adData, cancellationToken);
             }
         }
-        finally
+        catch
         {
-
             // try to update token from url after connection or error if ResponseAccessKey is not set
-            if (clientConnect.Client.ResponseAccessKey == null && !string.IsNullOrEmpty(token.ServerToken.Url))
-                _ = ClientProfileService.UpdateTokenFromUrl(token);
+            if (!string.IsNullOrEmpty(token.ServerToken.Url) && allowUpdateToken &&
+                await ClientProfileService.UpdateTokenByUrl(token))
+            {
+                token = ClientProfileService.GetToken(token.TokenId);
+                await ConnectInternal(packetCapture, token, userAgent, false, cancellationToken);
+                return;
+            }
+
+            throw;
         }
     }
 

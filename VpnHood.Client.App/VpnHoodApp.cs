@@ -118,9 +118,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             DefaultAccessTokenId = options.AccessKeys.Any() ? Token.FromAccessKey(options.AccessKeys.First()).TokenId : null,
             IsExcludeAppsSupported = Device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
+            IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             UpdateInfoUrl = options.UpdateInfoUrl,
             UiName = options.UiName,
-            IsAddAccessKeySupported = options.IsAddServerSupported,
         };
 
         // initialize services
@@ -446,7 +446,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _ = VersionCheck();
 
             // Show ad if it is required and does not show yet
-            if (token.IsAdRequired)
+            if (clientConnect.Client.SessionStatus.IsAdRequired)
             {
                 var adData = await ShowAd(clientConnect.Client.SessionId, cancellationToken);
                 if (string.IsNullOrEmpty(adData))

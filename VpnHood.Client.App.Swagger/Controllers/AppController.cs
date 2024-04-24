@@ -58,12 +58,6 @@ public class AppController : ControllerBase, IAppController
         throw new NotImplementedException();
     }
 
-    [HttpPost("add-test-server")]
-    public void AddTestServer()
-    {
-        throw new NotImplementedException();
-    }
-
     [HttpPut("user-settings")]
     public Task SetUserSettings(UserSettings userSettings)
     {

@@ -18,6 +18,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         Resource = DefaultAppResource.Resource,
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
-        IsAddServerSupported = true
+        IsAddAccessKeySupported = true
     };
 }

@@ -203,7 +203,8 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorCode = session.ErrorCode,
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
-            RedirectHostEndPoint = null
+            RedirectHostEndPoint = null,
+            IsAdRequired = accessItem.Token.IsAdRequired
         };
     }
 

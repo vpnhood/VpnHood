@@ -3,7 +3,6 @@
 public class AppFeatures
 {
     public required Version Version { get; init; }
-    public required string? DefaultAccessTokenId { get; init; }
     public required bool IsExcludeAppsSupported { get; init; }
     public required  bool IsIncludeAppsSupported { get; init; }
     public required Uri? UpdateInfoUrl { get; init; }

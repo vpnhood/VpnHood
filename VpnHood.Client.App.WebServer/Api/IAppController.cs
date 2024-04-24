@@ -15,7 +15,6 @@ public interface IAppController
     Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams);
     Task DeleteClientProfile(Guid clientProfileId);
     void ClearLastError();
-    void AddTestServer();
     Task SetUserSettings(UserSettings userSettings);
     Task<string> Log();
     Task<DeviceAppInfo[]> GetInstalledApps();

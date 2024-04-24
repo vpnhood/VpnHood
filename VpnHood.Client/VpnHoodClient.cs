@@ -253,7 +253,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // disable IncludeIpRanges if it contains all networks
             if (IncludeIpRanges.ToIpNetworks().IsAll())
-                IncludeIpRanges = Array.Empty<IpRange>();
+                IncludeIpRanges = [];
 
             State = ClientState.Connected;
             _initConnectedTime = DateTime.UtcNow;

@@ -271,7 +271,7 @@ internal class ServerHost : IAsyncDisposable, IJob
 
     private X509Certificate ServerCertificateSelectionCallback(object sender, string hostname)
     {
-        var certificate = Certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase)) 
+        var certificate = Certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase))
             ?? Certificates.First();
 
         return certificate.Certificate;
@@ -606,8 +606,13 @@ internal class ServerHost : IAsyncDisposable, IJob
             UdpEndPoints.SingleOrDefault(x => x.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.Port ??
             UdpEndPoints.SingleOrDefault(x => x.Address.Equals(IPAddressUtil.GetAnyIpAddress(ipEndPointPair.LocalEndPoint.AddressFamily)))?.Port;
 
-        var helloResponse = new HelloResponse(sessionResponse)
+        var helloResponse = new HelloResponse
         {
+            ErrorCode = sessionResponse.ErrorCode,
+            ErrorMessage = sessionResponse.ErrorMessage,
+            AccessUsage = sessionResponse.AccessUsage,
+            SuppressedBy = sessionResponse.SuppressedBy,
+            RedirectHostEndPoint = sessionResponse.RedirectHostEndPoint,
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
@@ -616,7 +621,6 @@ internal class ServerHost : IAsyncDisposable, IJob
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ServerProtocolVersion = ServerProtocolVersion,
             SuppressedTo = sessionResponse.SuppressedTo,
-            AccessUsage = sessionResponse.AccessUsage,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IncludeIpRanges = NetFilterIncludeIpRanges,
@@ -628,7 +632,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta,
             AccessKey = sessionResponse.AccessKey,
             DnsServers = DnsServers,
-            ErrorCode = SessionErrorCode.Ok
+            IsAdRequired = sessionResponse.IsAdRequired
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
         await clientStream.DisposeAsync();
@@ -639,7 +643,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the RewardAd request...");
         var request = await ReadRequest<AdRewardRequest>(clientStream, cancellationToken);
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
-        await session.ProcessAdRewardRequest(request, clientStream ,cancellationToken);
+        await session.ProcessAdRewardRequest(request, clientStream, cancellationToken);
     }
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
@@ -652,7 +656,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
 
         // Before calling CloseSession. Session must be validated by GetSession
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponse(SessionErrorCode.Ok), cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
         await clientStream.DisposeAsync(false);
 
         // must be last

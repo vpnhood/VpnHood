@@ -136,7 +136,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
-        if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
+        if (clientProfileId == App.CurrentClientProfile?.ClientProfileId)
             await App.Disconnect(true);
 
         App.ClientProfileService.Remove(clientProfileId);

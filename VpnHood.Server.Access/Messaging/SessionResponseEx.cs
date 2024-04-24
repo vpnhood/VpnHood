@@ -12,6 +12,6 @@ public class SessionResponseEx : SessionResponse
     public DateTime? CreatedTime { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }
     public ulong SessionId { get; set; }
-    public byte[] SessionKey { get; set; } = Array.Empty<byte>();
+    public byte[] SessionKey { get; set; } = [];
     public bool IsAdRequired { get; set; }
 }

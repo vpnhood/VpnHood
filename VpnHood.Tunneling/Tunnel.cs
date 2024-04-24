@@ -324,7 +324,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
                         // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
                         // packets should be empty to decrease the chance of missing the other packets by this packet
-                        if (packetSize > MtuNoFragment && !packets.Any() && _packetQueue.TryDequeue(out ipPacket))
+                        if (packetSize > MtuNoFragment && packets.Count == 0 && _packetQueue.TryDequeue(out ipPacket))
                         {
                             packets.Add(ipPacket);
                             break;

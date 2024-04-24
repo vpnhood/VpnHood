@@ -23,13 +23,6 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(Configuration)'=='Debug'">
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>PublicAccessKey</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PUBLIC_ACCESSKEY)</_Parameter2>
-		</AssemblyAttribute>
-	</ItemGroup>
-
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj" />
 		<ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />

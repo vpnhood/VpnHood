@@ -7,6 +7,7 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -125,24 +126,23 @@ public class Program
         var configJson = JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AppOptions>>().Value, new JsonSerializerOptions { WriteIndented = true });
         logger.LogInformation("App: {Config}", GmUtil.RedactJsonValue(configJson, [nameof(AppOptions.AgentSystemAuthorization)]));
 
-        // migrate
-        //todo
-        {
-            logger.LogInformation("Upgrading..");
-            var scope = webApp.Services.CreateAsyncScope();
-            await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
-            context.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
-            var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
-            logger.LogInformation($"ProjectCount: {projects.Length}..");
-            foreach (var project in projects)
-                project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
-                    .Replace("/", "")
-                    .Replace("+", "")
-                    .Replace("=", "");
-            await context.SaveChangesAsync();
-            logger.LogInformation($"Finish migrate: {projects.Length}..");
-        }
-
         await GrayMintApp.RunAsync(webApp, args);
     }
+
+    //private async Task Migrate(ILogger logger, WebApplication webApp)
+    //{
+    //    logger.LogInformation("Upgrading..");
+    //    var scope = webApp.Services.CreateAsyncScope();
+    //    await using var context = scope.ServiceProvider.GetRequiredService<VhContext>();
+    //    context.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+    //    var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
+    //    logger.LogInformation($"ProjectCount: {projects.Length}..");
+    //    foreach (var project in projects)
+    //        project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+    //            .Replace("/", "")
+    //            .Replace("+", "")
+    //            .Replace("=", "");
+    //    await context.SaveChangesAsync();
+    //    logger.LogInformation($"Finish migrate: {projects.Length}..");
+    //}
 }

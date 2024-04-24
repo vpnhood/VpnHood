@@ -160,11 +160,15 @@ public class CacheService(
 
     public void RewardAd(Guid projectId, string adData)
     {
+        //todo
+        logger.LogInformation("Ad rewarded. ProjectId: {ProjectId}, AdData: {AdData}", projectId, adData);
         Mem.Ads.TryAdd($"{projectId}/{adData}", DateTime.UtcNow);
     }
 
     public bool RemoveAd(Guid projectId, string adData)
     {
+        //todo
+        logger.LogInformation("Ad removed. ProjectId: {ProjectId}, AdData: {AdData}", projectId, adData);
         return Mem.Ads.TryRemove($"{projectId}/{adData}", out _);
     }
 

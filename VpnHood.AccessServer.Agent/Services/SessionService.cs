@@ -94,40 +94,43 @@ public class SessionService(
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Could not validate the request."
             };
 
         // can serverModel request this endpoint?
         if (accessToken.ServerFarmId != server.ServerFarmId)
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not belong to server farm."
             };
 
         // check is token locked
         if (!accessToken.IsEnabled)
-            return new SessionResponseEx(SessionErrorCode.AccessLocked)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessLocked,
                 ErrorMessage = "Your access has been locked! Please contact the support."
             };
 
         // set accessTokenModel expiration time on first use
         if (accessToken.Lifetime != 0 && accessToken.FirstUsedTime != null &&
             accessToken.FirstUsedTime + TimeSpan.FromDays(accessToken.Lifetime) < DateTime.UtcNow)
-        {
-            return new SessionResponseEx(SessionErrorCode.AccessExpired)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessExpired,
                 ErrorMessage = "Your access has been expired! Please contact the support."
             };
-        }
 
         // check is Ip Locked
         var ipLock = clientIp != null ? await vhAgentRepo.IpLockFind(projectId, clientIp.ToString()) : null;
         if (ipLock?.LockedTime != null)
-            return new SessionResponseEx(SessionErrorCode.AccessLocked)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessLocked,
                 ErrorMessage = "Your access has been locked! Please contact the support."
             };
 
@@ -159,8 +162,9 @@ public class SessionService(
 
         // check has device Locked
         if (device.LockedTime != null)
-            return new SessionResponseEx(SessionErrorCode.AccessLocked)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessLocked,
                 ErrorMessage = "Your access has been locked! Please contact the support."
             };
 
@@ -183,20 +187,28 @@ public class SessionService(
 
         // check supported version
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(AgentOptions.MinClientVersion) < 0)
-            return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.UnsupportedClient,
+                ErrorMessage = "This version is not supported! You need to update your app."
+            };
 
         // Check Redirect to another server if everything was ok
         var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
         if (bestTcpEndPoint == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Could not find any free server!"
+            };
 
         // redirect if current server does not serve the best TcpEndPoint
         if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestTcpEndPoint)))
-            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestTcpEndPoint };
-
-        // validate ad
-        if (!string.IsNullOrEmpty(sessionRequestEx.AdData) && !cacheService.RemoveAd(projectId, sessionRequestEx.AdData))
-            return new SessionResponseEx(SessionErrorCode.AdError) { ErrorMessage = "Invalid Ad. Please contact support." };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.RedirectHost,
+                RedirectHostEndPoint = bestTcpEndPoint
+            };
 
         // create session
         var session = new SessionCache
@@ -221,12 +233,12 @@ public class SessionService(
             IsArchived = false,
             UserAgent = device.UserAgent,
             ClientId = device.ClientId,
-            IsAdReward = !string.IsNullOrEmpty(sessionRequestEx.AdData),
-            AdExpirationTime = accessToken.IsAdRequired && string.IsNullOrEmpty(sessionRequestEx.AdData)
-                ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
+            IsAdReward = false,
+            AdExpirationTime = accessToken.IsAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
         };
 
         var ret = await BuildSessionResponse(session, access);
+        ret.IsAdRequired = accessToken.IsAdRequired;
         ret.ExtraData = session.ExtraData;
         ret.GaMeasurementId = project.GaMeasurementId;
         if (ret.ErrorCode != SessionErrorCode.Ok)
@@ -370,14 +382,15 @@ public class SessionService(
             },
             MaxClientCount = access.MaxDevice,
             MaxTraffic = access.MaxTraffic,
-            ExpirationTime = access.ExpirationTime == null || session.AdExpirationTime < access.ExpirationTime 
+            ExpirationTime = access.ExpirationTime == null || session.AdExpirationTime < access.ExpirationTime
                 ? session.AdExpirationTime : access.ExpirationTime,
             ActiveClientCount = activeSession.Count(x => x.EndTime == null)
         };
 
         // build result
-        return new SessionResponseEx(session.ErrorCode)
+        return new SessionResponseEx
         {
+            ErrorCode = session.ErrorCode,
             SessionId = (uint)session.SessionId,
             CreatedTime = session.CreatedTime,
             SessionKey = session.SessionKey,
@@ -402,9 +415,9 @@ public class SessionService(
 
         // validate ad
         var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
-        if (!string.IsNullOrEmpty(adData) && !cacheService.RemoveAd(session.ProjectId, adData))
+        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, adData))
         {
-            session.Close(SessionErrorCode.AdError, "Invalid Ad. Please contact support.");
+            session.Close(SessionErrorCode.AdError, "Could not verify the rewarded ad within the given time frame.");
             return await BuildSessionResponse(session, access);
         }
 
@@ -501,5 +514,17 @@ public class SessionService(
         }
 
         return null;
+    }
+
+    private async Task<bool> VerifyAdReward(Guid projectId, string adData)
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            if (cacheService.RemoveAd(projectId, adData))
+                return true;
+
+            await Task.Delay(1000);
+        }
+        return false;
     }
 }

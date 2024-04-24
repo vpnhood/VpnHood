@@ -30,6 +30,7 @@ public class AdTest
         // create session
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
+        Assert.IsTrue(sessionDom.SessionResponseEx.IsAdRequired);
 
         // extend session
         var sessionResponse = await sessionDom.AddUsage();
@@ -42,27 +43,5 @@ public class AdTest
         //wrong or used ad should close the session
         sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
         Assert.AreEqual(SessionErrorCode.AdError, sessionResponse.ErrorCode);
-    }
-
-    [TestMethod]
-    public async Task Create_session_with_ad_reward()
-    {
-        var farm1 = await ServerFarmDom.Create();
-        var adData = Guid.NewGuid().ToString();
-        farm1.TestApp.AgentTestApp.CacheService.RewardAd(farm1.ProjectId, adData);
-
-        // create token
-        var accessTokenDom = await farm1.CreateAccessToken(new AccessTokenCreateParams
-        {
-            ServerFarmId = farm1.ServerFarmId,
-            AccessTokenName = "tokenName1",
-            Url = "https://foo.com/accessKey1",
-            IsAdRequired = true,
-            IsEnabled = true
-        });
-
-        // create session
-        var sessionDom = await accessTokenDom.CreateSession(adData: adData);
-        Assert.IsNull(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime);
     }
 }

@@ -137,7 +137,11 @@ public class FileAccessManager : IAccessManager
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
@@ -156,8 +160,9 @@ public class FileAccessManager : IAccessManager
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Session does not exist."
             };
@@ -165,8 +170,9 @@ public class FileAccessManager : IAccessManager
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Token does not exist."
             };
@@ -196,12 +202,20 @@ public class FileAccessManager : IAccessManager
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
-            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
 
         accessItem.AccessUsage.Traffic += traffic;
         await WriteAccessItemUsage(accessItem);
@@ -214,8 +228,9 @@ public class FileAccessManager : IAccessManager
             SessionController.Sessions[sessionId].ExpirationTime = null;
 
         var res = SessionController.GetSession(sessionId, accessItem, null);
-        var ret = new SessionResponse(res.ErrorCode)
+        var ret = new SessionResponse
         {
+            ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,
             ErrorMessage = res.ErrorMessage,
             SuppressedBy = res.SuppressedBy

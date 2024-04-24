@@ -13,6 +13,6 @@ public class AppOptions
     public AppResource Resource { get; set; } = new();
     public string? AppGa4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
-    public bool IsAddServerSupported { get; set; } = true;
+    public bool IsAddAccessKeySupported { get; set; } = true;
     public string[] AccessKeys { get; set; } = [];
 }

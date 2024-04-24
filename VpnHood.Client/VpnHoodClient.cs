@@ -674,6 +674,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ServerSecret = sessionResponse.ServerSecret;
             ResponseAccessKey = sessionResponse.AccessKey;
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
+            SessionStatus.IsAdRequired = sessionResponse.IsAdRequired;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;

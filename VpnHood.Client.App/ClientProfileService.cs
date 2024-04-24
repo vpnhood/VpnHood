@@ -51,7 +51,10 @@ public class ClientProfileService
 
     public void Remove(Guid clientProfileId)
     {
-        var clientProfile = _clientProfiles.Single(x => x.ClientProfileId == clientProfileId);
+        var clientProfile = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
+        if (clientProfile == null)
+            return;
+
         _clientProfiles.Remove(clientProfile);
         Save();
     }
@@ -124,7 +127,7 @@ public class ClientProfileService
 
     }
 
-   public async Task<bool> UpdateTokenFromUrl(Token token)
+    public async Task<bool> UpdateTokenByUrl(Token token)
     {
         if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
             return false;

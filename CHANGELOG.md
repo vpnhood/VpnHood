@@ -1,7 +1,10 @@
-# v4.3.492
+# Upcoming
 ### Client
+* Update: Retry failed connection if the access token is updated from the server token URL
+* Update: Remove VpnHood Public Servers
 * Fix: Ad service
 * Android: Fix Google Play Update
+* Android: Improve Android TV
 
 ### Server
 * Feature: Ad reward service

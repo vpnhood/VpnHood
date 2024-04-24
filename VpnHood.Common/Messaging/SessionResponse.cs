@@ -4,18 +4,9 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Common.Messaging;
 
-[method: JsonConstructor]
-public class SessionResponse(SessionErrorCode errorCode)
+public class SessionResponse
 {
-    public SessionResponse(SessionResponse obj) : this(obj.ErrorCode)
-    {
-        ErrorMessage = obj.ErrorMessage;
-        AccessUsage = obj.AccessUsage;
-        SuppressedBy = obj.SuppressedBy;
-        RedirectHostEndPoint = obj.RedirectHostEndPoint;
-    }
-
-    public SessionErrorCode ErrorCode { get; set; } = errorCode;
+    public required SessionErrorCode ErrorCode { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? ErrorMessage { get; set; }

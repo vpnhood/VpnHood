@@ -11,6 +11,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
     public string[] HostNames { get; private set; } = GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
+    public HostRegion[] Regions { get; private set; } = clientProfile.Token.ServerToken.Regions ?? [];
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {

@@ -51,7 +51,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private VersionStatus _versionStatus = VersionStatus.Unknown;
     private CancellationTokenSource? _connectCts;
     private DateTime? _connectedTime;
-    private ClientProfile? _currentClientProfile;
+    private ClientProfile? _clientProfile;
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
@@ -112,7 +112,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         foreach (var accessKey in options.AccessKeys)
         {
             var clientProfile = ClientProfileService.ImportAccessKey(accessKey);
-            Settings.UserSettings.CurrentClientProfileId ??= clientProfile.ClientProfileId; // set first access key as default
+            Settings.UserSettings.ClientProfileId ??= clientProfile.ClientProfileId; // set first access key as default
         }
 
         // initialize features
@@ -137,13 +137,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         JobRunner.Default.Add(this);
     }
 
-    public ClientProfile? CurrentClientProfile
+    public ClientProfile? ClientProfile
     {
         get
         {
-            if (_currentClientProfile?.ClientProfileId != UserSettings.CurrentClientProfileId)
-                _currentClientProfile = ClientProfileService.FindById(UserSettings.CurrentClientProfileId ?? Guid.Empty);
-            return _currentClientProfile;
+            if (_clientProfile?.ClientProfileId != UserSettings.ClientProfileId)
+                _clientProfile = ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty);
+            return _clientProfile;
         }
     }
 
@@ -161,7 +161,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                CurrentClientProfileId = CurrentClientProfile?.ClientProfileId,
+                ClientProfileId = ClientProfile?.ClientProfileId,
+                HostRegionId = UserSettings.HostRegionId,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _lastError,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -174,8 +175,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 ClientIpGroup = _lastCountryIpGroup,
                 IsWaitingForAd = IsWaitingForAd,
                 VersionStatus = _versionStatus,
-                LastPublishInfo =
-                    _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
+                LastPublishInfo = _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture),
@@ -225,7 +225,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
-        var clientProfile = CurrentClientProfile ?? throw new Exception("There is no access key.");
+        var clientProfile = ClientProfile ?? throw new Exception("There is no access key.");
         _ = Connect(clientProfile.ClientProfileId);
     }
 
@@ -239,7 +239,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _hasDisconnectedByUser = false;
     }
 
-    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false,
+    public async Task Connect(Guid? clientProfileId = null, string? regionId = null, bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
         // disconnect current connection
@@ -247,12 +247,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             await Disconnect(true);
 
         // set default profileId to clientProfileId if not set
-        var clientProfile = ClientProfileService.FindById(clientProfileId ?? UserSettings.CurrentClientProfileId ?? Guid.Empty);
-        if (clientProfile == null) 
+        var clientProfile = ClientProfileService.FindById(clientProfileId ?? UserSettings.ClientProfileId ?? Guid.Empty);
+        if (clientProfile == null)
             throw new NotExistsException("Could not find any VPN profile to connect.");
 
         // set current profile
-        UserSettings.CurrentClientProfileId = clientProfile.ClientProfileId;
+        UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         Settings.Save();
 
         try
@@ -304,7 +304,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
             // connect
-            await ConnectInternal(packetCapture, clientProfile.Token, userAgent, true, cancellationToken);
+            await ConnectInternal(packetCapture, clientProfile.Token, regionId, userAgent, true, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -352,12 +352,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             Client.UseUdpChannel = UserSettings.UseUdpChannel;
             Client.DropUdpPackets = UserSettings.DropUdpPackets;
-            if (!IsIdle && UserSettings.CurrentClientProfileId != _activeClientProfileId)
+            if (!IsIdle && UserSettings.ClientProfileId != _activeClientProfileId)
                 _ = Disconnect(true);
         }
 
         // sync culture to app settings
-        _currentClientProfile = null; //lets refresh it
+        _clientProfile = null; //lets refresh it
         Services.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
         InitCulture();
     }
@@ -385,7 +385,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? userAgent,
+    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? regionId, string? userAgent,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -409,8 +409,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DropUdpPackets,
-            AppGa4MeasurementId = _appGa4MeasurementId
+            AppGa4MeasurementId = _appGa4MeasurementId,
+            RegionId = regionId
         };
+
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
@@ -423,7 +425,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             new ConnectOptions
             {
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
-                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
+                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off,
             });
 
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);
@@ -464,7 +466,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 await ClientProfileService.UpdateTokenByUrl(token))
             {
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(packetCapture, token, userAgent, false, cancellationToken);
+                await ConnectInternal(packetCapture, token, regionId, userAgent, false, cancellationToken);
                 return;
             }
 

@@ -26,19 +26,19 @@ public class Ga4Tracker
     public bool? IsMobile { get; init; } // GTag only
 
 
-    //private static string GetPlatform()
-    //{
+    // private static string GetPlatform()
+    // {
     //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
     //        return "Windows";
-
+    //
     //    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
     //        return "Linux";
-
+    //
     //    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
     //        return "macOS";
-
+    //
     //    return "Unknown";
-    //}
+    // }
 
     private void PrepareHttpHeaders(HttpHeaders httpHeaders)
     {

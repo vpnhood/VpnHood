@@ -46,7 +46,7 @@ public class MainActivity : AndroidAppMainActivity
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
         var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnitId);
         //_ = GooglePlayFirebaseCrashlytics.Create(this);
-        if (VpnHoodApp.Instance.IsIdle && VpnHoodApp.Instance.CurrentClientProfile?.Token.IsAdRequired == true)
+        if (VpnHoodApp.Instance.IsIdle && VpnHoodApp.Instance.ClientProfile?.Token.IsAdRequired == true)
            _ = googlePlayAdService.LoadRewardedAd(CancellationToken.None);
 
         VpnHoodApp.Instance.Services.AdService = googlePlayAdService;

@@ -15,7 +15,8 @@ public class CertificateService(
     {
         // make sure farm belong to this project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true);
-
+        serverFarm.UseHostName = false; // disable hostname for self-signed certificate
+        
         // remove all farm certificates
         foreach (var cert in serverFarm.Certificates!)
             await vhRepo.CertificateDelete(projectId, cert.CertificateId);

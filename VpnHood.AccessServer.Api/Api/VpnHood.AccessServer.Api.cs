@@ -8094,9 +8094,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
         public System.Guid? ServerProfileId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
-        public bool UseHostName { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
         public System.Uri? TokenUrl { get; set; } = default!;
 

@@ -5756,7 +5756,6 @@ export interface IServerFarmSummary {
 export class ServerFarmCreateParams implements IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
-    useHostName!: boolean;
     tokenUrl?: string | null;
     pushTokenToClient!: boolean;
 
@@ -5773,7 +5772,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         if (_data) {
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.serverProfileId = _data["serverProfileId"] !== undefined ? _data["serverProfileId"] : <any>null;
-            this.useHostName = _data["useHostName"] !== undefined ? _data["useHostName"] : <any>null;
             this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
             this.pushTokenToClient = _data["pushTokenToClient"] !== undefined ? _data["pushTokenToClient"] : <any>null;
         }
@@ -5790,7 +5788,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         data = typeof data === 'object' ? data : {};
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["serverProfileId"] = this.serverProfileId !== undefined ? this.serverProfileId : <any>null;
-        data["useHostName"] = this.useHostName !== undefined ? this.useHostName : <any>null;
         data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
         data["pushTokenToClient"] = this.pushTokenToClient !== undefined ? this.pushTokenToClient : <any>null;
         return data;
@@ -5800,7 +5797,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
 export interface IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
-    useHostName: boolean;
     tokenUrl?: string | null;
     pushTokenToClient: boolean;
 }

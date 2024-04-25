@@ -46,7 +46,7 @@ public class ServerFarmService(
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
             CreatedTime = DateTime.UtcNow,
-            UseHostName = createParams.UseHostName,
+            UseHostName = false,
             Secret = VhUtil.GenerateKey(),
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),

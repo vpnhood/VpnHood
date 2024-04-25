@@ -191,7 +191,6 @@ public class AccessTokenTest
     {
         using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
         {
-            UseHostName = false,
             ServerFarmName = Guid.NewGuid().ToString()
         }, serverCount: 0);
 
@@ -204,7 +203,6 @@ public class AccessTokenTest
     {
         using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
         {
-            UseHostName = false,
             ServerFarmName = Guid.NewGuid().ToString()
         });
 
@@ -226,8 +224,12 @@ public class AccessTokenTest
         var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
-            UseHostName = true,
             ServerFarmName = Guid.NewGuid().ToString()
+        });
+
+        await farm.Update(new ServerFarmUpdateParams
+        {
+            UseHostName = new PatchOfBoolean { Value = true }
         });
 
         var accessToken = await farm.CreateAccessToken();

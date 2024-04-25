@@ -129,7 +129,8 @@ public class AndroidAppMainActivityHandler
         var profiles = VpnHoodApp.Instance.ClientProfileService.List();
         var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
         _ = VpnHoodApp.Instance.Disconnect(true);
-        VpnHoodApp.Instance.UserSettings.CurrentClientProfileId = profile.ClientProfileId;
+        
+        VpnHoodApp.Instance.UserSettings.ClientProfileId = profile.ClientProfileId;
 
         var isNew = profiles.Any(x => x.ClientProfileId == profile.ClientProfileId);
         var message = isNew

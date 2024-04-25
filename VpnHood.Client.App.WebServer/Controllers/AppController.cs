@@ -48,16 +48,16 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/connect")]
-    public Task Connect([QueryField] Guid? clientProfileId = null, string? regionId = null)
+    public Task Connect([QueryField] Guid? clientProfileId = null, string? regionId = "<not_set>")
     {
-        return App.Connect(clientProfileId, regionId: regionId,  
+        return App.Connect(clientProfileId, regionId: regionId, diagnose: false,
             userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public Task Diagnose([QueryField] Guid? clientProfileId = null, string? regionId = null)
+    public Task Diagnose([QueryField] Guid? clientProfileId = null, string? regionId = "<not_set>")
     {
-        return App.Connect(clientProfileId, regionId: regionId, diagnose: true, 
+        return App.Connect(clientProfileId, regionId: regionId, diagnose: true,
             userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
@@ -138,7 +138,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
-        if (clientProfileId == App.ClientProfile?.ClientProfileId)
+        if (clientProfileId == App.CurrentClientProfile?.ClientProfileId)
             await App.Disconnect(true);
 
         App.ClientProfileService.Remove(clientProfileId);

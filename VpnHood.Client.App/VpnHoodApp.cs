@@ -51,7 +51,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private VersionStatus _versionStatus = VersionStatus.Unknown;
     private CancellationTokenSource? _connectCts;
     private DateTime? _connectedTime;
-    private ClientProfile? _clientProfile;
+    private ClientProfile? _currentClientProfile;
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
@@ -137,13 +137,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         JobRunner.Default.Add(this);
     }
 
-    public ClientProfile? ClientProfile
+    public ClientProfile? CurrentClientProfile
     {
         get
         {
-            if (_clientProfile?.ClientProfileId != UserSettings.ClientProfileId)
-                _clientProfile = ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty);
-            return _clientProfile;
+            if (_currentClientProfile?.ClientProfileId != UserSettings.ClientProfileId)
+                _currentClientProfile = ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty);
+            return _currentClientProfile;
         }
     }
 
@@ -161,7 +161,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfileId = ClientProfile?.ClientProfileId,
+                ClientProfileId = UserSettings.ClientProfileId,
                 HostRegionId = UserSettings.HostRegionId,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _lastError,
@@ -225,7 +225,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
-        var clientProfile = ClientProfile ?? throw new Exception("There is no access key.");
+        var clientProfile = CurrentClientProfile ?? throw new Exception("There is no access key.");
         _ = Connect(clientProfile.ClientProfileId);
     }
 
@@ -239,7 +239,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _hasDisconnectedByUser = false;
     }
 
-    public async Task Connect(Guid? clientProfileId = null, string? regionId = null, bool diagnose = false,
+    public async Task Connect(Guid? clientProfileId = null, string? regionId = "<not_set>", bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
         // disconnect current connection
@@ -247,12 +247,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             await Disconnect(true);
 
         // set default profileId to clientProfileId if not set
+        if (regionId == "<not_set>") regionId = UserSettings.HostRegionId;
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? UserSettings.ClientProfileId ?? Guid.Empty);
         if (clientProfile == null)
             throw new NotExistsException("Could not find any VPN profile to connect.");
 
+        // make sure regionId exists otherwise use any
+        regionId = clientProfile.Token.ServerToken.Regions?.FirstOrDefault(x => x.RegionId == regionId)?.RegionId;
+
         // set current profile
         UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        UserSettings.HostRegionId = regionId;
         Settings.Save();
 
         try
@@ -356,8 +361,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 _ = Disconnect(true);
         }
 
+        //lets refresh clientProfile
+        _currentClientProfile = null;
+
+        // clear HostRegionId if it is not in the current token
+        if (CurrentClientProfile?.Token.ServerToken.Regions is null ||
+            CurrentClientProfile.Token.ServerToken.Regions.All(x => x.RegionId != UserSettings.HostRegionId))
+            UserSettings.HostRegionId = null;
+
         // sync culture to app settings
-        _clientProfile = null; //lets refresh it
         Services.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
         InitCulture();
     }

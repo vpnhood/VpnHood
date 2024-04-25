@@ -19,7 +19,7 @@ public class HelloResponse : SessionResponse
     public int ServerProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = default!;
     public ulong SessionId { get; set; }
-    public byte[] SessionKey { get; set; } = Array.Empty<byte>();
+    public byte[] SessionKey { get; set; } = [];
     public SessionSuppressType SuppressedTo { get; set; } 
     public int MaxDatagramChannelCount { get; set; } 
     public bool IsIpV6Supported { get; set; }

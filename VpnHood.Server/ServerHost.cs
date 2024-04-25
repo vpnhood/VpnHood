@@ -35,8 +35,8 @@ internal class ServerHost : IAsyncDisposable, IJob
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public bool IsStarted { get; private set; }
-    public IPEndPoint[] TcpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
-    public IPEndPoint[] UdpEndPoints { get; private set; } = Array.Empty<IPEndPoint>();
+    public IPEndPoint[] TcpEndPoints { get; private set; } = [];
+    public IPEndPoint[] UdpEndPoints { get; private set; } = [];
     public IPAddress[]? DnsServers { get; set; }
     public CertificateHostName[] Certificates { get; private set; } = [];
 

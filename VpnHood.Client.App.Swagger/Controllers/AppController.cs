@@ -29,13 +29,13 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId = null)
+    public Task Connect(Guid? clientProfileId = null, string? regionId = null)
     {
         throw new NotImplementedException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId = null)
+    public Task Diagnose(Guid? clientProfileId = null, string? regionId = null)
     {
         throw new NotImplementedException();
     }

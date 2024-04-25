@@ -161,7 +161,7 @@ public class ClientAppTest : TestBase
 
         // ************
         // Test: With diagnose
-        _ = app.Connect(clientProfile1.ClientProfileId, true);
+        _ = app.Connect(clientProfile1.ClientProfileId, diagnose: true);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected, 10000);
         app.ClearLastError(); // should not affect
         await app.Disconnect(true);

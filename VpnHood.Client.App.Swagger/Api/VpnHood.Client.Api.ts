@@ -757,50 +757,6 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    addTestServer( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/add-test-server";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "POST",
-            url: url_,
-            headers: {
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processAddTestServer(_response);
-        });
-    }
-
-    protected processAddTestServer(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
     setUserSettings(userSettings: UserSettings, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/user-settings";
         url_ = url_.replace(/[?&]$/, "");
@@ -1452,12 +1408,12 @@ export interface IAppConfig {
 
 export class AppFeatures implements IAppFeatures {
     version!: string;
-    testServerTokenId?: string | null;
+    defaultAccessTokenId?: string | null;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     updateInfoUrl?: string | null;
     uiName?: string | null;
-    isAddServerSupported!: boolean;
+    isAddAccessKeySupported!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1471,12 +1427,12 @@ export class AppFeatures implements IAppFeatures {
     init(_data?: any) {
         if (_data) {
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
-            this.testServerTokenId = _data["testServerTokenId"] !== undefined ? _data["testServerTokenId"] : <any>null;
+            this.defaultAccessTokenId = _data["defaultAccessTokenId"] !== undefined ? _data["defaultAccessTokenId"] : <any>null;
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : <any>null;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
-            this.isAddServerSupported = _data["isAddServerSupported"] !== undefined ? _data["isAddServerSupported"] : <any>null;
+            this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : <any>null;
         }
     }
 
@@ -1490,24 +1446,24 @@ export class AppFeatures implements IAppFeatures {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["version"] = this.version !== undefined ? this.version : <any>null;
-        data["testServerTokenId"] = this.testServerTokenId !== undefined ? this.testServerTokenId : <any>null;
+        data["defaultAccessTokenId"] = this.defaultAccessTokenId !== undefined ? this.defaultAccessTokenId : <any>null;
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : <any>null;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
-        data["isAddServerSupported"] = this.isAddServerSupported !== undefined ? this.isAddServerSupported : <any>null;
+        data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : <any>null;
         return data;
     }
 }
 
 export interface IAppFeatures {
     version: string;
-    testServerTokenId?: string | null;
+    defaultAccessTokenId?: string | null;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     updateInfoUrl?: string | null;
     uiName?: string | null;
-    isAddServerSupported: boolean;
+    isAddAccessKeySupported: boolean;
 }
 
 export class AppSettings implements IAppSettings {
@@ -1518,7 +1474,6 @@ export class AppSettings implements IAppSettings {
     userSettings!: UserSettings;
     clientId!: string;
     lastCountryIpGroupId?: string | null;
-    testServerTokenAutoAdded?: string | null;
     lastUpdateCheckTime?: Date | null;
 
     constructor(data?: IAppSettings) {
@@ -1542,7 +1497,6 @@ export class AppSettings implements IAppSettings {
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
-            this.testServerTokenAutoAdded = _data["testServerTokenAutoAdded"] !== undefined ? _data["testServerTokenAutoAdded"] : <any>null;
             this.lastUpdateCheckTime = _data["lastUpdateCheckTime"] ? new Date(_data["lastUpdateCheckTime"].toString()) : <any>null;
         }
     }
@@ -1563,7 +1517,6 @@ export class AppSettings implements IAppSettings {
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
-        data["testServerTokenAutoAdded"] = this.testServerTokenAutoAdded !== undefined ? this.testServerTokenAutoAdded : <any>null;
         data["lastUpdateCheckTime"] = this.lastUpdateCheckTime ? this.lastUpdateCheckTime.toISOString() : <any>null;
         return data;
     }
@@ -1577,7 +1530,6 @@ export interface IAppSettings {
     userSettings: UserSettings;
     clientId: string;
     lastCountryIpGroupId?: string | null;
-    testServerTokenAutoAdded?: string | null;
     lastUpdateCheckTime?: Date | null;
 }
 
@@ -1960,6 +1912,7 @@ export class SessionStatus implements ISessionStatus {
     suppressedTo!: SessionSuppressType;
     suppressedBy!: SessionSuppressType;
     errorMessage?: string | null;
+    isAdRequired!: boolean;
 
     constructor(data?: ISessionStatus) {
         if (data) {
@@ -1977,6 +1930,7 @@ export class SessionStatus implements ISessionStatus {
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
             this.suppressedBy = _data["suppressedBy"] !== undefined ? _data["suppressedBy"] : <any>null;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
+            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
         }
     }
 
@@ -1994,6 +1948,7 @@ export class SessionStatus implements ISessionStatus {
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
         data["suppressedBy"] = this.suppressedBy !== undefined ? this.suppressedBy : <any>null;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
+        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         return data;
     }
 }
@@ -2004,6 +1959,7 @@ export interface ISessionStatus {
     suppressedTo: SessionSuppressType;
     suppressedBy: SessionSuppressType;
     errorMessage?: string | null;
+    isAdRequired: boolean;
 }
 
 export enum SessionErrorCode {
@@ -2016,6 +1972,7 @@ export enum SessionErrorCode {
     AccessTrafficOverflow = "AccessTrafficOverflow",
     AccessLocked = "AccessLocked",
     AccessError = "AccessError",
+    AdError = "AdError",
     Maintenance = "Maintenance",
     RedirectHost = "RedirectHost",
     UnsupportedClient = "UnsupportedClient",
@@ -2417,6 +2374,7 @@ export class AppStrings implements IAppStrings {
     msgAccessKeyUpdated!: string;
     msgCantReadAccessKey!: string;
     msgUnsupportedContent!: string;
+    msgCantShowAd!: string;
     open!: string;
     openInBrowser!: string;
 
@@ -2441,6 +2399,7 @@ export class AppStrings implements IAppStrings {
             this.msgAccessKeyUpdated = _data["msgAccessKeyUpdated"] !== undefined ? _data["msgAccessKeyUpdated"] : <any>null;
             this.msgCantReadAccessKey = _data["msgCantReadAccessKey"] !== undefined ? _data["msgCantReadAccessKey"] : <any>null;
             this.msgUnsupportedContent = _data["msgUnsupportedContent"] !== undefined ? _data["msgUnsupportedContent"] : <any>null;
+            this.msgCantShowAd = _data["msgCantShowAd"] !== undefined ? _data["msgCantShowAd"] : <any>null;
             this.open = _data["open"] !== undefined ? _data["open"] : <any>null;
             this.openInBrowser = _data["openInBrowser"] !== undefined ? _data["openInBrowser"] : <any>null;
         }
@@ -2465,6 +2424,7 @@ export class AppStrings implements IAppStrings {
         data["msgAccessKeyUpdated"] = this.msgAccessKeyUpdated !== undefined ? this.msgAccessKeyUpdated : <any>null;
         data["msgCantReadAccessKey"] = this.msgCantReadAccessKey !== undefined ? this.msgCantReadAccessKey : <any>null;
         data["msgUnsupportedContent"] = this.msgUnsupportedContent !== undefined ? this.msgUnsupportedContent : <any>null;
+        data["msgCantShowAd"] = this.msgCantShowAd !== undefined ? this.msgCantShowAd : <any>null;
         data["open"] = this.open !== undefined ? this.open : <any>null;
         data["openInBrowser"] = this.openInBrowser !== undefined ? this.openInBrowser : <any>null;
         return data;
@@ -2482,6 +2442,7 @@ export interface IAppStrings {
     msgAccessKeyUpdated: string;
     msgCantReadAccessKey: string;
     msgUnsupportedContent: string;
+    msgCantShowAd: string;
     open: string;
     openInBrowser: string;
 }

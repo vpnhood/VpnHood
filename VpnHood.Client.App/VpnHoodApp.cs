@@ -357,6 +357,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
 
         // sync culture to app settings
+        _currentClientProfile = null; //lets refresh it
         Services.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
         InitCulture();
     }

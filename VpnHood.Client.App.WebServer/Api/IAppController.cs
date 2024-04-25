@@ -8,8 +8,8 @@ public interface IAppController
     Task<AppConfig> Configure(ConfigParams configParams);
     Task<AppConfig> GetConfig();
     Task<AppState> GetState();
-    Task Connect(Guid? clientProfileId = null);
-    Task Diagnose(Guid? clientProfileId = null);
+    Task Connect(Guid? clientProfileId = null, string? regionId = null);
+    Task Diagnose(Guid? clientProfileId = null, string? regionId = null);
     Task Disconnect();
     Task<ClientProfileInfo> AddAccessKey(string accessKey);
     Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams);

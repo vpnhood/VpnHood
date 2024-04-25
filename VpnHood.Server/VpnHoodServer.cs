@@ -130,7 +130,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 EnvironmentVersion = Environment.Version,
                 Version = ServerVersion,
                 PrivateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses(),
-                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
+                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : [],
                 Status = GetStatus(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,

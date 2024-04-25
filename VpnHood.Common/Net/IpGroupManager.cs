@@ -11,7 +11,7 @@ public class IpGroupManager
 {
     private readonly string _ipGroupsFilePath;
 
-    public IpGroup[] IpGroups { get; private set; } = Array.Empty<IpGroup>();
+    public IpGroup[] IpGroups { get; private set; } = [];
     private readonly Dictionary<IpRange, IpGroup> _ipRangeGroups = new();
     private IpRange[]? _sortedIpRanges;
 

@@ -110,10 +110,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
         // add default test public server if not added yet
         ClientProfileService.Remove(Guid.Parse("5aacec55-5cac-457a-acad-3976969236f8")); //remove obsoleted public server
+        string? builtInAccessTokenId = null;
         foreach (var accessKey in options.AccessKeys)
         {
             var clientProfile = ClientProfileService.ImportAccessKey(accessKey);
             Settings.UserSettings.ClientProfileId ??= clientProfile.ClientProfileId; // set first access key as default
+            builtInAccessTokenId ??= clientProfile.ClientProfileId.ToString();
         }
 
         // initialize features
@@ -124,7 +126,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             UpdateInfoUrl = options.UpdateInfoUrl,
-            UiName = options.UiName
+            UiName = options.UiName,
+            BuiltInAccessTokenId = builtInAccessTokenId
         };
 
         // initialize services

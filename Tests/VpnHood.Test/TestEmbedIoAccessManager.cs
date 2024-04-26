@@ -19,7 +19,7 @@ namespace VpnHood.Test;
 public class TestEmbedIoAccessManager : IDisposable
 {
     private WebServer _webServer;
-    
+
     public IAccessManager FileAccessManager { get; }
 
 
@@ -37,6 +37,7 @@ public class TestEmbedIoAccessManager : IDisposable
     public Uri BaseUri { get; }
     public IPEndPoint? RedirectHostEndPoint { get; set; }
     public HttpException? HttpException { get; set; }
+    public Dictionary<string, IPEndPoint?> Regions { get; set; } = new();
 
     public void Dispose()
     {
@@ -110,6 +111,10 @@ public class TestEmbedIoAccessManager : IDisposable
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
+
+            if (!sessionRequestEx.AllowRedirect)
+                return res;
+            
             if (embedIoAccessManager.RedirectHostEndPoint != null &&
                 !sessionRequestEx.HostEndPoint.Equals(embedIoAccessManager.RedirectHostEndPoint))
             {
@@ -117,11 +122,22 @@ public class TestEmbedIoAccessManager : IDisposable
                 res.ErrorCode = SessionErrorCode.RedirectHost;
             }
 
+            // manage region
+            if (sessionRequestEx.RegionId != null)
+            {
+                var redirectEndPoint = embedIoAccessManager.Regions[sessionRequestEx.RegionId];
+                if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
+                {
+                    res.RedirectHostEndPoint = embedIoAccessManager.Regions[sessionRequestEx.RegionId];
+                    res.ErrorCode = SessionErrorCode.RedirectHost;
+                }
+            }
+
             return res;
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId, 
+        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId,
             [QueryField] bool closeSession, [QueryField] string? adData)
         {
             _ = serverId;

@@ -5,7 +5,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfileService
 {
@@ -59,20 +59,31 @@ public class ClientProfileService
         Save();
     }
 
-    public void Update(ClientProfile clientProfile)
+    public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
-        var index = _clientProfiles.FindIndex(x => x.ClientProfileId == clientProfile.ClientProfileId);
-        if (index == -1)
-            throw new NotExistsException($"ClientProfile does not exist. ClientProfileId: {clientProfile.ClientProfileId}");
+        var clientProfile = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+            ?? throw new NotExistsException("ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
-        _clientProfiles[index] = clientProfile;
+        // update name
+        if (updateParams.ClientProfileName != null)
+        {
+            var name = updateParams.ClientProfileName.Value?.Trim();
+            if (name?.Length == 0) name = null;
+            clientProfile.ClientProfileName = name;
+        }
 
-        // fix name
-        clientProfile.ClientProfileName = clientProfile.ClientProfileName?.Trim();
-        if (string.IsNullOrWhiteSpace(clientProfile.ClientProfileName) || clientProfile.ClientProfileName == clientProfile.Token.Name?.Trim())
-            clientProfile.ClientProfileName = null;
+        // update region
+        if (updateParams.RegionId != null)
+        {
+            if (updateParams.RegionId.Value !=null && 
+                clientProfile.Token.ServerToken.Regions?.SingleOrDefault(x=>x.RegionId == updateParams.RegionId) == null)
+                throw new NotExistsException("RegionId does not exist.");
+
+            clientProfile.RegionId = updateParams.RegionId;
+        }
 
         Save();
+        return clientProfile;
     }
 
 

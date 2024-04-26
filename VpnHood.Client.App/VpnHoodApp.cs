@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
@@ -123,7 +124,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsIncludeAppsSupported = Device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             UpdateInfoUrl = options.UpdateInfoUrl,
-            UiName = options.UiName,
+            UiName = options.UiName
         };
 
         // initialize services
@@ -162,7 +163,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfileId = UserSettings.ClientProfileId,
-                HostRegionId = UserSettings.HostRegionId,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _lastError,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -179,7 +179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture),
-                SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
+                SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture)
             };
         }
     }
@@ -239,7 +239,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _hasDisconnectedByUser = false;
     }
 
-    public async Task Connect(Guid? clientProfileId = null, string? regionId = "<not_set>", bool diagnose = false,
+    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
         // disconnect current connection
@@ -247,17 +247,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             await Disconnect(true);
 
         // set default profileId to clientProfileId if not set
-        if (regionId == "<not_set>") regionId = UserSettings.HostRegionId;
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? UserSettings.ClientProfileId ?? Guid.Empty);
         if (clientProfile == null)
             throw new NotExistsException("Could not find any VPN profile to connect.");
 
-        // make sure regionId exists otherwise use any
-        regionId = clientProfile.Token.ServerToken.Regions?.FirstOrDefault(x => x.RegionId == regionId)?.RegionId;
-
         // set current profile
         UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        UserSettings.HostRegionId = regionId;
         Settings.Save();
 
         try
@@ -309,7 +304,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
             // connect
-            await ConnectInternal(packetCapture, clientProfile.Token, regionId, userAgent, true, cancellationToken);
+            await ConnectInternal(packetCapture, clientProfile.Token, clientProfile.RegionId, userAgent, true, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -363,11 +358,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
         //lets refresh clientProfile
         _currentClientProfile = null;
-
-        // clear HostRegionId if it is not in the current token
-        if (CurrentClientProfile?.Token.ServerToken.Regions is null ||
-            CurrentClientProfile.Token.ServerToken.Regions.All(x => x.RegionId != UserSettings.HostRegionId))
-            UserSettings.HostRegionId = null;
 
         // sync culture to app settings
         Services.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
@@ -437,7 +427,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             new ConnectOptions
             {
                 MaxReconnectCount = UserSettings.MaxReconnectCount,
-                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off,
+                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
             });
 
         ClientConnectCreated?.Invoke(this, EventArgs.Empty);

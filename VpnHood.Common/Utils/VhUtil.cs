@@ -183,7 +183,7 @@ public static class VhUtil
         try
         {
             if (!File.Exists(filePath))
-                return default(T);
+                return default;
 
             var json = File.ReadAllText(filePath);
             var appAccount = JsonDeserialize<T>(json, options);
@@ -192,7 +192,7 @@ public static class VhUtil
         catch (Exception ex)
         {
             logger?.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
-            return default(T);
+            return default;
         }
     }
 

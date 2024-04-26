@@ -1,9 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Java.Lang;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install;
 using Xamarin.Google.Android.Play.Core.Install.Model;
+using Exception = System.Exception;
+using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -27,7 +30,7 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
 
             // Show Google Play update dialog
             var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
-            var updateFlowResult = await new GooglePlayTaskCompleteListener<Java.Lang.Integer>(updateFlowPlayTask).Task;
+            var updateFlowResult = await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task;
             if (updateFlowResult.IntValue() != -1)
                 throw new Exception("Could not start update flow.");
 
@@ -36,7 +39,7 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
 
             // Start install downloaded update
             var installUpdateTask = appUpdateManager.CompleteUpdate();
-            var installUpdateStatus = await new GooglePlayTaskCompleteListener<Java.Lang.Integer>(installUpdateTask).Task;
+            var installUpdateStatus = await new GooglePlayTaskCompleteListener<Integer>(installUpdateTask).Task;
 
             // Could not start install
             if (installUpdateStatus.IntValue() != -1)
@@ -52,7 +55,7 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
     }
 
     public class GooglePlayDownloadCompleteListener
-        : Java.Lang.Object, IInstallStateUpdatedListener
+        : Object, IInstallStateUpdatedListener
     {
         private readonly TaskCompletionSource _taskCompletionSource = new();
         private readonly IAppUpdateManager _appUpdateManager;

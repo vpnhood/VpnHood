@@ -2,6 +2,7 @@
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
@@ -48,16 +49,16 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/connect")]
-    public Task Connect([QueryField] Guid? clientProfileId = null, string? regionId = "<not_set>")
+    public Task Connect([QueryField] Guid? clientProfileId = null)
     {
-        return App.Connect(clientProfileId, regionId: regionId, diagnose: false,
+        return App.Connect(clientProfileId, diagnose: false,
             userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
-    public Task Diagnose([QueryField] Guid? clientProfileId = null, string? regionId = "<not_set>")
+    public Task Diagnose([QueryField] Guid? clientProfileId = null)
     {
-        return App.Connect(clientProfileId, regionId: regionId, diagnose: true,
+        return App.Connect(clientProfileId, diagnose: true,
             userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
@@ -124,15 +125,11 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
-    public async Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>();
-
-        var clientProfile = App.ClientProfileService.Get(clientProfileId);
-        if (updateParams.Name != null)
-            clientProfile.ClientProfileName = updateParams.Name;
-
-        App.ClientProfileService.Update(clientProfile);
+        var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
+        return clientProfile.ToInfo();
     }
 
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]

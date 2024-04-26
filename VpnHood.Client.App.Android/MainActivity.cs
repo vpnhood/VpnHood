@@ -3,7 +3,6 @@ using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
-using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Droid.Properties;
 
 namespace VpnHood.Client.App.Droid;
@@ -43,7 +42,8 @@ public class MainActivity : AndroidAppMainActivity
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3],
 #if GOOGLE_PLAY
-            AppUpdaterService = new GooglePlayAppUpdaterService(this)
+            // don't use using, because it will be unresolved if the nuget is not added by publish script
+            AppUpdaterService = new GooglePlay.GooglePlayAppUpdaterService(this)
 #else
             AppUpdaterService = null
 #endif

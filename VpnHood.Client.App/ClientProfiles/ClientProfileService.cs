@@ -75,8 +75,8 @@ public class ClientProfileService
         // update region
         if (updateParams.RegionId != null)
         {
-            if (updateParams.RegionId.Value !=null && 
-                clientProfile.Token.ServerToken.Regions?.SingleOrDefault(x=>x.RegionId == updateParams.RegionId) == null)
+            if (updateParams.RegionId.Value != null &&
+                clientProfile.Token.ServerToken.Regions?.SingleOrDefault(x => x.RegionId == updateParams.RegionId) == null)
                 throw new NotExistsException("RegionId does not exist.");
 
             clientProfile.RegionId = updateParams.RegionId;
@@ -87,17 +87,21 @@ public class ClientProfileService
     }
 
 
-    public ClientProfile ImportAccessKey(string accessKey)
+    public ClientProfile ImportAccessKey(string accessKey, bool overwriteNew = true)
     {
         var token = Token.FromAccessKey(accessKey);
         return ImportAccessToken(token);
     }
 
-    public ClientProfile ImportAccessToken(Token token)
+    public ClientProfile ImportAccessToken(Token token, bool overwriteNew = true)
     {
         // update tokens
-        foreach (var clientProfile in _clientProfiles.Where(clientProfile => clientProfile.Token.TokenId == token.TokenId))
-            clientProfile.Token = token;
+        foreach (var clientProfile in _clientProfiles.Where(clientProfile =>
+                     clientProfile.Token.TokenId == token.TokenId))
+        {
+            if (overwriteNew || token.IssuedAt > clientProfile.Token.IssuedAt)
+                clientProfile.Token = token;
+        }
 
         // add if it is a new token
         if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId))

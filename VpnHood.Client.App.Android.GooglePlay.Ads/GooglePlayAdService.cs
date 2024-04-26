@@ -3,6 +3,7 @@ using Android.Gms.Ads.Rewarded;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
+using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 public class GooglePlayAdService(
@@ -115,7 +116,7 @@ public class GooglePlayAdService(
         }
     }
 
-    private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
+    private class MyOnUserEarnedRewardListener : Object, IOnUserEarnedRewardListener
     {
         private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();
         public Task<IRewardItem> UserEarnedRewardTask => _earnedRewardCompletionSource.Task;

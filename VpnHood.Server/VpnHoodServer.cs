@@ -270,7 +270,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 nameof(ServerConfig.ServerSecret),
                 nameof(CertificateData.RawData),
                 nameof(ServerConfig.TcpEndPoints),
-                nameof(ServerConfig.UdpEndPoints),
+                nameof(ServerConfig.UdpEndPoints)
             ])
             : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
     }

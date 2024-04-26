@@ -1,7 +1,7 @@
 ﻿using VpnHood.Common;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfileInfo(ClientProfile clientProfile)
 {

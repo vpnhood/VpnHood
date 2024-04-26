@@ -1,5 +1,4 @@
-﻿
-using System.Net;
+﻿using System.Net;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Messaging;

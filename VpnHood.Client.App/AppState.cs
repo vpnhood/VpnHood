@@ -9,7 +9,6 @@ public class AppState
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
     public required Guid? ClientProfileId { get; init; }
-    public required string? HostRegionId { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseStarted { get; init; }

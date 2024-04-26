@@ -310,6 +310,7 @@ public class FileAccessManager : IAccessManager
             ExpirationTime = expirationTime,
             Token = new Token
             {
+                IssuedAt = DateTime.UtcNow,
                 TokenId = Guid.NewGuid().ToString(),
                 Secret = aes.Key,
                 Name = tokenName,

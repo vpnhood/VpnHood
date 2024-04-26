@@ -113,7 +113,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         string? builtInAccessTokenId = null;
         foreach (var accessKey in options.AccessKeys)
         {
-            var clientProfile = ClientProfileService.ImportAccessKey(accessKey);
+            var clientProfile = ClientProfileService.ImportAccessKey(accessKey, false);
             Settings.UserSettings.ClientProfileId ??= clientProfile.ClientProfileId; // set first access key as default
             builtInAccessTokenId ??= clientProfile.ClientProfileId.ToString();
         }

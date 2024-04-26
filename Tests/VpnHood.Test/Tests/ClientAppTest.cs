@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -68,13 +69,14 @@ public class ClientAppTest : TestBase
 
 
     [TestMethod]
-    public async Task Add_remove_clientProfiles()
+    public async Task ClientProfiles_CRUD()
     {
         await using var app = TestHelper.CreateClientApp();
 
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
+        token1.ServerToken.Regions = [new HostRegion{RegionId = "r1"}, new HostRegion { RegionId = "r2" }];
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
         Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");
@@ -98,24 +100,34 @@ public class ClientAppTest : TestBase
         Assert.ThrowsException<NotExistsException>(() =>
         {
             // ReSharper disable once AccessToDisposedClosure
-            app.ClientProfileService.Update(new ClientProfile
+            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
             {
-                Token = CreateToken(),
-                ClientProfileName = "Hi",
-                ClientProfileId = Guid.NewGuid()
+                ClientProfileName =  "Hi"
+            });
+
+        });
+
+        // ************
+        // *** TEST ***: Update throw NotExistsException exception if regionId does not exist
+        Assert.ThrowsException<NotExistsException>(() =>
+        {
+            // ReSharper disable once AccessToDisposedClosure
+            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
+            {
+                RegionId = Guid.NewGuid().ToString()
             });
 
         });
 
         // ************
         // *** TEST ***: Update should update the old node if ClientProfileId already exists
-        app.ClientProfileService.Update(new ClientProfile
+        app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
         {
             ClientProfileName = "Hi2",
-            ClientProfileId = clientProfile1.ClientProfileId,
-            Token = clientProfile1.Token
+            RegionId = "r2"
         });
         Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
+        Assert.AreEqual("r2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).RegionId);
 
         // ************
         // *** TEST ***: RemoveClientProfile

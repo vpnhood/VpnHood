@@ -4,7 +4,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.TokenLegacy;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.ClientProfiles;
 
 // deprecated by version 3.2.440 or upper
 internal static class ClientProfileServiceLegacy
@@ -30,9 +30,9 @@ internal static class ClientProfileServiceLegacy
         {
             var legacyClientProfiles = VhUtil.JsonDeserialize<ClientProfileLegacy[]>(File.ReadAllText(legacyProfilesFilePath));
 #pragma warning disable CS0618 // Type or member is obsolete
-            var tokens = VhUtil.JsonDeserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath)).Select(x=>x.ToToken()).ToArray();
+            var tokens = VhUtil.JsonDeserialize<TokenV3[]>(File.ReadAllText(legacyTokensFilePath)).Select(x => x.ToToken()).ToArray();
 #pragma warning restore CS0618 // Type or member is obsolete
-            var clientProfiles = new List<ClientProfile>();   
+            var clientProfiles = new List<ClientProfile>();
 
             // Create a file for each profile
             foreach (var legacyClientProfile in legacyClientProfiles)
@@ -68,7 +68,7 @@ internal static class ClientProfileServiceLegacy
             VhLogger.Instance.LogWarning(ex, $"Could not delete legacy file. {legacyProfilesFilePath}");
         }
 
-        try { File.Move(legacyTokensFilePath, legacyTokensFilePath + ".backup");  }
+        try { File.Move(legacyTokensFilePath, legacyTokensFilePath + ".backup"); }
         catch (Exception ex)
         {
             VhLogger.Instance.LogWarning(ex, $"Could not delete a legacy file. {legacyTokensFilePath}");

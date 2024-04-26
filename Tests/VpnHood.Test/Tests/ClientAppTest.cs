@@ -28,6 +28,7 @@ public class ClientAppTest : TestBase
         var token = new Token
         {
             Name = "Default Test Server",
+            IssuedAt = DateTime.UtcNow,
             SupportId = _lastSupportId++.ToString(),
             TokenId = randomId.ToString(),
             Secret = randomId.ToByteArray(),

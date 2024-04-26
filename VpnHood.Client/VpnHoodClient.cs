@@ -76,6 +76,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
+    public string? RegionId { get; }
 
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
@@ -114,6 +115,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
+        RegionId = options.RegionId;
 
         // NAT
         Nat = new Nat(true);
@@ -593,7 +595,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ConnectInternal(CancellationToken cancellationToken, bool redirecting = false)
+    private async Task ConnectInternal(CancellationToken cancellationToken, bool allowRedirect = true)
     {
         try
         {
@@ -611,7 +613,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 RequestId = Guid.NewGuid() + ":client",
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
-                TokenId = Token.TokenId
+                TokenId = Token.TokenId,
+                RegionId = RegionId,
+                AllowRedirect = allowRedirect
             };
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken);
@@ -727,10 +731,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _ = ManageDatagramChannels(cancellationToken);
 
         }
-        catch (RedirectHostException ex) when (!redirecting)
+        catch (RedirectHostException ex) when (allowRedirect)
         {
             SetHostEndPoint(ex.RedirectHostEndPoint);
-            await ConnectInternal(cancellationToken, true);
+            await ConnectInternal(cancellationToken, false);
         }
     }
 

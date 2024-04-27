@@ -3,6 +3,7 @@
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App
 * Fix: Ad service
+* Android: Fix Diagnoser mistakely shows "Connection is not stable"
 * Android: Fix Google Play Update
 * Android: Improve Android TV
 

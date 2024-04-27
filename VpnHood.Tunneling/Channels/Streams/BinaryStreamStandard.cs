@@ -280,7 +280,7 @@ public class BinaryStreamStandard : ChunkStream
         }
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public override ValueTask DisposeAsync()
     {

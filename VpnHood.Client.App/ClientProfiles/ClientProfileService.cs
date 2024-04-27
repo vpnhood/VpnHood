@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Authentication;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
@@ -12,6 +13,7 @@ public class ClientProfileService
     private const string FilenameProfiles = "vpn_profiles.json";
     private readonly string _folderPath;
     private readonly List<ClientProfile> _clientProfiles;
+    private string[] _builtInAccessTokenIds = [];
 
     private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
 
@@ -40,7 +42,6 @@ public class ClientProfileService
     public Token GetToken(string tokenId)
     {
         var clientProfile = FindByTokenId(tokenId) ?? throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
-        if (clientProfile == null) throw new KeyNotFoundException();
         return clientProfile.Token;
     }
 
@@ -51,11 +52,20 @@ public class ClientProfileService
 
     public void Remove(Guid clientProfileId)
     {
-        var clientProfile = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
-        if (clientProfile == null)
-            return;
+        var clientProfile =
+            _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+            ?? throw new NotExistsException();
 
         _clientProfiles.Remove(clientProfile);
+        Save();
+    }
+
+    public void TryRemoveByTokenId(string tokenId)
+    {
+        var clientProfiles = _clientProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
+        foreach (var clientProfile in clientProfiles)
+            _clientProfiles.Remove(clientProfile);
+
         Save();
     }
 
@@ -87,19 +97,28 @@ public class ClientProfileService
     }
 
 
-    public ClientProfile ImportAccessKey(string accessKey, bool overwriteNew = true)
+    public ClientProfile ImportAccessKey(string accessKey)
     {
         var token = Token.FromAccessKey(accessKey);
-        return ImportAccessToken(token);
+        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
     }
 
-    public ClientProfile ImportAccessToken(Token token, bool overwriteNew = true)
+    public ClientProfile ImportAccessToken(Token token)
     {
+        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
+    }
+
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn)
+    {
+        // make sure no one overwrites built-in tokens
+        if (!allowOverwriteBuiltIn && _builtInAccessTokenIds.Any(tokenId => tokenId == token.TokenId))
+            throw new AuthenticationException("Could not overwrite BuiltIn tokens.");
+
         // update tokens
         foreach (var clientProfile in _clientProfiles.Where(clientProfile =>
                      clientProfile.Token.TokenId == token.TokenId))
         {
-            if (overwriteNew || token.IssuedAt > clientProfile.Token.IssuedAt)
+            if (overwriteNewer || token.IssuedAt >= clientProfile.Token.IssuedAt)
                 clientProfile.Token = token;
         }
 
@@ -117,6 +136,14 @@ public class ClientProfileService
 
         var ret = _clientProfiles.First(x => x.Token.TokenId == token.TokenId);
         return ret;
+    }
+
+    internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
+    {
+        var accessTokens = accessKeys.Select(Token.FromAccessKey).ToArray();
+        var clientProfiles = accessTokens.Select(token => ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true)).ToArray();
+        _builtInAccessTokenIds = clientProfiles.Select(clientProfile => clientProfile.Token.TokenId).ToArray();
+        return clientProfiles;
     }
 
     public Token UpdateTokenByAccessKey(Token token, string accessKey)
@@ -194,5 +221,4 @@ public class ClientProfileService
             return [];
         }
     }
-
 }

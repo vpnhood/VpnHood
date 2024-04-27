@@ -189,7 +189,7 @@ public class ClientProfileService
             //update store
             token = VhUtil.JsonClone<Token>(token);
             token.ServerToken = newServerToken;
-            ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true);
+            ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: true);
             VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
             return true;
         }

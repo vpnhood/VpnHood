@@ -462,7 +462,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             // try to update token from url after connection or error if ResponseAccessKey is not set
             if (!string.IsNullOrEmpty(token.ServerToken.Url) && allowUpdateToken &&
-                await ClientProfileService.UpdateTokenByUrl(token))
+                await ClientProfileService.UpdateServerTokenByUrl(token))
             {
                 token = ClientProfileService.GetToken(token.TokenId);
                 await ConnectInternal(packetCapture, token, regionId, userAgent, false, cancellationToken);

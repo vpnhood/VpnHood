@@ -90,7 +90,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
-        Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
+        Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
         _loadCountryIpGroups = options.LoadCountryIpGroups;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
@@ -202,12 +202,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private void CheckConnectionStateChanged()
+    private void FireConnectionStateChanged()
     {
         // check changed state
         var connectionState = ConnectionState;
-        if (connectionState == _lastConnectionState)
-            return;
+        if (connectionState == _lastConnectionState) return;
         _lastConnectionState = connectionState;
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -270,7 +269,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _hasDiagnoseStarted = diagnose;
             _connectRequestTime = DateTime.Now;
             IsWaitingForAd = false;
-            CheckConnectionStateChanged();
+            FireConnectionStateChanged();
             LogService.Start(Settings.UserSettings.Logging, diagnose);
 
             // log general info
@@ -329,7 +328,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _connectCts = null;
             _isConnecting = false;
             IsWaitingForAd = false;
-            CheckConnectionStateChanged();
+            FireConnectionStateChanged();
         }
     }
 
@@ -507,7 +506,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         if (ClientConnect?.IsDisposed == true)
             _ = Disconnect();
         else
-            CheckConnectionStateChanged();
+            FireConnectionStateChanged();
     }
 
     private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
@@ -548,7 +547,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _ = Disconnect();
     }
 
-    public async Task Disconnect(bool byUser = false)
+    private readonly object _disconnectLock = new();
+    private Task? _disconnectTask;
+
+    public Task Disconnect(bool byUser = false)
+    {
+        lock (_disconnectLock)
+        {
+            if (_disconnectTask==null || _disconnectTask.IsCompleted)
+                _disconnectTask = DisconnectCore(byUser);
+        }
+
+        return _disconnectTask;
+    }
+
+    private async Task DisconnectCore(bool byUser)
     {
         if (_isDisconnecting || IsIdle)
             return;
@@ -562,7 +575,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             }
 
             _isDisconnecting = true;
-            CheckConnectionStateChanged();
+            FireConnectionStateChanged();
 
             // check for any success
             if (Client != null && _connectedTime != null)
@@ -602,7 +615,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _isDisconnecting = false;
             _connectedTime = null;
             ClientConnect = null;
-            CheckConnectionStateChanged();
+            FireConnectionStateChanged();
         }
     }
 
@@ -625,7 +638,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             try
             {
                 _initializingState++;
-                CheckConnectionStateChanged();
+                FireConnectionStateChanged();
                 await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
                 using var zipArchive = new ZipArchive(memZipStream);
                 var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
@@ -634,7 +647,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             finally
             {
                 _initializingState--;
-                CheckConnectionStateChanged();
+                FireConnectionStateChanged();
             }
         }
 

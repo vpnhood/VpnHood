@@ -704,7 +704,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         return Task.CompletedTask;
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {

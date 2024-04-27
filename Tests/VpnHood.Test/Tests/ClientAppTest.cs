@@ -48,6 +48,32 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
+    public async Task BuiltIn_AccessKeys_initialization()
+    {
+        var appOptions = TestHelper.CreateClientAppOptions();
+        var tokens = new[] {CreateToken(), CreateToken()};
+        appOptions.AccessKeys = tokens.Select(x=>x.ToAccessKey()).ToArray();
+        
+        await using var app1 = TestHelper.CreateClientApp(appOptions: appOptions);
+        var clientProfiles = app1.ClientProfileService.List();
+        Assert.AreEqual(tokens.Length, clientProfiles.Length);
+        Assert.AreEqual(tokens[0].TokenId, clientProfiles[0].Token.TokenId);
+        Assert.AreEqual(tokens[1].TokenId, clientProfiles[1].Token.TokenId);
+        Assert.AreEqual(tokens[0].TokenId, clientProfiles.Single(x=>x.ClientProfileId ==app1.Features.BuiltInClientProfileId).Token.TokenId);
+
+        // BuiltIn token should not be removed
+        foreach (var clientProfile in clientProfiles)
+        {
+            Assert.ThrowsException<UnauthorizedAccessException>(() =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                app1.ClientProfileService.Remove(clientProfile.ClientProfileId);
+            });
+        }
+    }
+
+
+    [TestMethod]
     public async Task Load_country_ip_groups()
     {
         // ************

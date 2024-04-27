@@ -108,6 +108,7 @@ public class ClientProfileService
         return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
     }
 
+    // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn)
     {
         // make sure no one overwrites built-in tokens

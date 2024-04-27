@@ -1,5 +1,4 @@
-﻿using System.Security.Authentication;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
@@ -56,6 +55,10 @@ public class ClientProfileService
             _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
             ?? throw new NotExistsException();
 
+        // BuiltInToken should not be removed
+        if (_builtInAccessTokenIds.Any(tokenId => tokenId == clientProfile.Token.TokenId))
+            throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
+
         _clientProfiles.Remove(clientProfile);
         Save();
     }
@@ -108,7 +111,7 @@ public class ClientProfileService
     {
         // make sure no one overwrites built-in tokens
         if (!allowOverwriteBuiltIn && _builtInAccessTokenIds.Any(tokenId => tokenId == token.TokenId))
-            throw new AuthenticationException("Could not overwrite BuiltIn tokens.");
+            throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
 
         // update tokens
         foreach (var clientProfile in _clientProfiles.Where(clientProfile =>

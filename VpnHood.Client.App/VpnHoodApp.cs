@@ -554,7 +554,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     {
         lock (_disconnectLock)
         {
-            if (_disconnectTask==null || _disconnectTask.IsCompleted)
+            if (_disconnectTask == null || _disconnectTask.IsCompleted)
                 _disconnectTask = DisconnectCore(byUser);
         }
 

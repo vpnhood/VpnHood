@@ -1,9 +1,9 @@
-# Upcominng
+# v4.4.497
 ### Client
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App
 * Fix: Ad service
-* Fix: The connect button didn't disconnect the current connection by random
+* Fix: Sometimes the connect button didn't disconnect the current connection
 * Android: Fix Diagnoser mistakenly shows "Connection is not stable"
 * Android: Fix Google Play Update
 * Android: Improve Android TV
@@ -14,7 +14,7 @@
 # v4.3.485
 ### Client
 * Feature: Accept DNS Servers from the connected Server
-* Feature: Multi-language Support (Arabic, Chinese, English, Farsi, Portuguese, Russian, Spanish)
+* Feature: Multi-language Support (Arabic, Chinese, English, Persian, Portuguese, Russian, Spanish)
 * Feature: Support Billing integration
 * Feature: Implement Google Billing
 * Feature: Support Interface for Account integration

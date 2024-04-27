@@ -28,13 +28,17 @@ public class AppLogService
         VhLogger.IsAnonymousMode = logSettings.LogAnonymous;
         VhLogger.IsDiagnoseMode = diagnose | logSettings.LogVerbose;
         VhLogger.Instance = NullLogger.Instance;
-        VhLogger.Instance = CreateLogger(logSettings.LogToConsole, logSettings.LogToFile | diagnose, diagnose, true);
+        VhLogger.Instance = CreateLogger(
+            addToConsole: logSettings.LogToConsole,
+            addToFile: logSettings.LogToFile | diagnose,
+            verbose: diagnose,
+            removeLastFile: true);
     }
 
     public void Stop()
     {
         VhLogger.Instance = NullLogger.Instance;
-        VhLogger.Instance = CreateLogger(false, false, false, false);
+        VhLogger.Instance = CreateLogger(addToConsole: false, addToFile: false, verbose: false, removeLastFile: false);
         VhLogger.IsDiagnoseMode = false;
     }
 
@@ -60,14 +64,14 @@ public class AppLogService
         return logger;
     }
 
-    private ILogger CreateLoggerInternal(bool addToConsole, bool addToFile, bool verbose, bool deleteLastFile)
+    private ILogger CreateLoggerInternal(bool addToConsole, bool addToFile, bool verbose, bool removeLastFile)
     {
         // file logger, close old stream
         _streamLogger?.Dispose();
         _streamLogger = null;
 
         // delete last lgo
-        if (deleteLastFile && File.Exists(LogFilePath))
+        if (removeLastFile && File.Exists(LogFilePath))
             File.Delete(LogFilePath);
 
         using var loggerFactory = LoggerFactory.Create(builder =>

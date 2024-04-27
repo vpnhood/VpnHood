@@ -244,7 +244,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             await Disconnect(true);
 
         // set default profileId to clientProfileId if not set
-        var clientProfile = ClientProfileService.FindById(clientProfileId ?? UserSettings.ClientProfileId ?? Guid.Empty);
+        clientProfileId ??= UserSettings.ClientProfileId;
+        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty);
         if (clientProfile == null)
             throw new NotExistsException("Could not find any VPN profile to connect.");
 

@@ -103,11 +103,6 @@ public class ClientProfileService
         return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
     }
 
-    public ClientProfile ImportAccessToken(Token token)
-    {
-        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
-    }
-
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn)
     {
@@ -158,7 +153,8 @@ public class ClientProfileService
             if (token.TokenId != newToken.TokenId)
                 throw new Exception("Could not update the token via access key because its token ID is not the same.");
 
-            ImportAccessToken(newToken);
+            // allow to overwrite builtIn because update token is from internal source and can update itself
+            ImportAccessToken(newToken, overwriteNewer: true, allowOverwriteBuiltIn: true);
             VhLogger.Instance.LogInformation("ServerToken has been updated.");
             return newToken;
         }
@@ -170,7 +166,7 @@ public class ClientProfileService
 
     }
 
-    public async Task<bool> UpdateTokenByUrl(Token token)
+    public async Task<bool> UpdateServerTokenByUrl(Token token)
     {
         if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
             return false;
@@ -193,7 +189,7 @@ public class ClientProfileService
             //update store
             token = VhUtil.JsonClone<Token>(token);
             token.ServerToken = newServerToken;
-            ImportAccessToken(token);
+            ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true);
             VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
             return true;
         }

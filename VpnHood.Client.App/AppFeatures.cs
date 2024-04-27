@@ -8,5 +8,5 @@ public class AppFeatures
     public required Uri? UpdateInfoUrl { get; init; }
     public required string? UiName { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
-    public required string? BuiltInAccessTokenId { get; init; }
+    public required Guid? BuiltInClientProfileId { get; init; }
 }

@@ -1417,7 +1417,7 @@ export class AppFeatures implements IAppFeatures {
     updateInfoUrl?: string | null;
     uiName?: string | null;
     isAddAccessKeySupported!: boolean;
-    builtInAccessTokenId?: string | null;
+    builtInClientProfileId?: string | null;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1436,7 +1436,7 @@ export class AppFeatures implements IAppFeatures {
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : <any>null;
-            this.builtInAccessTokenId = _data["builtInAccessTokenId"] !== undefined ? _data["builtInAccessTokenId"] : <any>null;
+            this.builtInClientProfileId = _data["builtInClientProfileId"] !== undefined ? _data["builtInClientProfileId"] : <any>null;
         }
     }
 
@@ -1455,7 +1455,7 @@ export class AppFeatures implements IAppFeatures {
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : <any>null;
-        data["builtInAccessTokenId"] = this.builtInAccessTokenId !== undefined ? this.builtInAccessTokenId : <any>null;
+        data["builtInClientProfileId"] = this.builtInClientProfileId !== undefined ? this.builtInClientProfileId : <any>null;
         return data;
     }
 }
@@ -1467,7 +1467,7 @@ export interface IAppFeatures {
     updateInfoUrl?: string | null;
     uiName?: string | null;
     isAddAccessKeySupported: boolean;
-    builtInAccessTokenId?: string | null;
+    builtInClientProfileId?: string | null;
 }
 
 export class AppSettings implements IAppSettings {

@@ -908,7 +908,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync();
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {

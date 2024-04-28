@@ -75,7 +75,8 @@ public class GooglePlayAdService(
         cancellationToken.ThrowIfCancellationRequested();
 
         // check task errors
-        if (fullScreenContentCallback.DismissedTask.IsFaulted) throw fullScreenContentCallback.DismissedTask.Exception;
+        if (fullScreenContentCallback.DismissedTask.IsFaulted)
+            throw fullScreenContentCallback.DismissedTask.Exception;
 
         _rewardedAdLoadCallback = null;
     }

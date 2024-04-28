@@ -46,7 +46,7 @@ public class MainActivity : AndroidAppMainActivity
         var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
         var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnitId);
         //_ = GooglePlayFirebaseCrashlytics.Create(this);
-
+        
         VpnHoodApp.Instance.Services.AdService = googlePlayAdService;
         VpnHoodApp.Instance.Services.UpdaterService = new GooglePlayAppUpdaterService(this);
         VpnHoodApp.Instance.Services.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);

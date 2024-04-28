@@ -223,7 +223,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
         var clientProfile = CurrentClientProfile ?? throw new Exception("There is no access key.");
-        _ = Connect(clientProfile.ClientProfileId);
+         _ = Connect(clientProfile.ClientProfileId);
     }
 
     public void ClearLastError()
@@ -264,7 +264,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _hasConnectRequested = true;
             _hasDiagnoseStarted = diagnose;
             _connectRequestTime = DateTime.Now;
-            IsWaitingForAd = false;
             FireConnectionStateChanged();
             LogService.Start(Settings.UserSettings.Logging, diagnose);
 
@@ -313,17 +312,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 _lastError = ex.Message;
             }
 
-            await Disconnect();
+            // don't wait for disconnect, it may cause deadlock
+            _ = Disconnect();
 
             if (throwException)
                 throw;
         }
         finally
         {
-            _connectCts?.Dispose();
             _connectCts = null;
             _isConnecting = false;
-            IsWaitingForAd = false;
             FireConnectionStateChanged();
         }
     }
@@ -456,7 +454,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 if (string.IsNullOrEmpty(adData))
                     throw new AdException("Could not display the require ad.");
 
-                await ClientConnect.Client.SendAdReward(adData, cancellationToken);
+                _ = ClientConnect.Client.SendAdReward(adData, cancellationToken);
             }
         }
         catch

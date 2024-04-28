@@ -99,6 +99,7 @@ public class GooglePlayAdService(
         {
             _dismissedCompletionSource.TrySetException(new Exception(adError.Message));
         }
+
     }
 
     private class MyRewardedAdLoadCallback : RewardedAdLoadCallback

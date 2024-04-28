@@ -4,6 +4,7 @@
 * Update: Move VpnHood Public Servers to VpnHood Connect App
 * Fix: Ad service
 * Fix: Sometimes the connect button didn't disconnect the current connection
+* Android: Fix: Crash on disconnect
 * Android: Fix Diagnoser mistakenly shows "Connection is not stable"
 * Android: Fix Google Play Update
 * Android: Improve Android TV

@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>496</ApplicationVersion>
-		<ApplicationDisplayVersion>4.4.496</ApplicationDisplayVersion>
+		<ApplicationVersion>497</ApplicationVersion>
+		<ApplicationDisplayVersion>4.4.497</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.4.496</Version>
+		<Version>4.4.497</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
@@ -38,9 +38,13 @@
 
 	<ItemGroup Condition="'$(Configuration)'=='Debug'">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>PublicAccessKey</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PUBLIC_ACCESSKEY)</_Parameter2>
+			<_Parameter1>DevPublicAccessKey</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_PUBLIC_ACCESSKEY)</_Parameter2>
 		</AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>DevAdUnit</_Parameter1>
+      <_Parameter2>$(VPNHOOD_DEV_AD_UNIT)</_Parameter2>
+    </AssemblyAttribute>
 	</ItemGroup>
 
 	<ItemGroup>

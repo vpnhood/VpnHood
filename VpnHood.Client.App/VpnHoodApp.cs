@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.ClientProfiles;
-using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -449,13 +448,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
             // Show ad if it is required and does not show yet
             if (clientConnect.Client.SessionStatus.IsAdRequired)
-            {
-                var adData = await ShowAd(clientConnect.Client.SessionId, cancellationToken);
-                if (string.IsNullOrEmpty(adData))
-                    throw new AdException("Could not display the require ad.");
-
-                _ = ClientConnect.Client.SendAdReward(adData, cancellationToken);
-            }
+                _ = ShowRewardedAd(clientConnect.Client, clientConnect.Client.SessionId, cancellationToken);
         }
         catch
         {
@@ -472,22 +465,24 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private async Task<string?> ShowAd(ulong sessionId, CancellationToken cancellationToken)
+    private async Task<bool> ShowRewardedAd(VpnHoodClient client, ulong sessionId, CancellationToken cancellationToken)
     {
         if (Services.AdService == null)
             throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
 
-        IsWaitingForAd = true;
         try
         {
+            IsWaitingForAd = true;
             var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             await Services.AdService.ShowAd(customData, cancellationToken);
-            return customData;
+            IsWaitingForAd = false; // it doesn't need to wait user for the acknowledgement
+            await client.SendAdReward(customData, cancellationToken); 
+            return true;
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogInformation(ex, "Error in displaying the ad.");
-            return null;
+            return false;
         }
         finally
         {

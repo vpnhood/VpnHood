@@ -38,12 +38,20 @@
 
 	<ItemGroup Condition="'$(Configuration)'=='Debug'">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>DevPublicAccessKey</_Parameter1>
+			<_Parameter1>GlobalServersAccessKey</_Parameter1>
 			<_Parameter2>$(VPNHOOD_DEV_PUBLIC_ACCESSKEY)</_Parameter2>
 		</AssemblyAttribute>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-      <_Parameter1>DevAdUnit</_Parameter1>
+      <_Parameter1>RewardedAdUnitId</_Parameter1>
       <_Parameter2>$(VPNHOOD_DEV_AD_UNIT)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>StoreBaseUri</_Parameter1>
+      <_Parameter2>$(VPNHOOD_DEV_STORE_BASE_URI)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>StoreAppId</_Parameter1>
+      <_Parameter2>$(VPNHOOD_DEV_STORE_APP_ID)</_Parameter2>
     </AssemblyAttribute>
 	</ItemGroup>
 

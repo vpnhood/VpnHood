@@ -4327,13 +4327,13 @@ export class AccessToken implements IAccessToken {
     maxDevice!: number;
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
-    url?: string | null;
     isPublic!: boolean;
     isEnabled!: boolean;
     isAdRequired!: boolean;
     expirationTime?: Date | null;
     createdTime!: Date;
     modifiedTime!: Date;
+    description?: string | null;
 
     constructor(data?: IAccessToken) {
         if (data) {
@@ -4357,13 +4357,13 @@ export class AccessToken implements IAccessToken {
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.firstUsedTime = _data["firstUsedTime"] ? new Date(_data["firstUsedTime"].toString()) : <any>null;
             this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
-            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.modifiedTime = _data["modifiedTime"] ? new Date(_data["modifiedTime"].toString()) : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -4387,13 +4387,13 @@ export class AccessToken implements IAccessToken {
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["firstUsedTime"] = this.firstUsedTime ? this.firstUsedTime.toISOString() : <any>null;
         data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
-        data["url"] = this.url !== undefined ? this.url : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["modifiedTime"] = this.modifiedTime ? this.modifiedTime.toISOString() : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -4410,13 +4410,13 @@ export interface IAccessToken {
     maxDevice: number;
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
-    url?: string | null;
     isPublic: boolean;
     isEnabled: boolean;
     isAdRequired: boolean;
     expirationTime?: Date | null;
     createdTime: Date;
     modifiedTime: Date;
+    description?: string | null;
 }
 
 export class Device implements IDevice {
@@ -4554,10 +4554,10 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     lifetime!: number;
     maxDevice!: number;
     expirationTime?: Date | null;
-    url?: string | null;
     isEnabled?: boolean | null;
     isPublic!: boolean;
     isAdRequired!: boolean;
+    description?: string | null;
 
     constructor(data?: IAccessTokenCreateParams) {
         if (data) {
@@ -4578,10 +4578,10 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
             this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
-            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -4602,10 +4602,10 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
         data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
-        data["url"] = this.url !== undefined ? this.url : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -4619,10 +4619,10 @@ export interface IAccessTokenCreateParams {
     lifetime: number;
     maxDevice: number;
     expirationTime?: Date | null;
-    url?: string | null;
     isEnabled?: boolean | null;
     isPublic: boolean;
     isAdRequired: boolean;
+    description?: string | null;
 }
 
 export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
@@ -4632,9 +4632,9 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
     lifetime?: PatchOfInteger | null;
     maxDevice?: PatchOfInteger | null;
     maxTraffic?: PatchOfLong | null;
-    url?: PatchOfString | null;
     isEnabled?: PatchOfBoolean | null;
     isAdRequired?: PatchOfBoolean | null;
+    description?: PatchOfString | null;
 
     constructor(data?: IAccessTokenUpdateParams) {
         if (data) {
@@ -4653,9 +4653,9 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
             this.lifetime = _data["lifetime"] ? PatchOfInteger.fromJS(_data["lifetime"]) : <any>null;
             this.maxDevice = _data["maxDevice"] ? PatchOfInteger.fromJS(_data["maxDevice"]) : <any>null;
             this.maxTraffic = _data["maxTraffic"] ? PatchOfLong.fromJS(_data["maxTraffic"]) : <any>null;
-            this.url = _data["url"] ? PatchOfString.fromJS(_data["url"]) : <any>null;
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
             this.isAdRequired = _data["isAdRequired"] ? PatchOfBoolean.fromJS(_data["isAdRequired"]) : <any>null;
+            this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
         }
     }
 
@@ -4674,9 +4674,9 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
         data["lifetime"] = this.lifetime ? this.lifetime.toJSON() : <any>null;
         data["maxDevice"] = this.maxDevice ? this.maxDevice.toJSON() : <any>null;
         data["maxTraffic"] = this.maxTraffic ? this.maxTraffic.toJSON() : <any>null;
-        data["url"] = this.url ? this.url.toJSON() : <any>null;
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
         data["isAdRequired"] = this.isAdRequired ? this.isAdRequired.toJSON() : <any>null;
+        data["description"] = this.description ? this.description.toJSON() : <any>null;
         return data;
     }
 }
@@ -4688,9 +4688,9 @@ export interface IAccessTokenUpdateParams {
     lifetime?: PatchOfInteger | null;
     maxDevice?: PatchOfInteger | null;
     maxTraffic?: PatchOfLong | null;
-    url?: PatchOfString | null;
     isEnabled?: PatchOfBoolean | null;
     isAdRequired?: PatchOfBoolean | null;
+    description?: PatchOfString | null;
 }
 
 export class PatchOfString implements IPatchOfString {

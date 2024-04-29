@@ -26,7 +26,7 @@ public static class AccessTokenConverter
             ProjectId = model.ProjectId,
             SupportCode = model.SupportCode,
             IsAdRequired = model.IsAdRequired,
-            Url = model.Url
+            Description = model.Description
         };
         return accessToken;
     }

@@ -211,7 +211,9 @@ public class SessionService(
             };
 
         // check is device already rewarded
-        var isAdRewardedDevice = cacheService.Ad_IsRewardedDevice(device.DeviceId);
+        var isAdRewardedDevice = cacheService.Ad_IsRewardedDevice(device.DeviceId) &&
+            !sessionRequestEx.ClientInfo.UserAgent.Contains("AD-DEBUG"); //for debug
+
         var isAdRequired = accessToken.IsAdRequired && !isAdRewardedDevice;
         
         // create session

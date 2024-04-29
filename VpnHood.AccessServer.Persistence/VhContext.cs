@@ -156,8 +156,8 @@ public class VhContext : DbContext
                 .IsFixedLength();
 
             entity
-                .Property(e => e.Url)
-                .HasMaxLength(255);
+                .Property(e => e.Description)
+                .HasMaxLength(200);
 
             entity
                 .Property(e => e.IsDeleted)

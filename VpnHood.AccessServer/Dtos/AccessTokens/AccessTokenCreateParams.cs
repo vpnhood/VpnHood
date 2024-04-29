@@ -9,8 +9,8 @@ public class AccessTokenCreateParams
     public int Lifetime { get; init; }
     public int MaxDevice { get; init; }
     public DateTime? ExpirationTime { get; init; }
-    public string? Url { get; init; }
     public bool? IsEnabled { get; init; } = true;
     public bool IsPublic { get; init; }
     public bool IsAdRequired { get; init; }
+    public string? Description { get; init; }
 }

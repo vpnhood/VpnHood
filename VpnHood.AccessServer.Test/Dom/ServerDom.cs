@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
-using VpnHood.AccessServer.Api;
+﻿using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
@@ -20,7 +18,6 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static async Task<ServerDom> Attach(TestApp testApp, Guid serverId)
     {
         var serverData = await testApp.ServersClient.GetAsync(testApp.ProjectId, serverId);
@@ -33,8 +30,8 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         {
             Version = server.Version != null ? Version.Parse(server.Version) : new Version(),
             EnvironmentVersion = server.EnvironmentVersion != null ? Version.Parse(server.EnvironmentVersion) : new Version(),
-            PrivateIpAddresses = Array.Empty<IPAddress>(),
-            PublicIpAddresses = Array.Empty<IPAddress>(),
+            PrivateIpAddresses = [],
+            PublicIpAddresses = [],
             MachineName = server.MachineName,
             LogicalCoreCount = server.LogicalCoreCount ?? 0,
             OsInfo = server.OsInfo,

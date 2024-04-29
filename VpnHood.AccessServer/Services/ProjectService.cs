@@ -102,9 +102,9 @@ public class ProjectService(
                     MaxDevice = 0,
                     MaxTraffic = 0,
                     Lifetime = 0,
-                    Url = null,
                     FirstUsedTime = null,
-                    ServerFarmId = serverFarm.ServerFarmId
+                    ServerFarmId = serverFarm.ServerFarmId,
+                    Description = null
                 },
 
                 new()
@@ -128,7 +128,7 @@ public class ProjectService(
                     LastUsedTime = null,
                     MaxTraffic = 0,
                     Lifetime = 0,
-                    Url = null
+                    Description = null
                 }
             }
         };

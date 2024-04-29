@@ -7,7 +7,6 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -17,7 +16,6 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Services.Acme;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer;
 

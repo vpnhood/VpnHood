@@ -17,8 +17,8 @@ public class AdTest
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             ServerFarmId = farm.ServerFarmId,
-            AccessTokenName = "tokenName1",
-            Url = "https://foo.com/accessKey1",
+            AccessTokenName = Guid.NewGuid().ToString(),
+            Description = Guid.NewGuid().ToString(),
             IsAdRequired = true,
             IsEnabled = true
         });
@@ -54,10 +54,10 @@ public class AdTest
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
             ServerFarmId = farm.ServerFarmId,
-            AccessTokenName = "tokenName1",
-            Url = "https://foo.com/accessKey1",
+            AccessTokenName = Guid.NewGuid().ToString(),
             IsAdRequired = true,
-            IsEnabled = true
+            IsEnabled = true,
+            Description = Guid.NewGuid().ToString()
         });
 
         // check access token

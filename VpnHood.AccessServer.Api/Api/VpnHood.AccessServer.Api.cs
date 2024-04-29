@@ -7517,9 +7517,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
         public System.DateTime? LastUsedTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
@@ -7539,6 +7536,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("modifiedTime")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime ModifiedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
 
     }
 
@@ -7625,9 +7625,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool? IsEnabled { get; set; } = default!;
 
@@ -7636,6 +7633,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
         public bool IsAdRequired { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
 
     }
 
@@ -7661,14 +7661,14 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
         public PatchOfLong? MaxTraffic { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public PatchOfString? Url { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
         public PatchOfBoolean? IsAdRequired { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public PatchOfString? Description { get; set; } = default!;
 
     }
 

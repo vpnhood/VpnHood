@@ -58,7 +58,7 @@ public class ServerService(
             ManagementSecret = VhUtil.GenerateKey(),
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
-            AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? Array.Empty<AccessPoint>()),
+            AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
             Description = null,

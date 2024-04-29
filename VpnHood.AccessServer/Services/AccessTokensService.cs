@@ -33,7 +33,6 @@ public class AccessTokensService(
             MaxDevice = createParams.MaxDevice,
             ExpirationTime = createParams.ExpirationTime,
             Lifetime = createParams.Lifetime,
-            Url = createParams.Url,
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? VhUtil.GenerateKey(),
             SupportCode = supportCode,
@@ -44,6 +43,7 @@ public class AccessTokensService(
             IsDeleted = false,
             FirstUsedTime = null,
             LastUsedTime = null,
+            Description = createParams.Description
         };
 
         await vhRepo.AddAsync(accessToken);
@@ -65,7 +65,7 @@ public class AccessTokensService(
         if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
         if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
-        if (updateParams.Url != null) accessToken.Url = updateParams.Url;
+        if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
         if (updateParams.IsAdRequired != null) accessToken.IsAdRequired = updateParams.IsAdRequired;
         if (updateParams.ServerFarmId != null)

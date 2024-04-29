@@ -10,7 +10,6 @@ public class AccessTokenModel
     public required Guid ServerFarmId { get; set; }
     public required long MaxTraffic { get; set; }
     public required int MaxDevice { get; set; }
-    public required string? Url { get; set; }
     public required bool IsPublic { get; set; }
     public required bool IsEnabled { get; set; }
     public required int Lifetime { get; set; }
@@ -20,6 +19,7 @@ public class AccessTokenModel
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; set; }
     public required bool IsAdRequired { get; set; }
+    public required string? Description { get; set; }
     public required bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }

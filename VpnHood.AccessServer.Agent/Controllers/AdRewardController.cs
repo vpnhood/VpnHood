@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Agent.Controllers;

@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -479,7 +480,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogInformation(ex, "Error in displaying the ad.");
+            throw new AdException($"Could not show the required ad. Error: {ex.Message}");
         }
         finally
         {

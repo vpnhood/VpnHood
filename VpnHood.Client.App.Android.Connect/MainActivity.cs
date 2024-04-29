@@ -16,7 +16,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     MainLauncher = true,
     Exported = true,
     WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
-    AlwaysRetainTaskState = true,
+    // AlwaysRetainTaskState = false, //todo: looks not required
     LaunchMode = LaunchMode.SingleInstance, 
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |

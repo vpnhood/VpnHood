@@ -210,6 +210,10 @@ public class SessionService(
                 RedirectHostEndPoint = bestTcpEndPoint
             };
 
+        // check is device already rewarded
+        var isAdRewardedDevice = cacheService.Ad_IsRewardedDevice(device.DeviceId);
+        var isAdRequired = accessToken.IsAdRequired && !isAdRewardedDevice;
+        
         // create session
         var session = new SessionCache
         {
@@ -233,12 +237,12 @@ public class SessionService(
             IsArchived = false,
             UserAgent = device.UserAgent,
             ClientId = device.ClientId,
-            IsAdReward = false,
-            AdExpirationTime = accessToken.IsAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
+            IsAdReward = isAdRewardedDevice,
+            AdExpirationTime = isAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
         };
 
         var ret = await BuildSessionResponse(session, access);
-        ret.IsAdRequired = accessToken.IsAdRequired;
+        ret.IsAdRequired = isAdRequired;
         ret.ExtraData = session.ExtraData;
         ret.GaMeasurementId = project.GaMeasurementId;
         if (ret.ErrorCode != SessionErrorCode.Ok)
@@ -259,7 +263,8 @@ public class SessionService(
                 TokenId = accessToken.AccessTokenId.ToString(),
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode.ToString(),
-                IsAdRequired = accessToken.IsAdRequired
+                IsAdRequired = accessToken.IsAdRequired,
+                IssuedAt = DateTime.UtcNow
             }.ToAccessKey();
 
         // Add session to database
@@ -415,9 +420,9 @@ public class SessionService(
 
         // validate ad
         var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
-        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, adData))
+        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, session.DeviceId, adData))
         {
-            session.Close(SessionErrorCode.AdError, "Could not verify the rewarded ad within the given time frame.");
+            session.Close(SessionErrorCode.AdError, "Could not verify the given rewarded ad.");
             return await BuildSessionResponse(session, access);
         }
 
@@ -516,15 +521,20 @@ public class SessionService(
         return null;
     }
 
-    private async Task<bool> VerifyAdReward(Guid projectId, string adData)
+    private async Task<bool> VerifyAdReward(Guid projectId, Guid deviceId, string adData)
     {
+        // check is device rewarded
         for (var i = 0; i < 5; i++)
         {
-            if (cacheService.RemoveAd(projectId, adData))
+            if (cacheService.Ad_RemoveRewardData(projectId, adData))
+            {
+                cacheService.Ad_AddRewardedDevice(deviceId);
                 return true;
+            }
 
             await Task.Delay(1000);
         }
+
         return false;
     }
 }

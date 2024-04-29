@@ -65,6 +65,7 @@ public class Program
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
 
+        builder.Services.AddSingleton<CacheRepo>();
         builder.Services.AddScoped<VhRepo>();
         builder.Services.AddScoped<VhAgentRepo>();
         builder.Services.AddScoped<SessionService>();

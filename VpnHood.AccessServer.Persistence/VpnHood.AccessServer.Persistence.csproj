@@ -26,7 +26,7 @@
 		<PackageReference Include="GrayMint.Common" Version="2.0.199" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.4" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.4" />
-		<PackageReference Include="VpnHood.Common" Version="4.4.493-prerelease" />
+		<PackageReference Include="VpnHood.Common" Version="4.4.495-prerelease" />
 	</ItemGroup>
 
 </Project>

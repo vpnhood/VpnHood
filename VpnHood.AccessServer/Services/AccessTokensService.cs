@@ -97,7 +97,8 @@ public class AccessTokensService(
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,
-            SupportId = accessToken.SupportCode.ToString()
+            SupportId = accessToken.SupportCode.ToString(),
+            IssuedAt = DateTime.UtcNow
         };
 
         return token.ToAccessKey();

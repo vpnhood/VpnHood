@@ -11,12 +11,12 @@ public class AdTest
     [TestMethod]
     public async Task Create_session_with_temporary_expiration()
     {
-        var farm1 = await ServerFarmDom.Create();
+        var farm = await ServerFarmDom.Create();
         
         // create token
-        var accessTokenDom = await farm1.CreateAccessToken(new AccessTokenCreateParams
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
-            ServerFarmId = farm1.ServerFarmId,
+            ServerFarmId = farm.ServerFarmId,
             AccessTokenName = "tokenName1",
             Url = "https://foo.com/accessKey1",
             IsAdRequired = true,
@@ -36,7 +36,7 @@ public class AdTest
         var sessionResponse = await sessionDom.AddUsage();
         Assert.IsTrue(sessionResponse.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
         var adData = Guid.NewGuid().ToString();
-        farm1.TestApp.AgentTestApp.CacheService.RewardAd(farm1.ProjectId, adData);
+        farm.TestApp.AgentTestApp.CacheService.Ad_AddRewardData(farm.ProjectId, adData);
         sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
         Assert.IsNull(sessionResponse.AccessUsage?.ExpirationTime);
 
@@ -44,4 +44,44 @@ public class AdTest
         sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
         Assert.AreEqual(SessionErrorCode.AdError, sessionResponse.ErrorCode);
     }
+
+    [TestMethod]
+    public async Task Create_second_session_should_be_auto_rewarded()
+    {
+        var farm = await ServerFarmDom.Create();
+
+        // create token
+        var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
+        {
+            ServerFarmId = farm.ServerFarmId,
+            AccessTokenName = "tokenName1",
+            Url = "https://foo.com/accessKey1",
+            IsAdRequired = true,
+            IsEnabled = true
+        });
+
+        // check access token
+        var token = await accessTokenDom.GetToken();
+        var clientId = Guid.NewGuid();
+        Assert.IsTrue(token.IsAdRequired);
+
+        // create session
+        var sessionDom = await accessTokenDom.CreateSession(clientId: clientId);
+        Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
+        Assert.IsTrue(sessionDom.SessionResponseEx.IsAdRequired);
+
+        // extend session
+        var sessionResponse = await sessionDom.AddUsage();
+        Assert.IsTrue(sessionResponse.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
+        var adData = Guid.NewGuid().ToString();
+        farm.TestApp.AgentTestApp.CacheService.Ad_AddRewardData(farm.ProjectId, adData);
+        sessionResponse = await sessionDom.AddUsage(new Traffic(), adData);
+        Assert.IsNull(sessionResponse.AccessUsage?.ExpirationTime);
+
+        // next session should be auto rewarded
+        var sessionDom2 = await accessTokenDom.CreateSession(clientId: clientId);
+        Assert.IsNull(sessionDom2.SessionResponseEx.AccessUsage?.ExpirationTime);
+        Assert.IsFalse(sessionDom2.SessionResponseEx.IsAdRequired);
+    }
+
 }

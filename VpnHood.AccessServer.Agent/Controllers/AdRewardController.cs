@@ -26,6 +26,6 @@ public class AdRewardController(
 
         _ = rewardItem; // not used yet
         if (!string.IsNullOrEmpty(customData) && customData.Length < 150)
-            cacheService.RewardAd(projectId, customData);
+            cacheService.Ad_AddRewardData(projectId, customData);
     }
 }

@@ -54,9 +54,12 @@ public class GooglePlayAdService(
     {
         // create ad custom data
         var rewardedAd = await LoadRewardedAd(cancellationToken);
+        if (activity.IsDestroyed)
+            throw new Exception("MainActivity has been destroyed before showing the ad.");
+
         var serverSideVerificationOptions = new ServerSideVerificationOptions.Builder()
-            .SetCustomData(customData)
-            .Build();
+        .SetCustomData(customData)
+        .Build();
 
         var fullScreenContentCallback = new MyFullScreenContentCallback();
         var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
@@ -88,6 +91,7 @@ public class GooglePlayAdService(
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {
         private readonly TaskCompletionSource _dismissedCompletionSource = new();
+
         public Task DismissedTask => _dismissedCompletionSource.Task;
 
         public override void OnAdDismissedFullScreenContent()

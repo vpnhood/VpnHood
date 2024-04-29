@@ -448,7 +448,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
             // Show ad if it is required and does not show yet
             if (clientConnect.Client.SessionStatus.IsAdRequired)
-                _ = ShowRewardedAd(clientConnect.Client, clientConnect.Client.SessionId, cancellationToken);
+                await ShowRewardedAd(clientConnect.Client, clientConnect.Client.SessionId, cancellationToken);
         }
         catch
         {
@@ -465,7 +465,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
     }
 
-    private async Task<bool> ShowRewardedAd(VpnHoodClient client, ulong sessionId, CancellationToken cancellationToken)
+    private async Task ShowRewardedAd(VpnHoodClient client, ulong sessionId, CancellationToken cancellationToken)
     {
         if (Services.AdService == null)
             throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
@@ -475,14 +475,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsWaitingForAd = true;
             var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             await Services.AdService.ShowAd(customData, cancellationToken);
-            IsWaitingForAd = false; // it doesn't need to wait user for the acknowledgement
-            await client.SendAdReward(customData, cancellationToken); 
-            return true;
+            _ = client.SendAdReward(customData, cancellationToken); 
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogInformation(ex, "Error in displaying the ad.");
-            return false;
         }
         finally
         {

@@ -129,14 +129,13 @@ public class GooglePlayBillingService: IAppBillingService
             .SetProductDetailsParamsList([productDetailsParam])
             .Build();
 
-
-        var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
-
-        if (billingResult.ResponseCode != BillingResponseCode.Ok)
-            throw CreateBillingResultException(billingResult);
-
         try
         {
+            var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
+
+            if (billingResult.ResponseCode != BillingResponseCode.Ok)
+                throw CreateBillingResultException(billingResult);
+
             _taskCompletionSource = new TaskCompletionSource<string>();
             var orderId = await _taskCompletionSource.Task;
             return orderId;

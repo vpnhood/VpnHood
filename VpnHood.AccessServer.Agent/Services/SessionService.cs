@@ -211,7 +211,7 @@ public class SessionService(
 
         // check is device already rewarded
         var isAdRewardedDevice = cacheService.Ad_IsRewardedDevice(device.DeviceId) &&
-            !sessionRequestEx.ClientInfo.UserAgent.Contains("AD-DEBUG"); //for debug
+            !accessToken.Description?.Contains("#ad-debugger") == true; //for debug
 
         var isAdRequired = accessToken.IsAdRequired && !isAdRewardedDevice;
         

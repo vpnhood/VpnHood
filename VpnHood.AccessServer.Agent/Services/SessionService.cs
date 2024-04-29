@@ -12,7 +12,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Messaging;
-using AsyncLock = GrayMint.Common.Utils.AsyncLock;
 
 namespace VpnHood.AccessServer.Agent.Services;
 

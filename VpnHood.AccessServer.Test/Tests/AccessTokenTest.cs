@@ -77,14 +77,14 @@ public class AccessTokenTest
             IsPublic = true,
             IsEnabled = true,
         };
-        var accessTokenDom2 = await farm2.CreateAccessToken();
+        var accessTokenDom2 = await farm2.CreateAccessToken(createParam2);
         Assert.AreNotEqual(0, accessTokenDom2.AccessToken.SupportCode);
         Assert.AreEqual(createParam2.AccessTokenName, accessTokenDom2.AccessToken.AccessTokenName);
         Assert.AreEqual(farm2.ServerFarmId, accessTokenDom2.AccessToken.ServerFarmId);
         Assert.IsNull(accessTokenDom2.AccessToken.FirstUsedTime);
         Assert.IsNull(accessTokenDom2.AccessToken.LastUsedTime);
         Assert.AreEqual(expirationTime2, accessTokenDom2.AccessToken.ExpirationTime);
-        Assert.AreEqual(createParam2.MaxDevice, accessTokenDom2.AccessToken.MaxTraffic);
+        Assert.AreEqual(createParam2.MaxTraffic, accessTokenDom2.AccessToken.MaxTraffic);
         Assert.AreEqual(createParam2.MaxDevice, accessTokenDom2.AccessToken.MaxDevice);
         Assert.AreEqual(createParam2.Lifetime, accessTokenDom2.AccessToken.Lifetime);
         Assert.AreEqual(createParam2.Description, accessTokenDom2.AccessToken.Description);

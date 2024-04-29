@@ -1,5 +1,7 @@
 using System.Security.Authentication;
+using Android.Content;
 using Android.Gms.Auth.Api.SignIn;
+using Android.Gms.Common.Apis;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid.Utils;
 
@@ -44,15 +46,23 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
     public async Task<string> SignIn()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        try
+        {
+            _taskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
+            _activityEvent?.Activity.StartActivityForResult(_googleSignInClient.SignInIntent, SignInIntentId);
+            var account = await _taskCompletionSource.Task;
 
-        _taskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
-        _activityEvent?.Activity.StartActivityForResult(_googleSignInClient.SignInIntent, SignInIntentId);
-        var account = await _taskCompletionSource.Task;
+            if (account.IdToken == null)
+                throw new ArgumentNullException(account.IdToken);
 
-        if (account.IdToken == null)
-            throw new ArgumentNullException(account.IdToken);
-
-        return account.IdToken;
+            return account.IdToken;
+        }
+        catch (ApiException ex)
+        {
+            Console.WriteLine(ex);
+            throw;
+        }
+        
     }
 
     public Task SignOut()
@@ -64,17 +74,22 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
     {
         // If the request code is not related to the Google sign-in method
-        if (e.RequestCode != SignInIntentId)
-            return;
-
-        GoogleSignIn.GetSignedInAccountFromIntentAsync(e.Data).ContinueWith(task =>
-        {
-            if (task.IsCompletedSuccessfully) _taskCompletionSource?.TrySetResult(task.Result);
-            else if (task.IsCanceled) _taskCompletionSource?.TrySetCanceled();
-            else _taskCompletionSource?.TrySetException(task.Exception ?? new Exception("Could not signin with google."));
-        });
+        if (e.RequestCode == SignInIntentId)
+            _ = ProcessSignedInAccountFromIntent(e.Data);
     }
 
+    private async Task ProcessSignedInAccountFromIntent(Intent? intent)
+    {
+        try
+        {
+            var googleSignInAccount = await GoogleSignIn.GetSignedInAccountFromIntentAsync(intent);
+            _taskCompletionSource?.SetResult(googleSignInAccount);
+        }
+        catch (Exception e)
+        {
+            _taskCompletionSource?.TrySetException(e);
+        }
+    }
     private void Activity_OnDestroy(object? sender, EventArgs e)
     {
         _googleSignInClient.Dispose();

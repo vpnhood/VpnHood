@@ -130,7 +130,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 EnvironmentVersion = Environment.Version,
                 Version = ServerVersion,
                 PrivateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses(),
-                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
+                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : [],
                 Status = GetStatus(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
@@ -270,7 +270,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 nameof(ServerConfig.ServerSecret),
                 nameof(CertificateData.RawData),
                 nameof(ServerConfig.TcpEndPoints),
-                nameof(ServerConfig.UdpEndPoints),
+                nameof(ServerConfig.UdpEndPoints)
             ])
             : JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
     }
@@ -378,7 +378,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             .GetResult();
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {

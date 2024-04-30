@@ -101,7 +101,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
             _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp,
                 udpProxy.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint);
 
-        var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
+        var dgram = udpPacket.PayloadData ?? [];
         return udpProxy.SendPacket(destinationEndPoint, dgram, noFragment);
     }
 

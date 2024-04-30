@@ -64,7 +64,7 @@ public class TcpClientStream : IClientStream
         return DisposeAsync(true);
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public ValueTask DisposeAsync(bool graceful)
     {

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using EmbedIO;
@@ -13,12 +12,14 @@ using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Messaging;
 
+// ReSharper disable UnusedMember.Local
+
 namespace VpnHood.Test;
 
 public class TestEmbedIoAccessManager : IDisposable
 {
     private WebServer _webServer;
-    
+
     public IAccessManager FileAccessManager { get; }
 
 
@@ -36,6 +37,7 @@ public class TestEmbedIoAccessManager : IDisposable
     public Uri BaseUri { get; }
     public IPEndPoint? RedirectHostEndPoint { get; set; }
     public HttpException? HttpException { get; set; }
+    public Dictionary<string, IPEndPoint?> Regions { get; set; } = new();
 
     public void Dispose()
     {
@@ -72,7 +74,6 @@ public class TestEmbedIoAccessManager : IDisposable
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 
-    [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private class ApiController(TestEmbedIoAccessManager embedIoAccessManager) : WebApiController
     {
         private IAccessManager AccessManager => embedIoAccessManager.FileAccessManager;
@@ -110,6 +111,10 @@ public class TestEmbedIoAccessManager : IDisposable
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
+
+            if (!sessionRequestEx.AllowRedirect)
+                return res;
+            
             if (embedIoAccessManager.RedirectHostEndPoint != null &&
                 !sessionRequestEx.HostEndPoint.Equals(embedIoAccessManager.RedirectHostEndPoint))
             {
@@ -117,17 +122,29 @@ public class TestEmbedIoAccessManager : IDisposable
                 res.ErrorCode = SessionErrorCode.RedirectHost;
             }
 
+            // manage region
+            if (sessionRequestEx.RegionId != null)
+            {
+                var redirectEndPoint = embedIoAccessManager.Regions[sessionRequestEx.RegionId];
+                if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
+                {
+                    res.RedirectHostEndPoint = embedIoAccessManager.Regions[sessionRequestEx.RegionId];
+                    res.ErrorCode = SessionErrorCode.RedirectHost;
+                }
+            }
+
             return res;
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId, [QueryField] bool closeSession)
+        public async Task<SessionResponse> Session_AddUsage([QueryField] Guid serverId, ulong sessionId,
+            [QueryField] bool closeSession, [QueryField] string? adData)
         {
             _ = serverId;
             var traffic = await GetRequestDataAsync<Traffic>();
             var res = closeSession
                 ? await AccessManager.Session_Close(sessionId, traffic)
-                : await AccessManager.Session_AddUsage(sessionId, traffic);
+                : await AccessManager.Session_AddUsage(sessionId, traffic, adData);
             return res;
 
         }

@@ -661,58 +661,6 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    addAccessKey(accessKey: string, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
-        let url_ = this.baseUrl + "/api/app/access-keys?";
-        if (accessKey === undefined || accessKey === null)
-            throw new Error("The parameter 'accessKey' must be defined and cannot be null.");
-        else
-            url_ += "accessKey=" + encodeURIComponent("" + accessKey) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "PUT",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processAddAccessKey(_response);
-        });
-    }
-
-    protected processAddAccessKey(response: AxiosResponse): Promise<ClientProfileInfo> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = ClientProfileInfo.fromJS(resultData200);
-            return Promise.resolve<ClientProfileInfo>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<ClientProfileInfo>(null as any);
-    }
-
     clearLastError( cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/clear-last-error";
         url_ = url_.replace(/[?&]$/, "");
@@ -737,50 +685,6 @@ export class AppClient {
     }
 
     protected processClearLastError(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    addTestServer( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/add-test-server";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "POST",
-            url: url_,
-            headers: {
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processAddTestServer(_response);
-        });
-    }
-
-    protected processAddTestServer(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1096,7 +1000,59 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    updateClientProfile(clientProfileId: string, updateParams: ClientProfileUpdateParams, cancelToken?: CancelToken): Promise<void> {
+    addAccessKey(accessKey: string, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
+        let url_ = this.baseUrl + "/api/app/access-keys?";
+        if (accessKey === undefined || accessKey === null)
+            throw new Error("The parameter 'accessKey' must be defined and cannot be null.");
+        else
+            url_ += "accessKey=" + encodeURIComponent("" + accessKey) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processAddAccessKey(_response);
+        });
+    }
+
+    protected processAddAccessKey(response: AxiosResponse): Promise<ClientProfileInfo> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientProfileInfo.fromJS(resultData200);
+            return Promise.resolve<ClientProfileInfo>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ClientProfileInfo>(null as any);
+    }
+
+    updateClientProfile(clientProfileId: string, updateParams: ClientProfileUpdateParams, cancelToken?: CancelToken): Promise<ClientProfileInfo> {
         let url_ = this.baseUrl + "/api/app/client-profiles/{clientProfileId}";
         if (clientProfileId === undefined || clientProfileId === null)
             throw new Error("The parameter 'clientProfileId' must be defined.");
@@ -1111,6 +1067,7 @@ export class AppClient {
             url: url_,
             headers: {
                 "Content-Type": "application/json",
+                "Accept": "application/json"
             },
             cancelToken
         };
@@ -1126,7 +1083,7 @@ export class AppClient {
         });
     }
 
-    protected processUpdateClientProfile(response: AxiosResponse): Promise<void> {
+    protected processUpdateClientProfile(response: AxiosResponse): Promise<ClientProfileInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1138,13 +1095,16 @@ export class AppClient {
         }
         if (status === 200) {
             const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = ClientProfileInfo.fromJS(resultData200);
+            return Promise.resolve<ClientProfileInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<ClientProfileInfo>(null as any);
     }
 
     deleteClientProfile(clientProfileId: string, cancelToken?: CancelToken): Promise<void> {
@@ -1452,12 +1412,12 @@ export interface IAppConfig {
 
 export class AppFeatures implements IAppFeatures {
     version!: string;
-    testServerTokenId?: string | null;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     updateInfoUrl?: string | null;
     uiName?: string | null;
-    isAddServerSupported!: boolean;
+    isAddAccessKeySupported!: boolean;
+    builtInClientProfileId?: string | null;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1471,12 +1431,12 @@ export class AppFeatures implements IAppFeatures {
     init(_data?: any) {
         if (_data) {
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
-            this.testServerTokenId = _data["testServerTokenId"] !== undefined ? _data["testServerTokenId"] : <any>null;
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : <any>null;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : <any>null;
             this.updateInfoUrl = _data["updateInfoUrl"] !== undefined ? _data["updateInfoUrl"] : <any>null;
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
-            this.isAddServerSupported = _data["isAddServerSupported"] !== undefined ? _data["isAddServerSupported"] : <any>null;
+            this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : <any>null;
+            this.builtInClientProfileId = _data["builtInClientProfileId"] !== undefined ? _data["builtInClientProfileId"] : <any>null;
         }
     }
 
@@ -1490,24 +1450,24 @@ export class AppFeatures implements IAppFeatures {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["version"] = this.version !== undefined ? this.version : <any>null;
-        data["testServerTokenId"] = this.testServerTokenId !== undefined ? this.testServerTokenId : <any>null;
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : <any>null;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : <any>null;
         data["updateInfoUrl"] = this.updateInfoUrl !== undefined ? this.updateInfoUrl : <any>null;
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
-        data["isAddServerSupported"] = this.isAddServerSupported !== undefined ? this.isAddServerSupported : <any>null;
+        data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : <any>null;
+        data["builtInClientProfileId"] = this.builtInClientProfileId !== undefined ? this.builtInClientProfileId : <any>null;
         return data;
     }
 }
 
 export interface IAppFeatures {
     version: string;
-    testServerTokenId?: string | null;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     updateInfoUrl?: string | null;
     uiName?: string | null;
-    isAddServerSupported: boolean;
+    isAddAccessKeySupported: boolean;
+    builtInClientProfileId?: string | null;
 }
 
 export class AppSettings implements IAppSettings {
@@ -1518,7 +1478,6 @@ export class AppSettings implements IAppSettings {
     userSettings!: UserSettings;
     clientId!: string;
     lastCountryIpGroupId?: string | null;
-    testServerTokenAutoAdded?: string | null;
     lastUpdateCheckTime?: Date | null;
 
     constructor(data?: IAppSettings) {
@@ -1542,7 +1501,6 @@ export class AppSettings implements IAppSettings {
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
-            this.testServerTokenAutoAdded = _data["testServerTokenAutoAdded"] !== undefined ? _data["testServerTokenAutoAdded"] : <any>null;
             this.lastUpdateCheckTime = _data["lastUpdateCheckTime"] ? new Date(_data["lastUpdateCheckTime"].toString()) : <any>null;
         }
     }
@@ -1563,7 +1521,6 @@ export class AppSettings implements IAppSettings {
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
-        data["testServerTokenAutoAdded"] = this.testServerTokenAutoAdded !== undefined ? this.testServerTokenAutoAdded : <any>null;
         data["lastUpdateCheckTime"] = this.lastUpdateCheckTime ? this.lastUpdateCheckTime.toISOString() : <any>null;
         return data;
     }
@@ -1577,14 +1534,13 @@ export interface IAppSettings {
     userSettings: UserSettings;
     clientId: string;
     lastCountryIpGroupId?: string | null;
-    testServerTokenAutoAdded?: string | null;
     lastUpdateCheckTime?: Date | null;
 }
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
     cultureCode?: string | null;
-    defaultClientProfileId?: string | null;
+    clientProfileId?: string | null;
     maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
     tunnelClientCountry!: boolean;
@@ -1618,7 +1574,7 @@ export class UserSettings implements IUserSettings {
         if (_data) {
             this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
-            this.defaultClientProfileId = _data["defaultClientProfileId"] !== undefined ? _data["defaultClientProfileId"] : <any>null;
+            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.maxReconnectCount = _data["maxReconnectCount"] !== undefined ? _data["maxReconnectCount"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
             this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : <any>null;
@@ -1690,7 +1646,7 @@ export class UserSettings implements IUserSettings {
         data = typeof data === 'object' ? data : {};
         data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
-        data["defaultClientProfileId"] = this.defaultClientProfileId !== undefined ? this.defaultClientProfileId : <any>null;
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["maxReconnectCount"] = this.maxReconnectCount !== undefined ? this.maxReconnectCount : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
         data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : <any>null;
@@ -1737,7 +1693,7 @@ export class UserSettings implements IUserSettings {
 export interface IUserSettings {
     logging: AppLogSettings;
     cultureCode?: string | null;
-    defaultClientProfileId?: string | null;
+    clientProfileId?: string | null;
     maxReconnectCount: number;
     maxDatagramChannelCount: number;
     tunnelClientCountry: boolean;
@@ -1814,10 +1770,9 @@ export class AppState implements IAppState {
     connectRequestTime?: Date | null;
     connectionState!: AppConnectionState;
     lastError?: string | null;
-    activeClientProfileId?: string | null;
+    clientProfileId?: string | null;
     isIdle!: boolean;
     logExists!: boolean;
-    lastActiveClientProfileId?: string | null;
     hasDiagnoseStarted!: boolean;
     hasDisconnectedByUser!: boolean;
     hasProblemDetected!: boolean;
@@ -1857,10 +1812,9 @@ export class AppState implements IAppState {
             this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : <any>null;
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
-            this.activeClientProfileId = _data["activeClientProfileId"] !== undefined ? _data["activeClientProfileId"] : <any>null;
+            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
-            this.lastActiveClientProfileId = _data["lastActiveClientProfileId"] !== undefined ? _data["lastActiveClientProfileId"] : <any>null;
             this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
             this.hasDisconnectedByUser = _data["hasDisconnectedByUser"] !== undefined ? _data["hasDisconnectedByUser"] : <any>null;
             this.hasProblemDetected = _data["hasProblemDetected"] !== undefined ? _data["hasProblemDetected"] : <any>null;
@@ -1893,10 +1847,9 @@ export class AppState implements IAppState {
         data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : <any>null;
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
-        data["activeClientProfileId"] = this.activeClientProfileId !== undefined ? this.activeClientProfileId : <any>null;
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
-        data["lastActiveClientProfileId"] = this.lastActiveClientProfileId !== undefined ? this.lastActiveClientProfileId : <any>null;
         data["hasDiagnoseStarted"] = this.hasDiagnoseStarted !== undefined ? this.hasDiagnoseStarted : <any>null;
         data["hasDisconnectedByUser"] = this.hasDisconnectedByUser !== undefined ? this.hasDisconnectedByUser : <any>null;
         data["hasProblemDetected"] = this.hasProblemDetected !== undefined ? this.hasProblemDetected : <any>null;
@@ -1922,10 +1875,9 @@ export interface IAppState {
     connectRequestTime?: Date | null;
     connectionState: AppConnectionState;
     lastError?: string | null;
-    activeClientProfileId?: string | null;
+    clientProfileId?: string | null;
     isIdle: boolean;
     logExists: boolean;
-    lastActiveClientProfileId?: string | null;
     hasDiagnoseStarted: boolean;
     hasDisconnectedByUser: boolean;
     hasProblemDetected: boolean;
@@ -1960,6 +1912,7 @@ export class SessionStatus implements ISessionStatus {
     suppressedTo!: SessionSuppressType;
     suppressedBy!: SessionSuppressType;
     errorMessage?: string | null;
+    isAdRequired!: boolean;
 
     constructor(data?: ISessionStatus) {
         if (data) {
@@ -1977,6 +1930,7 @@ export class SessionStatus implements ISessionStatus {
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
             this.suppressedBy = _data["suppressedBy"] !== undefined ? _data["suppressedBy"] : <any>null;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
+            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
         }
     }
 
@@ -1994,6 +1948,7 @@ export class SessionStatus implements ISessionStatus {
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
         data["suppressedBy"] = this.suppressedBy !== undefined ? this.suppressedBy : <any>null;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
+        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         return data;
     }
 }
@@ -2004,6 +1959,7 @@ export interface ISessionStatus {
     suppressedTo: SessionSuppressType;
     suppressedBy: SessionSuppressType;
     errorMessage?: string | null;
+    isAdRequired: boolean;
 }
 
 export enum SessionErrorCode {
@@ -2016,6 +1972,7 @@ export enum SessionErrorCode {
     AccessTrafficOverflow = "AccessTrafficOverflow",
     AccessLocked = "AccessLocked",
     AccessError = "AccessError",
+    AdError = "AdError",
     Maintenance = "Maintenance",
     RedirectHost = "RedirectHost",
     UnsupportedClient = "UnsupportedClient",
@@ -2289,6 +2246,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
     supportId?: string | null;
     hostNames!: string[];
     isValidHostName!: boolean;
+    regions!: HostRegion[];
 
     constructor(data?: IClientProfileInfo) {
         if (data) {
@@ -2299,6 +2257,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
         }
         if (!data) {
             this.hostNames = [];
+            this.regions = [];
         }
     }
 
@@ -2317,6 +2276,14 @@ export class ClientProfileInfo implements IClientProfileInfo {
                 this.hostNames = <any>null;
             }
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
+            if (Array.isArray(_data["regions"])) {
+                this.regions = [] as any;
+                for (let item of _data["regions"])
+                    this.regions!.push(HostRegion.fromJS(item));
+            }
+            else {
+                this.regions = <any>null;
+            }
         }
     }
 
@@ -2339,6 +2306,11 @@ export class ClientProfileInfo implements IClientProfileInfo {
                 data["hostNames"].push(item);
         }
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
+        if (Array.isArray(this.regions)) {
+            data["regions"] = [];
+            for (let item of this.regions)
+                data["regions"].push(item.toJSON());
+        }
         return data;
     }
 }
@@ -2350,6 +2322,51 @@ export interface IClientProfileInfo {
     supportId?: string | null;
     hostNames: string[];
     isValidHostName: boolean;
+    regions: HostRegion[];
+}
+
+export class HostRegion implements IHostRegion {
+    regionId!: string;
+    regionName?: string | null;
+    countryCode?: string | null;
+
+    constructor(data?: IHostRegion) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): HostRegion {
+        data = typeof data === 'object' ? data : {};
+        let result = new HostRegion();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        return data;
+    }
+}
+
+export interface IHostRegion {
+    regionId: string;
+    regionName?: string | null;
+    countryCode?: string | null;
 }
 
 export class ConfigParams implements IConfigParams {
@@ -2417,6 +2434,7 @@ export class AppStrings implements IAppStrings {
     msgAccessKeyUpdated!: string;
     msgCantReadAccessKey!: string;
     msgUnsupportedContent!: string;
+    msgCantShowAd!: string;
     open!: string;
     openInBrowser!: string;
 
@@ -2441,6 +2459,7 @@ export class AppStrings implements IAppStrings {
             this.msgAccessKeyUpdated = _data["msgAccessKeyUpdated"] !== undefined ? _data["msgAccessKeyUpdated"] : <any>null;
             this.msgCantReadAccessKey = _data["msgCantReadAccessKey"] !== undefined ? _data["msgCantReadAccessKey"] : <any>null;
             this.msgUnsupportedContent = _data["msgUnsupportedContent"] !== undefined ? _data["msgUnsupportedContent"] : <any>null;
+            this.msgCantShowAd = _data["msgCantShowAd"] !== undefined ? _data["msgCantShowAd"] : <any>null;
             this.open = _data["open"] !== undefined ? _data["open"] : <any>null;
             this.openInBrowser = _data["openInBrowser"] !== undefined ? _data["openInBrowser"] : <any>null;
         }
@@ -2465,6 +2484,7 @@ export class AppStrings implements IAppStrings {
         data["msgAccessKeyUpdated"] = this.msgAccessKeyUpdated !== undefined ? this.msgAccessKeyUpdated : <any>null;
         data["msgCantReadAccessKey"] = this.msgCantReadAccessKey !== undefined ? this.msgCantReadAccessKey : <any>null;
         data["msgUnsupportedContent"] = this.msgUnsupportedContent !== undefined ? this.msgUnsupportedContent : <any>null;
+        data["msgCantShowAd"] = this.msgCantShowAd !== undefined ? this.msgCantShowAd : <any>null;
         data["open"] = this.open !== undefined ? this.open : <any>null;
         data["openInBrowser"] = this.openInBrowser !== undefined ? this.openInBrowser : <any>null;
         return data;
@@ -2482,6 +2502,7 @@ export interface IAppStrings {
     msgAccessKeyUpdated: string;
     msgCantReadAccessKey: string;
     msgUnsupportedContent: string;
+    msgCantShowAd: string;
     open: string;
     openInBrowser: string;
 }
@@ -2531,7 +2552,8 @@ export interface IDeviceAppInfo {
 }
 
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
-    name?: string | null;
+    clientProfileName?: PatchOfString | null;
+    regionId?: PatchOfString | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -2544,7 +2566,8 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
     init(_data?: any) {
         if (_data) {
-            this.name = _data["name"] !== undefined ? _data["name"] : <any>null;
+            this.clientProfileName = _data["clientProfileName"] ? PatchOfString.fromJS(_data["clientProfileName"]) : <any>null;
+            this.regionId = _data["regionId"] ? PatchOfString.fromJS(_data["regionId"]) : <any>null;
         }
     }
 
@@ -2557,13 +2580,51 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["name"] = this.name !== undefined ? this.name : <any>null;
+        data["clientProfileName"] = this.clientProfileName ? this.clientProfileName.toJSON() : <any>null;
+        data["regionId"] = this.regionId ? this.regionId.toJSON() : <any>null;
         return data;
     }
 }
 
 export interface IClientProfileUpdateParams {
-    name?: string | null;
+    clientProfileName?: PatchOfString | null;
+    regionId?: PatchOfString | null;
+}
+
+export class PatchOfString implements IPatchOfString {
+    value?: string | null;
+
+    constructor(data?: IPatchOfString) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfString {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfString();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfString {
+    value?: string | null;
 }
 
 export class SubscriptionPlan implements ISubscriptionPlan {

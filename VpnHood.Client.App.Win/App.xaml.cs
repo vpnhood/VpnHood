@@ -26,7 +26,7 @@ public partial class App : Application
             {
                 Resource = DefaultAppResource.Resource,
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
-                IsAddServerSupported = true
+                IsAddAccessKeySupported = true
             });
 
             // initialize SPA

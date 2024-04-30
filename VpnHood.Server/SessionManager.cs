@@ -113,7 +113,7 @@ public class SessionManager : IAsyncDisposable, IJob
         VhLogger.Instance.Log(LogLevel.Trace, "Validating the request by the access server. TokenId: {TokenId}",
             VhLogger.FormatId(helloRequest.TokenId));
         var extraData = JsonSerializer.Serialize(new SessionExtraData
-            { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
+        { ProtocolVersion = helloRequest.ClientInfo.ProtocolVersion });
         var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx
         {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
@@ -122,7 +122,8 @@ public class SessionManager : IAsyncDisposable, IJob
             ClientInfo = helloRequest.ClientInfo,
             EncryptedClientId = helloRequest.EncryptedClientId,
             TokenId = helloRequest.TokenId,
-            AdData = helloRequest.AdData
+            RegionId = helloRequest.RegionId,
+            AllowRedirect = helloRequest.AllowRedirect
         });
 
         // Access Error should not pass to the client in create session
@@ -205,8 +206,9 @@ public class SessionManager : IAsyncDisposable, IJob
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
 
             // Create a dead session if it is not created
-            session = await CreateSessionInternal(new SessionResponseEx(SessionErrorCode.SessionError)
+            session = await CreateSessionInternal(new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.SessionError,
                 SessionId = sessionRequest.SessionId,
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
@@ -239,7 +241,14 @@ public class SessionManager : IAsyncDisposable, IJob
         // unexpected close
         if (session.IsDisposed)
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
-                new SessionResponse(session.SessionResponse) { ErrorCode = SessionErrorCode.SessionClosed },
+                new SessionResponse
+                {
+                    ErrorCode = SessionErrorCode.SessionClosed,
+                    ErrorMessage = session.SessionResponse.ErrorMessage,
+                    AccessUsage = session.SessionResponse.AccessUsage,
+                    SuppressedBy = session.SessionResponse.SuppressedBy,
+                    RedirectHostEndPoint = session.SessionResponse.RedirectHostEndPoint
+                },
                 requestBase.RequestId);
 
         return session;
@@ -279,12 +288,9 @@ public class SessionManager : IAsyncDisposable, IJob
             await session.Sync();
     }
 
-    private async Task Cleanup()
+    private async Task RemoveTimeoutSession()
     {
-        await CloseExpiredSessions();
-
-        // find expired or dead sessions
-        VhLogger.Instance.LogTrace("Cleaning up the expired sessions.");
+        VhLogger.Instance.LogTrace("Remove timeout sessions.");
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
         var timeoutSessions = Sessions
             .Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime)
@@ -295,6 +301,13 @@ public class SessionManager : IAsyncDisposable, IJob
             Sessions.Remove(session.Key, out _);
             await session.Value.DisposeAsync();
         }
+    }
+
+
+    private async Task Cleanup()
+    {
+        await CloseExpiredSessions();
+        await RemoveTimeoutSession();
     }
 
     public Session? GetSessionById(ulong sessionId)
@@ -314,7 +327,7 @@ public class SessionManager : IAsyncDisposable, IJob
             await session.Close();
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
 
     public ValueTask DisposeAsync()

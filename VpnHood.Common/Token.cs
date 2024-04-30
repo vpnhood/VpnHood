@@ -22,6 +22,9 @@ public class Token
     [JsonPropertyName("tid")]
     public required string TokenId { get; set; }
 
+    [JsonPropertyName("iat")]
+    public DateTime IssuedAt { get; set; } = DateTime.MinValue; // for backward compatibility it is not required
+
     [JsonPropertyName("sec")]
     public required byte[] Secret { get; set; }
     
@@ -30,9 +33,6 @@ public class Token
 
     [JsonPropertyName("ser")]
     public required ServerToken ServerToken { get; set; }
-    
-    [JsonIgnore]
-    public bool IsNewVersion { get; internal init; }
 
     public string ToAccessKey()
     {

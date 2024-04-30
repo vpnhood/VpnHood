@@ -4,6 +4,9 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Properties;
+#if GOOGLE_PLAY
+using VpnHood.Client.App.Droid.GooglePlay;
+#endif
 
 namespace VpnHood.Client.App.Droid;
 
@@ -13,7 +16,7 @@ namespace VpnHood.Client.App.Droid;
     MainLauncher = true,
     Exported = true,
     WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
-    AlwaysRetainTaskState = true,
+    // AlwaysRetainTaskState = true, //todo: looks not required
     LaunchMode = LaunchMode.SingleInstance,
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
@@ -42,7 +45,8 @@ public class MainActivity : AndroidAppMainActivity
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3],
 #if GOOGLE_PLAY
-            AppUpdaterService = new GooglePlay.GooglePlayAppUpdaterService(this)
+            // code clean up changes inline namespace to using
+            AppUpdaterService = new GooglePlayAppUpdaterService(this) 
 #else
             AppUpdaterService = null
 #endif

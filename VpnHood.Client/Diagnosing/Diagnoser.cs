@@ -74,6 +74,7 @@ public class Diagnoser
 
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;
+            await Task.Delay(2000, cancellationToken); // connections can not be established on android immediately
             if (!await NetworkCheck())
                 throw new NoStableVpnException();
             VhLogger.Instance.LogTrace("VPN has been established and tested successfully.");

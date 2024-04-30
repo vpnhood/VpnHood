@@ -1,10 +1,8 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : IDisposable
     where TValue : ITimeoutItem
 {

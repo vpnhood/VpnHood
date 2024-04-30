@@ -304,7 +304,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             ExtraData = session.ExtraData,
             CreatedTime = session.CreatedTime,
             LastUsedTime = session.LastUsedTime,
-            AdExpirationTime = session.AdExpirationTime,
             ClientVersion = session.ClientVersion,
             EndTime = session.EndTime,
             ErrorCode = session.ErrorCode,
@@ -315,6 +314,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             IsArchived = session.IsArchived,
             Country = session.Country,
             DeviceIp = session.DeviceIp,
+            AdExpirationTime = session.AdExpirationTime,
             IsAdReward = session.IsAdReward
         };
 
@@ -326,6 +326,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.ErrorMessage).IsModified = true;
         entry.Property(x => x.ErrorCode).IsModified = true;
         entry.Property(x => x.IsArchived).IsModified = true;
+        entry.Property(x => x.AdExpirationTime).IsModified = true;
+        entry.Property(x => x.IsAdReward).IsModified = true;
     }
 
     public void UpdateAccess(AccessCache access)

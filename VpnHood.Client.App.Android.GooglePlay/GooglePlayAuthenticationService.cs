@@ -60,8 +60,7 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
         catch (ApiException ex)
         {
             if (ex.StatusCode == 12501)
-                throw new OperationCanceledException("");
-            Console.WriteLine(ex);
+                throw new OperationCanceledException();
             throw;
         }
         

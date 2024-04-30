@@ -21,7 +21,7 @@ public class BinaryStreamCustom : ChunkStream
     private bool _isCurrentReadingChunkEncrypted;
     private readonly StreamCryptor _streamCryptor;
     private readonly byte[] _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
-    private byte[] _writeBuffer = Array.Empty<byte>();
+    private byte[] _writeBuffer = [];
 
     public long MaxEncryptChunk { get; set; } = long.MaxValue;
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
@@ -243,7 +243,7 @@ public class BinaryStreamCustom : ChunkStream
             if (PreserveWriteBuffer)
                 await WriteInternalAsync(new byte[ChunkHeaderLength], ChunkHeaderLength, 0, cancellationToken);
             else
-                await WriteInternalAsync(Array.Empty<byte>(), 0, 0, cancellationToken);
+                await WriteInternalAsync([], 0, 0, cancellationToken);
 
         }
         catch (Exception ex)
@@ -301,7 +301,7 @@ public class BinaryStreamCustom : ChunkStream
         }
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public override ValueTask DisposeAsync()
     {

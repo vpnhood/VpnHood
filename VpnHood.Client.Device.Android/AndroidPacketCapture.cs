@@ -35,7 +35,10 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public bool Started => _mInterface != null;
     public IpNetwork[]? IncludeNetworks { get; set; }
     public bool CanSendPacketToOutbound => false;
-
+    public bool CanExcludeApps => true;
+    public bool CanIncludeApps => true;
+    public string[]? ExcludeApps { get; set; }
+    public string[]? IncludeApps { get; set; }
     public bool IsMtuSupported => true;
 
     public int Mtu
@@ -141,13 +144,13 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             return;
 
         VhLogger.Instance.LogTrace("Stopping VPN Service...");
-        Close();
+        CloseVpn();
     }
 
     void IDisposable.Dispose()
     {
         // The parent should not be disposed, never call parent dispose
-        Close();
+        CloseVpn();
     }
 
     [return: GeneratedEnum]
@@ -240,7 +243,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         }
 
         if (Started)
-            Close();
+            CloseVpn();
 
         return Task.FromResult(0);
     }
@@ -262,18 +265,16 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public override void OnDestroy()
     {
         VhLogger.Instance.LogTrace("VpnService has been destroyed!");
-        base.OnDestroy(); // must be called first
 
-        Close();
+        CloseVpn();
+
+        base.OnDestroy(); 
+
         Stopped?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Close()
+    private void CloseVpn()
     {
-        // Started means is established; so we should not leave the service open
-        // if (!Started)
-        //   return; 
-
         VhLogger.Instance.LogTrace("Closing VpnService...");
 
         // close streams
@@ -293,29 +294,35 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             _mInterface?.Close(); //required to close the vpn. dispose is not enough
             _mInterface?.Dispose();
-            _mInterface = null;
 
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
         }
+        finally
+        {
+            _mInterface = null;
+        }
 
-        // it must be after _mInterface.Close
-        if (OperatingSystem.IsAndroidVersionAtLeast(24))
-            StopForeground(StopForegroundFlags.Remove);
-        else
-            StopForeground(true);
-
-        StopSelf();
+        StopVpnService();
     }
 
-    #region Application Filter
+    private void StopVpnService()
+    {
+        try
+        {
+            // it must be after _mInterface.Close
+            if (OperatingSystem.IsAndroidVersionAtLeast(24))
+                StopForeground(StopForegroundFlags.Remove);
+            else
+                StopForeground(true);
 
-    public bool CanExcludeApps => true;
-    public bool CanIncludeApps => true;
-    public string[]? ExcludeApps { get; set; }
-    public string[]? IncludeApps { get; set; }
-
-    #endregion
+            StopSelf();
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Error while stopping the VpnService.");
+        }
+    }
 }

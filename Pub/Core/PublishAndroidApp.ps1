@@ -30,7 +30,7 @@ $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android
-$nodeName = "Android.$packageFileTitle";
+$nodeName = "Android.$packageFileTitle.$distribution";
 $keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
 $keystorePass = $credentials.$nodeName.KeyStorePass
 $keystoreAlias = $credentials.$nodeName.KeyStoreAlias
@@ -56,7 +56,7 @@ if ($apk)
 	dotnet build $projectFile -c Release /t:SignAndroidPackage /p:Version=$versionParam /p:OutputPath=$outputPath /p:AndroidPackageFormat="apk" /verbosity:$msverbosity `
 		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
 		/p:ApplicationId=$packageId `
-		/p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr";
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 	 
 	# publish info
 	$json = @{
@@ -69,6 +69,7 @@ if ($apk)
 		DeprecatedVersion = "$deprecatedVersion";
 		NotificationDelay = "03.00:00:00";
 	};
+
 	$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
 }
 
@@ -86,11 +87,11 @@ if ($aab)
 	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 	if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath=$outputPath /verbosity:$msverbosity; }
-	dotnet build $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
-		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:ApplicationId=$packageId `
-		/p:DefineConstants=GOOGLE_PLAY `
-		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
+		dotnet build $projectFile /p:Configuration=Release /p:Version=$versionParam /p:OutputPath=$outputPath /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
+			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+			/p:ApplicationId=$packageId `
+			/p:DefineConstants=GOOGLE_PLAY `
+			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True;
 }
 
 # restore standard icon

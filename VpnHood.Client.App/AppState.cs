@@ -8,10 +8,9 @@ public class AppState
     public required DateTime? ConnectRequestTime { get; init; }
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
-    public required Guid? ActiveClientProfileId { get; init; }
+    public required Guid? ClientProfileId { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }
-    public required Guid? LastActiveClientProfileId { get; init; }
     public required bool HasDiagnoseStarted { get; init; }
     public required bool HasDisconnectedByUser { get; init; }
     public required bool HasProblemDetected { get; init; }

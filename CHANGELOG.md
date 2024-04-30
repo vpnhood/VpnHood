@@ -1,4 +1,4 @@
-# Upcoming
+# v4.4.500
 ### Client
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App

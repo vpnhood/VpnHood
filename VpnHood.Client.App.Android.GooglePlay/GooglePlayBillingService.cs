@@ -1,4 +1,5 @@
 using Android.BillingClient.Api;
+using Android.Gms.Common.Apis;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.Client.App.Abstractions;
@@ -139,6 +140,10 @@ public class GooglePlayBillingService: IAppBillingService
             _taskCompletionSource = new TaskCompletionSource<string>();
             var orderId = await _taskCompletionSource.Task;
             return orderId;
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new OperationCanceledException();
         }
         catch (Exception ex)
         {

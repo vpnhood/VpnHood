@@ -3,6 +3,7 @@ using Android.Gms.Ads.Rewarded;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
+using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 public class GooglePlayAdService(
@@ -49,14 +50,16 @@ public class GooglePlayAdService(
         }
     }
 
-    public async Task<string> ShowAd(CancellationToken cancellationToken)
+    public async Task ShowAd(string customData, CancellationToken cancellationToken)
     {
         // create ad custom data
-        var customData = Guid.NewGuid().ToString();
         var rewardedAd = await LoadRewardedAd(cancellationToken);
+        if (activity.IsDestroyed)
+            throw new Exception("MainActivity has been destroyed before showing the ad.");
+
         var serverSideVerificationOptions = new ServerSideVerificationOptions.Builder()
-            .SetCustomData(customData)
-            .Build();
+        .SetCustomData(customData)
+        .Build();
 
         var fullScreenContentCallback = new MyFullScreenContentCallback();
         var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
@@ -75,10 +78,10 @@ public class GooglePlayAdService(
         cancellationToken.ThrowIfCancellationRequested();
 
         // check task errors
-        if (fullScreenContentCallback.DismissedTask.IsFaulted) throw fullScreenContentCallback.DismissedTask.Exception;
+        if (fullScreenContentCallback.DismissedTask.IsFaulted)
+            throw fullScreenContentCallback.DismissedTask.Exception;
 
         _rewardedAdLoadCallback = null;
-        return customData;
     }
 
     public void Dispose()
@@ -88,6 +91,7 @@ public class GooglePlayAdService(
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {
         private readonly TaskCompletionSource _dismissedCompletionSource = new();
+
         public Task DismissedTask => _dismissedCompletionSource.Task;
 
         public override void OnAdDismissedFullScreenContent()
@@ -99,6 +103,7 @@ public class GooglePlayAdService(
         {
             _dismissedCompletionSource.TrySetException(new Exception(adError.Message));
         }
+
     }
 
     private class MyRewardedAdLoadCallback : RewardedAdLoadCallback
@@ -117,7 +122,7 @@ public class GooglePlayAdService(
         }
     }
 
-    private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
+    private class MyOnUserEarnedRewardListener : Object, IOnUserEarnedRewardListener
     {
         private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();
         public Task<IRewardItem> UserEarnedRewardTask => _earnedRewardCompletionSource.Task;

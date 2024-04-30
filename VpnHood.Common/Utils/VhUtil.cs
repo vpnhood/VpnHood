@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -183,7 +184,7 @@ public static class VhUtil
         try
         {
             if (!File.Exists(filePath))
-                return default(T);
+                return default;
 
             var json = File.ReadAllText(filePath);
             var appAccount = JsonDeserialize<T>(json, options);
@@ -192,7 +193,7 @@ public static class VhUtil
         catch (Exception ex)
         {
             logger?.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
-            return default(T);
+            return default;
         }
     }
 
@@ -371,4 +372,11 @@ public static class VhUtil
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Kind);
     }
 
+    public static string GetAssemblyMetadata(Assembly assembly, string key, string defaultValue)
+    {
+        var metadataAttribute = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(attr => attr.Key == key);
+
+        return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
+    }
 }

@@ -37,6 +37,10 @@ public class ServerToken
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint[]? HostEndPoints { get; set; }
 
+    [JsonPropertyName("regions")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public HostRegion[]? Regions { get; set; }
+
     public string Encrypt()
     {
         var json = JsonSerializer.Serialize(this);

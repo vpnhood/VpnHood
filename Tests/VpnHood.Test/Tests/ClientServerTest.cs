@@ -23,6 +23,7 @@ public class ClientServerTest : TestBase
     [TestMethod]
     public async Task Redirect_Server()
     {
+        // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
         using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
@@ -31,8 +32,7 @@ public class ClientServerTest : TestBase
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions2 = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint2] };
-        using var fileAccessManager2 =
-            TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
+        using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
         await using var server2 = TestHelper.CreateServer(testAccessManager2);
 
@@ -42,6 +42,35 @@ public class ClientServerTest : TestBase
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
         await using var client = await TestHelper.CreateClient(token1);
+        await TestHelper.Test_Https();
+
+        Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
+    }
+
+    [TestMethod]
+    public async Task Redirect_Server_For_Region()
+    {
+        // Create Server 1
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
+        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
+        await using var server1 = TestHelper.CreateServer(testAccessManager1);
+
+        // Create Server 2
+        var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var fileAccessManagerOptions2 = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint2] };
+        using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
+        using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
+        await using var server2 = TestHelper.CreateServer(testAccessManager2);
+
+        // redirect server1 to server2
+        testAccessManager1.EmbedIoAccessManager.Regions.Add("r1", serverEndPoint2);
+
+        // Create Client
+        var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
+        var clientOptions = TestHelper.CreateClientOptions();
+        clientOptions.RegionId = "r1";
+        await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions);
         await TestHelper.Test_Https();
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);

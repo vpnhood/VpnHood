@@ -34,14 +34,6 @@ public class AndroidAppWebViewMainActivityHandler(
         InitWebUi();
     }
 
-    protected override void OnDestroy()
-    {
-        if (VpnHoodAppWebServer.IsInit)
-            VpnHoodAppWebServer.Instance.Dispose();
-
-        base.OnDestroy();
-    }
-
     private void InitSplashScreen()
     {
         var imageView = new ImageView(ActivityEvent.Activity);

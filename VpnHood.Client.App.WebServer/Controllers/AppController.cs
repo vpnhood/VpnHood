@@ -1,9 +1,8 @@
-﻿using System.Globalization;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
+﻿using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
@@ -52,13 +51,15 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Post, "/connect")]
     public Task Connect([QueryField] Guid? clientProfileId = null)
     {
-        return App.Connect(clientProfileId, userAgent: HttpContext.Request.UserAgent, throwException: false);
+        return App.Connect(clientProfileId, diagnose: false,
+            userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/diagnose")]
     public Task Diagnose([QueryField] Guid? clientProfileId = null)
     {
-        return App.Connect(clientProfileId, true, HttpContext.Request.UserAgent, throwException: false);
+        return App.Connect(clientProfileId, diagnose: true,
+            userAgent: HttpContext.Request.UserAgent, throwException: false);
     }
 
     [Route(HttpVerbs.Post, "/disconnect")]
@@ -90,12 +91,6 @@ internal class AppController : WebApiController, IAppController
     public void ClearLastError()
     {
         App.ClearLastError();
-    }
-
-    [Route(HttpVerbs.Post, "/add-test-server")]
-    public void AddTestServer()
-    {
-        App.ClientProfileService.ImportAccessKey(App.Settings.PublicAccessKey);
     }
 
     [Route(HttpVerbs.Put, "/user-settings")]
@@ -130,21 +125,17 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
-    public async Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>();
-
-        var clientProfile = App.ClientProfileService.Get(clientProfileId);
-        if (updateParams.Name != null)
-            clientProfile.ClientProfileName = updateParams.Name;
-
-        App.ClientProfileService.Update(clientProfile);
+        var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
+        return clientProfile.ToInfo();
     }
 
     [Route(HttpVerbs.Delete, "/client-profiles/{clientProfileId}")]
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
-        if (clientProfileId == App.ActiveClientProfile?.ClientProfileId)
+        if (clientProfileId == App.CurrentClientProfile?.ClientProfileId)
             await App.Disconnect(true);
 
         App.ClientProfileService.Remove(clientProfileId);

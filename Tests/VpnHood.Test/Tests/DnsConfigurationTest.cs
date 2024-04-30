@@ -50,7 +50,7 @@ public class DnsConfigurationTest
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = [IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.2")];
-        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions()
+        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions
         {
             ExcludeIpRanges = clientDnsServers.Select(x => new IpRange(x)).ToArray()
         };
@@ -74,7 +74,7 @@ public class DnsConfigurationTest
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = serverDnsServers;
-        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions()
+        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions
         {
             IncludeIpRanges = [IpRange.Parse("10.10.10.10-10.10.10.11")]
         };

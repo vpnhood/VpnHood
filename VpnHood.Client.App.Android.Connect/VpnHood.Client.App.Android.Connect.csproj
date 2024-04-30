@@ -5,14 +5,14 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>480</ApplicationVersion>
-		<ApplicationDisplayVersion>3.3.480</ApplicationDisplayVersion>
+		<ApplicationVersion>497</ApplicationVersion>
+		<ApplicationDisplayVersion>4.4.497</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<PublishTrimmed>False</PublishTrimmed>
-		<RunAOTCompilation>False</RunAOTCompilation>
+		<PublishTrimmed>True</PublishTrimmed>
+		<RunAOTCompilation>True</RunAOTCompilation>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -30,11 +30,30 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.480</Version>
+		<Version>4.4.497</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
+
+	<ItemGroup Condition="'$(Configuration)'=='Debug'">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>GlobalServersAccessKey</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_PUBLIC_ACCESSKEY)</_Parameter2>
+		</AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>RewardedAdUnitId</_Parameter1>
+      <_Parameter2>$(VPNHOOD_DEV_AD_UNIT)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>StoreBaseUri</_Parameter1>
+      <_Parameter2>$(VPNHOOD_DEV_STORE_BASE_URI)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>StoreAppId</_Parameter1>
+      <_Parameter2>$(VPNHOOD_DEV_STORE_APP_ID)</_Parameter2>
+    </AssemblyAttribute>
+	</ItemGroup>
 
 	<ItemGroup>
 	  <None Remove="xml\network_security_config.xml" />
@@ -46,6 +65,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Ads\VpnHood.Client.App.Android.GooglePlay.Ads.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />

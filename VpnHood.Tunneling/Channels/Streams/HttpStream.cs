@@ -267,7 +267,7 @@ public class HttpStream : ChunkStream
         // finish writing current HttpStream gracefully
         try
         {
-            await WriteInternalAsync(Array.Empty<byte>(), 0, 0, cancellationToken);
+            await WriteInternalAsync([], 0, 0, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -304,7 +304,7 @@ public class HttpStream : ChunkStream
         }
     }
 
-    private readonly AsyncLock _disposeLock = new();
+    private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
     public override ValueTask DisposeAsync()
     {

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -27,6 +28,7 @@ public class ClientAppTest : TestBase
         var token = new Token
         {
             Name = "Default Test Server",
+            IssuedAt = DateTime.UtcNow,
             SupportId = _lastSupportId++.ToString(),
             TokenId = randomId.ToString(),
             Secret = randomId.ToByteArray(),
@@ -44,6 +46,32 @@ public class ClientAppTest : TestBase
 
         return token;
     }
+
+    [TestMethod]
+    public async Task BuiltIn_AccessKeys_initialization()
+    {
+        var appOptions = TestHelper.CreateClientAppOptions();
+        var tokens = new[] {CreateToken(), CreateToken()};
+        appOptions.AccessKeys = tokens.Select(x=>x.ToAccessKey()).ToArray();
+        
+        await using var app1 = TestHelper.CreateClientApp(appOptions: appOptions);
+        var clientProfiles = app1.ClientProfileService.List();
+        Assert.AreEqual(tokens.Length, clientProfiles.Length);
+        Assert.AreEqual(tokens[0].TokenId, clientProfiles[0].Token.TokenId);
+        Assert.AreEqual(tokens[1].TokenId, clientProfiles[1].Token.TokenId);
+        Assert.AreEqual(tokens[0].TokenId, clientProfiles.Single(x=>x.ClientProfileId ==app1.Features.BuiltInClientProfileId).Token.TokenId);
+
+        // BuiltIn token should not be removed
+        foreach (var clientProfile in clientProfiles)
+        {
+            Assert.ThrowsException<UnauthorizedAccessException>(() =>
+            {
+                // ReSharper disable once AccessToDisposedClosure
+                app1.ClientProfileService.Remove(clientProfile.ClientProfileId);
+            });
+        }
+    }
+
 
     [TestMethod]
     public async Task Load_country_ip_groups()
@@ -68,13 +96,14 @@ public class ClientAppTest : TestBase
 
 
     [TestMethod]
-    public async Task Add_remove_clientProfiles()
+    public async Task ClientProfiles_CRUD()
     {
         await using var app = TestHelper.CreateClientApp();
 
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
+        token1.ServerToken.Regions = [new HostRegion{RegionId = "r1"}, new HostRegion { RegionId = "r2" }];
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
         Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");
@@ -98,24 +127,34 @@ public class ClientAppTest : TestBase
         Assert.ThrowsException<NotExistsException>(() =>
         {
             // ReSharper disable once AccessToDisposedClosure
-            app.ClientProfileService.Update(new ClientProfile
+            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
             {
-                Token = CreateToken(),
-                ClientProfileName = "Hi",
-                ClientProfileId = Guid.NewGuid()
+                ClientProfileName =  "Hi"
+            });
+
+        });
+
+        // ************
+        // *** TEST ***: Update throw NotExistsException exception if regionId does not exist
+        Assert.ThrowsException<NotExistsException>(() =>
+        {
+            // ReSharper disable once AccessToDisposedClosure
+            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
+            {
+                RegionId = Guid.NewGuid().ToString()
             });
 
         });
 
         // ************
         // *** TEST ***: Update should update the old node if ClientProfileId already exists
-        app.ClientProfileService.Update(new ClientProfile
+        app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
         {
             ClientProfileName = "Hi2",
-            ClientProfileId = clientProfile1.ClientProfileId,
-            Token = clientProfile1.Token
+            RegionId = "r2"
         });
         Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
+        Assert.AreEqual("r2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).RegionId);
 
         // ************
         // *** TEST ***: RemoveClientProfile
@@ -161,7 +200,7 @@ public class ClientAppTest : TestBase
 
         // ************
         // Test: With diagnose
-        _ = app.Connect(clientProfile1.ClientProfileId, true);
+        _ = app.Connect(clientProfile1.ClientProfileId, diagnose: true);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected, 10000);
         app.ClearLastError(); // should not affect
         await app.Disconnect(true);
@@ -524,16 +563,12 @@ public class ClientAppTest : TestBase
         // connect
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        _ = app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId);
 
-        await VhTestUtil.AssertEqualsWait(true, () => isTokenRetrieved);
+        Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
         Assert.AreEqual(token2.ServerToken.CreatedTime, app.ClientProfileService.GetToken(token1.TokenId).ServerToken.CreatedTime);
-        Assert.AreNotEqual(AppConnectionState.Connected, app.State.ConnectionState);
-
-        // connect
-        await app.Connect(clientProfile.ClientProfileId);
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
+        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
     }
 
     [TestMethod]

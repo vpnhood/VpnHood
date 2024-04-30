@@ -2,6 +2,7 @@ using System.Text.Json;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.ApplicationLifetime;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +65,10 @@ public class Program
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
+
+
+        builder.Services
+            .AddGrayMintApplicationLifetime<CacheService>();
 
         builder.Services.AddSingleton<CacheRepo>();
         builder.Services.AddScoped<VhRepo>();

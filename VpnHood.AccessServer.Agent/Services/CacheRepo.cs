@@ -13,6 +13,6 @@ public class CacheRepo
     public ConcurrentDictionary<Guid, AccessCache> Accesses = new();
     public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
     public readonly ConcurrentDictionary<string, DateTime> Ads = new();
-    public readonly ConcurrentDictionary<Guid, DateTime> AdRewardedDevices = new();
+    public readonly ConcurrentDictionary<Guid, DateTime> AdRewardedAccesses = new();
     public DateTime LastSavedTime = DateTime.MinValue;
 }

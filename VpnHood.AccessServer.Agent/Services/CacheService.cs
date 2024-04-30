@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using GrayMint.Common.AspNetCore.ApplicationLifetime;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,7 @@ public class CacheService(
     ILogger<CacheService> logger,
     VhAgentRepo vhAgentRepo,
     CacheRepo cacheRepo)
-    : IGrayMintJob
+    : IGrayMintJob, IGrayMintApplicationLifetime
 {
 
     public async Task Init(bool force = true)
@@ -146,14 +147,14 @@ public class CacheService(
         return Task.CompletedTask;
     }
 
-    public void Ad_AddRewardedDevice(Guid deviceId)
+    public void Ad_AddRewardedAccess(Guid accessId)
     {
-        cacheRepo.AdRewardedDevices.TryAdd(deviceId, FastDateTime.Now);
+        cacheRepo.AdRewardedAccesses.TryAdd(accessId, FastDateTime.Now);
     }
 
-    public bool Ad_IsRewardedDevice(Guid deviceId)
+    public bool Ad_IsRewardedAccess(Guid accessId)
     {
-        return cacheRepo.AdRewardedDevices.TryGetValue(deviceId, out _);
+        return cacheRepo.AdRewardedAccesses.TryGetValue(accessId, out _);
     }
 
     public void Ad_AddRewardData(Guid projectId, string adData)
@@ -176,9 +177,9 @@ public class CacheService(
         foreach (var item in oldAdItems)
             cacheRepo.Ads.TryRemove(item);
 
-        var oldDeviceItems = cacheRepo.AdRewardedDevices.Where(x => x.Value < now - agentOptions.Value.AdRewardDeviceTimeout).ToArray();
+        var oldDeviceItems = cacheRepo.AdRewardedAccesses.Where(x => x.Value < now - agentOptions.Value.AdRewardDeviceTimeout).ToArray();
         foreach (var item in oldDeviceItems)
-            cacheRepo.AdRewardedDevices.TryRemove(item);
+            cacheRepo.AdRewardedAccesses.TryRemove(item);
     }
 
     public async Task InvalidateServers(Guid? projectId = null, Guid? serverFarmId = null,
@@ -421,7 +422,7 @@ public class CacheService(
         }
 
         cacheRepo.LastSavedTime = savingTime;
-        logger.LogTrace("The cache has been saved.");
+        logger.LogInformation("The cache has been saved.");
     }
 
     public Task<SessionCache[]> GetActiveSessions(Guid accessId)
@@ -437,6 +438,17 @@ public class CacheService(
     public Task RunJob(CancellationToken cancellationToken)
     {
         CleanupAds();
+        return SaveChanges();
+    }
+
+    public Task ApplicationStarted()
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task ApplicationStopping()
+    {
+        logger.LogInformation("Application is stopping. Saving cache...");
         return SaveChanges();
     }
 }

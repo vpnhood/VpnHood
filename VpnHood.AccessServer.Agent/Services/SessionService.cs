@@ -210,11 +210,11 @@ public class SessionService(
             };
 
         // check is device already rewarded
-        var isAdRewardedDevice = cacheService.Ad_IsRewardedDevice(device.DeviceId) &&
-            !accessToken.Description?.Contains("#ad-debugger") == true; //for debug
+        var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&
+            accessToken.Description?.Contains("#ad-debugger") is null or false; //for ad debuggers
 
         var isAdRequired = accessToken.IsAdRequired && !isAdRewardedDevice;
-        
+
         // create session
         var session = new SessionCache
         {
@@ -421,7 +421,7 @@ public class SessionService(
 
         // validate ad
         var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
-        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, session.DeviceId, adData))
+        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, access.AccessId, adData))
         {
             session.Close(SessionErrorCode.AdError, "Could not verify the given rewarded ad.");
             return await BuildSessionResponse(session, access);
@@ -522,14 +522,14 @@ public class SessionService(
         return null;
     }
 
-    private async Task<bool> VerifyAdReward(Guid projectId, Guid deviceId, string adData)
+    private async Task<bool> VerifyAdReward(Guid projectId, Guid accessId, string adData)
     {
         // check is device rewarded
         for (var i = 0; i < 5; i++)
         {
             if (cacheService.Ad_RemoveRewardData(projectId, adData))
             {
-                cacheService.Ad_AddRewardedDevice(deviceId);
+                cacheService.Ad_AddRewardedAccess(accessId);
                 return true;
             }
 

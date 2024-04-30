@@ -163,7 +163,7 @@ public class Session : IAsyncDisposable, IJob
         return Sync(true, false);
     }
 
-    private async Task Sync(bool force, bool closeSession)
+    private async Task Sync(bool force, bool closeSession, string? adData = null)
     {
         using var syncLock = await _syncLock.LockAsync();
         if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
@@ -191,7 +191,7 @@ public class Session : IAsyncDisposable, IJob
         {
             SessionResponse = closeSession
                 ? await _accessManager.Session_Close(SessionId, traffic)
-                : await _accessManager.Session_AddUsage(SessionId, traffic);
+                : await _accessManager.Session_AddUsage(SessionId, traffic, adData);
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
@@ -281,9 +281,11 @@ public class Session : IAsyncDisposable, IJob
         throw new NotImplementedException();
     }
 
-    public Task ProcessAdRewardRequest(AdRewardRequest request)
+    public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        await Sync(force: true, closeSession: false, adData: request.AdData);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+        await clientStream.DisposeAsync();
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream, CancellationToken cancellationToken)

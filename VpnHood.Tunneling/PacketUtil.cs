@@ -296,7 +296,7 @@ public static class PacketUtil
                     {
                         eventId = GeneralEventId.Ping;
                         var icmpPacket = ExtractIcmp(ipPacket);
-                        packetPayload = icmpPacket.PayloadData ?? Array.Empty<byte>();
+                        packetPayload = icmpPacket.PayloadData ?? [];
                         break;
                     }
 
@@ -304,7 +304,7 @@ public static class PacketUtil
                     {
                         eventId = GeneralEventId.Ping;
                         var icmpPacket = ExtractIcmpV6(ipPacket);
-                        packetPayload = icmpPacket.PayloadData ?? Array.Empty<byte>();
+                        packetPayload = icmpPacket.PayloadData ?? [];
                         break;
                     }
 
@@ -312,7 +312,7 @@ public static class PacketUtil
                     {
                         eventId = GeneralEventId.Udp;
                         var udpPacket = ExtractUdp(ipPacket);
-                        packetPayload = udpPacket.PayloadData ?? Array.Empty<byte>();
+                        packetPayload = udpPacket.PayloadData ?? [];
                         break;
                     }
 
@@ -320,7 +320,7 @@ public static class PacketUtil
                 {
                     eventId = GeneralEventId.Tcp;
                     var tcpPacket = ExtractTcp(ipPacket);
-                    packetPayload = tcpPacket.PayloadData ?? Array.Empty<byte>();
+                    packetPayload = tcpPacket.PayloadData ?? [];
                     break;
                 }
             }

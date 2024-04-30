@@ -33,8 +33,7 @@ internal class ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeou
         var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken);
 
         // log the response
-        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.",
-            ret.Response.ErrorCode);
+        VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
 
         lock (Stat) Stat.RequestCount++;
         return ret;

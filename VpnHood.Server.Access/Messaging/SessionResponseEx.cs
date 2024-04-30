@@ -3,8 +3,7 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Access.Messaging;
 
-public class SessionResponseEx(SessionErrorCode errorCode) 
-    : SessionResponse(errorCode)
+public class SessionResponseEx : SessionResponse
 {
     [JsonIgnore(Condition =JsonIgnoreCondition.WhenWritingNull)]
     public string? ExtraData { get; set; }
@@ -13,5 +12,6 @@ public class SessionResponseEx(SessionErrorCode errorCode)
     public DateTime? CreatedTime { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }
     public ulong SessionId { get; set; }
-    public byte[] SessionKey { get; set; } = Array.Empty<byte>();
+    public byte[] SessionKey { get; set; } = [];
+    public bool IsAdRequired { get; set; }
 }

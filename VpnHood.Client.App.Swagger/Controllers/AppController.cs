@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
@@ -46,20 +47,8 @@ public class AppController : ControllerBase, IAppController
         throw new NotImplementedException();
     }
 
-    [HttpPut("access-keys")]
-    public Task<ClientProfileInfo> AddAccessKey(string accessKey)
-    {
-        throw new NotImplementedException();
-    }
-
     [HttpPost("clear-last-error")]
     public void ClearLastError()
-    {
-        throw new NotImplementedException();
-    }
-
-    [HttpPost("add-test-server")]
-    public void AddTestServer()
     {
         throw new NotImplementedException();
     }
@@ -101,13 +90,19 @@ public class AppController : ControllerBase, IAppController
         throw new NotImplementedException();
     }
 
-    [HttpPatch("client-profiles/{clientProfileId}")]
-    public Task UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    [HttpPut("access-keys")]
+    public Task<ClientProfileInfo> AddAccessKey(string accessKey)
     {
         throw new NotImplementedException();
     }
 
-    [HttpDelete("client-profiles/{clientProfileId}")]
+    [HttpPatch("client-profiles/{clientProfileId:guid}")]
+    public Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpDelete("client-profiles/{clientProfileId:guid}")]
     public Task DeleteClientProfile(Guid clientProfileId)
     {
         throw new NotImplementedException();

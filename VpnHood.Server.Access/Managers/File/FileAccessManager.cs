@@ -39,7 +39,7 @@ public class FileAccessManager : IAccessManager
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = System.IO.File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty , X509KeyStorageFlags.Exportable)
+            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty, X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
         ServerConfig.Certificates =
@@ -110,13 +110,13 @@ public class FileAccessManager : IAccessManager
         return Convert.FromBase64String(System.IO.File.ReadAllText(serverSecretFile));
     }
 
-    public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
+    public virtual Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         ServerStatus = serverStatus;
         return Task.FromResult(new ServerCommand(ServerConfig.ConfigCode));
     }
 
-    public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
+    public virtual Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
@@ -133,11 +133,15 @@ public class FileAccessManager : IAccessManager
         return Task.FromResult((ServerConfig)ServerConfig);
     }
 
-    public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
 
@@ -148,7 +152,7 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
-    public async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         _ = hostEndPoint;
         _ = clientIp;
@@ -156,8 +160,9 @@ public class FileAccessManager : IAccessManager
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Session does not exist."
             };
@@ -165,8 +170,9 @@ public class FileAccessManager : IAccessManager
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx
             {
+                ErrorCode = SessionErrorCode.AccessError,
                 SessionId = sessionId,
                 ErrorMessage = "Token does not exist."
             };
@@ -175,27 +181,41 @@ public class FileAccessManager : IAccessManager
         return SessionController.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public virtual Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
-        return Session_AddUsage(sessionId, traffic, false);
+        return Session_AddUsage(sessionId, traffic, adData, false);
     }
 
-    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
+    public virtual Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
     {
-        return Session_AddUsage(sessionId, traffic, true);
+        return Session_AddUsage(sessionId, traffic, adData: null, closeSession: true);
     }
 
-    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, bool closeSession)
+    protected virtual bool IsValidAd(string? adData)
+    {
+        return true; // this server does not validate ad at server side
+    }
+
+    private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
+        bool closeSession)
     {
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId);
         if (accessItem == null)
-            return new SessionResponse(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
+            return new SessionResponse
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Token does not exist."
+            };
 
         accessItem.AccessUsage.Traffic += traffic;
         await WriteAccessItemUsage(accessItem);
@@ -203,9 +223,14 @@ public class FileAccessManager : IAccessManager
         if (closeSession)
             SessionController.CloseSession(sessionId);
 
+        // manage adData for simulation
+        if (IsValidAd(adData))
+            SessionController.Sessions[sessionId].ExpirationTime = null;
+
         var res = SessionController.GetSession(sessionId, accessItem, null);
-        var ret = new SessionResponse(res.ErrorCode)
+        var ret = new SessionResponse
         {
+            ErrorCode = res.ErrorCode,
             AccessUsage = res.AccessUsage,
             ErrorMessage = res.ErrorMessage,
             SuppressedBy = res.SuppressedBy
@@ -214,7 +239,7 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         SessionController.Dispose();
     }
@@ -269,7 +294,8 @@ public class FileAccessManager : IAccessManager
         int maxClientCount = 1,
         string? tokenName = null,
         int maxTrafficByteCount = 0,
-        DateTime? expirationTime = null)
+        DateTime? expirationTime = null,
+        bool isAdRequired = false)
     {
         // generate key
         var aes = Aes.Create();
@@ -284,11 +310,13 @@ public class FileAccessManager : IAccessManager
             ExpirationTime = expirationTime,
             Token = new Token
             {
+                IssuedAt = DateTime.UtcNow,
                 TokenId = Guid.NewGuid().ToString(),
                 Secret = aes.Key,
                 Name = tokenName,
                 SupportId = null,
-                ServerToken = _serverToken
+                ServerToken = _serverToken,
+                IsAdRequired = isAdRequired
             }
         };
 

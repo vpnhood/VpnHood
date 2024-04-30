@@ -55,6 +55,7 @@ public class TestAccessManager : IAccessManager
     {
         lock (_lockeObject)
             SessionGetCounter++;
+
         return _httpAccessManager.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
@@ -63,9 +64,9 @@ public class TestAccessManager : IAccessManager
         return _httpAccessManager.Session_Create(sessionRequestEx);
     }
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
     {
-        return _httpAccessManager.Session_AddUsage(sessionId, traffic);
+        return _httpAccessManager.Session_AddUsage(sessionId, traffic, adData);
     }
 
     public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)

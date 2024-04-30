@@ -8,17 +8,6 @@ namespace VpnHood.Tunneling.Messaging;
 
 public class HelloResponse : SessionResponse
 {
-    [JsonConstructor]
-    public HelloResponse(SessionErrorCode errorCode)
-        : base(errorCode)
-    {
-    }
-
-    public HelloResponse(SessionResponse obj)
-        : base(obj)
-    {
-    }
-
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress ClientPublicAddress { get; set; }
     
@@ -30,7 +19,7 @@ public class HelloResponse : SessionResponse
     public int ServerProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = default!;
     public ulong SessionId { get; set; }
-    public byte[] SessionKey { get; set; } = Array.Empty<byte>();
+    public byte[] SessionKey { get; set; } = [];
     public SessionSuppressType SuppressedTo { get; set; } 
     public int MaxDatagramChannelCount { get; set; } 
     public bool IsIpV6Supported { get; set; }
@@ -40,4 +29,5 @@ public class HelloResponse : SessionResponse
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public string? AccessKey { get; set; }
+    public bool IsAdRequired { get; set; }
 }

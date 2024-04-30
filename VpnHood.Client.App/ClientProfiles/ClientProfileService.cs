@@ -5,13 +5,14 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfileService
 {
     private const string FilenameProfiles = "vpn_profiles.json";
     private readonly string _folderPath;
     private readonly List<ClientProfile> _clientProfiles;
+    private string[] _builtInAccessTokenIds = [];
 
     private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
 
@@ -40,7 +41,6 @@ public class ClientProfileService
     public Token GetToken(string tokenId)
     {
         var clientProfile = FindByTokenId(tokenId) ?? throw new NotExistsException($"TokenId does not exist. TokenId: {tokenId}");
-        if (clientProfile == null) throw new KeyNotFoundException();
         return clientProfile.Token;
     }
 
@@ -51,39 +51,75 @@ public class ClientProfileService
 
     public void Remove(Guid clientProfileId)
     {
-        var clientProfile = _clientProfiles.Single(x => x.ClientProfileId == clientProfileId);
+        var clientProfile =
+            _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+            ?? throw new NotExistsException();
+
+        // BuiltInToken should not be removed
+        if (_builtInAccessTokenIds.Any(tokenId => tokenId == clientProfile.Token.TokenId))
+            throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
+
         _clientProfiles.Remove(clientProfile);
         Save();
     }
 
-    public void Update(ClientProfile clientProfile)
+    public void TryRemoveByTokenId(string tokenId)
     {
-        var index = _clientProfiles.FindIndex(x => x.ClientProfileId == clientProfile.ClientProfileId);
-        if (index == -1)
-            throw new NotExistsException($"ClientProfile does not exist. ClientProfileId: {clientProfile.ClientProfileId}");
-
-        _clientProfiles[index] = clientProfile;
-
-        // fix name
-        clientProfile.ClientProfileName = clientProfile.ClientProfileName?.Trim();
-        if (string.IsNullOrWhiteSpace(clientProfile.ClientProfileName) || clientProfile.ClientProfileName == clientProfile.Token.Name?.Trim())
-            clientProfile.ClientProfileName = null;
+        var clientProfiles = _clientProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
+        foreach (var clientProfile in clientProfiles)
+            _clientProfiles.Remove(clientProfile);
 
         Save();
+    }
+
+    public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    {
+        var clientProfile = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+            ?? throw new NotExistsException("ClientProfile does not exists. ClientProfileId: {clientProfileId}");
+
+        // update name
+        if (updateParams.ClientProfileName != null)
+        {
+            var name = updateParams.ClientProfileName.Value?.Trim();
+            if (name?.Length == 0) name = null;
+            clientProfile.ClientProfileName = name;
+        }
+
+        // update region
+        if (updateParams.RegionId != null)
+        {
+            if (updateParams.RegionId.Value != null &&
+                clientProfile.Token.ServerToken.Regions?.SingleOrDefault(x => x.RegionId == updateParams.RegionId) == null)
+                throw new NotExistsException("RegionId does not exist.");
+
+            clientProfile.RegionId = updateParams.RegionId;
+        }
+
+        Save();
+        return clientProfile;
     }
 
 
     public ClientProfile ImportAccessKey(string accessKey)
     {
         var token = Token.FromAccessKey(accessKey);
-        return ImportAccessToken(token);
+        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
     }
 
-    public ClientProfile ImportAccessToken(Token token)
+    // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn)
     {
+        // make sure no one overwrites built-in tokens
+        if (!allowOverwriteBuiltIn && _builtInAccessTokenIds.Any(tokenId => tokenId == token.TokenId))
+            throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
+
         // update tokens
-        foreach (var clientProfile in _clientProfiles.Where(clientProfile => clientProfile.Token.TokenId == token.TokenId))
-            clientProfile.Token = token;
+        foreach (var clientProfile in _clientProfiles.Where(clientProfile =>
+                     clientProfile.Token.TokenId == token.TokenId))
+        {
+            if (overwriteNewer || token.IssuedAt >= clientProfile.Token.IssuedAt)
+                clientProfile.Token = token;
+        }
 
         // add if it is a new token
         if (_clientProfiles.All(x => x.Token.TokenId != token.TokenId))
@@ -101,30 +137,39 @@ public class ClientProfileService
         return ret;
     }
 
-    public bool UpdateTokenByAccessKey(Token token, string accessKey)
+    internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
+    {
+        var accessTokens = accessKeys.Select(Token.FromAccessKey).ToArray();
+        var clientProfiles = accessTokens.Select(token => ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true)).ToArray();
+        _builtInAccessTokenIds = clientProfiles.Select(clientProfile => clientProfile.Token.TokenId).ToArray();
+        return clientProfiles;
+    }
+
+    public Token UpdateTokenByAccessKey(Token token, string accessKey)
     {
         try
         {
             var newToken = Token.FromAccessKey(accessKey);
             if (VhUtil.JsonEquals(token, newToken))
-                return false;
+                return token;
 
             if (token.TokenId != newToken.TokenId)
                 throw new Exception("Could not update the token via access key because its token ID is not the same.");
 
-            ImportAccessToken(newToken);
+            // allow to overwrite builtIn because update token is from internal source and can update itself
+            ImportAccessToken(newToken, overwriteNewer: true, allowOverwriteBuiltIn: true);
             VhLogger.Instance.LogInformation("ServerToken has been updated.");
-            return true;
+            return newToken;
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Could not update token from the given access-key.");
-            return false;
+            return token;
         }
 
     }
 
-   public async Task<bool> UpdateTokenFromUrl(Token token)
+    public async Task<bool> UpdateServerTokenByUrl(Token token)
     {
         if (string.IsNullOrEmpty(token.ServerToken.Url) || token.ServerToken.Secret == null)
             return false;
@@ -147,7 +192,7 @@ public class ClientProfileService
             //update store
             token = VhUtil.JsonClone<Token>(token);
             token.ServerToken = newServerToken;
-            ImportAccessToken(token);
+            ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: true);
             VhLogger.Instance.LogInformation("ServerToken has been updated from url.");
             return true;
         }
@@ -176,5 +221,4 @@ public class ClientProfileService
             return [];
         }
     }
-
 }

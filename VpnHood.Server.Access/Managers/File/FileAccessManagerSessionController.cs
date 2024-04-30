@@ -11,6 +11,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
 {
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
+    private readonly TimeSpan _adRequiredTimeout = TimeSpan.FromMinutes(4);
     private uint _lastSessionId;
 
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
@@ -58,8 +59,11 @@ public class FileAccessManagerSessionController : IDisposable, IJob
     {
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
-            return new SessionResponseEx(SessionErrorCode.AccessError)
-            { ErrorMessage = "Could not validate the request!" };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Could not validate the request."
+            };
 
         // create a new session
         var session = new Session
@@ -72,7 +76,8 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
-            ExtraData = sessionRequestEx.ExtraData
+            ExtraData = sessionRequestEx.ExtraData,
+            ExpirationTime = accessItem.Token.IsAdRequired ? DateTime.UtcNow + _adRequiredTimeout : null
         };
 
         //create response
@@ -89,12 +94,15 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         return ret;
     }
 
-    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem,
-        IPEndPoint? hostEndPoint)
+    public SessionResponseEx GetSession(ulong sessionId, FileAccessManager.AccessItem accessItem, IPEndPoint? hostEndPoint)
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
+            return new SessionResponseEx
+            {
+                ErrorCode = SessionErrorCode.AccessError,
+                ErrorMessage = "Session does not exist."
+            };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;
@@ -114,14 +122,31 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         {
             // check token expiration
             if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
-                return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
+                return new SessionResponseEx
+                {
+                    ErrorCode = SessionErrorCode.AccessExpired,
+                    ErrorMessage = "Access Expired.",
+                    AccessUsage = accessUsage
+                };
+
+            // session expiration
+            if (session.ExpirationTime != null && session.ExpirationTime < DateTime.UtcNow)
+                return new SessionResponseEx
+                {
+                    ErrorCode = SessionErrorCode.AccessExpired,
+                    AccessUsage = accessUsage,
+                    ErrorMessage = "Session Expired!"
+                };
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
                 accessUsage.Traffic.Total > accessUsage.MaxTraffic)
-                return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
+                return new SessionResponseEx
+                {
+                    ErrorCode = SessionErrorCode.AccessTrafficOverflow,
+                    ErrorMessage = "All traffic quota has been consumed.",
+                    AccessUsage = accessUsage
+                };
 
             var otherSessions = Sessions.Values
                 .Where(x => x.EndTime == null && x.TokenId == session.TokenId)
@@ -158,13 +183,17 @@ public class FileAccessManagerSessionController : IDisposable, IJob
                 }
             }
 
+            // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
+            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime))
+                accessUsage.ExpirationTime = session.ExpirationTime.Value;
+
             accessUsage.ActiveClientCount = otherSessions
-                .GroupBy(x=>x.ClientInfo.ClientId)
+                .GroupBy(x => x.ClientInfo.ClientId)
                 .Count();
         }
 
         // build result
-        return new SessionResponseEx(SessionErrorCode.Ok)
+        return new SessionResponseEx
         {
             SessionId = session.SessionId,
             CreatedTime = session.CreatedTime,
@@ -174,7 +203,8 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorCode = session.ErrorCode,
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
-            RedirectHostEndPoint = null
+            RedirectHostEndPoint = null,
+            IsAdRequired = accessItem.Token.IsAdRequired
         };
     }
 
@@ -197,6 +227,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         public DateTime CreatedTime { get; internal set; } = FastDateTime.Now;
         public DateTime LastUsedTime { get; internal set; } = FastDateTime.Now;
         public DateTime? EndTime { get; internal set; }
+        public DateTime? ExpirationTime { get; set; }
         public bool IsAlive => EndTime == null;
         public SessionSuppressType SuppressedBy { get; internal set; }
         public SessionSuppressType SuppressedTo { get; internal set; }

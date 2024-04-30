@@ -112,7 +112,9 @@ public class SessionService(
             return new SessionResponseEx
             {
                 ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = "Your access has been locked! Please contact the support."
+                ErrorMessage = accessToken.Description?.Contains("#message") == true
+                    ? accessToken.Description.Replace("#message", "").Trim()
+                    : "Your access has been locked! Please contact the support."
             };
 
         // set accessTokenModel expiration time on first use

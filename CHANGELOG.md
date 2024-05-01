@@ -5,8 +5,8 @@
 * Fix: Ad service
 * Fix: Sometimes the connect button didn't disconnect the current connection
 * Fix: Android: Crash on disconnect
-* Fix: Android: Fix Diagnoser mistakenly shows "Connection is not stable"
-* Fix: Android: Fix Google Play Update
+* Fix: Android: Diagnoser mistakenly shows "Connection is not stable"
+* Fix: Android: Google Play Update
 * Update: Android: Improve Android TV
 
 ### Server

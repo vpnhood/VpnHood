@@ -1,5 +1,4 @@
 using Android.BillingClient.Api;
-using Android.Gms.Common.Apis;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.Client.App.Abstractions;
@@ -143,6 +142,7 @@ public class GooglePlayBillingService: IAppBillingService
         }
         catch (TaskCanceledException ex)
         {
+            VhLogger.Instance.LogError(ex, "The google play purchase task was canceled by the user");
             throw new OperationCanceledException();
         }
         catch (Exception ex)

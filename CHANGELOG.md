@@ -1,3 +1,7 @@
+# Upcoming
+### Client
+* Fix: Crash when start as always-on but there is no selected server
+
 # v4.4.500
 ### Client
 * Update: Retry failed connection if the access token is updated from the server token URL

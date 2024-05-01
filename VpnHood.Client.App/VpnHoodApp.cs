@@ -222,8 +222,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private void DeviceOnStartedAsService(object sender, EventArgs e)
     {
-        var clientProfile = CurrentClientProfile ?? throw new Exception("There is no access key.");
-         _ = Connect(clientProfile.ClientProfileId);
+        var clientProfile = CurrentClientProfile;
+        if (clientProfile == null)
+        {
+            _lastError = "Could not start as service. No server is selected.";
+            throw new Exception(_lastError);
+        }
+
+        _ = Connect(clientProfile.ClientProfileId);
     }
 
     public void ClearLastError()

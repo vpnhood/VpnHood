@@ -3,7 +3,9 @@ using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Net;
 using Android.OS;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Device.Droid;
@@ -177,7 +179,16 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         // fire AutoCreate for always on
         var manual = intent?.GetBooleanExtra("manual", false) ?? false;
         if (!manual)
-            StartedAsService?.Invoke(this, EventArgs.Empty);
+        {
+            try
+            {
+                StartedAsService?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not start service.");
+            }
+        }
     }
 
     private static string EncodeToBase64(Drawable drawable, int quality)

@@ -1,12 +1,16 @@
 # Upcoming
 ### Client
+* Fix: Crash when start as always-on but there is no selected server
+
+# v4.4.500
+### Client
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App
 * Fix: Ad service
 * Fix: Sometimes the connect button didn't disconnect the current connection
 * Fix: Android: Crash on disconnect
-* Fix: Android: Fix Diagnoser mistakenly shows "Connection is not stable"
-* Fix: Android: Fix Google Play Update
+* Fix: Android: Diagnoser mistakenly shows "Connection is not stable"
+* Fix: Android: Google Play Update
 * Update: Android: Improve Android TV
 
 ### Server

@@ -7,6 +7,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
 {
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
     public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
+    public string? RegionId { get; private set; } = clientProfile.RegionId;
     public string TokenId { get; private set; } = clientProfile.Token.TokenId;
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
     public string[] HostNames { get; private set; } = GetEndPoints(clientProfile.Token.ServerToken);

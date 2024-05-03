@@ -251,9 +251,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
         // set default profileId to clientProfileId if not set
         clientProfileId ??= UserSettings.ClientProfileId;
-        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty);
-        if (clientProfile == null)
-            throw new NotExistsException("Could not find any VPN profile to connect.");
+        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) 
+                            ?? throw new NotExistsException("Could not find any VPN profile to connect.");
 
         // set current profile
         UserSettings.ClientProfileId = clientProfile.ClientProfileId;
@@ -482,7 +481,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsWaitingForAd = true;
             var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
             await Services.AdService.ShowAd(customData, cancellationToken);
-            _ = client.SendAdReward(customData, cancellationToken); 
+            _ = client.SendAdReward(customData, cancellationToken);
         }
         catch (Exception ex)
         {

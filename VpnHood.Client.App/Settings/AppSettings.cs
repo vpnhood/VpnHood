@@ -6,6 +6,9 @@ namespace VpnHood.Client.App.Settings;
 
 public class AppSettings
 {
+    private readonly object _saveLock = new();
+    public event EventHandler? Saved;
+
     [JsonIgnore] 
     public string SettingsFilePath { get; private set; } = null!;
     public int Version { get; set; } = 1;
@@ -17,8 +20,6 @@ public class AppSettings
     public string? LastCountryIpGroupId { get; set; }
     public DateTime? LastUpdateCheckTime { get; set; }
 
-    public event EventHandler? Saved;
-    private readonly object _saveLock = new();
 
     public void Save()
     {

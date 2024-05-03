@@ -140,6 +140,11 @@ public class GooglePlayBillingService: IAppBillingService
             var orderId = await _taskCompletionSource.Task;
             return orderId;
         }
+        catch (TaskCanceledException ex)
+        {
+            VhLogger.Instance.LogError(ex, "The google play purchase task was canceled by the user");
+            throw new OperationCanceledException();
+        }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Could not get order id from google play LaunchBillingFlow.");

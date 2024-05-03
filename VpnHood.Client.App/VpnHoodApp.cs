@@ -251,7 +251,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
         // set default profileId to clientProfileId if not set
         clientProfileId ??= UserSettings.ClientProfileId;
-        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) 
+        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty)
                             ?? throw new NotExistsException("Could not find any VPN profile to connect.");
 
         // set current profile
@@ -353,7 +353,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             Client.UseUdpChannel = UserSettings.UseUdpChannel;
             Client.DropUdpPackets = UserSettings.DropUdpPackets;
-            if (!IsIdle && UserSettings.ClientProfileId != _activeClientProfileId)
+            if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
+                _ = Disconnect(true);
+
+            if (!IsIdle && UserSettings.IncludeLocalNetwork != Client.IncludeLocalNetwork)
                 _ = Disconnect(true);
         }
 
@@ -405,7 +408,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
-            ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
             IpRangeProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,

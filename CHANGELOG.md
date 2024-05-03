@@ -1,6 +1,7 @@
 # Upcoming
 ### Client
 * Fix: Crash when start as always-on but there is no selected server
+* Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 
 # v4.4.500
 ### Client

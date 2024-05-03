@@ -6,6 +6,7 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Tunneling.Channels.Streams;
 
 // this was used for .NET 6 or earlier as .net didn't use hardware acceleration for encryption in android and SslStream was very slow
+// todo remove
 [Obsolete]
 public class BinaryStreamCustom : ChunkStream
 {

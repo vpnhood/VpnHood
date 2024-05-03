@@ -14,6 +14,7 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
+using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
@@ -103,8 +104,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         _useUdpChannel = options.UseUdpChannel;
-        // todo remove
-        //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
 
         Token = token;
         Version = options.Version;
@@ -171,8 +170,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         {
             if (_useUdpChannel == value) return;
             _useUdpChannel = value;
-            // todo remove
-            //_connectorService.BinaryStreamType = _useUdpChannel ? BinaryStreamType.Standard : BinaryStreamType.Custom;
             _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
     }

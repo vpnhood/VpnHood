@@ -33,7 +33,6 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
-    public BinaryStreamType BinaryStreamType { get; set; } = BinaryStreamType.Standard;  //todo temporary
 
     public ConnectorServiceBase(ISocketFactory socketFactory, TimeSpan tcpTimeout)
     {
@@ -56,42 +55,25 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        var streamSecret = VhUtil.GenerateKey(128); // deprecated by 451 and upper
-        var binaryStreamType = BinaryStreamType;
+        var binaryStreamType = string.IsNullOrEmpty(_apiKey) ? BinaryStreamType.None : BinaryStreamType.Standard;
         const bool useBuffer = true;
-        var version = ServerProtocolVersion < 5 ? 2 : 3;
-        if (version <= 2)
-            binaryStreamType = string.IsNullOrEmpty(_apiKey) ? BinaryStreamType.None : BinaryStreamType.Custom;
+        const int version =  3;
 
         // write HTTP request
         var header =
             $"POST /{Guid.NewGuid()} HTTP/1.1\r\n" +
             $"Authorization: ApiKey {_apiKey}\r\n" +
             $"X-Version: {version}\r\n" +
-            $"X-Secret: {Convert.ToBase64String(streamSecret)}\r\n" +
             $"X-BinaryStream: {binaryStreamType}\r\n" +
             $"X-Buffered: {useBuffer}\r\n" +
             "\r\n";
 
         // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken); // secret
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken);
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
-
-        switch (binaryStreamType)
-        {
-            case BinaryStreamType.None:
-                return new TcpClientStream(tcpClient, sslStream, streamId);
-
-            case BinaryStreamType.Custom:
-                await sslStream.DisposeAsync();
-                return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, streamSecret, useBuffer), streamId, ReuseStreamClient);
-
-            case BinaryStreamType.Standard:
-                return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
-
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        return binaryStreamType == BinaryStreamType.None 
+            ? new TcpClientStream(tcpClient, sslStream, streamId)
+            : new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
     }
 
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, CancellationToken cancellationToken)

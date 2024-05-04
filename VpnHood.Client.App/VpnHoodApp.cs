@@ -356,7 +356,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
                 _ = Disconnect(true);
 
-            if (!IsIdle && UserSettings.IncludeLocalNetwork != Client.IncludeLocalNetwork)
+            if (!IsIdle && UserSettings.ExcludeLocalNetwork != Client.ExcludeLocalNetwork)
                 _ = Disconnect(true);
         }
 
@@ -408,7 +408,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
-            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
+            ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
             IpRangeProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,

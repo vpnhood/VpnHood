@@ -10,7 +10,6 @@ public class WinDivertDevice : IDevice
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsLogToConsoleSupported => true;
     public bool IsIncludeAppsSupported => IsDebugMode;
-    public ICultureService? CultureService => null;
 
     public DeviceAppInfo[] InstalledApps
     {

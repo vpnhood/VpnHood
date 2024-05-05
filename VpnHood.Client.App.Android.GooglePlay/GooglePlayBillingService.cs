@@ -2,6 +2,7 @@ using Android.BillingClient.Api;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Droid.Common;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
@@ -9,23 +10,17 @@ namespace VpnHood.Client.App.Droid.GooglePlay;
 public class GooglePlayBillingService: IAppBillingService
 {
     private readonly BillingClient _billingClient;
-    private readonly Activity _activity;
     private readonly IAppAuthenticationService _authenticationService;
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
-    private GooglePlayBillingService(Activity activity, IAppAuthenticationService authenticationService)
+    
+    public GooglePlayBillingService(IAppAuthenticationService authenticationService)
     {
-        var builder = BillingClient.NewBuilder(activity);
+        var builder = BillingClient.NewBuilder(Application.Context);
         builder.SetListener(PurchasesUpdatedListener);
         _billingClient = builder.EnablePendingPurchases().Build();
-        _activity = activity;
         _authenticationService = authenticationService;
-    }
-
-    public static GooglePlayBillingService Create(Activity activity, IAppAuthenticationService authenticationService)
-    {
-        return new GooglePlayBillingService(activity, authenticationService);
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -38,9 +33,11 @@ public class GooglePlayBillingService: IAppBillingService
                 else
                     _taskCompletionSource?.TrySetException(new Exception("There is no any order."));
                 break;
+
             case BillingResponseCode.UserCancelled:
                 _taskCompletionSource?.TrySetCanceled();
                 break;  
+
             default:
                 _taskCompletionSource?.TrySetException(CreateBillingResultException(billingResult));
                 break;
@@ -105,8 +102,9 @@ public class GooglePlayBillingService: IAppBillingService
         }
     }
 
-    public async Task<string> Purchase(string planId)
+    public async Task<string> Purchase(IAppUiContext uiContext, string planId)
     {
+        var appUiContext = (AndroidAppUiContext)uiContext;
         await EnsureConnected();
 
         if (_authenticationService.UserId == null)
@@ -131,7 +129,7 @@ public class GooglePlayBillingService: IAppBillingService
 
         try
         {
-            var billingResult = _billingClient.LaunchBillingFlow(_activity, billingFlowParams);
+            var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw CreateBillingResultException(billingResult);

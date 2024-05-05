@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Settings;
@@ -74,6 +75,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public AppLogService LogService { get; }
     public AppResource Resource { get; }
     public AppServices Services { get; }
+    public IAppUiContext? UiContext { get; set; }
 
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
@@ -90,12 +92,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
-        Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
-        LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
         _loadCountryIpGroups = options.LoadCountryIpGroups;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
         _appPersistState = AppPersistState.Load(Path.Combine(AppDataFolderPath, FileNamePersisState));
+        Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
+        LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
 
         // configure update job section
         JobSection = new JobSection(new JobOptions
@@ -129,7 +131,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // initialize services
         Services = new AppServices
         {
-            CultureService = device.CultureService ?? new AppCultureService(this)
+            CultureService = device.CultureService ?? new AppCultureService(this),
+            UiService = options.UiService,
         };
 
         // initialize
@@ -340,12 +343,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
+        Settings.IsQuickLaunchAdded = null;
+        Settings.IsNotificationEnabled = null;
+
         // QuickLaunch
-        if (Services.UiService?.IsQuickLaunchSupported is true && Settings.IsQuickLaunchAdded is null)
+        if (UiContext != null && 
+            Services.UiService?.IsQuickLaunchSupported is true && 
+            Settings.IsQuickLaunchAdded is null)
         {
             try
             {
-                Settings.IsQuickLaunchAdded = await Services.UiService.RequestQuickLaunch(cancellationToken);
+                Settings.IsQuickLaunchAdded = await Services.UiService.RequestQuickLaunch(UiContext, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -355,11 +363,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             Settings.Save();
         }
 
-        if (Services.UiService?.IsNotificationSupported is true && !Settings.IsNotificationEnabled is null)
+        // Notification
+        if (UiContext != null && 
+            Services.UiService?.IsNotificationSupported is true && 
+            Settings.IsNotificationEnabled is null)
         {
             try
             {
-                Settings.IsNotificationEnabled = await Services.UiService.RequestNotification(cancellationToken);
+                Settings.IsNotificationEnabled = await Services.UiService.RequestNotification(UiContext, cancellationToken);
             }
             catch (Exception ex)
             {

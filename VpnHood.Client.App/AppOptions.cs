@@ -1,4 +1,6 @@
-﻿using VpnHood.Tunneling.Factory;
+﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
@@ -15,4 +17,6 @@ public class AppOptions
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;
     public string[] AccessKeys { get; set; } = [];
+    public IAppUiService? UiService { get; set; }
+    public ICultureService? CultureService { get; set; }
 }

@@ -4,6 +4,6 @@ public interface IAppUiService
 {
     bool IsNotificationSupported { get; }
     bool IsQuickLaunchSupported { get; }
-    Task<bool> RequestQuickLaunch(CancellationToken cancellationToken);
-    Task<bool> RequestNotification(CancellationToken cancellationToken);
+    Task<bool> RequestQuickLaunch(IAppUiContext uiContext, CancellationToken cancellationToken);
+    Task<bool> RequestNotification(IAppUiContext uiContext, CancellationToken cancellationToken);
 }

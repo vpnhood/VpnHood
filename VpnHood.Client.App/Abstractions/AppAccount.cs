@@ -7,5 +7,4 @@ public class AppAccount
     public string? Email { get; set; }
     public Guid? SubscriptionId { get; set; }
     public string? ProviderPlanId { get; set; }
-
 }

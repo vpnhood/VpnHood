@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Store.Api;
@@ -19,13 +18,6 @@ public class AppAccountService(
     private AppAccount? _appAccount;
     
     private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
-
-    public async Task<AppAccount> SignInWithGoogle()
-    {
-        await authenticationService.SignInWithGoogle();
-        var appAccount = await GetAccount();
-        return appAccount ?? throw new ArgumentNullException(nameof(appAccount));
-    }
 
     public async Task<AppAccount?> GetAccount()
     {
@@ -45,9 +37,10 @@ public class AppAccountService(
         return _appAccount;
     }
 
-    public void Refresh()
+    public async Task Refresh()
     {
         _appAccount = null;
+        _appAccount = await GetAccount();
     }
 
     private async Task<AppAccount> GetAccountFromServer()
@@ -73,6 +66,8 @@ public class AppAccountService(
         var accessKeys = _appAccount?.SubscriptionId != null
             ? await GetAccessKeys(_appAccount.SubscriptionId)
             : [];
+
+        //todo
         VpnHoodApp.Instance.ClientProfileService.UpdateFromAccount(accessKeys.ToArray());
 
         return appAccount;

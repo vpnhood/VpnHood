@@ -223,13 +223,8 @@ public class ClientProfileService
         }
     }
 
-    public async Task UpdateFromAccount(IAppAccountService accountService)
+    public void UpdateFromAccount(string[] accessKeys)
     {
-        // Retrieve account access keys
-        var account = await accountService.GetAccount();
-        var accessKeys = account?.SubscriptionId != null 
-            ? await accountService.GetAccessKeys(account.SubscriptionId) 
-            : [];
         var accessTokens = accessKeys.Select(Token.FromAccessKey);
 
         // Remove client profiles that does not exist in the account
@@ -240,5 +235,9 @@ public class ClientProfileService
 
         foreach (var clientProfileId in toRemoves)
             Remove(clientProfileId);
+
+        // Add or update access keys
+        foreach (var accessKey in accessKeys)
+            ImportAccessKey(accessKey);
     }
 }

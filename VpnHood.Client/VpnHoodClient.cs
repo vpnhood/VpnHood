@@ -14,7 +14,6 @@ using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
-using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;

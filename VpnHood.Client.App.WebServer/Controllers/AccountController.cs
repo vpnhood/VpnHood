@@ -35,13 +35,19 @@ internal class AccountController : WebApiController, IAccountController
         if (!AccountService.Authentication.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.Authentication.SignInWithGoogle();
+        if (VpnHoodApp.Instance.UiContext == null) 
+            throw new Exception("UI context is not available.");
+
+        return AccountService.Authentication.SignInWithGoogle(VpnHoodApp.Instance.UiContext);
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
     public Task SignOut()
     {
-        return AccountService.Authentication.SignOut();
+        if (VpnHoodApp.Instance.UiContext == null) 
+            throw new Exception("UI context is not available.");
+
+        return AccountService.Authentication.SignOut(VpnHoodApp.Instance.UiContext);
     }
 
     [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]

@@ -22,10 +22,6 @@ public class AndroidAppMainActivityHandler
         _accessKeyMimes = options.AccessKeySchemes;
         CheckForUpdateOnCreate = options.CheckForUpdateOnCreate;
 
-        VpnHoodApp.Instance.Services.AccountService = options.AccountService;
-        VpnHoodApp.Instance.Services.AdService = options.AdService;
-        VpnHoodApp.Instance.Services.UpdaterService = options.UpdaterService;
-
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
         activityEvent.RequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);

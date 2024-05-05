@@ -2,7 +2,10 @@
 using Android.Runtime;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
+using VpnHood.Client.App.Droid.GooglePlay;
+using VpnHood.Client.App.Droid.GooglePlay.Ads;
 using VpnHood.Client.App.Resources;
+using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -17,22 +20,29 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    protected override AppOptions AppOptions
+    protected override AppOptions CreateAppOptions()
     {
-        get
+        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(AssemblyInfo.FirebaseClientId);
+        var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
+        var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
+
+        var resources = DefaultAppResource.Resource;
+        resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
+        resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
+
+        return new AppOptions
         {
-            var resources = DefaultAppResource.Resource;
-            resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
-            resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
-            return new AppOptions
-            {
-                AccessKeys = [AssemblyInfo.GlobalServersAccessKey], 
-                Resource = DefaultAppResource.Resource,
-                UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
-                UiName = "VpnHoodConnect",
-                IsAddAccessKeySupported = false
-            };
-        }
+            AccessKeys = [AssemblyInfo.GlobalServersAccessKey],
+            Resource = DefaultAppResource.Resource,
+            UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
+            UiName = "VpnHoodConnect",
+            IsAddAccessKeySupported = false,
+            UpdaterService = new GooglePlayAppUpdaterService(),
+            CultureService = AndroidAppAppCultureService.CreateIfSupported(),
+            AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId),
+            AdService = GooglePlayAdService.Create(AssemblyInfo.RewardedAdUnitId),
+            UiService = new AndroidAppUiService()
+        };
     }
 }
 

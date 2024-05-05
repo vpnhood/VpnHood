@@ -5,9 +5,9 @@ namespace VpnHood.Client.App;
 
 public class AppServices
 {
-    public IAppAccountService? AccountService { get; set; }
-    public IAppUpdaterService? UpdaterService { get; set; }
-    public IAppUiService? UiService { get; init; }
-    public IAppAdService? AdService { get; set; }
+    public required IAppAccountService? AccountService { get; init; }
+    public required IAppUpdaterService? UpdaterService { get; init; }
+    public required IAppUiService? UiService { get; init; }
+    public required IAppAdService? AdService { get; init; }
     public required IAppCultureService AppCultureService { get; init;}
 }

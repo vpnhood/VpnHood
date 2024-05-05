@@ -62,10 +62,11 @@ public class AdTest : TestBase
         accessItem.Token.ToAccessKey();
 
         // create client app
-        await using var app = TestHelper.CreateClientApp();
+        var appOptions = TestHelper.CreateClientAppOptions();
         var adService = new TestAdService(fileAccessManager);
+        appOptions.AdService = adService;
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailAlways = true;
-        app.Services.AdService = adService;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
@@ -87,9 +88,9 @@ public class AdTest : TestBase
         accessItem.Token.ToAccessKey();
 
         // create client app
-        await using var app = TestHelper.CreateClientApp();
-        var adService = new TestAdService(fileAccessManager);
-        app.Services.AdService = adService;
+        var appOptions = TestHelper.CreateClientAppOptions();
+        appOptions.AdService = new TestAdService(fileAccessManager);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
@@ -114,9 +115,9 @@ public class AdTest : TestBase
         fileAccessManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
-        await using var app = TestHelper.CreateClientApp();
-        var adService = new TestAdService(fileAccessManager);
-        app.Services.AdService = adService;
+        var appOptions = TestHelper.CreateClientAppOptions();
+        appOptions.AdService = new TestAdService(fileAccessManager);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());

@@ -8,6 +8,7 @@ public class ClientProfile
     public required string? ClientProfileName { get; set; }
     public string? RegionId { get; set; }
     public required Token Token { get; set; }
+    public bool IsFromAccount { get; set; }
 
     public ClientProfileInfo ToInfo()
     {

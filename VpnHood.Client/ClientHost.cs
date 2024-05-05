@@ -227,10 +227,6 @@ internal class ClientHost(
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
-            // MaxEncryptChunk
-            if (proxyClientStream.Stream is BinaryStreamCustom binaryStream)
-                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
-
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             vpnHoodClient.Tunnel.AddChannel(channel);
         }

@@ -2,5 +2,5 @@
 
 public interface IAppAdService : IDisposable
 {
-    Task ShowAd(string customData, CancellationToken cancellationToken);
+    Task ShowAd(IAppUiContext appUiContext, string customData, CancellationToken cancellationToken);
 }

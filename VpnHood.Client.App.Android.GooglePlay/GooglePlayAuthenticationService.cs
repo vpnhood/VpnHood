@@ -3,53 +3,41 @@ using Android.Content;
 using Android.Gms.Auth.Api.SignIn;
 using Android.Gms.Common.Apis;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
+public class GooglePlayAuthenticationService(string firebaseClientId) 
+    : IAppAuthenticationExternalService
 {
     private const int SignInIntentId = 20200;
-    private bool _disposed;
-    private IActivityEvent? _activityEvent;
-    private readonly GoogleSignInClient _googleSignInClient;
     private TaskCompletionSource<GoogleSignInAccount>? _taskCompletionSource;
+    private readonly GoogleSignInOptions _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
+        .RequestIdToken(firebaseClientId)
+        .RequestEmail()
+        .Build();
 
-    public GooglePlayAuthenticationService(IActivityEvent activityEvent, string firebaseClientId)
+    public async Task<string> SilentSignIn(IAppUiContext uiContext)
     {
-        _activityEvent = activityEvent;
+        var appUiContext = (AndroidAppUiContext)uiContext;
 
-        var googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-            .RequestIdToken(firebaseClientId)
-            .RequestEmail()
-            .Build();
-
-        _googleSignInClient = GoogleSignIn.GetClient(activityEvent.Activity, googleSignInOptions);
-
-        activityEvent.DestroyEvent += Activity_OnDestroy;
-        activityEvent.ActivityResultEvent += Activity_OnActivityResult;
-    }
-
-    public static GooglePlayAuthenticationService Create(IActivityEvent activityEvent, string firebaseId) 
-    {
-        return new GooglePlayAuthenticationService(activityEvent, firebaseId);
-    }
-
-    public async Task<string> SilentSignIn()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-
-        var account = await _googleSignInClient.SilentSignInAsync();
+        using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
+        var account = await googleSignInClient.SilentSignInAsync();
         return account?.IdToken ?? throw new AuthenticationException("Could not perform SilentSignIn by Google.");
     }
 
-    public async Task<string> SignIn()
+    public async Task<string> SignIn(IAppUiContext uiContext)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        var appUiContext = (AndroidAppUiContext)uiContext;
+
         try
         {
+            using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
+
             _taskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
-            _activityEvent?.Activity.StartActivityForResult(_googleSignInClient.SignInIntent, SignInIntentId);
+            appUiContext.ActivityEvent.ActivityResultEvent += Activity_OnActivityResult;
+            appUiContext.ActivityEvent.Activity.StartActivityForResult(googleSignInClient.SignInIntent, SignInIntentId);
             var account = await _taskCompletionSource.Task;
 
             if (account.IdToken == null)
@@ -63,13 +51,18 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
                 throw new OperationCanceledException();
             throw;
         }
+        finally
+        {
+            appUiContext.ActivityEvent.ActivityResultEvent -= Activity_OnActivityResult;
+        }
         
     }
 
-    public Task SignOut()
+    public async Task SignOut(IAppUiContext uiContext)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _googleSignInClient.SignOutAsync();
+        var appUiContext = (AndroidAppUiContext)uiContext;
+        using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
+        await googleSignInClient.SignOutAsync();
     }
 
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
@@ -91,17 +84,7 @@ public class GooglePlayAuthenticationService : IAppAuthenticationExternalService
             _taskCompletionSource?.TrySetException(e);
         }
     }
-    private void Activity_OnDestroy(object? sender, EventArgs e)
-    {
-        _googleSignInClient.Dispose();
-    }
-
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
-
-        _googleSignInClient.Dispose();
-        _activityEvent = null;
     }
 }

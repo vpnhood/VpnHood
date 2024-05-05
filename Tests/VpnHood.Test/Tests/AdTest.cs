@@ -15,7 +15,7 @@ public class AdTest : TestBase
     {
         public bool FailAlways { get; set; }
 
-        public Task ShowAd(string customData, CancellationToken cancellationToken)
+        public Task ShowAd(IAppUiContext uiContext, string customData, CancellationToken cancellationToken)
         {
             if (FailAlways)
                 throw new Exception("Ad failed");

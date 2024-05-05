@@ -24,7 +24,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
-    public ICultureService? CultureService { get; } = AndroidCultureService.CreateIfSupported();
 
     private AndroidDevice()
     {

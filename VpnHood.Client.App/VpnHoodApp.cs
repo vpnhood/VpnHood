@@ -131,7 +131,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         // initialize services
         Services = new AppServices
         {
-            CultureService = device.CultureService ?? new AppCultureService(this),
+            AppCultureService = options.CultureService ?? new AppAppCultureService(this),
             UiService = options.UiService,
         };
 
@@ -347,8 +347,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         Settings.IsNotificationEnabled = null;
 
         // QuickLaunch
-        if (UiContext != null && 
-            Services.UiService?.IsQuickLaunchSupported is true && 
+        if (UiContext != null &&
+            Services.UiService?.IsQuickLaunchSupported is true &&
             Settings.IsQuickLaunchAdded is null)
         {
             try
@@ -364,8 +364,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
 
         // Notification
-        if (UiContext != null && 
-            Services.UiService?.IsNotificationSupported is true && 
+        if (UiContext != null &&
+            Services.UiService?.IsNotificationSupported is true &&
             Settings.IsNotificationEnabled is null)
         {
             try
@@ -382,15 +382,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     }
 
     public CultureInfo SystemUiCulture => new(
-        Services.CultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
+        Services.AppCultureService.SystemCultures.FirstOrDefault()?.Split("-").FirstOrDefault()
         ?? CultureInfo.InstalledUICulture.TwoLetterISOLanguageName);
 
     private void InitCulture()
     {
         // set default culture
-        var firstSelected = Services.CultureService.SelectedCultures.FirstOrDefault();
+        var firstSelected = Services.AppCultureService.SelectedCultures.FirstOrDefault();
         CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemUiCulture;
-        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(Services.CultureService.SelectedCultures.FirstOrDefault() ?? "en");
+        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(Services.AppCultureService.SelectedCultures.FirstOrDefault() ?? "en");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
         // sync UserSettings from the System App Settings
@@ -414,7 +414,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _currentClientProfile = null;
 
         // sync culture to app settings
-        Services.CultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+        Services.AppCultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
         InitCulture();
     }
 
@@ -529,11 +529,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         if (Services.AdService == null)
             throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
 
+        if (UiContext == null)
+            throw new Exception("This server requires a display ad, but Application window was not open.");
+
         try
         {
             IsWaitingForAd = true;
             var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-            await Services.AdService.ShowAd(customData, cancellationToken);
+            await Services.AdService.ShowAd(UiContext, customData, cancellationToken);
             _ = client.SendAdReward(customData, cancellationToken);
         }
         catch (Exception ex)
@@ -718,7 +721,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             try
             {
-                if (await Services.UpdaterService.Update())
+                if (UiContext != null && await Services.UpdaterService.Update(UiContext))
                 {
                     VersionCheckPostpone();
                     return;

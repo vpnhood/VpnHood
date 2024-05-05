@@ -20,7 +20,8 @@ internal class BillingController : WebApiController, IBillingController
     [Route(HttpVerbs.Post, "/purchase")]
     public Task<string> Purchase([QueryField] string planId)
     {
-        return BillingService.Purchase(planId);
+        if (VpnHoodApp.Instance.UiContext == null) throw new Exception("UI context is not available at this moment.");
+        return BillingService.Purchase(VpnHoodApp.Instance.UiContext, planId);
     }
 
 }

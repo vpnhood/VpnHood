@@ -2,5 +2,5 @@
 
 public interface IAppUpdaterService
 {
-    Task<bool> Update();
+    Task<bool> Update(IAppUiContext uiContext);
 }

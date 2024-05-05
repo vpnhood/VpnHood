@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Win.Common;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.WinDivert;
@@ -19,6 +20,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     protected AppWindow? AppWindow;
     
     public IDevice Device { get; } = new WinDivertDevice();
+    public IAppCultureService? CultureService => null;
 
     public void Init(VpnHoodApp vpnHoodApp)
     {

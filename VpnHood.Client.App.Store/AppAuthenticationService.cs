@@ -60,7 +60,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         }
     }
 
-    private async Task<ApiKey?> TryGetApiKey()
+    private async Task<ApiKey?> TryGetApiKey(IAppUiContext? uiContext)
     {
         // null if it has not been signed in yet
         if (ApiKey == null)
@@ -88,7 +88,10 @@ public class AppAuthenticationService : IAppAuthenticationService
         try
         {
             // refresh by id token
-            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn() : null;
+            if (uiContext == null)
+                throw new Exception("UI context is not available.");
+
+            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext) : null;
             if (!string.IsNullOrWhiteSpace(idToken))
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
@@ -104,16 +107,16 @@ public class AppAuthenticationService : IAppAuthenticationService
         return null;
     }
 
-    public async Task SignInWithGoogle()
+    public async Task SignInWithGoogle(IAppUiContext uiContext)
     {
         if (_externalAuthenticationService == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _externalAuthenticationService.SignIn();
+        var idToken = await _externalAuthenticationService.SignIn(uiContext);
         await SignInToVpnHoodStore(idToken, true);
     }
 
-    public async Task SignOut()
+    public async Task SignOut(IAppUiContext uiContext)
     {
         ApiKey = null;
         if (File.Exists(ApiKeyFilePath))
@@ -121,7 +124,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         
 
         if (_externalAuthenticationService != null)
-            await _externalAuthenticationService.SignOut();
+            await _externalAuthenticationService.SignOut(uiContext);
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
@@ -168,7 +171,7 @@ public class AppAuthenticationService : IAppAuthenticationService
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var apiKey = await accountService.TryGetApiKey();
+            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext);
             request.Headers.Authorization = apiKey != null ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : null;
             return await base.SendAsync(request, cancellationToken);
         }

@@ -25,6 +25,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
+    private const string FileNamePersisState = "state.json";
     private const string FolderNameProfiles = "profiles";
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
@@ -39,20 +40,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private bool _isConnecting;
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
-    private string? _lastError;
     private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
-    private int _initializingState;
+    private bool _isLoadingIpGroup;
     private readonly TimeSpan _versionCheckInterval;
-
-    private VpnHoodClient? Client => ClientConnect?.Client;
-    private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
-    private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
-    private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
+    private readonly AppPersistState _appPersistState;
     private VersionStatus _versionStatus = VersionStatus.Unknown;
     private CancellationTokenSource? _connectCts;
     private DateTime? _connectedTime;
     private ClientProfile? _currentClientProfile;
+    private VpnHoodClient? Client => ClientConnect?.Client;
+    private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
+    private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
+    private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
 
     public bool VersionCheckRequired { get; private set; }
     public event EventHandler? ConnectionStateChanged;
@@ -95,6 +95,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _loadCountryIpGroups = options.LoadCountryIpGroups;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
+        _appPersistState = AppPersistState.Load(Path.Combine(AppDataFolderPath, FileNamePersisState));
 
         // configure update job section
         JobSection = new JobSection(new JobOptions
@@ -162,10 +163,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfileId = UserSettings.ClientProfileId,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
-                LastError = _lastError,
+                LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
-                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _lastError != null),
+                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _appPersistState.LastErrorMessage != null),
                 SessionStatus = LastSessionStatus,
                 Speed = Client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
@@ -186,7 +187,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     {
         get
         {
-            if (_initializingState > 0) return AppConnectionState.Initializing;
+            if (_isLoadingIpGroup) return AppConnectionState.Initializing;
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
@@ -225,8 +226,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         var clientProfile = CurrentClientProfile;
         if (clientProfile == null)
         {
-            _lastError = "Could not start as service. No server is selected.";
-            throw new Exception(_lastError);
+            _appPersistState.LastErrorMessage = "Could not start as service. No server is selected.";
+            throw new Exception(_appPersistState.LastErrorMessage);
         }
 
         _ = Connect(clientProfile.ClientProfileId);
@@ -237,7 +238,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         if (!IsIdle)
             return; //can just set in Idle State
 
-        _lastError = null;
+        _appPersistState.LastErrorMessage = null;
         _hasDiagnoseStarted = false;
         _hasDisconnectedByUser = false;
     }
@@ -254,9 +255,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty)
                             ?? throw new NotExistsException("Could not find any VPN profile to connect.");
 
-        // set current profile
-        UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        Settings.Save();
+        // set current profile only if it has been updated to avoid unnecessary new config time
+        if (clientProfile.ClientProfileId != UserSettings.ClientProfileId)
+        {
+            UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+            Settings.Save();
+        }
 
         try
         {
@@ -314,7 +318,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             if (!_hasDisconnectedByUser)
             {
                 VhLogger.Instance.LogError(ex.Message);
-                _lastError = ex.Message;
+                _appPersistState.LastErrorMessage = ex.Message;
             }
 
             // don't wait for disconnect, it may cause deadlock
@@ -576,13 +580,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             if (Client != null && _connectedTime != null)
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
-                if (_lastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
-                    _lastError = "No data has been received.";
+                if (_appPersistState.LastErrorMessage == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
+                    _appPersistState.LastErrorMessage = "No data has been received.";
             }
 
             // check diagnose
-            if (_hasDiagnoseStarted && _lastError == null)
-                _lastError = "Diagnoser has finished and no issue has been detected.";
+            if (_hasDiagnoseStarted && _appPersistState.LastErrorMessage == null)
+                _appPersistState.LastErrorMessage = "Diagnoser has finished and no issue has been detected.";
 
             // close client
             try
@@ -603,7 +607,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         }
         finally
         {
-            _lastError ??= LastSessionStatus?.ErrorMessage;
+            _appPersistState.LastErrorMessage ??= LastSessionStatus?.ErrorMessage;
             _activeClientProfileId = null;
             _lastSessionStatus = Client?.SessionStatus;
             _isConnecting = false;
@@ -622,31 +626,32 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     private async Task<IpGroupManager> GetIpGroupManager()
     {
+        using var asyncLock = await AsyncLock.LockAsync("GetIpGroupManager");
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
         _ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
 
-        // AddFromIp2Location if hash has been changed
-        if (_loadCountryIpGroups)
-        {
-            try
-            {
-                _initializingState++;
-                FireConnectionStateChanged();
-                await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
-                using var zipArchive = new ZipArchive(memZipStream);
-                var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
-                await _ipGroupManager.InitByIp2LocationZipStream(entry);
-            }
-            finally
-            {
-                _initializingState--;
-                FireConnectionStateChanged();
-            }
-        }
+        // ignore country ip groups if not required usually by tests
+        if (!_loadCountryIpGroups)
+            return _ipGroupManager;
 
-        return _ipGroupManager;
+        // AddFromIp2Location if hash has been changed
+        try
+        {
+            _isLoadingIpGroup = true;
+            FireConnectionStateChanged();
+            await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
+            using var zipArchive = new ZipArchive(memZipStream);
+            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+            await _ipGroupManager.InitByIp2LocationZipStream(entry);
+            return _ipGroupManager;
+        }
+        finally
+        {
+            _isLoadingIpGroup = false;
+            FireConnectionStateChanged();
+        }
     }
 
     public void VersionCheckPostpone()

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -220,5 +221,24 @@ public class ClientProfileService
         {
             return [];
         }
+    }
+
+    public async Task UpdateFromAccount(IAppAccountService accountService)
+    {
+        // Retrieve account access keys
+        var account = await accountService.GetAccount();
+        var accessKeys = account?.SubscriptionId != null 
+            ? await accountService.GetAccessKeys(account.SubscriptionId) 
+            : [];
+        var accessTokens = accessKeys.Select(Token.FromAccessKey);
+
+        // Remove client profiles that does not exist in the account
+        var toRemoves = _clientProfiles
+            .Where(x => x.IsFromAccount)
+            .Where(x => accessTokens.All(y => y.TokenId != x.Token.TokenId))
+            .Select(x => x.ClientProfileId);
+
+        foreach (var clientProfileId in toRemoves)
+            Remove(clientProfileId);
     }
 }

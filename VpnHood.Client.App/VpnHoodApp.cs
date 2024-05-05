@@ -250,6 +250,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         if (!IsIdle)
             await Disconnect(true);
 
+        // request features for the first time
+        await RequestFeatures(cancellationToken);
+
         // set default profileId to clientProfileId if not set
         clientProfileId ??= UserSettings.ClientProfileId;
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty)
@@ -332,6 +335,38 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             _connectCts = null;
             _isConnecting = false;
             FireConnectionStateChanged();
+        }
+    }
+
+    private async Task RequestFeatures(CancellationToken cancellationToken)
+    {
+        // QuickLaunch
+        if (Services.UiService?.IsQuickLaunchSupported is true && Settings.IsQuickLaunchAdded is null)
+        {
+            try
+            {
+                Settings.IsQuickLaunchAdded = await Services.UiService.RequestQuickLaunch(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not add QuickLaunch.");
+            }
+
+            Settings.Save();
+        }
+
+        if (Services.UiService?.IsNotificationSupported is true && !Settings.IsNotificationEnabled is null)
+        {
+            try
+            {
+                Settings.IsNotificationEnabled = await Services.UiService.RequestNotification(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not enable Notification.");
+            }
+
+            Settings.Save();
         }
     }
 
@@ -656,9 +691,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     public void VersionCheckPostpone()
     {
+        _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
         Settings.LastUpdateCheckTime = DateTime.Now;
         VersionCheckRequired = false;
-        _versionStatus = VersionStatus.Unknown;
         Settings.Save();
     }
 
@@ -674,16 +709,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             {
                 if (await Services.UpdaterService.Update())
                 {
-                    _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
-                    VersionCheckRequired = false;
-                    Settings.LastUpdateCheckTime = DateTime.Now;
-                    Settings.Save();
+                    VersionCheckPostpone();
                     return;
                 }
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning(ex, "Could not check version by VersionCheckProc.");
+                VhLogger.Instance.LogWarning(ex, "Could not check version by VersionCheck.");
             }
         }
 

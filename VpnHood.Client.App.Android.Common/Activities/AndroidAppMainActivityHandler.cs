@@ -129,8 +129,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        VpnHoodApp.Instance.Services.UpdaterService = null;
-        VpnHoodApp.Instance.Services.AdService = null;
-        VpnHoodApp.Instance.Services.UpdaterService = null;
+        VpnHoodApp.Instance.UiContext = null;
     }
 }

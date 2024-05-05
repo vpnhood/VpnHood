@@ -22,6 +22,7 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
+
 public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
@@ -54,8 +55,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
-
-    public bool VersionCheckRequired { get; private set; }
+    
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
     public bool IsWaitingForAd { get; private set; }
@@ -76,6 +76,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public AppResource Resource { get; }
     public AppServices Services { get; }
     public IAppUiContext? UiContext { get; set; }
+    public IAppUiContext RequiredUiContext => UiContext ?? throw new Exception("The main window app does not exists.");
 
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
@@ -132,7 +133,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         Services = new AppServices
         {
             AppCultureService = options.CultureService ?? new AppAppCultureService(this),
+            AdService = options.AdService,
             UiService = options.UiService,
+            AccountService = options.AccountService,
+            UpdaterService = options.UpdaterService
         };
 
         // initialize
@@ -353,7 +357,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             try
             {
-                Settings.IsQuickLaunchAdded = await Services.UiService.RequestQuickLaunch(UiContext, cancellationToken);
+                Settings.IsQuickLaunchAdded = 
+                    await Services.UiService.RequestQuickLaunch(RequiredUiContext, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -370,7 +375,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             try
             {
-                Settings.IsNotificationEnabled = await Services.UiService.RequestNotification(UiContext, cancellationToken);
+                Settings.IsNotificationEnabled = 
+                    await Services.UiService.RequestNotification(RequiredUiContext, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -536,7 +542,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             IsWaitingForAd = true;
             var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-            await Services.AdService.ShowAd(UiContext, customData, cancellationToken);
+            await Services.AdService.ShowAd(RequiredUiContext, customData, cancellationToken);
             _ = client.SendAdReward(customData, cancellationToken);
         }
         catch (Exception ex)
@@ -707,7 +713,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     {
         _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
         Settings.LastUpdateCheckTime = DateTime.Now;
-        VersionCheckRequired = false;
         Settings.Save();
     }
 
@@ -732,9 +737,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 VhLogger.Instance.LogWarning(ex, "Could not check version by VersionCheck.");
             }
         }
-
-        // app container should check version if possible regardless of the result of VersionCheckByUpdateInfo
-        VersionCheckRequired = true;
 
         // check version by update info
         if (await VersionCheckByUpdateInfo())

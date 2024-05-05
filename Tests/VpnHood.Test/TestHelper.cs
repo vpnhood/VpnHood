@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
@@ -24,8 +25,10 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
 
+
 internal static class TestHelper
 {
+    public class TestAppUiContext : IAppUiContext;
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
 
@@ -390,6 +393,7 @@ internal static class TestHelper
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         clientApp.UserSettings.Logging.LogAnonymous = false;
         clientApp.UserSettings.Logging.LogVerbose = true;
+        clientApp.UiContext = new TestAppUiContext();
 
         return clientApp;
     }

@@ -46,7 +46,7 @@ public class MainActivity : AndroidAppMainActivity
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3],
 #if GOOGLE_PLAY
             // code clean up changes inline namespace to using
-            AppUpdaterService = new GooglePlayAppUpdaterService(this) 
+            UpdaterService = new GooglePlayAppUpdaterService(this) 
 #else
             AppUpdaterService = null
 #endif

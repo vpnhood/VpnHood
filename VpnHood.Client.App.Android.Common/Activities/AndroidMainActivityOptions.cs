@@ -6,6 +6,8 @@ public class AndroidMainActivityOptions
 {
     public string[] AccessKeySchemes { get; init; } = [];
     public string[] AccessKeyMimes { get; init; } = [];
-    public IAppUpdaterService? AppUpdaterService { get; init; }
-    public bool RequestFeaturesOnCreate { get; init; } = true;
+    public bool CheckForUpdateOnCreate { get; init; } = true;
+    public IAppUpdaterService? UpdaterService { get; init; }
+    public IAppAccountService? AccountService { get; init; }
+    public IAppAdService? AdService { get; init; }
 }

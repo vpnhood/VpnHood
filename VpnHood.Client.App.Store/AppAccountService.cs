@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Store.Api;
@@ -16,25 +17,37 @@ public class AppAccountService(
     public IAppAuthenticationService Authentication => authenticationService;
     public IAppBillingService? Billing => billingService;
     private AppAccount? _appAccount;
+    
     private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
+
+    public async Task<AppAccount> SignInWithGoogle()
+    {
+        await authenticationService.SignInWithGoogle();
+        var appAccount = await GetAccount();
+        return appAccount ?? throw new ArgumentNullException(nameof(appAccount));
+    }
 
     public async Task<AppAccount?> GetAccount()
     {
         if (authenticationService.UserId == null)
             return null;
 
+        // Get from local cache
         _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
         if (_appAccount != null)
             return _appAccount;
 
+        // Update cache from server and update local cache
         _appAccount = await GetAccountFromServer();
+        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
+        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount));
 
         return _appAccount;
     }
 
-    public async Task Refresh()
+    public void Refresh()
     {
-        _appAccount = await GetAccountFromServer();
+        _appAccount = null;
     }
 
     private async Task<AppAccount> GetAccountFromServer()
@@ -52,12 +65,16 @@ public class AppAccountService(
             UserId = currentUser.UserId,
             Name = currentUser.Name,
             Email = currentUser.Email,
-            SubscriptionId = subscriptionLastOrder?.SubscriptionId,
+            SubscriptionId = subscriptionLastOrder?.SubscriptionId.ToString(),
             ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
         };
 
-        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
-        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(appAccount));
+        // Get access keys from user account
+        var accessKeys = _appAccount?.SubscriptionId != null
+            ? await GetAccessKeys(_appAccount.SubscriptionId)
+            : [];
+        VpnHoodApp.Instance.ClientProfileService.UpdateFromAccount(accessKeys.ToArray());
+
         return appAccount;
     }
 

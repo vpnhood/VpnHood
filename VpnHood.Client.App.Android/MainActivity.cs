@@ -44,12 +44,6 @@ public class MainActivity : AndroidAppMainActivity
             ListenToAllIps = AssemblyInfo.ListenToAllIps,
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3],
-#if GOOGLE_PLAY
-            // code clean up changes inline namespace to using
-            UpdaterService = new GooglePlayAppUpdaterService(this) 
-#else
-            AppUpdaterService = null
-#endif
         });
     }
 }

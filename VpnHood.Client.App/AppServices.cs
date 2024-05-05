@@ -9,5 +9,5 @@ public class AppServices
     public IAppUpdaterService? UpdaterService { get; set; }
     public IAppUiService? UiService { get; init; }
     public IAppAdService? AdService { get; set; }
-    public required ICultureService CultureService { get; init;}
+    public required IAppCultureService AppCultureService { get; init;}
 }

@@ -4,9 +4,6 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
-using VpnHood.Client.App.Droid.GooglePlay;
-using VpnHood.Client.App.Droid.GooglePlay.Ads;
-using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -28,17 +25,10 @@ public class MainActivity : AndroidAppMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
-        var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
-        var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
-
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AssemblyInfo.DefaultSpaPort,
-            ListenToAllIps = AssemblyInfo.ListenToAllIps,
-            UpdaterService = new GooglePlayAppUpdaterService(this),
-            AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId),
-            AdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnitId),
+            ListenToAllIps = AssemblyInfo.ListenToAllIps
         });
     }
 }

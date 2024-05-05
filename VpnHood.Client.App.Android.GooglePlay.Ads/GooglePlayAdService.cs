@@ -2,12 +2,12 @@
 using Android.Gms.Ads.Rewarded;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Droid.Common;
 using VpnHood.Common.Logging;
 using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 public class GooglePlayAdService(
-    Activity activity,
     string rewardedAdUnitId)
     : IAppAdService
 {
@@ -15,13 +15,13 @@ public class GooglePlayAdService(
     private DateTime _lastRewardedAdLoadTime = DateTime.MinValue;
 
 
-    public static GooglePlayAdService Create(Activity activity, string rewardedAdUnit)
+    public static GooglePlayAdService Create(string rewardedAdUnit)
     {
-        var ret = new GooglePlayAdService(activity, rewardedAdUnit);
+        var ret = new GooglePlayAdService(rewardedAdUnit);
         return ret;
     }
 
-    public async Task<RewardedAd> LoadRewardedAd(CancellationToken cancellationToken)
+    public async Task<RewardedAd> LoadRewardedAd(Activity activity, CancellationToken cancellationToken)
     {
         try
         {
@@ -50,10 +50,13 @@ public class GooglePlayAdService(
         }
     }
 
-    public async Task ShowAd(string customData, CancellationToken cancellationToken)
+    public async Task ShowAd(IAppUiContext uiContext, string customData, CancellationToken cancellationToken)
     {
+        var appUiContext = (AndroidAppUiContext)uiContext;
+        var activity = appUiContext.Activity;
+
         // create ad custom data
-        var rewardedAd = await LoadRewardedAd(cancellationToken);
+        var rewardedAd = await LoadRewardedAd(activity, cancellationToken);
         if (activity.IsDestroyed)
             throw new Exception("MainActivity has been destroyed before showing the ad.");
 

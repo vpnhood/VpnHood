@@ -1,21 +1,17 @@
-﻿using Android;
-using Android.Content;
-using Android.Content.PM;
+﻿using Android.Content;
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
+using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
-public class AndroidAppMainActivityHandler : IAppUiService
+public class AndroidAppMainActivityHandler
 {
-    private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
     private readonly string[] _accessKeySchemes;
     private readonly string[] _accessKeyMimes;
-    private const int RequestPostNotificationId = 11;
     protected IActivityEvent ActivityEvent { get; }
     protected virtual bool CheckForUpdateOnCreate { get; }
 
@@ -29,7 +25,6 @@ public class AndroidAppMainActivityHandler : IAppUiService
         VpnHoodApp.Instance.Services.AccountService = options.AccountService;
         VpnHoodApp.Instance.Services.AdService = options.AdService;
         VpnHoodApp.Instance.Services.UpdaterService = options.UpdaterService;
-        VpnHoodApp.Instance.Services.UiService = this;
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
@@ -43,42 +38,13 @@ public class AndroidAppMainActivityHandler : IAppUiService
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
         AndroidDevice.Instance.Prepare(ActivityEvent);
+        VpnHoodApp.Instance.UiContext = new AndroidAppUiContext(ActivityEvent);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
 
         if (CheckForUpdateOnCreate)
             _ = VpnHoodApp.Instance.VersionCheck();
-    }
-
-    public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
-    public async Task<bool> RequestQuickLaunch(CancellationToken cancellationToken)
-    {
-        if (!IsQuickLaunchSupported)
-            throw new NotSupportedException("QuickLaunch is not supported on this device.");
-
-        // request for adding tile
-        // result. 0: reject, 1: already granted, 2: granted 
-        var res = await QuickLaunchTileService.RequestAddTile(ActivityEvent.Activity).WaitAsync(cancellationToken);
-        return res != 0;
-    }
-
-    public bool IsNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
-    public async Task<bool> RequestNotification(CancellationToken cancellationToken)
-    {
-        // check is request supported
-        if (!IsNotificationSupported)
-            throw new NotSupportedException("RequestNotification is not supported on this device.");
-
-        // check is already granted
-        if (ActivityEvent.Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) == Permission.Granted)
-            return true;
-
-        // request for notification
-        _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
-        ActivityEvent.Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
-        var res = await _requestPostNotificationsCompletionTask.Task.WaitAsync(cancellationToken);
-        return res == Permission.Granted;
     }
 
     protected virtual bool OnNewIntent(Intent? intent)
@@ -149,9 +115,6 @@ public class AndroidAppMainActivityHandler : IAppUiService
 
     protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
     {
-        var postNotificationsIndex = Array.IndexOf(permissions, Manifest.Permission.PostNotifications);
-        if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
-            _requestPostNotificationsCompletionTask.TrySetResult(grantResults[postNotificationsIndex]);
     }
 
     protected virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
@@ -173,6 +136,5 @@ public class AndroidAppMainActivityHandler : IAppUiService
         VpnHoodApp.Instance.Services.UpdaterService = null;
         VpnHoodApp.Instance.Services.AdService = null;
         VpnHoodApp.Instance.Services.UpdaterService = null;
-        VpnHoodApp.Instance.Services.UiService = null;
     }
 }

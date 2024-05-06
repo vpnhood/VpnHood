@@ -5,13 +5,15 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services;
 
-internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accountService) 
+internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accountService)
     : IAppAccountService
 {
     private AppAccount? _appAccount;
     private string AppAccountFilePath => Path.Combine(vpnHoodApp.StorageFolderPath, "account", "account.json");
 
-    public IAppAuthenticationService Authentication => accountService.Authentication;
+    public IAppAuthenticationService Authentication { get; } =
+        new AppAuthenticationService(vpnHoodApp, accountService.Authentication);
+
     public IAppBillingService? Billing { get; } = accountService.Billing != null
         ? new AppBillingService(vpnHoodApp, accountService.Billing) : null;
 

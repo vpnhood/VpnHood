@@ -67,7 +67,7 @@ public class QuickLaunchTileService : TileService
 
     public override void OnTileAdded()
     {
-        VpnHoodApp.Instance.Settings.IsQuickLaunchAdded = true;
+        VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
         VpnHoodApp.Instance.Settings.Save();
         base.OnTileAdded();
         Refresh();
@@ -75,7 +75,7 @@ public class QuickLaunchTileService : TileService
 
     public override void OnTileRemoved()
     {
-        VpnHoodApp.Instance.Settings.IsQuickLaunchAdded = false;
+        VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = false;
         VpnHoodApp.Instance.Settings.Save();
         base.OnTileRemoved();
     }
@@ -84,9 +84,9 @@ public class QuickLaunchTileService : TileService
     public override void OnStartListening()
     {
         base.OnStartListening();
-        if (VpnHoodApp.Instance.Settings.IsQuickLaunchAdded == false)
+        if (VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled == false)
         {
-            VpnHoodApp.Instance.Settings.IsQuickLaunchAdded = true;
+            VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
             VpnHoodApp.Instance.Settings.Save();
         }
 

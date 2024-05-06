@@ -13,7 +13,7 @@ public class AppSettings
     [JsonIgnore] 
     public string SettingsFilePath { get; private set; } = null!;
     public int Version { get; set; } = 1;
-    public bool? IsQuickLaunchAdded { get; set; } 
+    public bool? IsQuickLaunchEnabled { get; set; } 
     public bool? IsNotificationEnabled { get; set; }
     public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();

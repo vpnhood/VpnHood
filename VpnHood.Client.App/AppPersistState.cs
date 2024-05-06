@@ -29,7 +29,6 @@ internal class AppPersistState
         set { _updateIgnoreTime = value; Save(); }
     }
 
-
     internal static AppPersistState Load(string filePath)
     {
         var ret = VhUtil.JsonDeserializeFile<AppPersistState>(filePath, logger: VhLogger.Instance) ?? new AppPersistState();

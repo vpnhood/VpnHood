@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App;
 

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App.Settings;
+namespace VpnHood.Client.App;
 
 internal class AppPersistState
 {
@@ -13,12 +13,22 @@ internal class AppPersistState
     [JsonIgnore]
     public string FilePath { get; private set; } = null!;
 
+    // prop
     private string? _lastErrorMessage;
     public string? LastErrorMessage
     {
         get => _lastErrorMessage;
         set { _lastErrorMessage = value; Save(); }
     }
+
+    // prop
+    private DateTime _updateIgnoreTime = DateTime.MinValue;
+    public DateTime UpdateIgnoreTime
+    {
+        get => _updateIgnoreTime;
+        set { _updateIgnoreTime = value; Save(); }
+    }
+
 
     internal static AppPersistState Load(string filePath)
     {
@@ -27,7 +37,7 @@ internal class AppPersistState
         return ret;
     }
 
-    public void Save()
+    private void Save()
     {
         lock (_saveLock)
         {

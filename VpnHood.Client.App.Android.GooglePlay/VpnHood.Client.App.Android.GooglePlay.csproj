@@ -37,7 +37,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
-		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

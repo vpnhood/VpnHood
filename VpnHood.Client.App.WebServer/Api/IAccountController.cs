@@ -1,9 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.Client.App.Abstractions;
+﻿using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.WebServer.Api;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public interface IAccountController
 {
     bool IsSigninWithGoogleSupported();
@@ -12,5 +10,5 @@ public interface IAccountController
     Task Refresh();
     Task<AppAccount?> Get();
     Task<bool> IsSubscriptionOrderProcessed(string providerOrderId);
-    Task<List<string>> GetAccessKeys(string subscriptionId);
+    Task<string[]> GetAccessKeys(string subscriptionId);
 }

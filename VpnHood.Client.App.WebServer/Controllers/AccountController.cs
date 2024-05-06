@@ -20,7 +20,7 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Post, "/refresh")]
     public Task Refresh()
     {
-        return AccountService.Refresh();
+        return VpnHoodApp.Instance.RefreshAccount();
     }
 
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
@@ -39,9 +39,10 @@ internal class AccountController : WebApiController, IAccountController
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
-    public Task SignOut()
+    public async Task SignOut()
     {
-        return AccountService.Authentication.SignOut(VpnHoodApp.Instance.RequiredUiContext);
+        await AccountService.Authentication.SignOut(VpnHoodApp.Instance.RequiredUiContext);
+        await VpnHoodApp.Instance.RefreshAccount();
     }
 
     [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]

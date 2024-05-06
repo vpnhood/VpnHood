@@ -9,13 +9,14 @@ using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
-public class AppAuthenticationService : IAppAuthenticationService
+public class StoreAuthenticationService : IAppAuthenticationService
 {
     private bool _disposed;
+    private readonly string _storageFolderPath;
     private readonly IAppAuthenticationExternalService? _externalAuthenticationService;
     private readonly HttpClient _httpClientWithoutAuth;
     private ApiKey? _apiKey;
-    private readonly string _apiKeyFilePath;
+    private string ApiKeyFilePath => Path.Combine(_storageFolderPath, "account", "apiKey.json");
     public bool IsSignInWithGoogleSupported => _externalAuthenticationService != null;
 
     public string? UserId => ApiKey?.UserId;
@@ -23,13 +24,14 @@ public class AppAuthenticationService : IAppAuthenticationService
     public HttpClient HttpClient { get; }
     public Guid StoreAppId { get; }
 
-    public AppAuthenticationService(
+    public StoreAuthenticationService(
         string storageFolderPath,
         Uri storeBaseUrl,
         Guid storeAppId,
         IAppAuthenticationExternalService? externalAuthenticationService,
         bool ignoreSslVerification = false)
     {
+        _storageFolderPath = storageFolderPath;
         _externalAuthenticationService = externalAuthenticationService;
         StoreAppId = storeAppId;
         var handlerWithAuth = new HttpClientHandlerAuth(this);
@@ -40,8 +42,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         if (ignoreSslVerification) handlerWithoutAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClientWithoutAuth = new HttpClient(handlerWithoutAuth) { BaseAddress = storeBaseUrl };
 
-        _apiKeyFilePath = Path.Combine(storageFolderPath, "account", "apiKey.json");
-        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(_apiKeyFilePath, logger: VhLogger.Instance);
+        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
     }
 
     private ApiKey? ApiKey
@@ -52,13 +53,13 @@ public class AppAuthenticationService : IAppAuthenticationService
             _apiKey = value;
             if (value == null)
             {
-                if (File.Exists(_apiKeyFilePath))
-                    File.Delete(_apiKeyFilePath);
+                if (File.Exists(ApiKeyFilePath))
+                    File.Delete(ApiKeyFilePath);
                 return;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(_apiKeyFilePath)!);
-            File.WriteAllText(_apiKeyFilePath, JsonSerializer.Serialize(value));
+            Directory.CreateDirectory(Path.GetDirectoryName(ApiKeyFilePath)!);
+            File.WriteAllText(ApiKeyFilePath, JsonSerializer.Serialize(value));
         }
     }
 
@@ -121,8 +122,8 @@ public class AppAuthenticationService : IAppAuthenticationService
     public async Task SignOut(IAppUiContext uiContext)
     {
         ApiKey = null;
-        if (File.Exists(_apiKeyFilePath))
-            File.Delete(_apiKeyFilePath);
+        if (File.Exists(ApiKeyFilePath))
+            File.Delete(ApiKeyFilePath);
 
 
         if (_externalAuthenticationService != null)
@@ -169,7 +170,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         HttpClient.Dispose();
     }
 
-    public class HttpClientHandlerAuth(AppAuthenticationService accountService) : HttpClientHandler
+    public class HttpClientHandlerAuth(StoreAuthenticationService accountService) : HttpClientHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

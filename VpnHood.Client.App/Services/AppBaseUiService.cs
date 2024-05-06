@@ -1,8 +1,9 @@
 ﻿using VpnHood.Client.App.Abstractions;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.Services;
 
-internal class AppUiServiceBase : IAppUiService
+internal class AppBaseUiService 
+    : IAppUiService
 {
     public bool IsQuickLaunchSupported => false;
     public Task<bool> RequestQuickLaunch(IAppUiContext uiContext, CancellationToken cancellationToken) => throw new NotSupportedException();

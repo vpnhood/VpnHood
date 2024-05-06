@@ -79,7 +79,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var hash = md5.ComputeHash(memZipStream);
         _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
-        var spaFolderPath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp", "SPA");
+        var spaFolderPath = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp", "SPA");
         var path = Path.Combine(spaFolderPath, _spaHash);
         if (!Directory.Exists(path))
         {

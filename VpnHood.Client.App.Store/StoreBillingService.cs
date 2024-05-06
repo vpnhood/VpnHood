@@ -2,23 +2,23 @@ using VpnHood.Client.App.Abstractions;
 
 namespace VpnHood.Client.App.Store;
 
-internal class StoreBillingService(
-    IAppBillingService appBillingService, 
-    IAppBillingService appBillingServiceImplementation) 
+internal class StoreBillingService(IAppBillingService billingService)  
     : IAppBillingService
 {
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        return appBillingService.GetSubscriptionPlans();
+        return billingService.GetSubscriptionPlans();
     }
 
-    public Task<string> Purchase(IAppUiContext uiContext, string planId)
+    public async Task<string> Purchase(IAppUiContext uiContext, string planId)
     {
-        return appBillingService.Purchase(uiContext, planId);
+        var ret = await billingService.Purchase(uiContext, planId);
+        await VpnHoodApp.Instance.UpdateAccount();
+        return ret;
     }
 
     public void Dispose()
     {
-        appBillingService.Dispose();
+        billingService.Dispose();
     }
 }

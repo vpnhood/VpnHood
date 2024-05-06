@@ -15,7 +15,7 @@ public class AppAuthenticationService : IAppAuthenticationService
     private readonly IAppAuthenticationExternalService? _externalAuthenticationService;
     private readonly HttpClient _httpClientWithoutAuth;
     private ApiKey? _apiKey;
-    private static string ApiKeyFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "apiKey.json");
+    private readonly string _apiKeyFilePath;
     public bool IsSignInWithGoogleSupported => _externalAuthenticationService != null;
 
     public string? UserId => ApiKey?.UserId;
@@ -24,6 +24,7 @@ public class AppAuthenticationService : IAppAuthenticationService
     public Guid StoreAppId { get; }
 
     public AppAuthenticationService(
+        string storageFolderPath,
         Uri storeBaseUrl,
         Guid storeAppId,
         IAppAuthenticationExternalService? externalAuthenticationService,
@@ -39,7 +40,8 @@ public class AppAuthenticationService : IAppAuthenticationService
         if (ignoreSslVerification) handlerWithoutAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
         _httpClientWithoutAuth = new HttpClient(handlerWithoutAuth) { BaseAddress = storeBaseUrl };
 
-        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(ApiKeyFilePath, logger: VhLogger.Instance);
+        _apiKeyFilePath = Path.Combine(storageFolderPath, "account", "apiKey.json");
+        _apiKey = VhUtil.JsonDeserializeFile<ApiKey>(_apiKeyFilePath, logger: VhLogger.Instance);
     }
 
     private ApiKey? ApiKey
@@ -50,13 +52,13 @@ public class AppAuthenticationService : IAppAuthenticationService
             _apiKey = value;
             if (value == null)
             {
-                if (File.Exists(ApiKeyFilePath))
-                    File.Delete(ApiKeyFilePath);
+                if (File.Exists(_apiKeyFilePath))
+                    File.Delete(_apiKeyFilePath);
                 return;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(ApiKeyFilePath)!);
-            File.WriteAllText(ApiKeyFilePath, JsonSerializer.Serialize(value));
+            Directory.CreateDirectory(Path.GetDirectoryName(_apiKeyFilePath)!);
+            File.WriteAllText(_apiKeyFilePath, JsonSerializer.Serialize(value));
         }
     }
 
@@ -119,8 +121,8 @@ public class AppAuthenticationService : IAppAuthenticationService
     public async Task SignOut(IAppUiContext uiContext)
     {
         ApiKey = null;
-        if (File.Exists(ApiKeyFilePath))
-            File.Delete(ApiKeyFilePath);
+        if (File.Exists(_apiKeyFilePath))
+            File.Delete(_apiKeyFilePath);
 
 
         if (_externalAuthenticationService != null)

@@ -119,6 +119,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
         Settings.UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
+        var uiService = options.UiService ?? new AppUiServiceBase();
+        
         // initialize features
         Features = new AppFeatures
         {
@@ -131,6 +133,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
             IsAccountSupported = options.AccountService != null,
             IsBillingSupported = options.AccountService?.Billing != null,
+            IsQuickLaunchSupported = uiService.IsQuickLaunchSupported,
+            IsNotificationSupported = uiService.IsNotificationSupported,
+            IsAlwaysOnSupported = device.IsAlwaysOnSupported,
         };
 
         // initialize services
@@ -138,7 +143,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             AppCultureService = options.CultureService ?? new AppAppCultureService(this),
             AdService = options.AdService,
-            UiService = options.UiService,
+            UiService = uiService,
             AccountService = options.AccountService,
             UpdaterService = options.UpdaterService
         };
@@ -359,17 +364,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
-        Settings.IsQuickLaunchAdded = null;
-        Settings.IsNotificationEnabled = null;
-
         // QuickLaunch
         if (UiContext != null &&
-            Services.UiService?.IsQuickLaunchSupported is true &&
-            Settings.IsQuickLaunchAdded is null)
+            Services.UiService.IsQuickLaunchSupported &&
+            Settings.IsQuickLaunchEnabled is null)
         {
             try
             {
-                Settings.IsQuickLaunchAdded =
+                Settings.IsQuickLaunchEnabled =
                     await Services.UiService.RequestQuickLaunch(RequiredUiContext, cancellationToken);
             }
             catch (Exception ex)
@@ -382,7 +384,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // Notification
         if (UiContext != null &&
-            Services.UiService?.IsNotificationSupported is true &&
+            Services.UiService.IsNotificationSupported &&
             Settings.IsNotificationEnabled is null)
         {
             try

@@ -23,6 +23,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsLogToConsoleSupported => false;
+    public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
     private AndroidDevice()

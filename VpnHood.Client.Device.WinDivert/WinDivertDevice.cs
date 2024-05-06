@@ -9,6 +9,7 @@ public class WinDivertDevice : IDevice
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public bool IsExcludeAppsSupported => IsDebugMode;
     public bool IsLogToConsoleSupported => true;
+    public bool IsAlwaysOnSupported => false;
     public bool IsIncludeAppsSupported => IsDebugMode;
 
     public DeviceAppInfo[] InstalledApps

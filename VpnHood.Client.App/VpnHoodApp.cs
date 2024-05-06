@@ -82,13 +82,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         options ??= new AppOptions();
-        Directory.CreateDirectory(options.AppDataFolderPath); //make sure directory exists
+        Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
 
         Device = device;
         device.StartedAsService += DeviceOnStartedAsService;
 
-        AppDataFolderPath = options.AppDataFolderPath ?? throw new ArgumentNullException(nameof(options.AppDataFolderPath));
+        AppDataFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
         Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
         Settings.Saved += Settings_Saved;
         ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
@@ -129,7 +129,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UpdateInfoUrl = options.UpdateInfoUrl,
             UiName = options.UiName,
             BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
-            IsAccountSupported = options.AccountService != null
+            IsAccountSupported = options.AccountService != null,
+            IsBillingSupported = options.AccountService?.Billing != null,
         };
 
         // initialize services

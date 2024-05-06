@@ -16,14 +16,15 @@ namespace VpnHood.Client.App.Droid.Connect;
     NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
     SupportsRtl = true, AllowBackup = true)]
 
-[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = "ca-app-pub-8662231806304184~1740102860")]
+[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AssemblyInfo.AdMonApplicationId)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
     protected override AppOptions CreateAppOptions()
     {
+        var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(AssemblyInfo.FirebaseClientId);
-        var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
+        var authenticationService = new AppAuthenticationService(storageFolderPath, AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
 
         var resources = DefaultAppResource.Resource;
@@ -32,6 +33,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         return new AppOptions
         {
+            StorageFolderPath = storageFolderPath,
             AccessKeys = [AssemblyInfo.GlobalServersAccessKey],
             Resource = DefaultAppResource.Resource,
             UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,

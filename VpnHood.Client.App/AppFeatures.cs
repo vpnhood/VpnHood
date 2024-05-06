@@ -10,4 +10,5 @@ public class AppFeatures
     public required bool IsAddAccessKeySupported { get; init; }
     public required Guid? BuiltInClientProfileId { get; init; }
     public required bool IsAccountSupported { get; init; }
+    public required bool IsBillingSupported { get; init; }
 }

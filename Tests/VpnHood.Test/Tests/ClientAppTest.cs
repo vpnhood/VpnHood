@@ -177,7 +177,7 @@ public class ClientAppTest : TestBase
         await app.DisposeAsync();
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.StorageFolderPath = app.AppDataFolderPath;
+        appOptions.StorageFolderPath = app.StorageFolderPath;
 
         await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
         Assert.AreEqual(clientProfiles.Length, app2.ClientProfileService.List().Length, "ClientProfiles count are not same!");

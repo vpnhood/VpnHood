@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -223,8 +222,9 @@ public class ClientProfileService
         }
     }
 
-    public void UpdateFromAccount(string[] accessKeys)
+    internal void UpdateFromAccount(string[] accessKeys)
     {
+
         var accessTokens = accessKeys.Select(Token.FromAccessKey);
 
         // Remove client profiles that does not exist in the account

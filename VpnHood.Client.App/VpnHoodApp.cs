@@ -23,7 +23,8 @@ using VpnHood.Tunneling.Factory;
 namespace VpnHood.Client.App;
 
 
-public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvider, IJob
+public class VpnHoodApp : Singleton<VpnHoodApp>,
+    IAsyncDisposable, IIpRangeProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -127,7 +128,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             UpdateInfoUrl = options.UpdateInfoUrl,
             UiName = options.UiName,
-            BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId
+            BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
+            IsAccountSupported = options.AccountService != null
         };
 
         // initialize services
@@ -825,6 +827,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         return _lastCountryIpGroup != null
             ? await GetIncludeIpRanges(FilterMode.Exclude, [_lastCountryIpGroup.IpGroupId])
             : null;
+    }
+
+    public async Task UpdateAccount()
+    {
+        if (Services.AccountService == null)
+            throw new Exception("AccountService is not initialized.");
+
+        // update profiles
+        // get access tokens from account
+        var account = await Services.AccountService.GetAccount();
+        var accessKeys = account?.SubscriptionId != null ? await Services.AccountService.GetAccessKeys(account.SubscriptionId) : [];
+        ClientProfileService.UpdateFromAccount(accessKeys);
+
+        // update current profile if removed
+        if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null)
+        {
+            UserSettings.ClientProfileId = ClientProfileService.List().FirstOrDefault()?.ClientProfileId;
+            Settings.Save();
+        }
     }
 
     public Task RunJob()

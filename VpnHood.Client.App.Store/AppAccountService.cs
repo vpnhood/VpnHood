@@ -13,11 +13,11 @@ public class AppAccountService(
     Guid storeAppId)
     : IAppAccountService, IDisposable
 {
+    private AppAccount? _appAccount;
+    private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
+
     public IAppAuthenticationService Authentication => authenticationService;
     public IAppBillingService? Billing => billingService;
-    private AppAccount? _appAccount;
-    
-    private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
 
     public async Task<AppAccount?> GetAccount()
     {
@@ -62,15 +62,7 @@ public class AppAccountService(
             ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
         };
 
-        // Get access keys from user account
-        var accessKeys = _appAccount?.SubscriptionId != null
-            ? await GetAccessKeys(_appAccount.SubscriptionId)
-            : [];
-
-        //todo
-        VpnHoodApp.Instance.ClientProfileService.UpdateFromAccount(accessKeys.ToArray());
-
-        return appAccount;
+         return appAccount;
     }
 
     // Check order state 'isProcessed' for 6 time
@@ -99,10 +91,12 @@ public class AppAccountService(
         return false;
     }
 
-    public async Task<List<string>> GetAccessKeys(string subscriptionId)
+    public async Task<string[]> GetAccessKeys(string subscriptionId)
     {
         var httpClient = authenticationService.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
+
+        // todo: add includeAccessKey parameter and return accessKey in accessToken
         var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId));
 
         var accessKeyList = new List<string>();
@@ -112,7 +106,7 @@ public class AppAccountService(
             accessKeyList.Add(accessKey);
         }
 
-        return accessKeyList;
+        return accessKeyList.ToArray();
     }
 
     public void Dispose()

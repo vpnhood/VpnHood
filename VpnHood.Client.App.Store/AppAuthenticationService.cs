@@ -121,7 +121,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         ApiKey = null;
         if (File.Exists(ApiKeyFilePath))
             File.Delete(ApiKeyFilePath);
-        
+
 
         if (_externalAuthenticationService != null)
             await _externalAuthenticationService.SignOut(uiContext);

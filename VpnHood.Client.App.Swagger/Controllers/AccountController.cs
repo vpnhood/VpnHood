@@ -20,6 +20,7 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
+
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
@@ -45,7 +46,7 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpGet("subscriptions/{subscriptionId}/access-keys")]
-    public Task<List<string>> GetAccessKeys(string subscriptionId)
+    public Task<string[]> GetAccessKeys(string subscriptionId)
     {
         throw new NotImplementedException();
     }

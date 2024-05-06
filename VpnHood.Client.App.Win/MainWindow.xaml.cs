@@ -35,7 +35,7 @@ public partial class MainWindow : Window
         if (backgroundColor != null) VpnHoodWinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
-        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp") };
+        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
         if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;

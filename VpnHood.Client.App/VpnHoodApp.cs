@@ -27,7 +27,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
-    private const string FileNamePersisState = "state.json";
+    private const string FileNamePersistState = "state.json";
     private const string FolderNameProfiles = "profiles";
     private readonly SocketFactory? _socketFactory;
     private readonly bool _loadCountryIpGroups;
@@ -47,15 +47,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     private bool _isLoadingIpGroup;
     private readonly TimeSpan _versionCheckInterval;
     private readonly AppPersistState _appPersistState;
-    private VersionStatus _versionStatus = VersionStatus.Unknown;
     private CancellationTokenSource? _connectCts;
     private DateTime? _connectedTime;
     private ClientProfile? _currentClientProfile;
+    private VersionCheckResult? _versionCheckResult;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
-    
+    private string VersionCheckFilePath => Path.Combine(AppDataFolderPath, "version.json");
+
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
     public bool IsWaitingForAd { get; private set; }
@@ -69,7 +70,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
     public IDevice Device { get; }
-    public PublishInfo? LatestPublishInfo { get; private set; }
     public JobSection JobSection { get; }
     public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
     public AppLogService LogService { get; }
@@ -96,7 +96,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         _loadCountryIpGroups = options.LoadCountryIpGroups;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
-        _appPersistState = AppPersistState.Load(Path.Combine(AppDataFolderPath, FileNamePersisState));
+        _appPersistState = AppPersistState.Load(Path.Combine(AppDataFolderPath, FileNamePersistState));
+        _versionCheckResult = VhUtil.JsonDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
 
@@ -104,7 +105,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         JobSection = new JobSection(new JobOptions
         {
             Interval = options.VersionCheckInterval,
-            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5) ? TimeSpan.FromSeconds(5) : options.VersionCheckInterval,
+            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5) ? TimeSpan.FromSeconds(3) : options.VersionCheckInterval,
             Name = "VersionCheck"
         });
 
@@ -138,6 +139,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
             AccountService = options.AccountService,
             UpdaterService = options.UpdaterService
         };
+
+        // Clear last update status if version has changed
+        if (_versionCheckResult != null && _versionCheckResult.LocalVersion != Features.Version)
+        {
+            _versionCheckResult = null;
+            File.Delete(VersionCheckFilePath);
+        }
 
         // initialize
         InitCulture();
@@ -180,12 +188,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
                 SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
                 ClientIpGroup = _lastCountryIpGroup,
                 IsWaitingForAd = IsWaitingForAd,
-                VersionStatus = _versionStatus,
-                LastPublishInfo = _versionStatus is VersionStatus.Deprecated or VersionStatus.Old ? LatestPublishInfo : null,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture),
-                SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture)
+                SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
+                VersionStatus = _versionCheckResult?.VersionStatus ?? VersionStatus.Unknown,
+                LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
+                    ? _versionCheckResult.PublishInfo : null,
             };
         }
     }
@@ -357,7 +366,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             try
             {
-                Settings.IsQuickLaunchAdded = 
+                Settings.IsQuickLaunchAdded =
                     await Services.UiService.RequestQuickLaunch(RequiredUiContext, cancellationToken);
             }
             catch (Exception ex)
@@ -375,7 +384,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
         {
             try
             {
-                Settings.IsNotificationEnabled = 
+                Settings.IsNotificationEnabled =
                     await Services.UiService.RequestNotification(RequiredUiContext, cancellationToken);
             }
             catch (Exception ex)
@@ -711,78 +720,93 @@ public class VpnHoodApp : Singleton<VpnHoodApp>, IAsyncDisposable, IIpRangeProvi
 
     public void VersionCheckPostpone()
     {
-        _versionStatus = VersionStatus.Unknown; // version status is unknown when app container can do it
-        Settings.LastUpdateCheckTime = DateTime.Now;
-        Settings.Save();
+        // version status is unknown when app container can do it
+        if (Services.UpdaterService != null)
+        {
+            _versionCheckResult = null;
+            File.Delete(VersionCheckFilePath);
+        }
+
+        // set latest ignore time
+        _appPersistState.UpdateIgnoreTime = DateTime.Now;
     }
 
     public async Task VersionCheck(bool force = false)
     {
-        if (!force && Settings.LastUpdateCheckTime != null && Settings.LastUpdateCheckTime.Value + _versionCheckInterval > DateTime.Now)
+        if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
             return;
 
         // check version by app container
-        if (Services.UpdaterService != null)
+        try
         {
-            try
+            if (UiContext != null && Services.UpdaterService != null && await Services.UpdaterService.Update(UiContext))
             {
-                if (UiContext != null && await Services.UpdaterService.Update(UiContext))
-                {
-                    VersionCheckPostpone();
-                    return;
-                }
+                VersionCheckPostpone();
+                return;
             }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogWarning(ex, "Could not check version by VersionCheck.");
-            }
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not check version by VersionCheck.");
         }
 
-        // check version by update info
-        if (await VersionCheckByUpdateInfo())
-        {
-            Settings.LastUpdateCheckTime = DateTime.Now;
-            Settings.Save();
-        }
+        // check version by UpdateInfoUrl
+        _versionCheckResult = await VersionCheckByUpdateInfo();
+
+        // save the result
+        if (_versionCheckResult != null)
+            await File.WriteAllTextAsync(VersionCheckFilePath, JsonSerializer.Serialize(_versionCheckResult));
+        else if (File.Exists(VersionCheckFilePath))
+            File.Delete(VersionCheckFilePath);
     }
 
-    private async Task<bool> VersionCheckByUpdateInfo()
+    private async Task<VersionCheckResult?> VersionCheckByUpdateInfo()
     {
         try
         {
             if (Features.UpdateInfoUrl == null)
-                return true; // no update info url. Job done
+                return null; // no update info url. Job done
 
             VhLogger.Instance.LogTrace("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
             var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl);
-            LatestPublishInfo = VhUtil.JsonDeserialize<PublishInfo>(publishInfoJson);
+            var latestPublishInfo = VhUtil.JsonDeserialize<PublishInfo>(publishInfoJson);
+            VersionStatus versionStatus;
 
             // Check version
-            if (LatestPublishInfo.Version == null)
+            if (latestPublishInfo.Version == null)
                 throw new Exception("Version is not available in publish info.");
 
             // set default notification delay
-            if (Features.Version <= LatestPublishInfo.DeprecatedVersion)
-                _versionStatus = VersionStatus.Deprecated;
+            if (Features.Version <= latestPublishInfo.DeprecatedVersion)
+                versionStatus = VersionStatus.Deprecated;
 
-            else if (Features.Version < LatestPublishInfo.Version &&
-                     DateTime.UtcNow - LatestPublishInfo.ReleaseDate > LatestPublishInfo.NotificationDelay)
-                _versionStatus = VersionStatus.Old;
+            else if (Features.Version < latestPublishInfo.Version &&
+                     DateTime.UtcNow - latestPublishInfo.ReleaseDate > latestPublishInfo.NotificationDelay)
+                versionStatus = VersionStatus.Old;
 
             else
-                _versionStatus = VersionStatus.Latest;
+                versionStatus = VersionStatus.Latest;
+
+            // save the result
+            var checkResult = new VersionCheckResult
+            {
+                LocalVersion = Features.Version,
+                VersionStatus = versionStatus,
+                PublishInfo = latestPublishInfo,
+                CheckedTime = DateTime.UtcNow
+            };
 
             VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
-                _versionStatus, LatestPublishInfo.Version);
+                versionStatus, latestPublishInfo.Version);
 
-            return true; // Job done
+            return checkResult; // Job done
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogWarning(ex, "Could not retrieve the latest publish info information.");
-            return false; // could not retrieve the latest publish info. try later
+            return null; // could not retrieve the latest publish info. try later
         }
     }
 

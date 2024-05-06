@@ -44,12 +44,6 @@ internal class AccountController : WebApiController, IAccountController
         return AccountService.Authentication.SignOut(VpnHoodApp.Instance.RequiredUiContext);
     }
 
-    [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
-    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
-    {
-        return AccountService.IsSubscriptionOrderProcessed(providerOrderId);
-    }
-
     [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]
     public Task<string[]> GetAccessKeys(string subscriptionId)
     {

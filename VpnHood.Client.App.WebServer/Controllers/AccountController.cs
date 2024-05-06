@@ -39,10 +39,9 @@ internal class AccountController : WebApiController, IAccountController
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
-    public async Task SignOut()
+    public Task SignOut()
     {
-        await AccountService.Authentication.SignOut(VpnHoodApp.Instance.RequiredUiContext);
-        await VpnHoodApp.Instance.RefreshAccount();
+        return AccountService.Authentication.SignOut(VpnHoodApp.Instance.RequiredUiContext);
     }
 
     [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]

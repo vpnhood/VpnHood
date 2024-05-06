@@ -19,8 +19,6 @@ public class AppSettings
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
     public string? LastCountryIpGroupId { get; set; }
-    public DateTime? LastUpdateCheckTime { get; set; }
-    public bool IsFeaturesRequested { get; set; }
 
 
     public void Save()

@@ -40,11 +40,6 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
         _appAccount = null;
     }
 
-    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
-    {
-        return accountService.IsSubscriptionOrderProcessed(providerOrderId);
-    }
-
     public Task<string[]> GetAccessKeys(string subscriptionId)
     {
         return accountService.GetAccessKeys(subscriptionId);

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
+using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
@@ -54,9 +55,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VersionCheckResult? _versionCheckResult;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
-    private string TempFolderPath => Path.Combine(AppDataFolderPath, "Temp");
+    private string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
-    private string VersionCheckFilePath => Path.Combine(AppDataFolderPath, "version.json");
+    private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
 
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
@@ -65,7 +66,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public VpnHoodConnect? ClientConnect { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
     public Diagnoser Diagnoser { get; set; } = new();
-    public string AppDataFolderPath { get; }
+    public string StorageFolderPath { get; }
     public AppSettings Settings { get; }
     public UserSettings UserSettings => Settings.UserSettings;
     public AppFeatures Features { get; }
@@ -88,19 +89,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Device = device;
         device.StartedAsService += DeviceOnStartedAsService;
 
-        AppDataFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
-        Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
+        StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        Settings = AppSettings.Load(Path.Combine(StorageFolderPath, FileNameSettings));
         Settings.Saved += Settings_Saved;
-        ClientProfileService = new ClientProfileService(Path.Combine(AppDataFolderPath, FolderNameProfiles));
+        ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
         _loadCountryIpGroups = options.LoadCountryIpGroups;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
-        _appPersistState = AppPersistState.Load(Path.Combine(AppDataFolderPath, FileNamePersistState));
+        _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _versionCheckResult = VhUtil.JsonDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
-        LogService = new AppLogService(Path.Combine(AppDataFolderPath, FileNameLog));
+        LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog));
 
         // configure update job section
         JobSection = new JobSection(new JobOptions
@@ -119,7 +120,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
         Settings.UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
-        var uiService = options.UiService ?? new AppUiServiceBase();
+        var uiService = options.UiService ?? new AppBaseUiService();
         
         // initialize features
         Features = new AppFeatures
@@ -141,11 +142,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize services
         Services = new AppServices
         {
-            AppCultureService = options.CultureService ?? new AppAppCultureService(this),
+            AppCultureService = options.CultureService ?? new AppCultureService(this),
             AdService = options.AdService,
+            AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
+            UpdaterService = options.UpdaterService,
             UiService = uiService,
-            AccountService = options.AccountService,
-            UpdaterService = options.UpdaterService
         };
 
         // Clear last update status if version has changed
@@ -832,10 +833,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             : null;
     }
 
-    public async Task UpdateAccount()
+    public async Task RefreshAccount()
     {
-        if (Services.AccountService == null)
+        if (Services.AccountService is not AppAccountService accountService)
             throw new Exception("AccountService is not initialized.");
+
+        // cleat cache
+        accountService.ClearCache();
 
         // update profiles
         // get access tokens from account

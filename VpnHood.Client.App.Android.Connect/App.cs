@@ -24,8 +24,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(AssemblyInfo.FirebaseClientId);
-        var authenticationService = new AppAuthenticationService(storageFolderPath, AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
+        var authenticationService = new StoreAuthenticationService(storageFolderPath, AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
         var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
+        var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
 
         var resources = DefaultAppResource.Resource;
         resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
@@ -41,7 +42,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsAddAccessKeySupported = false,
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
-            AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId),
+            AccountService = accountService,
             AdService = GooglePlayAdService.Create(AssemblyInfo.RewardedAdUnitId),
             UiService = new AndroidAppUiService()
         };

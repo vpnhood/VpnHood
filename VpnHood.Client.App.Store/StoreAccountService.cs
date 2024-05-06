@@ -1,21 +1,16 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
 using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
-public class AppAccountService(
+public class StoreAccountService(
     IAppAuthenticationService authenticationService,
     IAppBillingService? billingService,
     Guid storeAppId)
     : IAppAccountService, IDisposable
 {
-    private AppAccount? _appAccount;
-    private static string AppAccountFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "account.json");
-
     public IAppAuthenticationService Authentication => authenticationService;
     public IAppBillingService? Billing => billingService;
 
@@ -24,27 +19,6 @@ public class AppAccountService(
         if (authenticationService.UserId == null)
             return null;
 
-        // Get from local cache
-        _appAccount ??= VhUtil.JsonDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
-        if (_appAccount != null)
-            return _appAccount;
-
-        // Update cache from server and update local cache
-        _appAccount = await GetAccountFromServer();
-        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
-        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount));
-
-        return _appAccount;
-    }
-
-    public async Task Refresh()
-    {
-        _appAccount = null;
-        _appAccount = await GetAccount();
-    }
-
-    private async Task<AppAccount> GetAccountFromServer()
-    {
         var httpClient = authenticationService.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
         var currentUser = await authenticationClient.GetCurrentUserAsync();
@@ -62,7 +36,7 @@ public class AppAccountService(
             ProviderPlanId = subscriptionLastOrder?.ProviderPlanId
         };
 
-         return appAccount;
+        return appAccount;
     }
 
     // Check order state 'isProcessed' for 6 time

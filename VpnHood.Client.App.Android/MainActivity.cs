@@ -4,9 +4,6 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Properties;
-#if GOOGLE_PLAY
-using VpnHood.Client.App.Droid.GooglePlay;
-#endif
 
 namespace VpnHood.Client.App.Droid;
 

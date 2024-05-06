@@ -107,4 +107,22 @@ public class AppController : ControllerBase, IAppController
     {
         throw new NotImplementedException();
     }
+
+    [HttpPost("settings/open-always-on-page")]
+    public void OpenAlwaysOnPage()
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPost("settings/request-quick-launch")]
+    public Task RequestQuickLaunch()
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPost("settings/request-notification")]
+    public Task RequestNotification()
+    {
+        throw new NotImplementedException();
+    }
 }

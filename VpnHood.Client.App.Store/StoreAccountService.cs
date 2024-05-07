@@ -5,26 +5,32 @@ using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
-public class StoreAccountService(
-    IAppAuthenticationService authenticationService,
-    IAppBillingService? billingService,
-    Guid storeAppId)
-    : IAppAccountService, IDisposable
+public class StoreAccountService : IAppAccountService, IDisposable
 {
-    public IAppAuthenticationService Authentication => authenticationService;
-    public IAppBillingService? Billing => billingService;
+    private readonly Guid _storeAppId;
+    public IAppAuthenticationService Authentication { get; }
+    public IAppBillingService? Billing { get; }
+
+    public StoreAccountService(IAppAuthenticationService authenticationService,
+        IAppBillingService? billingService,
+        Guid storeAppId)
+    {
+        _storeAppId = storeAppId;
+        Authentication = authenticationService;
+        Billing = billingService != null ? new StoreBillingService(this, billingService) : null;
+    }
 
     public async Task<AppAccount?> GetAccount()
     {
-        if (authenticationService.UserId == null)
+        if (Authentication.UserId == null)
             return null;
 
-        var httpClient = authenticationService.HttpClient;
+        var httpClient = Authentication.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
         var currentUser = await authenticationClient.GetCurrentUserAsync();
 
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
-        var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false);
+        var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(_storeAppId, false, false);
         var subscriptionLastOrder = activeSubscription.SingleOrDefault()?.LastOrder;
 
         var appAccount = new AppAccount
@@ -40,43 +46,42 @@ public class StoreAccountService(
     }
 
     // Check order state 'isProcessed' for 6 time
-    public async Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
+    public async Task WaitForProcessProviderOrder(string providerOrderId)
     {
-        var httpClient = authenticationService.HttpClient;
+        var httpClient = Authentication.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
 
-        for (var counter = 0; counter < 5; counter++)
+        for (var counter = 0; ; counter++)
         {
             try
             {
-                var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(storeAppId, providerOrderId);
-                if (subscriptionOrder.IsProcessed == false)
-                    throw new Exception("Order has not processed yet.");
-
-                // Order process complete
-                return subscriptionOrder.IsProcessed;
+                var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(_storeAppId, providerOrderId);
+                if (subscriptionOrder.IsProcessed)
+                    return;
+                throw new Exception("Order has not processed yet.");
             }
             catch (Exception ex)
             {
+                // We might encounter a ‘not exist’ exception. Therefore, we need to wait for Google to send the provider order to the Store.
                 VhLogger.Instance.LogWarning(ex, ex.Message);
+                if (counter == 5) throw;
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
         }
-        return false;
     }
 
     public async Task<string[]> GetAccessKeys(string subscriptionId)
     {
-        var httpClient = authenticationService.HttpClient;
+        var httpClient = Authentication.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
 
         // todo: add includeAccessKey parameter and return accessKey in accessToken
-        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId));
+        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId));
 
         var accessKeyList = new List<string>();
         foreach (var accessToken in accessTokens)
         {
-            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId);
+            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(_storeAppId, accessToken.AccessTokenId);
             accessKeyList.Add(accessKey);
         }
 

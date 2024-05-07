@@ -253,58 +253,6 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    isSubscriptionOrderProcessed(providerOrderId: string, cancelToken?: CancelToken): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/account/subscription-orders/providerOrderId:{providerOrderId}/is-processed";
-        if (providerOrderId === undefined || providerOrderId === null)
-            throw new Error("The parameter 'providerOrderId' must be defined.");
-        url_ = url_.replace("{providerOrderId}", encodeURIComponent("" + providerOrderId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processIsSubscriptionOrderProcessed(_response);
-        });
-    }
-
-    protected processIsSubscriptionOrderProcessed(response: AxiosResponse): Promise<boolean> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return Promise.resolve<boolean>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<boolean>(null as any);
-    }
-
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
         let url_ = this.baseUrl + "/api/account/subscriptions/{subscriptionId}/access-keys";
         if (subscriptionId === undefined || subscriptionId === null)
@@ -1153,6 +1101,138 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    openAlwaysOnPage( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/settings/open-always-on-page";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processOpenAlwaysOnPage(_response);
+        });
+    }
+
+    protected processOpenAlwaysOnPage(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    requestQuickLaunch( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/settings/request-quick-launch";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRequestQuickLaunch(_response);
+        });
+    }
+
+    protected processRequestQuickLaunch(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    requestNotification( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/settings/request-notification";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRequestNotification(_response);
+        });
+    }
+
+    protected processRequestNotification(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class BillingClient {
@@ -1418,6 +1498,11 @@ export class AppFeatures implements IAppFeatures {
     uiName?: string | null;
     isAddAccessKeySupported!: boolean;
     builtInClientProfileId?: string | null;
+    isAccountSupported!: boolean;
+    isBillingSupported!: boolean;
+    isQuickLaunchSupported!: boolean;
+    isNotificationSupported!: boolean;
+    isAlwaysOnSupported!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1437,6 +1522,11 @@ export class AppFeatures implements IAppFeatures {
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : <any>null;
             this.builtInClientProfileId = _data["builtInClientProfileId"] !== undefined ? _data["builtInClientProfileId"] : <any>null;
+            this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : <any>null;
+            this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : <any>null;
+            this.isQuickLaunchSupported = _data["isQuickLaunchSupported"] !== undefined ? _data["isQuickLaunchSupported"] : <any>null;
+            this.isNotificationSupported = _data["isNotificationSupported"] !== undefined ? _data["isNotificationSupported"] : <any>null;
+            this.isAlwaysOnSupported = _data["isAlwaysOnSupported"] !== undefined ? _data["isAlwaysOnSupported"] : <any>null;
         }
     }
 
@@ -1456,6 +1546,11 @@ export class AppFeatures implements IAppFeatures {
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : <any>null;
         data["builtInClientProfileId"] = this.builtInClientProfileId !== undefined ? this.builtInClientProfileId : <any>null;
+        data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : <any>null;
+        data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : <any>null;
+        data["isQuickLaunchSupported"] = this.isQuickLaunchSupported !== undefined ? this.isQuickLaunchSupported : <any>null;
+        data["isNotificationSupported"] = this.isNotificationSupported !== undefined ? this.isNotificationSupported : <any>null;
+        data["isAlwaysOnSupported"] = this.isAlwaysOnSupported !== undefined ? this.isAlwaysOnSupported : <any>null;
         return data;
     }
 }
@@ -1468,17 +1563,21 @@ export interface IAppFeatures {
     uiName?: string | null;
     isAddAccessKeySupported: boolean;
     builtInClientProfileId?: string | null;
+    isAccountSupported: boolean;
+    isBillingSupported: boolean;
+    isQuickLaunchSupported: boolean;
+    isNotificationSupported: boolean;
+    isAlwaysOnSupported: boolean;
 }
 
 export class AppSettings implements IAppSettings {
     version!: number;
-    isQuickLaunchAdded!: boolean;
-    isQuickLaunchRequested!: boolean;
+    isQuickLaunchEnabled?: boolean | null;
+    isNotificationEnabled?: boolean | null;
     configTime!: Date;
     userSettings!: UserSettings;
     clientId!: string;
     lastCountryIpGroupId?: string | null;
-    lastUpdateCheckTime?: Date | null;
 
     constructor(data?: IAppSettings) {
         if (data) {
@@ -1495,13 +1594,12 @@ export class AppSettings implements IAppSettings {
     init(_data?: any) {
         if (_data) {
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
-            this.isQuickLaunchAdded = _data["isQuickLaunchAdded"] !== undefined ? _data["isQuickLaunchAdded"] : <any>null;
-            this.isQuickLaunchRequested = _data["isQuickLaunchRequested"] !== undefined ? _data["isQuickLaunchRequested"] : <any>null;
+            this.isQuickLaunchEnabled = _data["isQuickLaunchEnabled"] !== undefined ? _data["isQuickLaunchEnabled"] : <any>null;
+            this.isNotificationEnabled = _data["isNotificationEnabled"] !== undefined ? _data["isNotificationEnabled"] : <any>null;
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
-            this.lastUpdateCheckTime = _data["lastUpdateCheckTime"] ? new Date(_data["lastUpdateCheckTime"].toString()) : <any>null;
         }
     }
 
@@ -1515,26 +1613,24 @@ export class AppSettings implements IAppSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["version"] = this.version !== undefined ? this.version : <any>null;
-        data["isQuickLaunchAdded"] = this.isQuickLaunchAdded !== undefined ? this.isQuickLaunchAdded : <any>null;
-        data["isQuickLaunchRequested"] = this.isQuickLaunchRequested !== undefined ? this.isQuickLaunchRequested : <any>null;
+        data["isQuickLaunchEnabled"] = this.isQuickLaunchEnabled !== undefined ? this.isQuickLaunchEnabled : <any>null;
+        data["isNotificationEnabled"] = this.isNotificationEnabled !== undefined ? this.isNotificationEnabled : <any>null;
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
-        data["lastUpdateCheckTime"] = this.lastUpdateCheckTime ? this.lastUpdateCheckTime.toISOString() : <any>null;
         return data;
     }
 }
 
 export interface IAppSettings {
     version: number;
-    isQuickLaunchAdded: boolean;
-    isQuickLaunchRequested: boolean;
+    isQuickLaunchEnabled?: boolean | null;
+    isNotificationEnabled?: boolean | null;
     configTime: Date;
     userSettings: UserSettings;
     clientId: string;
     lastCountryIpGroupId?: string | null;
-    lastUpdateCheckTime?: Date | null;
 }
 
 export class UserSettings implements IUserSettings {
@@ -2242,6 +2338,7 @@ export interface IUiCultureInfo {
 export class ClientProfileInfo implements IClientProfileInfo {
     clientProfileId!: string;
     clientProfileName!: string;
+    regionId?: string | null;
     tokenId!: string;
     supportId?: string | null;
     hostNames!: string[];
@@ -2265,6 +2362,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
         if (_data) {
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
+            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
             this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : <any>null;
             this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
             if (Array.isArray(_data["hostNames"])) {
@@ -2298,6 +2396,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
         data = typeof data === 'object' ? data : {};
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
+        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
         data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
         data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
         if (Array.isArray(this.hostNames)) {
@@ -2318,6 +2417,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
 export interface IClientProfileInfo {
     clientProfileId: string;
     clientProfileName: string;
+    regionId?: string | null;
     tokenId: string;
     supportId?: string | null;
     hostNames: string[];

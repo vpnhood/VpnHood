@@ -9,6 +9,5 @@ public interface IAccountController
     Task SignOut();
     Task Refresh();
     Task<AppAccount?> Get();
-    Task<bool> IsSubscriptionOrderProcessed(string providerOrderId);
     Task<string[]> GetAccessKeys(string subscriptionId);
 }

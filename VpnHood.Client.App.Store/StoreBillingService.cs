@@ -17,8 +17,21 @@ public class StoreBillingService(StoreAccountService storeAccountService, IAppBi
 
     public async Task<string> Purchase(IAppUiContext uiContext, string planId)
     {
-         var providerOrderId = await billingService.Purchase(uiContext, planId);
-         await storeAccountService.WaitForProcessProviderOrder(providerOrderId);
-         return providerOrderId;
+
+        try
+        {
+            PurchaseState = "started";
+            var providerOrderId = await billingService.Purchase(uiContext, planId);
+            PurchaseState = "Processing";
+            await storeAccountService.WaitForProcessProviderOrder(providerOrderId);
+            return providerOrderId;
+
+        }
+        finally
+        {
+            PurchaseState = null;
+        } 
     }
+
+    public string? PurchaseState { get; private set; }
 }

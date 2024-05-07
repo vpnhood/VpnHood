@@ -27,4 +27,5 @@ public class AppState
     public required bool CanConnect { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
+    public required string? PurchaseState { get; set; }
 }

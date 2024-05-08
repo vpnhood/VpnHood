@@ -33,7 +33,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
-        AndroidDevice.Instance.Prepare(ActivityEvent);
         VpnHoodApp.Instance.UiContext = new AndroidUiContext(ActivityEvent);
 
         // process intent

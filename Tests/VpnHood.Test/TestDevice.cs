@@ -17,7 +17,7 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 
-    public Task<IPacketCapture> CreatePacketCapture()
+    public Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
     {
         var res = new TestPacketCapture(_options);
         return Task.FromResult((IPacketCapture)res);

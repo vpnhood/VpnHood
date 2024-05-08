@@ -7,24 +7,28 @@ public class StreamLogger(Stream stream, bool includeScopes = true, bool leaveOp
     : TextLogger(includeScopes)
 {
     private const int DefaultBufferSize = 1024;
-    private readonly StreamWriter _streamWriter = new(stream, Encoding.UTF8, DefaultBufferSize, leaveOpen);
+    private StreamWriter? _streamWriter = new(stream, Encoding.UTF8, DefaultBufferSize, leaveOpen);
+    private readonly object _lock = new();
 
     public override void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
         var text = FormatLog(logLevel, eventId, state, exception, formatter);
-        _streamWriter.WriteLine(text);
+        lock (_lock)
+            _streamWriter?.WriteLine(text);
     }
 
     public override void Dispose()
     {
-        try { _streamWriter.Flush(); }
-        catch
+        lock (_lock)
         {
-            // ignored
-        }
+            if (_streamWriter == null)
+                return;
 
-        _streamWriter.Dispose();
-        base.Dispose();
+            _streamWriter.Flush();
+            _streamWriter.Dispose();
+            _streamWriter = null;
+            base.Dispose();
+        }
     }
 }

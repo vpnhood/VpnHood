@@ -37,6 +37,7 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
 
     public void ClearCache()
     {
+         File.Delete(AppAccountFilePath);
         _appAccount = null;
     }
 

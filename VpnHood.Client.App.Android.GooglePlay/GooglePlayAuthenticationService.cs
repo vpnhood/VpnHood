@@ -3,7 +3,8 @@ using Android.Content;
 using Android.Gms.Auth.Api.SignIn;
 using Android.Gms.Common.Apis;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Common;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
@@ -18,18 +19,18 @@ public class GooglePlayAuthenticationService(string firebaseClientId)
         .RequestEmail()
         .Build();
 
-    public async Task<string> SilentSignIn(IAppUiContext uiContext)
+    public async Task<string> SilentSignIn(IUiContext uiContext)
     {
-        var appUiContext = (AndroidAppUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)uiContext;
 
         using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
         var account = await googleSignInClient.SilentSignInAsync();
         return account?.IdToken ?? throw new AuthenticationException("Could not perform SilentSignIn by Google.");
     }
 
-    public async Task<string> SignIn(IAppUiContext uiContext)
+    public async Task<string> SignIn(IUiContext uiContext)
     {
-        var appUiContext = (AndroidAppUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)uiContext;
 
         try
         {
@@ -58,9 +59,9 @@ public class GooglePlayAuthenticationService(string firebaseClientId)
         
     }
 
-    public async Task SignOut(IAppUiContext uiContext)
+    public async Task SignOut(IUiContext uiContext)
     {
-        var appUiContext = (AndroidAppUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)uiContext;
         using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
         await googleSignInClient.SignOutAsync();
     }

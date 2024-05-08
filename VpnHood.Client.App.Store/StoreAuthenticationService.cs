@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
 using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -63,7 +64,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
         }
     }
 
-    private async Task<ApiKey?> TryGetApiKey(IAppUiContext? uiContext)
+    private async Task<ApiKey?> TryGetApiKey(IUiContext? uiContext)
     {
         // null if it has not been signed in yet
         if (ApiKey == null)
@@ -110,7 +111,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
         return null;
     }
 
-    public async Task SignInWithGoogle(IAppUiContext uiContext)
+    public async Task SignInWithGoogle(IUiContext uiContext)
     {
         if (_externalAuthenticationService == null)
             throw new InvalidOperationException("Google sign in is not supported.");
@@ -119,7 +120,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
         await SignInToVpnHoodStore(idToken, true);
     }
 
-    public async Task SignOut(IAppUiContext uiContext)
+    public async Task SignOut(IUiContext uiContext)
     {
         ApiKey = null;
         if (File.Exists(ApiKeyFilePath))

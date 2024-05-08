@@ -1,4 +1,5 @@
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.Store;
 
@@ -15,7 +16,7 @@ public class StoreBillingService(StoreAccountService storeAccountService, IAppBi
         return billingService.GetSubscriptionPlans();
     }
 
-    public async Task<string> Purchase(IAppUiContext uiContext, string planId)
+    public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
 
         try

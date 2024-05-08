@@ -9,5 +9,5 @@ public interface IDevice : IDisposable
     bool IsAlwaysOnSupported { get; }
     string OsInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
-    Task<IPacketCapture> CreatePacketCapture();
+    Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext);
 }

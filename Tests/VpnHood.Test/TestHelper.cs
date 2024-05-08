@@ -290,7 +290,7 @@ internal static class TestHelper
 
     public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
     {
-        return CreateDevice(options).CreatePacketCapture().Result;
+        return CreateDevice(options).CreatePacketCapture(null).Result;
     }
 
     public static ClientOptions CreateClientOptions(bool useUdp = false)

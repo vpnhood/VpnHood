@@ -324,7 +324,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             cancellationToken = linkedCts.Token;
 
             // create packet capture
-            var packetCapture = await Device.CreatePacketCapture();
+            var packetCapture = await Device.CreatePacketCapture(UiContext);
             packetCapture.Stopped += PacketCapture_OnStopped;
 
             // init packet capture

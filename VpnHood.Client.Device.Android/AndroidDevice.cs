@@ -175,6 +175,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
     {
         _packetCapture = packetCapture;
+        _packetCapture.Stopped += PacketCapture_Stopped;
         _startServiceTaskSource.TrySetResult(true);
 
         // set foreground
@@ -195,6 +196,12 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             }
         }
     }
+
+    private void PacketCapture_Stopped(object? sender, EventArgs e)
+    {
+        _packetCapture = null;
+    }
+
 
     private static string EncodeToBase64(Drawable drawable, int quality)
     {

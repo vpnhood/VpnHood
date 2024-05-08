@@ -6,7 +6,7 @@ namespace VpnHood.Client.App.Services;
 internal class AppBillingService(VpnHoodApp vpnHoodApp, IAppBillingService billingService)
     : IAppBillingService
 {
-    public string? PurchaseState => billingService.PurchaseState;
+    public BillingPurchaseState PurchaseState => billingService.PurchaseState;
 
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {

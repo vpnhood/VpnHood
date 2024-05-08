@@ -1652,6 +1652,8 @@ export class UserSettings implements IUserSettings {
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker!: boolean;
     dnsServers?: string[] | null;
+    debugData1?: string | null;
+    debugData2?: string | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -1728,6 +1730,8 @@ export class UserSettings implements IUserSettings {
             else {
                 this.dnsServers = <any>null;
             }
+            this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : <any>null;
+            this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : <any>null;
         }
     }
 
@@ -1782,6 +1786,8 @@ export class UserSettings implements IUserSettings {
             for (let item of this.dnsServers)
                 data["dnsServers"].push(item);
         }
+        data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : <any>null;
+        data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : <any>null;
         return data;
     }
 }
@@ -1805,6 +1811,8 @@ export interface IUserSettings {
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker: boolean;
     dnsServers?: string[] | null;
+    debugData1?: string | null;
+    debugData2?: string | null;
 }
 
 export class AppLogSettings implements IAppLogSettings {
@@ -1885,6 +1893,7 @@ export class AppState implements IAppState {
     canConnect!: boolean;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
+    purchaseState?: BillingPurchaseState | null;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1927,6 +1936,7 @@ export class AppState implements IAppState {
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
             this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
+            this.purchaseState = _data["purchaseState"] !== undefined ? _data["purchaseState"] : <any>null;
         }
     }
 
@@ -1962,6 +1972,7 @@ export class AppState implements IAppState {
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
         data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
+        data["purchaseState"] = this.purchaseState !== undefined ? this.purchaseState : <any>null;
         return data;
     }
 }
@@ -1990,6 +2001,7 @@ export interface IAppState {
     canConnect: boolean;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
+    purchaseState?: BillingPurchaseState | null;
 }
 
 export enum AppConnectionState {
@@ -2008,7 +2020,6 @@ export class SessionStatus implements ISessionStatus {
     suppressedTo!: SessionSuppressType;
     suppressedBy!: SessionSuppressType;
     errorMessage?: string | null;
-    isAdRequired!: boolean;
 
     constructor(data?: ISessionStatus) {
         if (data) {
@@ -2026,7 +2037,6 @@ export class SessionStatus implements ISessionStatus {
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
             this.suppressedBy = _data["suppressedBy"] !== undefined ? _data["suppressedBy"] : <any>null;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
-            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
         }
     }
 
@@ -2044,7 +2054,6 @@ export class SessionStatus implements ISessionStatus {
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
         data["suppressedBy"] = this.suppressedBy !== undefined ? this.suppressedBy : <any>null;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
-        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         return data;
     }
 }
@@ -2055,7 +2064,6 @@ export interface ISessionStatus {
     suppressedTo: SessionSuppressType;
     suppressedBy: SessionSuppressType;
     errorMessage?: string | null;
-    isAdRequired: boolean;
 }
 
 export enum SessionErrorCode {
@@ -2333,6 +2341,12 @@ export class UiCultureInfo implements IUiCultureInfo {
 export interface IUiCultureInfo {
     code: string;
     nativeName: string;
+}
+
+export enum BillingPurchaseState {
+    None = "None",
+    Started = "Started",
+    Processing = "Processing",
 }
 
 export class ClientProfileInfo implements IClientProfileInfo {

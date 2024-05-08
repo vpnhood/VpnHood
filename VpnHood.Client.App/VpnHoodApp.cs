@@ -4,12 +4,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
-using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
+using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Jobs;
@@ -22,9 +23,8 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-
 public class VpnHoodApp : Singleton<VpnHoodApp>,
-    IAsyncDisposable, IIpRangeProvider, IJob
+    IAsyncDisposable, IIpRangeProvider, IAdProvider, IJob
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -60,7 +60,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
-    public bool IsWaitingForAd { get; private set; }
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
@@ -88,7 +87,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Device = device;
         device.StartedAsService += DeviceOnStartedAsService;
 
-        StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        StorageFolderPath = options.StorageFolderPath ??
+                            throw new ArgumentNullException(nameof(options.StorageFolderPath));
         Settings = AppSettings.Load(Path.Combine(StorageFolderPath, FileNameSettings));
         Settings.Saved += Settings_Saved;
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
@@ -106,7 +106,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         JobSection = new JobSection(new JobOptions
         {
             Interval = options.VersionCheckInterval,
-            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5) ? TimeSpan.FromSeconds(3) : options.VersionCheckInterval,
+            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5)
+                ? TimeSpan.FromSeconds(3)
+                : options.VersionCheckInterval,
             Name = "VersionCheck"
         });
 
@@ -115,12 +117,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
-        ClientProfileService.TryRemoveByTokenId("5aacec55-5cac-457a-acad-3976969236f8"); //remove obsoleted public server
+        ClientProfileService.TryRemoveByTokenId(
+            "5aacec55-5cac-457a-acad-3976969236f8"); //remove obsoleted public server
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
-        Settings.UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
+        Settings.UserSettings.ClientProfileId ??=
+            builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
         var uiService = options.UiService ?? new AppBaseUiService();
-        
+
         // initialize features
         Features = new AppFeatures
         {
@@ -143,7 +147,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             AppCultureService = options.CultureService ?? new AppCultureService(this),
             AdService = options.AdService,
-            AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
+            AccountService =
+                options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
             UiService = uiService,
         };
@@ -189,13 +194,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
-                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _appPersistState.LastErrorMessage != null),
+                HasProblemDetected = _hasConnectRequested && IsIdle &&
+                                     (_hasDiagnoseStarted || _appPersistState.LastErrorMessage != null),
                 SessionStatus = LastSessionStatus,
                 Speed = Client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
                 SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
                 ClientIpGroup = _lastCountryIpGroup,
-                IsWaitingForAd = IsWaitingForAd,
+                IsWaitingForAd = Client?.Stat.IsWaitingForAd is true,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture),
@@ -203,7 +209,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VersionStatus = _versionCheckResult?.VersionStatus ?? VersionStatus.Unknown,
                 PurchaseState = Services.AccountService?.Billing?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
-                    ? _versionCheckResult.PublishInfo : null,
+                    ? _versionCheckResult.PublishInfo
+                    : null,
             };
         }
     }
@@ -216,9 +223,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
-            if (Client?.State == ClientState.Connected && IsWaitingForAd) return AppConnectionState.Connecting;
+            if (Client?.Stat.IsWaitingForAd is true) return AppConnectionState.Connecting;
             if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
-            if (ClientConnect?.IsWaiting == true) return AppConnectionState.Waiting;
+            if (ClientConnect?.IsWaiting is true) return AppConnectionState.Waiting;
             return AppConnectionState.None;
         }
     }
@@ -309,7 +316,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
             VhLogger.Instance.LogInformation("OS: {OsInfo}", Device.OsInfo);
             VhLogger.Instance.LogInformation("UserAgent: {userAgent}", userAgent);
-            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}", JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
+            VhLogger.Instance.LogInformation("UserSettings: {UserSettings}",
+                JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
 
             // it slows down tests and does not need to be logged in normal situation
             if (diagnose)
@@ -337,7 +345,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
             // connect
-            await ConnectInternal(packetCapture, clientProfile.Token, clientProfile.RegionId, userAgent, true, cancellationToken);
+            await ConnectInternal(packetCapture, clientProfile.Token, clientProfile.RegionId, userAgent, true,
+                cancellationToken);
         }
         catch (Exception ex)
         {
@@ -410,7 +419,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // set default culture
         var firstSelected = Services.AppCultureService.SelectedCultures.FirstOrDefault();
         CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemUiCulture;
-        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo(Services.AppCultureService.SelectedCultures.FirstOrDefault() ?? "en");
+        CultureInfo.DefaultThreadCurrentUICulture =
+            new CultureInfo(Services.AppCultureService.SelectedCultures.FirstOrDefault() ?? "en");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
         // sync UserSettings from the System App Settings
@@ -423,7 +433,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             Client.UseUdpChannel = UserSettings.UseUdpChannel;
             Client.DropUdpPackets = UserSettings.DropUdpPackets;
-            
+
             //ClientProfileId has been changed
             if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
                 _ = Disconnect(true);
@@ -437,7 +447,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _currentClientProfile = null;
 
         // sync culture to app settings
-        Services.AppCultureService.SelectedCultures = UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+        Services.AppCultureService.SelectedCultures =
+            UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
         InitCulture();
     }
 
@@ -468,7 +479,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
-        VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+        VhLogger.Instance.LogInformation(
+            $"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
@@ -483,6 +495,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             SessionTimeout = SessionTimeout,
             ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
             IpRangeProvider = this,
+            AdProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
@@ -527,10 +540,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // check version after first connection
             _ = VersionCheck();
-
-            // Show ad if it is required and does not show yet
-            if (clientConnect.Client.SessionStatus.IsAdRequired)
-                await ShowRewardedAd(clientConnect.Client, clientConnect.Client.SessionId, cancellationToken);
         }
         catch
         {
@@ -547,29 +556,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ShowRewardedAd(VpnHoodClient client, ulong sessionId, CancellationToken cancellationToken)
+    public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
-        if (Services.AdService == null)
-            throw new Exception("This server requires a display ad, but AppAdService has not been initialized.");
-
-        if (UiContext == null)
-            throw new Exception("This server requires a display ad, but Application window was not open.");
-
-        try
-        {
-            IsWaitingForAd = true;
-            var customData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-            await Services.AdService.ShowAd(RequiredUiContext, customData, cancellationToken);
-            _ = client.SendAdReward(customData, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            throw new AdException($"Could not show the required ad. Error: {ex.Message}");
-        }
-        finally
-        {
-            IsWaitingForAd = false;
-        }
+        if (Services.AdService == null) throw new Exception("AdService has not been initialized.");
+        var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
+        await Services.AdService.ShowAd(RequiredUiContext, adData, cancellationToken);
+        return adData;
     }
 
     private void ClientConnect_StateChanged(object sender, EventArgs e)
@@ -647,7 +639,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Client != null && _connectedTime != null)
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
-                if (_appPersistState.LastErrorMessage == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
+                if (_appPersistState.LastErrorMessage == null && !_hasAnyDataArrived && UserSettings is
+                        { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _appPersistState.LastErrorMessage = "No data has been received.";
             }
 
@@ -710,7 +703,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
             await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
             using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ?? throw new Exception("Could not find ip2location database.");
+            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ??
+                        throw new Exception("Could not find ip2location database.");
             await _ipGroupManager.InitByIp2LocationZipStream(entry);
             return _ipGroupManager;
         }
@@ -801,7 +795,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CheckedTime = DateTime.UtcNow
             };
 
-            VhLogger.Instance.LogInformation("The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
+            VhLogger.Instance.LogInformation(
+                "The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
                 versionStatus, latestPublishInfo.Version);
 
             return checkResult; // Job done
@@ -841,7 +836,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // update profiles
         // get access tokens from account
         var account = await Services.AccountService.GetAccount();
-        var accessKeys = account?.SubscriptionId != null ? await Services.AccountService.GetAccessKeys(account.SubscriptionId) : [];
+        var accessKeys = account?.SubscriptionId != null
+            ? await Services.AccountService.GetAccessKeys(account.SubscriptionId)
+            : [];
         ClientProfileService.UpdateFromAccount(accessKeys);
 
         // update current profile if removed

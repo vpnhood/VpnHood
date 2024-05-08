@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Client.App.Exceptions;
+﻿namespace VpnHood.Client.Exceptions;
 
 
 public class AdException :Exception

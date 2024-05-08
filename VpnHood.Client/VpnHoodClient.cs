@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Client.Abstractions;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
@@ -33,15 +34,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly SendingPackets _sendingPacket = new();
     private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
-    private IPAddress[] _dnsServersIpV4 = [];
-    private IPAddress[] _dnsServersIpV6 = [];
-    private IPAddress[] _dnsServers = [];
     private readonly IIpRangeProvider? _ipRangeProvider;
+    private readonly IAdProvider? _adProvider;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly ConnectorService _connectorService;
     private readonly bool _allowAnonymousTracker;
     private readonly string? _appGa4MeasurementId;
+    private IPAddress[] _dnsServersIpV4 = [];
+    private IPAddress[] _dnsServersIpV6 = [];
+    private IPAddress[] _dnsServers = [];
     private Traffic _helloTraffic = new();
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
@@ -49,6 +51,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private byte[]? _sessionKey;
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
+    private bool _isWaitingForAd;
     private int ProtocolVersion { get; }
 
     internal Nat Nat { get; }
@@ -78,7 +81,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public string? ResponseAccessKey { get; private set; }
     public string? RegionId { get; }
 
-
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
         if (options.TcpProxyCatcherAddressIpV4 == null)
@@ -103,6 +105,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
         _useUdpChannel = options.UseUdpChannel;
+        _adProvider = options.AdProvider;
 
         Token = token;
         Version = options.Version;
@@ -148,7 +151,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _dnsServers = value;
         }
     }
-
 
     public ClientState State
     {
@@ -533,7 +535,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private bool ShouldManageDatagramChannels =>
-        UseUdpChannel != Tunnel.IsUdpMode || 
+        UseUdpChannel != Tunnel.IsUdpMode ||
         (!UseUdpChannel && Tunnel.DatagramChannelCount < _maxDatagramChannelCount);
 
     private async Task ManageDatagramChannels(CancellationToken cancellationToken)
@@ -674,7 +676,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ServerSecret = sessionResponse.ServerSecret;
             ResponseAccessKey = sessionResponse.AccessKey;
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
-            SessionStatus.IsAdRequired = sessionResponse.IsAdRequired;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;
@@ -724,7 +725,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             else if (sessionResponse.SuppressedTo == SessionSuppressType.Other)
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
-            _ = ManageDatagramChannels(cancellationToken);
+            // show ad if required
+            if (sessionResponse.IsAdRequired)
+                await ShowAd(cancellationToken);
+
+            // manage datagram channels
+            await ManageDatagramChannels(cancellationToken);
 
         }
         catch (RedirectHostException ex) when (allowRedirect)
@@ -782,7 +788,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        if (_disposed) 
+        if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
         try
@@ -795,7 +801,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 SessionStatus.AccessUsage = requestResult.Response.AccessUsage;
 
             // client is disposed meanwhile
-            if (_disposed) 
+            if (_disposed)
                 throw new ObjectDisposedException(VhLogger.FormatType(this));
 
             _lastConnectionErrorTime = null;
@@ -847,10 +853,36 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public async Task SendAdReward(string adData, CancellationToken cancellationToken)
+    private async Task ShowAd(CancellationToken cancellationToken)
+    {
+        if (SessionId == 0) 
+            throw new Exception("SessionId is not set.");
+
+        try
+        {
+            if (_adProvider == null)
+                throw new Exception("AppAdService has not been initialized.");
+
+            _isWaitingForAd = true;
+            var adData = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken);
+            _ = SendAdReward(adData, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            throw new AdException("Could not show the required ad.", ex);
+        }
+        finally
+        {
+            _isWaitingForAd = false;
+        }
+
+    }
+
+    private async Task SendAdReward(string adData, CancellationToken cancellationToken)
     {
         try
         {
+            // request reward from server
             await using var requestResult = await SendRequest<SessionResponse>(
                 new AdRewardRequest
                 {
@@ -864,7 +896,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             VhLogger.LogError(GeneralEventId.Session, ex, "Could not send the AdReward request.");
-            throw;
+            throw new AdException("This server requires a display ad, but AppAdService has not been initialized.");
         }
     }
 
@@ -906,6 +938,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private readonly object _disposeLock = new();
     private ValueTask? _disposeTask;
+
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(false);
@@ -1013,6 +1046,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int DatagramChannelCount => _client.Tunnel.DatagramChannelCount;
         public bool IsUdpMode => _client.Tunnel.IsUdpMode;
         public bool IsUdpChannelSupported => _client.HostUdpEndPoint != null;
+        public bool IsWaitingForAd => _client._isWaitingForAd;
         public bool IsDnsServersAccepted { get; internal set; }
 
         internal ClientStat(VpnHoodClient vpnHoodClient)

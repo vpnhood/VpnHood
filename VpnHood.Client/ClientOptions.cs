@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Client.Abstractions;
 using VpnHood.Common.Net;
 using VpnHood.Tunneling.Factory;
 
@@ -15,9 +16,7 @@ public class ClientOptions
     ///     a never used IPv6 ip that must be outside the machine
     /// </summary>
     public IPAddress TcpProxyCatcherAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
-
     public IPAddress[]? DnsServers { get; set; }
-
     public bool AutoDisposePacketCapture { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -25,6 +24,7 @@ public class ClientOptions
     public bool UseUdpChannel { get; set; }
     public bool ExcludeLocalNetwork { get; set; } = true;
     public IIpRangeProvider? IpRangeProvider { get; set; }
+    public IAdProvider? AdProvider { get; set; }
     public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
     public SocketFactory SocketFactory { get; set; } = new();
     public int MaxDatagramChannelCount { get; set; } = 4;

@@ -9,5 +9,4 @@ public class SessionStatus
     public SessionSuppressType SuppressedTo { get; internal set; }
     public SessionSuppressType SuppressedBy { get; internal set; }
     public string? ErrorMessage { get; internal set; }
-    public bool IsAdRequired { get; internal set; }
 }

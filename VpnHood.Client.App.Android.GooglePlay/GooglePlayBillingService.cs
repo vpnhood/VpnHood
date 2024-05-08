@@ -15,7 +15,7 @@ public class GooglePlayBillingService: IAppBillingService
     private ProductDetails? _productDetails;
     private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
-    public string? PurchaseState { get; private set; }
+    public BillingPurchaseState PurchaseState { get; private set; }
 
     public GooglePlayBillingService(IAppAuthenticationService authenticationService)
     {
@@ -131,7 +131,7 @@ public class GooglePlayBillingService: IAppBillingService
 
         try
         {
-            PurchaseState = "started";
+            PurchaseState = BillingPurchaseState.Started;
             var billingResult = _billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
@@ -153,7 +153,7 @@ public class GooglePlayBillingService: IAppBillingService
         }
         finally
         {
-            PurchaseState = null;
+            PurchaseState = BillingPurchaseState.None;
         }
     }
 

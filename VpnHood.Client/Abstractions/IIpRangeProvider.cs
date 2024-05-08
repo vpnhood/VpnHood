@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Common.Net;
 
-namespace VpnHood.Client;
+namespace VpnHood.Client.Abstractions;
 
 public interface IIpRangeProvider
 {

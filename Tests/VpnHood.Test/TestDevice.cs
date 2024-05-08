@@ -7,7 +7,9 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
 {
     private readonly TestDeviceOptions _options = options ?? new TestDeviceOptions();
 
+#pragma warning disable CS0067 // The event 'TestDevice.StartedAsService' is never used
     public event EventHandler? StartedAsService;
+#pragma warning restore CS0067 // The event 'TestDevice.StartedAsService' is never used
     public IAppCultureService? CultureService => null;
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public bool IsExcludeAppsSupported => false;

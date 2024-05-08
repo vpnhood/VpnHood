@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Services;
@@ -306,15 +305,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LogService.Start(Settings.UserSettings.Logging, diagnose);
 
             // log general info
-            VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
-            VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
-            VhLogger.Instance.LogInformation($"OS: {Device.OsInfo}");
-            VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
+            VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
+            VhLogger.Instance.LogInformation("Time: {Time}", DateTime.UtcNow.ToString("u", new CultureInfo("en-US")));
+            VhLogger.Instance.LogInformation("OS: {OsInfo}", Device.OsInfo);
+            VhLogger.Instance.LogInformation("UserAgent: {userAgent}", userAgent);
             VhLogger.Instance.LogInformation("UserSettings: {UserSettings}", JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
 
             // it slows down tests and does not need to be logged in normal situation
             if (diagnose)
-                VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
+                VhLogger.Instance.LogInformation("Country: {Country}", await GetClientCountry());
 
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
@@ -325,7 +324,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // create packet capture
             var packetCapture = await Device.CreatePacketCapture(UiContext);
-            packetCapture.Stopped += PacketCapture_OnStopped;
 
             // init packet capture
             if (packetCapture.IsMtuSupported)
@@ -425,9 +423,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             Client.UseUdpChannel = UserSettings.UseUdpChannel;
             Client.DropUdpPackets = UserSettings.DropUdpPackets;
+            
+            //ClientProfileId has been changed
             if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
                 _ = Disconnect(true);
 
+            // ExcludeLocalNetwork has been changed
             if (!IsIdle && UserSettings.ExcludeLocalNetwork != Client.ExcludeLocalNetwork)
                 _ = Disconnect(true);
         }
@@ -610,11 +611,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
         return IpRange.Sort(ipRanges).ToArray();
-    }
-
-    private void PacketCapture_OnStopped(object sender, EventArgs e)
-    {
-        _ = Disconnect();
     }
 
     private readonly object _disconnectLock = new();

@@ -21,18 +21,18 @@ public class StoreBillingService(StoreAccountService storeAccountService, IAppBi
 
         try
         {
-            PurchaseState = "started";
+            PurchaseState = BillingPurchaseState.Started;
             var providerOrderId = await billingService.Purchase(uiContext, planId);
-            PurchaseState = "Processing";
+            PurchaseState = BillingPurchaseState.Processing;
             await storeAccountService.WaitForProcessProviderOrder(providerOrderId);
             return providerOrderId;
 
         }
         finally
         {
-            PurchaseState = null;
+            PurchaseState = BillingPurchaseState.None;
         } 
     }
 
-    public string? PurchaseState { get; private set; }
+    public BillingPurchaseState PurchaseState { get; private set; }
 }

@@ -77,8 +77,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppLogService LogService { get; }
     public AppResource Resource { get; }
     public AppServices Services { get; }
-    public IAppUiContext? UiContext { get; set; }
-    public IAppUiContext RequiredUiContext => UiContext ?? throw new Exception("The main window app does not exists.");
+    public IUiContext? UiContext { get; set; }
+    public IUiContext RequiredUiContext => UiContext ?? throw new Exception("The main window app does not exists.");
 
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {

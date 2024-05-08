@@ -159,7 +159,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         // check is service started
         _startServiceTaskSource = new TaskCompletionSource<bool>();
-        await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(10000));
+        await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(TimeSpan.FromSeconds(10)));
         if (_packetCapture == null)
             throw new Exception("Could not start VpnService in the given time.");
 

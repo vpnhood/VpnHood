@@ -28,7 +28,7 @@ namespace VpnHood.Test;
 
 internal static class TestHelper
 {
-    public class TestAppUiContext : IAppUiContext;
+    public class TestAppUiContext : IUiContext;
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
 

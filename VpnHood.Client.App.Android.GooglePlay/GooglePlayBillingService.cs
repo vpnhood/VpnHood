@@ -2,7 +2,8 @@ using Android.BillingClient.Api;
 using Microsoft.Extensions.Logging;
 using Org.Apache.Http.Authentication;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Common;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
@@ -103,9 +104,9 @@ public class GooglePlayBillingService: IAppBillingService
         }
     }
 
-    public async Task<string> Purchase(IAppUiContext uiContext, string planId)
+    public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
-        var appUiContext = (AndroidAppUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)uiContext;
         await EnsureConnected();
 
         if (_authenticationService.UserId == null)

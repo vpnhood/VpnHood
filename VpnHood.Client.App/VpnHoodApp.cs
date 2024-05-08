@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
@@ -432,7 +433,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (Client != null)
         {
             Client.UseUdpChannel = UserSettings.UseUdpChannel;
-            Client.DropUdpPackets = UserSettings.DropUdpPackets;
+            Client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
 
             //ClientProfileId has been changed
             if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
@@ -830,7 +831,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (Services.AccountService is not AppAccountService accountService)
             throw new Exception("AccountService is not initialized.");
 
-        // cleat cache
+        // clear cache
         accountService.ClearCache();
 
         // update profiles

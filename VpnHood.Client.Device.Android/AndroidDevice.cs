@@ -121,6 +121,9 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     {
         var androidUiContext = (AndroidUiContext?)uiContext;
 
+        // remove current if still exists
+        _packetCapture?.Dispose();
+
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
         using var prepareIntent = VpnService.Prepare(androidUiContext?.Activity ?? Application.Context);
         if (prepareIntent != null)

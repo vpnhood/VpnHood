@@ -2,6 +2,7 @@
 using VpnHood.Client.App;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Exceptions;
+using VpnHood.Client.Device;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.File;
@@ -15,7 +16,7 @@ public class AdTest : TestBase
     {
         public bool FailAlways { get; set; }
 
-        public Task ShowAd(IAppUiContext uiContext, string customData, CancellationToken cancellationToken)
+        public Task ShowAd(IUiContext uiContext, string customData, CancellationToken cancellationToken)
         {
             if (FailAlways)
                 throw new Exception("Ad failed");

@@ -1,7 +1,8 @@
 ﻿using Java.Lang;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Common;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install;
@@ -13,9 +14,9 @@ namespace VpnHood.Client.App.Droid.GooglePlay;
 
 public class GooglePlayAppUpdaterService : IAppUpdaterService
 {
-    public async Task<bool> Update(IAppUiContext uiContext)
+    public async Task<bool> Update(IUiContext uiContext)
     {
-        var appUiContext = (AndroidAppUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)uiContext;
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
         try
         {

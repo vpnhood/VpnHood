@@ -1,4 +1,5 @@
 ﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.Services;
 
@@ -9,13 +10,13 @@ internal class AppAuthenticationService(VpnHoodApp vpnHoodApp, IAppAuthenticatio
     public string? UserId => accountService.UserId;
     public HttpClient HttpClient => accountService.HttpClient;
 
-    public async Task SignInWithGoogle(IAppUiContext uiContext)
+    public async Task SignInWithGoogle(IUiContext uiContext)
     {
         await accountService.SignInWithGoogle(uiContext);
         await vpnHoodApp.RefreshAccount();
     }
 
-    public async Task SignOut(IAppUiContext uiContext)
+    public async Task SignOut(IUiContext uiContext)
     {
         await accountService.SignOut(uiContext);
         await vpnHoodApp.RefreshAccount();

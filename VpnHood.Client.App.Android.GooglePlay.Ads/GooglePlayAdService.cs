@@ -2,7 +2,8 @@
 using Android.Gms.Ads.Rewarded;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Common;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
 using Object = Java.Lang.Object;
 
@@ -50,9 +51,9 @@ public class GooglePlayAdService(
         }
     }
 
-    public async Task ShowAd(IAppUiContext uiContext, string customData, CancellationToken cancellationToken)
+    public async Task ShowAd(IUiContext uiContext, string customData, CancellationToken cancellationToken)
     {
-        var appUiContext = (AndroidAppUiContext)uiContext;
+        var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
 
         // create ad custom data

@@ -1,6 +1,8 @@
 ﻿using Android;
 using Android.Content;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
 using Permission = Android.Content.PM.Permission;
 
@@ -12,9 +14,9 @@ namespace VpnHood.Client.App.Droid.Common
         private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
 
         public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
-        public async Task<bool> RequestQuickLaunch(IAppUiContext context, CancellationToken cancellationToken)
+        public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
         {
-            var appUiContext = (AndroidAppUiContext)context;
+            var appUiContext = (AndroidUiContext)context;
 
             if (!IsQuickLaunchSupported)
                 throw new NotSupportedException("QuickLaunch is not supported on this device.");
@@ -27,9 +29,9 @@ namespace VpnHood.Client.App.Droid.Common
         }
 
         public bool IsNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
-        public async Task<bool> RequestNotification(IAppUiContext context, CancellationToken cancellationToken)
+        public async Task<bool> RequestNotification(IUiContext context, CancellationToken cancellationToken)
         {
-            var appUiContext = (AndroidAppUiContext)context;
+            var appUiContext = (AndroidUiContext)context;
 
             // check is request supported
             if (!IsNotificationSupported)
@@ -56,12 +58,12 @@ namespace VpnHood.Client.App.Droid.Common
         }
 
         public bool IsOpenAlwaysOnPageSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
-        public void OpenAlwaysOnPage(IAppUiContext context)
+        public void OpenAlwaysOnPage(IUiContext context)
         {
             if (!IsOpenAlwaysOnPageSupported)
                 throw new NotSupportedException("AlwaysOn is not supported on this device.");
 
-            var appUiContext = (AndroidAppUiContext)context;
+            var appUiContext = (AndroidUiContext)context;
             var intent = new Intent(Android.Provider.Settings.ActionVpnSettings);
             appUiContext.Activity.StartActivity(intent);
         }

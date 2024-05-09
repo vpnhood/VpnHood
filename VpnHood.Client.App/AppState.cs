@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Messaging;
+﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client.App;
 
@@ -27,5 +28,5 @@ public class AppState
     public required bool CanConnect { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
-    public required string? PurchaseState { get; set; }
+    public required BillingPurchaseState? PurchaseState { get; init; }
 }

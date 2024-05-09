@@ -9,5 +9,5 @@ public interface IAppBillingService : IDisposable
     /// <returns>Provider Order Id</returns>
     Task<string> Purchase(IUiContext uiContext, string planId);
 
-    string? PurchaseState { get; }
+    BillingPurchaseState PurchaseState { get; }
 }

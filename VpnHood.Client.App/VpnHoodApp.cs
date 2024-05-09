@@ -5,13 +5,11 @@ using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Jobs;
@@ -501,7 +499,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
-            DropUdpPackets = UserSettings.DropUdpPackets,
+            DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
             RegionId = regionId
         };
@@ -845,7 +843,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // update current profile if removed
         if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null)
         {
-            UserSettings.ClientProfileId = ClientProfileService.List().FirstOrDefault()?.ClientProfileId;
+            var clientProfiles = ClientProfileService.List();
+            UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
             Settings.Save();
         }
     }

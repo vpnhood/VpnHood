@@ -14,4 +14,10 @@ public class ClientProfile
     {
         return new ClientProfileInfo(this);
     }
+
+    public HostRegionInfo? GetRegionInfo()
+    {
+        var region = Token.ServerToken.Regions?.SingleOrDefault(x => x.RegionId == RegionId);
+        return region != null ? new HostRegionInfo(region) : null;
+    }
 }

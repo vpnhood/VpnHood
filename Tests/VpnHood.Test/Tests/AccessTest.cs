@@ -13,9 +13,9 @@ namespace VpnHood.Test.Tests;
 public class AccessTest : TestBase
 {
     [TestMethod]
-    public Task Foo()
+    public async Task Foo()
     {
-        return Task.Delay(0);
+        await Task.Delay(0);
     }
 
     [TestMethod]

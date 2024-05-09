@@ -1,6 +1,6 @@
 ﻿using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -136,7 +136,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 
     public async Task WaitForState(ServerState state)
     {
-        await VhTestUtil.AssertEqualsWait(state, async () =>
+        await TestUtil.AssertEqualsWait(state, async () =>
         {
             await Reload();
             return Server.ServerState;

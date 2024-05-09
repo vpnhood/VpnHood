@@ -21,6 +21,7 @@ public class VhContext : DbContext
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
+    public virtual DbSet<RegionModel> Regions { get; set; } = default!;
 
     protected VhContext()
     {
@@ -262,6 +263,10 @@ public class VhContext : DbContext
                 .IsFixedLength();
 
             entity
+                .Property(e => e.AllowAutoRegion)
+                .HasDefaultValue(true);
+
+            entity
                 .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 
@@ -284,6 +289,13 @@ public class VhContext : DbContext
                     ap.ToTable(nameof(ServerModel.AccessPoints));
                     ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
                 });
+
+            entity
+                .HasOne(e => e.Region)
+                .WithMany(d => d.Servers)
+                .HasForeignKey(e => new { e.ProjectId, e.RegionId })
+                .OnDelete(DeleteBehavior.NoAction);
+
 
             //entity.Property(e => e.AccessPoints)
             //    .HasColumnType("varchar(200)")
@@ -523,5 +535,16 @@ public class VhContext : DbContext
                 .Property(x => x.IsDeleted)
                 .HasDefaultValue(false);
         });
+
+        modelBuilder.Entity<RegionModel>(entity =>
+        {
+            entity
+                .HasKey(x => new { x.ProjectId, x.RegionId });
+
+            entity
+                .Property(x => x.RegionName)
+                .HasMaxLength(50);
+        });
+
     }
 }

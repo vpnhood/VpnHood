@@ -8,7 +8,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access;
 using ServerState = VpnHood.AccessServer.Api.ServerState;
@@ -130,7 +130,7 @@ public class CertificateTest
         await server.WaitForState(ServerState.Idle);
 
         // Wait for signin the certificate
-        await VhTestUtil.AssertEqualsWait(true, async () =>
+        await TestUtil.AssertEqualsWait(true, async () =>
         {
             await farm.Reload();
             return farm.ServerFarm.Certificate!.IsValidated;
@@ -181,7 +181,7 @@ public class CertificateTest
 
         // wait for auto validate to fail
         testApp.Logger.LogInformation("Test: Waiting for validation to fail.");
-        await VhTestUtil.AssertEqualsWait(false, async () =>
+        await TestUtil.AssertEqualsWait(false, async () =>
         {
             await farm.Reload();
             return string.IsNullOrEmpty(farm.ServerFarm.Certificate.ValidateError);
@@ -193,7 +193,7 @@ public class CertificateTest
 
         // wait for auto validating
         testApp.Logger.LogInformation("Test: Waiting for ValidateInprogress to be true.");
-        await VhTestUtil.AssertEqualsWait(true, async () =>
+        await TestUtil.AssertEqualsWait(true, async () =>
         {
             await farm.Reload();
             return farm.ServerFarm.Certificate.ValidateInprogress;
@@ -215,7 +215,7 @@ public class CertificateTest
         // wait for auto validating
         testApp.Logger.LogInformation("Test: Waiting for ValidateInprogress to be false.");
         Assert.IsNotNull(farm.ServerFarm.Certificate);
-        await VhTestUtil.AssertEqualsWait(false, async () =>
+        await TestUtil.AssertEqualsWait(false, async () =>
         {
             await farm.Reload();
             return farm.ServerFarm.Certificate.ValidateInprogress;

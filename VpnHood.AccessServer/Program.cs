@@ -98,6 +98,7 @@ public class Program
             .AddScoped<AgentCacheClient>()
             .AddScoped<AgentSystemClient>()
             .AddScoped<AccessTokensService>()
+            .AddScoped<RegionService>()
             .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
         // Report Service
@@ -136,7 +137,7 @@ public class Program
     //    var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
     //    logger.LogInformation($"ProjectCount: {projects.Length}..");
     //    foreach (var project in projects)
-    //        project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+    //        project.AdRewardSecret = Convert.ToBase64String(GmUtil.GenerateKey())
     //            .Replace("/", "")
     //            .Replace("+", "")
     //            .Replace("=", "");

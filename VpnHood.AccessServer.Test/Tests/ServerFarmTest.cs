@@ -4,7 +4,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common;
 using VpnHood.Common.Client;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -84,7 +84,7 @@ public class ServerFarmTest
             ServerProfileId = new PatchOfGuid { Value = serverProfile2.ServerProfileId },
             ServerFarmName = new PatchOfString { Value = $"groupName_{Guid.NewGuid()}" },
             TokenUrl = new PatchOfUri { Value = new Uri("http://localhost:8080/farm2-token") },
-            Secret = new PatchOfByteOf { Value = VhUtil.GenerateKey() },
+            Secret = new PatchOfByteOf { Value = GmUtil.GenerateKey() },
             PushTokenToClient = new PatchOfBoolean { Value = true }
         };
 

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos.AccessTokens;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 

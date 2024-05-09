@@ -312,12 +312,12 @@ public class VhRepo(VhContext vhContext)
         return results;
     }
 
-    public async Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount, TimeSpan retryInterval)
+    public Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount, TimeSpan retryInterval)
     {
         var expirationTime = DateTime.UtcNow + expireBy;
         var errorTime = DateTime.UtcNow - retryInterval;
 
-        var certificates = await vhContext.Certificates
+        var certificates = vhContext.Certificates
             .Where(x => !x.IsDeleted && x.AutoValidate)
             .Where(x => x.ValidateErrorCount < maxErrorCount)
             .Where(x => x.ValidateErrorTime < errorTime)
@@ -325,6 +325,42 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
 
         return certificates;
+    }
+
+    public async Task<int> RegionMaxId(Guid projectId)
+    {
+        var res = await vhContext.Regions 
+            .Where(x => x.ProjectId == projectId)
+            .MaxAsync(x => (int?)x.RegionId);
+
+        return res ?? 1;
+    }
+
+    public Task<RegionModel[]> RegionList(Guid projectId)
+    {
+        var regions = vhContext.Regions
+            .Where(x => x.ProjectId == projectId)
+            .ToArrayAsync();
+
+        return regions;
+    }
+
+    public Task<RegionModel> RegionGet(Guid projectId, int regionId)
+    {
+        return vhContext.Regions
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.RegionId == regionId)
+            .SingleAsync();
+    }
+
+    public async Task RegionDelete(Guid projectId, int regionId)
+    {
+        var region = await vhContext.Regions
+            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.RegionId == regionId)
+            .SingleAsync();
+
+        vhContext.Remove(region);
     }
 }
 

@@ -10,7 +10,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Messaging;
@@ -205,7 +205,7 @@ public class AgentService(
         {
             try
             {
-                var serverProfileConfig = VhUtil.JsonDeserialize<ServerConfig>(serverProfileConfigJson);
+                var serverProfileConfig = GmUtil.JsonDeserialize<ServerConfig>(serverProfileConfigJson);
                 serverConfig.Merge(serverProfileConfig);
             }
             catch (Exception ex)

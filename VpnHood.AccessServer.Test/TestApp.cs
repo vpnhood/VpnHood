@@ -43,6 +43,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public IpLocksClient IpLocksClient => new(HttpClient);
     public AccessesClient AccessesClient => new(HttpClient);
     public DevicesClient DevicesClient => new(HttpClient);
+    public RegionClient RegionsClient => new(HttpClient);
     public SystemClient SystemClient => new(HttpClient);
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);

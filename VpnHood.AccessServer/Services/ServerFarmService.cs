@@ -8,7 +8,7 @@ using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 using AccessPointView = VpnHood.AccessServer.Dtos.ServerFarms.AccessPointView;
 
 namespace VpnHood.AccessServer.Services;
@@ -47,7 +47,7 @@ public class ServerFarmService(
             ServerFarmName = createParams.ServerFarmName,
             CreatedTime = DateTime.UtcNow,
             UseHostName = false,
-            Secret = VhUtil.GenerateKey(),
+            Secret = GmUtil.GenerateKey(),
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = createParams.PushTokenToClient
@@ -81,13 +81,13 @@ public class ServerFarmService(
         if (string.IsNullOrEmpty(serverFarm.TokenJson))
             throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
 
-        var curFarmToken = VhUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
+        var curFarmToken = GmUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
         try
         {
             if (curFarmToken.IsValidHostName && string.IsNullOrEmpty(curFarmToken.HostName))
                 throw new Exception("You farm needs a valid certificate.");
 
-            if (!curFarmToken.IsValidHostName && VhUtil.IsNullOrEmpty(curFarmToken.HostEndPoints))
+            if (!curFarmToken.IsValidHostName && GmUtil.IsNullOrEmpty(curFarmToken.HostEndPoints))
                 throw new Exception("You farm needs at-least a public in token endpoint");
 
             // create no cache request

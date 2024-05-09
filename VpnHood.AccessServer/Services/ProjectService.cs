@@ -11,7 +11,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -30,7 +30,7 @@ public class ProjectService(
         using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
         await subscriptionService.AuthorizeCreateProject(ownerUserId);
         var projectId = Guid.NewGuid();
-        var adRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+        var adRewardSecret = Convert.ToBase64String(GmUtil.GenerateKey())
             .Replace("/", "")
             .Replace("+", "")
             .Replace("=", "");
@@ -54,7 +54,7 @@ public class ProjectService(
             UseHostName = false,
             ServerProfileId = serverProfile.ServerProfileId,
             ServerProfile = serverProfile,
-            Secret = VhUtil.GenerateKey(),
+            Secret = GmUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
             TokenUrl = null,
@@ -90,7 +90,7 @@ public class ProjectService(
                     ServerFarm = serverFarm,
                     AccessTokenName = "Public",
                     SupportCode = 1000,
-                    Secret = VhUtil.GenerateKey(),
+                    Secret = GmUtil.GenerateKey(),
                     IsPublic = true,
                     IsAdRequired = false,
                     IsEnabled= true,
@@ -118,7 +118,7 @@ public class ProjectService(
                     IsAdRequired = false,
                     SupportCode = 1001,
                     MaxDevice = 5,
-                    Secret = VhUtil.GenerateKey(),
+                    Secret = GmUtil.GenerateKey(),
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow,

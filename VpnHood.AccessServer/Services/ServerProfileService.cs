@@ -4,6 +4,7 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerProfiles;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
+using GrayMint.Common.Utils;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 
@@ -160,7 +161,7 @@ public class ServerProfileService(
         if (string.IsNullOrEmpty(serverConfigJson))
             return null;
 
-        var serverConfig = VhUtil.JsonDeserialize<ServerConfig>(serverConfigJson);
+        var serverConfig = GmUtil.JsonDeserialize<ServerConfig>(serverConfigJson);
 
         if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
             throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));

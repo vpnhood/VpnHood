@@ -5,7 +5,7 @@ using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 

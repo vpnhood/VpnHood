@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.Common;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -34,7 +34,7 @@ public class AccessTokensService(
             ExpirationTime = createParams.ExpirationTime,
             Lifetime = createParams.Lifetime,
             IsPublic = createParams.IsPublic,
-            Secret = createParams.Secret ?? VhUtil.GenerateKey(),
+            Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,
             IsAdRequired = createParams.IsAdRequired,
             IsEnabled = createParams.IsEnabled ?? true,

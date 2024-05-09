@@ -14,7 +14,7 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
-using VpnHood.Common.Utils;
+using GrayMint.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
@@ -55,7 +55,7 @@ public class ServerService(
             CreatedTime = DateTime.UtcNow,
             ServerName = serverName,
             IsEnabled = true,
-            ManagementSecret = VhUtil.GenerateKey(),
+            ManagementSecret = GmUtil.GenerateKey(),
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
@@ -71,6 +71,8 @@ public class ServerService(
             ConfigureTime = null,
             EnvironmentVersion = null,
             MachineName = null,
+            RegionId = null,
+            AllowAutoRegion = true,
             IsDeleted = false
         };
 
@@ -101,7 +103,7 @@ public class ServerService(
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
-        if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = VhUtil.GenerateKey();
+        if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
         if (updateParams.AccessPoints != null)

@@ -188,7 +188,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfileId = UserSettings.ClientProfileId,
+                ClientProfileId = CurrentClientProfile?.ClientProfileId,
+                ClientProfileName = CurrentClientProfile?.ClientProfileName,
+                ClientProfileRegion = CurrentClientProfile?.GetRegionInfo(),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -639,7 +641,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             {
                 _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
                 if (_appPersistState.LastErrorMessage == null && !_hasAnyDataArrived && UserSettings is
-                        { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
+                    { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _appPersistState.LastErrorMessage = "No data has been received.";
             }
 

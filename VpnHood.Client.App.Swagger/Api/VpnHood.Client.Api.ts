@@ -1875,6 +1875,8 @@ export class AppState implements IAppState {
     connectionState!: AppConnectionState;
     lastError?: string | null;
     clientProfileId?: string | null;
+    clientProfileName?: string | null;
+    clientProfileRegion?: HostRegionInfo | null;
     isIdle!: boolean;
     logExists!: boolean;
     hasDiagnoseStarted!: boolean;
@@ -1918,6 +1920,8 @@ export class AppState implements IAppState {
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
+            this.clientProfileRegion = _data["clientProfileRegion"] ? HostRegionInfo.fromJS(_data["clientProfileRegion"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
@@ -1954,6 +1958,8 @@ export class AppState implements IAppState {
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
+        data["clientProfileRegion"] = this.clientProfileRegion ? this.clientProfileRegion.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
         data["hasDiagnoseStarted"] = this.hasDiagnoseStarted !== undefined ? this.hasDiagnoseStarted : <any>null;
@@ -1983,6 +1989,8 @@ export interface IAppState {
     connectionState: AppConnectionState;
     lastError?: string | null;
     clientProfileId?: string | null;
+    clientProfileName?: string | null;
+    clientProfileRegion?: HostRegionInfo | null;
     isIdle: boolean;
     logExists: boolean;
     hasDiagnoseStarted: boolean;
@@ -2012,6 +2020,50 @@ export enum AppConnectionState {
     Connecting = "Connecting",
     Connected = "Connected",
     Disconnecting = "Disconnecting",
+}
+
+export class HostRegionInfo implements IHostRegionInfo {
+    regionId!: string;
+    regionName!: string;
+    countryCode!: string;
+
+    constructor(data?: IHostRegionInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): HostRegionInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new HostRegionInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        return data;
+    }
+}
+
+export interface IHostRegionInfo {
+    regionId: string;
+    regionName: string;
+    countryCode: string;
 }
 
 export class SessionStatus implements ISessionStatus {
@@ -2357,7 +2409,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
     supportId?: string | null;
     hostNames!: string[];
     isValidHostName!: boolean;
-    regions!: HostRegion[];
+    regions!: HostRegionInfo[];
 
     constructor(data?: IClientProfileInfo) {
         if (data) {
@@ -2391,7 +2443,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             if (Array.isArray(_data["regions"])) {
                 this.regions = [] as any;
                 for (let item of _data["regions"])
-                    this.regions!.push(HostRegion.fromJS(item));
+                    this.regions!.push(HostRegionInfo.fromJS(item));
             }
             else {
                 this.regions = <any>null;
@@ -2436,51 +2488,7 @@ export interface IClientProfileInfo {
     supportId?: string | null;
     hostNames: string[];
     isValidHostName: boolean;
-    regions: HostRegion[];
-}
-
-export class HostRegion implements IHostRegion {
-    regionId!: string;
-    regionName?: string | null;
-    countryCode?: string | null;
-
-    constructor(data?: IHostRegion) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): HostRegion {
-        data = typeof data === 'object' ? data : {};
-        let result = new HostRegion();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        return data;
-    }
-}
-
-export interface IHostRegion {
-    regionId: string;
-    regionName?: string | null;
-    countryCode?: string | null;
+    regions: HostRegionInfo[];
 }
 
 export class ConfigParams implements IConfigParams {

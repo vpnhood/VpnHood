@@ -25,4 +25,6 @@ public class UserSettings
     public IpRange[]? PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
     public bool AllowAnonymousTracker { get; set; } = DefaultClientOptions.AllowAnonymousTracker;
     public IPAddress[]? DnsServers { get; set; }
+    public string? DebugData1 { get; set; }
+    public string? DebugData2 { get; set; }
 }

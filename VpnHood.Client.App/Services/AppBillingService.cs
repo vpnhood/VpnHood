@@ -16,10 +16,7 @@ internal class AppBillingService(VpnHoodApp vpnHoodApp, IAppBillingService billi
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
         var ret = await billingService.Purchase(uiContext, planId);
-        await vpnHoodApp.RefreshAccount();
-        var clientProfiles = vpnHoodApp.ClientProfileService.List();
-        vpnHoodApp.UserSettings.ClientProfileId = clientProfiles.LastOrDefault()?.ClientProfileId;
-        vpnHoodApp.Settings.Save();
+        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true);
         return ret;
     }
 

@@ -103,7 +103,7 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
-        token1.ServerToken.Regions = [new HostRegion{RegionId = "r1"}, new HostRegion { RegionId = "r2" }];
+        token1.ServerToken.Regions = [new HostRegion{RegionId = "r1", CountryCode = "US"}, new HostRegion { RegionId = "r2", CountryCode = "US" }];
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
         Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");

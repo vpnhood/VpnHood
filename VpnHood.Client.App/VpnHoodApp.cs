@@ -439,8 +439,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
                 _ = Disconnect(true);
 
-            // ExcludeLocalNetwork has been changed
-            if (!IsIdle && UserSettings.ExcludeLocalNetwork != Client.ExcludeLocalNetwork)
+            // IncludeLocalNetwork has been changed
+            if (!IsIdle && UserSettings.IncludeLocalNetwork != Client.IncludeLocalNetwork)
                 _ = Disconnect(true);
         }
 
@@ -494,7 +494,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
-            ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+            IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
             IpRangeProvider = this,
             AdProvider = this,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),

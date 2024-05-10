@@ -6,19 +6,19 @@ namespace VpnHood.Server.Access.Configurations;
 
 public class NetFilterOptions
 {
-    public bool? ExcludeLocalNetwork { get; set; }
+    public bool? IncludeLocalNetwork { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? PacketCaptureExcludeIpRanges { get; set; }
     public IpRange[]? IncludeIpRanges { get; set; }
     public IpRange[]? ExcludeIpRanges { get; set; }
     public bool? BlockIpV6 { get; set; }
 
-    [JsonIgnore] public bool IncludeLocalNetworkValue => ExcludeLocalNetwork ?? false;
+    [JsonIgnore] public bool IncludeLocalNetworkValue => IncludeLocalNetwork ?? false;
     [JsonIgnore] public bool BlockIpV6Value => BlockIpV6 ?? false;
 
     public void Merge(NetFilterOptions obj)
     {
-        if (obj.ExcludeLocalNetwork != null) ExcludeLocalNetwork = obj.ExcludeLocalNetwork;
+        if (obj.IncludeLocalNetwork != null) IncludeLocalNetwork = obj.IncludeLocalNetwork;
         if (obj.PacketCaptureIncludeIpRanges != null) PacketCaptureIncludeIpRanges = obj.PacketCaptureIncludeIpRanges;
         if (obj.PacketCaptureExcludeIpRanges != null) PacketCaptureExcludeIpRanges = obj.PacketCaptureExcludeIpRanges;
         if (obj.IncludeIpRanges != null) IncludeIpRanges = obj.IncludeIpRanges;
@@ -27,7 +27,7 @@ public class NetFilterOptions
     }
     public void ApplyDefaults()
     {
-        ExcludeLocalNetwork = IncludeLocalNetworkValue;
+        IncludeLocalNetwork = IncludeLocalNetworkValue;
         BlockIpV6 = BlockIpV6Value;
     }
 

@@ -501,7 +501,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
-            DropUdpPackets = UserSettings.DropUdpPackets,
+            DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
             RegionId = regionId
         };
@@ -826,7 +826,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             : null;
     }
 
-    public async Task RefreshAccount()
+    public async Task RefreshAccount(bool updateCurrentClientProfile = false)
     {
         if (Services.AccountService is not AppAccountService accountService)
             throw new Exception("AccountService is not initialized.");
@@ -842,10 +842,26 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             : [];
         ClientProfileService.UpdateFromAccount(accessKeys);
 
+        // Select the best client profile from their account.
+        if (updateCurrentClientProfile)
+        {
+            var clientProfiles = ClientProfileService
+                .List()
+                .Where(x => x.IsForAccount)
+                .ToArray();
+
+            if (clientProfiles.Any())
+            {
+                UserSettings.ClientProfileId = clientProfiles.Last().ClientProfileId;
+                Settings.Save();
+            }
+        }
+        
         // update current profile if removed
         if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null)
         {
-            UserSettings.ClientProfileId = ClientProfileService.List().FirstOrDefault()?.ClientProfileId;
+            var clientProfiles = ClientProfileService.List();
+            UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
             Settings.Save();
         }
     }

@@ -7,7 +7,7 @@ namespace VpnHood.AccessServer.Services;
 
 public class RegionService(VhRepo vhRepo)
 {
-    public async Task<Region> Create(Guid projectId, RegionCreateParams regionCreateParams)
+    public async Task<RegionData> Create(Guid projectId, RegionCreateParams regionCreateParams)
     {
         var model = new RegionModel
         {
@@ -19,29 +19,45 @@ public class RegionService(VhRepo vhRepo)
 
         model = await vhRepo.AddAsync(model);
         await vhRepo.SaveChangesAsync();
-        return model.ToDto();
+        var ret = new RegionData
+        {
+            Region = model.ToDto()
+        };
+        return ret;
     }
 
 
-    public async Task<Region> Get(Guid projectId, int regionId)
+    public async Task<RegionData> Get(Guid projectId, int regionId)
     {
         var model = await vhRepo.RegionGet(projectId, regionId);
-        return model.ToDto();
+        var ret = new RegionData
+        {
+            Region = model.ToDto()
+        };
+        return ret;
     }
 
-    public async Task<Region> Update(Guid projectId, int regionId, RegionUpdateParams regionUpdateParams)
+    public async Task<RegionData> Update(Guid projectId, int regionId, RegionUpdateParams regionUpdateParams)
     {
         var model = await vhRepo.RegionGet(projectId, regionId);
         if (regionUpdateParams.RegionName!=null) model.RegionName = regionUpdateParams.RegionName;
         if (regionUpdateParams.CountryCode!=null) model.CountryCode = regionUpdateParams.CountryCode;
         await vhRepo.SaveChangesAsync();
-        return model.ToDto();
+
+        var ret = new RegionData
+        {
+            Region = model.ToDto()
+        };
+        return ret;
     }
 
-    public async Task<Region[]> List(Guid projectId)
+    public async Task<RegionData[]> List(Guid projectId)
     {
         var models = await vhRepo.RegionList(projectId);
-        var ret = models.Select(x => x.ToDto());
+        var ret = models.Select(x => new RegionData
+        {
+            Region = x.ToDto()
+        });
         return ret.ToArray();
     }
 

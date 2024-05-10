@@ -21,13 +21,13 @@ public class RegionTest
             RegionName = Guid.NewGuid().ToString(),
             CountryCode = "us"
         };
-        var region = await regionClient.CreateAsync(testApp.ProjectId, createParams);
+        var regionData = await regionClient.CreateAsync(testApp.ProjectId, createParams);
 
         //-----------
         // check: get
         //-----------
-        region = await regionClient.GetAsync(testApp.ProjectId, region.RegionId);
-        Assert.AreEqual(createParams.CountryCode, region.CountryCode);
+        regionData = await regionClient.GetAsync(testApp.ProjectId, regionData.Region.RegionId);
+        Assert.AreEqual(createParams.CountryCode, regionData.Region.CountryCode);
 
         //-----------
         // check: update
@@ -37,15 +37,15 @@ public class RegionTest
             RegionName = new PatchOfString{ Value = Guid.NewGuid().ToString() },
             CountryCode = new PatchOfString {Value = "UK" }
         };
-        await regionClient.UpdateAsync(testApp.ProjectId, region.RegionId, updateParams);
-        region = await regionClient.GetAsync(testApp.ProjectId, region.RegionId);
-        Assert.AreEqual(updateParams.RegionName.Value, region.RegionName);
-        Assert.AreEqual(updateParams.CountryCode.Value, region.CountryCode);
+        await regionClient.UpdateAsync(testApp.ProjectId, regionData.Region.RegionId, updateParams);
+        regionData = await regionClient.GetAsync(testApp.ProjectId, regionData.Region.RegionId);
+        Assert.AreEqual(updateParams.RegionName.Value, regionData.Region.RegionName);
+        Assert.AreEqual(updateParams.CountryCode.Value, regionData.Region.CountryCode);
 
         //-----------
         // check: delete
         //-----------
-        await regionClient.DeleteAsync(testApp.ProjectId, region.RegionId);
-        await VhTestUtil.AssertNotExistsException(regionClient.GetAsync(testApp.ProjectId, region.RegionId));
+        await regionClient.DeleteAsync(testApp.ProjectId, regionData.Region.RegionId);
+        await VhTestUtil.AssertNotExistsException(regionClient.GetAsync(testApp.ProjectId, regionData.Region.RegionId));
     }
 }

@@ -1560,7 +1560,7 @@ export class RegionsClient {
 
     }
 
-    create(projectId: string, regionCreateParams: RegionCreateParams, cancelToken?: CancelToken): Promise<Region> {
+    create(projectId: string, regionCreateParams: RegionCreateParams, cancelToken?: CancelToken): Promise<RegionData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1591,7 +1591,7 @@ export class RegionsClient {
         });
     }
 
-    protected processCreate(response: AxiosResponse): Promise<Region> {
+    protected processCreate(response: AxiosResponse): Promise<RegionData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1605,17 +1605,17 @@ export class RegionsClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = Region.fromJS(resultData200);
-            return Promise.resolve<Region>(result200);
+            result200 = RegionData.fromJS(resultData200);
+            return Promise.resolve<RegionData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<Region>(null as any);
+        return Promise.resolve<RegionData>(null as any);
     }
 
-    list(projectId: string, cancelToken?: CancelToken): Promise<Region[]> {
+    list(projectId: string, cancelToken?: CancelToken): Promise<RegionData[]> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1642,7 +1642,7 @@ export class RegionsClient {
         });
     }
 
-    protected processList(response: AxiosResponse): Promise<Region[]> {
+    protected processList(response: AxiosResponse): Promise<RegionData[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1659,21 +1659,21 @@ export class RegionsClient {
             if (Array.isArray(resultData200)) {
                 result200 = [] as any;
                 for (let item of resultData200)
-                    result200!.push(Region.fromJS(item));
+                    result200!.push(RegionData.fromJS(item));
             }
             else {
                 result200 = <any>null;
             }
-            return Promise.resolve<Region[]>(result200);
+            return Promise.resolve<RegionData[]>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<Region[]>(null as any);
+        return Promise.resolve<RegionData[]>(null as any);
     }
 
-    get(projectId: string, regionId: number, cancelToken?: CancelToken): Promise<Region> {
+    get(projectId: string, regionId: number, cancelToken?: CancelToken): Promise<RegionData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/{regionId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1703,7 +1703,7 @@ export class RegionsClient {
         });
     }
 
-    protected processGet(response: AxiosResponse): Promise<Region> {
+    protected processGet(response: AxiosResponse): Promise<RegionData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1717,17 +1717,17 @@ export class RegionsClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = Region.fromJS(resultData200);
-            return Promise.resolve<Region>(result200);
+            result200 = RegionData.fromJS(resultData200);
+            return Promise.resolve<RegionData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<Region>(null as any);
+        return Promise.resolve<RegionData>(null as any);
     }
 
-    update(projectId: string, regionId: number, updateParams: RegionUpdateParams, cancelToken?: CancelToken): Promise<Region> {
+    update(projectId: string, regionId: number, updateParams: RegionUpdateParams, cancelToken?: CancelToken): Promise<RegionData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/{regionId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -1761,7 +1761,7 @@ export class RegionsClient {
         });
     }
 
-    protected processUpdate(response: AxiosResponse): Promise<Region> {
+    protected processUpdate(response: AxiosResponse): Promise<RegionData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1775,14 +1775,14 @@ export class RegionsClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = Region.fromJS(resultData200);
-            return Promise.resolve<Region>(result200);
+            result200 = RegionData.fromJS(resultData200);
+            return Promise.resolve<RegionData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<Region>(null as any);
+        return Promise.resolve<RegionData>(null as any);
     }
 
     delete(projectId: string, regionId: number, cancelToken?: CancelToken): Promise<void> {
@@ -5725,6 +5725,45 @@ export interface IProjectUpdateParams {
     gaMeasurementId?: PatchOfString | null;
     gaApiSecret?: PatchOfString | null;
     adRewardSecret?: PatchOfString | null;
+}
+
+export class RegionData implements IRegionData {
+    region!: Region;
+
+    constructor(data?: IRegionData) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.region = new Region();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.region = _data["region"] ? Region.fromJS(_data["region"]) : new Region();
+        }
+    }
+
+    static fromJS(data: any): RegionData {
+        data = typeof data === 'object' ? data : {};
+        let result = new RegionData();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["region"] = this.region ? this.region.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IRegionData {
+    region: Region;
 }
 
 export class Region implements IRegion {

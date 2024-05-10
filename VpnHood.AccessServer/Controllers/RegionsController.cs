@@ -13,14 +13,14 @@ public class RegionsController(RegionService regionService)
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public Task<Region> Create(Guid projectId, RegionCreateParams regionCreateParams)
+    public Task<RegionData> Create(Guid projectId, RegionCreateParams regionCreateParams)
     {
         return regionService.Create(projectId, regionCreateParams);
     }
 
     [HttpGet("{regionId:int}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<Region> Get(Guid projectId, int regionId)
+    public Task<RegionData> Get(Guid projectId, int regionId)
     {
         return regionService.Get(projectId, regionId);
     }
@@ -28,7 +28,7 @@ public class RegionsController(RegionService regionService)
 
     [HttpPatch("{regionId:int}")]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]
-    public Task<Region> Update(Guid projectId, int regionId, RegionUpdateParams updateParams)
+    public Task<RegionData> Update(Guid projectId, int regionId, RegionUpdateParams updateParams)
     {
         return regionService.Update(projectId, regionId, updateParams);
     }
@@ -42,7 +42,7 @@ public class RegionsController(RegionService regionService)
 
     [HttpGet]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<Region[]> List(Guid projectId)
+    public Task<RegionData[]> List(Guid projectId)
     {
         return regionService.List(projectId);
     }

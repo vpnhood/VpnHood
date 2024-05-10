@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.DtoConverters;
+﻿using System.Globalization;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Regions;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
@@ -65,5 +66,34 @@ public class RegionService(VhRepo vhRepo)
     {
         await vhRepo.RegionDelete(projectId, regionId);
         await vhRepo.SaveChangesAsync();
+    }
+
+    public static CountryInfo[] ListAllCountries()
+    {
+        // Get all specific cultures
+        var countryInfos = new Dictionary<string, CountryInfo>();
+        var cultures = CultureInfo.GetCultures(CultureTypes.SpecificCultures);
+        foreach (var culture in cultures)
+        {
+            try
+            {
+                var regionInfo = new RegionInfo(culture.Name);
+                countryInfos.TryAdd(culture.Name, new CountryInfo
+                {
+                    CountryCode = regionInfo.Name,
+                    EnglishName = regionInfo.EnglishName
+                });
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        var items = countryInfos.Values
+            .ToArray()
+            .OrderBy(x => x.EnglishName);
+
+        return items.ToArray();
     }
 }

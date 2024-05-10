@@ -46,4 +46,14 @@ public class RegionsController(RegionService regionService)
     {
         return regionService.List(projectId);
     }
+
+    // just for helping UI to show all countries
+    [HttpGet("all-countries")]
+    [AuthorizeProjectPermission(Permissions.ProjectRead)]
+    public Task<CountryInfo[]> ListAllCountries(Guid projectId)
+    {
+        _ = projectId;
+        var countryInfos = RegionService.ListAllCountries();
+        return Task.FromResult(countryInfos);
+    }
 }

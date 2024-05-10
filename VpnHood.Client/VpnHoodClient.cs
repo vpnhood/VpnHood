@@ -68,7 +68,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ulong SessionId { get; private set; }
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
-    public bool ExcludeLocalNetwork { get; }
+    public bool IncludeLocalNetwork { get; }
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
@@ -113,7 +113,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ProtocolVersion = 4;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;
-        ExcludeLocalNetwork = options.ExcludeLocalNetwork;
+        IncludeLocalNetwork = options.IncludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
         RegionId = options.RegionId;
@@ -213,9 +213,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // report config
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
-            "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, ExcludeLocalNetwork: {ExcludeLocalNetwork}, " +
+            "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, IncludeLocalNetwork: {IncludeLocalNetwork}, " +
             "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
-            UseUdpChannel, DropUdpPackets, ExcludeLocalNetwork, workerThreads, completionPortThreads);
+            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads);
 
         // report version
         VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
@@ -286,7 +286,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostIpAddress) });
 
         // exclude local networks
-        if (ExcludeLocalNetwork)
+        if (!IncludeLocalNetwork)
             includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included

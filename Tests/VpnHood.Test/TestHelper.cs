@@ -315,7 +315,7 @@ internal static class TestHelper
         clientOptions ??= CreateClientOptions();
         if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout) clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
         clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.ExcludeLocalNetwork = false;
+        clientOptions.IncludeLocalNetwork = true;
 
         var client = new VpnHoodClient(
             packetCapture,
@@ -353,7 +353,7 @@ internal static class TestHelper
             clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
         clientOptions.SocketFactory = new SocketFactory();
         clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.ExcludeLocalNetwork = false;
+        clientOptions.IncludeLocalNetwork = true;
 
         var clientConnect = new VpnHoodConnect(
             packetCapture,

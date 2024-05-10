@@ -268,7 +268,7 @@ public class ServerTest : TestBase
                 IncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.3")],
                 PacketCaptureExcludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.4")],
                 PacketCaptureIncludeIpRanges = [IpRange.Parse("1.1.1.1-1.1.1.5")],
-                ExcludeLocalNetwork = false
+                IncludeLocalNetwork = false
             },
             TcpEndPoints = [IPEndPoint.Parse("2.2.2.2:4433")],
             UdpEndPoints = [IPEndPoint.Parse("3.3.3.3:5533")],

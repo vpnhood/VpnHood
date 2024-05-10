@@ -10,9 +10,7 @@ public class AppState
     public required DateTime? ConnectRequestTime { get; init; }
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
-    public required Guid? ClientProfileId { get; init; }
-    public string? ClientProfileName { get; set; }
-    public HostRegionInfo? ClientProfileRegion { get; set; }
+    public required ClientProfileBaseInfo? ClientProfile { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseStarted { get; init; }

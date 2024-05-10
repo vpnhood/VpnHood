@@ -9,7 +9,7 @@ namespace VpnHood.AccessServer.Controllers;
 [ApiController]
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/regions")]
-public class RegionController(RegionService regionService)
+public class RegionsController(RegionService regionService)
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ProjectWrite)]

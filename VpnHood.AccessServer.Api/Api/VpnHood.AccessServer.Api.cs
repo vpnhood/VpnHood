@@ -2933,13 +2933,13 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class RegionClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class RegionsClient : VpnHood.Common.Client.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
 
     #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public RegionClient(System.Net.Http.HttpClient httpClient)
+        public RegionsClient(System.Net.Http.HttpClient httpClient)
     #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             _httpClient = httpClient;

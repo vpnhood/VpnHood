@@ -1547,7 +1547,7 @@ export class ProjectsClient {
     }
 }
 
-export class RegionClient {
+export class RegionsClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;

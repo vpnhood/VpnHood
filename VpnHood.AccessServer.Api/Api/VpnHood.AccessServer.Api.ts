@@ -1834,6 +1834,64 @@ export class RegionsClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    listAllCountries(projectId: string, cancelToken?: CancelToken): Promise<CountryInfo[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/all-countries";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processListAllCountries(_response);
+        });
+    }
+
+    protected processListAllCountries(response: AxiosResponse): Promise<CountryInfo[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CountryInfo.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<CountryInfo[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CountryInfo[]>(null as any);
+    }
 }
 
 export class ServerFarmsClient {
@@ -5888,6 +5946,46 @@ export class RegionUpdateParams implements IRegionUpdateParams {
 export interface IRegionUpdateParams {
     regionName?: PatchOfString | null;
     countryCode?: PatchOfString | null;
+}
+
+export class CountryInfo implements ICountryInfo {
+    countryCode!: string;
+    englishName!: string;
+
+    constructor(data?: ICountryInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.englishName = _data["englishName"] !== undefined ? _data["englishName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): CountryInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new CountryInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["englishName"] = this.englishName !== undefined ? this.englishName : <any>null;
+        return data;
+    }
+}
+
+export interface ICountryInfo {
+    countryCode: string;
+    englishName: string;
 }
 
 export class ServerFarmData implements IServerFarmData {

@@ -27,7 +27,8 @@ public static class AssemblyInfo
         }
     }
 
-    public static IAppUpdaterService CreateUpdaterService()
+    // ReSharper disable once ReturnTypeCanBeNotNullable
+    public static IAppUpdaterService? CreateUpdaterService()
     {
 #if GOOGLE_PLAY
         // code clean up changes inline namespace to using

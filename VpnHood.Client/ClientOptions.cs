@@ -22,7 +22,7 @@ public class ClientOptions
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; }
-    public bool ExcludeLocalNetwork { get; set; } = true;
+    public bool IncludeLocalNetwork { get; set; }
     public IIpRangeProvider? IpRangeProvider { get; set; }
     public IAdProvider? AdProvider { get; set; }
     public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();

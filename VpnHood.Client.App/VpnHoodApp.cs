@@ -188,9 +188,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfileId = CurrentClientProfile?.ClientProfileId,
-                ClientProfileName = CurrentClientProfile?.ClientProfileName,
-                ClientProfileRegion = CurrentClientProfile?.GetRegionInfo(),
+                ClientProfile = CurrentClientProfile?.ToBaseInfo(),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,

@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.TokenLegacy;
 using VpnHood.Common.Utils;
 
@@ -28,9 +29,6 @@ public class Token
     [JsonPropertyName("sec")]
     public required byte[] Secret { get; set; }
     
-    [JsonPropertyName("ad")]
-    public bool IsAdRequired { get; set; }
-
     [JsonPropertyName("ser")]
     public required ServerToken ServerToken { get; set; }
 

@@ -632,7 +632,8 @@ internal class ServerHost : IAsyncDisposable, IJob
             TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta,
             AccessKey = sessionResponse.AccessKey,
             DnsServers = DnsServers,
-            IsAdRequired = sessionResponse.IsAdRequired
+            IsAdRequired = sessionResponse.IsAdRequired,
+            DisplayAd = sessionResponse.DisplayAd
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
         await clientStream.DisposeAsync();

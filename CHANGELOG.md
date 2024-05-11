@@ -1,8 +1,9 @@
-# Upcoming
+# v4.4.503
 ### Client
 * Update: Android: Show Notification & QuickLaunch Request after connect
 * Update: Display AD without VPN
 * Fix: Android: Crash when starting as always-on, but there is no selected server
+* Fix: Android: importing access key by file
 * Fix: minor issue in disconnect messages
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 

@@ -5870,6 +5870,7 @@ export class Region implements IRegion {
     regionId!: number;
     regionName?: string | null;
     countryCode!: string;
+    displayName!: string;
 
     constructor(data?: IRegion) {
         if (data) {
@@ -5885,6 +5886,7 @@ export class Region implements IRegion {
             this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
             this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
             this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
         }
     }
 
@@ -5900,6 +5902,7 @@ export class Region implements IRegion {
         data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
         data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
         data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
         return data;
     }
 }
@@ -5908,6 +5911,7 @@ export interface IRegion {
     regionId: number;
     regionName?: string | null;
     countryCode: string;
+    displayName: string;
 }
 
 export class RegionCreateParams implements IRegionCreateParams {

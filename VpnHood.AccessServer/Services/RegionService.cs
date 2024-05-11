@@ -13,7 +13,7 @@ public class RegionService(VhRepo vhRepo)
         var model = new RegionModel
         {
             ProjectId = projectId,
-            RegionId = await vhRepo.RegionMaxId(projectId),
+            RegionId = await vhRepo.RegionMaxId(projectId) + 1,
             RegionName = regionCreateParams.RegionName,
             CountryCode = regionCreateParams.CountryCode,
         };
@@ -55,11 +55,15 @@ public class RegionService(VhRepo vhRepo)
     public async Task<RegionData[]> List(Guid projectId)
     {
         var models = await vhRepo.RegionList(projectId);
-        var ret = models.Select(x => new RegionData
-        {
-            Region = x.ToDto()
-        });
-        return ret.ToArray();
+        var ret = models
+            .Select(x => new RegionData
+            {
+                Region = x.ToDto()
+            })
+            .OrderBy(x=>x.Region.DisplayName)
+            .ToArray();
+        
+        return ret;
     }
 
     public async Task Delete(Guid projectId, int regionId)
@@ -91,6 +95,7 @@ public class RegionService(VhRepo vhRepo)
         }
 
         var items = countryInfos.Values
+            .Where(x=>x.CountryCode.Length == 2) //exclude continents
             .ToArray()
             .OrderBy(x => x.EnglishName);
 

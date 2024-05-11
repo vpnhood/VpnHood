@@ -8588,6 +8588,10 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string CountryCode { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("displayName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string DisplayName { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]

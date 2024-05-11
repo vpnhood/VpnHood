@@ -21,6 +21,13 @@ public class RegionTest
             RegionName = Guid.NewGuid().ToString(),
             CountryCode = "us"
         };
+        await regionClient.CreateAsync(testApp.ProjectId, createParams);
+
+        createParams = new RegionCreateParams
+        {
+            RegionName = Guid.NewGuid().ToString(),
+            CountryCode = "gb"
+        };
         var regionData = await regionClient.CreateAsync(testApp.ProjectId, createParams);
 
         //-----------

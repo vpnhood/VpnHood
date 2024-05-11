@@ -19,7 +19,7 @@ public class AndroidAppMainActivityHandler
     {
         ActivityEvent = activityEvent;
         _accessKeySchemes = options.AccessKeySchemes;
-        _accessKeyMimes = options.AccessKeySchemes;
+        _accessKeyMimes = options.AccessKeyMimes;
         CheckForUpdateOnCreate = options.CheckForUpdateOnCreate;
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
@@ -96,8 +96,7 @@ public class AndroidAppMainActivityHandler
     {
         var profiles = VpnHoodApp.Instance.ClientProfileService.List();
         var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
-        _ = VpnHoodApp.Instance.Disconnect(true);
-
+        
         VpnHoodApp.Instance.UserSettings.ClientProfileId = profile.ClientProfileId;
 
         var isNew = profiles.Any(x => x.ClientProfileId == profile.ClientProfileId);

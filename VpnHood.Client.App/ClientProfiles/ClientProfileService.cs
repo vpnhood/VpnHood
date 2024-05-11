@@ -102,12 +102,17 @@ public class ClientProfileService
 
     public ClientProfile ImportAccessKey(string accessKey)
     {
+        return ImportAccessKey(accessKey, false);
+    }
+
+    private ClientProfile ImportAccessKey(string accessKey, bool isForAccount)
+    {
         var token = Token.FromAccessKey(accessKey);
-        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
+        return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
     }
 
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn)
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn, bool isForAccount = false)
     {
         // make sure no one overwrites built-in tokens
         if (!allowOverwriteBuiltIn && _builtInAccessTokenIds.Any(tokenId => tokenId == token.TokenId))
@@ -127,7 +132,8 @@ public class ClientProfileService
             {
                 ClientProfileId = Guid.NewGuid(),
                 ClientProfileName = token.Name,
-                Token = token
+                Token = token,
+                IsForAccount = isForAccount
             });
 
         // save profiles
@@ -220,5 +226,25 @@ public class ClientProfileService
         {
             return [];
         }
+    }
+
+    internal void UpdateFromAccount(string[] accessKeys)
+    {
+
+        var accessTokens = accessKeys.Select(Token.FromAccessKey);
+
+        // Remove client profiles that does not exist in the account
+        var toRemoves = _clientProfiles
+            .Where(x => x.IsForAccount)
+            .Where(x => accessTokens.All(y => y.TokenId != x.Token.TokenId))
+            .Select(x => x.ClientProfileId)
+            .ToArray();
+
+        foreach (var clientProfileId in toRemoves)
+            Remove(clientProfileId);
+
+        // Add or update access keys
+        foreach (var accessKey in accessKeys)
+            ImportAccessKey(accessKey, true);
     }
 }

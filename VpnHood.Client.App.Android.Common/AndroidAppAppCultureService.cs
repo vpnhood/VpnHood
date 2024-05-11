@@ -1,23 +1,24 @@
 ﻿using Android.Content;
 using Android.OS;
 using Java.Util;
+using VpnHood.Client.App.Abstractions;
 
-namespace VpnHood.Client.Device.Droid;
+namespace VpnHood.Client.App.Droid.Common;
 
-public class AndroidCultureService : ICultureService
+public class AndroidAppAppCultureService : IAppCultureService
 {
     public static bool IsSupported => OperatingSystem.IsAndroidVersionAtLeast(34);
 
-    private AndroidCultureService()
+    private AndroidAppAppCultureService()
     {
     }
 
-    public static AndroidCultureService Create()
+    public static AndroidAppAppCultureService Create()
     {
-        return IsSupported ? new AndroidCultureService() : throw new NotSupportedException();
+        return IsSupported ? new AndroidAppAppCultureService() : throw new NotSupportedException();
     }
 
-    public static AndroidCultureService? CreateIfSupported()
+    public static AndroidAppAppCultureService? CreateIfSupported()
     {
         return IsSupported ? Create() : null;
     }

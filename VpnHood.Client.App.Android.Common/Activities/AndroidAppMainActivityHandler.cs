@@ -1,33 +1,26 @@
-﻿using Android;
-using Android.Content;
-using Android.Content.PM;
+﻿using Android.Content;
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
+using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
-public class AndroidAppMainActivityHandler 
+public class AndroidAppMainActivityHandler
 {
-    private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
     private readonly string[] _accessKeySchemes;
     private readonly string[] _accessKeyMimes;
-    private readonly IAppUpdaterService? _appUpdaterService;
-    private const int RequestPostNotificationId = 11;
     protected IActivityEvent ActivityEvent { get; }
-    protected virtual bool RequestFeaturesOnCreate { get; }
+    protected virtual bool CheckForUpdateOnCreate { get; }
 
     public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options)
     {
         ActivityEvent = activityEvent;
-        _appUpdaterService = options.AppUpdaterService;
         _accessKeySchemes = options.AccessKeySchemes;
-        _accessKeyMimes = options.AccessKeySchemes;
-        RequestFeaturesOnCreate = options.RequestFeaturesOnCreate;
-
+        _accessKeyMimes = options.AccessKeyMimes;
+        CheckForUpdateOnCreate = options.CheckForUpdateOnCreate;
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
@@ -40,38 +33,13 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
-        AndroidDevice.Instance.Prepare(ActivityEvent);
+        VpnHoodApp.Instance.UiContext = new AndroidUiContext(ActivityEvent);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
 
-        if (RequestFeaturesOnCreate)
-            _ = RequestFeatures();
-    }
-
-    public async Task RequestFeatures()
-    {
-        // request for adding tile
-        if (!VpnHoodApp.Instance.Settings.IsQuickLaunchRequested &&
-            OperatingSystem.IsAndroidVersionAtLeast(33))
-        {
-            VpnHoodApp.Instance.Settings.IsQuickLaunchRequested = true;
-            VpnHoodApp.Instance.Settings.Save();
-            await QuickLaunchTileService.RequestAddTile(ActivityEvent.Activity);
-        }
-
-        // request for notification
-        if (OperatingSystem.IsAndroidVersionAtLeast(33) && ActivityEvent.Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
-        {
-            _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
-            ActivityEvent.Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
-            await _requestPostNotificationsCompletionTask.Task;
-        }
-
-        // Check for update
-        VpnHoodApp.Instance.Services.UpdaterService = _appUpdaterService;
-        if (VpnHoodApp.Instance.VersionCheckRequired && _appUpdaterService != null && await _appUpdaterService.Update())
-            VpnHoodApp.Instance.VersionCheckPostpone(); // postpone check if check succeeded
+        if (CheckForUpdateOnCreate)
+            _ = VpnHoodApp.Instance.VersionCheck();
     }
 
     protected virtual bool OnNewIntent(Intent? intent)
@@ -128,7 +96,6 @@ public class AndroidAppMainActivityHandler
     {
         var profiles = VpnHoodApp.Instance.ClientProfileService.List();
         var profile = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
-        _ = VpnHoodApp.Instance.Disconnect(true);
         
         VpnHoodApp.Instance.UserSettings.ClientProfileId = profile.ClientProfileId;
 
@@ -142,9 +109,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
     {
-        var postNotificationsIndex = Array.IndexOf(permissions, Manifest.Permission.PostNotifications);
-        if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
-            _requestPostNotificationsCompletionTask.TrySetResult(grantResults[postNotificationsIndex]);
     }
 
     protected virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
@@ -163,6 +127,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        VpnHoodApp.Instance.Services.UpdaterService = null;
+        VpnHoodApp.Instance.UiContext = null;
     }
 }

@@ -20,7 +20,7 @@ internal class BillingController : WebApiController, IBillingController
     [Route(HttpVerbs.Post, "/purchase")]
     public Task<string> Purchase([QueryField] string planId)
     {
-        return BillingService.Purchase(planId);
+        return BillingService.Purchase(VpnHoodApp.Instance.RequiredUiContext, planId);
     }
 
 }

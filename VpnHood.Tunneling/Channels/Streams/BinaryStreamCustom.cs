@@ -6,6 +6,8 @@ using VpnHood.Common.Utils;
 namespace VpnHood.Tunneling.Channels.Streams;
 
 // this was used for .NET 6 or earlier as .net didn't use hardware acceleration for encryption in android and SslStream was very slow
+// todo remove
+[Obsolete]
 public class BinaryStreamCustom : ChunkStream
 {
     private const int ChunkHeaderLength = 5;
@@ -26,6 +28,7 @@ public class BinaryStreamCustom : ChunkStream
     public long MaxEncryptChunk { get; set; } = long.MaxValue;
     public override int PreserveWriteBufferLength => ChunkHeaderLength;
 
+    [Obsolete]
     public BinaryStreamCustom(Stream sourceStream, string streamId, byte[] secret, bool useBuffer)
         : base(useBuffer ? new ReadCacheStream(sourceStream, false, TunnelDefaults.StreamProxyBufferSize) : sourceStream, streamId)
     {

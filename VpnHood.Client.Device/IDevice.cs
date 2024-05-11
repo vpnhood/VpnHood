@@ -6,8 +6,8 @@ public interface IDevice : IDisposable
     bool IsExcludeAppsSupported { get; }
     bool IsIncludeAppsSupported { get; }
     bool IsLogToConsoleSupported { get; }
+    bool IsAlwaysOnSupported { get; }
     string OsInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }
-    Task<IPacketCapture> CreatePacketCapture();
-    ICultureService? CultureService { get; }
+    Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext);
 }

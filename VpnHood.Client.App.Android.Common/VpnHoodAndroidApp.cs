@@ -6,7 +6,7 @@ namespace VpnHood.Client.App.Droid.Common;
 public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
     : Application(javaReference, transfer)
 {
-    protected virtual AppOptions AppOptions { get; } = new();
+    protected virtual AppOptions CreateAppOptions () => new();
 
     public override void OnCreate()
     {
@@ -15,8 +15,12 @@ public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership
         //app init
         if (!VpnHoodApp.IsInit)
         {
+            var options = CreateAppOptions();
+            options.UiService ??= new AndroidAppUiService();
+            options.CultureService ??= AndroidAppAppCultureService.CreateIfSupported();
+
             var vpnHoodDevice = AndroidDevice.Create();
-            var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, AppOptions);
+            var vpnHoodApp = VpnHoodApp.Init(vpnHoodDevice, options);
             vpnHoodDevice.InitNotification(new AndroidAppNotification(vpnHoodApp).DeviceNotification);
         }
     }

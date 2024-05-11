@@ -4676,7 +4676,7 @@ export class AccessToken implements IAccessToken {
     lastUsedTime?: Date | null;
     isPublic!: boolean;
     isEnabled!: boolean;
-    adShow!: AdShow;
+    adShow!: AdRequirement;
     expirationTime?: Date | null;
     createdTime!: Date;
     modifiedTime!: Date;
@@ -4759,14 +4759,14 @@ export interface IAccessToken {
     lastUsedTime?: Date | null;
     isPublic: boolean;
     isEnabled: boolean;
-    adShow: AdShow;
+    adShow: AdRequirement;
     expirationTime?: Date | null;
     createdTime: Date;
     modifiedTime: Date;
     description?: string | null;
 }
 
-export enum AdShow {
+export enum AdRequirement {
     None = "None",
     Flexible = "Flexible",
     Required = "Required",
@@ -4909,7 +4909,7 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     expirationTime?: Date | null;
     isEnabled?: boolean | null;
     isPublic!: boolean;
-    adShow!: AdShow;
+    adShow!: AdRequirement;
     description?: string | null;
 
     constructor(data?: IAccessTokenCreateParams) {
@@ -4974,7 +4974,7 @@ export interface IAccessTokenCreateParams {
     expirationTime?: Date | null;
     isEnabled?: boolean | null;
     isPublic: boolean;
-    adShow: AdShow;
+    adShow: AdRequirement;
     description?: string | null;
 }
 
@@ -5263,7 +5263,7 @@ export interface IPatchOfBoolean {
 }
 
 export class PatchOfAdShow implements IPatchOfAdShow {
-    value!: AdShow;
+    value!: AdRequirement;
 
     constructor(data?: IPatchOfAdShow) {
         if (data) {
@@ -5295,7 +5295,7 @@ export class PatchOfAdShow implements IPatchOfAdShow {
 }
 
 export interface IPatchOfAdShow {
-    value: AdShow;
+    value: AdRequirement;
 }
 
 export class AccessTokenData implements IAccessTokenData {

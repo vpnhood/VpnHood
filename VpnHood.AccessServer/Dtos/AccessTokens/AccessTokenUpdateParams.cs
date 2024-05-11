@@ -16,6 +16,6 @@ public class AccessTokenUpdateParams
 
     public Patch<long>? MaxTraffic { get; set; }
     public Patch<bool>? IsEnabled { get; set; }
-    public Patch<AdShow>? AdShow { get; set; }
+    public Patch<AdRequirement>? AdRequirement { get; set; }
     public Patch<string>? Description { get; set; }
 }

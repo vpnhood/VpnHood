@@ -2,7 +2,7 @@
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
-using AdShow = VpnHood.AccessServer.Api.AdShow;
+using AdRequirement = VpnHood.AccessServer.Api.AdRequirement;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -20,7 +20,7 @@ public class AdTest
             ServerFarmId = farm.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
             Description = Guid.NewGuid().ToString(),
-            AdShow = AdShow.Required,
+            AdRequirement = AdRequirement.Required,
             IsEnabled = true
         });
 
@@ -52,7 +52,7 @@ public class AdTest
         {
             ServerFarmId = farm.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
-            AdShow =  AdShow.Required,
+            AdRequirement =  AdRequirement.Required,
             IsEnabled = true,
             Description = Guid.NewGuid().ToString()
         });

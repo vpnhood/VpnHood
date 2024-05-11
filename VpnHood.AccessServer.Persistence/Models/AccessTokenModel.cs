@@ -20,7 +20,7 @@ public class AccessTokenModel
     public required DateTime? LastUsedTime { get; set; }
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; set; }
-    public required AdShow AdShow { get; set; }
+    public required AdRequirement AdRequirement { get; set; }
     public required string? Description { get; set; }
     public required bool IsDeleted { get; set; }
 

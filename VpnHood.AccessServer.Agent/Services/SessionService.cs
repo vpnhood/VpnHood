@@ -216,7 +216,7 @@ public class SessionService(
         var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&
             accessToken.Description?.Contains("#ad-debugger") is null or false; //for ad debuggers
 
-        var isAdRequired = accessToken.AdShow is AdShow.Required && !isAdRewardedDevice;
+        var isAdRequired = accessToken.AdRequirement is AdRequirement.Required && !isAdRewardedDevice;
 
         // create session
         var session = new SessionCache

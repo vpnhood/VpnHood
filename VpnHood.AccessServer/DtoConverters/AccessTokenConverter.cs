@@ -25,7 +25,7 @@ public static class AccessTokenConverter
             MaxTraffic = model.MaxTraffic,
             ProjectId = model.ProjectId,
             SupportCode = model.SupportCode,
-            AdShow = model.AdShow,
+            AdRequirement = model.AdRequirement,
             Description = model.Description
         };
         return accessToken;

@@ -8129,7 +8129,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("adShow")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public AdShow AdShow { get; set; } = default!;
+        public AdRequirement AdRequirement { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
@@ -8148,7 +8148,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum AdShow
+    public enum AdRequirement
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"None")]
@@ -8254,7 +8254,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("adShow")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public AdShow AdShow { get; set; } = default!;
+        public AdRequirement AdRequirement { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
@@ -8287,7 +8287,7 @@ namespace VpnHood.AccessServer.Api
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("adShow")]
-        public PatchOfAdShow? AdShow { get; set; } = default!;
+        public PatchOfAdShow? AdRequirement { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public PatchOfString? Description { get; set; } = default!;
@@ -8356,7 +8356,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public AdShow Value { get; set; } = default!;
+        public AdRequirement Value { get; set; } = default!;
 
     }
 

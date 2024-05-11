@@ -17,7 +17,7 @@ public class AccessToken
     public required DateTime? LastUsedTime { get; init; }
     public required bool IsPublic { get; init; }
     public required bool IsEnabled { get; init; }
-    public required AdShow AdShow { get; init; }
+    public required AdRequirement AdRequirement { get; init; }
     public required DateTime? ExpirationTime { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required DateTime ModifiedTime { get; init; }

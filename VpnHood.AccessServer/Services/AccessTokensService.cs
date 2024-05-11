@@ -36,7 +36,7 @@ public class AccessTokensService(
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,
-            AdShow = createParams.AdShow,
+            AdRequirement = createParams.AdRequirement,
             IsEnabled = createParams.IsEnabled ?? true,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
@@ -67,7 +67,7 @@ public class AccessTokensService(
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
         if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
-        if (updateParams.AdShow != null) accessToken.AdShow = updateParams.AdShow;
+        if (updateParams.AdRequirement != null) accessToken.AdRequirement = updateParams.AdRequirement;
         if (updateParams.ServerFarmId != null)
         {
             accessToken.ServerFarmId = updateParams.ServerFarmId;

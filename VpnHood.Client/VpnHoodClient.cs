@@ -726,8 +726,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             // show ad if required
-            if (sessionResponse.IsAdRequired || sessionResponse.DisplayAd is not DisplayAd.None)
-                await ShowAd(sessionResponse.DisplayAd is DisplayAd.Flexible, cancellationToken);
+            if (sessionResponse.IsAdRequired || sessionResponse.AdShow is not AdShow.None)
+                await ShowAd(sessionResponse.AdShow is AdShow.Flexible, cancellationToken);
 
             // manage datagram channels
             await ManageDatagramChannels(cancellationToken);

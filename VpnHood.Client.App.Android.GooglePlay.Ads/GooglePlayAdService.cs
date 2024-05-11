@@ -1,11 +1,9 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Rewarded;
-using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Exceptions;
-using VpnHood.Common.Logging;
 using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;

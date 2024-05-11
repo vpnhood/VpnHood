@@ -8126,7 +8126,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("adShow")]
+        [System.Text.Json.Serialization.JsonPropertyName("adRequirement")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public AdRequirement AdRequirement { get; set; } = default!;
@@ -8251,7 +8251,7 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("adShow")]
+        [System.Text.Json.Serialization.JsonPropertyName("adRequirement")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public AdRequirement AdRequirement { get; set; } = default!;
@@ -8286,8 +8286,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("adShow")]
-        public PatchOfAdShow? AdRequirement { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adRequirement")]
+        public PatchOfAdRequirement? AdRequirement { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public PatchOfString? Description { get; set; } = default!;
@@ -8350,7 +8350,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PatchOfAdShow
+    public partial class PatchOfAdRequirement
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]

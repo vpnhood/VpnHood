@@ -64,7 +64,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Flexible);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -89,7 +89,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Flexible);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -115,7 +115,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -141,7 +141,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -167,7 +167,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
         fileAccessManager.RejectAllAds = true; // server will reject all ads
 

@@ -253,58 +253,6 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    isSubscriptionOrderProcessed(providerOrderId: string, cancelToken?: CancelToken): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/account/subscription-orders/providerOrderId:{providerOrderId}/is-processed";
-        if (providerOrderId === undefined || providerOrderId === null)
-            throw new Error("The parameter 'providerOrderId' must be defined.");
-        url_ = url_.replace("{providerOrderId}", encodeURIComponent("" + providerOrderId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processIsSubscriptionOrderProcessed(_response);
-        });
-    }
-
-    protected processIsSubscriptionOrderProcessed(response: AxiosResponse): Promise<boolean> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-                result200 = resultData200 !== undefined ? resultData200 : <any>null;
-    
-            return Promise.resolve<boolean>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<boolean>(null as any);
-    }
-
     getAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
         let url_ = this.baseUrl + "/api/account/subscriptions/{subscriptionId}/access-keys";
         if (subscriptionId === undefined || subscriptionId === null)
@@ -1153,6 +1101,138 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    openAlwaysOnPage( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/settings/open-always-on-page";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processOpenAlwaysOnPage(_response);
+        });
+    }
+
+    protected processOpenAlwaysOnPage(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    requestQuickLaunch( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/settings/request-quick-launch";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRequestQuickLaunch(_response);
+        });
+    }
+
+    protected processRequestQuickLaunch(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    requestNotification( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/settings/request-notification";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRequestNotification(_response);
+        });
+    }
+
+    protected processRequestNotification(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class BillingClient {
@@ -1418,6 +1498,11 @@ export class AppFeatures implements IAppFeatures {
     uiName?: string | null;
     isAddAccessKeySupported!: boolean;
     builtInClientProfileId?: string | null;
+    isAccountSupported!: boolean;
+    isBillingSupported!: boolean;
+    isQuickLaunchSupported!: boolean;
+    isNotificationSupported!: boolean;
+    isAlwaysOnSupported!: boolean;
 
     constructor(data?: IAppFeatures) {
         if (data) {
@@ -1437,6 +1522,11 @@ export class AppFeatures implements IAppFeatures {
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : <any>null;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : <any>null;
             this.builtInClientProfileId = _data["builtInClientProfileId"] !== undefined ? _data["builtInClientProfileId"] : <any>null;
+            this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : <any>null;
+            this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : <any>null;
+            this.isQuickLaunchSupported = _data["isQuickLaunchSupported"] !== undefined ? _data["isQuickLaunchSupported"] : <any>null;
+            this.isNotificationSupported = _data["isNotificationSupported"] !== undefined ? _data["isNotificationSupported"] : <any>null;
+            this.isAlwaysOnSupported = _data["isAlwaysOnSupported"] !== undefined ? _data["isAlwaysOnSupported"] : <any>null;
         }
     }
 
@@ -1456,6 +1546,11 @@ export class AppFeatures implements IAppFeatures {
         data["uiName"] = this.uiName !== undefined ? this.uiName : <any>null;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : <any>null;
         data["builtInClientProfileId"] = this.builtInClientProfileId !== undefined ? this.builtInClientProfileId : <any>null;
+        data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : <any>null;
+        data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : <any>null;
+        data["isQuickLaunchSupported"] = this.isQuickLaunchSupported !== undefined ? this.isQuickLaunchSupported : <any>null;
+        data["isNotificationSupported"] = this.isNotificationSupported !== undefined ? this.isNotificationSupported : <any>null;
+        data["isAlwaysOnSupported"] = this.isAlwaysOnSupported !== undefined ? this.isAlwaysOnSupported : <any>null;
         return data;
     }
 }
@@ -1468,17 +1563,21 @@ export interface IAppFeatures {
     uiName?: string | null;
     isAddAccessKeySupported: boolean;
     builtInClientProfileId?: string | null;
+    isAccountSupported: boolean;
+    isBillingSupported: boolean;
+    isQuickLaunchSupported: boolean;
+    isNotificationSupported: boolean;
+    isAlwaysOnSupported: boolean;
 }
 
 export class AppSettings implements IAppSettings {
     version!: number;
-    isQuickLaunchAdded!: boolean;
-    isQuickLaunchRequested!: boolean;
+    isQuickLaunchEnabled?: boolean | null;
+    isNotificationEnabled?: boolean | null;
     configTime!: Date;
     userSettings!: UserSettings;
     clientId!: string;
     lastCountryIpGroupId?: string | null;
-    lastUpdateCheckTime?: Date | null;
 
     constructor(data?: IAppSettings) {
         if (data) {
@@ -1495,13 +1594,12 @@ export class AppSettings implements IAppSettings {
     init(_data?: any) {
         if (_data) {
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
-            this.isQuickLaunchAdded = _data["isQuickLaunchAdded"] !== undefined ? _data["isQuickLaunchAdded"] : <any>null;
-            this.isQuickLaunchRequested = _data["isQuickLaunchRequested"] !== undefined ? _data["isQuickLaunchRequested"] : <any>null;
+            this.isQuickLaunchEnabled = _data["isQuickLaunchEnabled"] !== undefined ? _data["isQuickLaunchEnabled"] : <any>null;
+            this.isNotificationEnabled = _data["isNotificationEnabled"] !== undefined ? _data["isNotificationEnabled"] : <any>null;
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
             this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
-            this.lastUpdateCheckTime = _data["lastUpdateCheckTime"] ? new Date(_data["lastUpdateCheckTime"].toString()) : <any>null;
         }
     }
 
@@ -1515,26 +1613,24 @@ export class AppSettings implements IAppSettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["version"] = this.version !== undefined ? this.version : <any>null;
-        data["isQuickLaunchAdded"] = this.isQuickLaunchAdded !== undefined ? this.isQuickLaunchAdded : <any>null;
-        data["isQuickLaunchRequested"] = this.isQuickLaunchRequested !== undefined ? this.isQuickLaunchRequested : <any>null;
+        data["isQuickLaunchEnabled"] = this.isQuickLaunchEnabled !== undefined ? this.isQuickLaunchEnabled : <any>null;
+        data["isNotificationEnabled"] = this.isNotificationEnabled !== undefined ? this.isNotificationEnabled : <any>null;
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
         data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
-        data["lastUpdateCheckTime"] = this.lastUpdateCheckTime ? this.lastUpdateCheckTime.toISOString() : <any>null;
         return data;
     }
 }
 
 export interface IAppSettings {
     version: number;
-    isQuickLaunchAdded: boolean;
-    isQuickLaunchRequested: boolean;
+    isQuickLaunchEnabled?: boolean | null;
+    isNotificationEnabled?: boolean | null;
     configTime: Date;
     userSettings: UserSettings;
     clientId: string;
     lastCountryIpGroupId?: string | null;
-    lastUpdateCheckTime?: Date | null;
 }
 
 export class UserSettings implements IUserSettings {
@@ -1551,11 +1647,13 @@ export class UserSettings implements IUserSettings {
     appFiltersMode!: FilterMode;
     useUdpChannel!: boolean;
     dropUdpPackets!: boolean;
-    excludeLocalNetwork!: boolean;
+    includeLocalNetwork!: boolean;
     packetCaptureIncludeIpRanges!: string[];
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker!: boolean;
     dnsServers?: string[] | null;
+    debugData1?: string | null;
+    debugData2?: string | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -1606,7 +1704,7 @@ export class UserSettings implements IUserSettings {
             this.appFiltersMode = _data["appFiltersMode"] !== undefined ? _data["appFiltersMode"] : <any>null;
             this.useUdpChannel = _data["useUdpChannel"] !== undefined ? _data["useUdpChannel"] : <any>null;
             this.dropUdpPackets = _data["dropUdpPackets"] !== undefined ? _data["dropUdpPackets"] : <any>null;
-            this.excludeLocalNetwork = _data["excludeLocalNetwork"] !== undefined ? _data["excludeLocalNetwork"] : <any>null;
+            this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : <any>null;
             if (Array.isArray(_data["packetCaptureIncludeIpRanges"])) {
                 this.packetCaptureIncludeIpRanges = [] as any;
                 for (let item of _data["packetCaptureIncludeIpRanges"])
@@ -1632,6 +1730,8 @@ export class UserSettings implements IUserSettings {
             else {
                 this.dnsServers = <any>null;
             }
+            this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : <any>null;
+            this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : <any>null;
         }
     }
 
@@ -1669,7 +1769,7 @@ export class UserSettings implements IUserSettings {
         data["appFiltersMode"] = this.appFiltersMode !== undefined ? this.appFiltersMode : <any>null;
         data["useUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : <any>null;
         data["dropUdpPackets"] = this.dropUdpPackets !== undefined ? this.dropUdpPackets : <any>null;
-        data["excludeLocalNetwork"] = this.excludeLocalNetwork !== undefined ? this.excludeLocalNetwork : <any>null;
+        data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : <any>null;
         if (Array.isArray(this.packetCaptureIncludeIpRanges)) {
             data["packetCaptureIncludeIpRanges"] = [];
             for (let item of this.packetCaptureIncludeIpRanges)
@@ -1686,6 +1786,8 @@ export class UserSettings implements IUserSettings {
             for (let item of this.dnsServers)
                 data["dnsServers"].push(item);
         }
+        data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : <any>null;
+        data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : <any>null;
         return data;
     }
 }
@@ -1704,11 +1806,13 @@ export interface IUserSettings {
     appFiltersMode: FilterMode;
     useUdpChannel: boolean;
     dropUdpPackets: boolean;
-    excludeLocalNetwork: boolean;
+    includeLocalNetwork: boolean;
     packetCaptureIncludeIpRanges: string[];
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker: boolean;
     dnsServers?: string[] | null;
+    debugData1?: string | null;
+    debugData2?: string | null;
 }
 
 export class AppLogSettings implements IAppLogSettings {
@@ -1770,7 +1874,7 @@ export class AppState implements IAppState {
     connectRequestTime?: Date | null;
     connectionState!: AppConnectionState;
     lastError?: string | null;
-    clientProfileId?: string | null;
+    clientProfile?: ClientProfileBaseInfo | null;
     isIdle!: boolean;
     logExists!: boolean;
     hasDiagnoseStarted!: boolean;
@@ -1789,6 +1893,7 @@ export class AppState implements IAppState {
     canConnect!: boolean;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
+    purchaseState?: BillingPurchaseState | null;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -1812,7 +1917,7 @@ export class AppState implements IAppState {
             this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : <any>null;
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
-            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
@@ -1831,6 +1936,7 @@ export class AppState implements IAppState {
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
             this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
+            this.purchaseState = _data["purchaseState"] !== undefined ? _data["purchaseState"] : <any>null;
         }
     }
 
@@ -1847,7 +1953,7 @@ export class AppState implements IAppState {
         data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : <any>null;
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
-        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
         data["hasDiagnoseStarted"] = this.hasDiagnoseStarted !== undefined ? this.hasDiagnoseStarted : <any>null;
@@ -1866,6 +1972,7 @@ export class AppState implements IAppState {
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
         data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
+        data["purchaseState"] = this.purchaseState !== undefined ? this.purchaseState : <any>null;
         return data;
     }
 }
@@ -1875,7 +1982,7 @@ export interface IAppState {
     connectRequestTime?: Date | null;
     connectionState: AppConnectionState;
     lastError?: string | null;
-    clientProfileId?: string | null;
+    clientProfile?: ClientProfileBaseInfo | null;
     isIdle: boolean;
     logExists: boolean;
     hasDiagnoseStarted: boolean;
@@ -1894,6 +2001,7 @@ export interface IAppState {
     canConnect: boolean;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
+    purchaseState?: BillingPurchaseState | null;
 }
 
 export enum AppConnectionState {
@@ -1906,13 +2014,60 @@ export enum AppConnectionState {
     Disconnecting = "Disconnecting",
 }
 
+export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
+    clientProfileId!: string;
+    clientProfileName!: string;
+    regionId?: string | null;
+    supportId?: string | null;
+
+    constructor(data?: IClientProfileBaseInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
+            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
+            this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ClientProfileBaseInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientProfileBaseInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
+        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
+        data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
+        return data;
+    }
+}
+
+export interface IClientProfileBaseInfo {
+    clientProfileId: string;
+    clientProfileName: string;
+    regionId?: string | null;
+    supportId?: string | null;
+}
+
 export class SessionStatus implements ISessionStatus {
     errorCode!: SessionErrorCode;
     accessUsage?: AccessUsage | null;
     suppressedTo!: SessionSuppressType;
     suppressedBy!: SessionSuppressType;
     errorMessage?: string | null;
-    isAdRequired!: boolean;
 
     constructor(data?: ISessionStatus) {
         if (data) {
@@ -1930,7 +2085,6 @@ export class SessionStatus implements ISessionStatus {
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
             this.suppressedBy = _data["suppressedBy"] !== undefined ? _data["suppressedBy"] : <any>null;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
-            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
         }
     }
 
@@ -1948,7 +2102,6 @@ export class SessionStatus implements ISessionStatus {
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
         data["suppressedBy"] = this.suppressedBy !== undefined ? this.suppressedBy : <any>null;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
-        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
         return data;
     }
 }
@@ -1959,7 +2112,6 @@ export interface ISessionStatus {
     suppressedTo: SessionSuppressType;
     suppressedBy: SessionSuppressType;
     errorMessage?: string | null;
-    isAdRequired: boolean;
 }
 
 export enum SessionErrorCode {
@@ -2239,34 +2391,30 @@ export interface IUiCultureInfo {
     nativeName: string;
 }
 
-export class ClientProfileInfo implements IClientProfileInfo {
-    clientProfileId!: string;
-    clientProfileName!: string;
+export enum BillingPurchaseState {
+    None = "None",
+    Started = "Started",
+    Processing = "Processing",
+}
+
+export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientProfileInfo {
     tokenId!: string;
-    supportId?: string | null;
     hostNames!: string[];
     isValidHostName!: boolean;
-    regions!: HostRegion[];
+    regions!: HostRegionInfo[];
 
     constructor(data?: IClientProfileInfo) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
+        super(data);
         if (!data) {
             this.hostNames = [];
             this.regions = [];
         }
     }
 
-    init(_data?: any) {
+    override init(_data?: any) {
+        super.init(_data);
         if (_data) {
-            this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
-            this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
             this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : <any>null;
-            this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
             if (Array.isArray(_data["hostNames"])) {
                 this.hostNames = [] as any;
                 for (let item of _data["hostNames"])
@@ -2279,7 +2427,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             if (Array.isArray(_data["regions"])) {
                 this.regions = [] as any;
                 for (let item of _data["regions"])
-                    this.regions!.push(HostRegion.fromJS(item));
+                    this.regions!.push(HostRegionInfo.fromJS(item));
             }
             else {
                 this.regions = <any>null;
@@ -2287,19 +2435,16 @@ export class ClientProfileInfo implements IClientProfileInfo {
         }
     }
 
-    static fromJS(data: any): ClientProfileInfo {
+    static override fromJS(data: any): ClientProfileInfo {
         data = typeof data === 'object' ? data : {};
         let result = new ClientProfileInfo();
         result.init(data);
         return result;
     }
 
-    toJSON(data?: any) {
+    override toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
-        data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
         data["tokenId"] = this.tokenId !== undefined ? this.tokenId : <any>null;
-        data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
         if (Array.isArray(this.hostNames)) {
             data["hostNames"] = [];
             for (let item of this.hostNames)
@@ -2311,26 +2456,24 @@ export class ClientProfileInfo implements IClientProfileInfo {
             for (let item of this.regions)
                 data["regions"].push(item.toJSON());
         }
+        super.toJSON(data);
         return data;
     }
 }
 
-export interface IClientProfileInfo {
-    clientProfileId: string;
-    clientProfileName: string;
+export interface IClientProfileInfo extends IClientProfileBaseInfo {
     tokenId: string;
-    supportId?: string | null;
     hostNames: string[];
     isValidHostName: boolean;
-    regions: HostRegion[];
+    regions: HostRegionInfo[];
 }
 
-export class HostRegion implements IHostRegion {
+export class HostRegionInfo implements IHostRegionInfo {
     regionId!: string;
-    regionName?: string | null;
-    countryCode?: string | null;
+    regionName!: string;
+    countryCode!: string;
 
-    constructor(data?: IHostRegion) {
+    constructor(data?: IHostRegionInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -2347,9 +2490,9 @@ export class HostRegion implements IHostRegion {
         }
     }
 
-    static fromJS(data: any): HostRegion {
+    static fromJS(data: any): HostRegionInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new HostRegion();
+        let result = new HostRegionInfo();
         result.init(data);
         return result;
     }
@@ -2363,10 +2506,10 @@ export class HostRegion implements IHostRegion {
     }
 }
 
-export interface IHostRegion {
+export interface IHostRegionInfo {
     regionId: string;
-    regionName?: string | null;
-    countryCode?: string | null;
+    regionName: string;
+    countryCode: string;
 }
 
 export class ConfigParams implements IConfigParams {

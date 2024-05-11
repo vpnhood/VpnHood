@@ -9,9 +9,7 @@ public class SyncLogger(ILogger logger) : ILogger
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         lock (_lock)
-        {
             return logger.BeginScope(state);
-        }
     }
 
     public bool IsEnabled(LogLevel logLevel)
@@ -24,8 +22,6 @@ public class SyncLogger(ILogger logger) : ILogger
         Func<TState, Exception?, string> formatter)
     {
         lock (_lock)
-        {
             logger.Log(logLevel, eventId, state, exception, formatter);
-        }
     }
 }

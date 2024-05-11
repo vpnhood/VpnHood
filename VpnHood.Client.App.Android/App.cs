@@ -11,13 +11,16 @@ namespace VpnHood.Client.App.Droid;
     Banner = "@mipmap/banner", // for TV
     NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
     SupportsRtl = true, AllowBackup = true)]
-public class App(IntPtr javaReference, JniHandleOwnership transfer) 
+public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    protected override AppOptions AppOptions => new()
+    protected override AppOptions CreateAppOptions() => new()
     {
         Resource = DefaultAppResource.Resource,
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
-        IsAddAccessKeySupported = true
+        IsAddAccessKeySupported = true,
+        UpdaterService = AssemblyInfo.CreateUpdaterService(),
+        CultureService = AndroidAppAppCultureService.CreateIfSupported(),
+        UiService = new AndroidAppUiService()
     };
 }

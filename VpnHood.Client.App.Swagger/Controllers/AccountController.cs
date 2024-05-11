@@ -20,6 +20,7 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
+
     [HttpGet("is-signin-with-google-supported")]
     public bool IsSigninWithGoogleSupported()
     {
@@ -38,14 +39,8 @@ public class AccountController : ControllerBase, IAccountController
         throw new NotImplementedException();
     }
 
-    [HttpGet("subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
-    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
-    {
-        throw new NotImplementedException();
-    }
-
     [HttpGet("subscriptions/{subscriptionId}/access-keys")]
-    public Task<List<string>> GetAccessKeys(string subscriptionId)
+    public Task<string[]> GetAccessKeys(string subscriptionId)
     {
         throw new NotImplementedException();
     }

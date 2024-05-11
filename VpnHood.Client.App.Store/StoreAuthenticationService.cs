@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
 using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -9,13 +10,14 @@ using VpnHood.Store.Api;
 
 namespace VpnHood.Client.App.Store;
 
-public class AppAuthenticationService : IAppAuthenticationService
+public class StoreAuthenticationService : IAppAuthenticationService
 {
     private bool _disposed;
+    private readonly string _storageFolderPath;
     private readonly IAppAuthenticationExternalService? _externalAuthenticationService;
     private readonly HttpClient _httpClientWithoutAuth;
     private ApiKey? _apiKey;
-    private static string ApiKeyFilePath => Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "account", "apiKey.json");
+    private string ApiKeyFilePath => Path.Combine(_storageFolderPath, "account", "apiKey.json");
     public bool IsSignInWithGoogleSupported => _externalAuthenticationService != null;
 
     public string? UserId => ApiKey?.UserId;
@@ -23,12 +25,14 @@ public class AppAuthenticationService : IAppAuthenticationService
     public HttpClient HttpClient { get; }
     public Guid StoreAppId { get; }
 
-    public AppAuthenticationService(
+    public StoreAuthenticationService(
+        string storageFolderPath,
         Uri storeBaseUrl,
         Guid storeAppId,
         IAppAuthenticationExternalService? externalAuthenticationService,
         bool ignoreSslVerification = false)
     {
+        _storageFolderPath = storageFolderPath;
         _externalAuthenticationService = externalAuthenticationService;
         StoreAppId = storeAppId;
         var handlerWithAuth = new HttpClientHandlerAuth(this);
@@ -60,7 +64,7 @@ public class AppAuthenticationService : IAppAuthenticationService
         }
     }
 
-    private async Task<ApiKey?> TryGetApiKey()
+    private async Task<ApiKey?> TryGetApiKey(IUiContext? uiContext)
     {
         // null if it has not been signed in yet
         if (ApiKey == null)
@@ -88,7 +92,10 @@ public class AppAuthenticationService : IAppAuthenticationService
         try
         {
             // refresh by id token
-            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn() : null;
+            if (uiContext == null)
+                throw new Exception("UI context is not available.");
+
+            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext) : null;
             if (!string.IsNullOrWhiteSpace(idToken))
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
@@ -104,24 +111,24 @@ public class AppAuthenticationService : IAppAuthenticationService
         return null;
     }
 
-    public async Task SignInWithGoogle()
+    public async Task SignInWithGoogle(IUiContext uiContext)
     {
         if (_externalAuthenticationService == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _externalAuthenticationService.SignIn();
+        var idToken = await _externalAuthenticationService.SignIn(uiContext);
         await SignInToVpnHoodStore(idToken, true);
     }
 
-    public async Task SignOut()
+    public async Task SignOut(IUiContext uiContext)
     {
         ApiKey = null;
         if (File.Exists(ApiKeyFilePath))
             File.Delete(ApiKeyFilePath);
-        
+
 
         if (_externalAuthenticationService != null)
-            await _externalAuthenticationService.SignOut();
+            await _externalAuthenticationService.SignOut(uiContext);
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
@@ -164,11 +171,11 @@ public class AppAuthenticationService : IAppAuthenticationService
         HttpClient.Dispose();
     }
 
-    public class HttpClientHandlerAuth(AppAuthenticationService accountService) : HttpClientHandler
+    public class HttpClientHandlerAuth(StoreAuthenticationService accountService) : HttpClientHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var apiKey = await accountService.TryGetApiKey();
+            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext);
             request.Headers.Authorization = apiKey != null ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : null;
             return await base.SendAsync(request, cancellationToken);
         }

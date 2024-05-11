@@ -8,7 +8,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
-using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -226,10 +225,6 @@ internal class ClientHost(
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
             var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
-
-            // MaxEncryptChunk
-            if (proxyClientStream.Stream is BinaryStreamCustom binaryStream)
-                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
 
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             vpnHoodClient.Tunnel.AddChannel(channel);

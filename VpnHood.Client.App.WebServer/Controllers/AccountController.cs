@@ -20,7 +20,7 @@ internal class AccountController : WebApiController, IAccountController
     [Route(HttpVerbs.Post, "/refresh")]
     public Task Refresh()
     {
-        return AccountService.Refresh();
+        return VpnHoodApp.Instance.RefreshAccount();
     }
 
     [Route(HttpVerbs.Get, "/is-signin-with-google-supported")]
@@ -35,23 +35,17 @@ internal class AccountController : WebApiController, IAccountController
         if (!AccountService.Authentication.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.Authentication.SignInWithGoogle();
+        return AccountService.Authentication.SignInWithGoogle(VpnHoodApp.Instance.RequiredUiContext);
     }
 
     [Route(HttpVerbs.Post, "/sign-out")]
     public Task SignOut()
     {
-        return AccountService.Authentication.SignOut();
-    }
-
-    [Route(HttpVerbs.Get, "/subscription-orders/providerOrderId:{providerOrderId}/is-processed")]
-    public Task<bool> IsSubscriptionOrderProcessed(string providerOrderId)
-    {
-        return AccountService.IsSubscriptionOrderProcessed(providerOrderId);
+        return AccountService.Authentication.SignOut(VpnHoodApp.Instance.RequiredUiContext);
     }
 
     [Route(HttpVerbs.Get, "/subscriptions/{subscriptionId}/access-keys")]
-    public Task<List<string>> GetAccessKeys(string subscriptionId)
+    public Task<string[]> GetAccessKeys(string subscriptionId)
     {
         return AccountService.GetAccessKeys(subscriptionId);
     }

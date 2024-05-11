@@ -1,4 +1,4 @@
-# v4.4.503
+# v4.4.506
 ### Client
 * Update: Android: Show Notification & QuickLaunch Request after connect
 * Update: Display AD without VPN
@@ -7,7 +7,10 @@
 * Fix: minor issue in disconnect messages
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 
-# v4.4.500
+### Server
+* Update: Support Flexible Ad
+
+# v4.4.500 
 ### Client
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App

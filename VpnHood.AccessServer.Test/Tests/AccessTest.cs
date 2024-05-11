@@ -14,7 +14,6 @@ public class AccessTest
     {
         await Task.Delay(0);
         Console.WriteLine(new RegionInfo("us").EnglishName);
-
     }
 
     [TestMethod]

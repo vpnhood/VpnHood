@@ -78,7 +78,7 @@ public class RegionService(VhRepo vhRepo)
             try
             {
                 var regionInfo = new RegionInfo(culture.Name);
-                countryInfos.TryAdd(culture.Name, new CountryInfo
+                countryInfos.TryAdd(regionInfo.Name, new CountryInfo
                 {
                     CountryCode = regionInfo.Name,
                     EnglishName = regionInfo.EnglishName

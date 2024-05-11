@@ -12,6 +12,7 @@ using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
 using GrayMint.Common.Utils;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -92,7 +93,7 @@ public class ProjectService(
                     SupportCode = 1000,
                     Secret = GmUtil.GenerateKey(),
                     IsPublic = true,
-                    IsAdRequired = false,
+                    AdShow = AdShow.None,
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow,
@@ -115,7 +116,7 @@ public class ProjectService(
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
-                    IsAdRequired = false,
+                    AdShow = AdShow.None,
                     SupportCode = 1001,
                     MaxDevice = 5,
                     Secret = GmUtil.GenerateKey(),

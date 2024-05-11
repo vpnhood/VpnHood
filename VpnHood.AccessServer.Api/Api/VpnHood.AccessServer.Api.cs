@@ -8126,8 +8126,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
-        public bool IsAdRequired { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adShow")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AdShow AdShow { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
@@ -8142,6 +8144,21 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AdShow
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"None")]
+        None = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Flexible")]
+        Flexible = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Required")]
+        Required = 2,
 
     }
 
@@ -8234,8 +8251,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
-        public bool IsAdRequired { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adShow")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AdShow AdShow { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public string? Description { get; set; } = default!;
@@ -8267,8 +8286,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
-        public PatchOfBoolean? IsAdRequired { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adShow")]
+        public PatchOfAdShow? AdShow { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
         public PatchOfString? Description { get; set; } = default!;
@@ -8327,6 +8346,17 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public bool Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfAdShow
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AdShow Value { get; set; } = default!;
 
     }
 

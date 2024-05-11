@@ -2,6 +2,7 @@
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
+using AdShow = VpnHood.AccessServer.Api.AdShow;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -19,13 +20,9 @@ public class AdTest
             ServerFarmId = farm.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
             Description = Guid.NewGuid().ToString(),
-            IsAdRequired = true,
+            AdShow = AdShow.Required,
             IsEnabled = true
         });
-
-        // check access token
-        var token = await accessTokenDom.GetToken();
-        Assert.IsTrue(token.IsAdRequired);
 
         // create session
         var sessionDom = await accessTokenDom.CreateSession();
@@ -55,15 +52,13 @@ public class AdTest
         {
             ServerFarmId = farm.ServerFarmId,
             AccessTokenName = Guid.NewGuid().ToString(),
-            IsAdRequired = true,
+            AdShow =  AdShow.Required,
             IsEnabled = true,
             Description = Guid.NewGuid().ToString()
         });
 
         // check access token
-        var token = await accessTokenDom.GetToken();
         var clientId = Guid.NewGuid();
-        Assert.IsTrue(token.IsAdRequired);
 
         // create session
         var sessionDom = await accessTokenDom.CreateSession(clientId: clientId);

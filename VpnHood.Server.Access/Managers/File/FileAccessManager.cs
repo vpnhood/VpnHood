@@ -295,7 +295,7 @@ public class FileAccessManager : IAccessManager
         string? tokenName = null,
         int maxTrafficByteCount = 0,
         DateTime? expirationTime = null,
-        bool isAdRequired = false)
+        DisplayAd displayAd = DisplayAd.None)
     {
         // generate key
         var aes = Aes.Create();
@@ -308,6 +308,7 @@ public class FileAccessManager : IAccessManager
             MaxTraffic = maxTrafficByteCount,
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
+            DisplayAd = displayAd,
             Token = new Token
             {
                 IssuedAt = DateTime.UtcNow,
@@ -315,8 +316,7 @@ public class FileAccessManager : IAccessManager
                 Secret = aes.Key,
                 Name = tokenName,
                 SupportId = null,
-                ServerToken = _serverToken,
-                IsAdRequired = isAdRequired
+                ServerToken = _serverToken
             }
         };
 
@@ -413,7 +413,8 @@ public class FileAccessManager : IAccessManager
         public DateTime? ExpirationTime { get; set; }
         public int MaxClientCount { get; set; }
         public long MaxTraffic { get; set; }
-        public Token Token { get; set; } = null!;
+        public DisplayAd DisplayAd { get; set; }
+        public required Token Token { get; set; }
 
         [JsonIgnore]
         public AccessUsage AccessUsage { get; set; } = new();

@@ -4,6 +4,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Collections;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.File;
 
@@ -14,12 +15,16 @@ public class AdTest : TestBase
 {
     private class TestAdService(AdAccessManager accessManager) : IAppAdService
     {
-        public bool FailAlways { get; set; }
+        public bool FailShow { get; set; }
+        public bool FailLoad { get; set; }
 
         public Task ShowAd(IUiContext uiContext, string customData, CancellationToken cancellationToken)
         {
-            if (FailAlways)
-                throw new Exception("Ad failed");
+            if (FailLoad)
+                throw new AdLoadException("Load Ad failed.");
+
+            if (FailShow)
+                throw new Exception("Ad failed.");
 
             accessManager.AddAdData(customData);
             return Task.CompletedTask;
@@ -50,6 +55,57 @@ public class AdTest : TestBase
     }
 
     [TestMethod]
+    public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
+    {
+        // create server
+        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
+            TestHelper.CreateFileAccessManagerOptions());
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        await using var server = TestHelper.CreateServer(testAccessManager);
+
+        // create access item
+        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Flexible);
+        accessItem.Token.ToAccessKey();
+
+        // create client app
+        var appOptions = TestHelper.CreateClientAppOptions();
+        var adService = new TestAdService(fileAccessManager);
+        appOptions.AdService = adService;
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        adService.FailLoad = true;
+
+        // connect
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId);
+    }
+
+    [TestMethod]
+    public async Task flexible_ad_should_close_session_if_display_ad_failed()
+    {
+        // create server
+        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
+            TestHelper.CreateFileAccessManagerOptions());
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        await using var server = TestHelper.CreateServer(testAccessManager);
+
+        // create access item
+        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Flexible);
+        accessItem.Token.ToAccessKey();
+
+        // create client app
+        var appOptions = TestHelper.CreateClientAppOptions();
+        var adService = new TestAdService(fileAccessManager);
+        appOptions.AdService = adService;
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        adService.FailShow = true;
+
+        // connect
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
+        await Assert.ThrowsExceptionAsync<AdException>(() => app.Connect(clientProfile.ClientProfileId));
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
+    }
+
+    [TestMethod]
     public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server
@@ -59,7 +115,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(isAdRequired: true);
+        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -67,7 +123,7 @@ public class AdTest : TestBase
         var adService = new TestAdService(fileAccessManager);
         appOptions.AdService = adService;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        adService.FailAlways = true;
+        adService.FailShow = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
@@ -85,7 +141,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(isAdRequired: true);
+        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -111,7 +167,7 @@ public class AdTest : TestBase
         await using var server = TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(isAdRequired: true);
+        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
         accessItem.Token.ToAccessKey();
         fileAccessManager.RejectAllAds = true; // server will reject all ads
 

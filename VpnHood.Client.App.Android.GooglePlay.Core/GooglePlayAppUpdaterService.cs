@@ -1,6 +1,8 @@
 ﻿using Java.Lang;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install;
@@ -10,11 +12,12 @@ using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
+public class GooglePlayAppUpdaterService : IAppUpdaterService
 {
-    public async Task<bool> Update()
+    public async Task<bool> Update(IUiContext uiContext)
     {
-        using var appUpdateManager = AppUpdateManagerFactory.Create(activity);
+        var appUiContext = (AndroidUiContext)uiContext;
+        using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
         try
         {
             var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
@@ -29,7 +32,7 @@ public class GooglePlayAppUpdaterService(Activity activity) : IAppUpdaterService
             using var googlePlayDownloadStateListener = new GooglePlayDownloadCompleteListener(appUpdateManager);
 
             // Show Google Play update dialog
-            var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
+            var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
             var updateFlowResult = await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task;
             if (updateFlowResult.IntValue() != -1)
                 throw new Exception("Could not start update flow.");

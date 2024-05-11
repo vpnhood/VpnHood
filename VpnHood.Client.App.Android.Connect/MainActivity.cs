@@ -4,9 +4,6 @@ using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Connect.Properties;
-using VpnHood.Client.App.Droid.GooglePlay;
-using VpnHood.Client.App.Droid.GooglePlay.Ads;
-using VpnHood.Client.App.Store;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -16,7 +13,6 @@ namespace VpnHood.Client.App.Droid.Connect;
     MainLauncher = true,
     Exported = true,
     WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
-    // AlwaysRetainTaskState = false, //todo: looks not required
     LaunchMode = LaunchMode.SingleInstance, 
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
@@ -32,31 +28,7 @@ public class MainActivity : AndroidAppMainActivity
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AssemblyInfo.DefaultSpaPort,
-            ListenToAllIps = AssemblyInfo.ListenToAllIps,
-            AppUpdaterService = new GooglePlayAppUpdaterService(this)
+            ListenToAllIps = AssemblyInfo.ListenToAllIps
         });
-    }
-
-    protected override void OnCreate(Bundle? savedInstanceState)
-    {
-        base.OnCreate(savedInstanceState);
-        
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(this, AssemblyInfo.FirebaseClientId);
-        var authenticationService = new AppAuthenticationService(AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
-        var googlePlayBillingService = GooglePlayBillingService.Create(this, authenticationService);
-        var googlePlayAdService = GooglePlayAdService.Create(this, AssemblyInfo.RewardedAdUnitId);
-        //_ = GooglePlayFirebaseCrashlytics.Create(this);
-        
-        VpnHoodApp.Instance.Services.AdService = googlePlayAdService;
-        VpnHoodApp.Instance.Services.UpdaterService = new GooglePlayAppUpdaterService(this);
-        VpnHoodApp.Instance.Services.AccountService = new AppAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
-    }
-
-    protected override void OnDestroy()
-    {
-        VpnHoodApp.Instance.Services.UpdaterService = null;
-        VpnHoodApp.Instance.Services.AccountService = null;
-        VpnHoodApp.Instance.Services.AdService = null;
-        base.OnDestroy();
     }
 }

@@ -1,12 +1,24 @@
-# v4.4.500
+# v4.4.506
+### Client
+* Update: Android: Show Notification & QuickLaunch Request after connect
+* Update: Display AD without VPN
+* Fix: Android: Crash when starting as always-on, but there is no selected server
+* Fix: Android: importing access key by file
+* Fix: minor issue in disconnect messages
+* Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
+
+### Server
+* Update: Support Flexible Ad
+
+# v4.4.500 
 ### Client
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App
 * Fix: Ad service
 * Fix: Sometimes the connect button didn't disconnect the current connection
 * Fix: Android: Crash on disconnect
-* Fix: Android: Fix Diagnoser mistakenly shows "Connection is not stable"
-* Fix: Android: Fix Google Play Update
+* Fix: Android: Diagnoser mistakenly shows "Connection is not stable"
+* Fix: Android: Google Play Update
 * Update: Android: Improve Android TV
 
 ### Server

@@ -77,7 +77,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-            ExpirationTime = accessItem.Token.IsAdRequired ? DateTime.UtcNow + _adRequiredTimeout : null
+            ExpirationTime = accessItem.AdShow is AdShow.Required ? DateTime.UtcNow + _adRequiredTimeout : null
         };
 
         //create response
@@ -204,7 +204,8 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null,
-            IsAdRequired = accessItem.Token.IsAdRequired
+            IsAdRequired = accessItem.AdShow is AdShow.Required,
+            AdShow = accessItem.AdShow
         };
     }
 

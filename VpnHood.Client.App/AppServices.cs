@@ -1,12 +1,12 @@
 ﻿using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App;
 
 public class AppServices
 {
-    public IAppAccountService? AccountService { get; set; }
-    public IAppUpdaterService? UpdaterService { get; set; }
-    public IAppAdService? AdService { get; set; }
-    public required ICultureService CultureService { get; init;}
+    public required IAppAccountService? AccountService { get; init; }
+    public required IAppUpdaterService? UpdaterService { get; init; }
+    public required IAppAdService? AdService { get; init; }
+    public required IAppUiService UiService { get; init; }
+    public required IAppCultureService AppCultureService { get; init;}
 }

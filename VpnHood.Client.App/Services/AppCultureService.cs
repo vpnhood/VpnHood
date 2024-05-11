@@ -1,9 +1,10 @@
 ﻿using System.Globalization;
-using VpnHood.Client.Device;
+using VpnHood.Client.App.Abstractions;
 
-namespace VpnHood.Client.App;
+namespace VpnHood.Client.App.Services;
 
-internal class AppCultureService(VpnHoodApp vpnHoodApp) : ICultureService
+internal class AppCultureService(VpnHoodApp vpnHoodApp) 
+    : IAppCultureService
 {
     public string[] SystemCultures => [CultureInfo.InstalledUICulture.Name];
     public string[] AvailableCultures { get; set; } = [];

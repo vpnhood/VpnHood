@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Exceptions;
 using VpnHood.Common.Logging;
 using Object = Java.Lang.Object;
 
@@ -13,7 +14,7 @@ public class GooglePlayAdService(
     : IAppAdService
 {
     private MyRewardedAdLoadCallback? _rewardedAdLoadCallback;
-    private DateTime _lastRewardedAdLoadTime = DateTime.MinValue;
+    private DateTime _lastLoadRewardedAdTime = DateTime.MinValue;
 
 
     public static GooglePlayAdService Create(string rewardedAdUnit)
@@ -26,7 +27,7 @@ public class GooglePlayAdService(
     {
         try
         {
-            if (_rewardedAdLoadCallback != null && _lastRewardedAdLoadTime.AddHours(1) < DateTime.Now)
+            if (_rewardedAdLoadCallback != null && _lastLoadRewardedAdTime.AddHours(1) < DateTime.Now)
                 return await _rewardedAdLoadCallback.Task;
 
             _rewardedAdLoadCallback = new MyRewardedAdLoadCallback();
@@ -39,15 +40,15 @@ public class GooglePlayAdService(
             cancellationToken.ThrowIfCancellationRequested();
 
             var rewardedAd = await _rewardedAdLoadCallback.Task;
-            _lastRewardedAdLoadTime = DateTime.Now;
+            _lastLoadRewardedAdTime = DateTime.Now;
             return rewardedAd;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            VhLogger.Instance.LogError(ex, "Failed to load ad.");
             _rewardedAdLoadCallback = null;
-            _lastRewardedAdLoadTime = DateTime.MinValue;
-            throw;
+            _lastLoadRewardedAdTime = DateTime.MinValue;
+            if (ex is AdLoadException) throw;
+            throw new AdLoadException("Failed to load ad.", ex);
         }
     }
 
@@ -59,7 +60,7 @@ public class GooglePlayAdService(
         // create ad custom data
         var rewardedAd = await LoadRewardedAd(activity, cancellationToken);
         if (activity.IsDestroyed)
-            throw new Exception("MainActivity has been destroyed before showing the ad.");
+            throw new AdException("MainActivity has been destroyed before showing the ad.");
 
         var serverSideVerificationOptions = new ServerSideVerificationOptions.Builder()
         .SetCustomData(customData)
@@ -105,7 +106,7 @@ public class GooglePlayAdService(
 
         public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
-            _dismissedCompletionSource.TrySetException(new Exception(adError.Message));
+            _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
         }
 
     }
@@ -122,7 +123,7 @@ public class GooglePlayAdService(
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new Exception(addError.Message));
+            _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
         }
     }
 

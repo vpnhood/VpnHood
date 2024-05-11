@@ -3,7 +3,7 @@
 namespace VpnHood.Common.Messaging;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum AdShow
+public enum AdRequirement
 {
     None,
     Flexible,

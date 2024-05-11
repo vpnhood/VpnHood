@@ -633,7 +633,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             AccessKey = sessionResponse.AccessKey,
             DnsServers = DnsServers,
             IsAdRequired = sessionResponse.IsAdRequired,
-            AdShow = sessionResponse.AdShow
+            AdRequirement = sessionResponse.AdRequirement
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
         await clientStream.DisposeAsync();

@@ -35,10 +35,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="122.3.0.3" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="122.3.0.3" />
+	  <ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 	</ItemGroup>
 </Project>

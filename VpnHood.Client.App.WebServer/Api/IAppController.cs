@@ -22,4 +22,7 @@ public interface IAppController
     Task<IpGroup[]> GetIpGroups();
     Task VersionCheck();
     void VersionCheckPostpone();
+    void OpenAlwaysOnPage();
+    Task RequestQuickLaunch();
+    Task RequestNotification();
 }

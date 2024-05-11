@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
@@ -24,8 +25,10 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
 
+
 internal static class TestHelper
 {
+    public class TestAppUiContext : IUiContext;
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
 
@@ -287,7 +290,7 @@ internal static class TestHelper
 
     public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
     {
-        return CreateDevice(options).CreatePacketCapture().Result;
+        return CreateDevice(options).CreatePacketCapture(null).Result;
     }
 
     public static ClientOptions CreateClientOptions(bool useUdp = false)
@@ -312,7 +315,7 @@ internal static class TestHelper
         clientOptions ??= CreateClientOptions();
         if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout) clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
         clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.ExcludeLocalNetwork = false;
+        clientOptions.IncludeLocalNetwork = true;
 
         var client = new VpnHoodClient(
             packetCapture,
@@ -350,7 +353,7 @@ internal static class TestHelper
             clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
         clientOptions.SocketFactory = new SocketFactory();
         clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.ExcludeLocalNetwork = false;
+        clientOptions.IncludeLocalNetwork = true;
 
         var clientConnect = new VpnHoodConnect(
             packetCapture,
@@ -370,7 +373,7 @@ internal static class TestHelper
     {
         var appOptions = new AppOptions
         {
-            AppDataFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
+            StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             LoadCountryIpGroups = false
         };
@@ -390,6 +393,7 @@ internal static class TestHelper
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         clientApp.UserSettings.Logging.LogAnonymous = false;
         clientApp.UserSettings.Logging.LogVerbose = true;
+        clientApp.UiContext = new TestAppUiContext();
 
         return clientApp;
     }

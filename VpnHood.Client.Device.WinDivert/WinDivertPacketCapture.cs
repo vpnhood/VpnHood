@@ -172,10 +172,10 @@ public class WinDivertPacketCapture : IPacketCapture
         }
     }
 
-    private void SendPacket(IPPacket ipPacket, bool outbound)
+    private void SendPacket(Packet ipPacket, bool outbound)
     {
         if (_lastCaptureHeader == null)
-            throw new InvalidOperationException("Could not send any data without receiving a packet!");
+            throw new InvalidOperationException("Could not send any data without receiving a packet.");
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;

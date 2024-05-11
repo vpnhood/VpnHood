@@ -36,31 +36,38 @@
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
+	<ItemGroup Condition="'$(Configuration)'=='Release'">
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>GlobalServersAccessKey</_Parameter1>
+			<_Parameter2>$(VPNHOOD_PRO_PUBLIC_ACCESSKEY)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
 	<ItemGroup Condition="'$(Configuration)'=='Debug'">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>GlobalServersAccessKey</_Parameter1>
 			<_Parameter2>$(VPNHOOD_DEV_PUBLIC_ACCESSKEY)</_Parameter2>
 		</AssemblyAttribute>
-    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-      <_Parameter1>RewardedAdUnitId</_Parameter1>
-      <_Parameter2>$(VPNHOOD_DEV_AD_UNIT)</_Parameter2>
-    </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-      <_Parameter1>StoreBaseUri</_Parameter1>
-      <_Parameter2>$(VPNHOOD_DEV_STORE_BASE_URI)</_Parameter2>
-    </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-      <_Parameter1>StoreAppId</_Parameter1>
-      <_Parameter2>$(VPNHOOD_DEV_STORE_APP_ID)</_Parameter2>
-    </AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>RewardedAdUnitId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>StoreBaseUri</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_STORE_BASE_URI)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>StoreAppId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_STORE_APP_ID)</_Parameter2>
+		</AssemblyAttribute>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Remove="xml\network_security_config.xml" />
+		<None Remove="xml\network_security_config.xml" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <AndroidResource Include="xml\network_security_config.xml" />
+		<AndroidResource Include="xml\network_security_config.xml" />
 	</ItemGroup>
 
 	<ItemGroup>

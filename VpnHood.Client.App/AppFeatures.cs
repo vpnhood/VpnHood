@@ -9,4 +9,9 @@ public class AppFeatures
     public required string? UiName { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
     public required Guid? BuiltInClientProfileId { get; init; }
+    public required bool IsAccountSupported { get; init; }
+    public required bool IsBillingSupported { get; init; }
+    public required bool IsQuickLaunchSupported { get; init; }
+    public required bool IsNotificationSupported { get; init; }
+    public required bool IsAlwaysOnSupported { get; init; }
 }

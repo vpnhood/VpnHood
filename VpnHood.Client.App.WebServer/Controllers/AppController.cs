@@ -12,12 +12,20 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 internal class AppController : WebApiController, IAppController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
+    private async Task<T> GetRequestDataAsync<T>()
+    {
+        var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
+        var res = JsonSerializer.Deserialize<T>(json,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        
+        return res ?? throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
+    }
 
     [Route(HttpVerbs.Patch, "/configure")]
     public async Task<AppConfig> Configure(ConfigParams configParams)
     {
         configParams = await GetRequestDataAsync<ConfigParams>();
-        App.Services.CultureService.AvailableCultures = configParams.AvailableCultures;
+        App.Services.AppCultureService.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
 
         App.UpdateUi();
@@ -33,7 +41,7 @@ internal class AppController : WebApiController, IAppController
             Settings = App.Settings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,
-            AvailableCultureInfos = App.Services.CultureService.AvailableCultures
+            AvailableCultureInfos = App.Services.AppCultureService.AvailableCultures
                 .Select(x => new UiCultureInfo(x))
                 .ToArray()
         };
@@ -141,13 +149,22 @@ internal class AppController : WebApiController, IAppController
         App.ClientProfileService.Remove(clientProfileId);
     }
 
-    private async Task<T> GetRequestDataAsync<T>()
+    [Route(HttpVerbs.Post, "/settings/open-always-on-page")]
+    public void OpenAlwaysOnPage()
     {
-        var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
-        var res = JsonSerializer.Deserialize<T>(json,
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        if (res == null)
-            throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
-        return res;
+        App.Services.UiService.OpenAlwaysOnPage(App.RequiredUiContext);
     }
+
+    [Route(HttpVerbs.Post, "/settings/request-quick-launch")]
+    public Task RequestQuickLaunch()
+    {
+        return App.Services.UiService.RequestQuickLaunch(App.RequiredUiContext, CancellationToken.None);
+    }
+
+    [Route(HttpVerbs.Post, "/settings/request-notification")]
+    public Task RequestNotification()
+    {
+        return App.Services.UiService.RequestNotification(App.RequiredUiContext, CancellationToken.None);
+    }
+
 }

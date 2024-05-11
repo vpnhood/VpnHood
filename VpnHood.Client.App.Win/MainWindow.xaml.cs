@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -9,11 +8,11 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.Client.App.WebServer;
 using VpnHood.Client.App.Win.Common;
+using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Win;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
-[SuppressMessage("ReSharper", "RedundantExtendsListEntry")]
+// ReSharper disable once RedundantExtendsListEntry
 public partial class MainWindow : Window
 {
     public MainWindow()
@@ -35,7 +34,7 @@ public partial class MainWindow : Window
         if (backgroundColor != null) VpnHoodWinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
-        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp") };
+        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
         if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;
@@ -43,14 +42,7 @@ public partial class MainWindow : Window
 
         // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
-        VpnHoodApp.Instance.Services.UpdaterService = new WinAppUpdaterService();
-
-        if (VpnHoodApp.Instance.VersionCheckRequired)
-            VpnHoodApp.Instance.Services.UpdaterService.Update().ContinueWith(res =>
-            {
-                if (res.Result)
-                    VpnHoodApp.Instance.VersionCheckPostpone();
-            });
+        VpnHoodApp.Instance.UiContext = new WinUiContext();
     }
 
 

@@ -1,10 +1,12 @@
-﻿using VpnHood.Tunneling.Factory;
+﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
 public class AppOptions
 {
-    public string AppDataFolderPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+    public static string DefaultStorageFolderPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
+    public string StorageFolderPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
     public TimeSpan SessionTimeout { get; set; } = new ClientOptions().SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
@@ -15,4 +17,9 @@ public class AppOptions
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;
     public string[] AccessKeys { get; set; } = [];
+    public IAppUiService? UiService { get; set; }
+    public IAppCultureService? CultureService { get; set; }
+    public IAppUpdaterService? UpdaterService { get; set; }
+    public IAppAccountService? AccountService { get; set; }
+    public IAppAdService? AdService { get; set; }
 }

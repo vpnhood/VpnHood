@@ -2,6 +2,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.Device;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Win.Common;
@@ -9,7 +10,7 @@ namespace VpnHood.Client.App.Win.Common;
 public class WinAppUpdaterService : IAppUpdaterService
 {
     // return false if the app update system does not work
-    public async Task<bool> Update()
+    public async Task<bool> Update(IUiContext uiContext)
     {
             // launch updater if exists
             var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??

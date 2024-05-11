@@ -1,31 +1,31 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Rewarded;
-using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Common.Logging;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Droid;
+using VpnHood.Client.Exceptions;
 using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
 public class GooglePlayAdService(
-    Activity activity,
     string rewardedAdUnitId)
     : IAppAdService
 {
     private MyRewardedAdLoadCallback? _rewardedAdLoadCallback;
-    private DateTime _lastRewardedAdLoadTime = DateTime.MinValue;
+    private DateTime _lastLoadRewardedAdTime = DateTime.MinValue;
 
 
-    public static GooglePlayAdService Create(Activity activity, string rewardedAdUnit)
+    public static GooglePlayAdService Create(string rewardedAdUnit)
     {
-        var ret = new GooglePlayAdService(activity, rewardedAdUnit);
+        var ret = new GooglePlayAdService(rewardedAdUnit);
         return ret;
     }
 
-    public async Task<RewardedAd> LoadRewardedAd(CancellationToken cancellationToken)
+    public async Task<RewardedAd> LoadRewardedAd(Activity activity, CancellationToken cancellationToken)
     {
         try
         {
-            if (_rewardedAdLoadCallback != null && _lastRewardedAdLoadTime.AddHours(1) < DateTime.Now)
+            if (_rewardedAdLoadCallback != null && _lastLoadRewardedAdTime.AddHours(1) < DateTime.Now)
                 return await _rewardedAdLoadCallback.Task;
 
             _rewardedAdLoadCallback = new MyRewardedAdLoadCallback();
@@ -38,24 +38,27 @@ public class GooglePlayAdService(
             cancellationToken.ThrowIfCancellationRequested();
 
             var rewardedAd = await _rewardedAdLoadCallback.Task;
-            _lastRewardedAdLoadTime = DateTime.Now;
+            _lastLoadRewardedAdTime = DateTime.Now;
             return rewardedAd;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            VhLogger.Instance.LogError(ex, "Failed to load ad.");
             _rewardedAdLoadCallback = null;
-            _lastRewardedAdLoadTime = DateTime.MinValue;
-            throw;
+            _lastLoadRewardedAdTime = DateTime.MinValue;
+            if (ex is AdLoadException) throw;
+            throw new AdLoadException("Failed to load ad.", ex);
         }
     }
 
-    public async Task ShowAd(string customData, CancellationToken cancellationToken)
+    public async Task ShowAd(IUiContext uiContext, string customData, CancellationToken cancellationToken)
     {
+        var appUiContext = (AndroidUiContext)uiContext;
+        var activity = appUiContext.Activity;
+
         // create ad custom data
-        var rewardedAd = await LoadRewardedAd(cancellationToken);
+        var rewardedAd = await LoadRewardedAd(activity, cancellationToken);
         if (activity.IsDestroyed)
-            throw new Exception("MainActivity has been destroyed before showing the ad.");
+            throw new AdException("MainActivity has been destroyed before showing the ad.");
 
         var serverSideVerificationOptions = new ServerSideVerificationOptions.Builder()
         .SetCustomData(customData)
@@ -101,7 +104,7 @@ public class GooglePlayAdService(
 
         public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
-            _dismissedCompletionSource.TrySetException(new Exception(adError.Message));
+            _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
         }
 
     }
@@ -118,7 +121,7 @@ public class GooglePlayAdService(
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new Exception(addError.Message));
+            _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
         }
     }
 

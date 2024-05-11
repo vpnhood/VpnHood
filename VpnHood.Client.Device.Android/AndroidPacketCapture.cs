@@ -47,8 +47,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         set
         {
             if (Started)
-                throw new InvalidOperationException(
-                    $"Could not set {nameof(Mtu)} while {nameof(IPacketCapture)} is started!");
+                throw new InvalidOperationException("Could not set MTU while PacketCapture is started.");
             _mtu = value;
         }
     }
@@ -98,7 +97,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         AddAppFilter(builder);
 
         // try to establish the connection
-        _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService");
+        _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService.");
 
         //Packets to be sent are queued in this input stream.
         _inStream = new FileInputStream(_mInterface.FileDescriptor);

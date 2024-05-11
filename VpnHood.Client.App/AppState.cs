@@ -1,4 +1,6 @@
-﻿using VpnHood.Common.Messaging;
+﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client.App;
 
@@ -8,7 +10,7 @@ public class AppState
     public required DateTime? ConnectRequestTime { get; init; }
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
-    public required Guid? ClientProfileId { get; init; }
+    public required ClientProfileBaseInfo? ClientProfile { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseStarted { get; init; }
@@ -27,4 +29,6 @@ public class AppState
     public required bool CanConnect { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
+    public required BillingPurchaseState? PurchaseState { get; init; }
+
 }

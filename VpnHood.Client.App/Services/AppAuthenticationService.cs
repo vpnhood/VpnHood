@@ -19,7 +19,7 @@ internal class AppAuthenticationService(VpnHoodApp vpnHoodApp, IAppAuthenticatio
     public async Task SignOut(IUiContext uiContext)
     {
         await accountService.SignOut(uiContext);
-        await vpnHoodApp.RefreshAccount();
+        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true);
     }
 
     public void Dispose()

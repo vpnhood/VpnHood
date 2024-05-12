@@ -2746,7 +2746,7 @@ export class ServersClient {
 
     }
 
-    create(projectId: string, createParams: ServerCreateParams, cancelToken?: CancelToken): Promise<VpnServer> {
+    create(projectId: string, createParams: ServerCreateParams, cancelToken?: CancelToken): Promise<ServerData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -2777,7 +2777,7 @@ export class ServersClient {
         });
     }
 
-    protected processCreate(response: AxiosResponse): Promise<VpnServer> {
+    protected processCreate(response: AxiosResponse): Promise<ServerData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2791,14 +2791,14 @@ export class ServersClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = VpnServer.fromJS(resultData200);
-            return Promise.resolve<VpnServer>(result200);
+            result200 = ServerData.fromJS(resultData200);
+            return Promise.resolve<ServerData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<VpnServer>(null as any);
+        return Promise.resolve<ServerData>(null as any);
     }
 
     list(projectId: string, search?: string | null | undefined, serverId?: string | null | undefined, serverFarmId?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<ServerData[]> {
@@ -2873,7 +2873,7 @@ export class ServersClient {
         return Promise.resolve<ServerData[]>(null as any);
     }
 
-    update(projectId: string, serverId: string, updateParams: ServerUpdateParams, cancelToken?: CancelToken): Promise<VpnServer> {
+    update(projectId: string, serverId: string, updateParams: ServerUpdateParams, cancelToken?: CancelToken): Promise<ServerData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers/{serverId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -2907,7 +2907,7 @@ export class ServersClient {
         });
     }
 
-    protected processUpdate(response: AxiosResponse): Promise<VpnServer> {
+    protected processUpdate(response: AxiosResponse): Promise<ServerData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2921,14 +2921,14 @@ export class ServersClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = VpnServer.fromJS(resultData200);
-            return Promise.resolve<VpnServer>(result200);
+            result200 = ServerData.fromJS(resultData200);
+            return Promise.resolve<ServerData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<VpnServer>(null as any);
+        return Promise.resolve<ServerData>(null as any);
     }
 
     get(projectId: string, serverId: string, cancelToken?: CancelToken): Promise<ServerData> {
@@ -6927,6 +6927,45 @@ export interface IServerProfileUpdateParams {
     serverConfig?: PatchOfString | null;
 }
 
+export class ServerData implements IServerData {
+    server!: VpnServer;
+
+    constructor(data?: IServerData) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.server = new VpnServer();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.server = _data["server"] ? VpnServer.fromJS(_data["server"]) : new VpnServer();
+        }
+    }
+
+    static fromJS(data: any): ServerData {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerData();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["server"] = this.server ? this.server.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IServerData {
+    server: VpnServer;
+}
+
 export class VpnServer implements IVpnServer {
     serverId!: string;
     serverName!: string;
@@ -7384,45 +7423,6 @@ export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {
 
 export interface IPatchOfAccessPointOf {
     value?: AccessPoint[] | null;
-}
-
-export class ServerData implements IServerData {
-    server!: VpnServer;
-
-    constructor(data?: IServerData) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.server = new VpnServer();
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.server = _data["server"] ? VpnServer.fromJS(_data["server"]) : new VpnServer();
-        }
-    }
-
-    static fromJS(data: any): ServerData {
-        data = typeof data === 'object' ? data : {};
-        let result = new ServerData();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["server"] = this.server ? this.server.toJSON() : <any>null;
-        return data;
-    }
-}
-
-export interface IServerData {
-    server: VpnServer;
 }
 
 export class ServerInstallBySshUserPasswordParams implements IServerInstallBySshUserPasswordParams {

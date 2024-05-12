@@ -69,11 +69,11 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 
     public static async Task<ServerDom> Create(TestApp testApp, ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
     {
-        var server = await testApp.ServersClient.CreateAsync(testApp.ProjectId, createParams);
+        var serverData = await testApp.ServersClient.CreateAsync(testApp.ProjectId, createParams);
 
         var myServer = new ServerDom(
             testApp: testApp,
-            server: server,
+            server: serverData.Server,
             serverInfo: await testApp.NewServerInfo(randomStatus: false)
             );
 
@@ -93,7 +93,8 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 
     public async Task Update(ServerUpdateParams updateParams)
     {
-        Server = await TestApp.ServersClient.UpdateAsync(TestApp.ProjectId, ServerId, updateParams);
+        var serverData = await TestApp.ServersClient.UpdateAsync(TestApp.ProjectId, ServerId, updateParams);
+        Server = serverData.Server;
     }
 
     public async Task Configure(bool updateStatus = true)

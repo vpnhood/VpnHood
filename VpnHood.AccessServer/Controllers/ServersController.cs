@@ -19,14 +19,14 @@ public class ServersController(
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
-    public Task<VpnServer> Create(Guid projectId, ServerCreateParams createParams)
+    public Task<ServerData> Create(Guid projectId, ServerCreateParams createParams)
     {
         return serverService.Create(projectId, createParams);
     }
 
     [HttpPatch("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
-    public Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
+    public Task<ServerData> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         return serverService.Update(projectId, serverId, updateParams);
     }

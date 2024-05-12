@@ -14,8 +14,8 @@ using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
-using GrayMint.Common.Utils;
 using VpnHood.Server.Access.Managers.Http;
+using GrayMint.Common.Utils;
 using ConnectionInfo = Renci.SshNet.ConnectionInfo;
 
 namespace VpnHood.AccessServer.Services;
@@ -29,7 +29,7 @@ public class ServerService(
     SubscriptionService subscriptionService,
     AgentSystemClient agentSystemClient)
 {
-    public async Task<VpnServer> Create(Guid projectId, ServerCreateParams createParams)
+    public async Task<ServerData> Create(Guid projectId, ServerCreateParams createParams)
     {
         // check user quota
         using var singleRequest = await AsyncLock.LockAsync($"CreateServer_{projectId}");
@@ -83,12 +83,14 @@ public class ServerService(
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
 
-        var serverDto = server.ToDto(null);
-        return serverDto;
-
+        var serverData = new ServerData
+        {
+            Server = server.ToDto(null)
+        };
+        return serverData;
     }
 
-    public async Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
+    public async Task<ServerData> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         if (updateParams.AutoConfigure?.Value == true && updateParams.AccessPoints != null)
             throw new ArgumentException($"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set", nameof(updateParams));
@@ -126,7 +128,11 @@ public class ServerService(
         // reconfig current server if required
         var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.ServerFarmId != null;
         var serverCache = await serverConfigureService.InvalidateServer(projectId, serverId, reconfigure);
-        return server.ToDto(serverCache);
+        var serverData = new ServerData
+        {
+            Server = server.ToDto(serverCache)
+        };
+        return serverData;
     }
 
     public async Task<ServerData[]> List(

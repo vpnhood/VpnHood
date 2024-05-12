@@ -36,7 +36,7 @@ public class ServerService(
         await subscriptionService.AuthorizeCreateServer(projectId);
 
         // validate
-        var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId, 
+        var serverFarm = await vhRepo.ServerFarmGet(projectId, createParams.ServerFarmId,
             includeServers: true, includeCertificate: true);
 
         // Resolve Name Template
@@ -58,6 +58,7 @@ public class ServerService(
             ManagementSecret = GmUtil.GenerateKey(),
             AuthorizationCode = Guid.NewGuid(),
             ServerFarmId = serverFarm.ServerFarmId,
+            RegionId = createParams.RegionId,
             AccessPoints = ValidateAccessPoints(createParams.AccessPoints ?? []),
             ConfigCode = Guid.NewGuid(),
             AutoConfigure = createParams.AccessPoints == null,
@@ -71,7 +72,6 @@ public class ServerService(
             ConfigureTime = null,
             EnvironmentVersion = null,
             MachineName = null,
-            RegionId = null,
             AllowAutoRegion = true,
             IsDeleted = false
         };
@@ -103,6 +103,7 @@ public class ServerService(
             var serverFarm = await vhRepo.ServerFarmGet(projectId, updateParams.ServerFarmId);
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
+        if (updateParams.RegionId != null) server.RegionId = updateParams.RegionId;
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
@@ -128,33 +129,17 @@ public class ServerService(
         return server.ToDto(serverCache);
     }
 
-    public async Task<ServerData[]> List(Guid projectId,
+    public async Task<ServerData[]> List(
+        Guid projectId,
         string? search = null,
         Guid? serverId = null,
         Guid? serverFarmId = null,
         int recordIndex = 0,
         int recordCount = int.MaxValue)
     {
-        // no lock
-        await using var trans = await vhContext.WithNoLockTransaction();
-
-        var query = vhContext.Servers
-            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
-            .Include(server => server.ServerFarm)
-            .Where(server => serverId == null || server.ServerId == serverId)
-            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
-            .Where(x =>
-                string.IsNullOrEmpty(search) ||
-                x.ServerName.Contains(search) ||
-                x.ServerId.ToString() == search ||
-                x.ServerFarmId.ToString() == search);
-
-        var servers = await query
-            .OrderBy(x => x.ServerId)
-            .Skip(recordIndex)
-            .Take(recordCount)
-            .AsNoTracking()
-            .ToArrayAsync();
+        var servers = await vhRepo.ServerSearch(projectId: projectId,
+            search: search, serverId: serverId, serverFarmId: serverFarmId, 
+            recordIndex: recordIndex, recordCount: recordCount);
 
         // create Dto
         var cachedServers = await agentCacheClient.GetServers(projectId);

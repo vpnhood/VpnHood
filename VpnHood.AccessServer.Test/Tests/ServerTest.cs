@@ -8,6 +8,7 @@ using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access;
+using YamlDotNet.Core.Tokens;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -30,11 +31,13 @@ public class ServerTest
     {
         var testApp = await TestApp.Create();
         var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0);
+        var region1 = await testApp.RegionsClient.CreateAsync(testApp.ProjectId, new RegionCreateParams { CountryCode = "us" });
+        var region2 = await testApp.RegionsClient.CreateAsync(testApp.ProjectId, new RegionCreateParams { CountryCode = "gb" });
 
         //-----------
         // check: Create
         //-----------
-        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
+        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", RegionId = region1.Region.RegionId };
         var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
         var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
@@ -43,6 +46,7 @@ public class ServerTest
         //-----------
         await serverDom.Reload();
         Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
+        Assert.AreEqual(server1ACreateParam.RegionId, serverDom.Server.Region?.RegionId);
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
@@ -75,6 +79,7 @@ public class ServerTest
         var serverUpdateParam = new ServerUpdateParams
         {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
+            RegionId = new PatchOfNullableInteger{ Value = region2.Region.RegionId},
             AutoConfigure = new PatchOfBoolean { Value = !serverDom.Server.AutoConfigure },
             GenerateNewSecret = new PatchOfBoolean { Value = false }
         };
@@ -84,6 +89,7 @@ public class ServerTest
         CollectionAssert.AreEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
+        Assert.AreEqual(serverUpdateParam.RegionId.Value, serverDom.Server.Region?.RegionId);
 
         //-----------
         // check: Update (change Secret)
@@ -240,12 +246,12 @@ public class ServerTest
         // add another server
         var server2Dom = await farm.AddNewServer(new ServerCreateParams
         {
-            AccessPoints = new[] {await farm.TestApp.NewAccessPoint()}
+            AccessPoints = new[] { await farm.TestApp.NewAccessPoint() }
         });
         var server2TokenIp = server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         accessToken = await farm.CreateAccessToken();
         token = await accessToken.GetToken();
-        
+
         // both server AccessPoint must exist
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server2TokenIp.IpAddress));
@@ -270,7 +276,7 @@ public class ServerTest
 
         // active 2
         sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic{Received = 100, Sent = 50 }});
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic { Received = 100, Sent = 50 } });
         sampleServer = await farm.AddNewServer();
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
@@ -372,7 +378,7 @@ public class ServerTest
 
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
-        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x=> x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
             "AccessPoints have not been updated in FarmToken.");
     }
 }

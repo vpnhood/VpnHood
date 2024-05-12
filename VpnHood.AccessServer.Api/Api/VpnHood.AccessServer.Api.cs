@@ -9006,6 +9006,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
         public string? ServerFarmName { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("region")]
+        public Region? Region { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("version")]
         public string? Version { get; set; } = default!;
 
@@ -9165,6 +9168,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerFarmId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("regionId")]
+        public int? RegionId { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public System.Collections.Generic.ICollection<AccessPoint>? AccessPoints { get; set; } = default!;
 
@@ -9180,6 +9186,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmId")]
         public PatchOfGuid? ServerFarmId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("regionId")]
+        public PatchOfNullableInteger? RegionId { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("generateNewSecret")]
         public PatchOfBoolean? GenerateNewSecret { get; set; } = default!;
 
@@ -9188,6 +9197,15 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public PatchOfAccessPointOf? AccessPoints { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfNullableInteger
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public int? Value { get; set; } = default!;
 
     }
 

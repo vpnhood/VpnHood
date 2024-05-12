@@ -1,4 +1,5 @@
-﻿using VpnHood.AccessServer.Persistence.Enums;
+﻿using VpnHood.AccessServer.Dtos.Regions;
+using VpnHood.AccessServer.Persistence.Enums;
 
 namespace VpnHood.AccessServer.Dtos.Servers;
 public class VpnServer
@@ -7,6 +8,7 @@ public class VpnServer
     public required string ServerName { get; init; }
     public required Guid ServerFarmId { get; init; }
     public required string? ServerFarmName { get; init; }
+    public required Region? Region { get; init; }
     public required string? Version { get; init; }
     public required string? EnvironmentVersion { get; init; }
     public required string? OsInfo { get; init; }

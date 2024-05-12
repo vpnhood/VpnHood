@@ -18,6 +18,7 @@ public class VhRepo(VhContext vhContext)
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
     {
         var query = vhContext.Servers
+            .Include(x => x.Region)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerId == serverId);
 
@@ -30,12 +31,43 @@ public class VhRepo(VhContext vhContext)
     public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         var query = vhContext.Servers
+            .Include(x => x.Region)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
             .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
 
         return query.ToArrayAsync();
     }
+
+    public async Task<ServerModel[]> ServerSearch(Guid projectId,
+        string? search,
+        Guid? serverId = null,
+        Guid? serverFarmId = null,
+        int recordIndex = 0,
+        int recordCount = int.MaxValue)
+    {
+        await using var trans = await vhContext.WithNoLockTransaction();
+        var servers = await vhContext.Servers
+            .Include(server => server.ServerFarm)
+            .Include(server => server.Region)
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .Where(server => serverId == null || server.ServerId == serverId)
+            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.ServerName.Contains(search) ||
+                x.ServerId.ToString() == search ||
+                x.ServerFarmId.ToString() == search)
+            .OrderBy(x => x.ServerId)
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .AsNoTracking()
+            .ToArrayAsync();
+
+        return servers;
+
+    }
+
 
     public Task<ServerProfileModel> ServerProfileGet(Guid projectId, Guid serverProfileId)
     {
@@ -151,7 +183,7 @@ public class VhRepo(VhContext vhContext)
         foreach (var accessToken in accessTokens)
             accessToken.IsDeleted = true;
 
-        return accessTokens.Select(x=>x.AccessTokenId).ToArray();
+        return accessTokens.Select(x => x.AccessTokenId).ToArray();
     }
 
     public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId,
@@ -329,7 +361,7 @@ public class VhRepo(VhContext vhContext)
 
     public async Task<int> RegionMaxId(Guid projectId)
     {
-        var res = await vhContext.Regions 
+        var res = await vhContext.Regions
             .Where(x => x.ProjectId == projectId)
             .MaxAsync(x => (int?)x.RegionId);
 

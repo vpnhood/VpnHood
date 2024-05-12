@@ -15,6 +15,7 @@ public static class ServerConverter
         {
             ServerFarmId = model.ServerFarmId,
             ServerFarmName = model.ServerFarm?.ServerFarmName,
+            Region = model.Region?.ToDto(),
             ConfigureTime = model.ConfigureTime,
             CreatedTime = model.CreatedTime,
             Description = model.Description,

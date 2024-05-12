@@ -6932,6 +6932,7 @@ export class VpnServer implements IVpnServer {
     serverName!: string;
     serverFarmId!: string;
     serverFarmName?: string | null;
+    region?: Region | null;
     version?: string | null;
     environmentVersion?: string | null;
     osInfo?: string | null;
@@ -6966,6 +6967,7 @@ export class VpnServer implements IVpnServer {
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
+            this.region = _data["region"] ? Region.fromJS(_data["region"]) : <any>null;
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.environmentVersion = _data["environmentVersion"] !== undefined ? _data["environmentVersion"] : <any>null;
             this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
@@ -7004,6 +7006,7 @@ export class VpnServer implements IVpnServer {
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
+        data["region"] = this.region ? this.region.toJSON() : <any>null;
         data["version"] = this.version !== undefined ? this.version : <any>null;
         data["environmentVersion"] = this.environmentVersion !== undefined ? this.environmentVersion : <any>null;
         data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
@@ -7032,6 +7035,7 @@ export interface IVpnServer {
     serverName: string;
     serverFarmId: string;
     serverFarmName?: string | null;
+    region?: Region | null;
     version?: string | null;
     environmentVersion?: string | null;
     osInfo?: string | null;
@@ -7187,6 +7191,7 @@ export enum AccessPointMode {
 export class ServerCreateParams implements IServerCreateParams {
     serverName?: string | null;
     serverFarmId!: string;
+    regionId?: number | null;
     accessPoints?: AccessPoint[] | null;
 
     constructor(data?: IServerCreateParams) {
@@ -7202,6 +7207,7 @@ export class ServerCreateParams implements IServerCreateParams {
         if (_data) {
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
+            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
             if (Array.isArray(_data["accessPoints"])) {
                 this.accessPoints = [] as any;
                 for (let item of _data["accessPoints"])
@@ -7224,6 +7230,7 @@ export class ServerCreateParams implements IServerCreateParams {
         data = typeof data === 'object' ? data : {};
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
+        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
         if (Array.isArray(this.accessPoints)) {
             data["accessPoints"] = [];
             for (let item of this.accessPoints)
@@ -7236,12 +7243,14 @@ export class ServerCreateParams implements IServerCreateParams {
 export interface IServerCreateParams {
     serverName?: string | null;
     serverFarmId: string;
+    regionId?: number | null;
     accessPoints?: AccessPoint[] | null;
 }
 
 export class ServerUpdateParams implements IServerUpdateParams {
     serverName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
+    regionId?: PatchOfNullableInteger | null;
     generateNewSecret?: PatchOfBoolean | null;
     autoConfigure?: PatchOfBoolean | null;
     accessPoints?: PatchOfAccessPointOf | null;
@@ -7259,6 +7268,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
         if (_data) {
             this.serverName = _data["serverName"] ? PatchOfString.fromJS(_data["serverName"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] ? PatchOfGuid.fromJS(_data["serverFarmId"]) : <any>null;
+            this.regionId = _data["regionId"] ? PatchOfNullableInteger.fromJS(_data["regionId"]) : <any>null;
             this.generateNewSecret = _data["generateNewSecret"] ? PatchOfBoolean.fromJS(_data["generateNewSecret"]) : <any>null;
             this.autoConfigure = _data["autoConfigure"] ? PatchOfBoolean.fromJS(_data["autoConfigure"]) : <any>null;
             this.accessPoints = _data["accessPoints"] ? PatchOfAccessPointOf.fromJS(_data["accessPoints"]) : <any>null;
@@ -7276,6 +7286,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data = typeof data === 'object' ? data : {};
         data["serverName"] = this.serverName ? this.serverName.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId ? this.serverFarmId.toJSON() : <any>null;
+        data["regionId"] = this.regionId ? this.regionId.toJSON() : <any>null;
         data["generateNewSecret"] = this.generateNewSecret ? this.generateNewSecret.toJSON() : <any>null;
         data["autoConfigure"] = this.autoConfigure ? this.autoConfigure.toJSON() : <any>null;
         data["accessPoints"] = this.accessPoints ? this.accessPoints.toJSON() : <any>null;
@@ -7286,9 +7297,46 @@ export class ServerUpdateParams implements IServerUpdateParams {
 export interface IServerUpdateParams {
     serverName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
+    regionId?: PatchOfNullableInteger | null;
     generateNewSecret?: PatchOfBoolean | null;
     autoConfigure?: PatchOfBoolean | null;
     accessPoints?: PatchOfAccessPointOf | null;
+}
+
+export class PatchOfNullableInteger implements IPatchOfNullableInteger {
+    value?: number | null;
+
+    constructor(data?: IPatchOfNullableInteger) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfNullableInteger {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfNullableInteger();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfNullableInteger {
+    value?: number | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {

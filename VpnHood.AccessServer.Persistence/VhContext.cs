@@ -263,10 +263,6 @@ public class VhContext : DbContext
                 .IsFixedLength();
 
             entity
-                .Property(e => e.AllowAutoRegion)
-                .HasDefaultValue(true);
-
-            entity
                 .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 

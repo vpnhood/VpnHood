@@ -22,8 +22,8 @@ public class VhRepo(VhContext vhContext)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerId == serverId);
 
-        if (includeFarm) query.Include(server => server.ServerFarm);
-        if (includeFarmProfile) query.Include(server => server.ServerFarm!.ServerProfile);
+        if (includeFarm) query = query.Include(server => server.ServerFarm);
+        if (includeFarmProfile) query = query.Include(server => server.ServerFarm!.ServerProfile);
 
         return query.SingleAsync();
     }

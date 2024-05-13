@@ -1503,7 +1503,7 @@ export class ProjectsClient {
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "PATCH",
+            method: "GET",
             url: url_,
             headers: {
                 "Accept": "application/json"

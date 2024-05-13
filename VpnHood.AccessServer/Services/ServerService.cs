@@ -72,7 +72,6 @@ public class ServerService(
             ConfigureTime = null,
             EnvironmentVersion = null,
             MachineName = null,
-            AllowAutoRegion = true,
             IsDeleted = false
         };
 
@@ -96,7 +95,7 @@ public class ServerService(
             throw new ArgumentException($"{nameof(updateParams.AutoConfigure)} can not be true when {nameof(updateParams.AccessPoints)} is set", nameof(updateParams));
 
         // validate
-        var server = await vhRepo.ServerGet(projectId, serverId);
+        var server = await vhRepo.ServerGet(projectId, serverId, includeFarm: true);
         var oldServerFarmId = server.ServerFarmId;
 
         if (updateParams.ServerFarmId != null)
@@ -128,11 +127,20 @@ public class ServerService(
         // reconfig current server if required
         var reconfigure = updateParams.AccessPoints != null || updateParams.AutoConfigure != null || updateParams.ServerFarmId != null;
         var serverCache = await serverConfigureService.InvalidateServer(projectId, serverId, reconfigure);
+
+        // get server again to resolve region and farm
+        server = await vhRepo.ServerGet(projectId, serverId: serverId, includeFarm: true);
         var serverData = new ServerData
         {
             Server = server.ToDto(serverCache)
         };
         return serverData;
+    }
+
+    public async Task<ServerData> Get(Guid projectId, Guid serverId)
+    {
+        var items = await List(projectId, serverId: serverId);
+        return items.Single();
     }
 
     public async Task<ServerData[]> List(
@@ -404,4 +412,5 @@ public class ServerService(
     {
         return serverConfigureService.InvalidateServer(projectId: projectId, serverId: serverId, reconfigure: true);
     }
+  
 }

@@ -33,10 +33,9 @@ public class ServersController(
 
     [HttpGet("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ServerData> Get(Guid projectId, Guid serverId)
+    public Task<ServerData> Get(Guid projectId, Guid serverId)
     {
-        var list = await serverService.List(projectId, serverId: serverId);
-        return list.Single();
+        return serverService.Get(projectId, serverId: serverId);
     }
 
     [HttpDelete("{serverId:guid}")]

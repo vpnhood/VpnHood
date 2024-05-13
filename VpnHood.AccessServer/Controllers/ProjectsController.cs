@@ -40,7 +40,7 @@ public class ProjectsController(
         return projectService.Update(projectId, updateParams);
     }
 
-    [HttpPatch("{projectId:guid}/usage")]
+    [HttpGet("{projectId:guid}/usage")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null)

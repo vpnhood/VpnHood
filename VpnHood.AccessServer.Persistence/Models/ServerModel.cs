@@ -23,7 +23,6 @@ public class ServerModel
     public required string? LastConfigError { get; set; }
     public required bool AutoConfigure { get; set; }
     public required int? RegionId { get; set; }
-    public required bool AllowAutoRegion { get; set; }
     public required bool IsDeleted { get; set; }
     public required List<AccessPointModel> AccessPoints { get; set; } = [];
 

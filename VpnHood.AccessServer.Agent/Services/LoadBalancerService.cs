@@ -19,9 +19,9 @@ public class LoadBalancerService(
         SessionRequestEx sessionRequestEx)
     {
         return CheckRedirect(
-            accessToken, currentServer, device, 
-            sessionRequestEx.HostEndPoint.AddressFamily, 
-            sessionRequestEx.RegionId, 
+            accessToken, currentServer, device,
+            sessionRequestEx.HostEndPoint.AddressFamily,
+            sessionRequestEx.RegionId,
             sessionRequestEx.AllowRedirect);
     }
 
@@ -66,15 +66,16 @@ public class LoadBalancerService(
         var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{regionId}";
         if (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId)
         {
-            if (servers.Any(x => x.ServerId == currentServer.ServerFarmId))
+            if (servers.Any(x => x.ServerId == currentServer.ServerId))
                 return;
         }
 
         // redirect if current server does not serve the best TcpEndPoint
-        if (!currentServer.AccessPoints.Any(accessPoint =>
-                new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(tcpEndPoints)))
+        var bestTcpEndPoint = tcpEndPoints.First();
+        var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint => bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
+        if (currentServer.ServerId != bestServer.ServerFarmId)
         {
-            memoryCache.Set(cacheKey, servers.First().ServerId, TimeSpan.FromMinutes(5));
+            memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
             throw new SessionExceptionEx(new SessionResponseEx
             {
                 ErrorCode = SessionErrorCode.RedirectHost,
@@ -108,6 +109,13 @@ public class LoadBalancerService(
                 (regionIds == null || regionIds.Contains(server.RegionId ?? -10)))
             .OrderBy(CalcServerLoad)
             .ToArray();
+
+        if (farmServers.Length == 0)
+        {
+            var a = servers
+                .Where(server => server.IsReady && server.ServerFarmId == serverFarmId)
+                .ToArray();
+        }
 
         return farmServers;
     }

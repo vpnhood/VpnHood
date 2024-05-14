@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Security.Authentication;
+﻿using System.Security.Authentication;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;

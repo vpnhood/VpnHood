@@ -50,14 +50,16 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         if (autoRedirect && ret.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
         {
             Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoint);
+            Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoints);
+            Assert.IsTrue(ret.SessionResponseEx.RedirectHostEndPoints.Any(x=>x.Equals(ret.SessionResponseEx.RedirectHostEndPoint)));
             Assert.AreEqual(ret.SessionRequestEx.HostEndPoint.AddressFamily, ret.SessionResponseEx.RedirectHostEndPoint.AddressFamily);
             return await CreateSession(
-                ret.SessionResponseEx.RedirectHostEndPoint, 
+                ret.SessionResponseEx.RedirectHostEndPoint,
                 clientId: sessionRequestEx.ClientInfo.ClientId,
-                clientIp: sessionRequestEx.ClientIp, 
+                clientIp: sessionRequestEx.ClientIp,
                 regionId: regionId,
                 assertError: assertError,
-                autoRedirect: true); //todo
+                autoRedirect: false);
         }
 
         if (assertError)

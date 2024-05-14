@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Security.Authentication;
 using Ga4.Ga4Tracking;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
@@ -20,10 +20,10 @@ public class SessionService(
     ILogger<SessionService> logger,
     ILogger<SessionService.NewAccess> newAccessLogger,
     IOptions<AgentOptions> agentOptions,
-    IMemoryCache memoryCache,
     CacheService cacheService,
     VhRepo vhRepo,
-    VhAgentRepo vhAgentRepo)
+    VhAgentRepo vhAgentRepo,
+    LoadBalancerService loadBalancerService)
 {
     public class NewAccess;
     private static Task TrackUsage(ProjectCache project, ServerCache server,
@@ -82,11 +82,15 @@ public class SessionService(
             var sessionResponseEx = await CreateSessionInternal(server, sessionRequestEx);
             return sessionResponseEx;
         }
+        catch (SessionExceptionEx ex)
+        {
+            return ex.SessionResponseEx;
+        }
         finally
         {
             // make sure to save changes if any error occured or return session exception
             // such as creating new device or access
-            await vhAgentRepo.SaveChangesAsync(); 
+            await vhAgentRepo.SaveChangesAsync();
         }
     }
     private async Task<SessionResponseEx> CreateSessionInternal(ServerCache server, SessionRequestEx sessionRequestEx)
@@ -100,7 +104,6 @@ public class SessionService(
         var serverId = server.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
-        var requestEndPoint = sessionRequestEx.HostEndPoint;
         var project = await cacheService.GetProject(server.ProjectId);
 
         // Get accessTokenModel
@@ -108,47 +111,28 @@ public class SessionService(
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Could not validate the request."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not validate the request.");
 
         // can serverModel request this endpoint?
         if (accessToken.ServerFarmId != server.ServerFarmId)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Token does not belong to server farm."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Token does not belong to server farm.");
 
         // check is token locked
         if (!accessToken.IsEnabled)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = accessToken.Description?.Contains("#message") == true
+            throw new SessionExceptionEx(SessionErrorCode.AccessLocked, 
+                accessToken.Description?.Contains("#message") == true
                     ? accessToken.Description.Replace("#message", "").Trim()
-                    : "Your access has been locked! Please contact the support."
-            };
+                    : "Your access has been locked! Please contact the support.");
 
         // set accessTokenModel expiration time on first use
         if (accessToken.Lifetime != 0 && accessToken.FirstUsedTime != null &&
             accessToken.FirstUsedTime + TimeSpan.FromDays(accessToken.Lifetime) < DateTime.UtcNow)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessExpired,
-                ErrorMessage = "Your access has been expired! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessExpired, "Your access has been expired! Please contact the support.");
 
         // check is Ip Locked
         var ipLock = clientIp != null ? await vhAgentRepo.IpLockFind(projectId, clientIp.ToString()) : null;
         if (ipLock?.LockedTime != null)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessLocked, "Your access has been locked! Please contact the support.");
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
@@ -178,11 +162,7 @@ public class SessionService(
 
         // check has device Locked
         if (device.LockedTime != null)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessLocked, "Your access has been locked! Please contact the support.");
 
         // multiple requests may be already queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
@@ -203,29 +183,10 @@ public class SessionService(
 
         // check supported version
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(AgentOptions.MinClientVersion) < 0)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.UnsupportedClient,
-                ErrorMessage = "This version is not supported! You need to update your app."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.UnsupportedClient, "This version is not supported! You need to update your app.");
 
         // Check Redirect to another server if everything was ok
-        var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, 
-            accessToken.ServerFarmId, device.DeviceId, sessionRequestEx.RegionId);
-        if (bestTcpEndPoint == null)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Could not find any free server!"
-            };
-
-        // redirect if current server does not serve the best TcpEndPoint
-        if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestTcpEndPoint)))
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.RedirectHost,
-                RedirectHostEndPoint = bestTcpEndPoint
-            };
+        await loadBalancerService.CheckRedirect(accessToken, server, device, sessionRequestEx);
 
         // check is device already rewarded
         var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&
@@ -500,61 +461,6 @@ public class SessionService(
         }
 
         return sessionResponse;
-    }
-
-    public async Task<IPEndPoint?> FindBestServerForDevice(ServerCache currentServer, IPEndPoint currentEndPoint, 
-        Guid serverFarmId, Guid deviceId, string? regionIdString)
-    {
-        // prevent re-redirect if device has already redirected to this server
-        var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}/{regionIdString}";
-        if (!agentOptions.Value.AllowRedirect ||
-            (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
-        {
-            if (currentServer.IsReady)
-                return currentEndPoint;
-        }
-
-        // find acceptable regions
-        List<int>? regionIds = null;
-        if (!string.IsNullOrWhiteSpace(regionIdString))
-        {
-            regionIds = new List<int>();
-            if (!int.TryParse(regionIdString, out var regionId))
-                throw new Exception("Could not find any server in the requested region.");
-                
-            regionIds.Add(regionId);
-        }
-
-        // get all servers of this farm
-        var servers = await cacheService.GetServers();
-        var farmServers = servers
-            .Where(server =>
-                server.IsReady &&
-                server.ProjectId == currentServer.ProjectId &&
-                server.ServerFarmId == currentServer.ServerFarmId &&
-                server.AccessPoints.Any(accessPoint => accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
-                (regionIds == null || regionIds.Contains(server.RegionId ?? -10)))
-            .ToArray();
-
-        // find the best free server
-        var bestServer = farmServers
-            .MinBy(CalcServerLoad);
-
-        if (bestServer != null)
-        {
-            memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
-            var serverEndPoint = bestServer.AccessPoints.First(accessPoint =>
-                accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily);
-            var ret = new IPEndPoint(serverEndPoint.IpAddress, serverEndPoint.TcpPort);
-            return ret;
-        }
-
-        return null;
-    }
-
-    private static float CalcServerLoad(ServerCache server)
-    {
-        return (float)server.ServerStatus!.SessionCount / Math.Max(1, server.LogicalCoreCount);
     }
 
     private async Task<bool> VerifyAdReward(Guid projectId, Guid accessId, string adData)

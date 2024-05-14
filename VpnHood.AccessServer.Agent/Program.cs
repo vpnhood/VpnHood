@@ -76,6 +76,7 @@ public class Program
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<AgentService>();
+        builder.Services.AddScoped<LoadBalancerService>();
         builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
         //---------------------

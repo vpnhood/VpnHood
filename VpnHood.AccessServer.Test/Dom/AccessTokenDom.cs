@@ -56,7 +56,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 clientId: sessionRequestEx.ClientInfo.ClientId,
                 clientIp: sessionRequestEx.ClientIp, 
                 regionId: regionId,
-                assertError: assertError);
+                assertError: assertError,
+                autoRedirect: true); //todo
         }
 
         if (assertError)

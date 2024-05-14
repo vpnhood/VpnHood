@@ -191,7 +191,7 @@ public class AgentServerTest
     public async Task Configure_UDP_for_first_time_only()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
-        var serverDom = await farm.AddNewServer(false);
+        var serverDom = await farm.AddNewServer(configure: false);
 
         // create serverInfo and configure
         var publicIp = await farm.TestApp.NewIpV6();
@@ -224,7 +224,7 @@ public class AgentServerTest
         var farmCreateParams = new ServerFarmCreateParams { TokenUrl = new Uri("http://localhost:8080/farm1-token") };
         using var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
-        var serverDom = await farm.AddNewServer(false);
+        var serverDom = await farm.AddNewServer(configure: false);
 
         // create serverInfo and configure
         var publicIp = await farm.TestApp.NewIpV6();
@@ -290,7 +290,7 @@ public class AgentServerTest
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         var testApp = farm.TestApp;
-        var serverDom = await farm.AddNewServer(false, false);
+        var serverDom = await farm.AddNewServer(configure: false, sendStatus: false);
 
         // create serverInfo
         var privateIpV4 = await testApp.NewIpV4();
@@ -542,7 +542,7 @@ public class AgentServerTest
         const long gb = 0x40000000;
 
         var sampler = await ServerFarmDom.Create(serverCount: 0);
-        var sampleServer = await sampler.AddNewServer(false);
+        var sampleServer = await sampler.AddNewServer(configure: false);
 
         sampleServer.ServerInfo.TotalMemory = 60L * gb;
         await sampleServer.Configure();

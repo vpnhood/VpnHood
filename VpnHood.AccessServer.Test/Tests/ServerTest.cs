@@ -281,10 +281,10 @@ public class ServerTest
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
         // notInstalled 4
-        await farm.AddNewServer(false);
-        await farm.AddNewServer(false);
-        await farm.AddNewServer(false);
-        await farm.AddNewServer(false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
 
         // idle1
         sampleServer = await farm.AddNewServer();

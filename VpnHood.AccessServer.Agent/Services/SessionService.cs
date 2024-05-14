@@ -77,6 +77,20 @@ public class SessionService(
 
     public async Task<SessionResponseEx> CreateSession(ServerCache server, SessionRequestEx sessionRequestEx)
     {
+        try
+        {
+            var sessionResponseEx = await CreateSessionInternal(server, sessionRequestEx);
+            return sessionResponseEx;
+        }
+        finally
+        {
+            // make sure to save changes if any error occured or return session exception
+            // such as creating new device or access
+            await vhAgentRepo.SaveChangesAsync(); 
+        }
+    }
+    private async Task<SessionResponseEx> CreateSessionInternal(ServerCache server, SessionRequestEx sessionRequestEx)
+    {
         // validate argument
         if (server.AccessPoints == null)
             throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
@@ -196,7 +210,8 @@ public class SessionService(
             };
 
         // Check Redirect to another server if everything was ok
-        var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
+        var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, 
+            accessToken.ServerFarmId, device.DeviceId, sessionRequestEx.RegionId);
         if (bestTcpEndPoint == null)
             return new SessionResponseEx
             {
@@ -487,9 +502,10 @@ public class SessionService(
         return sessionResponse;
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(ServerCache currentServer, IPEndPoint currentEndPoint, Guid serverFarmId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(ServerCache currentServer, IPEndPoint currentEndPoint, 
+        Guid serverFarmId, Guid deviceId, string? regionIdString)
     {
-        // prevent re-redirect if device has already redirected to this serverModel
+        // prevent re-redirect if device has already redirected to this server
         var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}";
         if (!agentOptions.Value.AllowRedirect ||
             (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
@@ -498,14 +514,26 @@ public class SessionService(
                 return currentEndPoint;
         }
 
+        // find acceptable regions
+        List<int>? regionIds = null;
+        if (!string.IsNullOrWhiteSpace(regionIdString))
+        {
+            regionIds = new List<int>();
+            if (!int.TryParse(regionIdString, out var regionId))
+                throw new Exception("Could not find any server in the requested region.");
+                
+            regionIds.Add(regionId);
+        }
+
         // get all servers of this farm
         var servers = await cacheService.GetServers();
         var farmServers = servers
             .Where(server =>
+                server.IsReady &&
                 server.ProjectId == currentServer.ProjectId &&
                 server.ServerFarmId == currentServer.ServerFarmId &&
                 server.AccessPoints.Any(accessPoint => accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
-                server.IsReady)
+                (regionIds == null || regionIds.Contains(server.RegionId ?? -10)))
             .ToArray();
 
         // find the best free server

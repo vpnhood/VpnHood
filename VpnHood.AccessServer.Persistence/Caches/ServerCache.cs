@@ -18,6 +18,8 @@ public class ServerCache
     public required DateTime? ConfigureTime { get; init; }
     public required bool IsEnabled { get; init; }
     public required Guid AuthorizationCode { get; init; }
+    public required int? RegionId { get; init; }
+    public required string? RegionCountryCode { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
     public bool IsReady => ServerState is ServerState.Idle or ServerState.Active;

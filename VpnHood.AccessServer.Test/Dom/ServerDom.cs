@@ -86,9 +86,11 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         return myServer;
     }
 
-    public static Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true, bool sendStatus = true)
+    public static async Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true,
+        bool sendStatus = true, int? regionId = null )
     {
-        return Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId }, configure, sendStatus);
+        var serverDom = await Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId, RegionId = regionId }, configure, sendStatus);
+        return serverDom;
     }
 
     public async Task Update(ServerUpdateParams updateParams)

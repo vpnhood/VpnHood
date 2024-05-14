@@ -37,7 +37,7 @@ public class SyncTest
     public async Task Sync_ServerStatuses()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
-        var serverDom = await farm.AddNewServer(false);
+        var serverDom = await farm.AddNewServer(configure: false);
         var vhContext = farm.TestApp.VhContext;
         var vhReportContext = farm.TestApp.VhReportContext;
 

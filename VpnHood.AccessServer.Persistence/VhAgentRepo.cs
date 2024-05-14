@@ -44,7 +44,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     AccessPoints = x.Server.AccessPoints.ToArray(),
                     ServerFarmName = x.Server.ServerFarm!.ServerFarmName,
                     ServerProfileId = x.Server.ServerFarm!.ServerProfileId,
-                    ServerStatus = x
+                    ServerStatus = x,
+                    RegionId = x.Server.Region!.RegionId,
+                    RegionCountryCode = x.Server.Region!.CountryCode,
                 },
                 Farm = new ServerFarmCache
                 {
@@ -154,7 +156,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessPoints = x.AccessPoints.ToArray(),
                 ServerFarmName = x.ServerFarm!.ServerFarmName,
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
-                ServerStatus = x.ServerStatuses!.FirstOrDefault()
+                ServerStatus = x.ServerStatuses!.FirstOrDefault(),
+                RegionId = x.Region!.RegionId,
+                RegionCountryCode = x.Region!.CountryCode,
             })
             .AsNoTracking()
             .ToArrayAsync();

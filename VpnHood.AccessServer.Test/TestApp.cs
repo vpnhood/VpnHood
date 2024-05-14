@@ -269,7 +269,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
-        , string? extraData = null)
+        , string? extraData = null, string? regionId = null)
     {
         var rand = new Random();
 
@@ -291,7 +291,8 @@ public class TestApp : IHttpClientFactory, IDisposable
             EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             ClientIp = clientIp ?? NewIpV4().Result,
             HostEndPoint = hostEndPoint,
-            ExtraData = extraData ?? Guid.NewGuid().ToString()
+            ExtraData = extraData ?? Guid.NewGuid().ToString(),
+            RegionId = regionId
         };
 
         return sessionRequestEx;
@@ -339,5 +340,13 @@ public class TestApp : IHttpClientFactory, IDisposable
         HttpClient.Dispose();
         AgentTestApp.Dispose();
         WebApp.Dispose();
+    }
+
+    public Task<RegionData> AddRegion(string countryCode)
+    {
+        return RegionsClient.CreateAsync(ProjectId, new RegionCreateParams
+        {
+            CountryCode = countryCode
+        });
     }
 }

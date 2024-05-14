@@ -98,9 +98,9 @@ public class ServerFarmDom : IDisposable
         return new AccessTokenDom(TestApp, ret);
     }
 
-    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true)
+    public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true, int? regionId = null)
     {
-        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, sendStatus);
+        var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, sendStatus, regionId);
         Servers.Add(sampleServer);
         return sampleServer;
     }

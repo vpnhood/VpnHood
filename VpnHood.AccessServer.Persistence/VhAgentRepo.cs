@@ -47,6 +47,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ServerStatus = x,
                     RegionId = x.Server.Region!.RegionId,
                     RegionCountryCode = x.Server.Region!.CountryCode,
+                    LogicalCoreCount = x.Server.LogicalCoreCount ?? 1
                 },
                 Farm = new ServerFarmCache
                 {
@@ -159,6 +160,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ServerStatus = x.ServerStatuses!.FirstOrDefault(),
                 RegionId = x.Region!.RegionId,
                 RegionCountryCode = x.Region!.CountryCode,
+                LogicalCoreCount = x.LogicalCoreCount ?? 1
             })
             .AsNoTracking()
             .ToArrayAsync();

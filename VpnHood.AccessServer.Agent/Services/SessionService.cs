@@ -506,7 +506,7 @@ public class SessionService(
         Guid serverFarmId, Guid deviceId, string? regionIdString)
     {
         // prevent re-redirect if device has already redirected to this server
-        var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}";
+        var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}/{regionIdString}";
         if (!agentOptions.Value.AllowRedirect ||
             (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
@@ -538,7 +538,7 @@ public class SessionService(
 
         // find the best free server
         var bestServer = farmServers
-            .MinBy(server => server.ServerStatus!.SessionCount);
+            .MinBy(CalcServerLoad);
 
         if (bestServer != null)
         {
@@ -550,6 +550,11 @@ public class SessionService(
         }
 
         return null;
+    }
+
+    private static float CalcServerLoad(ServerCache server)
+    {
+        return (float)server.ServerStatus!.SessionCount / Math.Max(1, server.LogicalCoreCount);
     }
 
     private async Task<bool> VerifyAdReward(Guid projectId, Guid accessId, string adData)

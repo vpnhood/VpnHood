@@ -236,7 +236,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false)
+    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null)
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
@@ -259,7 +259,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             Status = NewServerStatus(null, randomStatus),
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",
-            LogicalCoreCount = 2,
+            LogicalCoreCount = logicalCore ?? 2,
             TotalMemory = 20000000,
             FreeUdpPortV4 = new Random().Next(2000, 9000),
             FreeUdpPortV6 = new Random().Next(2000, 9000)

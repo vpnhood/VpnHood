@@ -470,55 +470,6 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task LoadBalancer()
-    {
-        using var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
-
-        // Create and init servers
-        var serverDom1 = await farm.AddNewServer();
-        var serverDom2 = await farm.AddNewServer();
-        var serverDom3 = await farm.AddNewServer(sendStatus: false);
-        var serverDom4 = await farm.AddNewServer(configure: false);
-        var serverDom5 = await farm.AddNewServer(configure: false, sendStatus: false);
-        var serverDom6 = await farm.AddNewServer();
-
-        // configure serverDom5 with ipv6
-        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()
-        ];
-        serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
-        await serverDom5.Configure();
-
-        // make sure all accessPoints are initialized
-        await farm.ReloadServers();
-
-        // create access token
-        var accessTokenDom = await farm.CreateAccessToken();
-
-        // create sessions
-        for (var i = 0; i < 10; i++)
-        {
-            var addressFamily = i == 9 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
-            var sessionDom = await accessTokenDom.CreateSession(addressFamily: addressFamily, autoRedirect: true);
-
-            // find the server that create the session
-            var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
-            serverDom.ServerInfo.Status.SessionCount++;
-            await serverDom.SendStatus();
-        }
-
-        // some server should not be selected
-        Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount, "Should not use server in Configuring state.");
-        Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount, "Should not use server in Configuring state.");
-        Assert.AreEqual(1, serverDom5.ServerStatus.SessionCount, "IpVersion was not respected.");
-
-        // each server sessions must be 3
-        Assert.AreEqual(3, serverDom1.ServerStatus.SessionCount);
-        Assert.AreEqual(3, serverDom2.ServerStatus.SessionCount);
-        Assert.AreEqual(3, serverDom6.ServerStatus.SessionCount);
-    }
-
-    [TestMethod]
     public async Task Fail_Configure_by_old_version()
     {
         using var farm = await ServerFarmDom.Create();

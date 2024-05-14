@@ -55,7 +55,7 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 ret.SessionResponseEx.RedirectHostEndPoint, 
                 clientId: sessionRequestEx.ClientInfo.ClientId,
                 clientIp: sessionRequestEx.ClientIp, 
-                regionId: null,
+                regionId: regionId,
                 assertError: assertError);
         }
 

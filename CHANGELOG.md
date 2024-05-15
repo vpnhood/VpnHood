@@ -1,3 +1,8 @@
+# Upcoming
+
+### Server
+* Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
+
 # v4.4.506
 ### Client
 * Update: Android: Show Notification & QuickLaunch Request after connect

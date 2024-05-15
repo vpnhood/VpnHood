@@ -328,10 +328,6 @@ public class Session : IAsyncDisposable, IJob
             // send response
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
 
-            // MaxEncryptChunk
-            if (clientStream.Stream is BinaryStreamCustom binaryStream)
-                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
-
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 "Adding a StreamProxyChannel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));

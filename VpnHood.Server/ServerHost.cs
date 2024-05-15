@@ -316,7 +316,6 @@ internal class ServerHost : IAsyncDisposable, IJob
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
-            if (xVersion == 2) binaryStreamType = BinaryStreamType.Custom;
 
             // read api key
             if (!CheckApiKeyAuthorization(authorization))
@@ -334,14 +333,6 @@ internal class ServerHost : IAsyncDisposable, IJob
 
             switch (binaryStreamType)
             {
-                case BinaryStreamType.Custom:
-                    {
-                        await sslStream.DisposeAsync(); // dispose Ssl
-                        var xSecret = headers.GetValueOrDefault("X-Secret", string.Empty);
-                        var secret = Convert.FromBase64String(xSecret);
-                        return new TcpClientStream(tcpClient, new BinaryStreamCustom(tcpClient.GetStream(), streamId, secret, useBuffer), streamId, ReuseClientStream);
-                    }
-
                 case BinaryStreamType.Standard:
                     return new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseClientStream);
 

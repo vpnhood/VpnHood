@@ -7,6 +7,5 @@ public enum BinaryStreamType
 {
     Unknown,
     None,
-    Custom,
     Standard
 }

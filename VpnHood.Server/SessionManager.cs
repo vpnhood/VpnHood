@@ -122,7 +122,7 @@ public class SessionManager : IAsyncDisposable, IJob
             ClientInfo = helloRequest.ClientInfo,
             EncryptedClientId = helloRequest.EncryptedClientId,
             TokenId = helloRequest.TokenId,
-            ServerSelectorId = helloRequest.ServerSelectorId,
+            ServerLocation = helloRequest.ServerLocation,
             AllowRedirect = helloRequest.AllowRedirect
         });
 

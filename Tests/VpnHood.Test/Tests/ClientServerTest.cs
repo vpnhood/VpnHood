@@ -69,7 +69,7 @@ public class ClientServerTest : TestBase
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
         var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.RegionId = "r1";
+        clientOptions.ServerSelectorId = "r1";
         await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions);
         await TestHelper.Test_Https();
 

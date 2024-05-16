@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Common.TokenLegacy;
+namespace VpnHood.Common;
 
 internal class TokenVersion
 {

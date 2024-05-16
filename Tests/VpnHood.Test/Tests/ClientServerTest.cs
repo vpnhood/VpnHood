@@ -48,7 +48,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task Redirect_Server_For_Region()
+    public async Task Redirect_Server_By_ServerLocation()
     {
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
@@ -64,12 +64,12 @@ public class ClientServerTest : TestBase
         await using var server2 = TestHelper.CreateServer(testAccessManager2);
 
         // redirect server1 to server2
-        testAccessManager1.EmbedIoAccessManager.Regions.Add("r1", serverEndPoint2);
+        testAccessManager1.EmbedIoAccessManager.ServerLocations.Add("uk/london", serverEndPoint2);
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
         var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.ServerSelectorId = "r1";
+        clientOptions.ServerLocation = "uk/london";
         await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions);
         await TestHelper.Test_Https();
 

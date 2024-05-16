@@ -39,7 +39,7 @@ public class ServerToken
 
     [JsonPropertyName("selectors")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string[]? ServerSelectors { get; set; }
+    public string[]? ServerLocations { get; set; }
 
     public string Encrypt()
     {

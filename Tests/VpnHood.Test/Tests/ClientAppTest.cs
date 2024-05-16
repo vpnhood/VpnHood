@@ -51,15 +51,15 @@ public class ClientAppTest : TestBase
     public async Task BuiltIn_AccessKeys_initialization()
     {
         var appOptions = TestHelper.CreateClientAppOptions();
-        var tokens = new[] {CreateToken(), CreateToken()};
-        appOptions.AccessKeys = tokens.Select(x=>x.ToAccessKey()).ToArray();
-        
+        var tokens = new[] { CreateToken(), CreateToken() };
+        appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();
+
         await using var app1 = TestHelper.CreateClientApp(appOptions: appOptions);
         var clientProfiles = app1.ClientProfileService.List();
         Assert.AreEqual(tokens.Length, clientProfiles.Length);
         Assert.AreEqual(tokens[0].TokenId, clientProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens[1].TokenId, clientProfiles[1].Token.TokenId);
-        Assert.AreEqual(tokens[0].TokenId, clientProfiles.Single(x=>x.ClientProfileId ==app1.Features.BuiltInClientProfileId).Token.TokenId);
+        Assert.AreEqual(tokens[0].TokenId, clientProfiles.Single(x => x.ClientProfileId == app1.Features.BuiltInClientProfileId).Token.TokenId);
 
         // BuiltIn token should not be removed
         foreach (var clientProfile in clientProfiles)
@@ -94,6 +94,12 @@ public class ClientAppTest : TestBase
             "Countries has not been extracted.");
     }
 
+    //
+    // Drop City in access server
+    // Use City as region if state is not available
+    // ServerLocation
+    //  Handle Null in client create auto*
+
 
     [TestMethod]
     public async Task ClientProfiles_CRUD()
@@ -103,10 +109,17 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
-        token1.ServerToken.Regions = [new HostRegion{RegionId = "r1", CountryCode = "US"}, new HostRegion { RegionId = "r2", CountryCode = "US" }];
+        token1.ServerToken.ServerSelectors = ["us", "us/california"];
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
         Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");
+        
+        Assert.IsTrue(clientProfile1.ToInfo().ServerSelectors.Any(x =>
+            x.ServerSelectorId == new ServerSelector { CountryCode = "us", RegionName = "-", CityName = "-" }.ServerSelectorId));
+        Assert.IsTrue(clientProfile1.ToInfo().ServerSelectors.Any(x =>
+            x.ServerSelectorId == new ServerSelector { CountryCode = "us", RegionName = "california", CityName = "-" }.ServerSelectorId));
+        Assert.IsTrue(clientProfile1.ToInfo().ServerSelectors.Any(x =>
+            x.ServerSelectorId == new ServerSelector { CountryCode = "us", RegionName = "*", CityName = "*" }.ServerSelectorId));
 
         // ************
         // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
@@ -129,7 +142,7 @@ public class ClientAppTest : TestBase
             // ReSharper disable once AccessToDisposedClosure
             app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
             {
-                ClientProfileName =  "Hi"
+                ClientProfileName = "Hi"
             });
 
         });
@@ -141,7 +154,7 @@ public class ClientAppTest : TestBase
             // ReSharper disable once AccessToDisposedClosure
             app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
             {
-                RegionId = Guid.NewGuid().ToString()
+                ServerSelectorId = Guid.NewGuid().ToString()
             });
 
         });
@@ -151,10 +164,10 @@ public class ClientAppTest : TestBase
         app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
         {
             ClientProfileName = "Hi2",
-            RegionId = "r2"
+            ServerSelectorId = "us/*/*"
         });
         Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
-        Assert.AreEqual("r2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).RegionId);
+        Assert.AreEqual("us/*/*", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ServerSelectorId);
 
         // ************
         // *** TEST ***: RemoveClientProfile

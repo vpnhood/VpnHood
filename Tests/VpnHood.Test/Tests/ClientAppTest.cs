@@ -94,12 +94,55 @@ public class ClientAppTest : TestBase
             "Countries has not been extracted.");
     }
 
-    //
+    // todo
     // Drop City in access server
     // Use City as region if state is not available
-    // ServerLocation
     //  Handle Null in client create auto*
 
+    [TestMethod]
+    public async Task ClientProfiles_ServerLocations()
+    {
+        await using var app1 = TestHelper.CreateClientApp();
+
+        // test two region in a same country
+        var token = CreateToken();
+        token.ServerToken.ServerLocations = ["us", "us/california"];
+        var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var serverLocations = clientProfile.ToInfo().ServerLocations.Select(x=>x.ServerLocation).ToArray();
+        var i = 0;
+        Assert.AreEqual("us/*", serverLocations[i++]);
+        Assert.AreEqual("us/-", serverLocations[i++]);
+        Assert.AreEqual("us/california", serverLocations[i++]);
+        _ = i;
+
+        // test multiple countries
+        token = CreateToken();
+        token.ServerToken.ServerLocations = ["us", "us/california", "uk"];
+        clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        serverLocations = clientProfile.ToInfo().ServerLocations.Select(x=>x.ServerLocation).ToArray();
+        i = 0;
+        Assert.AreEqual("*/*", serverLocations[i++]);
+        Assert.AreEqual("uk/-", serverLocations[i++]);
+        Assert.AreEqual("us/*", serverLocations[i++]);
+        Assert.AreEqual("us/-", serverLocations[i++]);
+        Assert.AreEqual("us/california", serverLocations[i++]);
+        _ = i;
+
+        // test multiple countries
+        token = CreateToken();
+        token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england", "uk/region2", "uk/england"];
+        clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        serverLocations = clientProfile.ToInfo().ServerLocations.Select(x => x.ServerLocation).ToArray();
+        i = 0;
+        Assert.AreEqual("*/*", serverLocations[i++]);
+        Assert.AreEqual("uk/*", serverLocations[i++]);
+        Assert.AreEqual("uk/england", serverLocations[i++]);
+        Assert.AreEqual("uk/region2", serverLocations[i++]);
+        Assert.AreEqual("us/*", serverLocations[i++]);
+        Assert.AreEqual("us/california", serverLocations[i++]);
+        Assert.AreEqual("us/virgina", serverLocations[i++]);
+        _ = i;
+    }
 
     [TestMethod]
     public async Task ClientProfiles_CRUD()
@@ -109,18 +152,11 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
         var token1 = CreateToken();
-        token1.ServerToken.ServerSelectors = ["us", "us/california"];
+        token1.ServerToken.ServerLocations = ["us", "us/california"];
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
         Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");
         
-        Assert.IsTrue(clientProfile1.ToInfo().ServerSelectors.Any(x =>
-            x.ServerSelectorId == new ServerSelector { CountryCode = "us", RegionName = "-", CityName = "-" }.ServerSelectorId));
-        Assert.IsTrue(clientProfile1.ToInfo().ServerSelectors.Any(x =>
-            x.ServerSelectorId == new ServerSelector { CountryCode = "us", RegionName = "california", CityName = "-" }.ServerSelectorId));
-        Assert.IsTrue(clientProfile1.ToInfo().ServerSelectors.Any(x =>
-            x.ServerSelectorId == new ServerSelector { CountryCode = "us", RegionName = "*", CityName = "*" }.ServerSelectorId));
-
         // ************
         // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
         var token2 = CreateToken();
@@ -154,7 +190,7 @@ public class ClientAppTest : TestBase
             // ReSharper disable once AccessToDisposedClosure
             app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
             {
-                ServerSelectorId = Guid.NewGuid().ToString()
+                ServerLocation = Guid.NewGuid().ToString()
             });
 
         });
@@ -164,10 +200,10 @@ public class ClientAppTest : TestBase
         app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
         {
             ClientProfileName = "Hi2",
-            ServerSelectorId = "us/*/*"
+            ServerLocation = "us/*"
         });
         Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
-        Assert.AreEqual("us/*/*", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ServerSelectorId);
+        Assert.AreEqual("us/*", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ServerLocation);
 
         // ************
         // *** TEST ***: RemoveClientProfile

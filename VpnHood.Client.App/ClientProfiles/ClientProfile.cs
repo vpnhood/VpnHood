@@ -6,7 +6,7 @@ public class ClientProfile
 {
     public required Guid ClientProfileId { get; set; }
     public required string? ClientProfileName { get; set; }
-    public string? ServerSelectorId { get; set; }
+    public string? ServerLocation { get; set; }
     public required Token Token { get; set; }
     public bool IsForAccount { get; set; }
 

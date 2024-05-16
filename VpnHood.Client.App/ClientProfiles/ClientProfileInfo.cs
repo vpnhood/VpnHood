@@ -3,14 +3,14 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.ClientProfiles;
 
-public class ClientProfileInfo(ClientProfile clientProfile) 
+public class ClientProfileInfo(ClientProfile clientProfile)
     : ClientProfileBaseInfo(clientProfile)
 {
     public string TokenId { get; private set; } = clientProfile.Token.TokenId;
     public string[] HostNames { get; private set; } = GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
-    public HostRegionInfo[] Regions { get; private set; } = 
-        clientProfile.Token.ServerToken.Regions?.Select(x => new HostRegionInfo(x)).ToArray() ?? [];
+    public ServerSelector[] ServerSelectors { get; private set; } =
+        ServerSelector.AddCategoryGaps(clientProfile.Token.ServerToken.ServerSelectors);
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {
@@ -23,4 +23,6 @@ public class ClientProfileInfo(ClientProfile clientProfile)
 
         return hostNames.ToArray();
     }
+
+
 }

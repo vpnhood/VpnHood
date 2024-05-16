@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;

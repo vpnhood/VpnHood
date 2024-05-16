@@ -123,12 +123,12 @@ public class TestEmbedIoAccessManager : IDisposable
             }
 
             // manage region
-            if (sessionRequestEx.ServerSelector != null)
+            if (sessionRequestEx.ServerSelectorId != null)
             {
-                var redirectEndPoint = embedIoAccessManager.Regions[sessionRequestEx.ServerSelector];
+                var redirectEndPoint = embedIoAccessManager.Regions[sessionRequestEx.ServerSelectorId];
                 if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
                 {
-                    res.RedirectHostEndPoint = embedIoAccessManager.Regions[sessionRequestEx.ServerSelector];
+                    res.RedirectHostEndPoint = embedIoAccessManager.Regions[sessionRequestEx.ServerSelectorId];
                     res.ErrorCode = SessionErrorCode.RedirectHost;
                 }
             }

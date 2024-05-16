@@ -86,19 +86,21 @@ public class ClientProfileService
         }
 
         // update region
-        if (updateParams.RegionId != null)
+        if (updateParams.ServerSelectorId != null)
         {
-            if (updateParams.RegionId.Value != null &&
-                clientProfile.Token.ServerToken.Regions?.SingleOrDefault(x => x.RegionId == updateParams.RegionId) == null)
-                throw new NotExistsException("RegionId does not exist.");
+            if (updateParams.ServerSelectorId.Value != null)
+            {
+                var profileInfo = clientProfile.ToInfo();
+                if (profileInfo.ServerSelectors.All(x => x.ServerSelectorId != updateParams.ServerSelectorId))
+                    throw new NotExistsException($"{nameof(updateParams.ServerSelectorId)} does not exist.");
+            }
 
-            clientProfile.RegionId = updateParams.RegionId;
+            clientProfile.ServerSelectorId = updateParams.ServerSelectorId;
         }
 
         Save();
         return clientProfile;
     }
-
 
     public ClientProfile ImportAccessKey(string accessKey)
     {

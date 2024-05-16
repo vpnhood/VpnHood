@@ -18,6 +18,6 @@ public class SessionRequestEx
     public required  IPAddress? ClientIp { get; set; }
 
     public required string? ExtraData { get; set; }
-    public string? ServerSelectorId { get; set; }
+    public string? ServerLocation { get; set; }
     public bool AllowRedirect { get; set; } = true;
 }

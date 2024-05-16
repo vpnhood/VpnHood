@@ -34,7 +34,7 @@ public class ClientOptions
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool DropUdpPackets { get; set; }
     public string? AppGa4MeasurementId { get; set; }
-    public string? RegionId { get; set; }
+    public string? ServerSelectorId { get; set; }
 
 #if DEBUG
     public int ProtocolVersion { get; set; }

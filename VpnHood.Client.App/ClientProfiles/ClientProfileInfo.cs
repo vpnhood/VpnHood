@@ -9,8 +9,8 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string TokenId { get; private set; } = clientProfile.Token.TokenId;
     public string[] HostNames { get; private set; } = GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
-    public ServerSelector[] ServerSelectors { get; private set; } =
-        ServerSelector.AddCategoryGaps(clientProfile.Token.ServerToken.ServerSelectors);
+    public ServerLocationInfo[] ServerLocations { get; private set; } =
+        ServerLocationInfo.AddCategoryGaps(clientProfile.Token.ServerToken.ServerLocations);
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {

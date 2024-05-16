@@ -37,7 +37,7 @@ public class TestEmbedIoAccessManager : IDisposable
     public Uri BaseUri { get; }
     public IPEndPoint? RedirectHostEndPoint { get; set; }
     public HttpException? HttpException { get; set; }
-    public Dictionary<string, IPEndPoint?> Regions { get; set; } = new();
+    public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
 
     public void Dispose()
     {
@@ -123,12 +123,12 @@ public class TestEmbedIoAccessManager : IDisposable
             }
 
             // manage region
-            if (sessionRequestEx.ServerSelectorId != null)
+            if (sessionRequestEx.ServerLocation != null)
             {
-                var redirectEndPoint = embedIoAccessManager.Regions[sessionRequestEx.ServerSelectorId];
+                var redirectEndPoint = embedIoAccessManager.ServerLocations[sessionRequestEx.ServerLocation];
                 if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
                 {
-                    res.RedirectHostEndPoint = embedIoAccessManager.Regions[sessionRequestEx.ServerSelectorId];
+                    res.RedirectHostEndPoint = embedIoAccessManager.ServerLocations[sessionRequestEx.ServerLocation];
                     res.ErrorCode = SessionErrorCode.RedirectHost;
                 }
             }

@@ -1547,353 +1547,6 @@ export class ProjectsClient {
     }
 }
 
-export class RegionsClient {
-    protected instance: AxiosInstance;
-    protected baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, instance?: AxiosInstance) {
-
-        this.instance = instance || axios.create();
-
-        this.baseUrl = baseUrl ?? "";
-
-    }
-
-    create(projectId: string, regionCreateParams: RegionCreateParams, cancelToken?: CancelToken): Promise<RegionData> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(regionCreateParams);
-
-        let options_: AxiosRequestConfig = {
-            data: content_,
-            method: "POST",
-            url: url_,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processCreate(_response);
-        });
-    }
-
-    protected processCreate(response: AxiosResponse): Promise<RegionData> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = RegionData.fromJS(resultData200);
-            return Promise.resolve<RegionData>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<RegionData>(null as any);
-    }
-
-    list(projectId: string, cancelToken?: CancelToken): Promise<RegionData[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processList(_response);
-        });
-    }
-
-    protected processList(response: AxiosResponse): Promise<RegionData[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(RegionData.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<RegionData[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<RegionData[]>(null as any);
-    }
-
-    get(projectId: string, regionId: number, cancelToken?: CancelToken): Promise<RegionData> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/{regionId}";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (regionId === undefined || regionId === null)
-            throw new Error("The parameter 'regionId' must be defined.");
-        url_ = url_.replace("{regionId}", encodeURIComponent("" + regionId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processGet(_response);
-        });
-    }
-
-    protected processGet(response: AxiosResponse): Promise<RegionData> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = RegionData.fromJS(resultData200);
-            return Promise.resolve<RegionData>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<RegionData>(null as any);
-    }
-
-    update(projectId: string, regionId: number, updateParams: RegionUpdateParams, cancelToken?: CancelToken): Promise<RegionData> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/{regionId}";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (regionId === undefined || regionId === null)
-            throw new Error("The parameter 'regionId' must be defined.");
-        url_ = url_.replace("{regionId}", encodeURIComponent("" + regionId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(updateParams);
-
-        let options_: AxiosRequestConfig = {
-            data: content_,
-            method: "PATCH",
-            url: url_,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processUpdate(_response);
-        });
-    }
-
-    protected processUpdate(response: AxiosResponse): Promise<RegionData> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            result200 = RegionData.fromJS(resultData200);
-            return Promise.resolve<RegionData>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<RegionData>(null as any);
-    }
-
-    delete(projectId: string, regionId: number, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/{regionId}";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (regionId === undefined || regionId === null)
-            throw new Error("The parameter 'regionId' must be defined.");
-        url_ = url_.replace("{regionId}", encodeURIComponent("" + regionId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "DELETE",
-            url: url_,
-            headers: {
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processDelete(_response);
-        });
-    }
-
-    protected processDelete(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
-    }
-
-    listAllCountries(projectId: string, cancelToken?: CancelToken): Promise<CountryInfo[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/regions/all-countries";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processListAllCountries(_response);
-        });
-    }
-
-    protected processListAllCountries(response: AxiosResponse): Promise<CountryInfo[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(CountryInfo.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<CountryInfo[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<CountryInfo[]>(null as any);
-    }
-}
-
 export class ServerFarmsClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
@@ -5827,213 +5480,6 @@ export interface IProjectUpdateParams {
     adRewardSecret?: PatchOfString | null;
 }
 
-export class RegionData implements IRegionData {
-    region!: Region;
-
-    constructor(data?: IRegionData) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.region = new Region();
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.region = _data["region"] ? Region.fromJS(_data["region"]) : new Region();
-        }
-    }
-
-    static fromJS(data: any): RegionData {
-        data = typeof data === 'object' ? data : {};
-        let result = new RegionData();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["region"] = this.region ? this.region.toJSON() : <any>null;
-        return data;
-    }
-}
-
-export interface IRegionData {
-    region: Region;
-}
-
-export class Region implements IRegion {
-    regionId!: number;
-    regionName?: string | null;
-    countryCode!: string;
-    displayName!: string;
-
-    constructor(data?: IRegion) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): Region {
-        data = typeof data === 'object' ? data : {};
-        let result = new Region();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
-        return data;
-    }
-}
-
-export interface IRegion {
-    regionId: number;
-    regionName?: string | null;
-    countryCode: string;
-    displayName: string;
-}
-
-export class RegionCreateParams implements IRegionCreateParams {
-    regionName?: string | null;
-    countryCode!: string;
-
-    constructor(data?: IRegionCreateParams) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): RegionCreateParams {
-        data = typeof data === 'object' ? data : {};
-        let result = new RegionCreateParams();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        return data;
-    }
-}
-
-export interface IRegionCreateParams {
-    regionName?: string | null;
-    countryCode: string;
-}
-
-export class RegionUpdateParams implements IRegionUpdateParams {
-    regionName?: PatchOfString | null;
-    countryCode?: PatchOfString | null;
-
-    constructor(data?: IRegionUpdateParams) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.regionName = _data["regionName"] ? PatchOfString.fromJS(_data["regionName"]) : <any>null;
-            this.countryCode = _data["countryCode"] ? PatchOfString.fromJS(_data["countryCode"]) : <any>null;
-        }
-    }
-
-    static fromJS(data: any): RegionUpdateParams {
-        data = typeof data === 'object' ? data : {};
-        let result = new RegionUpdateParams();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["regionName"] = this.regionName ? this.regionName.toJSON() : <any>null;
-        data["countryCode"] = this.countryCode ? this.countryCode.toJSON() : <any>null;
-        return data;
-    }
-}
-
-export interface IRegionUpdateParams {
-    regionName?: PatchOfString | null;
-    countryCode?: PatchOfString | null;
-}
-
-export class CountryInfo implements ICountryInfo {
-    countryCode!: string;
-    englishName!: string;
-
-    constructor(data?: ICountryInfo) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
-            this.englishName = _data["englishName"] !== undefined ? _data["englishName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): CountryInfo {
-        data = typeof data === 'object' ? data : {};
-        let result = new CountryInfo();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
-        data["englishName"] = this.englishName !== undefined ? this.englishName : <any>null;
-        return data;
-    }
-}
-
-export interface ICountryInfo {
-    countryCode: string;
-    englishName: string;
-}
-
 export class ServerFarmData implements IServerFarmData {
     serverFarm!: ServerFarm;
     accessPoints!: AccessPointView[];
@@ -6971,7 +6417,7 @@ export class VpnServer implements IVpnServer {
     serverName!: string;
     serverFarmId!: string;
     serverFarmName?: string | null;
-    region?: Region | null;
+    location?: Location | null;
     version?: string | null;
     environmentVersion?: string | null;
     osInfo?: string | null;
@@ -7006,7 +6452,7 @@ export class VpnServer implements IVpnServer {
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
-            this.region = _data["region"] ? Region.fromJS(_data["region"]) : <any>null;
+            this.location = _data["location"] ? Location.fromJS(_data["location"]) : <any>null;
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.environmentVersion = _data["environmentVersion"] !== undefined ? _data["environmentVersion"] : <any>null;
             this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
@@ -7045,7 +6491,7 @@ export class VpnServer implements IVpnServer {
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
-        data["region"] = this.region ? this.region.toJSON() : <any>null;
+        data["location"] = this.location ? this.location.toJSON() : <any>null;
         data["version"] = this.version !== undefined ? this.version : <any>null;
         data["environmentVersion"] = this.environmentVersion !== undefined ? this.environmentVersion : <any>null;
         data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
@@ -7074,7 +6520,7 @@ export interface IVpnServer {
     serverName: string;
     serverFarmId: string;
     serverFarmName?: string | null;
-    region?: Region | null;
+    location?: Location | null;
     version?: string | null;
     environmentVersion?: string | null;
     osInfo?: string | null;
@@ -7090,6 +6536,66 @@ export interface IVpnServer {
     serverState: ServerState;
     serverStatus?: ServerStatusEx | null;
     accessPoints: AccessPoint[];
+}
+
+export class Location implements ILocation {
+    countryName!: string;
+    countryCode!: string;
+    regionName?: string | null;
+    regionCode?: string | null;
+    cityName?: string | null;
+    cityCode?: string | null;
+    displayName!: string;
+
+    constructor(data?: ILocation) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.regionCode = _data["regionCode"] !== undefined ? _data["regionCode"] : <any>null;
+            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
+            this.cityCode = _data["cityCode"] !== undefined ? _data["cityCode"] : <any>null;
+            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Location {
+        data = typeof data === 'object' ? data : {};
+        let result = new Location();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["regionCode"] = this.regionCode !== undefined ? this.regionCode : <any>null;
+        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
+        data["cityCode"] = this.cityCode !== undefined ? this.cityCode : <any>null;
+        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
+        return data;
+    }
+}
+
+export interface ILocation {
+    countryName: string;
+    countryCode: string;
+    regionName?: string | null;
+    regionCode?: string | null;
+    cityName?: string | null;
+    cityCode?: string | null;
+    displayName: string;
 }
 
 export enum ServerState {
@@ -7230,7 +6736,6 @@ export enum AccessPointMode {
 export class ServerCreateParams implements IServerCreateParams {
     serverName?: string | null;
     serverFarmId!: string;
-    regionId?: number | null;
     accessPoints?: AccessPoint[] | null;
 
     constructor(data?: IServerCreateParams) {
@@ -7246,7 +6751,6 @@ export class ServerCreateParams implements IServerCreateParams {
         if (_data) {
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
-            this.regionId = _data["regionId"] !== undefined ? _data["regionId"] : <any>null;
             if (Array.isArray(_data["accessPoints"])) {
                 this.accessPoints = [] as any;
                 for (let item of _data["accessPoints"])
@@ -7269,7 +6773,6 @@ export class ServerCreateParams implements IServerCreateParams {
         data = typeof data === 'object' ? data : {};
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
-        data["regionId"] = this.regionId !== undefined ? this.regionId : <any>null;
         if (Array.isArray(this.accessPoints)) {
             data["accessPoints"] = [];
             for (let item of this.accessPoints)
@@ -7282,14 +6785,12 @@ export class ServerCreateParams implements IServerCreateParams {
 export interface IServerCreateParams {
     serverName?: string | null;
     serverFarmId: string;
-    regionId?: number | null;
     accessPoints?: AccessPoint[] | null;
 }
 
 export class ServerUpdateParams implements IServerUpdateParams {
     serverName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
-    regionId?: PatchOfNullableInteger | null;
     generateNewSecret?: PatchOfBoolean | null;
     autoConfigure?: PatchOfBoolean | null;
     accessPoints?: PatchOfAccessPointOf | null;
@@ -7307,7 +6808,6 @@ export class ServerUpdateParams implements IServerUpdateParams {
         if (_data) {
             this.serverName = _data["serverName"] ? PatchOfString.fromJS(_data["serverName"]) : <any>null;
             this.serverFarmId = _data["serverFarmId"] ? PatchOfGuid.fromJS(_data["serverFarmId"]) : <any>null;
-            this.regionId = _data["regionId"] ? PatchOfNullableInteger.fromJS(_data["regionId"]) : <any>null;
             this.generateNewSecret = _data["generateNewSecret"] ? PatchOfBoolean.fromJS(_data["generateNewSecret"]) : <any>null;
             this.autoConfigure = _data["autoConfigure"] ? PatchOfBoolean.fromJS(_data["autoConfigure"]) : <any>null;
             this.accessPoints = _data["accessPoints"] ? PatchOfAccessPointOf.fromJS(_data["accessPoints"]) : <any>null;
@@ -7325,7 +6825,6 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data = typeof data === 'object' ? data : {};
         data["serverName"] = this.serverName ? this.serverName.toJSON() : <any>null;
         data["serverFarmId"] = this.serverFarmId ? this.serverFarmId.toJSON() : <any>null;
-        data["regionId"] = this.regionId ? this.regionId.toJSON() : <any>null;
         data["generateNewSecret"] = this.generateNewSecret ? this.generateNewSecret.toJSON() : <any>null;
         data["autoConfigure"] = this.autoConfigure ? this.autoConfigure.toJSON() : <any>null;
         data["accessPoints"] = this.accessPoints ? this.accessPoints.toJSON() : <any>null;
@@ -7336,46 +6835,9 @@ export class ServerUpdateParams implements IServerUpdateParams {
 export interface IServerUpdateParams {
     serverName?: PatchOfString | null;
     serverFarmId?: PatchOfGuid | null;
-    regionId?: PatchOfNullableInteger | null;
     generateNewSecret?: PatchOfBoolean | null;
     autoConfigure?: PatchOfBoolean | null;
     accessPoints?: PatchOfAccessPointOf | null;
-}
-
-export class PatchOfNullableInteger implements IPatchOfNullableInteger {
-    value?: number | null;
-
-    constructor(data?: IPatchOfNullableInteger) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): PatchOfNullableInteger {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfNullableInteger();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value !== undefined ? this.value : <any>null;
-        return data;
-    }
-}
-
-export interface IPatchOfNullableInteger {
-    value?: number | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {

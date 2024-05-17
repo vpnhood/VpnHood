@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.IpLocations;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -43,7 +44,6 @@ public class TestApp : IHttpClientFactory, IDisposable
     public IpLocksClient IpLocksClient => new(HttpClient);
     public AccessesClient AccessesClient => new(HttpClient);
     public DevicesClient DevicesClient => new(HttpClient);
-    public RegionsClient RegionsClient => new(HttpClient);
     public SystemClient SystemClient => new(HttpClient);
     public ServerProfilesClient ServerProfilesClient => new(HttpClient);
     public TeamClient TeamClient => new(HttpClient);
@@ -236,7 +236,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null)
+    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null, IPAddress? gatewayIpV4 = null)
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
@@ -252,7 +252,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             ],
             PublicIpAddresses =
             [
-                await NewIpV4(),
+                gatewayIpV4 ?? await NewIpV4(),
                 await NewIpV6(),
                 publicIp
             ],
@@ -269,7 +269,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
-        , string? extraData = null, string? regionId = null)
+        , string? extraData = null, string? locationPath = null, bool allowRedirect = false)
     {
         var rand = new Random();
 
@@ -292,7 +292,8 @@ public class TestApp : IHttpClientFactory, IDisposable
             ClientIp = clientIp ?? NewIpV4().Result,
             HostEndPoint = hostEndPoint,
             ExtraData = extraData ?? Guid.NewGuid().ToString(),
-            RegionId = regionId
+            RegionId = locationPath,
+            AllowRedirect = allowRedirect
         };
 
         return sessionRequestEx;
@@ -340,13 +341,5 @@ public class TestApp : IHttpClientFactory, IDisposable
         HttpClient.Dispose();
         AgentTestApp.Dispose();
         WebApp.Dispose();
-    }
-
-    public Task<RegionData> AddRegion(string countryCode)
-    {
-        return RegionsClient.CreateAsync(ProjectId, new RegionCreateParams
-        {
-            CountryCode = countryCode
-        });
     }
 }

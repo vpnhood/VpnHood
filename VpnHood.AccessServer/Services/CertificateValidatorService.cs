@@ -3,8 +3,8 @@ using GrayMint.Common.AspNetCore.Jobs;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Options;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Services.Acme;
 
 namespace VpnHood.AccessServer.Services;

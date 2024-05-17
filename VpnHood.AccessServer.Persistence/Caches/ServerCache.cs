@@ -1,5 +1,6 @@
 ﻿using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Persistence.Caches;
 
@@ -18,8 +19,7 @@ public class ServerCache
     public required DateTime? ConfigureTime { get; init; }
     public required bool IsEnabled { get; init; }
     public required Guid AuthorizationCode { get; init; }
-    public required int? RegionId { get; init; }
-    public required string? RegionCountryCode { get; init; }
+    public required ServerLocationInfo LocationInfo { get; init; }
     public required int LogicalCoreCount { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }

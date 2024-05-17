@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace VpnHood.AccessServer.Persistence;
+namespace VpnHood.AccessServer.Repos;
 
 public abstract class RepoBase(DbContext dbContext)
 {

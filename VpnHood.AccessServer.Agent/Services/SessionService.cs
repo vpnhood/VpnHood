@@ -2,7 +2,7 @@
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
-using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
@@ -20,7 +20,6 @@ public class SessionService(
     ILogger<SessionService.NewAccess> newAccessLogger,
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
-    VhRepo vhRepo,
     VhAgentRepo vhAgentRepo,
     LoadBalancerService loadBalancerService)
 {
@@ -106,7 +105,8 @@ public class SessionService(
         var project = await cacheService.GetProject(server.ProjectId);
 
         // Get accessTokenModel
-        var accessToken = await vhRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId), true);
+        //todo use farmCache instead of db
+        var accessToken = await vhAgentRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId), true);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
@@ -149,7 +149,7 @@ public class SessionService(
                 CreatedTime = DateTime.UtcNow,
                 ModifiedTime = DateTime.UtcNow
             };
-            device = await vhRepo.AddAsync(device);
+            device = await vhAgentRepo.DeviceAdd(device);
         }
         else
         {
@@ -169,7 +169,7 @@ public class SessionService(
         var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
         if (access == null)
         {
-            access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
+            access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, deviceId);
             newAccessLogger.LogInformation(
                 "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
                 access.AccessId, project.ProjectName, accessToken.ServerFarm?.ServerFarmName);
@@ -246,7 +246,7 @@ public class SessionService(
             }.ToAccessKey();
 
         // Add session to database
-        var sessionModel = await vhAgentRepo.AddSession(session);
+        var sessionModel = await vhAgentRepo.SessionAdd(session);
         await vhAgentRepo.SaveChangesAsync();
         session.SessionId = sessionModel.SessionId;
 

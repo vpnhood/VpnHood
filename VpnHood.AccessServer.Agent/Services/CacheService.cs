@@ -4,7 +4,7 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common.Messaging;
@@ -57,7 +57,7 @@ public class CacheService(
         if (cacheRepo.Projects.TryGetValue(projectId, out project))
             return project;
 
-        project = await vhAgentRepo.GetProject(projectId);
+        project = await vhAgentRepo.ProjectGet(projectId);
         cacheRepo.Projects.TryAdd(projectId, project);
         return project;
     }
@@ -71,7 +71,7 @@ public class CacheService(
         if (cacheRepo.Servers.TryGetValue(serverId, out server))
             return server;
 
-        server = await vhAgentRepo.GetServer(serverId);
+        server = await vhAgentRepo.ServerGet(serverId);
         cacheRepo.Servers.TryAdd(serverId, server);
         return server.UpdateState(agentOptions.Value.LostServerThreshold);
     }
@@ -85,7 +85,7 @@ public class CacheService(
         if (cacheRepo.ServerFarms.TryGetValue(farmId, out farm))
             return farm;
 
-        farm = await vhAgentRepo.GetFarm(farmId);
+        farm = await vhAgentRepo.ServerFarmGet(farmId);
         cacheRepo.ServerFarms.TryAdd(farmId, farm);
         return farm;
     }
@@ -101,7 +101,7 @@ public class CacheService(
             return access;
 
         // load from db
-        access = await vhAgentRepo.GetAccess(accessId);
+        access = await vhAgentRepo.AccessGet(accessId);
         cacheRepo.Accesses.TryAdd(access.AccessId, access);
         return access;
     }
@@ -134,7 +134,7 @@ public class CacheService(
             return access;
 
         // load from db
-        access = await vhAgentRepo.GetAccessOrDefault(accessTokenId, deviceId);
+        access = await vhAgentRepo.AccessFind(accessTokenId, deviceId);
         if (access != null)
             cacheRepo.Accesses.TryAdd(access.AccessId, access);
 
@@ -231,7 +231,7 @@ public class CacheService(
     {
         // invalid servers that already exist in cache
         serverIds = serverIds.Intersect(cacheRepo.Servers.Keys).ToArray();
-        var servers = await vhAgentRepo.GetServers(serverIds);
+        var servers = await vhAgentRepo.ServersGet(serverIds);
 
         // recover server status
         foreach (var serverId in serverIds)
@@ -336,14 +336,14 @@ public class CacheService(
         // update sessions
         // never update archived session, it may not exist on db anymore
         foreach (var session in updatedSessions)
-            vhAgentRepo.UpdateSession(session);
+            vhAgentRepo.SessionUpdate(session);
 
         // update accesses
         var accessIds = updatedSessions.Select(x => x.AccessId).Distinct();
         foreach (var accessId in accessIds)
         {
             var access = await GetAccess(accessId);
-            vhAgentRepo.UpdateAccess(access);
+            vhAgentRepo.AccessUpdate(access);
         }
 
         // save updated sessions
@@ -375,7 +375,7 @@ public class CacheService(
         cacheRepo.SessionUsages = new ConcurrentDictionary<long, AccessUsageModel>();
         try
         {
-            await vhAgentRepo.AddAccessUsages(sessionUsages);
+            await vhAgentRepo.AccessUsageAdd(sessionUsages);
             await vhAgentRepo.SaveChangesAsync();
 
             // cleanup: remove unused accesses

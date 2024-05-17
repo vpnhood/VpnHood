@@ -99,22 +99,26 @@ public class ServerFarmDom : IDisposable
     }
 
     public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true, 
-        int? regionId = null, int? logicalCore = null)
+        IPAddress? gatewayIpV4 = null, int? logicalCore = null)
     {
         var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, 
-            sendStatus, regionId, logicalCore: logicalCore);
+            sendStatus, gatewayIpV4, logicalCore: logicalCore);
+
         Servers.Add(sampleServer);
         return sampleServer;
     }
 
-    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
+    public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, 
+        bool sendStatus = true, IPAddress? gatewayIpV4 = null)
     {
         // ReSharper disable once LocalizableElement
         if (createParams.ServerFarmId != ServerFarmId && createParams.ServerFarmId != Guid.Empty)
             throw new ArgumentException($"{nameof(createParams.ServerFarmId)} must be the same as this farm", nameof(createParams));
 
         createParams.ServerFarmId = ServerFarmId;
-        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus);
+        var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus, 
+            gatewayIpV4: gatewayIpV4);
+
         Servers.Add(sampleServer);
         return sampleServer;
     }

@@ -8,6 +8,8 @@ using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.IpLocations;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
 
@@ -68,16 +70,16 @@ public class Program
 
 
         builder.Services
-            .AddGrayMintApplicationLifetime<CacheService>();
-
-        builder.Services.AddSingleton<CacheRepo>();
-        builder.Services.AddScoped<VhRepo>();
-        builder.Services.AddScoped<VhAgentRepo>();
-        builder.Services.AddScoped<SessionService>();
-        builder.Services.AddScoped<CacheService>();
-        builder.Services.AddScoped<AgentService>();
-        builder.Services.AddScoped<LoadBalancerService>();
-        builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
+            .AddHttpClient()
+            .AddGrayMintApplicationLifetime<CacheService>()
+            .AddSingleton<CacheRepo>()
+            .AddScoped<VhAgentRepo>()
+            .AddScoped<SessionService>()
+            .AddScoped<CacheService>()
+            .AddScoped<AgentService>()
+            .AddScoped<LoadBalancerService>()
+            .AddScoped<IIpLocationService, IpLocationService>()
+            .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
         //---------------------
         // Create App

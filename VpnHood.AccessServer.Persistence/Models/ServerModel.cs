@@ -22,14 +22,15 @@ public class ServerModel
     public required Guid? LastConfigCode { get; set; }
     public required string? LastConfigError { get; set; }
     public required bool AutoConfigure { get; set; }
-    public required int? RegionId { get; set; }
+    public required int? LocationId { get; set; }
     public required bool IsDeleted { get; set; }
+    public required string? GatewayIpV4 { get; set; }
+    public required string? GatewayIpV6 { get; set; }
     public required List<AccessPointModel> AccessPoints { get; set; } = [];
-
 
     public virtual ProjectModel? Project { get; set; }
     public virtual ServerFarmModel? ServerFarm { get; set; }
-    public virtual RegionModel? Region { get; set; }
+    public virtual LocationModel? Location { get; set; }
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
 }

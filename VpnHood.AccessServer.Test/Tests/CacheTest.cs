@@ -1,7 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using GrayMint.Common.Utils;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
-using GrayMint.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

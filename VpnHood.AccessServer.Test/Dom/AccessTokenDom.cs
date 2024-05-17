@@ -14,17 +14,17 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
     public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null, AddressFamily addressFamily = AddressFamily.InterNetwork,
-        bool assertError = true, bool autoRedirect = false, string? regionId = null)
+        bool assertError = true, bool autoRedirect = false, string? locationPath = null)
     {
         // get server ip
         var accessKey = await GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
         var serverEndPoint = token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
-        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, autoRedirect, regionId: regionId);
+        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, locationPath: locationPath, autoRedirect: autoRedirect);
     }
 
     public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null, IPAddress? clientIp = null,
-        bool assertError = true, bool autoRedirect = false, string? regionId = null)
+        bool assertError = true, string? locationPath = null, bool autoRedirect = false, bool allowRedirect = true)
     {
         // find server of the farm that listen to token EndPoint
         var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId);
@@ -38,7 +38,8 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,
             serverEndPoint,
-            regionId: regionId,
+            allowRedirect: allowRedirect,
+            locationPath: locationPath,
             clientId: clientId,
             clientIp: clientIp);
 
@@ -57,9 +58,9 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
                 ret.SessionResponseEx.RedirectHostEndPoint,
                 clientId: sessionRequestEx.ClientInfo.ClientId,
                 clientIp: sessionRequestEx.ClientIp,
-                regionId: regionId,
+                locationPath: locationPath,
                 assertError: assertError,
-                autoRedirect: false);
+                allowRedirect: false);
         }
 
         if (assertError)

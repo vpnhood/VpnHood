@@ -1,63 +1,9 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.AccessServer.Api;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
-
-[TestClass]
-public class RegionTest
-{
-    [TestMethod]
-    public async Task Crud()
-    {
-        var testApp = await TestApp.Create();
-        var regionClient = testApp.RegionsClient;
-
-        //-----------
-        // check: Create
-        //-----------
-        var createParams = new RegionCreateParams
-        {
-            RegionName = Guid.NewGuid().ToString(),
-            CountryCode = "us"
-        };
-        await regionClient.CreateAsync(testApp.ProjectId, createParams);
-
-        createParams = new RegionCreateParams
-        {
-            RegionName = Guid.NewGuid().ToString(),
-            CountryCode = "gb"
-        };
-        var regionData = await regionClient.CreateAsync(testApp.ProjectId, createParams);
-
-        //-----------
-        // check: get
-        //-----------
-        regionData = await regionClient.GetAsync(testApp.ProjectId, regionData.Region.RegionId);
-        Assert.AreEqual(createParams.CountryCode, regionData.Region.CountryCode);
-
-        //-----------
-        // check: update
-        //-----------
-        var updateParams = new RegionUpdateParams
-        {
-            RegionName = new PatchOfString{ Value = Guid.NewGuid().ToString() },
-            CountryCode = new PatchOfString {Value = "UK" }
-        };
-        await regionClient.UpdateAsync(testApp.ProjectId, regionData.Region.RegionId, updateParams);
-        regionData = await regionClient.GetAsync(testApp.ProjectId, regionData.Region.RegionId);
-        Assert.AreEqual(updateParams.RegionName.Value, regionData.Region.RegionName);
-        Assert.AreEqual(updateParams.CountryCode.Value, regionData.Region.CountryCode);
-
-        //-----------
-        // check: delete
-        //-----------
-        await regionClient.DeleteAsync(testApp.ProjectId, regionData.Region.RegionId);
-        await VhTestUtil.AssertNotExistsException(regionClient.GetAsync(testApp.ProjectId, regionData.Region.RegionId));
-    }
-}
 
 [TestClass]
 public class LoadBalancerTest
@@ -116,18 +62,14 @@ public class LoadBalancerTest
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
-
-        var region1 = (await farm.TestApp.AddRegion("us")).Region;
-        var region2 = (await farm.TestApp.AddRegion("us")).Region;
-        var region3 = (await farm.TestApp.AddRegion("gb")).Region;
-        var region4 = (await farm.TestApp.AddRegion("fr")).Region;
+        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromHours(1);
 
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(regionId: region1.RegionId);
-        var serverDom2 = await farm.AddNewServer(regionId: region1.RegionId);
-        var serverDom3 = await farm.AddNewServer(regionId: region2.RegionId);
-        var serverDom4 = await farm.AddNewServer(regionId: region3.RegionId);
-        var serverDom5 = await farm.AddNewServer(regionId: region4.RegionId);
+        var serverDom1 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
+        var serverDom2 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
+        var serverDom3 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("20.0.0.3"));
+        var serverDom4 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("30.0.0.4"));
+        var serverDom5 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("40.0.0.5"));
 
         // create access token
         var accessTokenDom = await farm.CreateAccessToken();
@@ -157,17 +99,12 @@ public class LoadBalancerTest
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
-        var region1 = (await farm.TestApp.AddRegion("us")).Region;
-        var region2 = (await farm.TestApp.AddRegion("us")).Region;
-        var region3 = (await farm.TestApp.AddRegion("gb")).Region;
-        var region4 = (await farm.TestApp.AddRegion("fr")).Region;
-
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(regionId: region1.RegionId);
-        var serverDom2 = await farm.AddNewServer(regionId: region1.RegionId);
-        var serverDom3 = await farm.AddNewServer(regionId: region2.RegionId);
-        var serverDom4 = await farm.AddNewServer(regionId: region3.RegionId);
-        var serverDom5 = await farm.AddNewServer(regionId: region4.RegionId);
+        var serverDom1 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
+        var serverDom2 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
+        var serverDom3 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("20.0.0.3"));
+        var serverDom4 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("30.0.0.4"));
+        var serverDom5 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("40.0.0.5"));
         await farm.ReloadServers();
 
         // create access token
@@ -176,7 +113,7 @@ public class LoadBalancerTest
         // create sessions
         for (var i = 0; i < 6; i++)
         {
-            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, regionId: region1.RegionId.ToString());
+            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, locationPath: "10");
 
             // find the server that create the session
             var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
@@ -198,17 +135,12 @@ public class LoadBalancerTest
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
-        var region1 = (await farm.TestApp.AddRegion("us")).Region;
-        var region2 = (await farm.TestApp.AddRegion("us")).Region;
-        var region3 = (await farm.TestApp.AddRegion("gb")).Region;
-        var region4 = (await farm.TestApp.AddRegion("fr")).Region;
-
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(regionId: region1.RegionId, logicalCore: 4);
-        var serverDom2 = await farm.AddNewServer(regionId: region1.RegionId, logicalCore: 2);
-        var serverDom3 = await farm.AddNewServer(regionId: region2.RegionId, logicalCore: 2);
-        var serverDom4 = await farm.AddNewServer(regionId: region3.RegionId, logicalCore: 1);
-        var serverDom5 = await farm.AddNewServer(regionId: region4.RegionId, logicalCore: 1);
+        var serverDom1 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 4);
+        var serverDom2 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"), logicalCore: 2);
+        var serverDom3 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("20.0.0.3"), logicalCore: 2);
+        var serverDom4 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("30.0.0.4"), logicalCore: 1);
+        var serverDom5 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("40.0.0.5"), logicalCore: 1);
         await farm.ReloadServers();
 
         // create access token

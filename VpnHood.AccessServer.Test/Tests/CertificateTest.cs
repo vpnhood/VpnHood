@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -8,7 +9,6 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Logging;
-using GrayMint.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access;
 using ServerState = VpnHood.AccessServer.Api.ServerState;
@@ -148,7 +148,7 @@ public class CertificateTest
         var testApp = await TestApp.Create(new Dictionary<string, string?>
         {
             [$"CertificateValidator:{nameof(CertificateValidatorOptions.Interval)}"] = TimeSpan.FromSeconds(1).ToString(),
-            [$"CertificateValidator:{nameof(CertificateValidatorOptions.Due)}"] = TimeSpan.FromSeconds(1).ToString(),
+            [$"CertificateValidator:{nameof(CertificateValidatorOptions.Due)}"] = TimeSpan.FromSeconds(1).ToString()
         });
 
         await testApp.VhContext.Certificates.ExecuteDeleteAsync();

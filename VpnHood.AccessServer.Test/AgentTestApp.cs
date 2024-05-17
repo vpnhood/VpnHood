@@ -7,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using VpnHood.AccessServer.Agent;
+using VpnHood.AccessServer.Agent.IpLocations;
 using VpnHood.AccessServer.Agent.Services;
+using VpnHood.AccessServer.Test.Helper;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -31,7 +33,7 @@ public class AgentTestApp : IDisposable
                 builder.UseEnvironment(environment);
                 builder.ConfigureServices(services =>
                 {
-                    _ = services;
+                    services.AddScoped<IIpLocationService, TestIpLocationService>();
                 });
             });
         

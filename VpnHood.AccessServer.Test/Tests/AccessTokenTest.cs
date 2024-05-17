@@ -50,7 +50,7 @@ public class AccessTokenTest
             MaxDevice = 12,
             Lifetime = 13,
             ExpirationTime = expirationTime1,
-            IsEnabled = true,
+            IsEnabled = true
         };
         var accessTokenDom1 = await farm1.CreateAccessToken(createParam1);
         Assert.AreNotEqual(0, accessTokenDom1.AccessToken.SupportCode);
@@ -75,7 +75,7 @@ public class AccessTokenTest
             Lifetime = 23,
             ExpirationTime = expirationTime2,
             IsPublic = true,
-            IsEnabled = true,
+            IsEnabled = true
         };
         var accessTokenDom2 = await farm2.CreateAccessToken(createParam2);
         Assert.AreNotEqual(0, accessTokenDom2.AccessToken.SupportCode);
@@ -384,7 +384,7 @@ public class AccessTokenTest
         await accessTokenDom1.Update(
             new AccessTokenUpdateParams
             {
-                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 },
+                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 }
             });
 
         // add usage to create the new expiration

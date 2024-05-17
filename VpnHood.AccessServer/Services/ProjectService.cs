@@ -1,4 +1,5 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
@@ -11,7 +12,6 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
-using GrayMint.Common.Utils;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Services;

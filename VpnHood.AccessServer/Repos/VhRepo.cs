@@ -1,9 +1,10 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Views;
+using VpnHood.AccessServer.Repos.Views;
 
-namespace VpnHood.AccessServer.Persistence;
+namespace VpnHood.AccessServer.Repos;
 
 public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
@@ -18,7 +19,7 @@ public class VhRepo(VhContext vhContext)
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
     {
         var query = vhContext.Servers
-            .Include(x => x.Region)
+            .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerId == serverId);
 
@@ -31,7 +32,7 @@ public class VhRepo(VhContext vhContext)
     public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         var query = vhContext.Servers
-            .Include(x => x.Region)
+            .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
             .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
@@ -49,7 +50,7 @@ public class VhRepo(VhContext vhContext)
         await using var trans = await vhContext.WithNoLockTransaction();
         var servers = await vhContext.Servers
             .Include(server => server.ServerFarm)
-            .Include(server => server.Region)
+            .Include(server => server.Location)
             .Where(server => server.ProjectId == projectId && !server.IsDeleted)
             .Where(server => serverId == null || server.ServerId == serverId)
             .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
@@ -316,7 +317,7 @@ public class VhRepo(VhContext vhContext)
                     IsDeleted = x.IsDeleted,
                     IsDefault = x.IsDefault,
                     ProjectId = x.ProjectId,
-                    ServerFarmId = x.ServerFarmId,
+                    ServerFarmId = x.ServerFarmId
                 },
                 ServerFarm = x.ServerFarm!,
                 ServerProfileName = x.ServerFarm!.ServerProfile!.ServerProfileName,
@@ -357,42 +358,6 @@ public class VhRepo(VhContext vhContext)
             .ToArrayAsync();
 
         return certificates;
-    }
-
-    public async Task<int> RegionMaxId(Guid projectId)
-    {
-        var res = await vhContext.Regions
-            .Where(x => x.ProjectId == projectId)
-            .MaxAsync(x => (int?)x.RegionId);
-
-        return res ?? 1;
-    }
-
-    public Task<RegionModel[]> RegionList(Guid projectId)
-    {
-        var regions = vhContext.Regions
-            .Where(x => x.ProjectId == projectId)
-            .ToArrayAsync();
-
-        return regions;
-    }
-
-    public Task<RegionModel> RegionGet(Guid projectId, int regionId)
-    {
-        return vhContext.Regions
-            .Where(x => x.ProjectId == projectId)
-            .Where(x => x.RegionId == regionId)
-            .SingleAsync();
-    }
-
-    public async Task RegionDelete(Guid projectId, int regionId)
-    {
-        var region = await vhContext.Regions
-            .Where(x => x.ProjectId == projectId)
-            .Where(x => x.RegionId == regionId)
-            .SingleAsync();
-
-        vhContext.Remove(region);
     }
 }
 

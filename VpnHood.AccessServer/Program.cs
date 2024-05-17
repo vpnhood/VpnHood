@@ -13,6 +13,7 @@ using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Services.Acme;
@@ -98,7 +99,6 @@ public class Program
             .AddScoped<AgentCacheClient>()
             .AddScoped<AgentSystemClient>()
             .AddScoped<AccessTokensService>()
-            .AddScoped<RegionService>()
             .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
         // Report Service

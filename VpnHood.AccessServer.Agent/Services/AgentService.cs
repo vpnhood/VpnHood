@@ -1,16 +1,18 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.IpLocations;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Utils;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common.Messaging;
-using GrayMint.Common.Utils;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Messaging;
@@ -23,6 +25,7 @@ public class AgentService(
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     SessionService sessionService,
+    IIpLocationService ipLocationService,
     VhAgentRepo vhAgentRepo)
 {
     private readonly AgentOptions _agentOptions = agentOptions.Value;
@@ -52,18 +55,6 @@ public class AgentService(
     {
         var server = await GetServer(serverId);
         return await sessionService.AddUsage(server, sessionId, traffic, closeSession, adData);
-    }
-
-    [HttpGet("certificates/{hostEndPoint}")]
-    //todo: deprecated
-    public async Task<byte[]> GetCertificate(Guid serverId, string hostEndPoint)
-    {
-        var server = await GetServer(serverId);
-        logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
-            server.ServerId, hostEndPoint);
-
-        var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeCertificate: true);
-        return serverFarm.Certificate!.RawData;
     }
 
     private async Task CheckServerVersion(ServerCache server, string? version)
@@ -127,6 +118,8 @@ public class AgentService(
         var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, serverModel.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
 
         // update cache
+        var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+        var gatewayIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         serverModel.OsInfo = serverInfo.OsInfo;
         serverModel.MachineName = serverInfo.MachineName;
@@ -134,6 +127,9 @@ public class AgentService(
         serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
         serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
         serverModel.Version = serverInfo.Version.ToString();
+        serverModel.GatewayIpV4 = gatewayIpV4?.ToString();
+        serverModel.GatewayIpV6 = gatewayIpV6?.ToString();
+        serverModel.Location ??= await GetIpLocation(gatewayIpV4 ?? gatewayIpV6);
 
         // calculate access points
         if (serverModel.AutoConfigure)
@@ -155,6 +151,40 @@ public class AgentService(
         // update cache
         var serverConfig = GetServerConfig(serverModel, serverFarmModel);
         return serverConfig;
+    }
+
+    private async Task<LocationModel?> GetIpLocation(IPAddress? ipAddress)
+    {
+        if (ipAddress == null)
+            return null;
+
+        try
+        {
+            var ipLocation =  await ipLocationService.GetLocation(ipAddress);
+            var location = await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
+            if (location == null)
+            {
+                location = new LocationModel
+                {
+                    LocationId = 0,
+                    CountryCode = ipLocation.CountryCode,
+                    CountryName = ipLocation.CountryName,
+                    RegionCode = ipLocation.RegionCode ?? LocationModel.UnknownCode,
+                    RegionName = ipLocation.RegionName,
+                    CityCode = ipLocation.CityCode ?? LocationModel.UnknownCode,
+                    CityName = ipLocation.CityName,
+                    ContinentCode = ipLocation.ContinentCode
+                };
+                location = await vhAgentRepo.LocationAdd(location);
+            }
+
+            return location;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Could not retrieve IP location. IP: {IP}", VhUtil.RedactIpAddress(ipAddress));
+            return null;
+        }
     }
 
     private ServerConfig GetServerConfig(ServerModel serverModel,

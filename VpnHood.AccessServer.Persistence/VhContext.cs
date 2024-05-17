@@ -21,7 +21,7 @@ public class VhContext : DbContext
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
-    public virtual DbSet<RegionModel> Regions { get; set; } = default!;
+    public virtual DbSet<LocationModel> Locations { get; set; } = default!;
 
     protected VhContext()
     {
@@ -287,9 +287,9 @@ public class VhContext : DbContext
                 });
 
             entity
-                .HasOne(e => e.Region)
+                .HasOne(e => e.Location)
                 .WithMany(d => d.Servers)
-                .HasForeignKey(e => new { e.ProjectId, e.RegionId })
+                .HasForeignKey(e => e.LocationId)
                 .OnDelete(DeleteBehavior.NoAction);
 
 
@@ -532,10 +532,14 @@ public class VhContext : DbContext
                 .HasDefaultValue(false);
         });
 
-        modelBuilder.Entity<RegionModel>(entity =>
+        modelBuilder.Entity<LocationModel>(entity =>
         {
             entity
-                .HasKey(x => new { x.ProjectId, x.RegionId });
+                .HasKey(x => x.LocationId);
+
+            entity
+                .HasIndex(x => new { x.CountryCode, x.RegionCode, x.CityCode })
+                .IsUnique();
 
             entity
                 .Property(x => x.RegionName)

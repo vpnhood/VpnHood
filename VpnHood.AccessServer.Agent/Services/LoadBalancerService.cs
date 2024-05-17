@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access.Messaging;
 
@@ -26,14 +27,14 @@ public class LoadBalancerService(
     }
 
     private async Task CheckRedirect(AccessTokenModel accessToken, ServerCache currentServer, DeviceModel device,
-        AddressFamily addressFamily, string? regionId, bool allowRedirect)
+        AddressFamily addressFamily, string? locationPath, bool allowRedirect)
     {
         // server redirect is disabled by admin
         if (!agentOptions.Value.AllowRedirect)
             return;
 
         // get acceptable servers for this request
-        var servers = await GetServersForRequest(accessToken.ServerFarmId, regionId);
+        var servers = await GetServersForRequest(accessToken.ServerFarmId, locationPath);
 
         // accept current server (no redirect) if it is in acceptable list
         if (!allowRedirect)
@@ -63,8 +64,9 @@ public class LoadBalancerService(
 
         // deprecated: 505 client and later
         // client should send no redirect flag. for older version we keep last state in memory to prevent re-redirect
-        var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{regionId}";
-        if (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId)
+        var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{locationPath}";
+        if (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) &&
+            lastDeviceServerId == currentServer.ServerId)
         {
             if (servers.Any(x => x.ServerId == currentServer.ServerId))
                 return;
@@ -72,7 +74,8 @@ public class LoadBalancerService(
 
         // redirect if current server does not serve the best TcpEndPoint
         var bestTcpEndPoint = tcpEndPoints.First();
-        var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint => bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
+        var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint =>
+            bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
         if (currentServer.ServerId != bestServer.ServerFarmId)
         {
             memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
@@ -80,42 +83,25 @@ public class LoadBalancerService(
             {
                 ErrorCode = SessionErrorCode.RedirectHost,
                 RedirectHostEndPoint = tcpEndPoints.First(),
-                RedirectHostEndPoints = tcpEndPoints.Take(100).ToArray(),
+                RedirectHostEndPoints = tcpEndPoints.Take(100).ToArray()
             });
         }
     }
 
-    private async Task<ServerCache[]> GetServersForRequest(Guid serverFarmId, string? regionIdString)
+    private async Task<ServerCache[]> GetServersForRequest(Guid serverFarmId, string? locationPath)
     {
-        // find acceptable regions
-        List<int>? regionIds = null;
-        if (!string.IsNullOrWhiteSpace(regionIdString))
-        {
-            regionIds = new List<int>();
-            if (!int.TryParse(regionIdString, out var regionId))
-                throw new SessionExceptionEx(SessionErrorCode.SessionError, "Could not find any server for the requested region.");
-
-            regionIds.Add(regionId);
-        }
-
         // get all servers of this farm
         var servers = await cacheService.GetServers();
+        var requestLocation = ServerLocationInfo.Parse(locationPath ?? "*");
 
         // filter acceptable servers and sort them by load
         var farmServers = servers
             .Where(server =>
                 server.IsReady &&
                 server.ServerFarmId == serverFarmId &&
-                (regionIds == null || regionIds.Contains(server.RegionId ?? -10)))
+                server.LocationInfo.IsMatched(requestLocation))
             .OrderBy(CalcServerLoad)
             .ToArray();
-
-        if (farmServers.Length == 0)
-        {
-            var a = servers
-                .Where(server => server.IsReady && server.ServerFarmId == serverFarmId)
-                .ToArray();
-        }
 
         return farmServers;
     }
@@ -124,4 +110,6 @@ public class LoadBalancerService(
     {
         return (float)server.ServerStatus!.SessionCount / Math.Max(1, server.LogicalCoreCount);
     }
+
+
 }

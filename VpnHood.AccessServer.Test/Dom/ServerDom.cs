@@ -1,6 +1,7 @@
-﻿using VpnHood.AccessServer.Api;
-using VpnHood.Common.Messaging;
+﻿using System.Net;
 using GrayMint.Common.Utils;
+using VpnHood.AccessServer.Api;
+using VpnHood.Common.Messaging;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -68,14 +69,17 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     }
 
     public static async Task<ServerDom> Create(TestApp testApp, ServerCreateParams createParams,
-        bool configure = true, bool sendStatus = true, int? logicalCore = null)
+        bool configure = true, bool sendStatus = true, int? logicalCore = null, IPAddress? gatewayIpV4 = null)
     {
         var serverData = await testApp.ServersClient.CreateAsync(testApp.ProjectId, createParams);
 
         var myServer = new ServerDom(
             testApp: testApp,
             server: serverData.Server,
-            serverInfo: await testApp.NewServerInfo(randomStatus: false, logicalCore: logicalCore)
+            serverInfo: await testApp.NewServerInfo(
+                randomStatus: false,
+                logicalCore: logicalCore,
+                gatewayIpV4: gatewayIpV4)
             );
 
         if (configure)
@@ -88,10 +92,14 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     }
 
     public static async Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true,
-        bool sendStatus = true, int? regionId = null, int? logicalCore = null)
+        bool sendStatus = true, IPAddress? gatewayIpV4 = null, int? logicalCore = null)
     {
-        var serverDom = await Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId, RegionId = regionId }
-            , configure: configure, sendStatus: sendStatus, logicalCore: logicalCore);
+        var serverDom = await Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId },
+            configure: configure,
+            sendStatus: sendStatus,
+            logicalCore: logicalCore,
+            gatewayIpV4: gatewayIpV4);
+
         return serverDom;
     }
 

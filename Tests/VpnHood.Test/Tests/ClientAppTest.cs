@@ -117,17 +117,21 @@ public class ClientAppTest : TestBase
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["us", "us/california"];
         var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var serverLocations = clientProfile.ToInfo().ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
+        var clientProfileInfo = clientProfile.ToInfo();
+        var serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         var i = 0;
         Assert.AreEqual("us/*", serverLocations[i++]);
         Assert.AreEqual("us/california", serverLocations[i++]);
+        Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
+        Assert.IsTrue(clientProfileInfo.ServerLocationInfos[1].IsNestedCountry);
         _ = i;
 
         // test multiple countries
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us", "us/california", "uk"];
         clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        serverLocations = clientProfile.ToInfo().ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
+        clientProfileInfo = clientProfile.ToInfo();
+        serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
         Assert.AreEqual("uk/*", serverLocations[i++]);
@@ -139,7 +143,8 @@ public class ClientAppTest : TestBase
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england", "uk/region2", "uk/england"];
         clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        serverLocations = clientProfile.ToInfo().ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
+        clientProfileInfo = clientProfile.ToInfo();
+        serverLocations = clientProfileInfo.ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
         Assert.AreEqual("uk/*", serverLocations[i++]);
@@ -148,6 +153,10 @@ public class ClientAppTest : TestBase
         Assert.AreEqual("us/*", serverLocations[i++]);
         Assert.AreEqual("us/california", serverLocations[i++]);
         Assert.AreEqual("us/virgina", serverLocations[i++]);
+        Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
+        Assert.IsFalse(clientProfileInfo.ServerLocationInfos[1].IsNestedCountry);
+        Assert.IsTrue(clientProfileInfo.ServerLocationInfos[2].IsNestedCountry);
+        Assert.IsTrue(clientProfileInfo.ServerLocationInfos[3].IsNestedCountry);
         _ = i;
     }
 

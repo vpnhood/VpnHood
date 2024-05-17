@@ -32,10 +32,11 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         return ServerLocation.GetHashCode();
     }
 
-    public static ServerLocationInfo Parse(string value)
+    public static ServerLocationInfo Parse(string? value)
     {
-        var parts = value.Split('/');
+        if (value == null) return Auto;
 
+        var parts = value.Split('/');
         var ret = new ServerLocationInfo
         {
             CountryCode = ParseLocationPart(parts, 0),
@@ -44,7 +45,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         return ret;
     }
 
-    public bool IsMatched(ServerLocationInfo serverLocationInfo)
+    public bool IsMatch(ServerLocationInfo serverLocationInfo)
     {
         return
             MatchLocationPart(CountryCode, serverLocationInfo.CountryCode) &&

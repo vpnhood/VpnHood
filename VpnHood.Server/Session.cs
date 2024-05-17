@@ -13,7 +13,6 @@ using VpnHood.Server.Access.Messaging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
-using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;

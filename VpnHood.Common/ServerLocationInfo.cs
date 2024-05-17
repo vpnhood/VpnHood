@@ -74,10 +74,10 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         }
     }
 
-    public static ServerLocationInfo[] AddCategoryGaps(string[]? selectors)
+    public static ServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
     {
-        selectors ??= [];
-        var locationInfos = selectors.Select(Parse).ToArray();
+        serverLocations ??= [];
+        var locationInfos = serverLocations.Select(Parse).ToArray();
 
         var results = new List<ServerLocationInfo>();
         var countryCount = new Dictionary<string, int>();
@@ -89,7 +89,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
                 countryCount[locationInfo.CountryCode]++;
         }
 
-        // Add wildcard selectors for countries multiple occurrences
+        // Add wildcard serverLocations for countries multiple occurrences
         var seenCountries = new HashSet<string>();
         foreach (var locationInfo in locationInfos)
         {

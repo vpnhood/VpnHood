@@ -91,7 +91,7 @@ public class ClientProfileService
             if (updateParams.ServerLocation.Value != null)
             {
                 var profileInfo = clientProfile.ToInfo();
-                if (profileInfo.ServerLocations.All(x => x.ServerLocation != updateParams.ServerLocation))
+                if (profileInfo.ServerLocationInfos.All(x => x.ServerLocation != updateParams.ServerLocation))
                     throw new NotExistsException($"{nameof(updateParams.ServerLocation)} does not exist.");
             }
 

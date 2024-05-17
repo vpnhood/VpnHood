@@ -98,6 +98,19 @@ public class ClientAppTest : TestBase
     // Drop City in access server
     // Use City as region if state is not available
     //  Handle Null in client create auto*
+    [TestMethod]
+    public async Task ClientProfiles_default_ServerLocation()
+    {
+        await using var app1 = TestHelper.CreateClientApp();
+
+        // test two region in a same country
+        var token = CreateToken();
+        token.ServerToken.ServerLocations = ["us/regin2", "us/california"];
+        var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        Assert.AreEqual(clientProfile.ToInfo().ServerLocationInfo, ServerLocationInfo.Auto);
+        Assert.IsNull(clientProfile.ServerLocation);
+    }
+
 
     [TestMethod]
     public async Task ClientProfiles_ServerLocations()
@@ -108,10 +121,9 @@ public class ClientAppTest : TestBase
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["us", "us/california"];
         var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var serverLocations = clientProfile.ToInfo().ServerLocations.Select(x=>x.ServerLocation).ToArray();
+        var serverLocations = clientProfile.ToInfo().ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         var i = 0;
         Assert.AreEqual("us/*", serverLocations[i++]);
-        Assert.AreEqual("us/-", serverLocations[i++]);
         Assert.AreEqual("us/california", serverLocations[i++]);
         _ = i;
 
@@ -119,12 +131,11 @@ public class ClientAppTest : TestBase
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us", "us/california", "uk"];
         clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        serverLocations = clientProfile.ToInfo().ServerLocations.Select(x=>x.ServerLocation).ToArray();
+        serverLocations = clientProfile.ToInfo().ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
-        Assert.AreEqual("uk/-", serverLocations[i++]);
+        Assert.AreEqual("uk/*", serverLocations[i++]);
         Assert.AreEqual("us/*", serverLocations[i++]);
-        Assert.AreEqual("us/-", serverLocations[i++]);
         Assert.AreEqual("us/california", serverLocations[i++]);
         _ = i;
 
@@ -132,7 +143,7 @@ public class ClientAppTest : TestBase
         token = CreateToken();
         token.ServerToken.ServerLocations = ["us/virgina", "us/california", "uk/england", "uk/region2", "uk/england"];
         clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        serverLocations = clientProfile.ToInfo().ServerLocations.Select(x => x.ServerLocation).ToArray();
+        serverLocations = clientProfile.ToInfo().ServerLocationInfos.Select(x => x.ServerLocation).ToArray();
         i = 0;
         Assert.AreEqual("*/*", serverLocations[i++]);
         Assert.AreEqual("uk/*", serverLocations[i++]);
@@ -156,7 +167,7 @@ public class ClientAppTest : TestBase
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.IsNotNull(app.ClientProfileService.FindByTokenId(token1.TokenId), "ClientProfile is not added");
         Assert.AreEqual(token1.TokenId, clientProfile1.Token.TokenId, "invalid tokenId has been assigned to clientProfile");
-        
+
         // ************
         // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
         var token2 = CreateToken();

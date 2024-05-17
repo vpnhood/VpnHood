@@ -474,7 +474,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? ServerLocationInfo, string? userAgent,
+    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? serverLocationInfo, string? userAgent,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -501,7 +501,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
-            ServerLocation = ServerLocationInfo
+            ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -547,7 +547,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 await ClientProfileService.UpdateServerTokenByUrl(token))
             {
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(packetCapture, token, ServerLocationInfo, userAgent, false, cancellationToken);
+                await ConnectInternal(packetCapture, token, serverLocationInfo, userAgent, false, cancellationToken);
                 return;
             }
 

@@ -292,19 +292,6 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
         var streamId = Guid.NewGuid() + ":incoming";
 
-        // todo: deprecated on >= 451 {
-        #region Deprecated on >= 451
-        var buffer = new byte[16];
-        var res = await sslStream.ReadAsync(buffer, 0, 1, cancellationToken);
-        if (res == 0)
-            throw new Exception("Connection has been closed before receiving any request.");
-
-        // check request version
-        var version = buffer[0];
-        if (version == 1)
-            return new TcpClientStream(tcpClient, new ReadCacheStream(sslStream, false, cacheData: [version], cacheSize: 1), streamId);
-        #endregion
-
         // Version 2 is HTTP and starts with POST
         try
         {
@@ -312,7 +299,7 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await HttpUtil.ParseHeadersAsync(sslStream, cancellationToken)
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
-            int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
+            // int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);

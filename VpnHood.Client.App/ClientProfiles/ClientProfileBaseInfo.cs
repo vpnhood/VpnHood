@@ -7,8 +7,9 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
 {
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
     public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
-    public ServerLocationInfo ServerLocationInfo { get; private set; } = 
-        clientProfile.ServerLocation!=null  ? ServerLocationInfo.Parse(clientProfile.ServerLocation) : ServerLocationInfo.Auto;
+
+    public ServerLocationInfo ServerLocationInfo { get; private set; } =
+        ServerLocationInfo.Parse(clientProfile.ServerLocation);
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
 
     private static string GetTitle(ClientProfile clientProfile)

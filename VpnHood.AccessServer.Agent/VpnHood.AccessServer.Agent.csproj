@@ -29,7 +29,7 @@
 		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.202" />
 		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.202" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
-		<PackageReference Include="VpnHood.Common" Version="4.4.510" />
+		<PackageReference Include="VpnHood.Common" Version="4.4.512" />
 		<PackageReference Include="VpnHood.Server.Access" Version="4.4.507" />
 	</ItemGroup>
 

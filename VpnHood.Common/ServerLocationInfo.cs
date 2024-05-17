@@ -8,6 +8,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public required string RegionName { get; init; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
+    public static ServerLocationInfo Auto { get; } = new() { CountryCode = "*", RegionName = "*" };
 
     public int CompareTo(ServerLocationInfo other)
     {
@@ -52,7 +53,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 
     private static string ParseLocationPart(IReadOnlyList<string> parts, int index)
     {
-        return parts.Count <= index || string.IsNullOrWhiteSpace(parts[index]) ? "-" : parts[index].Trim();
+        return parts.Count <= index || string.IsNullOrWhiteSpace(parts[index]) ? "*" : parts[index].Trim();
     }
 
     private static bool MatchLocationPart(string serverPart, string requestPart)
@@ -64,7 +65,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     {
         try
         {
-            if (countryCode=="*") return "(auto)";
+            if (countryCode == "*") return "(auto)";
             var regionInfo = new RegionInfo(countryCode);
             return regionInfo.EnglishName;
         }
@@ -111,7 +112,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         }
 
         if (seenCountries.Count > 1)
-            results.Insert(0, new ServerLocationInfo{CountryCode = "*", RegionName = "*"});
+            results.Insert(0, Auto);
 
         results.Sort();
         var distinctResults = results.Distinct().ToArray();

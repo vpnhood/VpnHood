@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Persistence;
 
@@ -159,6 +160,11 @@ public class VhContext : DbContext
             entity
                 .Property(e => e.Description)
                 .HasMaxLength(200);
+
+            entity
+                .Property(e => e.AdRequirement)
+                .HasDefaultValue(AdRequirement.None)
+                .HasMaxLength(50);
 
             entity
                 .Property(e => e.IsDeleted)

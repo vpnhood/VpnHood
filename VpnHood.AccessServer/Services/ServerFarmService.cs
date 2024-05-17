@@ -252,7 +252,7 @@ public class ServerFarmService(
         if (string.IsNullOrEmpty(serverFarm.TokenJson))
             throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
 
-        var farmToken = FarmTokenBuilder.GetUsableToken(serverFarm);
+        var farmToken = FarmTokenBuilder.GetUsableToken(serverFarm.TokenJson);
         return farmToken.Encrypt();
     }
 

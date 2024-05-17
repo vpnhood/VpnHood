@@ -99,7 +99,7 @@ public class LoadBalancerService(
             .Where(server =>
                 server.IsReady &&
                 server.ServerFarmId == serverFarmId &&
-                server.LocationInfo.IsMatched(requestLocation))
+                server.LocationInfo.IsMatch(requestLocation))
             .OrderBy(CalcServerLoad)
             .ToArray();
 

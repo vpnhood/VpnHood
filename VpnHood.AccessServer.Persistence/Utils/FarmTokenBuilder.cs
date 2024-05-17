@@ -86,18 +86,18 @@ public static class FarmTokenBuilder
                serverToken.HostEndPoints?.Length > 0;
     }
 
-    public static ServerToken? TryGetUsableToken(ServerFarmModel serverFarm)
+    public static ServerToken? TryGetUsableToken(string? tokenJson)
     {
-        if (string.IsNullOrEmpty(serverFarm.TokenJson))
+        if (string.IsNullOrEmpty(tokenJson))
             return null;
 
-        var serverToken = JsonSerializer.Deserialize<ServerToken>(serverFarm.TokenJson);
+        var serverToken = JsonSerializer.Deserialize<ServerToken>(tokenJson);
         return serverToken != null && CanUse(serverToken) ? serverToken : null;
     }
 
-    public static ServerToken GetUsableToken(ServerFarmModel serverFarm)
+    public static ServerToken GetUsableToken(string? tokenJson)
     {
-        return TryGetUsableToken(serverFarm)
+        return TryGetUsableToken(tokenJson)
                ?? throw new InvalidOperationException("The Farm has not been configured or it does not have at least a server with a PublicInToken access points.");
     }
 }

@@ -105,8 +105,8 @@ public class SessionService(
         var project = await cacheService.GetProject(server.ProjectId);
 
         // Get accessTokenModel
-        //todo use farmCache instead of db
-        var accessToken = await vhAgentRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId), true);
+        var accessToken = await vhAgentRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId));
+        var serverFarmCache = await cacheService.GetServerFarm(server.ServerFarmId);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
@@ -172,7 +172,7 @@ public class SessionService(
             access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, deviceId);
             newAccessLogger.LogInformation(
                 "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
-                access.AccessId, project.ProjectName, accessToken.ServerFarm?.ServerFarmName);
+                access.AccessId, project.ProjectName, serverFarmCache.ServerFarmName);
         }
         else
         {
@@ -228,12 +228,12 @@ public class SessionService(
             return ret;
 
         // update AccessToken
-        if (accessToken.ServerFarm?.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
+        if (serverFarmCache.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
         accessToken.FirstUsedTime ??= session.CreatedTime;
         accessToken.LastUsedTime = session.CreatedTime;
 
         // push token to client
-        var farmToken = accessToken.ServerFarm.PushTokenToClient ? FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm) : null;
+        var farmToken = serverFarmCache.PushTokenToClient ? FarmTokenBuilder.GetUsableToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
             ret.AccessKey = new Token
             {

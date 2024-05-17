@@ -92,7 +92,7 @@ public class AccessTokensService(
         // create token
         var token = new Token
         {
-            ServerToken = FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm!),
+            ServerToken = FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm?.TokenJson),
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,

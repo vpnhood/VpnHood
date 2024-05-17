@@ -52,7 +52,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 Farm = new ServerFarmCache
                 {
                     ProjectId = x.Server.ServerFarm.ProjectId,
-                    ServerFarmId = x.Server.ServerFarm.ServerFarmId
+                    ServerFarmId = x.Server.ServerFarm.ServerFarmId,
+                    ServerFarmName = x.Server.ServerFarm.ServerFarmName,
+                    TokenJson = x.Server.ServerFarm.TokenJson,
+                    PushTokenToClient = x.Server.ServerFarm.PushTokenToClient
                 },
                 Project = new ProjectCache
                 {
@@ -383,7 +386,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .Select(farm => new ServerFarmCache
             {
                 ProjectId = farm.ProjectId,
-                ServerFarmId = farm.ServerFarmId
+                ServerFarmId = farm.ServerFarmId,
+                ServerFarmName = farm.ServerFarmName,
+                TokenJson = farm.TokenJson,
+                PushTokenToClient = farm.PushTokenToClient
             })
             .AsNoTracking()
             .SingleAsync();

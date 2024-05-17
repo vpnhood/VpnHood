@@ -76,7 +76,7 @@ public class CacheService(
         return server.UpdateState(agentOptions.Value.LostServerThreshold);
     }
 
-    public async Task<ServerFarmCache> GetFarm(Guid farmId)
+    public async Task<ServerFarmCache> GetServerFarm(Guid farmId)
     {
         if (cacheRepo.ServerFarms.TryGetValue(farmId, out var farm))
             return farm;

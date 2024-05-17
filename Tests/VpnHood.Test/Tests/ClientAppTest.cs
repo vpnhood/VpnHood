@@ -94,10 +94,6 @@ public class ClientAppTest : TestBase
             "Countries has not been extracted.");
     }
 
-    // todo
-    // Drop City in access server
-    // Use City as region if state is not available
-    //  Handle Null in client create auto*
     [TestMethod]
     public async Task ClientProfiles_default_ServerLocation()
     {

@@ -13,7 +13,7 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
-        Console.WriteLine(new RegionInfo("us").EnglishName);
+        Console.WriteLine(new RegionInfo("us").Name);
     }
 
     [TestMethod]

@@ -50,7 +50,7 @@ public class ServerFarmService(
             Secret = GmUtil.GenerateKey(),
             TokenJson = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
-            PushTokenToClient = createParams.PushTokenToClient
+            PushTokenToClient = true
         };
 
         await vhRepo.AddAsync(serverFarm);

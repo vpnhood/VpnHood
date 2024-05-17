@@ -373,7 +373,7 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.PushTokenToClient)
-                .HasDefaultValue(false);
+                .HasDefaultValue(true);
 
             entity
                 .Property(e => e.ServerFarmName)

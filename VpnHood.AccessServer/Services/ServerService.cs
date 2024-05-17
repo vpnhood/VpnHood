@@ -80,10 +80,12 @@ public class ServerService(
 
         // add server and update FarmToken
         serverFarm.Servers!.Add(server);
-        FarmTokenBuilder.UpdateIfChanged(serverFarm);
+        var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarm);
 
         await vhRepo.AddAsync(server);
         await vhRepo.SaveChangesAsync();
+        if (isFarmUpdated)
+            await agentCacheClient.InvalidateServerFarm(serverFarm.ServerFarmId, false);
 
         var serverData = new ServerData
         {
@@ -122,8 +124,10 @@ public class ServerService(
         if (oldServerFarmId != server.ServerFarmId)
         {
             var serverFarm = await vhRepo.ServerFarmGet(projectId, oldServerFarmId, includeServers: true, includeCertificate: true);
-            FarmTokenBuilder.UpdateIfChanged(serverFarm);
+            var isFarmChanged = FarmTokenBuilder.UpdateIfChanged(serverFarm);
             await vhRepo.SaveChangesAsync();
+            if (isFarmChanged)
+                await agentCacheClient.InvalidateServerFarm(oldServerFarmId, false);
         }
 
         // reconfig current server if required

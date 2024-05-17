@@ -58,23 +58,32 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Push_token_to_client()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = false};
-        using var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z")};
+        using var farm = await ServerFarmDom.Create(createParams: farmOptions, serverCount: 0);
+        await farm.AddNewServer(configure: true, sendStatus: true);
+        await farm.AddNewServer(configure: true, sendStatus: true);
         var accessTokenDom = await farm.CreateAccessToken();
 
         // ------------
-        // Check: with push
+        // Check: all server ready
         // ------------
-        await farm.Update(new ServerFarmUpdateParams { PushTokenToClient = new PatchOfBoolean { Value = true } });
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.AccessKey);
 
         // ------------
-        // Check: without push
+        // Check: a when server is not ready
         // ------------
-        await farm.Update(new ServerFarmUpdateParams { PushTokenToClient = new PatchOfBoolean { Value = false } });
+        var badServer = await farm.AddNewServer();
+        badServer.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode =
+            AccessPointMode.PublicInToken;
+        await badServer.Update(new ServerUpdateParams()
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = badServer.Server.AccessPoints }
+        });
+
         sessionDom = await accessTokenDom.CreateSession();
-        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey);
+        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey, 
+            "Must be null when a server with PublicInToken is not ready.");
     }
 
     [TestMethod]

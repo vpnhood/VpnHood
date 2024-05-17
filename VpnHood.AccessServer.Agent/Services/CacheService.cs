@@ -202,7 +202,7 @@ public class CacheService(
         return Task.CompletedTask;
     }
 
-    public Task InvalidateServerFarm(Guid serverFarmId)
+    public Task InvalidateServerFarm(Guid serverFarmId, bool includeServers = true)
     {
         cacheRepo.ServerFarms.TryRemove(serverFarmId, out _);
         var serverIds = cacheRepo.Servers.Values
@@ -210,7 +210,7 @@ public class CacheService(
             .Select(x => x.ServerId)
             .ToArray();
 
-        return InvalidateServers(serverIds);
+        return includeServers ? InvalidateServers(serverIds) : Task.CompletedTask;
     }
 
     public Task InvalidateServer(Guid serverId)

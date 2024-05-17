@@ -232,8 +232,9 @@ public class SessionService(
         accessToken.FirstUsedTime ??= session.CreatedTime;
         accessToken.LastUsedTime = session.CreatedTime;
 
-        // push token to client
-        var farmToken = serverFarmCache.PushTokenToClient ? FarmTokenBuilder.GetUsableToken(serverFarmCache.TokenJson) : null;
+        // push token to client if add server with PublicInToken are ready
+        var pushTokenToClient = serverFarmCache.PushTokenToClient && await loadBalancerService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
+        var farmToken = pushTokenToClient ? FarmTokenBuilder.GetUsableToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
             ret.AccessKey = new Token
             {

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Persistence.Caches;
+using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
@@ -109,6 +110,22 @@ public class LoadBalancerService(
     private static float CalcServerLoad(ServerCache server)
     {
         return (float)server.ServerStatus!.SessionCount / Math.Max(1, server.LogicalCoreCount);
+    }
+
+    public async Task<bool> IsAllPublicInTokenServersReady(Guid serverFarmId)
+    {
+        var servers = await cacheService.GetServers();
+
+        // find all servers with access in tokens
+        servers = servers
+            .Where(server => 
+                server.ServerFarmId == serverFarmId &&
+                server.IsEnabled && 
+                server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken))
+            .ToArray();
+        
+        // at-least one server must be ready
+        return servers.Length > 0 && servers.All(x=>x.IsReady);
     }
 
 

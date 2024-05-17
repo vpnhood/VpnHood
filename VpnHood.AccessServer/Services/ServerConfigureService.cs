@@ -35,7 +35,7 @@ public class ServerConfigureService(
         }
 
         await vhRepo.SaveChangesAsync();
-        await agentCacheClient.InvalidateServerFarm(serverFarmId: serverFarm.ServerFarmId);
+        await agentCacheClient.InvalidateServerFarm(serverFarmId: serverFarm.ServerFarmId, includeSevers: true);
     }
 
     public async Task<ServerCache?> InvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
@@ -47,9 +47,11 @@ public class ServerConfigureService(
                 server.ProjectId, serverFarmId: server.ServerFarmId,
                 includeCertificate: true, includeServers: true);
 
-            FarmTokenBuilder.UpdateIfChanged(serverFarm);
+            var isFarmUpdated =  FarmTokenBuilder.UpdateIfChanged(serverFarm);
             server.ConfigCode = Guid.NewGuid();
             await vhRepo.SaveChangesAsync();
+            if (isFarmUpdated)
+                await agentCacheClient.InvalidateServerFarm(serverFarm.ServerFarmId, includeSevers: false);
         }
 
         await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);

@@ -52,6 +52,9 @@ public static class FarmTokenBuilder
         {
             var hostPorts = accessPoints.DistinctBy(x => x.TcpPort).ToArray();
             hostPort = hostPorts.FirstOrDefault()?.TcpPort ?? 443;
+            if (hostPorts.Any(x=>x.TcpPort!= hostPort))
+                throw new InvalidOperationException
+                    ("All access point PublicInToken must have the same port for the host name to use valid hostname.");
         }
 
         // serverLocations

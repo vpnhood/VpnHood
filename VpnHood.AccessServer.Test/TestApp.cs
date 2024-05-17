@@ -131,9 +131,9 @@ public class TestApp : IHttpClientFactory, IDisposable
         return new IPAddress(address);
     }
 
-    public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
+    public async Task<IPEndPoint> NewEndPoint(int port = 443) => new(await NewIpV4(), port);
     // ReSharper disable once UnusedMember.Global
-    public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
+    public async Task<IPEndPoint> NewEndPointIp6(int port = 443) => new(await NewIpV6(), port);
 
 
     public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,

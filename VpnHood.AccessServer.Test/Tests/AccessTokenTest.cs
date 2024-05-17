@@ -201,6 +201,40 @@ public class AccessTokenTest
     }
 
     [TestMethod]
+    public async Task GetAccessKey_fail_if_use_hostname_with_multiple_port()
+    {
+        // create farm with UseHostName
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        {
+            ServerFarmName = Guid.NewGuid().ToString()
+        }, serverCount: 0);
+        
+        // add different port
+        var serverDom = await farm.AddNewServer();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf
+            {
+                Value =[await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPointIp6(4443))]
+            }
+        });
+
+        serverDom = await farm.AddNewServer();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf
+            {
+                Value = [await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPoint())]
+            }
+        });
+
+        await VhTestUtil.AssertApiException(HttpStatusCode.BadRequest, farm.Update(new ServerFarmUpdateParams
+        {
+            UseHostName = new PatchOfBoolean { Value = true }
+        }));
+    }
+
+    [TestMethod]
     public async Task GetAccessKey_ForIp()
     {
         using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
@@ -414,7 +448,7 @@ public class AccessTokenTest
             });
 
         // add usage to create the new expiration
-        var sessionResponse =  await sessionDom.AddUsage();
+        var sessionResponse = await sessionDom.AddUsage();
         Assert.AreEqual(expirationTime1, sessionResponse.AccessUsage?.ExpirationTime);
     }
 

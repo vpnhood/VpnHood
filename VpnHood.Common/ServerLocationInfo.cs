@@ -32,10 +32,8 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         return ServerLocation.GetHashCode();
     }
 
-    public static ServerLocationInfo Parse(string? value)
+    public static ServerLocationInfo Parse(string value)
     {
-        if (value == null) return Auto;
-
         var parts = value.Split('/');
         var ret = new ServerLocationInfo
         {

@@ -410,7 +410,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             query = query
                 .Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
                 .ThenInclude(server => server.AccessPoints)
-                .AsSplitQuery();
+                .Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
+                .ThenInclude(server => server.Location)
+                .AsSingleQuery();
 
         var farmModel = await query.SingleAsync();
         FillCertificate(farmModel);

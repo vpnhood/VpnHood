@@ -221,6 +221,32 @@ public class AccessTokenTest
     }
 
     [TestMethod]
+    public async Task GetAccessKey_With_ServerLocations()
+    {
+        // create farm
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        {
+            ServerFarmName = Guid.NewGuid().ToString()
+        }, serverCount: 0);
+
+        // create servers
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.1.0.3"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("11.1.0.4"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("11.2.0.5"));
+
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsNotNull(token.ServerToken.ServerLocations);
+        Assert.AreEqual(4, token.ServerToken.ServerLocations.Length);
+        Assert.AreEqual("10/0", token.ServerToken.ServerLocations[0]);
+        Assert.AreEqual("10/1", token.ServerToken.ServerLocations[1]);
+        Assert.AreEqual("11/1", token.ServerToken.ServerLocations[2]);
+        Assert.AreEqual("11/2", token.ServerToken.ServerLocations[3]);
+    }
+
+    [TestMethod]
     public async Task GetAccessKey_ForDomain()
     {
         var testApp = await TestApp.Create();

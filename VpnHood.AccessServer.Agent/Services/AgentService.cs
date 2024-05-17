@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text.Json;
 using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -114,8 +113,8 @@ public class AgentService(
         UpdateServerStatus(server, serverInfo.Status, true);
 
         // ready for update
-        var serverModel = await vhAgentRepo.ServerGet(server.ProjectId, serverId);
-        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, serverModel.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
+        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
+        var serverModel = serverFarmModel.Servers!.Single(x=>x.ServerId == serverId);
 
         // update cache
         var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
@@ -133,18 +132,10 @@ public class AgentService(
 
         // calculate access points
         if (serverModel.AutoConfigure)
-        {
-            var accessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
-
-            // check if access points has been changed, then update host token and access points
-            if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(serverModel.AccessPoints))
-            {
-                serverModel.AccessPoints = accessPoints;
-                FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
-            }
-        }
+            serverModel.AccessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
 
         // update if there is any change & update cache
+        FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
         await vhAgentRepo.SaveChangesAsync();
         await cacheService.InvalidateServer(server.ServerId);
 

@@ -270,7 +270,8 @@ public class VhRepo(VhContext vhContext)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
 
         if (includeServers)
-            query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted));
+            query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
+                .ThenInclude(x=>x.Location);
 
         if (includeAccessTokens)
             query = query.Include(farm => farm.AccessTokens!.Where(accessToken => !accessToken.IsDeleted));

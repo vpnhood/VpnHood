@@ -37,7 +37,7 @@ public class ServerToken
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint[]? HostEndPoints { get; set; }
 
-    [JsonPropertyName("selectors")]
+    [JsonPropertyName("loc")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string[]? ServerLocations { get; set; }
 

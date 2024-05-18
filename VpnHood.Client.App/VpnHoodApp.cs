@@ -180,7 +180,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             var connectionState = ConnectionState;
             var currentClientProfileBaseInfo = CurrentClientProfile?.ToBaseInfo();
-            var serverLocationInfos = currentClientProfileBaseInfo?.ServerLocationInfos;
 
             return new AppState
             {
@@ -193,6 +192,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfile = currentClientProfileBaseInfo,
+                ServerLocation = UserSettings.ServerLocation,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -214,11 +214,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PurchaseState = Services.AccountService?.Billing?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
                     ? _versionCheckResult.PublishInfo
-                    : null,
-                ServerLocation =
-                    serverLocationInfos?.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.ServerLocation ??
-                    serverLocationInfos?.FirstOrDefault(x => x.ServerLocation == ServerLocationInfo.Auto.ServerLocation)?.ServerLocation ??
-                    UserSettings.ServerLocation
+                    : null
             };
         }
     }
@@ -283,7 +279,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _hasDisconnectedByUser = false;
     }
 
-    public async Task Connect(Guid? clientProfileId = null, bool diagnose = false,
+    public async Task Connect(Guid? clientProfileId = null, string? serverLocation = null, bool diagnose = false,
         string? userAgent = default, bool throwException = true, CancellationToken cancellationToken = default)
     {
         // disconnect current connection
@@ -294,14 +290,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         await RequestFeatures(cancellationToken);
 
         // set default profileId to clientProfileId if not set
+        serverLocation ??= UserSettings.ServerLocation;
         clientProfileId ??= UserSettings.ClientProfileId;
-        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty)
-                            ?? throw new NotExistsException("Could not find any VPN profile to connect.");
+        var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
+        
+        // set default server location
+        var serverLocations = clientProfile.ToBaseInfo().ServerLocationInfos;
+        serverLocation = serverLocations.FirstOrDefault(x => x.ServerLocation == serverLocation)?.ServerLocation ??
+                         serverLocations.FirstOrDefault()?.ServerLocation;
 
         // set current profile only if it has been updated to avoid unnecessary new config time
-        if (clientProfile.ClientProfileId != UserSettings.ClientProfileId)
+        if (clientProfile.ClientProfileId != UserSettings.ClientProfileId || serverLocation!= UserSettings.ServerLocation)
         {
             UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+            UserSettings.ServerLocation = serverLocation;
             Settings.Save();
         }
 

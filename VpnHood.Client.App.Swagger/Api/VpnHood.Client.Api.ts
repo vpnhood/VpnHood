@@ -1577,7 +1577,6 @@ export class AppSettings implements IAppSettings {
     configTime!: Date;
     userSettings!: UserSettings;
     clientId!: string;
-    lastCountryIpGroupId?: string | null;
 
     constructor(data?: IAppSettings) {
         if (data) {
@@ -1599,7 +1598,6 @@ export class AppSettings implements IAppSettings {
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : <any>null;
-            this.lastCountryIpGroupId = _data["lastCountryIpGroupId"] !== undefined ? _data["lastCountryIpGroupId"] : <any>null;
         }
     }
 
@@ -1618,7 +1616,6 @@ export class AppSettings implements IAppSettings {
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
         data["userSettings"] = this.userSettings ? this.userSettings.toJSON() : <any>null;
         data["clientId"] = this.clientId !== undefined ? this.clientId : <any>null;
-        data["lastCountryIpGroupId"] = this.lastCountryIpGroupId !== undefined ? this.lastCountryIpGroupId : <any>null;
         return data;
     }
 }
@@ -1630,25 +1627,24 @@ export interface IAppSettings {
     configTime: Date;
     userSettings: UserSettings;
     clientId: string;
-    lastCountryIpGroupId?: string | null;
 }
 
 export class UserSettings implements IUserSettings {
     logging!: AppLogSettings;
     cultureCode?: string | null;
     clientProfileId?: string | null;
+    serverLocation?: string | null;
     maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
     tunnelClientCountry!: boolean;
-    ipGroupFilters?: string[] | null;
-    ipGroupFiltersMode!: FilterMode;
-    customIpRanges?: string[] | null;
     appFilters?: string[] | null;
     appFiltersMode!: FilterMode;
     useUdpChannel!: boolean;
     dropUdpPackets!: boolean;
     includeLocalNetwork!: boolean;
-    packetCaptureIncludeIpRanges!: string[];
+    includeIpRanges?: string[] | null;
+    excludeIpRanges?: string[] | null;
+    packetCaptureIncludeIpRanges?: string[] | null;
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker!: boolean;
     dnsServers?: string[] | null;
@@ -1664,7 +1660,6 @@ export class UserSettings implements IUserSettings {
         }
         if (!data) {
             this.logging = new AppLogSettings();
-            this.packetCaptureIncludeIpRanges = [];
         }
     }
 
@@ -1673,26 +1668,10 @@ export class UserSettings implements IUserSettings {
             this.logging = _data["logging"] ? AppLogSettings.fromJS(_data["logging"]) : new AppLogSettings();
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
+            this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
             this.maxReconnectCount = _data["maxReconnectCount"] !== undefined ? _data["maxReconnectCount"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
             this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : <any>null;
-            if (Array.isArray(_data["ipGroupFilters"])) {
-                this.ipGroupFilters = [] as any;
-                for (let item of _data["ipGroupFilters"])
-                    this.ipGroupFilters!.push(item);
-            }
-            else {
-                this.ipGroupFilters = <any>null;
-            }
-            this.ipGroupFiltersMode = _data["ipGroupFiltersMode"] !== undefined ? _data["ipGroupFiltersMode"] : <any>null;
-            if (Array.isArray(_data["customIpRanges"])) {
-                this.customIpRanges = [] as any;
-                for (let item of _data["customIpRanges"])
-                    this.customIpRanges!.push(item);
-            }
-            else {
-                this.customIpRanges = <any>null;
-            }
             if (Array.isArray(_data["appFilters"])) {
                 this.appFilters = [] as any;
                 for (let item of _data["appFilters"])
@@ -1705,6 +1684,22 @@ export class UserSettings implements IUserSettings {
             this.useUdpChannel = _data["useUdpChannel"] !== undefined ? _data["useUdpChannel"] : <any>null;
             this.dropUdpPackets = _data["dropUdpPackets"] !== undefined ? _data["dropUdpPackets"] : <any>null;
             this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : <any>null;
+            if (Array.isArray(_data["includeIpRanges"])) {
+                this.includeIpRanges = [] as any;
+                for (let item of _data["includeIpRanges"])
+                    this.includeIpRanges!.push(item);
+            }
+            else {
+                this.includeIpRanges = <any>null;
+            }
+            if (Array.isArray(_data["excludeIpRanges"])) {
+                this.excludeIpRanges = [] as any;
+                for (let item of _data["excludeIpRanges"])
+                    this.excludeIpRanges!.push(item);
+            }
+            else {
+                this.excludeIpRanges = <any>null;
+            }
             if (Array.isArray(_data["packetCaptureIncludeIpRanges"])) {
                 this.packetCaptureIncludeIpRanges = [] as any;
                 for (let item of _data["packetCaptureIncludeIpRanges"])
@@ -1747,20 +1742,10 @@ export class UserSettings implements IUserSettings {
         data["logging"] = this.logging ? this.logging.toJSON() : <any>null;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
+        data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
         data["maxReconnectCount"] = this.maxReconnectCount !== undefined ? this.maxReconnectCount : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
         data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : <any>null;
-        if (Array.isArray(this.ipGroupFilters)) {
-            data["ipGroupFilters"] = [];
-            for (let item of this.ipGroupFilters)
-                data["ipGroupFilters"].push(item);
-        }
-        data["ipGroupFiltersMode"] = this.ipGroupFiltersMode !== undefined ? this.ipGroupFiltersMode : <any>null;
-        if (Array.isArray(this.customIpRanges)) {
-            data["customIpRanges"] = [];
-            for (let item of this.customIpRanges)
-                data["customIpRanges"].push(item);
-        }
         if (Array.isArray(this.appFilters)) {
             data["appFilters"] = [];
             for (let item of this.appFilters)
@@ -1770,6 +1755,16 @@ export class UserSettings implements IUserSettings {
         data["useUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : <any>null;
         data["dropUdpPackets"] = this.dropUdpPackets !== undefined ? this.dropUdpPackets : <any>null;
         data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : <any>null;
+        if (Array.isArray(this.includeIpRanges)) {
+            data["includeIpRanges"] = [];
+            for (let item of this.includeIpRanges)
+                data["includeIpRanges"].push(item);
+        }
+        if (Array.isArray(this.excludeIpRanges)) {
+            data["excludeIpRanges"] = [];
+            for (let item of this.excludeIpRanges)
+                data["excludeIpRanges"].push(item);
+        }
         if (Array.isArray(this.packetCaptureIncludeIpRanges)) {
             data["packetCaptureIncludeIpRanges"] = [];
             for (let item of this.packetCaptureIncludeIpRanges)
@@ -1796,18 +1791,18 @@ export interface IUserSettings {
     logging: AppLogSettings;
     cultureCode?: string | null;
     clientProfileId?: string | null;
+    serverLocation?: string | null;
     maxReconnectCount: number;
     maxDatagramChannelCount: number;
     tunnelClientCountry: boolean;
-    ipGroupFilters?: string[] | null;
-    ipGroupFiltersMode: FilterMode;
-    customIpRanges?: string[] | null;
     appFilters?: string[] | null;
     appFiltersMode: FilterMode;
     useUdpChannel: boolean;
     dropUdpPackets: boolean;
     includeLocalNetwork: boolean;
-    packetCaptureIncludeIpRanges: string[];
+    includeIpRanges?: string[] | null;
+    excludeIpRanges?: string[] | null;
+    packetCaptureIncludeIpRanges?: string[] | null;
     packetCaptureExcludeIpRanges?: string[] | null;
     allowAnonymousTracker: boolean;
     dnsServers?: string[] | null;
@@ -1875,6 +1870,7 @@ export class AppState implements IAppState {
     connectionState!: AppConnectionState;
     lastError?: string | null;
     clientProfile?: ClientProfileBaseInfo | null;
+    serverLocation?: string | null;
     isIdle!: boolean;
     logExists!: boolean;
     hasDiagnoseStarted!: boolean;
@@ -1884,13 +1880,15 @@ export class AppState implements IAppState {
     speed!: Traffic;
     sessionTraffic!: Traffic;
     accountTraffic!: Traffic;
-    clientIpGroup?: IpGroup | null;
+    clientCountryCode?: string | null;
+    clientCountryName?: string | null;
     isWaitingForAd!: boolean;
     versionStatus!: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
     isUdpChannelSupported?: boolean | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
+    canDiagnose!: boolean;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
@@ -1918,6 +1916,7 @@ export class AppState implements IAppState {
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
+            this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
@@ -1927,13 +1926,15 @@ export class AppState implements IAppState {
             this.speed = _data["speed"] ? Traffic.fromJS(_data["speed"]) : new Traffic();
             this.sessionTraffic = _data["sessionTraffic"] ? Traffic.fromJS(_data["sessionTraffic"]) : new Traffic();
             this.accountTraffic = _data["accountTraffic"] ? Traffic.fromJS(_data["accountTraffic"]) : new Traffic();
-            this.clientIpGroup = _data["clientIpGroup"] ? IpGroup.fromJS(_data["clientIpGroup"]) : <any>null;
+            this.clientCountryCode = _data["clientCountryCode"] !== undefined ? _data["clientCountryCode"] : <any>null;
+            this.clientCountryName = _data["clientCountryName"] !== undefined ? _data["clientCountryName"] : <any>null;
             this.isWaitingForAd = _data["isWaitingForAd"] !== undefined ? _data["isWaitingForAd"] : <any>null;
             this.versionStatus = _data["versionStatus"] !== undefined ? _data["versionStatus"] : <any>null;
             this.lastPublishInfo = _data["lastPublishInfo"] ? PublishInfo.fromJS(_data["lastPublishInfo"]) : <any>null;
             this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
+            this.canDiagnose = _data["canDiagnose"] !== undefined ? _data["canDiagnose"] : <any>null;
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
             this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
             this.purchaseState = _data["purchaseState"] !== undefined ? _data["purchaseState"] : <any>null;
@@ -1954,6 +1955,7 @@ export class AppState implements IAppState {
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
+        data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
         data["hasDiagnoseStarted"] = this.hasDiagnoseStarted !== undefined ? this.hasDiagnoseStarted : <any>null;
@@ -1963,13 +1965,15 @@ export class AppState implements IAppState {
         data["speed"] = this.speed ? this.speed.toJSON() : <any>null;
         data["sessionTraffic"] = this.sessionTraffic ? this.sessionTraffic.toJSON() : <any>null;
         data["accountTraffic"] = this.accountTraffic ? this.accountTraffic.toJSON() : <any>null;
-        data["clientIpGroup"] = this.clientIpGroup ? this.clientIpGroup.toJSON() : <any>null;
+        data["clientCountryCode"] = this.clientCountryCode !== undefined ? this.clientCountryCode : <any>null;
+        data["clientCountryName"] = this.clientCountryName !== undefined ? this.clientCountryName : <any>null;
         data["isWaitingForAd"] = this.isWaitingForAd !== undefined ? this.isWaitingForAd : <any>null;
         data["versionStatus"] = this.versionStatus !== undefined ? this.versionStatus : <any>null;
         data["lastPublishInfo"] = this.lastPublishInfo ? this.lastPublishInfo.toJSON() : <any>null;
         data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
+        data["canDiagnose"] = this.canDiagnose !== undefined ? this.canDiagnose : <any>null;
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
         data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : <any>null;
         data["purchaseState"] = this.purchaseState !== undefined ? this.purchaseState : <any>null;
@@ -1983,6 +1987,7 @@ export interface IAppState {
     connectionState: AppConnectionState;
     lastError?: string | null;
     clientProfile?: ClientProfileBaseInfo | null;
+    serverLocation?: string | null;
     isIdle: boolean;
     logExists: boolean;
     hasDiagnoseStarted: boolean;
@@ -1992,13 +1997,15 @@ export interface IAppState {
     speed: Traffic;
     sessionTraffic: Traffic;
     accountTraffic: Traffic;
-    clientIpGroup?: IpGroup | null;
+    clientCountryCode?: string | null;
+    clientCountryName?: string | null;
     isWaitingForAd: boolean;
     versionStatus: VersionStatus;
     lastPublishInfo?: PublishInfo | null;
     isUdpChannelSupported?: boolean | null;
     canDisconnect: boolean;
     canConnect: boolean;
+    canDiagnose: boolean;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
@@ -2017,8 +2024,8 @@ export enum AppConnectionState {
 export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     clientProfileId!: string;
     clientProfileName!: string;
-    serverLocationInfo!: ServerLocationInfo;
     supportId?: string | null;
+    serverLocationInfos!: ClientServerLocationInfo[];
 
     constructor(data?: IClientProfileBaseInfo) {
         if (data) {
@@ -2028,7 +2035,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             }
         }
         if (!data) {
-            this.serverLocationInfo = new ServerLocationInfo();
+            this.serverLocationInfos = [];
         }
     }
 
@@ -2036,8 +2043,15 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         if (_data) {
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
-            this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : new ServerLocationInfo();
             this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
+            if (Array.isArray(_data["serverLocationInfos"])) {
+                this.serverLocationInfos = [] as any;
+                for (let item of _data["serverLocationInfos"])
+                    this.serverLocationInfos!.push(ClientServerLocationInfo.fromJS(item));
+            }
+            else {
+                this.serverLocationInfos = <any>null;
+            }
         }
     }
 
@@ -2052,8 +2066,12 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data = typeof data === 'object' ? data : {};
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
-        data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
         data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
+        if (Array.isArray(this.serverLocationInfos)) {
+            data["serverLocationInfos"] = [];
+            for (let item of this.serverLocationInfos)
+                data["serverLocationInfos"].push(item.toJSON());
+        }
         return data;
     }
 }
@@ -2061,8 +2079,8 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
 export interface IClientProfileBaseInfo {
     clientProfileId: string;
     clientProfileName: string;
-    serverLocationInfo: ServerLocationInfo;
     supportId?: string | null;
+    serverLocationInfos: ClientServerLocationInfo[];
 }
 
 export class ServerLocationInfo implements IServerLocationInfo {
@@ -2111,6 +2129,39 @@ export interface IServerLocationInfo {
     regionName: string;
     serverLocation: string;
     countryName: string;
+}
+
+export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
+    isNestedCountry!: boolean;
+
+    constructor(data?: IClientServerLocationInfo) {
+        super(data);
+    }
+
+    override init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.isNestedCountry = _data["isNestedCountry"] !== undefined ? _data["isNestedCountry"] : <any>null;
+        }
+    }
+
+    static override fromJS(data: any): ClientServerLocationInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientServerLocationInfo();
+        result.init(data);
+        return result;
+    }
+
+    override toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["isNestedCountry"] = this.isNestedCountry !== undefined ? this.isNestedCountry : <any>null;
+        super.toJSON(data);
+        return data;
+    }
+}
+
+export interface IClientServerLocationInfo extends IServerLocationInfo {
+    isNestedCountry: boolean;
 }
 
 export class SessionStatus implements ISessionStatus {
@@ -2291,46 +2342,6 @@ export enum SessionSuppressType {
     Other = "Other",
 }
 
-export class IpGroup implements IIpGroup {
-    ipGroupId!: string;
-    ipGroupName!: string;
-
-    constructor(data?: IIpGroup) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.ipGroupId = _data["ipGroupId"] !== undefined ? _data["ipGroupId"] : <any>null;
-            this.ipGroupName = _data["ipGroupName"] !== undefined ? _data["ipGroupName"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): IpGroup {
-        data = typeof data === 'object' ? data : {};
-        let result = new IpGroup();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["ipGroupId"] = this.ipGroupId !== undefined ? this.ipGroupId : <any>null;
-        data["ipGroupName"] = this.ipGroupName !== undefined ? this.ipGroupName : <any>null;
-        return data;
-    }
-}
-
-export interface IIpGroup {
-    ipGroupId: string;
-    ipGroupName: string;
-}
-
 export enum VersionStatus {
     Unknown = "Unknown",
     Latest = "Latest",
@@ -2452,13 +2463,11 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
     tokenId!: string;
     hostNames!: string[];
     isValidHostName!: boolean;
-    serverLocationInfos!: ServerLocationInfo[];
 
     constructor(data?: IClientProfileInfo) {
         super(data);
         if (!data) {
             this.hostNames = [];
-            this.serverLocationInfos = [];
         }
     }
 
@@ -2475,14 +2484,6 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 this.hostNames = <any>null;
             }
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
-            if (Array.isArray(_data["serverLocationInfos"])) {
-                this.serverLocationInfos = [] as any;
-                for (let item of _data["serverLocationInfos"])
-                    this.serverLocationInfos!.push(ServerLocationInfo.fromJS(item));
-            }
-            else {
-                this.serverLocationInfos = <any>null;
-            }
         }
     }
 
@@ -2502,11 +2503,6 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 data["hostNames"].push(item);
         }
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
-        if (Array.isArray(this.serverLocationInfos)) {
-            data["serverLocationInfos"] = [];
-            for (let item of this.serverLocationInfos)
-                data["serverLocationInfos"].push(item.toJSON());
-        }
         super.toJSON(data);
         return data;
     }
@@ -2516,7 +2512,6 @@ export interface IClientProfileInfo extends IClientProfileBaseInfo {
     tokenId: string;
     hostNames: string[];
     isValidHostName: boolean;
-    serverLocationInfos: ServerLocationInfo[];
 }
 
 export class ConfigParams implements IConfigParams {
@@ -2701,9 +2696,48 @@ export interface IDeviceAppInfo {
     iconPng: string;
 }
 
+export class IpGroup implements IIpGroup {
+    ipGroupId!: string;
+    ipGroupName!: string;
+
+    constructor(data?: IIpGroup) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.ipGroupId = _data["ipGroupId"] !== undefined ? _data["ipGroupId"] : <any>null;
+            this.ipGroupName = _data["ipGroupName"] !== undefined ? _data["ipGroupName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): IpGroup {
+        data = typeof data === 'object' ? data : {};
+        let result = new IpGroup();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["ipGroupId"] = this.ipGroupId !== undefined ? this.ipGroupId : <any>null;
+        data["ipGroupName"] = this.ipGroupName !== undefined ? this.ipGroupName : <any>null;
+        return data;
+    }
+}
+
+export interface IIpGroup {
+    ipGroupId: string;
+    ipGroupName: string;
+}
+
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     clientProfileName?: PatchOfString | null;
-    serverLocation?: PatchOfString | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -2717,7 +2751,6 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     init(_data?: any) {
         if (_data) {
             this.clientProfileName = _data["clientProfileName"] ? PatchOfString.fromJS(_data["clientProfileName"]) : <any>null;
-            this.serverLocation = _data["serverLocation"] ? PatchOfString.fromJS(_data["serverLocation"]) : <any>null;
         }
     }
 
@@ -2731,14 +2764,12 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["clientProfileName"] = this.clientProfileName ? this.clientProfileName.toJSON() : <any>null;
-        data["serverLocation"] = this.serverLocation ? this.serverLocation.toJSON() : <any>null;
         return data;
     }
 }
 
 export interface IClientProfileUpdateParams {
     clientProfileName?: PatchOfString | null;
-    serverLocation?: PatchOfString | null;
 }
 
 export class PatchOfString implements IPatchOfString {

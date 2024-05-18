@@ -11,6 +11,7 @@ public class AppState
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
     public required ClientProfileBaseInfo? ClientProfile { get; init; }
+    public required string? ServerLocation { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseStarted { get; init; }
@@ -19,7 +20,7 @@ public class AppState
     public required SessionStatus? SessionStatus { get; init; }
     public required Traffic Speed { get; init; }
     public required Traffic SessionTraffic { get; init; }
-    public required Traffic AccountTraffic { get; init; } 
+    public required Traffic AccountTraffic { get; init; }
     public required string? ClientCountryCode { get; init; }
     public required string? ClientCountryName { get; init; }
     public required bool IsWaitingForAd { get; init; }
@@ -28,6 +29,7 @@ public class AppState
     public required bool? IsUdpChannelSupported { get; init; }
     public required bool CanDisconnect { get; init; }
     public required bool CanConnect { get; init; }
+    public required bool CanDiagnose { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }

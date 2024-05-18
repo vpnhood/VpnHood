@@ -7,9 +7,9 @@ public class ClientProfileBaseInfo(ClientProfile clientProfile)
 {
     public Guid ClientProfileId { get; private set; } = clientProfile.ClientProfileId;
     public string ClientProfileName { get; private set; } = GetTitle(clientProfile);
-    public ServerLocationInfo ServerLocationInfo { get; private set; } = 
-        clientProfile.ServerLocation!=null  ? ServerLocationInfo.Parse(clientProfile.ServerLocation) : ServerLocationInfo.Auto;
     public string? SupportId { get; private set; } = clientProfile.Token.SupportId;
+    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = 
+        ClientServerLocationInfo.AddCategoryGaps(clientProfile.Token.ServerToken.ServerLocations);
 
     private static string GetTitle(ClientProfile clientProfile)
     {

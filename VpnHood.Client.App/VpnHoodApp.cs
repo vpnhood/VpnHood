@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.IO.Compression;
 using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
@@ -30,9 +29,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FileNamePersistState = "state.json";
     private const string FolderNameProfiles = "profiles";
     private readonly SocketFactory? _socketFactory;
-    private readonly bool _loadCountryIpGroups;
+    private readonly bool _useIpGroupManager;
+    private readonly bool _useExternalLocationService;
     private readonly string? _appGa4MeasurementId;
-    private bool _hasAnyDataArrived;
     private bool _hasConnectRequested;
     private bool _hasDiagnoseStarted;
     private bool _hasDisconnectedByUser;
@@ -42,13 +41,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isConnecting;
     private bool _isDisconnecting;
     private SessionStatus? _lastSessionStatus;
-    private IpGroup? _lastCountryIpGroup;
     private AppConnectionState _lastConnectionState;
     private bool _isLoadingIpGroup;
     private readonly TimeSpan _versionCheckInterval;
     private readonly AppPersistState _appPersistState;
     private CancellationTokenSource? _connectCts;
-    private DateTime? _connectedTime;
     private ClientProfile? _currentClientProfile;
     private VersionCheckResult? _versionCheckResult;
     private VpnHoodClient? Client => ClientConnect?.Client;
@@ -74,6 +71,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppLogService LogService { get; }
     public AppResource Resource { get; }
     public AppServices Services { get; }
+    public DateTime? ConnectedTime { get; private set; }
     public IUiContext? UiContext { get; set; }
     public IUiContext RequiredUiContext => UiContext ?? throw new Exception("The main window app does not exists.");
 
@@ -93,7 +91,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
-        _loadCountryIpGroups = options.LoadCountryIpGroups;
+        _useIpGroupManager = options.UseIpGroupManager;
+        _useExternalLocationService = options.UseExternalLocationService;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
@@ -199,7 +198,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Speed = Client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
                 SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
-                ClientIpGroup = _lastCountryIpGroup,
+                ClientCountryCode = _appPersistState.ClientCountryCode, 
+                ClientCountryName = _appPersistState.ClientCountryName,
                 IsWaitingForAd = Client?.Stat.IsWaitingForAd is true,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = Client?.Stat.IsUdpChannelSupported,
@@ -302,7 +302,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ClearLastError();
             _activeClientProfileId = clientProfileId;
             _isConnecting = true;
-            _hasAnyDataArrived = false;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
             _hasDiagnoseStarted = diagnose;
@@ -451,27 +450,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         InitCulture();
     }
 
-    private async Task<string?> GetClientCountry()
+    public async Task<string?> GetClientCountry()
     {
-        try
-        {
-            var ipAddress =
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork) ??
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
+        // try to get by external service
+        if (_useExternalLocationService)
+            _appPersistState.ClientCountryCode ??= await AppLocationService.GetCountryCode();
 
-            if (ipAddress == null)
-                return null;
+        // try to get by ip group
+        if (_useIpGroupManager)
+            _appPersistState.ClientCountryCode ??= await AppLocationService.GetCountryCode(await GetIpGroupManager());
 
-            var ipGroupManager = await GetIpGroupManager();
-            _lastCountryIpGroup = await ipGroupManager.FindIpGroup(ipAddress, Settings.LastCountryIpGroupId);
-            Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
-            return _lastCountryIpGroup?.IpGroupName;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
-            return null;
-        }
+        // return last country
+        return _appPersistState.ClientCountryName;
     }
 
     private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? serverLocationInfo, string? userAgent,
@@ -531,7 +521,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 await Diagnoser.Connect(clientConnect, cancellationToken);
 
             // set connected time
-            _connectedTime = DateTime.Now;
+            ConnectedTime = DateTime.Now;
 
             // update access token if ResponseAccessKey is set
             if (clientConnect.Client.ResponseAccessKey != null)
@@ -571,38 +561,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
     }
 
-    private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
-    {
-        if (filterMode == FilterMode.All || VhUtil.IsNullOrEmpty(ipGroupIds))
-            return null;
-
-        if (filterMode == FilterMode.Include)
-            return await GetIpRanges(ipGroupIds);
-
-        return IpRange.Invert(await GetIpRanges(ipGroupIds)).ToArray();
-    }
-
-    private async Task<IpRange[]> GetIpRanges(IEnumerable<string> ipGroupIds)
-    {
-        var ipRanges = new List<IpRange>();
-        foreach (var ipGroupId in ipGroupIds)
-            try
-            {
-                if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
-                    ipRanges.AddRange(UserSettings.CustomIpRanges ?? []);
-                else
-                {
-                    var ipGroupManager = await GetIpGroupManager();
-                    ipRanges.AddRange(await ipGroupManager.GetIpRanges(ipGroupId));
-                }
-            }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError(ex, $"Could not add {nameof(IpRange)} of Group {ipGroupId}");
-            }
-
-        return IpRange.Sort(ipRanges).ToArray();
-    }
 
     private readonly object _disconnectLock = new();
     private Task? _disconnectTask;
@@ -634,15 +592,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isDisconnecting = true;
             FireConnectionStateChanged();
 
-            // check for any success
-            if (Client != null && _connectedTime != null)
-            {
-                _hasAnyDataArrived = Client.Stat.SessionTraffic.Received > 1000;
-                if (_appPersistState.LastErrorMessage == null && !_hasAnyDataArrived && UserSettings is
-                    { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
-                    _appPersistState.LastErrorMessage = "No data has been received.";
-            }
-
             // check diagnose
             if (_hasDiagnoseStarted && _appPersistState.LastErrorMessage == null)
                 _appPersistState.LastErrorMessage = "Diagnoser has finished and no issue has been detected.";
@@ -671,7 +620,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _lastSessionStatus = Client?.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
-            _connectedTime = null;
+            ConnectedTime = null;
             ClientConnect = null;
             FireConnectionStateChanged();
         }
@@ -692,7 +641,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
 
         // ignore country ip groups if not required usually by tests
-        if (!_loadCountryIpGroups)
+        if (!_useIpGroupManager)
             return _ipGroupManager;
 
         // AddFromIp2Location if hash has been changed
@@ -809,19 +758,24 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
     {
-        // use TunnelMyCountry
-        if (UserSettings.TunnelClientCountry)
-            return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);
+        // calculate packetCaptureIpRanges
+        var ipRanges = IpNetwork.All.ToIpRanges();
+        if (!VhUtil.IsNullOrEmpty(UserSettings.IncludeIpRanges)) ipRanges = ipRanges.Intersect(UserSettings.IncludeIpRanges);
+        if (!VhUtil.IsNullOrEmpty(UserSettings.ExcludeIpRanges)) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
 
-        // Exclude my country
-        var ipGroupManager = await GetIpGroupManager();
-        _lastCountryIpGroup = await ipGroupManager.FindIpGroup(clientIp, Settings.LastCountryIpGroupId);
-        Settings.LastCountryIpGroupId = _lastCountryIpGroup?.IpGroupId;
-        VhLogger.Instance.LogInformation($"Client Country is: {_lastCountryIpGroup?.IpGroupName}");
+        // exclude client country IPs
+        if (!UserSettings.TunnelClientCountry)
+        {
+            var ipGroupManager = await GetIpGroupManager();
+            var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode);
+            _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
+            VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
+            if (ipGroup!=null)
+                ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId));
 
-        return _lastCountryIpGroup != null
-            ? await GetIncludeIpRanges(FilterMode.Exclude, [_lastCountryIpGroup.IpGroupId])
-            : null;
+        }
+
+        return ipRanges.ToArray();
     }
 
     public async Task RefreshAccount(bool updateCurrentClientProfile = false)
@@ -854,7 +808,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Settings.Save();
             }
         }
-        
+
         // update current profile if removed
         if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null)
         {

@@ -441,20 +441,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         if (Client != null)
         {
-            Client.UseUdpChannel = UserSettings.UseUdpChannel;
-            Client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
             var state = State;
-
-            //ClientProfileId has been changed
-            if (state.CanDisconnect && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
-                _ = Disconnect(true);
-
-            //ClientProfileId has been changed
-            if (state.CanDisconnect && _activeServerLocation != state.ServerLocation)
-                _ = Disconnect(true);
-
-            // IncludeLocalNetwork has been changed
-            if (state.CanDisconnect && UserSettings.IncludeLocalNetwork != Client.IncludeLocalNetwork)
+            var client = Client; // it may get null
+            client.UseUdpChannel = UserSettings.UseUdpChannel;
+            client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
+            
+            // check is disconnect required
+            var disconnectRequired =
+                (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
+                (state.CanDisconnect && _activeServerLocation != state.ServerLocation) || //ClientProfileId has been changed
+                (state.CanDisconnect && UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
+            
+            // disconnect
+            if (state.CanDisconnect && disconnectRequired)
                 _ = Disconnect(true);
         }
 

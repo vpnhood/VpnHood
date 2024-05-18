@@ -10,6 +10,18 @@ namespace VpnHood.AccessServer.Persistence.Utils;
 
 public static class FarmTokenBuilder
 {
+    public static bool TryUpdateIfChanged(ServerFarmModel serverFarm)
+    {
+        try
+        {
+            return UpdateIfChanged(serverFarm);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static bool UpdateIfChanged(ServerFarmModel serverFarm)
     {
         // build new host token

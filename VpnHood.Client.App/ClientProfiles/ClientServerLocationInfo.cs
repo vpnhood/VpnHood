@@ -2,13 +2,13 @@
 
 namespace VpnHood.Client.App.ClientProfiles;
 
-public class AppServerLocationInfo : ServerLocationInfo
+public class ClientServerLocationInfo : ServerLocationInfo
 {
     public required bool IsNestedCountry { get; init; }
 
-    private static AppServerLocationInfo FromBase(ServerLocationInfo locationInfo, bool isNestedCountry)
+    private static ClientServerLocationInfo FromBase(ServerLocationInfo locationInfo, bool isNestedCountry)
     {
-        return new AppServerLocationInfo
+        return new ClientServerLocationInfo
         {
             CountryCode = locationInfo.CountryCode,
             RegionName = locationInfo.RegionName,
@@ -16,12 +16,12 @@ public class AppServerLocationInfo : ServerLocationInfo
         };
     }
 
-    public static AppServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
+    public static ClientServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
     {
         serverLocations ??= [];
         var locationInfos = serverLocations.Select(Parse).ToArray();
 
-        var results = new List<AppServerLocationInfo>();
+        var results = new List<ClientServerLocationInfo>();
         var countryCount = new Dictionary<string, int>();
 
         // Count occurrences of each country and region
@@ -42,7 +42,7 @@ public class AppServerLocationInfo : ServerLocationInfo
             if (!seenCountries.Contains(country))
             {
                 if (isMultipleCountry)
-                    results.Add(new AppServerLocationInfo
+                    results.Add(new ClientServerLocationInfo
                     {
                         CountryCode = locationInfo.CountryCode,
                         RegionName = "*",
@@ -54,7 +54,8 @@ public class AppServerLocationInfo : ServerLocationInfo
             results.Add(FromBase(locationInfo, isMultipleCountry));
         }
 
-        if (seenCountries.Count > 1)
+        // Add auto if there is no item or if there are multiple countries
+        if (results.Count == 1 || seenCountries.Count > 1)
             results.Insert(0, FromBase(Auto, false));
 
         results.Sort();

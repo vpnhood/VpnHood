@@ -55,7 +55,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         }
 
         // Add auto if there is no item or if there are multiple countries
-        if (results.Count == 1 || seenCountries.Count > 1)
+        if (results.Count == 0 || seenCountries.Count > 1)
             results.Insert(0, FromBase(Auto, false));
 
         results.Sort();

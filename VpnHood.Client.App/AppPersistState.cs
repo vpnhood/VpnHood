@@ -1,6 +1,8 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
@@ -28,6 +30,36 @@ internal class AppPersistState
         get => _updateIgnoreTime;
         set { _updateIgnoreTime = value; Save(); }
     }
+
+    // prop
+    private string? _clientCountryCode;
+    public string? ClientCountryCode
+    {
+        get => _clientCountryCode;
+        set
+        {
+            if (_clientCountryCode == value)
+                return;
+            
+            // set country code and its name
+            _clientCountryCode = value;
+            try
+            {
+                ClientCountryName = value!=null ? new RegionInfo(value).EnglishName : null;
+            }
+            catch(Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not get country name for code: {Code}", value);
+                ClientCountryName = value;
+            }
+            Save();
+        }
+    }
+
+    // prop
+    [JsonIgnore]
+    public string? ClientCountryName { get; private set; }
+
 
     internal static AppPersistState Load(string filePath)
     {

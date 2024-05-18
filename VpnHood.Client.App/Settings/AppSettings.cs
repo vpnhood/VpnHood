@@ -18,8 +18,6 @@ public class AppSettings
     public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
-    public string? LastCountryIpGroupId { get; set; }
-
 
     public void Save()
     {

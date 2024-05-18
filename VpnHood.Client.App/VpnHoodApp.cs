@@ -36,6 +36,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _hasDiagnoseStarted;
     private bool _hasDisconnectedByUser;
     private Guid? _activeClientProfileId;
+    private string? _activeServerLocation;
     private DateTime? _connectRequestTime;
     private IpGroupManager? _ipGroupManager;
     private bool _isConnecting;
@@ -178,16 +179,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get
         {
             var connectionState = ConnectionState;
+            var currentClientProfileBaseInfo = CurrentClientProfile?.ToBaseInfo();
+            var serverLocationInfos = currentClientProfileBaseInfo?.ServerLocationInfos;
+
             return new AppState
             {
                 ConfigTime = Settings.ConfigTime,
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
+                CanDiagnose = connectionState is AppConnectionState.None or AppConnectionState.Connected or AppConnectionState.Connecting,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfile = CurrentClientProfile?.ToBaseInfo(),
+                ClientProfile = currentClientProfileBaseInfo,
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -198,7 +203,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 Speed = Client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
                 SessionTraffic = Client?.Stat.SessionTraffic ?? new Traffic(),
-                ClientCountryCode = _appPersistState.ClientCountryCode, 
+                ClientCountryCode = _appPersistState.ClientCountryCode,
                 ClientCountryName = _appPersistState.ClientCountryName,
                 IsWaitingForAd = Client?.Stat.IsWaitingForAd is true,
                 ConnectRequestTime = _connectRequestTime,
@@ -210,6 +215,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
                     ? _versionCheckResult.PublishInfo
                     : null,
+                ServerLocation =
+                    serverLocationInfos?.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.ServerLocation ??
+                    serverLocationInfos?.FirstOrDefault(x => x.ServerLocation == ServerLocationInfo.Auto.ServerLocation)?.ServerLocation ??
+                    UserSettings.ServerLocation
             };
         }
     }
@@ -301,6 +310,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // prepare logger
             ClearLastError();
             _activeClientProfileId = clientProfileId;
+            _activeServerLocation = State.ServerLocation;
             _isConnecting = true;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
@@ -343,7 +353,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 packetCapture.IncludeApps = UserSettings.AppFilters;
 
             // connect
-            await ConnectInternal(packetCapture, clientProfile.Token, clientProfile.ServerLocation, userAgent, true,
+            await ConnectInternal(packetCapture, clientProfile.Token, _activeServerLocation, userAgent, true,
                 cancellationToken);
         }
         catch (Exception ex)
@@ -431,13 +441,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             Client.UseUdpChannel = UserSettings.UseUdpChannel;
             Client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
+            var state = State;
 
             //ClientProfileId has been changed
-            if (!IsIdle && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
+            if (state.CanDisconnect && _activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId)
+                _ = Disconnect(true);
+
+            //ClientProfileId has been changed
+            if (state.CanDisconnect && _activeServerLocation != state.ServerLocation)
                 _ = Disconnect(true);
 
             // IncludeLocalNetwork has been changed
-            if (!IsIdle && UserSettings.IncludeLocalNetwork != Client.IncludeLocalNetwork)
+            if (state.CanDisconnect && UserSettings.IncludeLocalNetwork != Client.IncludeLocalNetwork)
                 _ = Disconnect(true);
         }
 
@@ -617,6 +632,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             _appPersistState.LastErrorMessage ??= LastSessionStatus?.ErrorMessage;
             _activeClientProfileId = null;
+            _activeServerLocation = null;
             _lastSessionStatus = Client?.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
@@ -770,7 +786,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode);
             _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
             VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
-            if (ipGroup!=null)
+            if (ipGroup != null)
                 ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId));
 
         }

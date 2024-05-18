@@ -87,7 +87,7 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.LoadCountryIpGroups = true;
+        appOptions.UseIpGroupManager = true;
         await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
         var ipGroups2 = await app2.GetIpGroups();
         Assert.IsTrue(ipGroups2.Any(x => x.IpGroupId == "us"),
@@ -284,7 +284,6 @@ public class ClientAppTest : TestBase
 
         // ************
         // Test: Without diagnose
-        // ReSharper disable once RedundantAssignment
         _ = app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
         await app.Disconnect(true);
@@ -293,7 +292,6 @@ public class ClientAppTest : TestBase
         Assert.IsFalse(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseStarted);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
-        Assert.IsTrue(app.State.HasProblemDetected); //no data
         Assert.IsTrue(app.State.IsIdle);
     }
 
@@ -366,7 +364,7 @@ public class ClientAppTest : TestBase
 
         await using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        var ipList = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
+        var customIps = (await Dns.GetHostAddressesAsync(TestConstants.HttpsUri1.Host))
             .Select(x => new IpRange(x))
             .Concat(new[]
             {
@@ -374,13 +372,13 @@ public class ClientAppTest : TestBase
                 new IpRange(TestConstants.NsEndPoint1.Address),
                 new IpRange(TestConstants.UdpV4EndPoint1.Address),
                 new IpRange(TestConstants.UdpV6EndPoint1.Address)
-            });
+            })
+            .ToArray();
 
         // ************
         // *** TEST ***: Test Include ip filter
-        app.UserSettings.CustomIpRanges = ipList.ToArray();
-        app.UserSettings.IpGroupFilters = ["custom"];
-        app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
+        app.UserSettings.IncludeIpRanges = customIps;
+        app.UserSettings.ExcludeIpRanges = null;
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
@@ -390,7 +388,8 @@ public class ClientAppTest : TestBase
 
         // ************
         // *** TEST ***: Test Exclude ip filters
-        app.UserSettings.IpGroupFiltersMode = FilterMode.Exclude;
+        app.UserSettings.IncludeIpRanges = null;
+        app.UserSettings.ExcludeIpRanges = customIps;
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
 

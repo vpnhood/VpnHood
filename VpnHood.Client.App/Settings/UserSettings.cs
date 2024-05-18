@@ -13,15 +13,14 @@ public class UserSettings
     public int MaxReconnectCount { get; set; } = int.MaxValue;
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;
     public bool TunnelClientCountry { get; set; } = true;
-    public string[]? IpGroupFilters { get; set; }
-    public FilterMode IpGroupFiltersMode { get; set; } = FilterMode.All;
-    public IpRange[]? CustomIpRanges { get; set; }
     public string[]? AppFilters { get; set; }
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
     public bool UseUdpChannel { get; set; } = DefaultClientOptions.UseUdpChannel;
     public bool DropUdpPackets { get; set; } = DefaultClientOptions.DropUdpPackets;
     public bool IncludeLocalNetwork { get; set; } = DefaultClientOptions.IncludeLocalNetwork;
-    public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRange[]? IncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRange[]? ExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
+    public IpRange[]? PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[]? PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
     public bool AllowAnonymousTracker { get; set; } = DefaultClientOptions.AllowAnonymousTracker;
     public IPAddress[]? DnsServers { get; set; }

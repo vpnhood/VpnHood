@@ -5,9 +5,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common.Collections;
-using VpnHood.Common.Exceptions;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
@@ -85,34 +83,23 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         // create new stream
         var tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint.AddressFamily);
 
-        try
-        {
-            // Client.SessionTimeout does not affect in ConnectAsync
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
+        // Client.SessionTimeout does not affect in ConnectAsync
+        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
-            await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
+        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
 
-            // Establish a TLS connection
-            var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatHostName(hostName));
-            await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
-            {
-                TargetHost = hostName,
-                EnabledSslProtocols = SslProtocols.None // auto
-            }, cancellationToken);
+        // Establish a TLS connection
+        var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
+        VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "TLS Authenticating... HostName: {HostName}", VhLogger.FormatHostName(hostName));
+        await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+        {
+            TargetHost = hostName,
+            EnabledSslProtocols = SslProtocols.None // auto
+        }, cancellationToken);
 
-            var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
-            lock (Stat) Stat.CreatedConnectionCount++;
-            return clientStream;
-        }
-        catch (MaintenanceException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new ConnectorEstablishException(ex.Message, ex);
-        }
+        var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
+        lock (Stat) Stat.CreatedConnectionCount++;
+        return clientStream;
     }
 
     protected IClientStream? GetFreeClientStream()

@@ -1,4 +1,6 @@
 # Upcoming
+### Client
+* Update: User IncludeIpRanges amd ExcludeIpRanges in settings instead of CustomIpRanges
 
 ### Server
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported

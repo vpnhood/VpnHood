@@ -85,19 +85,6 @@ public class ClientProfileService
             clientProfile.ClientProfileName = name;
         }
 
-        // update region
-        if (updateParams.ServerLocation != null)
-        {
-            if (updateParams.ServerLocation.Value != null)
-            {
-                var profileInfo = clientProfile.ToInfo();
-                if (profileInfo.ServerLocationInfos.All(x => x.ServerLocation != updateParams.ServerLocation))
-                    throw new NotExistsException($"{nameof(updateParams.ServerLocation)} does not exist.");
-            }
-
-            clientProfile.ServerLocation = updateParams.ServerLocation;
-        }
-
         Save();
         return clientProfile;
     }

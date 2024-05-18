@@ -10,6 +10,7 @@ public class UserSettings
     public AppLogSettings Logging { get; set; } = new();
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
+    public string? ServerLocation { get; set; }
     public int MaxReconnectCount { get; set; } = int.MaxValue;
     public int MaxDatagramChannelCount { get; set; } = DefaultClientOptions.MaxDatagramChannelCount;
     public bool TunnelClientCountry { get; set; } = true;

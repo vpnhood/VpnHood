@@ -36,12 +36,17 @@ public class Diagnoser
         {
             await clientConnect.Connect(cancellationToken);
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
             if (!await NetworkCheck())
                 throw new NoInternetException();
+
             throw;
         }
         finally

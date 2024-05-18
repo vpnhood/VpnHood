@@ -103,8 +103,8 @@ public class ClientAppTest : TestBase
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["us/regin2", "us/california"];
         var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        Assert.AreEqual(clientProfile.ToInfo().ServerLocationInfo, ServerLocationInfo.Auto);
-        Assert.IsNull(clientProfile.ServerLocation);
+        app1.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        Assert.IsNull(app1.State.ServerLocation);
     }
 
 
@@ -200,26 +200,12 @@ public class ClientAppTest : TestBase
         });
 
         // ************
-        // *** TEST ***: Update throw NotExistsException exception if regionId does not exist
-        Assert.ThrowsException<NotExistsException>(() =>
-        {
-            // ReSharper disable once AccessToDisposedClosure
-            app.ClientProfileService.Update(Guid.NewGuid(), new ClientProfileUpdateParams
-            {
-                ServerLocation = Guid.NewGuid().ToString()
-            });
-
-        });
-
-        // ************
         // *** TEST ***: Update should update the old node if ClientProfileId already exists
         app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
         {
-            ClientProfileName = "Hi2",
-            ServerLocation = "us/*"
+            ClientProfileName = "Hi2"
         });
         Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
-        Assert.AreEqual("us/*", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ServerLocation);
 
         // ************
         // *** TEST ***: RemoveClientProfile

@@ -89,7 +89,7 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Session_Create_success()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = true };
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z")};
         using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {

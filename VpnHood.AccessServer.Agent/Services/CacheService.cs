@@ -41,9 +41,11 @@ public class CacheService(
         await Init();
     }
 
-    public Task<ServerCache[]> GetServers()
+    public Task<ServerCache[]> GetServers(Guid? projectId = null, Guid? serverFarmId = null)
     {
         var servers = cacheRepo.Servers.Values
+            .Where(x=> projectId==null || x.ProjectId == projectId)
+            .Where(x=> serverFarmId==null || x.ServerFarmId == serverFarmId)
             .Select(x => x.UpdateState(agentOptions.Value.LostServerThreshold));
         return Task.FromResult(servers.ToArray());
     }

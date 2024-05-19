@@ -49,10 +49,12 @@ public class ServerFarmService(
             UseHostName = false,
             Secret = GmUtil.GenerateKey(),
             TokenJson = null,
+            TokenError = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
             PushTokenToClient = true
         };
 
+        FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhRepo.AddAsync(serverFarm);
         await vhRepo.SaveChangesAsync();
 
@@ -157,12 +159,11 @@ public class ServerFarmService(
         }
 
         // update
-        await vhRepo.SaveChangesAsync();
-        await serverConfigureService.InvalidateServerFarm(projectId, serverFarmId, reconfigure);
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, serverFarmId, reconfigure);
 
         // validate certificate
         if (validateCertificate)
-            _  = certificateValidatorService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
+            _ = certificateValidatorService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
 
         // update cache after save
         var ret = await Get(projectId, serverFarmId, false);
@@ -249,10 +250,7 @@ public class ServerFarmService(
     public async Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
-        if (string.IsNullOrEmpty(serverFarm.TokenJson))
-            throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
-
-        var farmToken = FarmTokenBuilder.GetUsableToken(serverFarm.TokenJson);
+        var farmToken = FarmTokenBuilder.GetRequiredServerToken(serverFarm.TokenJson);
         return farmToken.Encrypt();
     }
 

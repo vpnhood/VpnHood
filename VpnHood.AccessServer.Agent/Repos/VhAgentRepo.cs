@@ -27,6 +27,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         var statuses = await vhContext.ServerStatuses
             .Where(x => x.IsLast && x.CreatedTime > minServerUsedTime)
             .Where(x => !x.Server!.IsDeleted)
+            .Where(x => !x.Project!.IsDeleted)
+            .Where(x => !x.Server!.ServerFarm!.IsDeleted)
             .Select(x => new
             {
                 Server = new ServerCache

@@ -24,11 +24,11 @@ public class ServerConfigureService(
         await agentCacheClient.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
     }
 
-    public async Task InvalidateServerFarm(Guid projectId, Guid serverFarmId, bool reconfigure)
+    public async Task SaveChangesAndInvalidateServerFarm(Guid projectId, Guid serverFarmId, bool reconfigureServers)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificate: true, includeServers: true);
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
-        if (reconfigure)
+        if (reconfigureServers)
         {
             foreach (var server in serverFarm.Servers!)
                 server.ConfigCode = Guid.NewGuid();
@@ -38,23 +38,20 @@ public class ServerConfigureService(
         await agentCacheClient.InvalidateServerFarm(serverFarmId: serverFarm.ServerFarmId, includeSevers: true);
     }
 
-    public async Task<ServerCache?> InvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
+    public async Task<ServerCache?> SaveChangesAndInvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
     {
         if (reconfigure)
         {
             var server = await vhRepo.ServerGet(projectId, serverId);
-            var serverFarm = await vhRepo.ServerFarmGet(
-                server.ProjectId, serverFarmId: server.ServerFarmId,
-                includeCertificate: true, includeServers: true);
-
-            var isFarmUpdated =  FarmTokenBuilder.UpdateIfChanged(serverFarm);
             server.ConfigCode = Guid.NewGuid();
+            await SaveChangesAndInvalidateServerFarm(projectId, server.ServerFarmId, false);
+        }
+        else
+        {
             await vhRepo.SaveChangesAsync();
-            if (isFarmUpdated)
-                await agentCacheClient.InvalidateServerFarm(serverFarm.ServerFarmId, includeSevers: false);
+            await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);
         }
 
-        await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);
         return await agentCacheClient.GetServer(serverId);
     }
 

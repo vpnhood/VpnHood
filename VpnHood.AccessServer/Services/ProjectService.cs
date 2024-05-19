@@ -59,6 +59,7 @@ public class ProjectService(
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
             TokenUrl = null,
+            TokenError = null,
             PushTokenToClient = true,
             Servers = []
         };
@@ -74,6 +75,8 @@ public class ProjectService(
             GaMeasurementId = null,
             AdRewardSecret = adRewardSecret,
             LetsEncryptAccount = null,
+            IsDeleted = false,
+            IsEnabled = true,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
                 serverProfile

@@ -23,11 +23,9 @@ public class CertificateService(
 
         var certificate = BuildSelfSinged(serverFarm.ProjectId, serverFarmId: serverFarm.ServerFarmId, createParams: createParams);
         await vhRepo.AddAsync(certificate);
-        await vhRepo.SaveChangesAsync();
 
         // invalidate farm cache
-        await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
-
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
         return certificate.ToDto();
     }
 
@@ -43,11 +41,9 @@ public class CertificateService(
         // replace with the new one
         var certificate = BuildByImport(serverFarm.ProjectId, serverFarm.ServerFarmId, importParams);
         await vhRepo.AddAsync(certificate);
-        await vhRepo.SaveChangesAsync();
 
         // invalidate farm cache
-        await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
-
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
         return certificate.ToDto();
     }
 

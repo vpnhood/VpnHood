@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.Common;
@@ -10,19 +11,22 @@ namespace VpnHood.AccessServer.Persistence.Utils;
 
 public static class FarmTokenBuilder
 {
-    public static bool TryUpdateIfChanged(ServerFarmModel serverFarm)
+    public static bool UpdateIfChanged(ServerFarmModel serverFarm)
     {
         try
         {
-            return UpdateIfChanged(serverFarm);
+            return UpdateIfChangedInternal(serverFarm);
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            var isChanged = serverFarm.TokenJson != null || serverFarm.TokenError != ex.Message;
+            serverFarm.TokenJson = null;
+            serverFarm.TokenError = ex.Message;
+            return isChanged;
         }
     }
 
-    public static bool UpdateIfChanged(ServerFarmModel serverFarm)
+    private static bool UpdateIfChangedInternal(ServerFarmModel serverFarm)
     {
         // build new host token
         var farmTokenNew = Build(serverFarm);
@@ -37,6 +41,7 @@ public static class FarmTokenBuilder
 
         // update host token
         serverFarm.TokenJson = JsonSerializer.Serialize(farmTokenNew);
+        serverFarm.TokenError = null;
         return true;
     }
 
@@ -53,7 +58,7 @@ public static class FarmTokenBuilder
 
         // find all public accessPoints 
         var accessPoints = servers
-            .Where(server => server.IsEnabled)
+            .Where(server => server is { IsEnabled: true, IsDeleted: false })
             .SelectMany(server => server.AccessPoints)
             .Where(accessPoint => accessPoint.AccessPointMode == AccessPointMode.PublicInToken)
             .ToArray();
@@ -64,9 +69,16 @@ public static class FarmTokenBuilder
         {
             var hostPorts = accessPoints.DistinctBy(x => x.TcpPort).ToArray();
             hostPort = hostPorts.FirstOrDefault()?.TcpPort ?? 443;
-            if (hostPorts.Any(x=>x.TcpPort!= hostPort))
+            if (hostPorts.Any(x => x.TcpPort != hostPort))
                 throw new InvalidOperationException
-                    ("All access point PublicInToken must have the same port for the host name to use valid hostname.");
+                    ("All PublicInToken access points must use the same port when using valid domain.");
+
+            if (hostPort < 0)
+                throw new InvalidOperationException("The host port must be greater than 0 when using valid domain.");
+        }
+        else if (accessPoints.Length == 0)
+        {
+            throw new InvalidOperationException("The farm must have at least one server with PublicInToken access points.");
         }
 
         // serverLocations
@@ -89,30 +101,32 @@ public static class FarmTokenBuilder
             IsValidHostName = serverFarm.UseHostName,
             Url = serverFarm.TokenUrl,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
-            ServerLocations = locations.Length >0 ? locations : null
+            ServerLocations = locations.Length > 0 ? locations : null
         };
+
+        // validate token
 
         return serverToken;
     }
 
-    private static bool CanUse(ServerToken serverToken)
+    public static ServerToken? GetServerToken(string? serverFarmTokenJson)
     {
-        return serverToken is { IsValidHostName: true, HostPort: > 0 } ||
-               serverToken.HostEndPoints?.Length > 0;
-    }
-
-    public static ServerToken? TryGetUsableToken(string? tokenJson)
-    {
-        if (string.IsNullOrEmpty(tokenJson))
+        try
+        {
+            return serverFarmTokenJson != null ? GmUtil.JsonDeserialize<ServerToken>(serverFarmTokenJson) : null;
+        }
+        catch
+        {
             return null;
-
-        var serverToken = JsonSerializer.Deserialize<ServerToken>(tokenJson);
-        return serverToken != null && CanUse(serverToken) ? serverToken : null;
+        }
     }
-
-    public static ServerToken GetUsableToken(string? tokenJson)
+    
+    public static ServerToken GetRequiredServerToken(string? serverFarmTokenJson)
     {
-        return TryGetUsableToken(tokenJson)
-               ?? throw new InvalidOperationException("The Farm has not been configured or it does not have at least a server with a PublicInToken access points.");
+        if (string.IsNullOrEmpty(serverFarmTokenJson))
+            throw new InvalidOperationException("The server farm token has not been initialized properly.");
+
+        return GmUtil.JsonDeserialize<ServerToken>(serverFarmTokenJson);
     }
+
 }

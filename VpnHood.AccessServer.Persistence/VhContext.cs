@@ -76,6 +76,14 @@ public class VhContext : DbContext
                 .HasMaxLength(200);
 
             entity
+                .Property(e => e.IsDeleted)
+                .HasDefaultValue(false);
+
+            entity
+                .Property(e => e.IsEnabled)
+                .HasDefaultValue(true);
+
+            entity
                 .HasOne(e => e.LetsEncryptAccount)
                 .WithOne(d => d.Project)
                 .HasForeignKey<LetsEncryptAccount>(d => d.ProjectId)

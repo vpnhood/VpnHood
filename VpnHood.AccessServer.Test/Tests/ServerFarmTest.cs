@@ -5,6 +5,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common;
 using VpnHood.Common.Client;
+using VpnHood.Common.Utils;
 using Token = VpnHood.Common.Token;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -19,8 +20,7 @@ public class ServerFarmTest
         var farm1 = await ServerFarmDom.Create(testApp, serverCount: 0,
             createParams: new ServerFarmCreateParams
             {
-                TokenUrl = new Uri("http://localhost:8080/farm1-token"),
-                PushTokenToClient = true
+                TokenUrl = new Uri("http://localhost:8080/farm1-token")
             });
         Assert.IsTrue(farm1.ServerFarm.PushTokenToClient);
 
@@ -133,25 +133,8 @@ public class ServerFarmTest
 
         // delete the server
         await farm1.Client.DeleteAsync(farm1.ProjectId, farm1.ServerFarmId);
-        try
-        {
-            await farm1.Reload();
-            Assert.Fail("Exception Expected.");
-        }
-        catch (ApiException ex)
-        {
-            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
-        }
-
-        try
-        {
-            await accessTokenDom.Reload();
-            Assert.Fail("Exception Expected.");
-        }
-        catch (ApiException ex)
-        {
-            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
-        }
+        await VhTestUtil.AssertNotExistsException(farm1.Reload());
+        await VhTestUtil.AssertNotExistsException(accessTokenDom.Reload());
     }
 
     [TestMethod]
@@ -294,22 +277,26 @@ public class ServerFarmTest
         server = await farm.AddNewServer();
         server.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode =
             AccessPointMode.PublicInToken;
-        await server.Update(new ServerUpdateParams()
+        await server.Update(new ServerUpdateParams
         {
-            AccessPoints = new PatchOfAccessPointOf {Value = server.Server.AccessPoints }
+            AccessPoints = new PatchOfAccessPointOf { Value = server.Server.AccessPoints }
         });
+        await server.Configure();
+
+        await farm.ReloadServers();
+        var ss = farm.Servers;
 
         accessTokenDom = await farm.CreateAccessToken();
         accessKey = await accessTokenDom.GetAccessKey();
         token = Token.FromAccessKey(accessKey);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => 
+            x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
 
         // new session should return the updated token
-        await server.Configure();
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.AccessKey);
         token = Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => 
+            x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
     }
-
 }

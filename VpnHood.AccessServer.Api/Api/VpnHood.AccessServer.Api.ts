@@ -5546,6 +5546,7 @@ export class ServerFarm implements IServerFarm {
     serverProfileName!: string;
     useHostName!: boolean;
     tokenUrl?: string | null;
+    tokenError?: string | null;
     secret!: string;
     createdTime!: Date;
     pushTokenToClient!: boolean;
@@ -5568,6 +5569,7 @@ export class ServerFarm implements IServerFarm {
             this.serverProfileName = _data["serverProfileName"] !== undefined ? _data["serverProfileName"] : <any>null;
             this.useHostName = _data["useHostName"] !== undefined ? _data["useHostName"] : <any>null;
             this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
+            this.tokenError = _data["tokenError"] !== undefined ? _data["tokenError"] : <any>null;
             this.secret = _data["secret"] !== undefined ? _data["secret"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.pushTokenToClient = _data["pushTokenToClient"] !== undefined ? _data["pushTokenToClient"] : <any>null;
@@ -5590,6 +5592,7 @@ export class ServerFarm implements IServerFarm {
         data["serverProfileName"] = this.serverProfileName !== undefined ? this.serverProfileName : <any>null;
         data["useHostName"] = this.useHostName !== undefined ? this.useHostName : <any>null;
         data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
+        data["tokenError"] = this.tokenError !== undefined ? this.tokenError : <any>null;
         data["secret"] = this.secret !== undefined ? this.secret : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["pushTokenToClient"] = this.pushTokenToClient !== undefined ? this.pushTokenToClient : <any>null;
@@ -5605,6 +5608,7 @@ export interface IServerFarm {
     serverProfileName: string;
     useHostName: boolean;
     tokenUrl?: string | null;
+    tokenError?: string | null;
     secret: string;
     createdTime: Date;
     pushTokenToClient: boolean;
@@ -5799,7 +5803,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
     tokenUrl?: string | null;
-    pushTokenToClient!: boolean;
 
     constructor(data?: IServerFarmCreateParams) {
         if (data) {
@@ -5815,7 +5818,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.serverProfileId = _data["serverProfileId"] !== undefined ? _data["serverProfileId"] : <any>null;
             this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
-            this.pushTokenToClient = _data["pushTokenToClient"] !== undefined ? _data["pushTokenToClient"] : <any>null;
         }
     }
 
@@ -5831,7 +5833,6 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["serverProfileId"] = this.serverProfileId !== undefined ? this.serverProfileId : <any>null;
         data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
-        data["pushTokenToClient"] = this.pushTokenToClient !== undefined ? this.pushTokenToClient : <any>null;
         return data;
     }
 }
@@ -5840,7 +5841,6 @@ export interface IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
     tokenUrl?: string | null;
-    pushTokenToClient: boolean;
 }
 
 export class ServerFarmUpdateParams implements IServerFarmUpdateParams {

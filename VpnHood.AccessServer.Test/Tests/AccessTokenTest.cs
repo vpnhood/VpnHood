@@ -228,10 +228,14 @@ public class AccessTokenTest
             }
         });
 
-        await VhTestUtil.AssertApiException(HttpStatusCode.BadRequest, farm.Update(new ServerFarmUpdateParams
+        var serverFarmData = await farm.Update(new ServerFarmUpdateParams
         {
             UseHostName = new PatchOfBoolean { Value = true }
-        }));
+        });
+        
+        Assert.IsNull(serverFarmData.ServerFarm.TokenUrl);
+        var accessTokenDom = await farm.CreateAccessToken();
+        await VhTestUtil.AssertApiException<InvalidOperationException>(accessTokenDom.GetAccessKey());
     }
 
     [TestMethod]

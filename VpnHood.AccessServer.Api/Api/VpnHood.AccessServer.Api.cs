@@ -8003,6 +8003,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
         public System.Uri? TokenUrl { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("tokenError")]
+        public string? TokenError { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("secret")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public byte[] Secret { get; set; } = default!;
@@ -8125,9 +8128,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
         public System.Uri? TokenUrl { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
-        public bool PushTokenToClient { get; set; } = default!;
 
     }
 

@@ -135,7 +135,7 @@ public class AgentService(
             serverModel.AccessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
 
         // update if there is any change & update cache
-        var isFarmUpdated = FarmTokenBuilder.TryUpdateIfChanged(serverFarmModel);
+        var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
         await vhAgentRepo.SaveChangesAsync();
         await cacheService.InvalidateServer(server.ServerId);
         if (isFarmUpdated)

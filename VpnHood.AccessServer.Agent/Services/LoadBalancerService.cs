@@ -114,7 +114,7 @@ public class LoadBalancerService(
 
     public async Task<bool> IsAllPublicInTokenServersReady(Guid serverFarmId)
     {
-        var servers = await cacheService.GetServers();
+        var servers = await cacheService.GetServers(serverFarmId: serverFarmId);
 
         // find all servers with access in tokens
         servers = servers

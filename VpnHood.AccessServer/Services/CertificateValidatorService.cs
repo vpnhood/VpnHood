@@ -63,10 +63,9 @@ public class CertificateValidatorService(
             var acmeOrderService = await acmeOrderFactory.CreateOrder(project.LetsEncryptAccount.AccountPem, csr);
             certificate.ValidateToken = acmeOrderService.Token;
             certificate.ValidateKeyAuthorization = acmeOrderService.KeyAuthorization;
-            await vhRepo.SaveChangesAsync();
 
             // wait for farm configuration
-            await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
+            await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
             await serverConfigureService.WaitForFarmConfiguration(certificate.ProjectId, certificate.ServerFarmId, cancellationToken);
 
             // validate order by manager
@@ -90,8 +89,8 @@ public class CertificateValidatorService(
                     certificate.Thumbprint = res.Thumbprint;
                     certificate.ExpirationTime = res.NotAfter;
                     certificate.IssueTime = res.NotBefore;
-
-                    await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
+                    
+                    await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
                     break;
                 }
 

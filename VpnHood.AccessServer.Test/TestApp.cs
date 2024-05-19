@@ -336,6 +336,7 @@ public class TestApp : IHttpClientFactory, IDisposable
 
     public void Dispose()
     {
+
         Scope.Dispose();
         HttpClient.Dispose();
         AgentTestApp.Dispose();

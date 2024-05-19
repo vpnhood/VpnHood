@@ -234,7 +234,7 @@ public class SessionService(
 
         // push token to client if add server with PublicInToken are ready
         var pushTokenToClient = serverFarmCache.PushTokenToClient && await loadBalancerService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
-        var farmToken = pushTokenToClient ? FarmTokenBuilder.GetUsableToken(serverFarmCache.TokenJson) : null;
+        var farmToken = pushTokenToClient ? FarmTokenBuilder.GetServerToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
             ret.AccessKey = new Token
             {

@@ -104,7 +104,7 @@ public class ClientAppTest : TestBase
         token.ServerToken.ServerLocations = ["us/regin2", "us/california"];
         var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app1.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        Assert.IsNull(app1.State.ServerLocation);
+        Assert.IsNull(app1.State.ServerLocationInfo?.ServerLocation);
     }
 
 

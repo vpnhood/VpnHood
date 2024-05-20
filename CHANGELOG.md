@@ -1,8 +1,11 @@
 # Upcoming
 ### Client
+* Feature: Allow to select server by country if the server supports it
 * Update: User IncludeIpRanges amd ExcludeIpRanges in settings instead of CustomIpRanges
+* Fix: Some wrong message in disconnect
 
 ### Server
+* Feature: Support selecting server location when controlled by HttpAccessManager
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 
 # v4.4.506

@@ -186,9 +186,29 @@ public class IpGroupManager
         return null;
     }
 
+    public async Task<string?> GetCountryCodeByCurrentIp()
+    {
+        try
+        {
+            var ipAddress =
+                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork) ??
+                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
+
+            if (ipAddress == null)
+                return null;
+
+            var ipGroup = await FindIpGroup(ipAddress, null);
+            return ipGroup?.IpGroupId;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
+            return null;
+        }
+    }
+
     private class IpGroupNetwork : IpGroup
     {
         public List<IpRange> IpRanges { get; set; } = [];
     }
-
 }

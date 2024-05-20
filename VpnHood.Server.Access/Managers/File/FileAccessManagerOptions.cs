@@ -15,4 +15,5 @@ public class FileAccessManagerOptions : ServerConfig
     public bool IsValidHostName { get; set; }
     public string? ServerTokenUrl { get; set; }
     public bool ReplyAccessKey { get; set; } = true; // if false, access tokens will only be updated by url
+    public bool UseExternalLocationService { get; set; } = true;
 }

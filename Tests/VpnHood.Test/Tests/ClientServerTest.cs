@@ -31,7 +31,8 @@ public class ClientServerTest : TestBase
 
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions2 = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint2] };
+        var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
         using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
         await using var server2 = TestHelper.CreateServer(testAccessManager2);
@@ -58,7 +59,7 @@ public class ClientServerTest : TestBase
 
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions2 = new FileAccessManagerOptions { TcpEndPoints = [serverEndPoint2] };
+        var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint2]);
         using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
         await using var server2 = TestHelper.CreateServer(testAccessManager2);

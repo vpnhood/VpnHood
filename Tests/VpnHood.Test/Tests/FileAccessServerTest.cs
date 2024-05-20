@@ -28,11 +28,9 @@ public class FileAccessManagerTest : TestBase
     public async Task Crud()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var fileAccessManagerOptions = new FileAccessManagerOptions
-        {
-            TcpEndPoints = [new IPEndPoint(IPAddress.Any, 8000)],
-            PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")]
-        };
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.TcpEndPoints = [new IPEndPoint(IPAddress.Any, 8000)];
+        fileAccessManagerOptions.PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")];
         var accessManager1 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
         //add two tokens

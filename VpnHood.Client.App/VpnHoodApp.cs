@@ -178,7 +178,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get
         {
             var connectionState = ConnectionState;
-            var currentClientBaseInfo = CurrentClientProfile?.ToInfo();
             var currentClientProfileBaseInfo = CurrentClientProfile?.ToBaseInfo();
 
             return new AppState
@@ -192,7 +191,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfile = currentClientProfileBaseInfo,
-                ServerLocationInfo = currentClientBaseInfo?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation),
+                ServerLocationInfo = CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,

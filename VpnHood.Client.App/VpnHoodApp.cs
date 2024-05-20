@@ -137,7 +137,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsBillingSupported = options.AccountService?.Billing != null,
             IsQuickLaunchSupported = uiService.IsQuickLaunchSupported,
             IsNotificationSupported = uiService.IsNotificationSupported,
-            IsAlwaysOnSupported = device.IsAlwaysOnSupported,
+            IsAlwaysOnSupported = device.IsAlwaysOnSupported
         };
 
         // initialize services
@@ -148,7 +148,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AccountService =
                 options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
-            UiService = uiService,
+            UiService = uiService
         };
 
         // Clear last update status if version has changed
@@ -178,8 +178,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get
         {
             var connectionState = ConnectionState;
-            var currentClientProfileBaseInfo = CurrentClientProfile?.ToBaseInfo();
-
             return new AppState
             {
                 ConfigTime = Settings.ConfigTime,
@@ -190,14 +188,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
-                ClientProfile = currentClientProfileBaseInfo,
+                ClientProfile = CurrentClientProfile?.ToBaseInfo(),
                 ServerLocationInfo = CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
-                HasProblemDetected = _hasConnectRequested && IsIdle &&
-                                     (_hasDiagnoseStarted || _appPersistState.LastErrorMessage != null),
+                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _appPersistState.LastErrorMessage != null),
                 SessionStatus = LastSessionStatus,
                 Speed = Client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = Client?.Stat.AccountTraffic ?? new Traffic(),
@@ -292,14 +289,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         serverLocation ??= UserSettings.ServerLocation;
         clientProfileId ??= UserSettings.ClientProfileId;
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
-        
+
         // set default server location
         var serverLocations = clientProfile.ToInfo().ServerLocationInfos;
         serverLocation = serverLocations.FirstOrDefault(x => x.ServerLocation == serverLocation)?.ServerLocation ??
                          serverLocations.FirstOrDefault()?.ServerLocation;
 
         // set current profile only if it has been updated to avoid unnecessary new config time
-        if (clientProfile.ClientProfileId != UserSettings.ClientProfileId || serverLocation!= UserSettings.ServerLocation)
+        if (clientProfile.ClientProfileId != UserSettings.ClientProfileId || serverLocation != UserSettings.ServerLocation)
         {
             UserSettings.ClientProfileId = clientProfile.ClientProfileId;
             UserSettings.ServerLocation = serverLocation;
@@ -444,13 +441,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var client = Client; // it may get null
             client.UseUdpChannel = UserSettings.UseUdpChannel;
             client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
-            
+
             // check is disconnect required
             var disconnectRequired =
                 (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
                 (state.CanDisconnect && _activeServerLocation != state.ServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
                 (state.CanDisconnect && UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
-            
+
             // disconnect
             if (state.CanDisconnect && disconnectRequired)
                 _ = Disconnect(true);

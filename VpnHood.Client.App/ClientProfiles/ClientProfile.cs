@@ -5,7 +5,7 @@ namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfile
 {
-    public required Guid ClientProfileId { get; set; }
+    public required Guid ClientProfileId { get; init; }
     public required string? ClientProfileName { get; set; }
     public bool IsForAccount { get; set; }
     

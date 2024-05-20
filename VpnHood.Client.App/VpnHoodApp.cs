@@ -11,6 +11,7 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -116,11 +117,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         LogService.Start(Settings.UserSettings.Logging, false);
 
         // add default test public server if not added yet
-        ClientProfileService.TryRemoveByTokenId(
-            "5aacec55-5cac-457a-acad-3976969236f8"); //remove obsoleted public server
+        ClientProfileService.TryRemoveByTokenId("5aacec55-5cac-457a-acad-3976969236f8"); //remove obsoleted public server
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
-        Settings.UserSettings.ClientProfileId ??=
-            builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
+        Settings.UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
         var uiService = options.UiService ?? new AppUiServiceBase();
 
@@ -469,11 +468,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task<string?> GetClientCountry()
     {
         // try to get by external service
-        if (_useExternalLocationService)
-            _appPersistState.ClientCountryCode ??= await IpLocationUtil.GetCountryCode();
+        if (_appPersistState.ClientCountryCode == null && _useExternalLocationService)
+        {
+            try
+            {
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault();
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient());
+                _appPersistState.ClientCountryCode = ipLocation.CountryCode;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not get country code from IpApi service.");
+            }
+        }
 
         // try to get by ip group
-        if (_useIpGroupManager)
+        if (_appPersistState.ClientCountryCode == null && _useIpGroupManager)
         {
             var ipGroupManager = await GetIpGroupManager();
             _appPersistState.ClientCountryCode ??= await ipGroupManager.GetCountryCodeByCurrentIp();

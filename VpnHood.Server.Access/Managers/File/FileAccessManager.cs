@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -64,13 +65,15 @@ public class FileAccessManager : IAccessManager
     }
 
     private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
-    private static ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
+    private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
         if (!publicEndPoints.Any() || publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
             throw new Exception("PublicEndPoints has not been configured properly.");
 
+
+        var serverLocation = LoadServerLocation().Result;
         var serverToken = new ServerToken
         {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
@@ -80,7 +83,8 @@ public class FileAccessManager : IAccessManager
             IsValidHostName = serverConfig.IsValidHostName,
             Secret = serverConfig.ServerSecretValue,
             Url = serverConfig.ServerTokenUrl,
-            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
+            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
+            ServerLocations = serverLocation!=null ? [serverLocation] : null
         };
 
         // write encrypted server token
@@ -101,13 +105,53 @@ public class FileAccessManager : IAccessManager
         return serverToken;
     }
 
-    public byte[] LoadServerSecret()
+    private byte[] LoadServerSecret()
     {
         var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
-        if (!System.IO.File.Exists(serverSecretFile))
-            System.IO.File.WriteAllText(serverSecretFile, Convert.ToBase64String(VhUtil.GenerateKey(128)));
+        var secretBase64 = TryToReadFile(serverSecretFile);
+        if (string.IsNullOrEmpty(secretBase64))
+        {
+            secretBase64 = Convert.ToBase64String(VhUtil.GenerateKey(128));
+            System.IO.File.WriteAllText(serverSecretFile, secretBase64);
+        }
 
-        return Convert.FromBase64String(System.IO.File.ReadAllText(serverSecretFile));
+        return Convert.FromBase64String(secretBase64);
+    }
+
+    private async Task<string?> LoadServerLocation()
+    {
+        try
+        {
+            var serverCountryFile = Path.Combine(StoragePath, "server_location");
+            var serverLocation = TryToReadFile(serverCountryFile);
+            if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService)
+            {
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault();
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient());
+                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
+                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation);
+            }
+
+            VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
+            return serverLocation;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not read server location.");
+            return null;
+        }
+    }
+    private static string? TryToReadFile(string filePath)
+    {
+        try
+        {
+            return System.IO.File.Exists(filePath) ? System.IO.File.ReadAllText(filePath) : null;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not read file: {FilePath}", filePath);
+            return null;
+        }
     }
 
     public virtual Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)

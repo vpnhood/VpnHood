@@ -473,10 +473,12 @@ export class AppClient {
         return Promise.resolve<AppState>(null as any);
     }
 
-    connect(clientProfileId?: string | null | undefined, cancelToken?: CancelToken): Promise<void> {
+    connect(clientProfileId?: string | null | undefined, serverLocation?: string | null | undefined, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/connect?";
         if (clientProfileId !== undefined && clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
+        if (serverLocation !== undefined && serverLocation !== null)
+            url_ += "serverLocation=" + encodeURIComponent("" + serverLocation) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -519,10 +521,12 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    diagnose(clientProfileId?: string | null | undefined, cancelToken?: CancelToken): Promise<void> {
+    diagnose(clientProfileId?: string | null | undefined, serverLocation?: string | null | undefined, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/diagnose?";
         if (clientProfileId !== undefined && clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
+        if (serverLocation !== undefined && serverLocation !== null)
+            url_ += "serverLocation=" + encodeURIComponent("" + serverLocation) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1870,7 +1874,7 @@ export class AppState implements IAppState {
     connectionState!: AppConnectionState;
     lastError?: string | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    serverLocation?: string | null;
+    serverLocationInfo?: ClientServerLocationInfo | null;
     isIdle!: boolean;
     logExists!: boolean;
     hasDiagnoseStarted!: boolean;
@@ -1916,7 +1920,7 @@ export class AppState implements IAppState {
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
-            this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
+            this.serverLocationInfo = _data["serverLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
@@ -1955,7 +1959,7 @@ export class AppState implements IAppState {
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
-        data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
+        data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
         data["hasDiagnoseStarted"] = this.hasDiagnoseStarted !== undefined ? this.hasDiagnoseStarted : <any>null;
@@ -1987,7 +1991,7 @@ export interface IAppState {
     connectionState: AppConnectionState;
     lastError?: string | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    serverLocation?: string | null;
+    serverLocationInfo?: ClientServerLocationInfo | null;
     isIdle: boolean;
     logExists: boolean;
     hasDiagnoseStarted: boolean;
@@ -2025,7 +2029,6 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     clientProfileId!: string;
     clientProfileName!: string;
     supportId?: string | null;
-    serverLocationInfos!: ClientServerLocationInfo[];
 
     constructor(data?: IClientProfileBaseInfo) {
         if (data) {
@@ -2034,9 +2037,6 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
                     (<any>this)[property] = (<any>data)[property];
             }
         }
-        if (!data) {
-            this.serverLocationInfos = [];
-        }
     }
 
     init(_data?: any) {
@@ -2044,14 +2044,6 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.clientProfileName = _data["clientProfileName"] !== undefined ? _data["clientProfileName"] : <any>null;
             this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : <any>null;
-            if (Array.isArray(_data["serverLocationInfos"])) {
-                this.serverLocationInfos = [] as any;
-                for (let item of _data["serverLocationInfos"])
-                    this.serverLocationInfos!.push(ClientServerLocationInfo.fromJS(item));
-            }
-            else {
-                this.serverLocationInfos = <any>null;
-            }
         }
     }
 
@@ -2067,11 +2059,6 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["clientProfileName"] = this.clientProfileName !== undefined ? this.clientProfileName : <any>null;
         data["supportId"] = this.supportId !== undefined ? this.supportId : <any>null;
-        if (Array.isArray(this.serverLocationInfos)) {
-            data["serverLocationInfos"] = [];
-            for (let item of this.serverLocationInfos)
-                data["serverLocationInfos"].push(item.toJSON());
-        }
         return data;
     }
 }
@@ -2080,7 +2067,6 @@ export interface IClientProfileBaseInfo {
     clientProfileId: string;
     clientProfileName: string;
     supportId?: string | null;
-    serverLocationInfos: ClientServerLocationInfo[];
 }
 
 export class ServerLocationInfo implements IServerLocationInfo {
@@ -2463,11 +2449,13 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
     tokenId!: string;
     hostNames!: string[];
     isValidHostName!: boolean;
+    serverLocationInfos!: ClientServerLocationInfo[];
 
     constructor(data?: IClientProfileInfo) {
         super(data);
         if (!data) {
             this.hostNames = [];
+            this.serverLocationInfos = [];
         }
     }
 
@@ -2484,6 +2472,14 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 this.hostNames = <any>null;
             }
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
+            if (Array.isArray(_data["serverLocationInfos"])) {
+                this.serverLocationInfos = [] as any;
+                for (let item of _data["serverLocationInfos"])
+                    this.serverLocationInfos!.push(ClientServerLocationInfo.fromJS(item));
+            }
+            else {
+                this.serverLocationInfos = <any>null;
+            }
         }
     }
 
@@ -2503,6 +2499,11 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 data["hostNames"].push(item);
         }
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
+        if (Array.isArray(this.serverLocationInfos)) {
+            data["serverLocationInfos"] = [];
+            for (let item of this.serverLocationInfos)
+                data["serverLocationInfos"].push(item.toJSON());
+        }
         super.toJSON(data);
         return data;
     }
@@ -2512,6 +2513,7 @@ export interface IClientProfileInfo extends IClientProfileBaseInfo {
     tokenId: string;
     hostNames: string[];
     isValidHostName: boolean;
+    serverLocationInfos: ClientServerLocationInfo[];
 }
 
 export class ConfigParams implements IConfigParams {

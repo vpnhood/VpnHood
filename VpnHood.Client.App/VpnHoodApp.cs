@@ -122,7 +122,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Settings.UserSettings.ClientProfileId ??=
             builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 
-        var uiService = options.UiService ?? new AppBaseUiService();
+        var uiService = options.UiService ?? new AppUiServiceBase();
 
         // initialize features
         Features = new AppFeatures
@@ -470,11 +470,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // try to get by external service
         if (_useExternalLocationService)
-            _appPersistState.ClientCountryCode ??= await AppLocationService.GetCountryCode();
+            _appPersistState.ClientCountryCode ??= await IpLocationUtil.GetCountryCode();
 
         // try to get by ip group
         if (_useIpGroupManager)
-            _appPersistState.ClientCountryCode ??= await AppLocationService.GetCountryCode(await GetIpGroupManager());
+        {
+            var ipGroupManager = await GetIpGroupManager();
+            _appPersistState.ClientCountryCode ??= await ipGroupManager.GetCountryCodeByCurrentIp();
+        }
 
         // return last country
         return _appPersistState.ClientCountryName;

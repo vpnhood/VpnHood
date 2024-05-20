@@ -1,12 +1,10 @@
-﻿using System.Net.Sockets;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Net;
 
-namespace VpnHood.Client.App.Services;
+namespace VpnHood.Common.Utils;
 
-public class AppLocationService
+public static class IpLocationUtil
 {
     public static async Task<string?> GetCountryCode()
     {
@@ -18,27 +16,6 @@ public class AppLocationService
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Could not get country code from IpApi service.");
-            return null;
-        }
-    }
-
-    public static async Task<string?> GetCountryCode(IpGroupManager ipGroupManager)
-    {
-        try
-        {
-            var ipAddress =
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork) ??
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
-
-            if (ipAddress == null)
-                return null;
-
-            var ipGroup = await ipGroupManager.FindIpGroup(ipAddress, null);
-            return ipGroup?.IpGroupId;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex, "Could not retrieve client country from public ip services.");
             return null;
         }
     }

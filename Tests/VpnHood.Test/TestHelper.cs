@@ -213,12 +213,12 @@ internal static class TestHelper
         return new FileAccessManager(storagePath, options);
     }
 
-    public static FileAccessManagerOptions CreateFileAccessManagerOptions()
+    public static FileAccessManagerOptions CreateFileAccessManagerOptions(IPEndPoint[]? tcpEndPoints = null)
     {
         var options = new FileAccessManagerOptions
         {
             PublicEndPoints = null, // use TcpEndPoints
-            TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
+            TcpEndPoints = tcpEndPoints ?? [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions
             {
@@ -232,7 +232,8 @@ internal static class TestHelper
                 SyncCacheSize = 50,
                 SyncInterval = TimeSpan.FromMilliseconds(100)
             },
-            LogAnonymizer = false
+            LogAnonymizer = false,
+            UseExternalLocationService = false
         };
         return options;
     }

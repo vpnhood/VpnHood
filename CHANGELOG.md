@@ -1,7 +1,7 @@
-# Upcoming
+# v4.5.515
 ### Client
-* Feature: Allow to select server by country if the server supports it
-* Update: User IncludeIpRanges amd ExcludeIpRanges in settings instead of CustomIpRanges
+* Feature: Allow to select servers by country if the server supports it
+* Update: User IncludeIpRanges abd ExcludeIpRanges in settings instead of CustomIpRanges
 * Fix: Some wrong message in disconnect
 
 ### Server

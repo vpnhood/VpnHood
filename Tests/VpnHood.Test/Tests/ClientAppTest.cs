@@ -203,9 +203,11 @@ public class ClientAppTest : TestBase
         // *** TEST ***: Update should update the old node if ClientProfileId already exists
         app.ClientProfileService.Update(clientProfile1.ClientProfileId, new ClientProfileUpdateParams
         {
-            ClientProfileName = "Hi2"
+            ClientProfileName = "Hi2",
+            IsFavorite = true
         });
         Assert.AreEqual("Hi2", app.ClientProfileService.Get(clientProfile1.ClientProfileId).ClientProfileName);
+        Assert.IsTrue(app.ClientProfileService.Get(clientProfile1.ClientProfileId).IsFavorite);
 
         // ************
         // *** TEST ***: RemoveClientProfile

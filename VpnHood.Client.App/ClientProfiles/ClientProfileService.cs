@@ -85,6 +85,9 @@ public class ClientProfileService
             clientProfile.ClientProfileName = name;
         }
 
+        if (updateParams.IsFavorite != null)
+            clientProfile.IsFavorite = updateParams.IsFavorite.Value;
+
         Save();
         return clientProfile;
     }

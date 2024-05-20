@@ -178,6 +178,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get
         {
             var connectionState = ConnectionState;
+            var currentClientBaseInfo = CurrentClientProfile?.ToInfo();
             var currentClientProfileBaseInfo = CurrentClientProfile?.ToBaseInfo();
 
             return new AppState
@@ -191,7 +192,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfile = currentClientProfileBaseInfo,
-                ServerLocation = UserSettings.ServerLocation,
+                ServerLocationInfo = currentClientBaseInfo?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -294,7 +295,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
         
         // set default server location
-        var serverLocations = clientProfile.ToBaseInfo().ServerLocationInfos;
+        var serverLocations = clientProfile.ToInfo().ServerLocationInfos;
         serverLocation = serverLocations.FirstOrDefault(x => x.ServerLocation == serverLocation)?.ServerLocation ??
                          serverLocations.FirstOrDefault()?.ServerLocation;
 
@@ -311,7 +312,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // prepare logger
             ClearLastError();
             _activeClientProfileId = clientProfileId;
-            _activeServerLocation = State.ServerLocation;
+            _activeServerLocation = State.ServerLocationInfo?.ServerLocation;
             _isConnecting = true;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
@@ -448,7 +449,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // check is disconnect required
             var disconnectRequired =
                 (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
-                (state.CanDisconnect && _activeServerLocation != state.ServerLocation) || //ClientProfileId has been changed
+                (state.CanDisconnect && _activeServerLocation != state.ServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
                 (state.CanDisconnect && UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
             
             // disconnect

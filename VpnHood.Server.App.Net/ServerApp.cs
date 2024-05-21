@@ -64,7 +64,10 @@ public class ServerApp : IDisposable
         AppSettings = File.Exists(appSettingsFilePath)
             ? VhUtil.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
+
+        // Init File Logger before starting server
         VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
+        InitFileLogger(storagePath);
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
@@ -89,7 +92,7 @@ public class ServerApp : IDisposable
             : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
     }
 
-    private void InitFileLogger()
+    private void InitFileLogger(string storagePath)
     {
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
         if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
@@ -101,7 +104,7 @@ public class ServerApp : IDisposable
                 if (AppSettings.IsDiagnoseMode)
                     builder.SetMinimumLevel(LogLevel.Trace);
             });
-            LogManager.Configuration.Variables["mydir"] = StoragePath;
+            LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("NLog");
         }
         else
@@ -221,8 +224,7 @@ public class ServerApp : IDisposable
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");
 
-            // Init File Logger before starting server; other log should be on console or other file
-            InitFileLogger();
+            // Init logger for http access manager
             if (AccessManager is HttpAccessManager httpAccessManager)
                 httpAccessManager.Logger = VhLogger.Instance;
 

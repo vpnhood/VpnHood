@@ -16,6 +16,7 @@ using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
 using VpnHood.Tunneling.Utils;
+using Exception = System.Exception;
 
 namespace VpnHood.Server;
 
@@ -23,20 +24,17 @@ internal class ServerHost : IAsyncDisposable, IJob
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
     private const int ServerProtocolVersion = 5;
-    private CancellationTokenSource _cancellationTokenSource = new();
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly List<TcpListener> _tcpListeners;
     private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
-    private Task? _listenerTask;
+    private readonly List<Task> _tcpListenerTasks = [];
     private bool _disposed;
 
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterPacketCaptureIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
-    public bool IsStarted { get; private set; }
-    public IPEndPoint[] TcpEndPoints { get; private set; } = [];
-    public IPEndPoint[] UdpEndPoints { get; private set; } = [];
     public IPAddress[]? DnsServers { get; set; }
     public CertificateHostName[] Certificates { get; private set; } = [];
 
@@ -47,160 +45,111 @@ internal class ServerHost : IAsyncDisposable, IJob
         JobRunner.Default.Add(this);
     }
 
-    private async Task Start(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints)
-    {
-        if (_disposed) throw new ObjectDisposedException(GetType().Name);
-        if (IsStarted) throw new Exception("ServerHost is already Started!");
-        if (tcpEndPoints.Length == 0) throw new ArgumentNullException(nameof(tcpEndPoints), "No TcpEndPoint has been configured.");
-
-        _cancellationTokenSource = new CancellationTokenSource();
-        var cancellationToken = _cancellationTokenSource.Token;
-        IsStarted = true;
-        lock (_stopLock) _stopTask = null;
-
-        try
-        {
-            //start UDPs
-            lock (_udpChannelTransmitters)
-            {
-                foreach (var udpEndPoint in udpEndPoints)
-                {
-                    if (udpEndPoint.Port != 0)
-                        VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpEndPoint));
-
-                    try
-                    {
-                        var udpClient = new UdpClient(udpEndPoint);
-                        var udpChannelTransmitter = new ServerUdpChannelTransmitter(udpClient, _sessionManager);
-                        _udpChannelTransmitters.Add(udpChannelTransmitter);
-
-                        if (udpEndPoint.Port == 0)
-                            VhLogger.Instance.LogInformation("Started listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
-                    }
-                    catch (Exception ex)
-                    {
-                        ex.Data.Add("UdpEndPoint", udpEndPoint);
-                        throw;
-                    }
-                }
-
-                UdpEndPoints = udpEndPoints;
-            }
-
-            //start TCPs
-            var tasks = new List<Task>();
-            lock (_tcpListeners)
-            {
-                foreach (var tcpEndPoint in tcpEndPoints)
-                {
-                    try
-                    {
-                        VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpEndPoint));
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var tcpListener = new TcpListener(tcpEndPoint);
-                        tcpListener.Start();
-                        _tcpListeners.Add(tcpListener);
-                        tasks.Add(ListenTask(tcpListener, cancellationToken));
-                    }
-                    catch (Exception ex)
-                    {
-                        ex.Data.Add("TcpEndPoint", tcpEndPoint);
-                        throw;
-                    }
-                }
-            }
-            TcpEndPoints = tcpEndPoints;
-            _listenerTask = Task.WhenAll(tasks);
-        }
-        catch
-        {
-            await Stop();
-            throw;
-        }
-    }
-
-    private readonly AsyncLock _stopLock = new();
-    private Task? _stopTask;
-
-    public Task Stop()
-    {
-        lock (_stopLock)
-            _stopTask ??= StopCore();
-
-        return _stopTask;
-    }
-
-    private async Task StopCore()
-    {
-        if (!IsStarted)
-            return;
-
-        VhLogger.Instance.LogTrace("Stopping ServerHost...");
-        _cancellationTokenSource.Cancel();
-
-        // UDPs
-        VhLogger.Instance.LogTrace("Disposing UdpChannelTransmitters...");
-        lock (_udpChannelTransmitters)
-        {
-            foreach (var udpChannelClient in _udpChannelTransmitters)
-                udpChannelClient.Dispose();
-            _udpChannelTransmitters.Clear();
-        }
-
-        // TCPs
-        VhLogger.Instance.LogTrace("Disposing TcpListeners...");
-        lock (_tcpListeners)
-        {
-            foreach (var tcpListener in _tcpListeners)
-                tcpListener.Stop();
-            _tcpListeners.Clear();
-        }
-
-        // dispose clientStreams
-        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
-        Task[] disposeTasks;
-        lock (_clientStreams)
-            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
-        await Task.WhenAll(disposeTasks);
-
-        VhLogger.Instance.LogTrace("Disposing current processing requests...");
-        try
-        {
-            if (_listenerTask != null)
-                await _listenerTask;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
-        }
-
-        _listenerTask = null;
-        IsStarted = false;
-    }
-
     public async Task Configure(IPEndPoint[] tcpEndPoints, IPEndPoint[] udpEndPoints,
         IPAddress[]? dnsServers, X509Certificate2[] certificates)
     {
-        if (VhUtil.IsNullOrEmpty(certificates)) throw new ArgumentNullException(nameof(certificates), "Certificates has not been configured.");
+        if (VhUtil.IsNullOrEmpty(certificates))
+            throw new ArgumentNullException(nameof(certificates), "No certificate has been configured.");
 
-        // Clear certificate cache
+        if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+
+        // wait for last configure to finish
+        using var lockResult = await _configureLock.LockAsync(_cancellationTokenSource.Token);
+
+        // reconfigure
         DnsServers = dnsServers;
         Certificates = certificates.Select(x => new CertificateHostName(x)).ToArray();
 
-        // Restart if endPoints has been changed
-        if (IsStarted &&
-            (!TcpEndPoints.SequenceEqual(tcpEndPoints) ||
-             !UdpEndPoints.SequenceEqual(udpEndPoints)))
+        // Configure
+        await Task.WhenAll(ConfigureUdpListeners(udpEndPoints), ConfigureTcpListeners(tcpEndPoints));
+        _tcpListenerTasks.RemoveAll(x => x.IsCompleted);
+    }
+
+    private readonly AsyncLock _configureLock = new();
+    private Task ConfigureUdpListeners(IPEndPoint[] udpEndPoints)
+    {
+        // UDP port zero must be specified in preparation
+        if (udpEndPoints.Any(x => x.Port == 0))
+            throw new InvalidOperationException("UDP port has not been specified.");
+
+        // stop listeners that are not in the list
+        foreach (var udpChannelTransmitter in _udpChannelTransmitters
+                     .Where(x => !udpEndPoints.Contains(x.LocalEndPoint)).ToArray())
         {
-            VhLogger.Instance.LogInformation("EndPoints has been changed. Stopping ServerHost...");
-            await Stop();
+            VhLogger.Instance.LogInformation("Stop listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
+            udpChannelTransmitter.Dispose();
+            _udpChannelTransmitters.Remove(udpChannelTransmitter);
         }
 
-        if (!IsStarted)
+        // start new listeners
+        foreach (var udpEndPoint in udpEndPoints)
         {
-            VhLogger.Instance.LogInformation("Starting ServerHost...");
-            await Start(tcpEndPoints, udpEndPoints);
+            // ignore already listening
+            if (_udpChannelTransmitters.Any(x => x.LocalEndPoint.Equals(udpEndPoint)))
+                continue;
+
+            // report if port is set
+            if (udpEndPoint.Port == 0)
+                VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpEndPoint));
+
+            try
+            {
+                var udpClient = new UdpClient(udpEndPoint);
+                var udpChannelTransmitter = new ServerUdpChannelTransmitter(udpClient, _sessionManager);
+                _udpChannelTransmitters.Add(udpChannelTransmitter);
+
+                if (udpEndPoint.Port == 0)
+                    VhLogger.Instance.LogInformation("Started listening on UdpEndPoint: {UdpEndPoint}", VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
+            }
+            catch (Exception ex)
+            {
+                ex.Data.Add("UdpEndPoint", udpEndPoint);
+                throw;
+            }
         }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ConfigureTcpListeners(IPEndPoint[] tcpEndPoints)
+    {
+        if (tcpEndPoints.Length == 0)
+            throw new ArgumentNullException(nameof(tcpEndPoints), "No TcpEndPoint has been configured.");
+
+        // start TCPs
+        // stop listeners that are not in the new list
+        foreach (var tcpListener in _tcpListeners
+                     .Where(x => !tcpEndPoints.Contains((IPEndPoint)x.LocalEndpoint)).ToArray())
+        {
+            VhLogger.Instance.LogInformation("Stop listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpListener.LocalEndpoint));
+            tcpListener.Stop();
+            _tcpListeners.Remove(tcpListener);
+        }
+
+        foreach (var tcpEndPoint in tcpEndPoints)
+        {
+            // check already listening
+            if (_tcpListeners.Any(x => x.LocalEndpoint.Equals(tcpEndPoint)))
+                continue;
+
+            try
+            {
+                VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpEndPoint));
+                var tcpListener = new TcpListener(tcpEndPoint);
+                tcpListener.Start();
+                _tcpListeners.Add(tcpListener);
+                _tcpListenerTasks.Add(ListenTask(tcpListener, _cancellationTokenSource.Token));
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogInformation("Error listening on TcpEndPoint: {TcpEndPoint}", VhLogger.Format(tcpEndPoint));
+                ex.Data.Add("TcpEndPoint", tcpEndPoint);
+                throw;
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -223,6 +172,10 @@ internal class ServerHost : IAsyncDisposable, IJob
                 _ = ProcessTcpClient(tcpClient, cancellationToken);
                 errorCounter = 0;
             }
+            catch (Exception) when (!tcpListener.Server.IsBound)
+            {
+                break;
+            }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
             {
                 errorCounter++;
@@ -234,12 +187,17 @@ internal class ServerHost : IAsyncDisposable, IJob
             catch (Exception ex)
             {
                 errorCounter++;
-                VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "ServerHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
                 if (errorCounter > maxErrorCount)
                 {
-                    VhLogger.Instance.LogError("Too many unexpected errors in AcceptTcpClient. Stopping the ServerHost...");
-                    _ = Stop();
+                    VhLogger.Instance.LogError(
+                        "Too many unexpected errors in AcceptTcpClient. Stopping the Listener... LocalEndPint: {LocalEndPint}",
+                        tcpListener.LocalEndpoint);
+                    break;
                 }
+
+                VhLogger.Instance.LogError(GeneralEventId.Tcp, ex,
+                    "ServerHost could not AcceptTcpClient. LocalEndPint: {LocalEndPint}, ErrorCounter: {ErrorCounter}",
+                    tcpListener.LocalEndpoint, errorCounter);
             }
         }
 
@@ -580,9 +538,10 @@ internal class ServerHost : IAsyncDisposable, IJob
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
 
-        var udpPort =
-            UdpEndPoints.SingleOrDefault(x => x.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.Port ??
-            UdpEndPoints.SingleOrDefault(x => x.Address.Equals(IPAddressUtil.GetAnyIpAddress(ipEndPointPair.LocalEndPoint.AddressFamily)))?.Port;
+        // find udp port that match to the same tcp local IpAddress
+        var udpPort = _udpChannelTransmitters
+            .SingleOrDefault(x => x.LocalEndPoint.Address.Equals(ipEndPointPair.LocalEndPoint.Address))?.LocalEndPoint
+            .Port;
 
         var helloResponse = new HelloResponse
         {
@@ -683,23 +642,54 @@ internal class ServerHost : IAsyncDisposable, IJob
         return Task.CompletedTask;
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-    public ValueTask DisposeAsync()
+    private async Task Stop()
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-        return _disposeTask.Value;
+        VhLogger.Instance.LogTrace("Stopping ServerHost...");
+        _cancellationTokenSource.Cancel();
+
+        // UDPs
+        VhLogger.Instance.LogTrace("Disposing UdpChannelTransmitters...");
+        foreach (var udpChannelClient in _udpChannelTransmitters)
+            udpChannelClient.Dispose();
+        _udpChannelTransmitters.Clear();
+
+        // TCPs
+        VhLogger.Instance.LogTrace("Disposing TcpListeners...");
+        foreach (var tcpListener in _tcpListeners)
+            tcpListener.Stop();
+        _tcpListeners.Clear();
+
+        // dispose clientStreams
+        VhLogger.Instance.LogTrace("Disposing ClientStreams...");
+        Task[] disposeTasks;
+        lock (_clientStreams)
+            disposeTasks = _clientStreams.Select(x => x.DisposeAsync(false).AsTask()).ToArray();
+        await Task.WhenAll(disposeTasks);
+
+        // wait for finalizing all listener tasks
+        VhLogger.Instance.LogTrace("Disposing current processing requests...");
+        try
+        {
+            await VhUtil.RunTask(Task.WhenAll(_tcpListenerTasks), TimeSpan.FromSeconds(15));
+        }
+        catch (Exception ex)
+        {
+            if (ex is TimeoutException)
+                VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
+        }
+        _tcpListenerTasks.Clear();
     }
 
-    private async ValueTask DisposeAsyncCore()
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync()
     {
+        using var lockResult = await _disposeLock.LockAsync();
         if (_disposed) return;
         _disposed = true;
-
         await Stop();
     }
 
+    // cache HostName for performance
     public class CertificateHostName(X509Certificate2 certificate)
     {
         public string HostName { get; } = certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Could not get the HostName from the certificate.");

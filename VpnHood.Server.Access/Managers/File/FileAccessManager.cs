@@ -126,7 +126,7 @@ public class FileAccessManager : IAccessManager
             var serverLocation = TryToReadFile(serverCountryFile);
             if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService)
             {
-                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault();
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Server");
                 var ipLocation = await ipLocationProvider.GetLocation(new HttpClient());
                 serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
                 await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation);

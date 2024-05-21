@@ -121,11 +121,19 @@ public abstract class UdpChannelTransmitter : IDisposable
                 var channelCryptorPosition = BitConverter.ToInt64(buffer, bufferIndex);
                 bufferIndex += 8;
 
-                OnReceiveData(sessionId, udpResult.RemoteEndPoint, channelCryptorPosition, udpResult.Buffer, bufferIndex);
+                OnReceiveData(sessionId, udpResult.RemoteEndPoint, channelCryptorPosition, udpResult.Buffer,
+                    bufferIndex);
             }
             catch (Exception ex)
             {
-                // break only for the first call
+                // finish if disposed
+                if (_disposed)
+                {
+                    VhLogger.Instance.LogInformation(GeneralEventId.Essential, "UdpChannelTransmitter has been stopped.");
+                    break;
+                }
+
+                // break only for the first call and means that the local endpoint can not bind
                 if (remoteEndPoint == null)
                 {
                     VhLogger.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter has stopped reading.");

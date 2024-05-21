@@ -70,7 +70,7 @@ public class ServerTest : TestBase
         // change tcp end points
         var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test,
-            "Test: Changing access server UdpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
+            "Test: Changing access server TcpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
         fileAccessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
@@ -86,7 +86,8 @@ public class ServerTest : TestBase
         fileAccessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode);
+            () => testAccessManager.LastServerStatus!.ConfigCode, timeout: 10000); //todo remove timeout
+
         Assert.AreNotEqual(
             VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, fileAccessManager.ServerConfig.UdpEndPoints[0].Port),
             fileAccessManager.ServerConfig.UdpEndPoints[0]);

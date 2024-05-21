@@ -5,6 +5,7 @@
 * Fix: Some wrong message in disconnect
 
 ### Server
+* Improve: Optimize server reconfiguration at runtime
 * Feature: Support selecting server location when controlled by HttpAccessManager
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 

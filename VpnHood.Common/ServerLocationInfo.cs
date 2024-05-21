@@ -1,16 +1,17 @@
 ﻿using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.Common;
 
 public class ServerLocationInfo : IComparable<ServerLocationInfo>
 {
-    // do not use auto property because NSwag generate incorrect code
-    public static readonly ServerLocationInfo Auto = new() { CountryCode = "*", RegionName = "*" };
+    [JsonIgnore] // required to prevent NSwag generate incorrect code
+    public static ServerLocationInfo Auto { get; } = new() { CountryCode = "*", RegionName = "*" };
     public required string CountryCode { get; init; }
     public required string RegionName { get; init; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
     public string CountryName => GetCountryName(CountryCode);
-    
+
     public int CompareTo(ServerLocationInfo other)
     {
         var countryComparison = string.Compare(CountryCode, other.CountryCode, StringComparison.OrdinalIgnoreCase);
@@ -74,5 +75,5 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
             return countryCode;
         }
     }
-   
+
 }

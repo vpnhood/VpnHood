@@ -81,6 +81,7 @@ public class ClientProfileService
         if (updateParams.ClientProfileName != null)
         {
             var name = updateParams.ClientProfileName.Value?.Trim();
+            if (name == clientProfile.Token.Name?.Trim()) name = null; // set default if the name is same as token name
             if (name?.Length == 0) name = null;
             clientProfile.ClientProfileName = name;
         }

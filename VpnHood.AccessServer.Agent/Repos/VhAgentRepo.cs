@@ -22,13 +22,10 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
-        // Statuses
+        // Statuses. Load Deleted Servers and Projects too but filter by minServerUsedTime
         logger.LogTrace("Loading the recent server status, farms and projects ...");
         var statuses = await vhContext.ServerStatuses
             .Where(x => x.IsLast && x.CreatedTime > minServerUsedTime)
-            .Where(x => !x.Server!.IsDeleted)
-            .Where(x => !x.Project!.IsDeleted)
-            .Where(x => !x.Server!.ServerFarm!.IsDeleted)
             .Select(x => new
             {
                 Server = new ServerCache

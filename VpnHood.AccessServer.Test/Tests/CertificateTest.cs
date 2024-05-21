@@ -151,7 +151,12 @@ public class CertificateTest
             [$"CertificateValidator:{nameof(CertificateValidatorOptions.Due)}"] = TimeSpan.FromSeconds(1).ToString()
         });
 
-        await testApp.VhContext.Certificates.ExecuteDeleteAsync();
+        // disable old AutoValidate to prevent jon validate old certificates in test
+        var validatingCertificates = await testApp.VhContext.Certificates
+            .Where(x=>x.AutoValidate).ToArrayAsync();
+        foreach (var validatingCertificate in validatingCertificates)
+            validatingCertificate.AutoValidate = false;
+        await testApp.VhContext.SaveChangesAsync();
 
         // create farm and server
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);

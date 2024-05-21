@@ -15,9 +15,7 @@ public class LocationModel
 
     public string ToPath()
     {
-
         return $"{CountryCode}/{RegionName ?? CityName ?? ""}".Trim('/');
-
     }
 
     public virtual ICollection<ServerModel>? Servers { get; set; }

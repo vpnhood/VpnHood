@@ -190,7 +190,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
             _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
-            await _serverHost.Stop();
             await SendStatusToAccessManager(false);
         }
     }

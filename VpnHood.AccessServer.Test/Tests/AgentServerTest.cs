@@ -188,6 +188,32 @@ public class AgentServerTest
     }
 
     [TestMethod]
+    public async Task Configure_should_update_farm_server_token_and_update_cache()
+    {
+        // create serverInfo
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        var serverDom = await farm.AddNewServer();
+        
+        // create a session to make sure agent cache the objects
+        var accessToken = await farm.CreateAccessToken();
+        await accessToken.CreateSession();
+
+        // reconfig server by new endpoints
+        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        await serverDom.Configure();
+
+        // create new session to see if agent cache has been updated
+        var sessionDom = await accessToken.CreateSession();
+        var token = Common.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
+        Assert.IsNotNull(token.ServerToken.HostEndPoints);
+        Assert.AreEqual(
+            token.ServerToken.HostEndPoints.First(x=>x.AddressFamily==AddressFamily.InterNetwork).Address, 
+            serverDom.ServerInfo.PublicIpAddresses.First());
+    }
+
+
+    [TestMethod]
     public async Task Configure_UDP_for_first_time_only()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);

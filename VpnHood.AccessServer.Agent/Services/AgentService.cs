@@ -139,7 +139,7 @@ public class AgentService(
         await vhAgentRepo.SaveChangesAsync();
         await cacheService.InvalidateServer(server.ServerId);
         if (isFarmUpdated)
-            await cacheService.InvalidateServerFarm(server.ServerId, includeServers: false);
+            await cacheService.InvalidateServerFarm(server.ServerFarmId, includeServers: false);
 
         // update cache
         var serverConfig = GetServerConfig(serverModel, serverFarmModel);

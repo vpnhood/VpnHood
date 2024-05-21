@@ -7,7 +7,7 @@ public static class AccessServerUtil
 {
     public static string FindUniqueName(string template, string?[] names)
     {
-        for (var i = 2; ; i++)
+        for (var i = 1; ; i++)
         {
             var name = template.Replace("##", i.ToString());
             if (names.All(x => x != name))

@@ -469,7 +469,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             try
             {
-                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault();
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Client");
                 var ipLocation = await ipLocationProvider.GetLocation(new HttpClient());
                 _appPersistState.ClientCountryCode = ipLocation.CountryCode;
             }
@@ -517,7 +517,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
-            ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo
+            ServerLocation = serverLocationInfo == ClientServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;

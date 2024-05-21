@@ -5,7 +5,7 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.IpLocations.Providers;
 
-public class IpApiCoLocationProvider : IIpLocationProvider
+public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
 {
     internal class ApiLocation
     {
@@ -35,20 +35,20 @@ public class IpApiCoLocationProvider : IIpLocationProvider
     public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress)
     {
         var uri = new Uri($"https://ipapi.co/{ipAddress}/json/");
-        return GetLocation(httpClient, uri);
+        return GetLocation(httpClient, uri, userAgent);
     }
 
     public Task<IpLocation> GetLocation(HttpClient httpClient)
     {
         var uri = new Uri("https://ipapi.co/json/");
-        return GetLocation(httpClient, uri);
+        return GetLocation(httpClient, uri, userAgent);
     }
 
-    private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url)
+    private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent)
     {
         // get json from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-        requestMessage.Headers.Add("User-Agent", "VpnHood-AccessManager");
+        requestMessage.Headers.Add("User-Agent", userAgent);
         var responseMessage = await httpClient.SendAsync(requestMessage);
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content.ReadAsStringAsync();

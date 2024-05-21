@@ -3,13 +3,13 @@ using System.Net.Sockets;
 using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.IpLocations;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Utils;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
@@ -24,7 +24,8 @@ public class AgentService(
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     SessionService sessionService,
-    IIpLocationService ipLocationService,
+    [FromKeyedServices(Program.LocationProviderServer)] IIpLocationProvider ipLocationProvider,
+    IHttpClientFactory httpClientFactory,
     VhAgentRepo vhAgentRepo)
 {
     private readonly AgentOptions _agentOptions = agentOptions.Value;
@@ -49,7 +50,7 @@ public class AgentService(
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public async Task<SessionResponse> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, 
+    public async Task<SessionResponse> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession,
         Traffic traffic, string? adData)
     {
         var server = await GetServer(serverId);
@@ -114,7 +115,7 @@ public class AgentService(
 
         // ready for update
         var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
-        var serverModel = serverFarmModel.Servers!.Single(x=>x.ServerId == serverId);
+        var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache
         var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
@@ -153,7 +154,8 @@ public class AgentService(
 
         try
         {
-            var ipLocation =  await ipLocationService.GetLocation(ipAddress);
+            using var httpClient = httpClientFactory.CreateClient();
+            var ipLocation = await ipLocationProvider.GetLocation(httpClient, ipAddress);
             var location = await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
             if (location == null)
             {

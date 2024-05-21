@@ -291,7 +291,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             ClientIp = clientIp ?? NewIpV4().Result,
             HostEndPoint = hostEndPoint,
             ExtraData = extraData ?? Guid.NewGuid().ToString(),
-            RegionId = locationPath,
+            ServerLocation = locationPath,
             AllowRedirect = allowRedirect
         };
 

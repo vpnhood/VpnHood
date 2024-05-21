@@ -8,15 +8,18 @@ using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.IpLocations;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.Common.IpLocations;
+using VpnHood.Common.IpLocations.Providers;
 
 namespace VpnHood.AccessServer.Agent;
 
 public class Program
 {
+    public const string LocationProviderServer = "ServerLocationProvider";
+
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -78,7 +81,7 @@ public class Program
             .AddScoped<CacheService>()
             .AddScoped<AgentService>()
             .AddScoped<LoadBalancerService>()
-            .AddScoped<IIpLocationService, IpLocationService>()
+            .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer, (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
             .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
         //---------------------

@@ -58,7 +58,7 @@ public class LoadBalancerTest
     }
 
     [TestMethod]
-    public async Task By_region_auto()
+    public async Task By_location_auto()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
@@ -94,7 +94,7 @@ public class LoadBalancerTest
     }
 
     [TestMethod]
-    public async Task By_region_id()
+    public async Task By_location()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;

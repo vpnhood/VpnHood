@@ -23,7 +23,7 @@ public class LoadBalancerService(
         return CheckRedirect(
             accessToken, currentServer, device,
             sessionRequestEx.HostEndPoint.AddressFamily,
-            sessionRequestEx.RegionId,
+            sessionRequestEx.ServerLocation,
             sessionRequestEx.AllowRedirect);
     }
 

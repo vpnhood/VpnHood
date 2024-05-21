@@ -21,6 +21,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     public async Task<InitCache> GetInitView(DateTime minServerUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        var autoServerLocation = ServerLocationInfo.Auto;
 
         // Statuses. Load Deleted Servers and Projects too but filter by minServerUsedTime
         logger.LogTrace("Loading the recent server status, farms and projects ...");
@@ -45,7 +46,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ServerFarmName = x.Server.ServerFarm!.ServerFarmName,
                     ServerProfileId = x.Server.ServerFarm!.ServerProfileId,
                     ServerStatus = x,
-                    LocationInfo = x.Server.Location != null ? ServerLocationInfo.Parse(x.Server.Location.ToPath()) : ServerLocationInfo.Auto,
+                    LocationInfo = x.Server.Location != null ? ServerLocationInfo.Parse(x.Server.Location.ToPath()) : autoServerLocation,
                     LogicalCoreCount = x.Server.LogicalCoreCount ?? 1
                 },
                 Farm = new ServerFarmCache
@@ -140,6 +141,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
     public Task<ServerCache[]> ServersGet(Guid[]? serverIds = null)
     {
+        var autoServerLocation = ServerLocationInfo.Auto;
         return vhContext.Servers
             .Where(x => serverIds == null || serverIds.Contains(x.ServerId))
             .Include(x => x.ServerStatuses!.Where(y => y.IsLast == true))
@@ -160,7 +162,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ServerFarmName = x.ServerFarm!.ServerFarmName,
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
                 ServerStatus = x.ServerStatuses!.FirstOrDefault(),
-                LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : ServerLocationInfo.Auto,
+                LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : autoServerLocation,
                 LogicalCoreCount = x.LogicalCoreCount ?? 1
             })
             .AsNoTracking()

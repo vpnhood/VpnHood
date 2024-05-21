@@ -7,9 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using VpnHood.AccessServer.Agent;
-using VpnHood.AccessServer.Agent.IpLocations;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Test.Helper;
+using VpnHood.Common.IpLocations;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -33,13 +33,14 @@ public class AgentTestApp : IDisposable
                 builder.UseEnvironment(environment);
                 builder.ConfigureServices(services =>
                 {
-                    services.AddScoped<IIpLocationService, TestIpLocationService>();
+                    services.AddKeyedSingleton<IIpLocationProvider,
+                        TestIpLocationProvider>(Agent.Program.LocationProviderServer, (_, _) => new TestIpLocationProvider());
                 });
             });
-        
+
         AgentScope = AgentApp.Services.CreateScope();
         AgentOptions.AllowRedirect = false;
-        
+
         HttpClient = AgentApp.CreateClient();
         HttpClient.DefaultRequestHeaders.Authorization = GetAuthenticationHeaderValue(AgentApp.Services);
     }

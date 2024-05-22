@@ -1,7 +1,8 @@
-# v4.5.515
+# Upcoming
 ### Client
 * Feature: Allow to select servers by country if the server supports it
-* Update: User IncludeIpRanges abd ExcludeIpRanges in settings instead of CustomIpRanges
+* Update: User IncludeIpRanges and ExcludeIpRanges in settings instead of CustomIpRanges
+* Update: Try to fix accesskey when it is not valid by missing the padding characters
 * Fix: Some wrong message in disconnect
 
 ### Server

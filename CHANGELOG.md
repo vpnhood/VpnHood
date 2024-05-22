@@ -1,4 +1,4 @@
-# Upcoming
+# v4.5.518
 ### Client
 * Feature: Allow to select servers by country if the server supports it
 * Update: User IncludeIpRanges and ExcludeIpRanges in settings instead of CustomIpRanges

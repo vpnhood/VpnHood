@@ -9,5 +9,6 @@ public enum RequestCode : byte
     // SessionStatus = 4,
     UdpPacket = 5,
     AdReward = 10,
+    ServerStatus = 20,
     Bye = 50
 }

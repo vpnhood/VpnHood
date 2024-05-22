@@ -447,6 +447,10 @@ internal class ServerHost : IAsyncDisposable, IJob
         var requestCode = (RequestCode)buffer[0];
         switch (requestCode)
         {
+            case RequestCode.ServerStatus:
+                await ProcessServerStatus(clientStream, cancellationToken);
+                break;
+
             case RequestCode.Hello:
                 await ProcessHello(clientStream, cancellationToken);
                 break;
@@ -583,6 +587,24 @@ internal class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
         await session.ProcessAdRewardRequest(request, clientStream, cancellationToken);
     }
+
+    private static async Task ProcessServerStatus(IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the ServerStatus request...");
+        var request = await ReadRequest<ServerStatusRequest>(clientStream, cancellationToken);
+
+        // Before calling CloseSession. Session must be validated by GetSession
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, 
+            new ServerStatusResponse
+            {
+                ErrorCode = SessionErrorCode.Ok,
+                Message = request.Message == "How are you?" ? "I am OK. How are you?" : "OK. Who are you?"
+
+            },cancellationToken);
+
+        await clientStream.DisposeAsync();
+    }
+
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {

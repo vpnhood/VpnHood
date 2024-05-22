@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -53,6 +54,27 @@ public static class VhUtil
         catch when (defaultPort != 0)
         {
             return GetFreeUdpEndPoint(ipAddress);
+        }
+    }
+
+    private static string FixBase64String(string base64)
+    {
+        base64 = base64.Trim();
+        var padding = base64.Length % 4;
+        if (padding > 0)
+            base64 = base64.PadRight(base64.Length + (4 - padding), '=');
+        return base64;
+    }
+
+    public static byte[] ConvertFromBase64AndFixPadding(string base64)
+    {
+        try
+        {
+            return Convert.FromBase64String(base64);
+        }
+        catch (FormatException)
+        {
+            return Convert.FromBase64String(FixBase64String(base64));
         }
     }
 

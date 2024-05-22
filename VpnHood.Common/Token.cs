@@ -46,7 +46,7 @@ public class Token
                 base64 = base64[prefix.Length..];
 
          // load
-        var json = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
+        var json = Encoding.UTF8.GetString(VhUtil.ConvertFromBase64AndFixPadding(base64));
         var tokenVersion = VhUtil.JsonDeserialize<TokenVersion>(json);
 
         return tokenVersion.Version switch

@@ -946,27 +946,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync();
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
 
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(false);
     }
 
-    public ValueTask DisposeAsync(bool waitForBye)
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync(bool waitForBye)
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(waitForBye);
-        return _disposeTask.Value;
-    }
+        using var lockResult = await _disposeLock.LockAsync();
+        if (_disposed) return;
+        _disposed = true;
 
-    private async ValueTask DisposeAsyncCore(bool waitForBye)
-    {
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
 
-        _disposed = true;
         _cancellationTokenSource.Cancel();
         var wasConnected = State is ClientState.Connecting or ClientState.Connected;
         State = ClientState.Disconnecting;

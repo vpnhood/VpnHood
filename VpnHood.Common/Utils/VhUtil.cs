@@ -1,5 +1,4 @@
-﻿using System.Data;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
@@ -125,7 +124,7 @@ public static class VhUtil
     public static async Task RunTask(Task task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         if (timeout == TimeSpan.Zero)
-            timeout = TimeSpan.FromMilliseconds(-1);
+            timeout = Timeout.InfiniteTimeSpan;
 
         var timeoutTask = Task.Delay(timeout, cancellationToken);
         await Task.WhenAny(task, timeoutTask);
@@ -389,6 +388,11 @@ public static class VhUtil
         return json;
     }
 
+    public static T GetRequiredInstance<T>(T? obj)
+    {
+        return obj ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet.");
+    }
+
     public static DateTime RemoveMilliseconds(DateTime dateTime)
     {
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Kind);
@@ -400,5 +404,24 @@ public static class VhUtil
             .FirstOrDefault(attr => attr.Key == key);
 
         return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
+    }
+
+    public static async Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> body, int maxDegreeOfParallelism,
+        CancellationToken cancellationToken)
+    {
+        var tasks = new List<Task>();
+        foreach (var t in source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            tasks.Add(body(t));
+            if (tasks.Count == maxDegreeOfParallelism)
+            {
+                await Task.WhenAny(tasks);
+                foreach (var completedTask in tasks.Where(x => x.IsCompleted).ToArray())
+                    tasks.Remove(completedTask);
+            }
+        }
+        await Task.WhenAll(tasks);
     }
 }

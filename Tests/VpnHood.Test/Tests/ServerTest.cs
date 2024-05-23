@@ -86,7 +86,7 @@ public class ServerTest : TestBase
         fileAccessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
         fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
         await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode, timeout: 10000); //todo remove timeout
+            () => testAccessManager.LastServerStatus!.ConfigCode); 
 
         Assert.AreNotEqual(
             VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, fileAccessManager.ServerConfig.UdpEndPoints[0].Port),

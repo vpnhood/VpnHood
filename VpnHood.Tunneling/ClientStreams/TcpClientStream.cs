@@ -13,7 +13,6 @@ public class TcpClientStream : IClientStream
     private readonly ReuseCallback? _reuseCallback;
     private string _clientStreamId;
 
-    public bool Disposed { get; private set; }
     public delegate Task ReuseCallback(IClientStream clientStream);
     public TcpClient TcpClient { get; }
     public Stream Stream { get; set; }
@@ -64,17 +63,11 @@ public class TcpClientStream : IClientStream
         return DisposeAsync(true);
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-    public ValueTask DisposeAsync(bool graceful)
+    private readonly AsyncLock _disposeLock = new();
+    public bool Disposed { get; private set; }
+    public async ValueTask DisposeAsync(bool graceful)
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(graceful);
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore(bool graceful)
-    {
+        using var lockResult = await _disposeLock.LockAsync();
         if (Disposed) return;
         Disposed = true;
 

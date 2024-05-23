@@ -98,22 +98,15 @@ public class VpnHoodConnect : IAsyncDisposable
         }
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(true);
     }
 
-    public ValueTask DisposeAsync(bool waitForBye)
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync(bool waitForBye)
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(waitForBye);
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore(bool waitForBye)
-    {
+        using var lockResult = await _disposeLock.LockAsync();
         if (IsDisposed) return;
         IsDisposed = true;
 

@@ -23,7 +23,6 @@ public class SessionManager : IAsyncDisposable, IJob
     private readonly IAccessManager _accessManager;
     private readonly SocketFactory _socketFactory;
     private byte[] _serverSecret;
-    private bool _disposed;
     private readonly JobSection _heartbeatSection = new(TimeSpan.FromMinutes(10));
 
     public string ApiKey { get; private set; }
@@ -327,21 +326,15 @@ public class SessionManager : IAsyncDisposable, IJob
             await session.Close();
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-
-    public ValueTask DisposeAsync()
+    private bool _disposed;
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync()
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore()
-    {
+        using var lockResult = await _disposeLock.LockAsync();
         if (_disposed) return;
         _disposed = true;
 
         await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask()));
     }
 }
+

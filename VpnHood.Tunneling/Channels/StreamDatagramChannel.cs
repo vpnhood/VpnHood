@@ -14,7 +14,6 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly byte[] _buffer = new byte[0xFFFF];
     private const int Mtu = 0xFFFF;
     private readonly IClientStream _clientStream;
-    private bool _disposed;
     private readonly DateTime _lifeTime = DateTime.MaxValue;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -220,22 +219,18 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         return Task.CompletedTask;
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(true);
     }
 
-    public ValueTask DisposeAsync(bool graceful)
+    private bool _disposed;
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync(bool graceful)
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(graceful);
-        return _disposeTask.Value;
-    }
+        using var lockResult = await _disposeLock.LockAsync();
+        if (_disposed) return;
 
-    private async ValueTask DisposeAsyncCore(bool graceful)
-    {
         if (graceful)
             await SendClose(); // this won't throw any error
 

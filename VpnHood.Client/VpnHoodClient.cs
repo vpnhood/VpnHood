@@ -38,7 +38,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly IAdProvider? _adProvider;
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
-    private readonly ConnectorService _connectorService;
     private readonly bool _allowAnonymousTracker;
     private readonly string? _appGa4MeasurementId;
     private IPAddress[] _dnsServersIpV4 = [];
@@ -52,6 +51,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _useUdpChannel;
     private ClientState _state = ClientState.None;
     private bool _isWaitingForAd;
+    private ConnectorService? _connectorService;
+    private readonly TimeSpan _tcpConnectTimeout;
+    private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
 
     internal Nat Nat { get; }
@@ -72,7 +74,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
-    public IPEndPoint? HostTcpEndPoint => _connectorService.EndPointInfo?.TcpEndPoint;
+    public IPEndPoint HostTcpEndPoint => ConnectorService.EndPointInfo.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
     public bool DropUdpPackets { get; set; }
     public ClientStat Stat { get; }
@@ -80,6 +82,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
     public string? ServerLocation { get; }
+
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -103,7 +106,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
-        _connectorService = new ConnectorService(SocketFactory, options.ConnectTimeout);
+        _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
 
@@ -185,7 +188,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken)
     {
         // set timeout
-        using var cancellationTokenSource = new CancellationTokenSource(_connectorService.RequestTimeout);
+        using var cancellationTokenSource = new CancellationTokenSource(ConnectorService.RequestTimeout);
         using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
         cancellationToken = linkedCancellationTokenSource.Token;
 
@@ -229,13 +232,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // Init hostEndPoint
-            _connectorService.EndPointInfo = new ConnectorEndPointInfo
+            var endPointInfo = new ConnectorEndPointInfo
             {
                 HostName = Token.ServerToken.HostName,
                 TcpEndPoint = await ServerTokenHelper.ResolveHostEndPoint(Token.ServerToken),
                 CertificateHash = Token.ServerToken.CertificateHash
             };
-            SetHostEndPoint(_connectorService.EndPointInfo.TcpEndPoint);
+            _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout);
 
             // Establish first connection and create a session
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
@@ -247,7 +250,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Preparing device;
             if (!_packetCapture.Started) //make sure it is not a shared packet capture
             {
-                ConfigPacketFilter(_connectorService.EndPointInfo.TcpEndPoint.Address);
+                ConfigPacketFilter(ConnectorService.EndPointInfo.TcpEndPoint.Address);
                 _packetCapture.StartCapture();
             }
 
@@ -577,7 +580,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
 
         var udpClient = SocketFactory.CreateUdpClient(HostTcpEndPoint.AddressFamily);
-        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, _connectorService.ServerProtocolVersion);
+        var udpChannel = new UdpChannel(SessionId, _sessionKey, false, ConnectorService.ServerProtocolVersion);
         try
         {
             var udpChannelTransmitter = new ClientUdpChannelTransmitter(udpChannel, udpClient, ServerSecret);
@@ -622,11 +625,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
 
             // initialize the connector
-            _connectorService.Init(
+            ConnectorService.Init(
                 sessionResponse.ServerProtocolVersion,
                 sessionResponse.RequestTimeout,
-                sessionResponse.TcpReuseTimeout,
-                sessionResponse.ServerSecret);
+                sessionResponse.ServerSecret,
+                sessionResponse.TcpReuseTimeout);
 
             // log response
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -679,7 +682,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;
-            if (sessionResponse.UdpPort > 0 && HostTcpEndPoint != null)
+            if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(HostTcpEndPoint.Address, sessionResponse.UdpPort.Value);
 
             // PacketCaptureIpRanges
@@ -742,12 +745,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     private void SetHostEndPoint(IPEndPoint ipEndPoint)
     {
-        if (_connectorService.EndPointInfo == null)
-            throw new InvalidOperationException($"{nameof(ConnectorServiceBase.EndPointInfo)} is not initialized.");
-
         // update _connectorService
-        _connectorService.EndPointInfo.TcpEndPoint = ipEndPoint;
+        ConnectorService.EndPointInfo.TcpEndPoint = ipEndPoint;
 
+        // todo: remove
         // Restart the packet capture if it captures Host IpAddress
         if (_packetCapture is { Started: true, CanProtectSocket: false, IncludeNetworks: not null } &&
             IpRange.IsInSortedRanges(_packetCapture.IncludeNetworks.ToIpRanges().ToArray(), ipEndPoint.Address))
@@ -794,7 +795,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // create a connection and send the request 
-            var requestResult = await _connectorService.SendRequest<T>(request, cancellationToken);
+            var requestResult = await ConnectorService.SendRequest<T>(request, cancellationToken);
 
             // set SessionStatus
             if (requestResult.Response.AccessUsage != null)
@@ -838,7 +839,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try
         {
             // don't use SendRequest because it can be disposed
-            await using var requestResult = await _connectorService.SendRequest<SessionResponse>(
+            await using var requestResult = await ConnectorService.SendRequest<SessionResponse>(
                 new ByeRequest
                 {
                     RequestId = Guid.NewGuid() + ":client",
@@ -1020,7 +1021,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // dispose ConnectorService
         VhLogger.Instance.LogTrace("Disposing ConnectorService...");
-        await _connectorService.DisposeAsync();
+        await ConnectorService.DisposeAsync();
 
         State = ClientState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");
@@ -1048,7 +1049,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public class ClientStat
     {
         private readonly VpnHoodClient _client;
-        public ConnectorStat ConnectorStat => _client._connectorService.Stat;
+        public ConnectorStat ConnectorStat => _client.ConnectorService.Stat;
         public Traffic Speed => _client.Tunnel.Speed;
         public Traffic SessionTraffic => _client.Tunnel.Traffic;
         public Traffic AccountTraffic => _client._helloTraffic + SessionTraffic;

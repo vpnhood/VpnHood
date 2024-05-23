@@ -10,8 +10,12 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Client.ConnectorServices;
 
-internal class ConnectorService(ISocketFactory socketFactory, TimeSpan tcpTimeout)
-    : ConnectorServiceBase(socketFactory, tcpTimeout)
+internal class ConnectorService(
+    ConnectorEndPointInfo endPointInfo,
+    ISocketFactory socketFactory,
+    TimeSpan tcpConnectTimeout,
+    bool allowTcpReuse = true)
+    : ConnectorServiceBase(endPointInfo, socketFactory, tcpConnectTimeout, allowTcpReuse)
 {
     public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
         where T : SessionResponse

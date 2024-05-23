@@ -260,6 +260,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             // int.TryParse(headers.GetValueOrDefault("X-Version", "0"), out var xVersion);
             Enum.TryParse<BinaryStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var binaryStreamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
+            bool.TryParse(headers.GetValueOrDefault("X-IsStatusCheck", "true"), out var isStatusCheck);
             var authorization = headers.GetValueOrDefault("Authorization", string.Empty);
 
             // read api key
@@ -598,7 +599,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             new ServerStatusResponse
             {
                 ErrorCode = SessionErrorCode.Ok,
-                Message = request.Message == "How are you?" ? "I am OK. How are you?" : "OK. Who are you?"
+                Message = request.Message == "Hi, How are you?" ? "I am OK. How are you?" : "OK. Who are you?"
 
             },cancellationToken);
 

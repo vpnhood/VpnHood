@@ -20,30 +20,34 @@ namespace VpnHood.Client.ConnectorServices;
 internal class ConnectorServiceBase : IAsyncDisposable, IJob
 {
     private readonly ISocketFactory _socketFactory;
+    private readonly bool _allowTcpReuse;
     private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
     protected readonly TaskCollection DisposingTasks = new();
     private string _apiKey = "";
 
-    public TimeSpan TcpTimeout { get; set; }
-    public ConnectorEndPointInfo? EndPointInfo { get; set; }
+    public TimeSpan TcpConnectTimeout { get; set; }
+    public ConnectorEndPointInfo EndPointInfo { get; }
     public JobSection JobSection { get; }
     public ConnectorStat Stat { get; }
     public TimeSpan RequestTimeout { get; private set; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ServerProtocolVersion { get; private set; }
 
-    public ConnectorServiceBase(ISocketFactory socketFactory, TimeSpan tcpTimeout)
+    public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory,
+        TimeSpan tcpConnectTimeout, bool allowTcpReuse)
     {
         _socketFactory = socketFactory;
+        _allowTcpReuse = allowTcpReuse;
         Stat = new ConnectorStatImpl(this);
-        TcpTimeout = tcpTimeout;
-        JobSection = new JobSection(tcpTimeout);
+        TcpConnectTimeout = tcpConnectTimeout;
+        JobSection = new JobSection(tcpConnectTimeout);
         RequestTimeout = TimeSpan.FromSeconds(30);
         TcpReuseTimeout = TimeSpan.FromSeconds(60);
+        EndPointInfo = endPointInfo;
         JobRunner.Default.Add(this);
     }
 
-    public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, TimeSpan tcpReuseTimeout, byte[]? serverSecret)
+    public void Init(int serverProtocolVersion, TimeSpan tcpRequestTimeout, byte[]? serverSecret, TimeSpan tcpReuseTimeout)
     {
         ServerProtocolVersion = serverProtocolVersion;
         RequestTimeout = tcpRequestTimeout;
@@ -53,9 +57,10 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
 
     private async Task<IClientStream> CreateClientStream(TcpClient tcpClient, Stream sslStream, string streamId, CancellationToken cancellationToken)
     {
-        var binaryStreamType = string.IsNullOrEmpty(_apiKey) ? BinaryStreamType.None : BinaryStreamType.Standard;
         const bool useBuffer = true;
-        const int version =  3;
+        const int version = 3;
+        var binaryStreamType = string.IsNullOrEmpty(_apiKey) || !_allowTcpReuse
+            ? BinaryStreamType.None : BinaryStreamType.Standard;
 
         // write HTTP request
         var header =
@@ -69,7 +74,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken);
         await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
-        return binaryStreamType == BinaryStreamType.None 
+        return binaryStreamType == BinaryStreamType.None
             ? new TcpClientStream(tcpClient, sslStream, streamId)
             : new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
     }
@@ -85,8 +90,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
 
         // Client.SessionTimeout does not affect in ConnectAsync
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
-
-        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpTimeout, cancellationToken);
+        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout, cancellationToken);
 
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -142,12 +146,12 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
             return true;
 
         var ret = sslPolicyErrors == SslPolicyErrors.None ||
-               EndPointInfo?.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+               EndPointInfo.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
 
         return ret;
     }
 
- public ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         while (_freeClientStreams.TryDequeue(out var queueItem))
             DisposingTasks.Add(queueItem.ClientStream.DisposeAsync(false));
@@ -161,7 +165,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         public DateTime EnqueueTime { get; } = FastDateTime.Now;
     }
 
-    internal class ConnectorStatImpl(ConnectorServiceBase connectorServiceBase) 
+    internal class ConnectorStatImpl(ConnectorServiceBase connectorServiceBase)
         : ConnectorStat
     {
         public override int FreeConnectionCount => connectorServiceBase._freeClientStreams.Count;

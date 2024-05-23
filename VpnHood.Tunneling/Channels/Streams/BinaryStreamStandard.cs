@@ -9,7 +9,6 @@ public class BinaryStreamStandard : ChunkStream
 {
     private const int ChunkHeaderLength = 4;
     private int _remainingChunkBytes;
-    private bool _disposed;
     private bool _finished;
     private bool _hasError;
     private readonly CancellationTokenSource _readCts = new();
@@ -280,18 +279,12 @@ public class BinaryStreamStandard : ChunkStream
         }
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-    public override ValueTask DisposeAsync()
+    private bool _disposed;
+    private readonly AsyncLock _disposeLock = new();
+    public override async ValueTask DisposeAsync()
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore()
-    {
-        // prevent other caller requests
+        using var lockResult = await _disposeLock.LockAsync();
+        if (_disposed) return;
         _disposed = true;
 
         // close stream

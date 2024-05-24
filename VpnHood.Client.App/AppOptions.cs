@@ -7,7 +7,7 @@ public class AppOptions
 {
     public static string DefaultStorageFolderPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
     public string StorageFolderPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
-    public TimeSpan SessionTimeout { get; set; } = new ClientOptions().SessionTimeout;
+    public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
     public Uri? UpdateInfoUrl { get; set; }
@@ -23,4 +23,6 @@ public class AppOptions
     public IAppUpdaterService? UpdaterService { get; set; }
     public IAppAccountService? AccountService { get; set; }
     public IAppAdService? AdService { get; set; }
+    public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
+    public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
 }

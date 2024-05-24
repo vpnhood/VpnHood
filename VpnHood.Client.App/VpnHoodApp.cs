@@ -187,7 +187,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConnectionState = connectionState,
                 IsIdle = IsIdle,
                 CanConnect = connectionState is AppConnectionState.None,
-                CanDiagnose = connectionState is AppConnectionState.None or AppConnectionState.Connected or AppConnectionState.Connecting,
+                CanDiagnose = !_hasDiagnoseStarted && (connectionState is AppConnectionState.None or AppConnectionState.Connected or AppConnectionState.Connecting),
                 CanDisconnect = !_isDisconnecting && (connectionState
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),

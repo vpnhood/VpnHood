@@ -53,6 +53,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _isWaitingForAd;
     private ConnectorService? _connectorService;
     private readonly TimeSpan _tcpConnectTimeout;
+    private DateTime? _autoWaitTime;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
 
@@ -65,6 +66,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPAddress? PublicAddress { get; private set; }
     public bool IsIpV6Supported { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
+    public TimeSpan AutoWaitTimeout { get; set; }
+    public TimeSpan ReconnectTimeout { get; set; } 
     public Token Token { get; }
     public Guid ClientId { get; }
     public ulong SessionId { get; private set; }
@@ -110,6 +113,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
 
+        ReconnectTimeout = options.ReconnectTimeout;
+        AutoWaitTimeout = options.AutoWaitTimeout;
         Token = token;
         Version = options.Version;
         UserAgent = options.UserAgent;
@@ -317,8 +322,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     // WARNING: Performance Critical!
     private void PacketCapture_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
     {
+        // stop traffic if the client is disposed
         if (_disposed || _initConnectedTime is null)
             return;
+
+        // Stop traffic if the client is paused and unpause after AutoPauseTimeout
+        if (_autoWaitTime != null)
+        {
+            if (FastDateTime.Now - _autoWaitTime.Value < AutoWaitTimeout)
+                return;
+
+            State = ClientState.Connecting;
+            _autoWaitTime = null;
+        }
 
         try
         {
@@ -809,7 +825,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Connected;
             return requestResult;
         }
-        catch (SessionException ex) when (ex.SessionResponse.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
+        catch (SessionException ex) when
+            (ex.SessionResponse.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
         {
             // set SessionStatus
             if (ex.SessionResponse.AccessUsage != null)
@@ -819,16 +836,34 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _lastConnectionErrorTime = null;
             throw;
         }
+        catch (Exception) when (_disposed)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or SessionException)
+        {
+            _ = DisposeAsync(ex);
+            throw;
+        }
         catch (Exception ex)
         {
-            // set connecting state if it could not establish any connection
-            if (!_disposed && State == ClientState.Connected)
-                State = ClientState.Connecting;
+            var now = FastDateTime.Now;
+            _lastConnectionErrorTime ??= now;
 
-            // dispose by session timeout or known exception
-            _lastConnectionErrorTime ??= FastDateTime.Now;
-            if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
+            // dispose by session timeout and must before pause because SessionTimeout is bigger than ReconnectTimeout
+            if (now - _lastConnectionErrorTime.Value > SessionTimeout)
                 _ = DisposeAsync(ex);
+            
+            // pause after retry limit
+            else if (now - _lastConnectionErrorTime.Value > ReconnectTimeout)
+            {
+                _autoWaitTime = now;
+                State = ClientState.Waiting;
+            }
+
+            // set connecting state if it could not establish any connection
+            else if (State == ClientState.Connected)
+                State = ClientState.Connecting;
 
             throw;
         }
@@ -1020,7 +1055,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         State = ClientState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");
-
     }
 
     private class SendingPackets

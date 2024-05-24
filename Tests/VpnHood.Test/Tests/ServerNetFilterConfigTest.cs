@@ -15,7 +15,7 @@ public class ServerNetFilterConfigTest : TestBase
         serverOptions.NetFilterOptions.PacketCaptureIncludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
 
         // Create Server
-        await using var server = TestHelper.CreateServer(serverOptions);
+        await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
@@ -47,7 +47,7 @@ public class ServerNetFilterConfigTest : TestBase
         serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = [IpRange.Parse("230.0.0.100-230.0.0.250")];
 
         // Create Server
-        await using var server = TestHelper.CreateServer(serverOptions);
+        await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
@@ -82,7 +82,7 @@ public class ServerNetFilterConfigTest : TestBase
         serverOptions.NetFilterOptions.PacketCaptureExcludeIpRanges = [IpRange.Parse("230.0.0.100 - 230.0.0.250")];
 
         // Create Server
-        await using var server = TestHelper.CreateServer(serverOptions);
+        await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
@@ -109,7 +109,7 @@ public class ServerNetFilterConfigTest : TestBase
         serverOptions.NetFilterOptions.ExcludeIpRanges = [IpRange.Parse("230.0.0.100 - 230.0.0.250")];
 
         // Create Server
-        await using var server = TestHelper.CreateServer(serverOptions);
+        await using var server = await TestHelper.CreateServer(serverOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // create client

@@ -238,17 +238,17 @@ internal static class TestHelper
         return options;
     }
 
-    public static VpnHoodServer CreateServer(IAccessManager? accessManager = null, bool autoStart = true, TimeSpan? configureInterval = null)
+    public static Task<VpnHoodServer> CreateServer(IAccessManager? accessManager = null, bool autoStart = true, TimeSpan? configureInterval = null)
     {
         return CreateServer(accessManager, null, autoStart, configureInterval);
     }
 
-    public static VpnHoodServer CreateServer(FileAccessManagerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
+    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
     {
         return CreateServer(null, options, autoStart, configureInterval);
     }
 
-    private static VpnHoodServer CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, bool autoStart,
+    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, bool autoStart,
         TimeSpan? configureInterval = null)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
@@ -276,7 +276,7 @@ internal static class TestHelper
         var server = new VpnHoodServer(accessManager, serverOptions);
         if (autoStart)
         {
-            server.Start().Wait();
+            await server.Start();
             Assert.AreEqual(ServerState.Ready, server.State);
         }
 

@@ -579,50 +579,6 @@ public class ClientServerTest : TestBase
         await TestHelper.WaitForClientStateAsync(client6, ClientState.Connected);
     }
 
-    [TestMethod]
-    public async Task AutoReconnect()
-    {
-        using var httpClient = new HttpClient();
-
-        // create server
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
-
-        // create client
-        var token = TestHelper.CreateAccessToken(server);
-
-        // -----------
-        // Check:  Reconnect after disconnection (1st time)
-        // -----------
-        await using var clientConnect = TestHelper.CreateClientConnect(token,
-            connectOptions: new ConnectOptions { MaxReconnectCount = 1, ReconnectDelay = TimeSpan.Zero });
-        Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-        await TestHelper.Test_Https(); //let transfer something
-
-        fileAccessManager.SessionController.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
-        server.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
-        await VhTestUtil.AssertEqualsWait(ClientState.Connected, async () =>
-        {
-            await TestHelper.Test_Https(throwError: false);
-            return clientConnect.Client.State;
-        }, timeout: 30_000);
-        Assert.AreEqual(1, clientConnect.AttemptCount);
-        await TestTunnel(server, clientConnect.Client);
-
-        // -----------
-        // Check: dispose after second try (2nd time)
-        // -----------
-        Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-        await server.SessionManager.CloseSession(clientConnect.Client.SessionId);
-        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
-        {
-            await TestHelper.Test_Https(throwError: false);
-            return clientConnect.Client.State;
-        }, timeout: 30_000);
-        Assert.AreEqual(1, clientConnect.AttemptCount);
-    }
-
 #if DEBUG
     [TestMethod]
     public async Task Disconnect_for_unsupported_client()

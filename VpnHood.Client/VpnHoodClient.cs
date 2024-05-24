@@ -825,8 +825,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Connected;
             return requestResult;
         }
-        catch (SessionException ex) when
-            (ex.SessionResponse.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
+        catch (SessionException ex) 
         {
             // set SessionStatus
             if (ex.SessionResponse.AccessUsage != null)
@@ -834,19 +833,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
+
+            // close session if server has ended the session
+            if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError && 
+                ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost)
+                _ = DisposeAsync(ex);
+
             throw;
         }
-        catch (Exception) when (_disposed)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or SessionException)
+        catch (UnauthorizedAccessException ex)
         {
             _ = DisposeAsync(ex);
             throw;
         }
         catch (Exception ex)
         {
+            if (_disposed)
+                throw;
+
             var now = FastDateTime.Now;
             _lastConnectionErrorTime ??= now;
 

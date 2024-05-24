@@ -61,7 +61,7 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
@@ -86,7 +86,7 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
@@ -112,7 +112,7 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
@@ -138,7 +138,7 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
@@ -164,7 +164,7 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);

@@ -244,7 +244,7 @@ public class ClientAppTest : TestBase
     public async Task State_Diagnose_info()
     {
         // create server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
@@ -287,22 +287,14 @@ public class ClientAppTest : TestBase
     public async Task State_Error_InConnecting()
     {
         // create server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
         token.ServerToken.HostEndPoints = [IPEndPoint.Parse("10.10.10.99:443")];
 
         // create app
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-
-        try
-        {
-            await app.Connect(clientProfile.ClientProfileId);
-        }
-        catch
-        {
-            // ignored
-        }
+        await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
 
         await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
         Assert.IsFalse(app.State.LogExists);
@@ -311,11 +303,50 @@ public class ClientAppTest : TestBase
         Assert.IsNotNull(app.State.LastError);
     }
 
+
+    [TestMethod]
+    public async Task State_Waiting()
+    {
+        // create Access Manager and token
+        using var fileAccessManager = TestHelper.CreateFileAccessManager();
+        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        var token = TestHelper.CreateAccessToken(fileAccessManager);
+
+        // create server
+        await using var server1 = await TestHelper.CreateServer(testAccessManager);
+
+        // create app & connect
+        var appOptions = TestHelper.CreateClientAppOptions();
+        appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
+        appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
+        appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId);
+        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
+
+        // dispose server and wait for waiting state
+        await server1.DisposeAsync();
+        await VhTestUtil.AssertEqualsWait(AppConnectionState.Waiting, async () =>
+        {
+            await TestHelper.Test_Https(throwError: false, timeout: 100);
+            return app.State.ConnectionState;
+        });
+
+        // start a new server & waiting for connected state
+        await using var server2 = await TestHelper.CreateServer(testAccessManager);
+        await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () =>
+        {
+            await TestHelper.Test_Https(throwError: false, timeout: 100);
+            return app.State.ConnectionState;
+        });
+    }
+
     [TestMethod]
     public async Task Set_DnsServer_to_packetCapture()
     {
         // Create Server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
@@ -339,7 +370,7 @@ public class ClientAppTest : TestBase
             !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
 
         // Create Server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
@@ -526,7 +557,7 @@ public class ClientAppTest : TestBase
     public async Task State_Connected_Disconnected_successfully()
     {
         // create server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
@@ -565,7 +596,7 @@ public class ClientAppTest : TestBase
         fileAccessManager.ClearCache();
 
         // create server and app
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
         await using var app = TestHelper.CreateClientApp();
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -591,7 +622,7 @@ public class ClientAppTest : TestBase
         fileAccessManagerOptions1.ServerTokenUrl = $"http://{endPoint}/accesskey";
         using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
         using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
-        await using var server1 = TestHelper.CreateServer(testAccessManager1);
+        await using var server1 = await TestHelper.CreateServer(testAccessManager1);
         var token1 = TestHelper.CreateAccessToken(server1);
         await server1.DisposeAsync();
 
@@ -600,7 +631,7 @@ public class ClientAppTest : TestBase
         fileAccessManagerOptions1.TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, tcpEndPoint.Port + 1)];
         var fileAccessManager2 = TestHelper.CreateFileAccessManager(storagePath: fileAccessManager1.StoragePath, options: fileAccessManagerOptions1);
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
-        await using var server2 = TestHelper.CreateServer(testAccessManager2);
+        await using var server2 = await TestHelper.CreateServer(testAccessManager2);
         var token2 = TestHelper.CreateAccessToken(server2);
 
         //update web server enc_server_token
@@ -626,8 +657,8 @@ public class ClientAppTest : TestBase
     [TestMethod]
     public async Task Change_server_while_connected()
     {
-        await using var server1 = TestHelper.CreateServer();
-        await using var server2 = TestHelper.CreateServer();
+        await using var server1 = await TestHelper.CreateServer();
+        await using var server2 = await TestHelper.CreateServer();
 
         var token1 = TestHelper.CreateAccessToken(server1);
         var token2 = TestHelper.CreateAccessToken(server2);

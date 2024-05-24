@@ -47,6 +47,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isLoadingIpGroup;
     private readonly TimeSpan _versionCheckInterval;
     private readonly AppPersistState _appPersistState;
+    private readonly TimeSpan _reconnectTimeout;
+    private readonly TimeSpan _autoWaitTimeout;
     private CancellationTokenSource? _connectCts;
     private ClientProfile? _currentClientProfile;
     private VersionCheckResult? _versionCheckResult;
@@ -97,6 +99,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _useExternalLocationService = options.UseExternalLocationService;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
+        _reconnectTimeout = options.ReconnectTimeout;
+        _autoWaitTimeout = options.AutoWaitTimeout;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _versionCheckResult = VhUtil.JsonDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
@@ -223,9 +227,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
+            if (ClientConnect?.IsWaiting is true || Client?.State == ClientState.Waiting) return AppConnectionState.Waiting;
             if (Client?.Stat.IsWaitingForAd is true) return AppConnectionState.Connecting;
             if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
-            if (ClientConnect?.IsWaiting is true) return AppConnectionState.Waiting;
             return AppConnectionState.None;
         }
     }
@@ -508,6 +512,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var clientOptions = new ClientOptions
         {
             SessionTimeout = SessionTimeout,
+            ReconnectTimeout = _reconnectTimeout,
+            AutoWaitTimeout = _autoWaitTimeout,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
             IpRangeProvider = this,
             AdProvider = this,
@@ -517,7 +523,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
-            ServerLocation = serverLocationInfo == ClientServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo
+            ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -588,22 +594,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
 
-    private readonly object _disconnectLock = new();
-    private Task? _disconnectTask;
+    private readonly AsyncLock _disconnectLock = new();
 
-    public Task Disconnect(bool byUser = false)
+    public async Task Disconnect(bool byUser = false)
     {
-        lock (_disconnectLock)
-        {
-            if (_disconnectTask == null || _disconnectTask.IsCompleted)
-                _disconnectTask = DisconnectCore(byUser);
-        }
-
-        return _disconnectTask;
-    }
-
-    private async Task DisconnectCore(bool byUser)
-    {
+        using var lockAsync = await _disconnectLock.LockAsync();
         if (_isDisconnecting || IsIdle)
             return;
 

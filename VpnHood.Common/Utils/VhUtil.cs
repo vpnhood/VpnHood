@@ -208,8 +208,8 @@ public static class VhUtil
                 return default;
 
             var json = File.ReadAllText(filePath);
-            var appAccount = JsonDeserialize<T>(json, options);
-            return appAccount;
+            var obj = JsonDeserialize<T>(json, options);
+            return obj;
         }
         catch (Exception ex)
         {
@@ -423,5 +423,20 @@ public static class VhUtil
             }
         }
         await Task.WhenAll(tasks);
+    }
+
+    public static bool TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

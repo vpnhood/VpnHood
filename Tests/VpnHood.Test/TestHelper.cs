@@ -378,7 +378,7 @@ internal static class TestHelper
                 ClientId = clientId.Value, 
                 UserAgent  = "Test", 
                 ClientVersion = "1.0.0",
-                ProtocolVersion = 4,
+                ProtocolVersion = 4
             },
             HostEndPoint = token.ServerToken.HostEndPoints!.First(),
             EncryptedClientId = VhUtil.EncryptClientId(clientId.Value, token.Secret),

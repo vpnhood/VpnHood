@@ -32,7 +32,7 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
             return connector;
         });
 
-        await VhUtil.ParallelForEachAsync(connectors, async (connector) =>
+        await VhUtil.ParallelForEachAsync(connectors, async connector =>
         {
             _hostEndPointStatus[connector.EndPointInfo.TcpEndPoint] = await CheckServerStatus(connector);
         }, maxDegreeOfParallelism, cancellationToken);
@@ -56,7 +56,7 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Could not get server status. EndPoint: {EndPoint}",
-                VhLogger.Format(connectorService.EndPointInfo?.TcpEndPoint));
+                VhLogger.Format(connectorService.EndPointInfo.TcpEndPoint));
 
             return false;
         }

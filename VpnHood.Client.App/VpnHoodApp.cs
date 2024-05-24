@@ -274,6 +274,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.LastErrorMessage = null;
         _hasDiagnoseStarted = false;
         _hasDisconnectedByUser = false;
+        _hasConnectRequested = false;
+        _connectRequestTime = null;
     }
 
     public async Task Connect(Guid? clientProfileId = null, string? serverLocation = null, bool diagnose = false,

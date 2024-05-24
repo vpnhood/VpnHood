@@ -19,7 +19,6 @@ using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Messaging;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Factory;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test;
@@ -336,37 +335,6 @@ internal static class TestHelper
         }
 
         return client;
-    }
-
-    public static VpnHoodConnect CreateClientConnect(Token token,
-        IPacketCapture? packetCapture = default,
-        TestDeviceOptions? deviceOptions = default,
-        Guid? clientId = default,
-        bool autoConnect = true,
-        ClientOptions? clientOptions = default,
-        ConnectOptions? connectOptions = default)
-    {
-        clientOptions ??= new ClientOptions();
-        packetCapture ??= CreatePacketCapture(deviceOptions);
-        clientId ??= Guid.NewGuid();
-        if (clientOptions.SessionTimeout == new ClientOptions().SessionTimeout)
-            clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
-        clientOptions.SocketFactory = new SocketFactory();
-        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientOptions.IncludeLocalNetwork = true;
-
-        var clientConnect = new VpnHoodConnect(
-            packetCapture,
-            clientId.Value,
-            token,
-            clientOptions,
-            connectOptions);
-
-        // test starting the client
-        if (autoConnect)
-            clientConnect.Connect().Wait();
-
-        return clientConnect;
     }
 
     public static AppOptions CreateClientAppOptions()

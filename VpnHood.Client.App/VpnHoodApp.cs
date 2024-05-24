@@ -181,7 +181,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get
         {
             var connectionState = ConnectionState;
-            return new AppState
+            var appState =  new AppState
             {
                 ConfigTime = Settings.ConfigTime,
                 ConnectionState = connectionState,
@@ -215,6 +215,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? _versionCheckResult.PublishInfo
                     : null
             };
+
+            return appState;
         }
     }
 

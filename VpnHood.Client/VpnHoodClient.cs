@@ -77,7 +77,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IpRange[] IncludeIpRanges { get; private set; } = IpNetwork.All.ToIpRanges().ToArray();
     public IpRange[] PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
-    public IPEndPoint HostTcpEndPoint => ConnectorService.EndPointInfo.TcpEndPoint;
+    public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
     public bool DropUdpPackets { get; set; }
     public ClientStat Stat { get; }
@@ -699,7 +699,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;
             if (sessionResponse.UdpPort > 0)
-                HostUdpEndPoint = new IPEndPoint(HostTcpEndPoint.Address, sessionResponse.UdpPort.Value);
+                HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address, sessionResponse.UdpPort.Value);
 
             // PacketCaptureIpRanges
             if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))

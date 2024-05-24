@@ -24,6 +24,7 @@ public class FileAccessManager : IAccessManager
     public string StoragePath { get; }
     public FileAccessManagerSessionController SessionController { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
+    public string SessionsFolderPath => Path.Combine(StoragePath, "sessions");
     public X509Certificate2 DefaultCert { get; }
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
@@ -35,7 +36,7 @@ public class FileAccessManager : IAccessManager
 
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
-        SessionController = new FileAccessManagerSessionController();
+        SessionController = new FileAccessManagerSessionController(SessionsFolderPath);
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");

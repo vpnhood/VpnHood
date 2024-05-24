@@ -163,19 +163,24 @@ public class ServerTest : TestBase
     public async Task Restore_session_after_restarting_server()
     {
         // create server
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
+        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
+        await using var server1 = await TestHelper.CreateServer(testAccessManager1);
 
         // create client
-        var token = TestHelper.CreateAccessToken(server);
+        var token = TestHelper.CreateAccessToken(server1);
         await using var client = await TestHelper.CreateClient(token);
         Assert.AreEqual(ClientState.Connected, client.State);
         await TestHelper.Test_Https();
 
-        // restart server
-        await server.DisposeAsync();
-        await using var server2 = await TestHelper.CreateServer(testAccessManager);
+        // restart server and access manager
+        await server1.DisposeAsync();
+        testAccessManager1.Dispose();
+        fileAccessManager1.Dispose();
+        using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions, fileAccessManager1.StoragePath);
+        using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
+        await using var server2 = await TestHelper.CreateServer(testAccessManager2);
 
         VhLogger.Instance.LogInformation("Test: Sending another HTTP Request...");
         await TestHelper.Test_Https();

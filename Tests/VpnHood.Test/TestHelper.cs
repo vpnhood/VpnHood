@@ -405,7 +405,13 @@ internal static class TestHelper
         return new SessionRequestEx
         {
             TokenId = token.TokenId,
-            ClientInfo = new ClientInfo { ClientId = clientId.Value },
+            ClientInfo = new ClientInfo
+            {
+                ClientId = clientId.Value, 
+                UserAgent  = "Test", 
+                ClientVersion = "1.0.0",
+                ProtocolVersion = 4,
+            },
             HostEndPoint = token.ServerToken.HostEndPoints!.First(),
             EncryptedClientId = VhUtil.EncryptClientId(clientId.Value, token.Secret),
             ClientIp = null,

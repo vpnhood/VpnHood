@@ -9,6 +9,7 @@
 ### Server
 * Improve: Optimize server reconfiguration at runtime
 * Feature: Support selecting server location when controlled by HttpAccessManager
+* Feature: Enable hot restart for FileAccessManager
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 
 # v4.4.506

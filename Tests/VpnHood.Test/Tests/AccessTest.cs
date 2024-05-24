@@ -24,7 +24,7 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Server_reject_invalid_requests()
     {
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
 
         // ************
         // *** TEST ***: request with invalid tokenId
@@ -58,7 +58,7 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Server_reject_expired_access_hello()
     {
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
 
         // create an expired token
         var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
@@ -73,7 +73,7 @@ public class AccessTest : TestBase
     public async Task Server_reject_expired_access_at_runtime()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create a short expiring token
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
@@ -93,7 +93,7 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Server_reject_trafficOverflow_access()
     {
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
 
         // create a fast expiring token
         var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
@@ -152,7 +152,7 @@ public class AccessTest : TestBase
         using var packetCapture = TestHelper.CreatePacketCapture();
 
         // Create Server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server, 2);
 
         // create default token with 2 client count
@@ -211,7 +211,7 @@ public class AccessTest : TestBase
     {
 
         // Create Server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server, 0);
 
         // client1

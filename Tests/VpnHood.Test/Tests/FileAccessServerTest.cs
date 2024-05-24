@@ -16,7 +16,7 @@ public class FileAccessManagerTest : TestBase
 
         var fileAccessManager = TestHelper.CreateFileAccessManager(options);
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         var accessItem = fileAccessManager.AccessItem_Create();
         Assert.AreEqual(fileAccessManager.ServerConfig.TcpEndPointsValue.First().Port, accessItem.Token.ServerToken.HostPort);

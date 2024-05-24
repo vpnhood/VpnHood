@@ -19,32 +19,36 @@ public static class VhTestUtil
         }
     }
 
-    private static async Task WaitForValue<TValue>(object? expectedValue, Func<TValue?> valueFactory, int timeout = 5000)
+    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<TValue> valueFactory, int timeout = 5000)
     {
         const int waitTime = 100;
+        var actualValue = valueFactory();
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
-            if (Equals(expectedValue, valueFactory()))
-                return;
+            if (Equals(expectedValue, actualValue))
+                return actualValue;
 
             await Task.Delay(waitTime);
+            actualValue = valueFactory();
         }
 
-        throw new TimeoutException();
+        return actualValue;
     }
 
-    private static async Task WaitForValue<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory, int timeout = 5000)
+    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory, int timeout = 5000)
     {
         const int waitTime = 100;
+        var actualValue = await valueFactory();
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
-            if (Equals(expectedValue, await valueFactory()))
-                return;
+            if (Equals(expectedValue, actualValue))
+                return actualValue;
 
             await Task.Delay(waitTime);
+            actualValue = await valueFactory();
         }
 
-        throw new TimeoutException();
+        return actualValue;
     }
 
 
@@ -55,25 +59,25 @@ public static class VhTestUtil
             throw new AssertException($"{message}. Expected: {expected}, Actual: {actual}");
     }
 
-    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<TValue?> valueFactory,
+    public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<TValue> valueFactory,
         string? message = null, int timeout = 5000)
     {
-        await WaitForValue(expectedValue, valueFactory, timeout);
-        AssertEquals(expectedValue, valueFactory(), message);
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout);
+        AssertEquals(expectedValue, actualValue, message);
     }
 
-    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Func<Task<TValue?>> valueFactory,
+    public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
         string? message = null, int timeout = 5000)
     {
-        await WaitForValue(expectedValue, valueFactory, timeout);
-        AssertEquals(expectedValue, await valueFactory(), message);
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout);
+        AssertEquals(expectedValue, actualValue, message);
     }
 
-    public static async Task AssertEqualsWait<TValue>(object? expectedValue, Task<TValue?> task,
+    public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Task<TValue> task,
         string? message = null, int timeout = 5000)
     {
-        await WaitForValue(expectedValue, () => task, timeout);
-        AssertEquals(expectedValue, await task, message);
+        var actualValue = await WaitForValue(expectedValue, () => task, timeout);
+        AssertEquals(expectedValue, actualValue, message);
     }
 
     public static Task AssertApiException(HttpStatusCode expectedStatusCode, Task task, string? message = null)

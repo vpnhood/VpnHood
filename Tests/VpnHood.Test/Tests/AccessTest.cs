@@ -1,9 +1,6 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
-using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;

@@ -47,14 +47,22 @@ internal static class TestHelper
         }
     }
 
-    public static Task WaitForClientStateAsync(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
+    public static Task WaitForAppState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
     {
         return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState, "App state didn't reach the expected value.", timeout);
     }
 
-    public static Task WaitForClientStateAsync(VpnHoodClient client, ClientState clientState, int timeout = 6000)
+    public static Task WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 6000, bool useUpdateStatus = false)
     {
-        return VhTestUtil.AssertEqualsWait(clientState, () => client.State, "Client state didn't reach the expected value.", timeout);
+        return VhTestUtil.AssertEqualsWait(clientState,
+            async () =>
+            {
+                if (useUpdateStatus)
+                    try { await client.UpdateSessionStatus(); } catch { /*ignore*/ }
+                return client.State;
+            },
+            "Client state didn't reach the expected value.",
+            timeout);
     }
 
     private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = TestConstants.DefaultTimeout)
@@ -375,8 +383,8 @@ internal static class TestHelper
             TokenId = token.TokenId,
             ClientInfo = new ClientInfo
             {
-                ClientId = clientId.Value, 
-                UserAgent  = "Test", 
+                ClientId = clientId.Value,
+                UserAgent = "Test",
                 ClientVersion = "1.0.0",
                 ProtocolVersion = 4
             },

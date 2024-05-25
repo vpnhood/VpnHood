@@ -164,6 +164,9 @@ internal class ServerHost : IAsyncDisposable, IJob
             try
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
+                if (_disposed)
+                    throw new ObjectDisposedException("ServerHost has been stopped.");
+
                 VhUtil.ConfigTcpClient(tcpClient,
                     _sessionManager.SessionOptions.TcpKernelSendBufferSize,
                     _sessionManager.SessionOptions.TcpKernelReceiveBufferSize);
@@ -697,7 +700,7 @@ internal class ServerHost : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             if (ex is TimeoutException)
-                VhLogger.Instance.LogTrace(ex, "Error in stopping ServerHost.");
+                VhLogger.Instance.LogError(ex, "Error in stopping ServerHost.");
         }
         _tcpListenerTasks.Clear();
     }

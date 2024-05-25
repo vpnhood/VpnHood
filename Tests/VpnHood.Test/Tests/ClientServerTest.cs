@@ -591,19 +591,8 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token, autoConnect: false,
             clientOptions: new ClientOptions { ProtocolVersion = 1 });
 
-        try
-        {
-            _ = client.Connect();
-            await TestHelper.WaitForClientState(client, ClientState.Disposed);
-        }
-        catch
-        {
-            // ignored
-        }
-        finally
-        {
-            Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
-        }
+        await Assert.ThrowsExceptionAsync<SessionException>(() => client.Connect());
+        Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
     }
 #endif
 

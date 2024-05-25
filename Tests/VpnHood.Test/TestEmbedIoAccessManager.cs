@@ -4,13 +4,16 @@ using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using Microsoft.Extensions.Logging;
 using Swan.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Messaging;
+using VpnHood.Tunneling;
 
 // ReSharper disable UnusedMember.Local
 
@@ -31,7 +34,10 @@ public class TestEmbedIoAccessManager : IDisposable
         BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
+        {
             _webServer.Start();
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} is listening to {BaseUri}");
+        }
     }
 
     public Uri BaseUri { get; }
@@ -41,6 +47,7 @@ public class TestEmbedIoAccessManager : IDisposable
 
     public void Dispose()
     {
+        Stop();
         _webServer.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -60,6 +67,7 @@ public class TestEmbedIoAccessManager : IDisposable
 
     public void Stop()
     {
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} has stopped listening to {BaseUri}");
         _webServer.Dispose();
     }
 

@@ -107,7 +107,9 @@ public class Session : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
-        return Sync(true, false);
+        return IsDisposed 
+            ? Task.CompletedTask 
+            : Sync(true, false);
     }
 
     public bool UseUdpChannel

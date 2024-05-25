@@ -282,6 +282,12 @@ public class Session : IAsyncDisposable, IJob
         throw new NotImplementedException();
     }
 
+    public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+        await clientStream.DisposeAsync();
+    }
+
     public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
         await Sync(force: true, closeSession: false, adData: request.AdData);

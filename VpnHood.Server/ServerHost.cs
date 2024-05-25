@@ -454,6 +454,10 @@ internal class ServerHost : IAsyncDisposable, IJob
                 await ProcessServerStatus(clientStream, cancellationToken);
                 break;
 
+            case RequestCode.SessionStatus:
+                await ProcessSessionStatus(clientStream, cancellationToken);
+                break;
+
             case RequestCode.Hello:
                 await ProcessHello(clientStream, cancellationToken);
                 break;
@@ -608,6 +612,17 @@ internal class ServerHost : IAsyncDisposable, IJob
         await clientStream.DisposeAsync();
     }
 
+    private async Task ProcessSessionStatus(IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Reading the SessionStatus request...");
+        var request = await ReadRequest<SessionStatusRequest>(clientStream, cancellationToken);
+
+        // finding session
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
+
+        // processing request
+        await session.ProcessSessionStatusRequest(request, clientStream, cancellationToken);
+    }
 
     private async Task ProcessBye(IClientStream clientStream, CancellationToken cancellationToken)
     {
@@ -635,7 +650,6 @@ internal class ServerHost : IAsyncDisposable, IJob
         var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair);
         await session.ProcessUdpPacketRequest(request, clientStream, cancellationToken);
     }
-
 
     private async Task ProcessTcpDatagramChannel(IClientStream clientStream, CancellationToken cancellationToken)
     {

@@ -107,7 +107,9 @@ public class Session : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
-        return Sync(true, false);
+        return IsDisposed 
+            ? Task.CompletedTask 
+            : Sync(true, false);
     }
 
     public bool UseUdpChannel
@@ -278,6 +280,12 @@ public class Session : IAsyncDisposable, IJob
         //udpClient.SendAsync();
         //request.PacketBuffers.
         throw new NotImplementedException();
+    }
+
+    public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+        await clientStream.DisposeAsync();
     }
 
     public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream, CancellationToken cancellationToken)

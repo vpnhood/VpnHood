@@ -253,11 +253,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _clientHost.Start();
 
             // Preparing device;
-            if (!_packetCapture.Started) //make sure it is not a shared packet capture
-            {
-                ConfigPacketFilter(ConnectorService.EndPointInfo.TcpEndPoint.Address);
-                _packetCapture.StartCapture();
-            }
+            if (_packetCapture.Started) //make sure it is not a shared packet capture
+                throw new InvalidOperationException("PacketCapture should not be started before connect.");
+            
+            ConfigPacketFilter(ConnectorService.EndPointInfo.TcpEndPoint.Address);
+            _packetCapture.StartCapture();
 
             // disable IncludeIpRanges if it contains all networks
             if (IncludeIpRanges.ToIpNetworks().IsAll())
@@ -754,21 +754,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (RedirectHostException ex) when (allowRedirect)
         {
-            SetHostEndPoint(ex.RedirectHostEndPoint);
+            // todo; init new connector
+            ConnectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
             await ConnectInternal(cancellationToken, false);
         }
-    }
-
-    private void SetHostEndPoint(IPEndPoint ipEndPoint)
-    {
-        // update _connectorService
-        ConnectorService.EndPointInfo.TcpEndPoint = ipEndPoint;
-
-        // todo: remove
-        // Restart the packet capture if it captures Host IpAddress
-        if (_packetCapture is { Started: true, CanProtectSocket: false, IncludeNetworks: not null } &&
-            IpRange.IsInSortedRanges(_packetCapture.IncludeNetworks.ToIpRanges().ToArray(), ipEndPoint.Address))
-            _packetCapture.StopCapture();
     }
 
     private async Task AddTcpDatagramChannel(CancellationToken cancellationToken)
@@ -871,6 +860,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             throw;
         }
+    }
+
+    public async Task UpdateSessionStatus(CancellationToken cancellationToken = default)
+    {
+        using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+
+        // don't use SendRequest because it can be disposed
+        await using var requestResult = await SendRequest<SessionResponse>(
+            new SessionStatusRequest()
+            {
+                RequestId = Guid.NewGuid() + ":client",
+                SessionId = SessionId,
+                SessionKey = SessionKey
+            },
+            linkedCancellationTokenSource.Token);
     }
 
     private async Task SendByeRequest(CancellationToken cancellationToken)

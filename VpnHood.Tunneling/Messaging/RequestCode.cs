@@ -6,7 +6,7 @@ public enum RequestCode : byte
     Hello = 1, 
     TcpDatagramChannel = 2,
     StreamProxyChannel = 3,
-    // SessionStatus = 4,
+    SessionStatus = 4,
     UdpPacket = 5,
     AdReward = 10,
     ServerStatus = 20,

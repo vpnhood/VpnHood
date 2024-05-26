@@ -218,19 +218,19 @@ public class ClientAppTest : TestBase
     [TestMethod]
     public async Task Save_load_clientProfiles()
     {
-        await using var app = TestHelper.CreateClientApp();
+        await using var app1 = TestHelper.CreateClientApp();
 
         var token1 = CreateToken();
-        var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
+        var clientProfile1 = app1.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
 
         var token2 = CreateToken();
-        var clientProfile2 = app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
+        var clientProfile2 = app1.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
 
-        var clientProfiles = app.ClientProfileService.List();
-        await app.DisposeAsync();
+        var clientProfiles = app1.ClientProfileService.List();
+        await app1.DisposeAsync();
 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.StorageFolderPath = app.StorageFolderPath;
+        appOptions.StorageFolderPath = app1.StorageFolderPath;
 
         await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
         Assert.AreEqual(clientProfiles.Length, app2.ClientProfileService.List().Length, "ClientProfiles count are not same!");
@@ -253,7 +253,7 @@ public class ClientAppTest : TestBase
 
         // ************
         // Test: With diagnose
-        _ = app.Connect(clientProfile1.ClientProfileId, diagnose: true);
+        await app.Connect(clientProfile1.ClientProfileId, diagnose: true);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected, 10000);
         app.ClearLastError(); // should not affect
         await app.Disconnect(true);
@@ -272,15 +272,15 @@ public class ClientAppTest : TestBase
 
         // ************
         // Test: Without diagnose
-        _ = app.Connect(clientProfile1.ClientProfileId);
+        await app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
         await app.Disconnect(true);
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
 
-        Assert.IsFalse(app.State.LogExists);
+        Assert.IsTrue(app.State.IsIdle);
         Assert.IsFalse(app.State.HasDiagnoseStarted);
         Assert.IsTrue(app.State.HasDisconnectedByUser);
-        Assert.IsTrue(app.State.IsIdle);
+        Assert.IsFalse(app.State.LogExists);
     }
 
     [TestMethod]
@@ -413,6 +413,7 @@ public class ClientAppTest : TestBase
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
         await IpFilters_TestExclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
+        await app.Disconnect();
     }
 
     public static async Task IpFilters_TestInclude(VpnHoodApp app, bool testUdp, bool testPing, bool testDns)

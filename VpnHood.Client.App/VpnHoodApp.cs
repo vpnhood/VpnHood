@@ -53,6 +53,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private ClientProfile? _currentClientProfile;
     private VersionCheckResult? _versionCheckResult;
     private VpnHoodClient? _client;
+    private readonly bool? _logVerbose;
+    private readonly bool? _logAnonumous;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
@@ -102,6 +104,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _autoWaitTimeout = options.AutoWaitTimeout;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _versionCheckResult = VhUtil.JsonDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
+        _logVerbose = options.LogVerbose;
+        _logAnonumous = options.LogAnonymous;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog));
 
@@ -117,7 +121,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // create start up logger
         if (!device.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
-        LogService.Start(Settings.UserSettings.Logging, false);
+        LogService.Start(new AppLogSettings
+        {
+            LogVerbose = options.LogVerbose ?? Settings.UserSettings.Logging.LogVerbose,
+            LogAnonymous = options.LogAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
+            LogToConsole = UserSettings.Logging.LogToConsole,
+            LogToFile = UserSettings.Logging.LogToFile
+        });
 
         // add default test public server if not added yet
         ClientProfileService.TryRemoveByTokenId("5aacec55-5cac-457a-acad-3976969236f8"); //remove obsoleted public server
@@ -181,7 +191,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get
         {
             var connectionState = ConnectionState;
-            var appState =  new AppState
+            var appState = new AppState
             {
                 ConfigTime = Settings.ConfigTime,
                 ConnectionState = connectionState,
@@ -248,6 +258,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         await Disconnect();
         Device.Dispose();
+        LogService.Dispose();
         DisposeSingleton();
     }
 
@@ -320,7 +331,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _hasDiagnoseStarted = diagnose;
             _connectRequestTime = DateTime.Now;
             FireConnectionStateChanged();
-            LogService.Start(Settings.UserSettings.Logging, diagnose);
+            LogService.Start(new AppLogSettings
+            {
+                LogVerbose = _logVerbose ?? Settings.UserSettings.Logging.LogVerbose | diagnose,
+                LogAnonymous = _logAnonumous ?? Settings.UserSettings.Logging.LogAnonymous,
+                LogToConsole = UserSettings.Logging.LogToConsole,
+                LogToFile = UserSettings.Logging.LogToFile | diagnose
+            });
+
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
@@ -341,23 +359,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _connectCts.Token);
             cancellationToken = linkedCts.Token;
 
-            // create packet capture
-            var packetCapture = await Device.CreatePacketCapture(UiContext);
-
-            // init packet capture
-            if (packetCapture.IsMtuSupported)
-                packetCapture.Mtu = TunnelDefaults.MtuWithoutFragmentation;
-
-            // App filters
-            if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
-                packetCapture.ExcludeApps = UserSettings.AppFilters;
-
-            if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include)
-                packetCapture.IncludeApps = UserSettings.AppFilters;
-
             // connect
-            await ConnectInternal(packetCapture, clientProfile.Token, _activeServerLocation, userAgent, true,
-                cancellationToken);
+            await ConnectInternal(clientProfile.Token, _activeServerLocation, userAgent, true, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -382,7 +385,26 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ConnectInternal(IPacketCapture packetCapture, Token token, string? serverLocationInfo, string? userAgent,
+    private async Task<IPacketCapture> CreatePacketCapture()
+    {
+        // create packet capture
+        var packetCapture = await Device.CreatePacketCapture(UiContext);
+
+        // init packet capture
+        if (packetCapture.IsMtuSupported)
+            packetCapture.Mtu = TunnelDefaults.MtuWithoutFragmentation;
+
+        // App filters
+        if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
+            packetCapture.ExcludeApps = UserSettings.AppFilters;
+
+        if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include)
+            packetCapture.IncludeApps = UserSettings.AppFilters;
+
+        return packetCapture;
+    }
+
+    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent,
     bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -418,7 +440,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
-        // Create Client
+        // Create Client with a new PacketCapture
+        if (_client != null) throw new Exception("Last client has not been disposed properly.");
+        var packetCapture = await CreatePacketCapture();
         _client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
         _client.StateChanged += Client_StateChanged;
 
@@ -439,14 +463,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // check version after first connection
             _ = VersionCheck();
         }
+        catch (Exception) when (_client is null)
+        {
+            packetCapture.Dispose(); // don't miss to dispose when there is no client to handle it
+        }
         catch (Exception)
         {
+            await _client.DisposeAsync();
+            _client = null;
+
             // try to update token from url after connection or error if ResponseAccessKey is not set
-            if (!string.IsNullOrEmpty(token.ServerToken.Url) && allowUpdateToken &&
+            // check _client is not null to make sure 
+            if (allowUpdateToken && !string.IsNullOrEmpty(token.ServerToken.Url) &&
                 await ClientProfileService.UpdateServerTokenByUrl(token))
             {
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(packetCapture, token, serverLocationInfo, userAgent, false, cancellationToken);
+                await ConnectInternal(token, serverLocationInfo, userAgent, false, cancellationToken);
                 return;
             }
 
@@ -590,7 +622,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
 
     private readonly AsyncLock _disconnectLock = new();
-
     public async Task Disconnect(bool byUser = false)
     {
         using var lockAsync = await _disconnectLock.LockAsync();
@@ -612,22 +643,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (_hasDiagnoseStarted && _appPersistState.LastErrorMessage == null)
                 _appPersistState.LastErrorMessage = "Diagnoser has finished and no issue has been detected.";
 
-            // close client
-            try
-            {
-                // cancel current connecting if any
-                _connectCts?.Cancel();
+            // cancel current connecting if any
+            _connectCts?.Cancel();
 
-                // do not wait for bye if user request disconnection
-                if (_client != null)
-                    await _client.DisposeAsync(waitForBye: !byUser);
-            }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError(GeneralEventId.Session, ex, "Could not dispose the client properly.");
-            }
+            // close client
+            // do not wait for bye if user request disconnection
+            if (_client != null)
+                await _client.DisposeAsync(waitForBye: !byUser);
 
             LogService.Stop();
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Error in disconnecting.");
         }
         finally
         {

@@ -67,7 +67,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsIpV6Supported { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
     public TimeSpan AutoWaitTimeout { get; set; }
-    public TimeSpan ReconnectTimeout { get; set; } 
+    public TimeSpan ReconnectTimeout { get; set; }
     public Token Token { get; }
     public Guid ClientId { get; }
     public ulong SessionId { get; private set; }
@@ -255,7 +255,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // Preparing device;
             if (_packetCapture.Started) //make sure it is not a shared packet capture
                 throw new InvalidOperationException("PacketCapture should not be started before connect.");
-            
+
             ConfigPacketFilter(ConnectorService.EndPointInfo.TcpEndPoint.Address);
             _packetCapture.StartCapture();
 
@@ -322,19 +322,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     // WARNING: Performance Critical!
     private void PacketCapture_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
     {
-        // stop traffic if the client is disposed
+        // stop traffic if the client has been disposed
         if (_disposed || _initConnectedTime is null)
             return;
-
-        // Stop traffic if the client is paused and unpause after AutoPauseTimeout
-        if (_autoWaitTime != null)
-        {
-            if (FastDateTime.Now - _autoWaitTime.Value < AutoWaitTimeout)
-                return;
-
-            State = ClientState.Connecting;
-            _autoWaitTime = null;
-        }
 
         try
         {
@@ -423,7 +413,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                         else
                             droppedPackets.Add(ipPacket);
+                    }
+                }
 
+                // Stop tunnel traffics if the client is paused and unpause after AutoPauseTimeout
+                if (_autoWaitTime != null)
+                {
+                    if (FastDateTime.Now - _autoWaitTime.Value < AutoWaitTimeout)
+                    {
+                        tunnelPackets.Clear();
+                    }
+                    else
+                    {
+                        State = ClientState.Connecting;
+                        _autoWaitTime = null;
                     }
                 }
 
@@ -814,7 +817,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             State = ClientState.Connected;
             return requestResult;
         }
-        catch (SessionException ex) 
+        catch (SessionException ex)
         {
             // set SessionStatus
             if (ex.SessionResponse.AccessUsage != null)
@@ -824,7 +827,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _lastConnectionErrorTime = null;
 
             // close session if server has ended the session
-            if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError && 
+            if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError &&
                 ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost)
                 _ = DisposeAsync(ex);
 
@@ -846,7 +849,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // dispose by session timeout and must before pause because SessionTimeout is bigger than ReconnectTimeout
             if (now - _lastConnectionErrorTime.Value > SessionTimeout)
                 _ = DisposeAsync(ex);
-            
+
             // pause after retry limit
             else if (now - _lastConnectionErrorTime.Value > ReconnectTimeout)
             {

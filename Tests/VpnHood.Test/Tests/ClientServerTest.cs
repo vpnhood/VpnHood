@@ -461,6 +461,7 @@ public class ClientServerTest : TestBase
         {
             stream.WriteByte(1);
             stream.ReadByte();
+            Assert.Fail("Exception expected!");
         }
         catch (Exception ex)
             when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset })
@@ -531,7 +532,7 @@ public class ClientServerTest : TestBase
         // Check: MaintenanceMode is expected
         // ----------
         var token = TestHelper.CreateAccessToken(fileAccessManager);
-        await using var client = await TestHelper.CreateClient(token, autoConnect: false);
+        await using var client = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
 
         Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
@@ -541,14 +542,14 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         testAccessManager.EmbedIoAccessManager.Start();
-        await using var client2 = await TestHelper.CreateClient(token);
+        await using var client2 = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
         await TestHelper.WaitForClientState(client2, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode after server started by stopping the server
         // ----------
         testAccessManager.EmbedIoAccessManager.Stop();
-        await using var client3 = await TestHelper.CreateClient(token, autoConnect: false);
+        await using var client3 = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
         await TestHelper.WaitForClientState(client3, ClientState.Disposed);
@@ -558,14 +559,14 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         testAccessManager.EmbedIoAccessManager.Start();
-        await using var client4 = await TestHelper.CreateClient(token);
+        await using var client4 = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
         await TestHelper.WaitForClientState(client4, ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode by replying 404 from access-server
         // ----------
         testAccessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
-        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false);
+        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientState(client5, ClientState.Disposed);
@@ -575,7 +576,7 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         testAccessManager.EmbedIoAccessManager.HttpException = null;
-        await using var client6 = await TestHelper.CreateClient(token);
+        await using var client6 = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
         await TestHelper.WaitForClientState(client6, ClientState.Connected);
     }
 

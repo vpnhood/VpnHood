@@ -27,6 +27,7 @@ internal class TestNullPacketCapture : IPacketCapture
     public void StartCapture()
     {
         Started = true;
+        _ = PacketReceivedFromInbound; //prevent not used warning
     }
 
     public void StopCapture()

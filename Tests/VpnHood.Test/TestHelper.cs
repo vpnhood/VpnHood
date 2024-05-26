@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
@@ -29,6 +30,8 @@ internal static class TestHelper
     public class TestAppUiContext : IUiContext;
     public static TestWebServer WebServer { get; private set; } = default!;
     public static TestNetFilter NetFilter { get; private set; } = default!;
+    private static bool LogVerbose => true;
+
 
     private static int _accessItemIndex;
 
@@ -150,7 +153,8 @@ internal static class TestHelper
     {
         if (throwError)
         {
-            Assert.IsTrue(await SendHttpGet(httpClient, uri, timeout), "Https get doesn't work!");
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, $"Fetching a test uri. {uri}", uri);
+            Assert.IsTrue(await SendHttpGet(httpClient, uri, timeout), $"Could not fetch the test uri: {uri}");
             return true;
         }
 
@@ -352,7 +356,8 @@ internal static class TestHelper
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             UseIpGroupManager = false,
-            UseExternalLocationService = false
+            UseExternalLocationService = false,
+            LogVerbose = LogVerbose
         };
         return appOptions;
     }
@@ -367,9 +372,8 @@ internal static class TestHelper
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
-        clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         clientApp.UserSettings.Logging.LogAnonymous = false;
-        clientApp.UserSettings.Logging.LogVerbose = true;
+        clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
         clientApp.UiContext = new TestAppUiContext();
 
         return clientApp;

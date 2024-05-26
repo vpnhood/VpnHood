@@ -107,8 +107,9 @@ internal class ConnectorService(
             ProcessResponseException(response);
             return response;
         }
-        catch (Exception ex) when (ex is not SessionException)
+        catch (Exception ex) when (ex is not SessionException && typeof(T) != typeof(SessionResponse))
         {
+            // try to deserialize as a SessionResponse (base)
             var sessionResponse = VhUtil.JsonDeserialize<SessionResponse>(message);
             ProcessResponseException(sessionResponse);
             throw;

@@ -1638,7 +1638,6 @@ export class UserSettings implements IUserSettings {
     cultureCode?: string | null;
     clientProfileId?: string | null;
     serverLocation?: string | null;
-    maxReconnectCount!: number;
     maxDatagramChannelCount!: number;
     tunnelClientCountry!: boolean;
     appFilters?: string[] | null;
@@ -1673,7 +1672,6 @@ export class UserSettings implements IUserSettings {
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : <any>null;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : <any>null;
             this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : <any>null;
-            this.maxReconnectCount = _data["maxReconnectCount"] !== undefined ? _data["maxReconnectCount"] : <any>null;
             this.maxDatagramChannelCount = _data["maxDatagramChannelCount"] !== undefined ? _data["maxDatagramChannelCount"] : <any>null;
             this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : <any>null;
             if (Array.isArray(_data["appFilters"])) {
@@ -1747,7 +1745,6 @@ export class UserSettings implements IUserSettings {
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : <any>null;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : <any>null;
         data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : <any>null;
-        data["maxReconnectCount"] = this.maxReconnectCount !== undefined ? this.maxReconnectCount : <any>null;
         data["maxDatagramChannelCount"] = this.maxDatagramChannelCount !== undefined ? this.maxDatagramChannelCount : <any>null;
         data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : <any>null;
         if (Array.isArray(this.appFilters)) {
@@ -1796,7 +1793,6 @@ export interface IUserSettings {
     cultureCode?: string | null;
     clientProfileId?: string | null;
     serverLocation?: string | null;
-    maxReconnectCount: number;
     maxDatagramChannelCount: number;
     tunnelClientCountry: boolean;
     appFilters?: string[] | null;

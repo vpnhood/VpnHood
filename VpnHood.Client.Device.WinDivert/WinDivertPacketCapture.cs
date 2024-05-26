@@ -95,8 +95,11 @@ public class WinDivertPacketCapture : IPacketCapture
 
     public void StartCapture()
     {
+        if (_disposed)
+            throw new ObjectDisposedException(VhLogger.FormatType(this));
+
         if (Started)
-            throw new InvalidOperationException("_device has been already started!");
+            throw new InvalidOperationException("PacketCapture has been already started.");
 
         // create include and exclude phrases
         var phraseX = "true";
@@ -143,7 +146,9 @@ public class WinDivertPacketCapture : IPacketCapture
         if (_disposed)
             return;
 
-        StopCapture();
+        if (_device.Started)
+            StopCapture();
+
         _device.Dispose();
         _disposed = true;
     }

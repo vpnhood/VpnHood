@@ -1,4 +1,5 @@
 ﻿using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Settings;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
@@ -25,4 +26,6 @@ public class AppOptions
     public IAppAdService? AdService { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
+    public bool? LogVerbose { get; set; }
+    public bool? LogAnonymous { get; set; }
 }

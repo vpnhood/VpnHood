@@ -85,7 +85,7 @@ public class FileAccessManager : IAccessManager
             Secret = serverConfig.ServerSecretValue,
             Url = serverConfig.ServerTokenUrl,
             CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
-            ServerLocations = serverLocation!=null ? [serverLocation] : null
+            ServerLocations = serverLocation != null ? [serverLocation] : null
         };
 
         // write encrypted server token
@@ -244,6 +244,7 @@ public class FileAccessManager : IAccessManager
     private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
         bool closeSession)
     {
+
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)

@@ -4,6 +4,7 @@
 * Feature: Auto pause and resume when server is not reachable
 * Update: User IncludeIpRanges and ExcludeIpRanges in settings instead of CustomIpRanges
 * Update: Try to fix accesskey when it is not valid by missing the padding characters
+* Update: Countries IP ranges
 * Fix: Some wrong message in disconnect
 
 ### Server

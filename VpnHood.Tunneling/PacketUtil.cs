@@ -72,7 +72,8 @@ public static class PacketUtil
         var tcpPacketOrg = ExtractTcp(ipPacket);
         TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort)
         {
-            Reset = true
+            Reset = true,
+            WindowSize = 0
         };
 
         if (tcpPacketOrg is { Synchronize: true, Acknowledgment: false })

@@ -70,11 +70,29 @@ public class ClientServerTest : TestBase
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.ServerLocation = "uk/london";
-        await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions);
-        await TestHelper.Test_Https();
+        await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
+        Assert.AreEqual("uk/london", client.ServerLocation);
     }
+
+    [TestMethod]
+    public async Task Client_must_update_ServerLocation_from_access_manager()
+    {
+        // Create Server
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
+        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
+        testAccessManager1.ServerLocation = "us/california";
+
+        await using var server1 = await TestHelper.CreateServer(testAccessManager1);
+        
+        // create client
+        var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
+        await using var client = await TestHelper.CreateClient(token1, packetCapture: new TestNullPacketCapture());
+        Assert.AreEqual("us/california", client.ServerLocation);
+    }
+
 
     [TestMethod]
     public async Task TcpChannel()

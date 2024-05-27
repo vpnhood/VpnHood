@@ -35,6 +35,7 @@ public class TestAccessManager : IAccessManager
     public IAccessManager BaseAccessManager { get; }
 
     public bool IsMaintenanceMode => _httpAccessManager.IsMaintenanceMode;
+    public string ServerLocation { get; set; }
 
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
@@ -59,9 +60,11 @@ public class TestAccessManager : IAccessManager
         return _httpAccessManager.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
-    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        return _httpAccessManager.Session_Create(sessionRequestEx);
+        var ret = await _httpAccessManager.Session_Create(sessionRequestEx);
+        ret.ServerLocation = ServerLocation;
+        return ret;
     }
 
     public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)

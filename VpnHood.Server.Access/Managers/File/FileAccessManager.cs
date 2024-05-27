@@ -189,6 +189,7 @@ public class FileAccessManager : IAccessManager
             };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
+        ret.ServerLocation = _serverToken.ServerLocations?.FirstOrDefault();
 
         // update accesskey
         if (ServerConfig.ReplyAccessKey)

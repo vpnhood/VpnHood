@@ -84,7 +84,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
-    public string? ServerLocation { get; }
+    public string? ServerLocation { get; private set; }
 
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
@@ -701,6 +701,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;
+            ServerLocation = sessionResponse.ServerLocation ?? ServerLocation;
             if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address, sessionResponse.UdpPort.Value);
 

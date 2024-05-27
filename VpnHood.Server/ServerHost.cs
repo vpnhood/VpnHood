@@ -581,7 +581,8 @@ internal class ServerHost : IAsyncDisposable, IJob
             AccessKey = sessionResponse.AccessKey,
             DnsServers = DnsServers,
             IsAdRequired = sessionResponse.IsAdRequired,
-            AdRequirement = sessionResponse.AdRequirement
+            AdRequirement = sessionResponse.AdRequirement,
+            ServerLocation = sessionResponse.ServerLocation
         };
         await StreamUtil.WriteJsonAsync(clientStream.Stream, helloResponse, cancellationToken);
         await clientStream.DisposeAsync();

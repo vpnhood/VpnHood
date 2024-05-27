@@ -224,7 +224,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? _versionCheckResult.PublishInfo
                     : null,
                 ServerLocationInfo = UserSettings.ServerLocation is null 
-                    ? CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.IsSameAsGlobalAuto)
+                    ? CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.IsDefault)
                     : CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)
             };
 
@@ -562,7 +562,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // set ServerLocation to null if the item is SameAsGlobalAuto
         state = State; //refresh state
-        if (UserSettings.ServerLocation != null && (state.ServerLocationInfo is null || state.ServerLocationInfo.IsSameAsGlobalAuto))
+        if (UserSettings.ServerLocation != null && (state.ServerLocationInfo is null || state.ServerLocationInfo.IsDefault))
             UserSettings.ServerLocation = null;
 
         // sync culture to app settings

@@ -5,7 +5,7 @@ namespace VpnHood.Client.App.ClientProfiles;
 public class ClientServerLocationInfo : ServerLocationInfo
 {
     public required bool IsNestedCountry { get; init; }
-    public required bool IsSameAsGlobalAuto { get; init; }
+    public required bool IsDefault { get; init; }
 
     public static ClientServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
     {
@@ -38,7 +38,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
                         CountryCode = locationInfo.CountryCode,
                         RegionName = "*",
                         IsNestedCountry = false,
-                        IsSameAsGlobalAuto = countryCount.Count == 1
+                        IsDefault = countryCount.Count == 1
                     });
                 seenCountries.Add(countryCode);
             }
@@ -48,7 +48,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 CountryCode = locationInfo.CountryCode,
                 RegionName = locationInfo.RegionName,
                 IsNestedCountry = isMultipleCountry,
-                IsSameAsGlobalAuto = countryCount.Count == 1 && !isMultipleCountry
+                IsDefault = countryCount.Count == 1 && !isMultipleCountry
             });
         }
 
@@ -59,7 +59,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 CountryCode = Auto.CountryCode,
                 RegionName = Auto.RegionName,
                 IsNestedCountry = false,
-                IsSameAsGlobalAuto = true
+                IsDefault = true
             });
 
         results.Sort();

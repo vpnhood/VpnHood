@@ -15,6 +15,15 @@ public class TestAccessManager : IAccessManager
     private readonly object _lockeObject = new();
     private readonly HttpAccessManager _httpAccessManager;
     public int SessionGetCounter { get; private set; }
+    public DateTime? LastConfigureTime { get; private set; }
+    public ServerInfo? LastServerInfo { get; private set; }
+    public ServerStatus? LastServerStatus { get; private set; }
+
+    public TestEmbedIoAccessManager EmbedIoAccessManager { get; }
+    public IAccessManager BaseAccessManager { get; }
+
+    public bool IsMaintenanceMode => _httpAccessManager.IsMaintenanceMode;
+    public string? ServerLocation { get; set; }
 
     public TestAccessManager(IAccessManager baseAccessManager)
     {
@@ -26,16 +35,6 @@ public class TestAccessManager : IAccessManager
             LoggerEventId = GeneralEventId.AccessManager
         };
     }
-
-    public DateTime? LastConfigureTime { get; private set; }
-    public ServerInfo? LastServerInfo { get; private set; }
-    public ServerStatus? LastServerStatus { get; private set; }
-
-    public TestEmbedIoAccessManager EmbedIoAccessManager { get; }
-    public IAccessManager BaseAccessManager { get; }
-
-    public bool IsMaintenanceMode => _httpAccessManager.IsMaintenanceMode;
-    public string ServerLocation { get; set; }
 
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {

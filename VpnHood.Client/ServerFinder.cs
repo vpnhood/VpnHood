@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Common;
@@ -15,32 +14,32 @@ namespace VpnHood.Client;
 
 public class ServerFinder(int maxDegreeOfParallelism = 10)
 {
-    private IDictionary<IPEndPoint, bool>? _hostEndPointStatus;
+    public IReadOnlyDictionary<IPEndPoint, bool>? HostEndPointStatus { get; private set; }
 
     // There are much work to be done here
-    public async Task<IPAddress?> FindBestServerAsync(ServerToken serverToken, ISocketFactory socketFactory, CancellationToken cancellationToken)
+    public async Task<IPEndPoint?> FindBestServerAsync(ServerToken serverToken, ISocketFactory socketFactory, CancellationToken cancellationToken)
     {
         // create a connector for each endpoint
-        var hostEndPoint = serverToken.HostEndPoints ?? [];
-        var connectors = hostEndPoint.Select(x =>
+        var hostEndPoints = serverToken.HostEndPoints ?? [];
+        var connectors = hostEndPoints.Select(tcpEndPoint =>
         {
             var endPointInfo = new ConnectorEndPointInfo
             {
                 CertificateHash = serverToken.CertificateHash,
                 HostName = serverToken.HostName,
-                TcpEndPoint = serverToken.HostEndPoints![0] //todo
+                TcpEndPoint = tcpEndPoint
             };
             var connector = new ConnectorService(endPointInfo, socketFactory, TimeSpan.FromSeconds(10), false);
             connector.Init(0, TimeSpan.FromSeconds(10), serverToken.Secret, TimeSpan.FromSeconds(10));
             return connector;
         });
 
-        _hostEndPointStatus = await VerifyServersStatus(connectors, cancellationToken);
-
-        throw new NotImplementedException();
+        // find endpoint status
+        HostEndPointStatus = await VerifyServersStatus(connectors, cancellationToken);
+        return HostEndPointStatus.FirstOrDefault(x=>x.Value).Key; //todo check if it is null
     }
 
-    private async Task<IDictionary<IPEndPoint, bool>> VerifyServersStatus(IEnumerable<ConnectorService> connectors,
+    private async Task<IReadOnlyDictionary<IPEndPoint, bool>> VerifyServersStatus(IEnumerable<ConnectorService> connectors,
         CancellationToken cancellationToken)
     {
         var hostEndPointStatus = new ConcurrentDictionary<IPEndPoint, bool>();
@@ -62,6 +61,7 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
         }
         catch (OperationCanceledException)
         {
+            // it means a server has been found
         }
 
         return hostEndPointStatus;
@@ -85,11 +85,11 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
 
             return true;
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             throw;
         }
-        catch (SessionException ex)
+        catch (SessionException)
         {
             throw;
         }

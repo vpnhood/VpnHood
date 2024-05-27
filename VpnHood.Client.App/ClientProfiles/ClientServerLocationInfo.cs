@@ -5,16 +5,7 @@ namespace VpnHood.Client.App.ClientProfiles;
 public class ClientServerLocationInfo : ServerLocationInfo
 {
     public required bool IsNestedCountry { get; init; }
-
-    private static ClientServerLocationInfo FromBase(ServerLocationInfo locationInfo, bool isNestedCountry)
-    {
-        return new ClientServerLocationInfo
-        {
-            CountryCode = locationInfo.CountryCode,
-            RegionName = locationInfo.RegionName,
-            IsNestedCountry = isNestedCountry
-        };
-    }
+    public required bool IsSameAsGlobalAuto { get; init; }
 
     public static ClientServerLocationInfo[] AddCategoryGaps(string[]? serverLocations)
     {
@@ -35,28 +26,41 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var seenCountries = new HashSet<string>();
         foreach (var locationInfo in locationInfos)
         {
-            var country = locationInfo.CountryCode;
+            var countryCode = locationInfo.CountryCode;
 
             // Add wildcard selector for country if it has multiple occurrences
-            var isMultipleCountry = countryCount[country] > 1;
-            if (!seenCountries.Contains(country))
+            var isMultipleCountry = countryCount[countryCode] > 1;
+            if (!seenCountries.Contains(countryCode))
             {
                 if (isMultipleCountry)
                     results.Add(new ClientServerLocationInfo
                     {
                         CountryCode = locationInfo.CountryCode,
                         RegionName = "*",
-                        IsNestedCountry = false
+                        IsNestedCountry = false,
+                        IsSameAsGlobalAuto = countryCount.Count == 1
                     });
-                seenCountries.Add(country);
+                seenCountries.Add(countryCode);
             }
 
-            results.Add(FromBase(locationInfo, isMultipleCountry));
+            results.Add(new ClientServerLocationInfo
+            {
+                CountryCode = locationInfo.CountryCode,
+                RegionName = locationInfo.RegionName,
+                IsNestedCountry = isMultipleCountry,
+                IsSameAsGlobalAuto = countryCount.Count == 1 && !isMultipleCountry
+            });
         }
 
         // Add auto if there is no item or if there are multiple countries
-        if (seenCountries.Count > 1)
-            results.Insert(0, FromBase(Auto, false));
+        if (countryCount.Count > 1)
+            results.Insert(0, new ClientServerLocationInfo
+            {
+                CountryCode = Auto.CountryCode,
+                RegionName = Auto.RegionName,
+                IsNestedCountry = false,
+                IsSameAsGlobalAuto = true
+            });
 
         results.Sort();
         var distinctResults = results.Distinct().ToArray();

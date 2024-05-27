@@ -54,7 +54,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VersionCheckResult? _versionCheckResult;
     private VpnHoodClient? _client;
     private readonly bool? _logVerbose;
-    private readonly bool? _logAnonumous;
+    private readonly bool? _logAnonymous;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
@@ -92,7 +92,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         StorageFolderPath = options.StorageFolderPath ??
                             throw new ArgumentNullException(nameof(options.StorageFolderPath));
         Settings = AppSettings.Load(Path.Combine(StorageFolderPath, FileNameSettings));
-        Settings.Saved += Settings_Saved;
+        Settings.BeforeSave += SettingsBeforeSave;
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
@@ -105,7 +105,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _versionCheckResult = VhUtil.JsonDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         _logVerbose = options.LogVerbose;
-        _logAnonumous = options.LogAnonymous;
+        _logAnonymous = options.LogAnonymous;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog));
 
@@ -202,7 +202,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     is AppConnectionState.Connected or AppConnectionState.Connecting
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfile = CurrentClientProfile?.ToBaseInfo(),
-                ServerLocationInfo = CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
                 LastError = _appPersistState.LastErrorMessage,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
@@ -223,7 +222,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PurchaseState = Services.AccountService?.Billing?.PurchaseState,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
                     ? _versionCheckResult.PublishInfo
-                    : null
+                    : null,
+                ServerLocationInfo = UserSettings.ServerLocation is null 
+                    ? CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.IsSameAsGlobalAuto)
+                    : CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)
             };
 
             return appState;
@@ -301,15 +303,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // request features for the first time
         await RequestFeatures(cancellationToken);
 
-        // set default profileId to clientProfileId if not set
+        // set use default clientProfile and serverLocation
         serverLocation ??= UserSettings.ServerLocation;
         clientProfileId ??= UserSettings.ClientProfileId;
         var clientProfile = ClientProfileService.FindById(clientProfileId ?? Guid.Empty) ?? throw new NotExistsException("Could not find any VPN profile to connect.");
-
-        // set default server location
-        var serverLocations = clientProfile.ToInfo().ServerLocationInfos;
-        serverLocation = serverLocations.FirstOrDefault(x => x.ServerLocation == serverLocation)?.ServerLocation ??
-                         serverLocations.FirstOrDefault()?.ServerLocation;
 
         // set current profile only if it has been updated to avoid unnecessary new config time
         if (clientProfile.ClientProfileId != UserSettings.ClientProfileId || serverLocation != UserSettings.ServerLocation)
@@ -334,7 +331,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LogService.Start(new AppLogSettings
             {
                 LogVerbose = _logVerbose ?? Settings.UserSettings.Logging.LogVerbose | diagnose,
-                LogAnonymous = _logAnonumous ?? Settings.UserSettings.Logging.LogAnonymous,
+                LogAnonymous = _logAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
                 LogToConsole = UserSettings.Logging.LogToConsole,
                 LogToFile = UserSettings.Logging.LogToFile | diagnose
             });
@@ -534,19 +531,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // set default culture
         var firstSelected = Services.AppCultureService.SelectedCultures.FirstOrDefault();
         CultureInfo.CurrentUICulture = (firstSelected != null) ? new CultureInfo(firstSelected) : SystemUiCulture;
-        CultureInfo.DefaultThreadCurrentUICulture =
-            new CultureInfo(Services.AppCultureService.SelectedCultures.FirstOrDefault() ?? "en");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
 
         // sync UserSettings from the System App Settings
         UserSettings.CultureCode = firstSelected?.Split("-").FirstOrDefault();
     }
 
-    private void Settings_Saved(object sender, EventArgs e)
+    private void SettingsBeforeSave(object sender, EventArgs e)
     {
+        var state = State;
         if (_client != null)
         {
-            var state = State;
             var client = _client; // it may get null
             client.UseUdpChannel = UserSettings.UseUdpChannel;
             client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
@@ -565,9 +560,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         //lets refresh clientProfile
         _currentClientProfile = null;
 
+        // set ServerLocation to null if the item is SameAsGlobalAuto
+        state = State; //refresh state
+        if (UserSettings.ServerLocation != null && (state.ServerLocationInfo is null || state.ServerLocationInfo.IsSameAsGlobalAuto))
+            UserSettings.ServerLocation = null;
+
         // sync culture to app settings
         Services.AppCultureService.SelectedCultures =
             UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+
         InitCulture();
     }
 

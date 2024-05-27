@@ -97,14 +97,25 @@ public class ClientAppTest : TestBase
     [TestMethod]
     public async Task ClientProfiles_default_ServerLocation()
     {
-        await using var app1 = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
 
         // test two region in a same country
         var token = CreateToken();
         token.ServerToken.ServerLocations = ["us/regin2", "us/california"];
-        var clientProfile = app1.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        app1.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
-        Assert.IsNull(app1.State.ServerLocationInfo?.ServerLocation);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        app.UserSettings.ServerLocation = "us/*";
+        app.Settings.Save();
+        Assert.AreEqual("us/*", app.State.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual(null, app.UserSettings.ServerLocation);
+
+        // test three regin
+        token.ServerToken.ServerLocations = ["us/regin2", "us/california", "fr/paris"];
+        clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        app.Settings.Save();
+        Assert.AreEqual("*/*", app.State.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual(null, app.UserSettings.ServerLocation);
     }
 
 
@@ -123,7 +134,9 @@ public class ClientAppTest : TestBase
         Assert.AreEqual("us/*", serverLocations[i++]);
         Assert.AreEqual("us/california", serverLocations[i++]);
         Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
+        Assert.IsTrue(clientProfileInfo.ServerLocationInfos[0].IsSameAsGlobalAuto);
         Assert.IsTrue(clientProfileInfo.ServerLocationInfos[1].IsNestedCountry);
+        Assert.IsFalse(clientProfileInfo.ServerLocationInfos[1].IsSameAsGlobalAuto);
         _ = i;
 
         // test multiple countries
@@ -137,6 +150,8 @@ public class ClientAppTest : TestBase
         Assert.AreEqual("uk/*", serverLocations[i++]);
         Assert.AreEqual("us/*", serverLocations[i++]);
         Assert.AreEqual("us/california", serverLocations[i++]);
+        Assert.IsFalse(clientProfileInfo.ServerLocationInfos[0].IsNestedCountry);
+        Assert.IsTrue(clientProfileInfo.ServerLocationInfos[0].IsSameAsGlobalAuto);
         _ = i;
 
         // test multiple countries

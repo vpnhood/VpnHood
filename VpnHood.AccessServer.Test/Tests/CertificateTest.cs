@@ -91,6 +91,7 @@ public class CertificateTest
 
         await server.Reload();
         Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
+        Assert.IsFalse(farm.ServerFarm.UseHostName);
 
         // create new certificate
         await farm.CertificateReplace(new CertificateCreateParams
@@ -136,6 +137,8 @@ public class CertificateTest
             return farm.ServerFarm.Certificate!.IsValidated;
         });
 
+        Assert.IsTrue(farm.ServerFarm.UseHostName);
+
         // Create a token and make sure it is valid and there is no CertificateHash
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
@@ -160,6 +163,7 @@ public class CertificateTest
 
         // create farm and server
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        Assert.IsFalse(farm.ServerFarm.UseHostName);
         farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(4);
         farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(4);
         Assert.IsNotNull(farm.ServerFarm.Certificate);
@@ -225,6 +229,7 @@ public class CertificateTest
             await farm.Reload();
             return farm.ServerFarm.Certificate.ValidateInprogress;
         });
+        Assert.IsTrue(farm.ServerFarm.UseHostName);
         Assert.IsTrue(farm.ServerFarm.Certificate.IsValidated);
         Assert.IsNull(farm.ServerFarm.Certificate.ValidateErrorTime);
         Assert.IsFalse(farm.ServerFarm.Certificate.ValidateInprogress);

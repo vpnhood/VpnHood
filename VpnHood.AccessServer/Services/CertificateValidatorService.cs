@@ -89,7 +89,8 @@ public class CertificateValidatorService(
                     certificate.Thumbprint = res.Thumbprint;
                     certificate.ExpirationTime = res.NotAfter;
                     certificate.IssueTime = res.NotBefore;
-                    
+
+                    certificate.ServerFarm!.UseHostName = true;
                     await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
                     break;
                 }

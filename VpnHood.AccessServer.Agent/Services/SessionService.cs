@@ -224,6 +224,7 @@ public class SessionService(
         ret.IsAdRequired = isAdRequired;
         ret.ExtraData = session.ExtraData;
         ret.GaMeasurementId = project.GaMeasurementId;
+        ret.ServerLocation = server.LocationInfo.ServerLocation;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 

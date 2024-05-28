@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Testing.Platform.TestHost;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -21,6 +22,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
+using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
 using Token = VpnHood.Common.Token;
 
@@ -268,15 +270,18 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
-        , string? extraData = null, string? locationPath = null, bool allowRedirect = false)
+        , string? extraData = null, string? locationPath = null, bool allowRedirect = false, ClientInfo? clientInfo = null)
     {
         var rand = new Random();
+        if (clientInfo != null && clientId != null)
+            throw new InvalidOperationException("Could not set both clientInfo & clientId parameters at the same time.");
 
-        var clientInfo = new ClientInfo
+        clientInfo ??= new ClientInfo
         {
             ClientId = clientId ?? Guid.NewGuid(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
-            UserAgent = "agent"
+            UserAgent = "agent",
+            ProtocolVersion = 0
         };
 
         var accessKey = await AccessTokensClient.GetAccessKeyAsync(accessToken.ProjectId, accessToken.AccessTokenId);

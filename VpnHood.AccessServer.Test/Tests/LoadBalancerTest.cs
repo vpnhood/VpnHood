@@ -113,7 +113,8 @@ public class LoadBalancerTest
         // create sessions
         for (var i = 0; i < 6; i++)
         {
-            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, locationPath: "10");
+            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, serverLocation: "10");
+            Assert.AreEqual(sessionDom.SessionResponseEx.ServerLocation, "10/0");
 
             // find the server that create the session
             var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);

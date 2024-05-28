@@ -217,9 +217,16 @@ internal static class TestHelper
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null)
+    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null, 
+        string? serverLocation = null)
     {
         storagePath ??= CreateAccessManagerWorkingDir();
+        if (!string.IsNullOrEmpty(serverLocation))
+        {
+            Directory.CreateDirectory(storagePath);
+            File.WriteAllText(Path.Combine(storagePath, "server_location"), serverLocation);
+        }
+
         options ??= CreateFileAccessManagerOptions();
         return new FileAccessManager(storagePath, options);
     }

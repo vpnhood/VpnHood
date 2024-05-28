@@ -1870,7 +1870,8 @@ export class AppState implements IAppState {
     connectionState!: AppConnectionState;
     lastError?: string | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    serverLocationInfo?: ClientServerLocationInfo | null;
+    clientServerLocationInfo?: ClientServerLocationInfo | null;
+    serverLocationInfo?: ServerLocationInfo | null;
     isIdle!: boolean;
     logExists!: boolean;
     hasDiagnoseStarted!: boolean;
@@ -1916,7 +1917,8 @@ export class AppState implements IAppState {
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
             this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
-            this.serverLocationInfo = _data["serverLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
+            this.clientServerLocationInfo = _data["clientServerLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["clientServerLocationInfo"]) : <any>null;
+            this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
             this.isIdle = _data["isIdle"] !== undefined ? _data["isIdle"] : <any>null;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : <any>null;
             this.hasDiagnoseStarted = _data["hasDiagnoseStarted"] !== undefined ? _data["hasDiagnoseStarted"] : <any>null;
@@ -1955,6 +1957,7 @@ export class AppState implements IAppState {
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
         data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
+        data["clientServerLocationInfo"] = this.clientServerLocationInfo ? this.clientServerLocationInfo.toJSON() : <any>null;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
         data["isIdle"] = this.isIdle !== undefined ? this.isIdle : <any>null;
         data["logExists"] = this.logExists !== undefined ? this.logExists : <any>null;
@@ -1987,7 +1990,8 @@ export interface IAppState {
     connectionState: AppConnectionState;
     lastError?: string | null;
     clientProfile?: ClientProfileBaseInfo | null;
-    serverLocationInfo?: ClientServerLocationInfo | null;
+    clientServerLocationInfo?: ClientServerLocationInfo | null;
+    serverLocationInfo?: ServerLocationInfo | null;
     isIdle: boolean;
     logExists: boolean;
     hasDiagnoseStarted: boolean;
@@ -2115,6 +2119,7 @@ export interface IServerLocationInfo {
 
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
     isNestedCountry!: boolean;
+    isDefault!: boolean;
 
     constructor(data?: IClientServerLocationInfo) {
         super(data);
@@ -2124,6 +2129,7 @@ export class ClientServerLocationInfo extends ServerLocationInfo implements ICli
         super.init(_data);
         if (_data) {
             this.isNestedCountry = _data["isNestedCountry"] !== undefined ? _data["isNestedCountry"] : <any>null;
+            this.isDefault = _data["isDefault"] !== undefined ? _data["isDefault"] : <any>null;
         }
     }
 
@@ -2137,6 +2143,7 @@ export class ClientServerLocationInfo extends ServerLocationInfo implements ICli
     override toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["isNestedCountry"] = this.isNestedCountry !== undefined ? this.isNestedCountry : <any>null;
+        data["isDefault"] = this.isDefault !== undefined ? this.isDefault : <any>null;
         super.toJSON(data);
         return data;
     }
@@ -2144,6 +2151,7 @@ export class ClientServerLocationInfo extends ServerLocationInfo implements ICli
 
 export interface IClientServerLocationInfo extends IServerLocationInfo {
     isNestedCountry: boolean;
+    isDefault: boolean;
 }
 
 export class SessionStatus implements ISessionStatus {

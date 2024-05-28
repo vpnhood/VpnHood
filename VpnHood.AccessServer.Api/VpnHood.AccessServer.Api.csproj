@@ -19,7 +19,7 @@
 		<Company>OmegaHood LLC</Company>
 		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
-		<Version>3.0.193.0-alpha</Version>
+		<Version>3.0.194.0</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 

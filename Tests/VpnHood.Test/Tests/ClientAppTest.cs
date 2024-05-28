@@ -106,7 +106,7 @@ public class ClientAppTest : TestBase
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         app.UserSettings.ServerLocation = "us/*";
         app.Settings.Save();
-        Assert.AreEqual("us/*", app.State.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("us/*", app.State.ClientServerLocationInfo?.ServerLocation);
         Assert.AreEqual(null, app.UserSettings.ServerLocation);
 
         // test three regin
@@ -114,7 +114,7 @@ public class ClientAppTest : TestBase
         clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         app.Settings.Save();
-        Assert.AreEqual("*/*", app.State.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("*/*", app.State.ClientServerLocationInfo?.ServerLocation);
         Assert.AreEqual(null, app.UserSettings.ServerLocation);
     }
 

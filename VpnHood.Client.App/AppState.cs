@@ -12,6 +12,7 @@ public class AppState
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
     public required ClientProfileBaseInfo? ClientProfile { get; init; }
+    public required ClientServerLocationInfo? ClientServerLocationInfo { get; init; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }

@@ -223,10 +223,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastPublishInfo = _versionCheckResult?.VersionStatus is VersionStatus.Deprecated or VersionStatus.Old
                     ? _versionCheckResult.PublishInfo
                     : null,
-                ServerLocationInfo = _client?.Stat.ServerLocationInfo ?? (
-                    UserSettings.ServerLocation is null
+                ServerLocationInfo = _client?.Stat.ServerLocationInfo,
+                ClientServerLocationInfo = UserSettings.ServerLocation is null
                         ? CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.IsDefault)
-                        : CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation))
+                        : CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)
             };
 
             return appState;
@@ -322,7 +322,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // prepare logger
             ClearLastError();
             _activeClientProfileId = clientProfileId;
-            _activeServerLocation = State.ServerLocationInfo?.ServerLocation;
+            _activeServerLocation = State.ClientServerLocationInfo?.ServerLocation;
             _isConnecting = true;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
@@ -550,7 +550,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // check is disconnect required
             var disconnectRequired =
                 (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
-                (state.CanDisconnect && _activeServerLocation != state.ServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
+                (state.CanDisconnect && _activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
                 (state.CanDisconnect && UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
 
             // disconnect

@@ -37,7 +37,7 @@ public class ClientServerTest : TestBase
         await using var server2 = await TestHelper.CreateServer(testAccessManager2);
 
         // redirect server1 to server2
-        testAccessManager1.EmbedIoAccessManager.RedirectHostEndPoint = serverEndPoint2;
+        testAccessManager1.RedirectHostEndPoint = serverEndPoint2;
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
@@ -51,20 +51,22 @@ public class ClientServerTest : TestBase
     public async Task Redirect_Server_By_ServerLocation()
     {
         // Create Server 1
-        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
+        var serverEndPoint1 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint1]);
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1, serverLocation: "us/california");
         using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
         await using var server1 = await TestHelper.CreateServer(testAccessManager1);
 
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint2]);
-        using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath);
+        using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions2, fileAccessManager1.StoragePath, serverLocation: "uk/london");
         using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
         await using var server2 = await TestHelper.CreateServer(testAccessManager2);
 
         // redirect server1 to server2
-        testAccessManager1.EmbedIoAccessManager.ServerLocations.Add("uk/london", serverEndPoint2);
+        testAccessManager1.ServerLocations.Add("us/california", serverEndPoint1);
+        testAccessManager1.ServerLocations.Add("uk/london", serverEndPoint2);
 
         // Create Client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
@@ -73,7 +75,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
-        Assert.AreEqual("uk/london", client.ServerLocation);
+        Assert.AreEqual("uk/london", client.Stat.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -81,16 +83,15 @@ public class ClientServerTest : TestBase
     {
         // Create Server
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
+        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1, serverLocation: "us/california");
         using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
-        testAccessManager1.ServerLocation = "us/california";
 
         await using var server1 = await TestHelper.CreateServer(testAccessManager1);
         
         // create client
         var token1 = TestHelper.CreateAccessToken(fileAccessManager1);
         await using var client = await TestHelper.CreateClient(token1, packetCapture: new TestNullPacketCapture());
-        Assert.AreEqual("us/california", client.ServerLocation);
+        Assert.AreEqual("us/california", client.Stat.ServerLocationInfo?.ServerLocation);
     }
 
 

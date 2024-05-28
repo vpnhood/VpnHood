@@ -1,5 +1,6 @@
 ﻿using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Common;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client.App;
@@ -11,7 +12,7 @@ public class AppState
     public required AppConnectionState ConnectionState { get; init; }
     public required string? LastError { get; init; }
     public required ClientProfileBaseInfo? ClientProfile { get; init; }
-    public required ClientServerLocationInfo? ServerLocationInfo { get; init; }
+    public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsIdle { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseStarted { get; init; }

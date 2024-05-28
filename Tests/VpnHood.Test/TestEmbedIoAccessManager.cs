@@ -41,9 +41,7 @@ public class TestEmbedIoAccessManager : IDisposable
     }
 
     public Uri BaseUri { get; }
-    public IPEndPoint? RedirectHostEndPoint { get; set; }
     public HttpException? HttpException { get; set; }
-    public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
 
     public void Dispose()
     {
@@ -119,28 +117,6 @@ public class TestEmbedIoAccessManager : IDisposable
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
-
-            if (!sessionRequestEx.AllowRedirect)
-                return res;
-            
-            if (embedIoAccessManager.RedirectHostEndPoint != null &&
-                !sessionRequestEx.HostEndPoint.Equals(embedIoAccessManager.RedirectHostEndPoint))
-            {
-                res.RedirectHostEndPoint = embedIoAccessManager.RedirectHostEndPoint;
-                res.ErrorCode = SessionErrorCode.RedirectHost;
-            }
-
-            // manage region
-            if (sessionRequestEx.ServerLocation != null)
-            {
-                var redirectEndPoint = embedIoAccessManager.ServerLocations[sessionRequestEx.ServerLocation];
-                if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
-                {
-                    res.RedirectHostEndPoint = embedIoAccessManager.ServerLocations[sessionRequestEx.ServerLocation];
-                    res.ErrorCode = SessionErrorCode.RedirectHost;
-                }
-            }
-
             return res;
         }
 

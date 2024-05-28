@@ -54,6 +54,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ConnectorService? _connectorService;
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
+    private readonly string? _serverLocation;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
 
@@ -84,7 +85,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
-    public string? ServerLocation { get; private set; }
 
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
@@ -124,7 +124,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IncludeLocalNetwork = options.IncludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
-        ServerLocation = options.ServerLocation;
+        _serverLocation = options.ServerLocation;
 
         // NAT
         Nat = new Nat(true);
@@ -634,7 +634,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
-                ServerLocation = ServerLocation,
+                ServerLocation = _serverLocation,
                 AllowRedirect = allowRedirect
             };
 
@@ -701,7 +701,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
             IsIpV6Supported = sessionResponse.IsIpV6Supported;
-            ServerLocation = sessionResponse.ServerLocation ?? ServerLocation;
+            Stat.ServerLocationInfo = sessionResponse.ServerLocation != null ? ServerLocationInfo.Parse(sessionResponse.ServerLocation) : null;
             if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address, sessionResponse.UdpPort.Value);
 
@@ -1099,6 +1099,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public bool IsUdpChannelSupported => _client.HostUdpEndPoint != null;
         public bool IsWaitingForAd => _client._isWaitingForAd;
         public bool IsDnsServersAccepted { get; internal set; }
+        public ServerLocationInfo? ServerLocationInfo{ get; internal set; }
 
         internal ClientStat(VpnHoodClient vpnHoodClient)
         {

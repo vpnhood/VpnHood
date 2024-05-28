@@ -23,7 +23,9 @@ public class TestAccessManager : IAccessManager
     public IAccessManager BaseAccessManager { get; }
 
     public bool IsMaintenanceMode => _httpAccessManager.IsMaintenanceMode;
-    public string? ServerLocation { get; set; }
+    public IPEndPoint? RedirectHostEndPoint { get; set; }
+    public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
+
 
     public TestAccessManager(IAccessManager baseAccessManager)
     {
@@ -62,7 +64,28 @@ public class TestAccessManager : IAccessManager
     public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var ret = await _httpAccessManager.Session_Create(sessionRequestEx);
-        ret.ServerLocation = ServerLocation;
+
+        if (!sessionRequestEx.AllowRedirect)
+            return ret;
+
+        if (RedirectHostEndPoint != null &&
+            !sessionRequestEx.HostEndPoint.Equals(RedirectHostEndPoint))
+        {
+            ret.RedirectHostEndPoint = RedirectHostEndPoint;
+            ret.ErrorCode = SessionErrorCode.RedirectHost;
+        }
+
+        // manage region
+        if (sessionRequestEx.ServerLocation != null)
+        {
+            var redirectEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
+            if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
+            {
+                ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
+                ret.ErrorCode = SessionErrorCode.RedirectHost;
+            }
+        }
+        
         return ret;
     }
 

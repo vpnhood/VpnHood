@@ -20,19 +20,19 @@
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
-		<Version>3.0.174</Version>
+		<Version>3.0.193</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Certes" Version="3.0.4" />
 		<PackageReference Include="GrayMint.Authorization" Version="3.0.110" />
-		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.199" />
-		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.199" />
-		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.199" />
+		<PackageReference Include="GrayMint.Common.AspNetCore" Version="2.0.203" />
+		<PackageReference Include="GrayMint.Common.EntityFrameworkCore" Version="2.0.203" />
+		<PackageReference Include="GrayMint.Common.Swagger" Version="2.0.203" />
 		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.20.1" />
 		<PackageReference Include="SSH.NET" Version="2024.0.0" />
-		<PackageReference Include="VpnHood.Server.Access" Version="4.4.493-prerelease" />
+		<PackageReference Include="VpnHood.Server.Access" Version="4.5.519-prerelease" />
 	</ItemGroup>
 
 	<ItemGroup>

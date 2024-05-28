@@ -41,51 +41,53 @@ public class AccessTokenTest
         //-----------
         var expirationTime1 = DateTime.Today.AddDays(1);
         expirationTime1 = expirationTime1.AddMilliseconds(-expirationTime1.Millisecond);
-        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
+        var createParam1 = new AccessTokenCreateParams
         {
             ServerFarmId = farm1.ServerFarmId,
-            AccessTokenName = "tokenName1",
-            Url = "https://foo.com/accessKey1",
+            AccessTokenName = Guid.NewGuid().ToString(),
+            Description = Guid.NewGuid().ToString(),
             MaxTraffic = 11,
             MaxDevice = 12,
             Lifetime = 13,
             ExpirationTime = expirationTime1,
-            IsEnabled = true,
-        });
+            IsEnabled = true
+        };
+        var accessTokenDom1 = await farm1.CreateAccessToken(createParam1);
         Assert.AreNotEqual(0, accessTokenDom1.AccessToken.SupportCode);
-        Assert.AreEqual("tokenName1", accessTokenDom1.AccessToken.AccessTokenName);
+        Assert.AreEqual(createParam1.AccessTokenName, accessTokenDom1.AccessToken.AccessTokenName);
         Assert.AreEqual(farm1.ServerFarmId, accessTokenDom1.AccessToken.ServerFarmId);
         Assert.IsNull(accessTokenDom1.AccessToken.FirstUsedTime);
         Assert.AreEqual(expirationTime1, accessTokenDom1.AccessToken.ExpirationTime);
-        Assert.AreEqual(11, accessTokenDom1.AccessToken.MaxTraffic);
-        Assert.AreEqual(12, accessTokenDom1.AccessToken.MaxDevice);
-        Assert.AreEqual(13, accessTokenDom1.AccessToken.Lifetime);
-        Assert.AreEqual("https://foo.com/accessKey1", accessTokenDom1.AccessToken.Url);
+        Assert.AreEqual(createParam1.MaxTraffic, accessTokenDom1.AccessToken.MaxTraffic);
+        Assert.AreEqual(createParam1.MaxDevice, accessTokenDom1.AccessToken.MaxDevice);
+        Assert.AreEqual(createParam1.Lifetime, accessTokenDom1.AccessToken.Lifetime);
+        Assert.AreEqual(createParam1.Description, accessTokenDom1.AccessToken.Description);
 
         var farm2 = await ServerFarmDom.Create(testApp);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
-        var accessTokenDom2 = await farm2.CreateAccessToken(new AccessTokenCreateParams
+        var createParam2 = new AccessTokenCreateParams
         {
             ServerFarmId = farm2.ServerFarmId,
-            AccessTokenName = "tokenName2",
-            Url = "https://foo.com/accessKey2",
+            AccessTokenName = Guid.NewGuid().ToString(),
+            Description = Guid.NewGuid().ToString(),
             MaxTraffic = 21,
             MaxDevice = 22,
             Lifetime = 23,
             ExpirationTime = expirationTime2,
             IsPublic = true,
-            IsEnabled = true,
-        });
+            IsEnabled = true
+        };
+        var accessTokenDom2 = await farm2.CreateAccessToken(createParam2);
         Assert.AreNotEqual(0, accessTokenDom2.AccessToken.SupportCode);
-        Assert.AreEqual("tokenName2", accessTokenDom2.AccessToken.AccessTokenName);
+        Assert.AreEqual(createParam2.AccessTokenName, accessTokenDom2.AccessToken.AccessTokenName);
         Assert.AreEqual(farm2.ServerFarmId, accessTokenDom2.AccessToken.ServerFarmId);
         Assert.IsNull(accessTokenDom2.AccessToken.FirstUsedTime);
         Assert.IsNull(accessTokenDom2.AccessToken.LastUsedTime);
         Assert.AreEqual(expirationTime2, accessTokenDom2.AccessToken.ExpirationTime);
-        Assert.AreEqual(21, accessTokenDom2.AccessToken.MaxTraffic);
-        Assert.AreEqual(22, accessTokenDom2.AccessToken.MaxDevice);
-        Assert.AreEqual(23, accessTokenDom2.AccessToken.Lifetime);
-        Assert.AreEqual("https://foo.com/accessKey2", accessTokenDom2.AccessToken.Url);
+        Assert.AreEqual(createParam2.MaxTraffic, accessTokenDom2.AccessToken.MaxTraffic);
+        Assert.AreEqual(createParam2.MaxDevice, accessTokenDom2.AccessToken.MaxDevice);
+        Assert.AreEqual(createParam2.Lifetime, accessTokenDom2.AccessToken.Lifetime);
+        Assert.AreEqual(createParam2.Description, accessTokenDom2.AccessToken.Description);
         Assert.IsTrue(accessTokenDom2.AccessToken.IsEnabled);
 
         //-----------
@@ -102,7 +104,7 @@ public class AccessTokenTest
         Assert.AreEqual(accessTokenDom2.AccessToken.Lifetime, accessToken2B.Lifetime);
         Assert.AreEqual(accessTokenDom2.AccessToken.MaxDevice, accessToken2B.MaxDevice);
         Assert.AreEqual(accessTokenDom2.AccessToken.SupportCode, accessToken2B.SupportCode);
-        Assert.AreEqual(accessTokenDom2.AccessToken.Url, accessToken2B.Url);
+        Assert.AreEqual(accessTokenDom2.AccessToken.Description, accessToken2B.Description);
         Assert.IsTrue(accessTokenDom2.AccessToken.IsEnabled);
 
         //-----------
@@ -116,7 +118,7 @@ public class AccessTokenTest
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },
             MaxTraffic = new PatchOfLong { Value = 805004 },
-            Url = new PatchOfString { Value = "http:" + $"//www.sss.com/new{Guid.NewGuid()}.com" },
+            Description = new PatchOfString { Value = "http:" + $"//www.sss.com/new{Guid.NewGuid()}.com" },
             IsEnabled = new PatchOfBoolean { Value = false }
         };
 
@@ -133,7 +135,7 @@ public class AccessTokenTest
         Assert.AreEqual(updateParams.Lifetime.Value, accessToken2B.Lifetime);
         Assert.AreEqual(updateParams.MaxDevice.Value, accessToken2B.MaxDevice);
         Assert.AreEqual(accessTokenDom2.AccessToken.SupportCode, accessToken2B.SupportCode);
-        Assert.AreEqual(updateParams.Url.Value, accessToken2B.Url);
+        Assert.AreEqual(updateParams.Description.Value, accessToken2B.Description);
         Assert.AreEqual(updateParams.IsEnabled.Value, accessToken2B.IsEnabled);
 
         //-----------
@@ -191,7 +193,6 @@ public class AccessTokenTest
     {
         using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
         {
-            UseHostName = false,
             ServerFarmName = Guid.NewGuid().ToString()
         }, serverCount: 0);
 
@@ -200,11 +201,48 @@ public class AccessTokenTest
     }
 
     [TestMethod]
+    public async Task GetAccessKey_fail_if_use_hostname_with_multiple_port()
+    {
+        // create farm with UseHostName
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        {
+            ServerFarmName = Guid.NewGuid().ToString()
+        }, serverCount: 0);
+        
+        // add different port
+        var serverDom = await farm.AddNewServer();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf
+            {
+                Value =[await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPointIp6(4443))]
+            }
+        });
+
+        serverDom = await farm.AddNewServer();
+        await serverDom.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf
+            {
+                Value = [await farm.TestApp.NewAccessPoint(await farm.TestApp.NewEndPoint())]
+            }
+        });
+
+        var serverFarmData = await farm.Update(new ServerFarmUpdateParams
+        {
+            UseHostName = new PatchOfBoolean { Value = true }
+        });
+        
+        Assert.IsNull(serverFarmData.ServerFarm.TokenUrl);
+        var accessTokenDom = await farm.CreateAccessToken();
+        await VhTestUtil.AssertApiException<InvalidOperationException>(accessTokenDom.GetAccessKey());
+    }
+
+    [TestMethod]
     public async Task GetAccessKey_ForIp()
     {
         using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
         {
-            UseHostName = false,
             ServerFarmName = Guid.NewGuid().ToString()
         });
 
@@ -221,13 +259,43 @@ public class AccessTokenTest
     }
 
     [TestMethod]
+    public async Task GetAccessKey_With_ServerLocations()
+    {
+        // create farm
+        using var farm = await ServerFarmDom.Create(createParams: new ServerFarmCreateParams
+        {
+            ServerFarmName = Guid.NewGuid().ToString()
+        }, serverCount: 0);
+
+        // create servers
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.1.0.3"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("11.1.0.4"));
+        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("11.2.0.5"));
+
+        var accessToken = await farm.CreateAccessToken();
+        var token = await accessToken.GetToken();
+        Assert.IsNotNull(token.ServerToken.ServerLocations);
+        Assert.AreEqual(4, token.ServerToken.ServerLocations.Length);
+        Assert.AreEqual("10/0", token.ServerToken.ServerLocations[0]);
+        Assert.AreEqual("10/1", token.ServerToken.ServerLocations[1]);
+        Assert.AreEqual("11/1", token.ServerToken.ServerLocations[2]);
+        Assert.AreEqual("11/2", token.ServerToken.ServerLocations[3]);
+    }
+
+    [TestMethod]
     public async Task GetAccessKey_ForDomain()
     {
         var testApp = await TestApp.Create();
         using var farm = await ServerFarmDom.Create(testApp, createParams: new ServerFarmCreateParams
         {
-            UseHostName = true,
             ServerFarmName = Guid.NewGuid().ToString()
+        });
+
+        await farm.Update(new ServerFarmUpdateParams
+        {
+            UseHostName = new PatchOfBoolean { Value = true }
         });
 
         var accessToken = await farm.CreateAccessToken();
@@ -365,7 +433,6 @@ public class AccessTokenTest
         {
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
-            Url = "https://foo.com/accessKey1",
             MaxDevice = 12,
             Lifetime = 13,
             ExpirationTime = null,
@@ -381,11 +448,11 @@ public class AccessTokenTest
         await accessTokenDom1.Update(
             new AccessTokenUpdateParams
             {
-                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 },
+                ExpirationTime = new PatchOfNullableDateTime { Value = expirationTime1 }
             });
 
         // add usage to create the new expiration
-        var sessionResponse =  await sessionDom.AddUsage();
+        var sessionResponse = await sessionDom.AddUsage();
         Assert.AreEqual(expirationTime1, sessionResponse.AccessUsage?.ExpirationTime);
     }
 
@@ -400,7 +467,6 @@ public class AccessTokenTest
         {
             ServerFarmId = farm1.ServerFarmId,
             AccessTokenName = "tokenName1",
-            Url = "https://foo.com/accessKey1",
             MaxDevice = 12,
             Lifetime = 13,
             ExpirationTime = null,

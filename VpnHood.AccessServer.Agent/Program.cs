@@ -2,18 +2,24 @@ using System.Text.Json;
 using GrayMint.Authorization.Abstractions;
 using GrayMint.Authorization.Authentications;
 using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.ApplicationLifetime;
 using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.Common.IpLocations;
+using VpnHood.Common.IpLocations.Providers;
 
 namespace VpnHood.AccessServer.Agent;
 
 public class Program
 {
+    public const string LocationProviderServer = "ServerLocationProvider";
+
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -65,12 +71,18 @@ public class Program
                 options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             }, 100);
 
-        builder.Services.AddScoped<VhRepo>();
-        builder.Services.AddScoped<VhAgentRepo>();
-        builder.Services.AddScoped<SessionService>();
-        builder.Services.AddScoped<CacheService>();
-        builder.Services.AddScoped<AgentService>();
-        builder.Services.AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
+
+        builder.Services
+            .AddHttpClient()
+            .AddGrayMintApplicationLifetime<CacheService>()
+            .AddSingleton<CacheRepo>()
+            .AddScoped<VhAgentRepo>()
+            .AddScoped<SessionService>()
+            .AddScoped<CacheService>()
+            .AddScoped<AgentService>()
+            .AddScoped<LoadBalancerService>()
+            .AddKeyedSingleton<IIpLocationProvider>(LocationProviderServer, (_, _) => new IpApiCoLocationProvider("VpnHood-AccessManager"))
+            .AddScoped<IAuthorizationProvider, AgentAuthorizationProvider>();
 
         //---------------------
         // Create App

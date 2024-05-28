@@ -2745,8 +2745,7 @@ namespace VpnHood.AccessServer.Api
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
-                    request_.Method = new System.Net.Http.HttpMethod("PATCH");
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
@@ -4390,7 +4389,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<VpnServer> CreateAsync(System.Guid projectId, ServerCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerData> CreateAsync(System.Guid projectId, ServerCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -4443,7 +4442,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<VpnServer>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ServerData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4569,7 +4568,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<VpnServer> UpdateAsync(System.Guid projectId, System.Guid serverId, ServerUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<ServerData> UpdateAsync(System.Guid projectId, System.Guid serverId, ServerUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -4626,7 +4625,7 @@ namespace VpnHood.AccessServer.Api
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<VpnServer>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ServerData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -7517,17 +7516,16 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
         public System.DateTime? LastUsedTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool IsEnabled { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
-        public bool IsAdRequired { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adRequirement")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AdRequirement AdRequirement { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
@@ -7539,6 +7537,24 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("modifiedTime")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime ModifiedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AdRequirement
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"None")]
+        None = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Flexible")]
+        Flexible = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Required")]
+        Required = 2,
 
     }
 
@@ -7625,17 +7641,19 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
         public System.DateTime? ExpirationTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public string? Url { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public bool? IsEnabled { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
         public bool IsPublic { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
-        public bool IsAdRequired { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adRequirement")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AdRequirement AdRequirement { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
 
     }
 
@@ -7661,14 +7679,14 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
         public PatchOfLong? MaxTraffic { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-        public PatchOfString? Url { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
         public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("isAdRequired")]
-        public PatchOfBoolean? IsAdRequired { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("adRequirement")]
+        public PatchOfAdRequirement? AdRequirement { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public PatchOfString? Description { get; set; } = default!;
 
     }
 
@@ -7724,6 +7742,17 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public bool Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PatchOfAdRequirement
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public AdRequirement Value { get; set; } = default!;
 
     }
 
@@ -7974,6 +8003,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
         public System.Uri? TokenUrl { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("tokenError")]
+        public string? TokenError { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("secret")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public byte[] Secret { get; set; } = default!;
@@ -8094,14 +8126,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverProfileId")]
         public System.Guid? ServerProfileId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("useHostName")]
-        public bool UseHostName { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("tokenUrl")]
         public System.Uri? TokenUrl { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("pushTokenToClient")]
-        public bool PushTokenToClient { get; set; } = default!;
 
     }
 
@@ -8289,6 +8315,16 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerData
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("server")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public VpnServer Server { get; set; } = new VpnServer();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class VpnServer
     {
 
@@ -8306,6 +8342,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("serverFarmName")]
         public string? ServerFarmName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("location")]
+        public Location? Location { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("version")]
         public string? Version { get; set; } = default!;
@@ -8355,6 +8394,36 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<AccessPoint> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<AccessPoint>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Location
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("countryName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CountryName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("countryCode")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string CountryCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("regionName")]
+        public string? RegionName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("regionCode")]
+        public string? RegionCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cityName")]
+        public string? CityName { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cityCode")]
+        public string? CityCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("displayName")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string DisplayName { get; set; } = default!;
 
     }
 
@@ -8498,16 +8567,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("value")]
         public System.Collections.Generic.ICollection<AccessPoint>? Value { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServerData
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("server")]
-        [System.ComponentModel.DataAnnotations.Required]
-        public VpnServer Server { get; set; } = new VpnServer();
 
     }
 
@@ -8761,16 +8820,7 @@ namespace VpnHood.AccessServer.Api
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
-        public PatchOfString2? Name { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PatchOfString2
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("value")]
-        public string? Value { get; set; } = default!;
+        public PatchOfString? Name { get; set; } = default!;
 
     }
 

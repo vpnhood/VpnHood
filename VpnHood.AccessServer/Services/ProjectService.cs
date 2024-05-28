@@ -1,4 +1,5 @@
 ﻿using GrayMint.Authorization.RoleManagement.Abstractions;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
@@ -11,7 +12,7 @@ using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -30,7 +31,7 @@ public class ProjectService(
         using var singleRequest = await AsyncLock.LockAsync($"{ownerUserId}_CreateProject");
         await subscriptionService.AuthorizeCreateProject(ownerUserId);
         var projectId = Guid.NewGuid();
-        var adRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+        var adRewardSecret = Convert.ToBase64String(GmUtil.GenerateKey())
             .Replace("/", "")
             .Replace("+", "")
             .Replace("=", "");
@@ -54,10 +55,11 @@ public class ProjectService(
             UseHostName = false,
             ServerProfileId = serverProfile.ServerProfileId,
             ServerProfile = serverProfile,
-            Secret = VhUtil.GenerateKey(),
+            Secret = GmUtil.GenerateKey(),
             CreatedTime = DateTime.UtcNow,
             TokenJson = null,
             TokenUrl = null,
+            TokenError = null,
             PushTokenToClient = true,
             Servers = []
         };
@@ -73,6 +75,8 @@ public class ProjectService(
             GaMeasurementId = null,
             AdRewardSecret = adRewardSecret,
             LetsEncryptAccount = null,
+            IsDeleted = false,
+            IsEnabled = true,
             ServerProfiles = new HashSet<ServerProfileModel>
             {
                 serverProfile
@@ -90,9 +94,9 @@ public class ProjectService(
                     ServerFarm = serverFarm,
                     AccessTokenName = "Public",
                     SupportCode = 1000,
-                    Secret = VhUtil.GenerateKey(),
+                    Secret = GmUtil.GenerateKey(),
                     IsPublic = true,
-                    IsAdRequired = false,
+                    AdRequirement = AdRequirement.None,
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow,
@@ -102,9 +106,9 @@ public class ProjectService(
                     MaxDevice = 0,
                     MaxTraffic = 0,
                     Lifetime = 0,
-                    Url = null,
                     FirstUsedTime = null,
-                    ServerFarmId = serverFarm.ServerFarmId
+                    ServerFarmId = serverFarm.ServerFarmId,
+                    Description = null
                 },
 
                 new()
@@ -115,10 +119,10 @@ public class ProjectService(
                     ServerFarm = serverFarm,
                     AccessTokenName = "Private 1",
                     IsPublic = false,
-                    IsAdRequired = false,
+                    AdRequirement = AdRequirement.None,
                     SupportCode = 1001,
                     MaxDevice = 5,
-                    Secret = VhUtil.GenerateKey(),
+                    Secret = GmUtil.GenerateKey(),
                     IsEnabled= true,
                     IsDeleted = false,
                     CreatedTime= DateTime.UtcNow,
@@ -128,7 +132,7 @@ public class ProjectService(
                     LastUsedTime = null,
                     MaxTraffic = 0,
                     Lifetime = 0,
-                    Url = null
+                    Description = null
                 }
             }
         };

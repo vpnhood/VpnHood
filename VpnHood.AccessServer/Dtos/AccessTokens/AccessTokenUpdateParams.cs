@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Utils;
+﻿using GrayMint.Common.Utils;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Dtos.AccessTokens;
 public class AccessTokenUpdateParams
@@ -14,8 +15,7 @@ public class AccessTokenUpdateParams
     public Patch<int>? MaxDevice { get; set; }
 
     public Patch<long>? MaxTraffic { get; set; }
-
-    public Patch<string>? Url { get; set; }
     public Patch<bool>? IsEnabled { get; set; }
-    public Patch<bool>? IsAdRequired { get; set; }
+    public Patch<AdRequirement>? AdRequirement { get; set; }
+    public Patch<string>? Description { get; set; }
 }

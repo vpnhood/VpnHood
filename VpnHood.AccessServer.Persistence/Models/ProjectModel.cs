@@ -12,6 +12,8 @@ public class ProjectModel
     public required SubscriptionType SubscriptionType { get; set; }
     public required DateTime CreatedTime { get; set; }
     public required LetsEncryptAccount? LetsEncryptAccount { get; set; }
+    public required bool IsEnabled { get; set; }
+    public required bool IsDeleted { get; set; }
 
     public virtual ICollection<ServerModel>? Servers { get; set; }
     public virtual ICollection<ServerProfileModel>? ServerProfiles { get; set; }

@@ -1,7 +1,7 @@
 ﻿using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Persistence.Models;
 
-namespace VpnHood.AccessServer.Persistence.Views;
+namespace VpnHood.AccessServer.Repos.Views;
 
 public class CertificateView
 {

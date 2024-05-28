@@ -3,8 +3,8 @@ using GrayMint.Common.AspNetCore.Jobs;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Options;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Services.Acme;
 
 namespace VpnHood.AccessServer.Services;
@@ -63,10 +63,9 @@ public class CertificateValidatorService(
             var acmeOrderService = await acmeOrderFactory.CreateOrder(project.LetsEncryptAccount.AccountPem, csr);
             certificate.ValidateToken = acmeOrderService.Token;
             certificate.ValidateKeyAuthorization = acmeOrderService.KeyAuthorization;
-            await vhRepo.SaveChangesAsync();
 
             // wait for farm configuration
-            await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
+            await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
             await serverConfigureService.WaitForFarmConfiguration(certificate.ProjectId, certificate.ServerFarmId, cancellationToken);
 
             // validate order by manager
@@ -91,7 +90,8 @@ public class CertificateValidatorService(
                     certificate.ExpirationTime = res.NotAfter;
                     certificate.IssueTime = res.NotBefore;
 
-                    await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
+                    certificate.ServerFarm!.UseHostName = true;
+                    await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, certificate.ServerFarmId, true);
                     break;
                 }
 

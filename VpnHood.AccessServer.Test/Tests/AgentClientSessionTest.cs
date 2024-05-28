@@ -58,29 +58,38 @@ public class AgentClientSessionTest
     [TestMethod]
     public async Task Push_token_to_client()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = false};
-        using var farm = await ServerFarmDom.Create(createParams: farmOptions);
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z")};
+        using var farm = await ServerFarmDom.Create(createParams: farmOptions, serverCount: 0);
+        await farm.AddNewServer(configure: true, sendStatus: true);
+        await farm.AddNewServer(configure: true, sendStatus: true);
         var accessTokenDom = await farm.CreateAccessToken();
 
         // ------------
-        // Check: with push
+        // Check: all server ready
         // ------------
-        await farm.Update(new ServerFarmUpdateParams { PushTokenToClient = new PatchOfBoolean { Value = true } });
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.AccessKey);
 
         // ------------
-        // Check: without push
+        // Check: a when server is not ready
         // ------------
-        await farm.Update(new ServerFarmUpdateParams { PushTokenToClient = new PatchOfBoolean { Value = false } });
+        var badServer = await farm.AddNewServer();
+        badServer.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode =
+            AccessPointMode.PublicInToken;
+        await badServer.Update(new ServerUpdateParams()
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = badServer.Server.AccessPoints }
+        });
+
         sessionDom = await accessTokenDom.CreateSession();
-        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey);
+        Assert.IsNull(sessionDom.SessionResponseEx.AccessKey, 
+            "Must be null when a server with PublicInToken is not ready.");
     }
 
     [TestMethod]
     public async Task Session_Create_success()
     {
-        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z"), PushTokenToClient = true };
+        var farmOptions = new ServerFarmCreateParams { TokenUrl = new Uri("https://zzz.com/z")};
         using var farm = await ServerFarmDom.Create(createParams: farmOptions);
         var accessTokenDom = await farm.CreateAccessToken(new AccessTokenCreateParams
         {
@@ -116,17 +125,22 @@ public class AgentClientSessionTest
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
+        clientInfo = new ClientInfo
+        {
+            ClientId = clientInfo.ClientId,
+            UserAgent = "userAgent2",
+            ClientVersion = "200.0.0",
+            ProtocolVersion = clientInfo.ProtocolVersion
+        };
+        sessionDom = await accessTokenDom.CreateSession(clientInfo: clientInfo);
         var sessionRequestEx = sessionDom.SessionRequestEx;
         sessionRequestEx.ClientIp = await farm.TestApp.NewIpV4();
-        sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
-        sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
-        await farm.DefaultServer.AgentClient.Session_Create(sessionRequestEx);
         device = await farm.TestApp.DevicesClient.FindByClientIdAsync(farm.TestApp.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
-    private async Task<AccessModel> GetAccessFromSession(SessionDom sessionDom)
+    private static async Task<AccessModel> GetAccessFromSession(SessionDom sessionDom)
     {
         await using var scope = sessionDom.TestApp.WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();

@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System.Globalization;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
@@ -12,6 +13,7 @@ public class AccessTest
     public async Task Foo()
     {
         await Task.Delay(0);
+        Console.WriteLine(new RegionInfo("us").Name);
     }
 
     [TestMethod]

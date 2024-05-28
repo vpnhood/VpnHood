@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Utils;
+using VpnHood.AccessServer.Repos;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -24,35 +24,34 @@ public class ServerConfigureService(
         await agentCacheClient.InvalidateServers(projectId: projectId, serverFarmId: serverFarmId, serverProfileId: serverProfileId);
     }
 
-    public async Task InvalidateServerFarm(Guid projectId, Guid serverFarmId, bool reconfigure)
+    public async Task SaveChangesAndInvalidateServerFarm(Guid projectId, Guid serverFarmId, bool reconfigureServers)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId: serverFarmId, includeCertificate: true, includeServers: true);
         FarmTokenBuilder.UpdateIfChanged(serverFarm);
-        if (reconfigure)
+        if (reconfigureServers)
         {
             foreach (var server in serverFarm.Servers!)
                 server.ConfigCode = Guid.NewGuid();
         }
 
         await vhRepo.SaveChangesAsync();
-        await agentCacheClient.InvalidateServerFarm(serverFarmId: serverFarm.ServerFarmId);
+        await agentCacheClient.InvalidateServerFarm(serverFarmId: serverFarm.ServerFarmId, includeSevers: true);
     }
 
-    public async Task<ServerCache?> InvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
+    public async Task<ServerCache?> SaveChangesAndInvalidateServer(Guid projectId, Guid serverId, bool reconfigure)
     {
         if (reconfigure)
         {
             var server = await vhRepo.ServerGet(projectId, serverId);
-            var serverFarm = await vhRepo.ServerFarmGet(
-                server.ProjectId, serverFarmId: server.ServerFarmId,
-                includeCertificate: true, includeServers: true);
-
-            FarmTokenBuilder.UpdateIfChanged(serverFarm);
             server.ConfigCode = Guid.NewGuid();
+            await SaveChangesAndInvalidateServerFarm(projectId, server.ServerFarmId, false);
+        }
+        else
+        {
             await vhRepo.SaveChangesAsync();
+            await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);
         }
 
-        await agentCacheClient.InvalidateServers(projectId: projectId, serverId: serverId);
         return await agentCacheClient.GetServer(serverId);
     }
 

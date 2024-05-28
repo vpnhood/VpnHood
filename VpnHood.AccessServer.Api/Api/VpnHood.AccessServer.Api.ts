@@ -1503,7 +1503,7 @@ export class ProjectsClient {
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
-            method: "PATCH",
+            method: "GET",
             url: url_,
             headers: {
                 "Accept": "application/json"
@@ -2399,7 +2399,7 @@ export class ServersClient {
 
     }
 
-    create(projectId: string, createParams: ServerCreateParams, cancelToken?: CancelToken): Promise<VpnServer> {
+    create(projectId: string, createParams: ServerCreateParams, cancelToken?: CancelToken): Promise<ServerData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -2430,7 +2430,7 @@ export class ServersClient {
         });
     }
 
-    protected processCreate(response: AxiosResponse): Promise<VpnServer> {
+    protected processCreate(response: AxiosResponse): Promise<ServerData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2444,14 +2444,14 @@ export class ServersClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = VpnServer.fromJS(resultData200);
-            return Promise.resolve<VpnServer>(result200);
+            result200 = ServerData.fromJS(resultData200);
+            return Promise.resolve<ServerData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<VpnServer>(null as any);
+        return Promise.resolve<ServerData>(null as any);
     }
 
     list(projectId: string, search?: string | null | undefined, serverId?: string | null | undefined, serverFarmId?: string | null | undefined, recordIndex?: number | undefined, recordCount?: number | undefined, cancelToken?: CancelToken): Promise<ServerData[]> {
@@ -2526,7 +2526,7 @@ export class ServersClient {
         return Promise.resolve<ServerData[]>(null as any);
     }
 
-    update(projectId: string, serverId: string, updateParams: ServerUpdateParams, cancelToken?: CancelToken): Promise<VpnServer> {
+    update(projectId: string, serverId: string, updateParams: ServerUpdateParams, cancelToken?: CancelToken): Promise<ServerData> {
         let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers/{serverId}";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
@@ -2560,7 +2560,7 @@ export class ServersClient {
         });
     }
 
-    protected processUpdate(response: AxiosResponse): Promise<VpnServer> {
+    protected processUpdate(response: AxiosResponse): Promise<ServerData> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2574,14 +2574,14 @@ export class ServersClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = VpnServer.fromJS(resultData200);
-            return Promise.resolve<VpnServer>(result200);
+            result200 = ServerData.fromJS(resultData200);
+            return Promise.resolve<ServerData>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<VpnServer>(null as any);
+        return Promise.resolve<ServerData>(null as any);
     }
 
     get(projectId: string, serverId: string, cancelToken?: CancelToken): Promise<ServerData> {
@@ -4327,13 +4327,13 @@ export class AccessToken implements IAccessToken {
     maxDevice!: number;
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
-    url?: string | null;
     isPublic!: boolean;
     isEnabled!: boolean;
-    isAdRequired!: boolean;
+    adRequirement!: AdRequirement;
     expirationTime?: Date | null;
     createdTime!: Date;
     modifiedTime!: Date;
+    description?: string | null;
 
     constructor(data?: IAccessToken) {
         if (data) {
@@ -4357,13 +4357,13 @@ export class AccessToken implements IAccessToken {
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.firstUsedTime = _data["firstUsedTime"] ? new Date(_data["firstUsedTime"].toString()) : <any>null;
             this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : <any>null;
-            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
-            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
+            this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.modifiedTime = _data["modifiedTime"] ? new Date(_data["modifiedTime"].toString()) : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -4387,13 +4387,13 @@ export class AccessToken implements IAccessToken {
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["firstUsedTime"] = this.firstUsedTime ? this.firstUsedTime.toISOString() : <any>null;
         data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : <any>null;
-        data["url"] = this.url !== undefined ? this.url : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
-        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
+        data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["modifiedTime"] = this.modifiedTime ? this.modifiedTime.toISOString() : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -4410,13 +4410,19 @@ export interface IAccessToken {
     maxDevice: number;
     firstUsedTime?: Date | null;
     lastUsedTime?: Date | null;
-    url?: string | null;
     isPublic: boolean;
     isEnabled: boolean;
-    isAdRequired: boolean;
+    adRequirement: AdRequirement;
     expirationTime?: Date | null;
     createdTime: Date;
     modifiedTime: Date;
+    description?: string | null;
+}
+
+export enum AdRequirement {
+    None = "None",
+    Flexible = "Flexible",
+    Required = "Required",
 }
 
 export class Device implements IDevice {
@@ -4554,10 +4560,10 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
     lifetime!: number;
     maxDevice!: number;
     expirationTime?: Date | null;
-    url?: string | null;
     isEnabled?: boolean | null;
     isPublic!: boolean;
-    isAdRequired!: boolean;
+    adRequirement!: AdRequirement;
+    description?: string | null;
 
     constructor(data?: IAccessTokenCreateParams) {
         if (data) {
@@ -4578,10 +4584,10 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
             this.lifetime = _data["lifetime"] !== undefined ? _data["lifetime"] : <any>null;
             this.maxDevice = _data["maxDevice"] !== undefined ? _data["maxDevice"] : <any>null;
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : <any>null;
-            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
             this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
             this.isPublic = _data["isPublic"] !== undefined ? _data["isPublic"] : <any>null;
-            this.isAdRequired = _data["isAdRequired"] !== undefined ? _data["isAdRequired"] : <any>null;
+            this.adRequirement = _data["adRequirement"] !== undefined ? _data["adRequirement"] : <any>null;
+            this.description = _data["description"] !== undefined ? _data["description"] : <any>null;
         }
     }
 
@@ -4602,10 +4608,10 @@ export class AccessTokenCreateParams implements IAccessTokenCreateParams {
         data["lifetime"] = this.lifetime !== undefined ? this.lifetime : <any>null;
         data["maxDevice"] = this.maxDevice !== undefined ? this.maxDevice : <any>null;
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : <any>null;
-        data["url"] = this.url !== undefined ? this.url : <any>null;
         data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
         data["isPublic"] = this.isPublic !== undefined ? this.isPublic : <any>null;
-        data["isAdRequired"] = this.isAdRequired !== undefined ? this.isAdRequired : <any>null;
+        data["adRequirement"] = this.adRequirement !== undefined ? this.adRequirement : <any>null;
+        data["description"] = this.description !== undefined ? this.description : <any>null;
         return data;
     }
 }
@@ -4619,10 +4625,10 @@ export interface IAccessTokenCreateParams {
     lifetime: number;
     maxDevice: number;
     expirationTime?: Date | null;
-    url?: string | null;
     isEnabled?: boolean | null;
     isPublic: boolean;
-    isAdRequired: boolean;
+    adRequirement: AdRequirement;
+    description?: string | null;
 }
 
 export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
@@ -4632,9 +4638,9 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
     lifetime?: PatchOfInteger | null;
     maxDevice?: PatchOfInteger | null;
     maxTraffic?: PatchOfLong | null;
-    url?: PatchOfString | null;
     isEnabled?: PatchOfBoolean | null;
-    isAdRequired?: PatchOfBoolean | null;
+    adRequirement?: PatchOfAdRequirement | null;
+    description?: PatchOfString | null;
 
     constructor(data?: IAccessTokenUpdateParams) {
         if (data) {
@@ -4653,9 +4659,9 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
             this.lifetime = _data["lifetime"] ? PatchOfInteger.fromJS(_data["lifetime"]) : <any>null;
             this.maxDevice = _data["maxDevice"] ? PatchOfInteger.fromJS(_data["maxDevice"]) : <any>null;
             this.maxTraffic = _data["maxTraffic"] ? PatchOfLong.fromJS(_data["maxTraffic"]) : <any>null;
-            this.url = _data["url"] ? PatchOfString.fromJS(_data["url"]) : <any>null;
             this.isEnabled = _data["isEnabled"] ? PatchOfBoolean.fromJS(_data["isEnabled"]) : <any>null;
-            this.isAdRequired = _data["isAdRequired"] ? PatchOfBoolean.fromJS(_data["isAdRequired"]) : <any>null;
+            this.adRequirement = _data["adRequirement"] ? PatchOfAdRequirement.fromJS(_data["adRequirement"]) : <any>null;
+            this.description = _data["description"] ? PatchOfString.fromJS(_data["description"]) : <any>null;
         }
     }
 
@@ -4674,9 +4680,9 @@ export class AccessTokenUpdateParams implements IAccessTokenUpdateParams {
         data["lifetime"] = this.lifetime ? this.lifetime.toJSON() : <any>null;
         data["maxDevice"] = this.maxDevice ? this.maxDevice.toJSON() : <any>null;
         data["maxTraffic"] = this.maxTraffic ? this.maxTraffic.toJSON() : <any>null;
-        data["url"] = this.url ? this.url.toJSON() : <any>null;
         data["isEnabled"] = this.isEnabled ? this.isEnabled.toJSON() : <any>null;
-        data["isAdRequired"] = this.isAdRequired ? this.isAdRequired.toJSON() : <any>null;
+        data["adRequirement"] = this.adRequirement ? this.adRequirement.toJSON() : <any>null;
+        data["description"] = this.description ? this.description.toJSON() : <any>null;
         return data;
     }
 }
@@ -4688,9 +4694,9 @@ export interface IAccessTokenUpdateParams {
     lifetime?: PatchOfInteger | null;
     maxDevice?: PatchOfInteger | null;
     maxTraffic?: PatchOfLong | null;
-    url?: PatchOfString | null;
     isEnabled?: PatchOfBoolean | null;
-    isAdRequired?: PatchOfBoolean | null;
+    adRequirement?: PatchOfAdRequirement | null;
+    description?: PatchOfString | null;
 }
 
 export class PatchOfString implements IPatchOfString {
@@ -4907,6 +4913,42 @@ export class PatchOfBoolean implements IPatchOfBoolean {
 
 export interface IPatchOfBoolean {
     value: boolean;
+}
+
+export class PatchOfAdRequirement implements IPatchOfAdRequirement {
+    value!: AdRequirement;
+
+    constructor(data?: IPatchOfAdRequirement) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): PatchOfAdRequirement {
+        data = typeof data === 'object' ? data : {};
+        let result = new PatchOfAdRequirement();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["value"] = this.value !== undefined ? this.value : <any>null;
+        return data;
+    }
+}
+
+export interface IPatchOfAdRequirement {
+    value: AdRequirement;
 }
 
 export class AccessTokenData implements IAccessTokenData {
@@ -5504,6 +5546,7 @@ export class ServerFarm implements IServerFarm {
     serverProfileName!: string;
     useHostName!: boolean;
     tokenUrl?: string | null;
+    tokenError?: string | null;
     secret!: string;
     createdTime!: Date;
     pushTokenToClient!: boolean;
@@ -5526,6 +5569,7 @@ export class ServerFarm implements IServerFarm {
             this.serverProfileName = _data["serverProfileName"] !== undefined ? _data["serverProfileName"] : <any>null;
             this.useHostName = _data["useHostName"] !== undefined ? _data["useHostName"] : <any>null;
             this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
+            this.tokenError = _data["tokenError"] !== undefined ? _data["tokenError"] : <any>null;
             this.secret = _data["secret"] !== undefined ? _data["secret"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
             this.pushTokenToClient = _data["pushTokenToClient"] !== undefined ? _data["pushTokenToClient"] : <any>null;
@@ -5548,6 +5592,7 @@ export class ServerFarm implements IServerFarm {
         data["serverProfileName"] = this.serverProfileName !== undefined ? this.serverProfileName : <any>null;
         data["useHostName"] = this.useHostName !== undefined ? this.useHostName : <any>null;
         data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
+        data["tokenError"] = this.tokenError !== undefined ? this.tokenError : <any>null;
         data["secret"] = this.secret !== undefined ? this.secret : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
         data["pushTokenToClient"] = this.pushTokenToClient !== undefined ? this.pushTokenToClient : <any>null;
@@ -5563,6 +5608,7 @@ export interface IServerFarm {
     serverProfileName: string;
     useHostName: boolean;
     tokenUrl?: string | null;
+    tokenError?: string | null;
     secret: string;
     createdTime: Date;
     pushTokenToClient: boolean;
@@ -5756,9 +5802,7 @@ export interface IServerFarmSummary {
 export class ServerFarmCreateParams implements IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
-    useHostName!: boolean;
     tokenUrl?: string | null;
-    pushTokenToClient!: boolean;
 
     constructor(data?: IServerFarmCreateParams) {
         if (data) {
@@ -5773,9 +5817,7 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         if (_data) {
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
             this.serverProfileId = _data["serverProfileId"] !== undefined ? _data["serverProfileId"] : <any>null;
-            this.useHostName = _data["useHostName"] !== undefined ? _data["useHostName"] : <any>null;
             this.tokenUrl = _data["tokenUrl"] !== undefined ? _data["tokenUrl"] : <any>null;
-            this.pushTokenToClient = _data["pushTokenToClient"] !== undefined ? _data["pushTokenToClient"] : <any>null;
         }
     }
 
@@ -5790,9 +5832,7 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
         data = typeof data === 'object' ? data : {};
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
         data["serverProfileId"] = this.serverProfileId !== undefined ? this.serverProfileId : <any>null;
-        data["useHostName"] = this.useHostName !== undefined ? this.useHostName : <any>null;
         data["tokenUrl"] = this.tokenUrl !== undefined ? this.tokenUrl : <any>null;
-        data["pushTokenToClient"] = this.pushTokenToClient !== undefined ? this.pushTokenToClient : <any>null;
         return data;
     }
 }
@@ -5800,9 +5840,7 @@ export class ServerFarmCreateParams implements IServerFarmCreateParams {
 export interface IServerFarmCreateParams {
     serverFarmName?: string | null;
     serverProfileId?: string | null;
-    useHostName: boolean;
     tokenUrl?: string | null;
-    pushTokenToClient: boolean;
 }
 
 export class ServerFarmUpdateParams implements IServerFarmUpdateParams {
@@ -6335,11 +6373,51 @@ export interface IServerProfileUpdateParams {
     serverConfig?: PatchOfString | null;
 }
 
+export class ServerData implements IServerData {
+    server!: VpnServer;
+
+    constructor(data?: IServerData) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.server = new VpnServer();
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.server = _data["server"] ? VpnServer.fromJS(_data["server"]) : new VpnServer();
+        }
+    }
+
+    static fromJS(data: any): ServerData {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerData();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["server"] = this.server ? this.server.toJSON() : <any>null;
+        return data;
+    }
+}
+
+export interface IServerData {
+    server: VpnServer;
+}
+
 export class VpnServer implements IVpnServer {
     serverId!: string;
     serverName!: string;
     serverFarmId!: string;
     serverFarmName?: string | null;
+    location?: Location | null;
     version?: string | null;
     environmentVersion?: string | null;
     osInfo?: string | null;
@@ -6374,6 +6452,7 @@ export class VpnServer implements IVpnServer {
             this.serverName = _data["serverName"] !== undefined ? _data["serverName"] : <any>null;
             this.serverFarmId = _data["serverFarmId"] !== undefined ? _data["serverFarmId"] : <any>null;
             this.serverFarmName = _data["serverFarmName"] !== undefined ? _data["serverFarmName"] : <any>null;
+            this.location = _data["location"] ? Location.fromJS(_data["location"]) : <any>null;
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
             this.environmentVersion = _data["environmentVersion"] !== undefined ? _data["environmentVersion"] : <any>null;
             this.osInfo = _data["osInfo"] !== undefined ? _data["osInfo"] : <any>null;
@@ -6412,6 +6491,7 @@ export class VpnServer implements IVpnServer {
         data["serverName"] = this.serverName !== undefined ? this.serverName : <any>null;
         data["serverFarmId"] = this.serverFarmId !== undefined ? this.serverFarmId : <any>null;
         data["serverFarmName"] = this.serverFarmName !== undefined ? this.serverFarmName : <any>null;
+        data["location"] = this.location ? this.location.toJSON() : <any>null;
         data["version"] = this.version !== undefined ? this.version : <any>null;
         data["environmentVersion"] = this.environmentVersion !== undefined ? this.environmentVersion : <any>null;
         data["osInfo"] = this.osInfo !== undefined ? this.osInfo : <any>null;
@@ -6440,6 +6520,7 @@ export interface IVpnServer {
     serverName: string;
     serverFarmId: string;
     serverFarmName?: string | null;
+    location?: Location | null;
     version?: string | null;
     environmentVersion?: string | null;
     osInfo?: string | null;
@@ -6455,6 +6536,66 @@ export interface IVpnServer {
     serverState: ServerState;
     serverStatus?: ServerStatusEx | null;
     accessPoints: AccessPoint[];
+}
+
+export class Location implements ILocation {
+    countryName!: string;
+    countryCode!: string;
+    regionName?: string | null;
+    regionCode?: string | null;
+    cityName?: string | null;
+    cityCode?: string | null;
+    displayName!: string;
+
+    constructor(data?: ILocation) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : <any>null;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : <any>null;
+            this.regionName = _data["regionName"] !== undefined ? _data["regionName"] : <any>null;
+            this.regionCode = _data["regionCode"] !== undefined ? _data["regionCode"] : <any>null;
+            this.cityName = _data["cityName"] !== undefined ? _data["cityName"] : <any>null;
+            this.cityCode = _data["cityCode"] !== undefined ? _data["cityCode"] : <any>null;
+            this.displayName = _data["displayName"] !== undefined ? _data["displayName"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): Location {
+        data = typeof data === 'object' ? data : {};
+        let result = new Location();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["countryName"] = this.countryName !== undefined ? this.countryName : <any>null;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : <any>null;
+        data["regionName"] = this.regionName !== undefined ? this.regionName : <any>null;
+        data["regionCode"] = this.regionCode !== undefined ? this.regionCode : <any>null;
+        data["cityName"] = this.cityName !== undefined ? this.cityName : <any>null;
+        data["cityCode"] = this.cityCode !== undefined ? this.cityCode : <any>null;
+        data["displayName"] = this.displayName !== undefined ? this.displayName : <any>null;
+        return data;
+    }
+}
+
+export interface ILocation {
+    countryName: string;
+    countryCode: string;
+    regionName?: string | null;
+    regionCode?: string | null;
+    cityName?: string | null;
+    cityCode?: string | null;
+    displayName: string;
 }
 
 export enum ServerState {
@@ -6744,45 +6885,6 @@ export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {
 
 export interface IPatchOfAccessPointOf {
     value?: AccessPoint[] | null;
-}
-
-export class ServerData implements IServerData {
-    server!: VpnServer;
-
-    constructor(data?: IServerData) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-        if (!data) {
-            this.server = new VpnServer();
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.server = _data["server"] ? VpnServer.fromJS(_data["server"]) : new VpnServer();
-        }
-    }
-
-    static fromJS(data: any): ServerData {
-        data = typeof data === 'object' ? data : {};
-        let result = new ServerData();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["server"] = this.server ? this.server.toJSON() : <any>null;
-        return data;
-    }
-}
-
-export interface IServerData {
-    server: VpnServer;
 }
 
 export class ServerInstallBySshUserPasswordParams implements IServerInstallBySshUserPasswordParams {
@@ -7331,7 +7433,7 @@ export interface IUser {
 }
 
 export class TeamUpdateBotParam implements ITeamUpdateBotParam {
-    name?: PatchOfString2 | null;
+    name?: PatchOfString | null;
 
     constructor(data?: ITeamUpdateBotParam) {
         if (data) {
@@ -7344,7 +7446,7 @@ export class TeamUpdateBotParam implements ITeamUpdateBotParam {
 
     init(_data?: any) {
         if (_data) {
-            this.name = _data["name"] ? PatchOfString2.fromJS(_data["name"]) : <any>null;
+            this.name = _data["name"] ? PatchOfString.fromJS(_data["name"]) : <any>null;
         }
     }
 
@@ -7363,43 +7465,7 @@ export class TeamUpdateBotParam implements ITeamUpdateBotParam {
 }
 
 export interface ITeamUpdateBotParam {
-    name?: PatchOfString2 | null;
-}
-
-export class PatchOfString2 implements IPatchOfString2 {
-    value?: string | null;
-
-    constructor(data?: IPatchOfString2) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.value = _data["value"] !== undefined ? _data["value"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): PatchOfString2 {
-        data = typeof data === 'object' ? data : {};
-        let result = new PatchOfString2();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["value"] = this.value !== undefined ? this.value : <any>null;
-        return data;
-    }
-}
-
-export interface IPatchOfString2 {
-    value?: string | null;
+    name?: PatchOfString | null;
 }
 
 export class Role implements IRole {

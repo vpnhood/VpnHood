@@ -1,14 +1,14 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using GrayMint.Common.Utils;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerFarms;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
+using VpnHood.AccessServer.Repos;
 using VpnHood.Common;
-using VpnHood.Common.Utils;
 using AccessPointView = VpnHood.AccessServer.Dtos.ServerFarms.AccessPointView;
 
 namespace VpnHood.AccessServer.Services;
@@ -46,13 +46,15 @@ public class ServerFarmService(
             ServerProfileId = serverProfile.ServerProfileId,
             ServerFarmName = createParams.ServerFarmName,
             CreatedTime = DateTime.UtcNow,
-            UseHostName = createParams.UseHostName,
-            Secret = VhUtil.GenerateKey(),
+            UseHostName = false,
+            Secret = GmUtil.GenerateKey(),
             TokenJson = null,
+            TokenError = null,
             TokenUrl = createParams.TokenUrl?.ToString(),
-            PushTokenToClient = createParams.PushTokenToClient
+            PushTokenToClient = true
         };
 
+        FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhRepo.AddAsync(serverFarm);
         await vhRepo.SaveChangesAsync();
 
@@ -81,13 +83,13 @@ public class ServerFarmService(
         if (string.IsNullOrEmpty(serverFarm.TokenJson))
             throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
 
-        var curFarmToken = VhUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
+        var curFarmToken = GmUtil.JsonDeserialize<ServerToken>(serverFarm.TokenJson);
         try
         {
             if (curFarmToken.IsValidHostName && string.IsNullOrEmpty(curFarmToken.HostName))
                 throw new Exception("You farm needs a valid certificate.");
 
-            if (!curFarmToken.IsValidHostName && VhUtil.IsNullOrEmpty(curFarmToken.HostEndPoints))
+            if (!curFarmToken.IsValidHostName && GmUtil.IsNullOrEmpty(curFarmToken.HostEndPoints))
                 throw new Exception("You farm needs at-least a public in token endpoint");
 
             // create no cache request
@@ -157,12 +159,11 @@ public class ServerFarmService(
         }
 
         // update
-        await vhRepo.SaveChangesAsync();
-        await serverConfigureService.InvalidateServerFarm(projectId, serverFarmId, reconfigure);
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(projectId, serverFarmId, reconfigure);
 
         // validate certificate
         if (validateCertificate)
-            _  = certificateValidatorService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
+            _ = certificateValidatorService.ValidateJob(projectId, serverFarmId, true, CancellationToken.None);
 
         // update cache after save
         var ret = await Get(projectId, serverFarmId, false);
@@ -249,10 +250,7 @@ public class ServerFarmService(
     public async Task<string> GetEncryptedToken(Guid projectId, Guid serverFarmId)
     {
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId);
-        if (string.IsNullOrEmpty(serverFarm.TokenJson))
-            throw new InvalidOperationException("Farm has not been initialized yet."); // there is no token at the moment
-
-        var farmToken = FarmTokenBuilder.GetUsableToken(serverFarm);
+        var farmToken = FarmTokenBuilder.GetRequiredServerToken(serverFarm.TokenJson);
         return farmToken.Encrypt();
     }
 

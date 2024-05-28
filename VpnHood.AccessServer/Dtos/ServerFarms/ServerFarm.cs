@@ -10,6 +10,7 @@ public class ServerFarm
     public required string ServerProfileName { get; init; }
     public required bool UseHostName { get; init; }
     public required Uri? TokenUrl { get; init; }
+    public required string? TokenError { get; init; }
     public required byte[] Secret { get; init; }
     public required DateTime CreatedTime { get; init; }
     public required bool PushTokenToClient { get; init; }

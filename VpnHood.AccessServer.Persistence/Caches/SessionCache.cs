@@ -30,7 +30,7 @@ public class SessionCache : SessionBaseModel
             IsArchived = IsArchived,
             ExtraData = ExtraData,
             AdExpirationTime = AdExpirationTime,
-            IsAdReward = IsAdReward,
+            IsAdReward = IsAdReward
         };
     }
 }

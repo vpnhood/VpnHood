@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Testing.Platform.TestHost;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -21,6 +22,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Messaging;
 using ApiKey = VpnHood.AccessServer.Api.ApiKey;
+using ClientInfo = VpnHood.Common.Messaging.ClientInfo;
 using HttpAccessManagerOptions = VpnHood.Server.Access.Managers.Http.HttpAccessManagerOptions;
 using Token = VpnHood.Common.Token;
 
@@ -131,9 +133,9 @@ public class TestApp : IHttpClientFactory, IDisposable
         return new IPAddress(address);
     }
 
-    public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
+    public async Task<IPEndPoint> NewEndPoint(int port = 443) => new(await NewIpV4(), port);
     // ReSharper disable once UnusedMember.Global
-    public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
+    public async Task<IPEndPoint> NewEndPointIp6(int port = 443) => new(await NewIpV6(), port);
 
 
     public async Task<AccessPoint> NewAccessPoint(IPEndPoint? ipEndPoint = null, AccessPointMode accessPointMode = AccessPointMode.PublicInToken,
@@ -235,7 +237,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false)
+    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null, IPAddress? gatewayIpV4 = null)
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
@@ -251,14 +253,14 @@ public class TestApp : IHttpClientFactory, IDisposable
             ],
             PublicIpAddresses =
             [
-                await NewIpV4(),
+                gatewayIpV4 ?? await NewIpV4(),
                 await NewIpV6(),
                 publicIp
             ],
             Status = NewServerStatus(null, randomStatus),
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",
-            LogicalCoreCount = 2,
+            LogicalCoreCount = logicalCore ?? 2,
             TotalMemory = 20000000,
             FreeUdpPortV4 = new Random().Next(2000, 9000),
             FreeUdpPortV6 = new Random().Next(2000, 9000)
@@ -268,15 +270,18 @@ public class TestApp : IHttpClientFactory, IDisposable
     }
 
     public async Task<SessionRequestEx> CreateSessionRequestEx(AccessToken accessToken, IPEndPoint hostEndPoint, Guid? clientId = null, IPAddress? clientIp = null
-        , string? extraData = null)
+        , string? extraData = null, string? locationPath = null, bool allowRedirect = false, ClientInfo? clientInfo = null)
     {
         var rand = new Random();
+        if (clientInfo != null && clientId != null)
+            throw new InvalidOperationException("Could not set both clientInfo & clientId parameters at the same time.");
 
-        var clientInfo = new ClientInfo
+        clientInfo ??= new ClientInfo
         {
             ClientId = clientId ?? Guid.NewGuid(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
-            UserAgent = "agent"
+            UserAgent = "agent",
+            ProtocolVersion = 0
         };
 
         var accessKey = await AccessTokensClient.GetAccessKeyAsync(accessToken.ProjectId, accessToken.AccessTokenId);
@@ -290,7 +295,9 @@ public class TestApp : IHttpClientFactory, IDisposable
             EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, secret),
             ClientIp = clientIp ?? NewIpV4().Result,
             HostEndPoint = hostEndPoint,
-            ExtraData = extraData ?? Guid.NewGuid().ToString()
+            ExtraData = extraData ?? Guid.NewGuid().ToString(),
+            ServerLocation = locationPath,
+            AllowRedirect = allowRedirect
         };
 
         return sessionRequestEx;
@@ -334,6 +341,7 @@ public class TestApp : IHttpClientFactory, IDisposable
 
     public void Dispose()
     {
+
         Scope.Dispose();
         HttpClient.Dispose();
         AgentTestApp.Dispose();

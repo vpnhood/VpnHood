@@ -7,17 +7,16 @@ using GrayMint.Common.AspNetCore.Jobs;
 using GrayMint.Common.Swagger;
 using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Report;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Services.Acme;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer;
 
@@ -138,7 +137,7 @@ public class Program
     //    var projects = await context.Projects.Where(x => string.IsNullOrEmpty(x.AdRewardSecret)).ToArrayAsync();
     //    logger.LogInformation($"ProjectCount: {projects.Length}..");
     //    foreach (var project in projects)
-    //        project.AdRewardSecret = Convert.ToBase64String(VhUtil.GenerateKey(128))
+    //        project.AdRewardSecret = Convert.ToBase64String(GmUtil.GenerateKey())
     //            .Replace("/", "")
     //            .Replace("+", "")
     //            .Replace("=", "");

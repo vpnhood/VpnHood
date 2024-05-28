@@ -1,9 +1,8 @@
-﻿using System.Net;
-using System.Security.Authentication;
+﻿using System.Security.Authentication;
 using Ga4.Ga4Tracking;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Agent.Exceptions;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
@@ -20,10 +19,9 @@ public class SessionService(
     ILogger<SessionService> logger,
     ILogger<SessionService.NewAccess> newAccessLogger,
     IOptions<AgentOptions> agentOptions,
-    IMemoryCache memoryCache,
     CacheService cacheService,
-    VhRepo vhRepo,
-    VhAgentRepo vhAgentRepo)
+    VhAgentRepo vhAgentRepo,
+    LoadBalancerService loadBalancerService)
 {
     public class NewAccess;
     private static Task TrackUsage(ProjectCache project, ServerCache server,
@@ -77,6 +75,24 @@ public class SessionService(
 
     public async Task<SessionResponseEx> CreateSession(ServerCache server, SessionRequestEx sessionRequestEx)
     {
+        try
+        {
+            var sessionResponseEx = await CreateSessionInternal(server, sessionRequestEx);
+            return sessionResponseEx;
+        }
+        catch (SessionExceptionEx ex)
+        {
+            return ex.SessionResponseEx;
+        }
+        finally
+        {
+            // make sure to save changes if any error occured or return session exception
+            // such as creating new device or access
+            await vhAgentRepo.SaveChangesAsync();
+        }
+    }
+    private async Task<SessionResponseEx> CreateSessionInternal(ServerCache server, SessionRequestEx sessionRequestEx)
+    {
         // validate argument
         if (server.AccessPoints == null)
             throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
@@ -86,53 +102,36 @@ public class SessionService(
         var serverId = server.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
-        var requestEndPoint = sessionRequestEx.HostEndPoint;
         var project = await cacheService.GetProject(server.ProjectId);
 
         // Get accessTokenModel
-        var accessToken = await vhRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId), true);
+        var accessToken = await vhAgentRepo.AccessTokenGet(projectId, Guid.Parse(sessionRequestEx.TokenId));
+        var serverFarmCache = await cacheService.GetServerFarm(server.ServerFarmId);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Could not validate the request."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not validate the request.");
 
         // can serverModel request this endpoint?
         if (accessToken.ServerFarmId != server.ServerFarmId)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Token does not belong to server farm."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Token does not belong to server farm.");
 
         // check is token locked
         if (!accessToken.IsEnabled)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessLocked, 
+                accessToken.Description?.Contains("#message") == true
+                    ? accessToken.Description.Replace("#message", "").Trim()
+                    : "Your access has been locked! Please contact the support.");
 
         // set accessTokenModel expiration time on first use
         if (accessToken.Lifetime != 0 && accessToken.FirstUsedTime != null &&
             accessToken.FirstUsedTime + TimeSpan.FromDays(accessToken.Lifetime) < DateTime.UtcNow)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessExpired,
-                ErrorMessage = "Your access has been expired! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessExpired, "Your access has been expired! Please contact the support.");
 
         // check is Ip Locked
         var ipLock = clientIp != null ? await vhAgentRepo.IpLockFind(projectId, clientIp.ToString()) : null;
         if (ipLock?.LockedTime != null)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessLocked, "Your access has been locked! Please contact the support.");
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
@@ -150,7 +149,7 @@ public class SessionService(
                 CreatedTime = DateTime.UtcNow,
                 ModifiedTime = DateTime.UtcNow
             };
-            device = await vhRepo.AddAsync(device);
+            device = await vhAgentRepo.DeviceAdd(device);
         }
         else
         {
@@ -162,11 +161,7 @@ public class SessionService(
 
         // check has device Locked
         if (device.LockedTime != null)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessLocked,
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.AccessLocked, "Your access has been locked! Please contact the support.");
 
         // multiple requests may be already queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
@@ -174,10 +169,10 @@ public class SessionService(
         var access = await cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
         if (access == null)
         {
-            access = await vhAgentRepo.AddNewAccess(accessToken.AccessTokenId, deviceId);
+            access = await vhAgentRepo.AccessAdd(accessToken.AccessTokenId, deviceId);
             newAccessLogger.LogInformation(
                 "New Access has been created. AccessId: {access.AccessId}, ProjectName: {ProjectName}, FarmName: {FarmName}",
-                access.AccessId, project.ProjectName, accessToken.ServerFarm?.ServerFarmName);
+                access.AccessId, project.ProjectName, serverFarmCache.ServerFarmName);
         }
         else
         {
@@ -187,28 +182,16 @@ public class SessionService(
 
         // check supported version
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(AgentOptions.MinClientVersion) < 0)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.UnsupportedClient,
-                ErrorMessage = "This version is not supported! You need to update your app."
-            };
+            throw new SessionExceptionEx(SessionErrorCode.UnsupportedClient, "This version is not supported! You need to update your app.");
 
         // Check Redirect to another server if everything was ok
-        var bestTcpEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.ServerFarmId, device.DeviceId);
-        if (bestTcpEndPoint == null)
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.AccessError,
-                ErrorMessage = "Could not find any free server!"
-            };
+        await loadBalancerService.CheckRedirect(accessToken, server, device, sessionRequestEx);
 
-        // redirect if current server does not serve the best TcpEndPoint
-        if (!server.AccessPoints.Any(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort).Equals(bestTcpEndPoint)))
-            return new SessionResponseEx
-            {
-                ErrorCode = SessionErrorCode.RedirectHost,
-                RedirectHostEndPoint = bestTcpEndPoint
-            };
+        // check is device already rewarded
+        var isAdRewardedDevice = cacheService.Ad_IsRewardedAccess(access.AccessId) &&
+            accessToken.Description?.Contains("#ad-debugger") is null or false; //for ad debuggers
+
+        var isAdRequired = accessToken.AdRequirement is AdRequirement.Required && !isAdRewardedDevice;
 
         // create session
         var session = new SessionCache
@@ -233,24 +216,26 @@ public class SessionService(
             IsArchived = false,
             UserAgent = device.UserAgent,
             ClientId = device.ClientId,
-            IsAdReward = false,
-            AdExpirationTime = accessToken.IsAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
+            IsAdReward = isAdRewardedDevice,
+            AdExpirationTime = isAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
         };
 
         var ret = await BuildSessionResponse(session, access);
-        ret.IsAdRequired = accessToken.IsAdRequired;
+        ret.IsAdRequired = isAdRequired;
         ret.ExtraData = session.ExtraData;
         ret.GaMeasurementId = project.GaMeasurementId;
+        ret.ServerLocation = server.LocationInfo.ServerLocation;
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
         // update AccessToken
-        if (accessToken.ServerFarm?.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
+        if (serverFarmCache.TokenJson == null) throw new Exception("TokenJson is not initialized for this farm.");
         accessToken.FirstUsedTime ??= session.CreatedTime;
         accessToken.LastUsedTime = session.CreatedTime;
 
-        // push token to client
-        var farmToken = accessToken.ServerFarm.PushTokenToClient ? FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm) : null;
+        // push token to client if add server with PublicInToken are ready
+        var pushTokenToClient = serverFarmCache.PushTokenToClient && await loadBalancerService.IsAllPublicInTokenServersReady(serverFarmCache.ServerFarmId);
+        var farmToken = pushTokenToClient ? FarmTokenBuilder.GetServerToken(serverFarmCache.TokenJson) : null;
         if (farmToken != null)
             ret.AccessKey = new Token
             {
@@ -259,11 +244,11 @@ public class SessionService(
                 TokenId = accessToken.AccessTokenId.ToString(),
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode.ToString(),
-                IsAdRequired = accessToken.IsAdRequired
+                IssuedAt = DateTime.UtcNow
             }.ToAccessKey();
 
         // Add session to database
-        var sessionModel = await vhAgentRepo.AddSession(session);
+        var sessionModel = await vhAgentRepo.SessionAdd(session);
         await vhAgentRepo.SaveChangesAsync();
         session.SessionId = sessionModel.SessionId;
 
@@ -415,9 +400,9 @@ public class SessionService(
 
         // validate ad
         var adReward = session.AdExpirationTime != null && !string.IsNullOrEmpty(adData);
-        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, adData))
+        if (!string.IsNullOrEmpty(adData) && !await VerifyAdReward(session.ProjectId, access.AccessId, adData))
         {
-            session.Close(SessionErrorCode.AdError, "Could not verify the rewarded ad within the given time frame.");
+            session.Close(SessionErrorCode.AdError, "Could not verify the given rewarded ad.");
             return await BuildSessionResponse(session, access);
         }
 
@@ -479,52 +464,20 @@ public class SessionService(
         return sessionResponse;
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(ServerCache currentServer, IPEndPoint currentEndPoint, Guid serverFarmId, Guid deviceId)
+    private async Task<bool> VerifyAdReward(Guid projectId, Guid accessId, string adData)
     {
-        // prevent re-redirect if device has already redirected to this serverModel
-        var cacheKey = $"LastDeviceServer/{serverFarmId}/{deviceId}";
-        if (!agentOptions.Value.AllowRedirect ||
-            (memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
-        {
-            if (currentServer.IsReady)
-                return currentEndPoint;
-        }
-
-        // get all servers of this farm
-        var servers = await cacheService.GetServers();
-        var farmServers = servers
-            .Where(server =>
-                server.ProjectId == currentServer.ProjectId &&
-                server.ServerFarmId == currentServer.ServerFarmId &&
-                server.AccessPoints.Any(accessPoint => accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily) &&
-                server.IsReady)
-            .ToArray();
-
-        // find the best free server
-        var bestServer = farmServers
-            .MinBy(server => server.ServerStatus!.SessionCount);
-
-        if (bestServer != null)
-        {
-            memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
-            var serverEndPoint = bestServer.AccessPoints.First(accessPoint =>
-                accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == currentEndPoint.AddressFamily);
-            var ret = new IPEndPoint(serverEndPoint.IpAddress, serverEndPoint.TcpPort);
-            return ret;
-        }
-
-        return null;
-    }
-
-    private async Task<bool> VerifyAdReward(Guid projectId, string adData)
-    {
+        // check is device rewarded
         for (var i = 0; i < 5; i++)
         {
-            if (cacheService.RemoveAd(projectId, adData))
+            if (cacheService.Ad_RemoveRewardData(projectId, adData))
+            {
+                cacheService.Ad_AddRewardedAccess(accessId);
                 return true;
+            }
 
             await Task.Delay(1000);
         }
+
         return false;
     }
 }

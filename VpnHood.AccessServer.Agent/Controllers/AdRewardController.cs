@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
@@ -26,6 +25,6 @@ public class AdRewardController(
 
         _ = rewardItem; // not used yet
         if (!string.IsNullOrEmpty(customData) && customData.Length < 150)
-            cacheService.RewardAd(projectId, customData);
+            cacheService.Ad_AddRewardData(projectId, customData);
     }
 }

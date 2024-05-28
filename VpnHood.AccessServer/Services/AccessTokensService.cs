@@ -1,13 +1,13 @@
 ﻿using GrayMint.Common.Generics;
+using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.AccessTokens;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.AccessServer.Report.Services;
+using VpnHood.AccessServer.Repos;
 using VpnHood.Common;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Services;
 
@@ -33,17 +33,17 @@ public class AccessTokensService(
             MaxDevice = createParams.MaxDevice,
             ExpirationTime = createParams.ExpirationTime,
             Lifetime = createParams.Lifetime,
-            Url = createParams.Url,
             IsPublic = createParams.IsPublic,
-            Secret = createParams.Secret ?? VhUtil.GenerateKey(),
+            Secret = createParams.Secret ?? GmUtil.GenerateKey(),
             SupportCode = supportCode,
-            IsAdRequired = createParams.IsAdRequired,
+            AdRequirement = createParams.AdRequirement,
             IsEnabled = createParams.IsEnabled ?? true,
             CreatedTime = DateTime.UtcNow,
             ModifiedTime = DateTime.UtcNow,
             IsDeleted = false,
             FirstUsedTime = null,
             LastUsedTime = null,
+            Description = createParams.Description
         };
 
         await vhRepo.AddAsync(accessToken);
@@ -65,9 +65,9 @@ public class AccessTokensService(
         if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
         if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
         if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
-        if (updateParams.Url != null) accessToken.Url = updateParams.Url;
+        if (updateParams.Description != null) accessToken.Description = updateParams.Description;
         if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
-        if (updateParams.IsAdRequired != null) accessToken.IsAdRequired = updateParams.IsAdRequired;
+        if (updateParams.AdRequirement != null) accessToken.AdRequirement = updateParams.AdRequirement;
         if (updateParams.ServerFarmId != null)
         {
             accessToken.ServerFarmId = updateParams.ServerFarmId;
@@ -92,12 +92,12 @@ public class AccessTokensService(
         // create token
         var token = new Token
         {
-            ServerToken = FarmTokenBuilder.GetUsableToken(accessToken.ServerFarm!),
-            IsAdRequired = accessToken.IsAdRequired,
+            ServerToken = FarmTokenBuilder.GetRequiredServerToken(accessToken.ServerFarm?.TokenJson),
             Secret = accessToken.Secret,
             TokenId = accessToken.AccessTokenId.ToString(),
             Name = accessToken.AccessTokenName,
-            SupportId = accessToken.SupportCode.ToString()
+            SupportId = accessToken.SupportCode.ToString(),
+            IssuedAt = DateTime.UtcNow
         };
 
         return token.ToAccessKey();

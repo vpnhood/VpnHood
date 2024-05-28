@@ -20,7 +20,7 @@ public class CacheController(CacheService cacheService)
     [HttpGet("servers")]
     public async Task<ServerCache[]> GetServers(Guid? projectId = null, Guid? serverFarmId = null)
     {
-        var servers = (await cacheService.GetServers())
+        var servers = (await cacheService.GetServers(projectId: projectId, serverFarmId: serverFarmId))
             .Where(x => x.ProjectId == projectId || projectId == null)
             .Where(x => serverFarmId == null || x.ServerFarmId == serverFarmId)
             .ToArray();

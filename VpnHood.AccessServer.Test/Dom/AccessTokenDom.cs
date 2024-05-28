@@ -13,18 +13,21 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
     public AccessToken AccessToken { get; private set; } = accessToken;
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
-    public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null, AddressFamily addressFamily = AddressFamily.InterNetwork,
-        bool assertError = true, bool autoRedirect = false)
+    public async Task<SessionDom> CreateSession(Guid? clientId = null, IPAddress? clientIp = null,
+        AddressFamily addressFamily = AddressFamily.InterNetwork, bool assertError = true,
+        bool autoRedirect = false, string? serverLocation = null, ClientInfo? clientInfo = null)
     {
         // get server ip
         var accessKey = await GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
         var serverEndPoint = token.ServerToken.HostEndPoints?.FirstOrDefault(x => x.Address.AddressFamily == addressFamily) ?? throw new Exception("There is no HostEndPoint.");
-        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, autoRedirect);
+        return await CreateSession(serverEndPoint, clientId, clientIp, assertError, serverLocation:
+            serverLocation, autoRedirect: autoRedirect, clientInfo: clientInfo);
     }
 
     public async Task<SessionDom> CreateSession(IPEndPoint serverEndPoint, Guid? clientId = null, IPAddress? clientIp = null,
-        bool assertError = true, bool autoRedirect = false)
+        bool assertError = true, string? serverLocation = null, bool autoRedirect = false, bool allowRedirect = true,
+        ClientInfo? clientInfo = null)
     {
         // find server of the farm that listen to token EndPoint
         var servers = await TestApp.ServersClient.ListAsync(TestApp.ProjectId);
@@ -38,6 +41,9 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         var sessionRequestEx = await TestApp.CreateSessionRequestEx(
             AccessToken,
             serverEndPoint,
+            allowRedirect: allowRedirect,
+            locationPath: serverLocation,
+            clientInfo: clientInfo,
             clientId: clientId,
             clientIp: clientIp);
 
@@ -49,8 +55,16 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
         if (autoRedirect && ret.SessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
         {
             Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoint);
+            Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoints);
+            Assert.IsTrue(ret.SessionResponseEx.RedirectHostEndPoints.Any(x => x.Equals(ret.SessionResponseEx.RedirectHostEndPoint)));
             Assert.AreEqual(ret.SessionRequestEx.HostEndPoint.AddressFamily, ret.SessionResponseEx.RedirectHostEndPoint.AddressFamily);
-            return await CreateSession(ret.SessionResponseEx.RedirectHostEndPoint, clientId, clientIp, assertError);
+            return await CreateSession(
+                ret.SessionResponseEx.RedirectHostEndPoint,
+                clientId: sessionRequestEx.ClientInfo.ClientId,
+                clientIp: sessionRequestEx.ClientIp,
+                serverLocation: serverLocation,
+                assertError: assertError,
+                allowRedirect: false);
         }
 
         if (assertError)

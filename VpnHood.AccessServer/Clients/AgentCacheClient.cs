@@ -48,9 +48,14 @@ public class AgentCacheClient : ApiClientBase
     }
 
 
-    public Task InvalidateServerFarm(Guid serverFarmId)
+    public Task InvalidateServerFarm(Guid serverFarmId, bool includeSevers)
     {
-        return HttpPostAsync($"/api/cache/server-farms/{serverFarmId}/invalidate", null, null);
+        var parameters = new Dictionary<string, object?>
+        {
+            [nameof(includeSevers)] = includeSevers
+        };
+
+        return HttpPostAsync($"/api/cache/server-farms/{serverFarmId}/invalidate", parameters, null);
     }
 
     public Task<SessionCache> GetSession(long sessionId)

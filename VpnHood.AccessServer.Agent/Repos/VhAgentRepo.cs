@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.Common;
 
-namespace VpnHood.AccessServer.Persistence;
+namespace VpnHood.AccessServer.Agent.Repos;
 
 public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 {
@@ -20,12 +21,12 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
     public async Task<InitCache> GetInitView(DateTime minServerUsedTime)
     {
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        var autoServerLocation = ServerLocationInfo.Auto;
 
-        // Statuses
+        // Statuses. Load Deleted Servers and Projects too but filter by minServerUsedTime
         logger.LogTrace("Loading the recent server status, farms and projects ...");
         var statuses = await vhContext.ServerStatuses
             .Where(x => x.IsLast && x.CreatedTime > minServerUsedTime)
-            .Where(x => !x.Server!.IsDeleted)
             .Select(x => new
             {
                 Server = new ServerCache
@@ -44,12 +45,17 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     AccessPoints = x.Server.AccessPoints.ToArray(),
                     ServerFarmName = x.Server.ServerFarm!.ServerFarmName,
                     ServerProfileId = x.Server.ServerFarm!.ServerProfileId,
-                    ServerStatus = x
+                    ServerStatus = x,
+                    LocationInfo = x.Server.Location != null ? ServerLocationInfo.Parse(x.Server.Location.ToPath()) : autoServerLocation,
+                    LogicalCoreCount = x.Server.LogicalCoreCount ?? 1
                 },
                 Farm = new ServerFarmCache
                 {
                     ProjectId = x.Server.ServerFarm.ProjectId,
-                    ServerFarmId = x.Server.ServerFarm.ServerFarmId
+                    ServerFarmId = x.Server.ServerFarm.ServerFarmId,
+                    ServerFarmName = x.Server.ServerFarm.ServerFarmName,
+                    TokenJson = x.Server.ServerFarm.TokenJson,
+                    PushTokenToClient = x.Server.ServerFarm.PushTokenToClient
                 },
                 Project = new ProjectCache
                 {
@@ -133,8 +139,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         return ret;
     }
 
-    public Task<ServerCache[]> GetServers(Guid[]? serverIds = null)
+    public Task<ServerCache[]> ServersGet(Guid[]? serverIds = null)
     {
+        var autoServerLocation = ServerLocationInfo.Auto;
         return vhContext.Servers
             .Where(x => serverIds == null || serverIds.Contains(x.ServerId))
             .Include(x => x.ServerStatuses!.Where(y => y.IsLast == true))
@@ -154,33 +161,22 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AccessPoints = x.AccessPoints.ToArray(),
                 ServerFarmName = x.ServerFarm!.ServerFarmName,
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
-                ServerStatus = x.ServerStatuses!.FirstOrDefault()
+                ServerStatus = x.ServerStatuses!.FirstOrDefault(),
+                LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : autoServerLocation,
+                LogicalCoreCount = x.LogicalCoreCount ?? 1
             })
             .AsNoTracking()
             .ToArrayAsync();
     }
 
 
-    public async Task<ServerCache> GetServer(Guid serverId)
+    public async Task<ServerCache> ServerGet(Guid serverId)
     {
-        var server = await GetServers([serverId]);
+        var server = await ServersGet([serverId]);
         return server.Single();
     }
 
-    public Task<ServerFarmCache> GetFarm(Guid farmId)
-    {
-        return vhContext.ServerFarms
-            .Where(farm => farm.ServerFarmId == farmId)
-            .Select(farm => new ServerFarmCache
-            {
-                ProjectId = farm.ProjectId,
-                ServerFarmId = farm.ServerFarmId
-            })
-            .AsNoTracking()
-            .SingleAsync();
-    }
-
-    public Task<ProjectCache> GetProject(Guid projectId)
+    public Task<ProjectCache> ProjectGet(Guid projectId)
     {
         return vhContext.Projects
             .Where(project => project.ProjectId == projectId)
@@ -196,7 +192,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleAsync();
     }
 
-    public async Task<AccessCache> GetAccess(Guid accessId)
+    public async Task<AccessCache> AccessGet(Guid accessId)
     {
         return await vhContext.Accesses
             .Where(x => x.AccessId == accessId)
@@ -227,7 +223,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleAsync();
     }
 
-    public async Task<AccessCache?> GetAccessOrDefault(Guid accessTokenId, Guid? deviceId)
+    public async Task<AccessCache?> AccessFind(Guid accessTokenId, Guid? deviceId)
     {
         return await vhContext.Accesses
             .Where(x => x.AccessTokenId == accessTokenId && x.DeviceId == deviceId)
@@ -258,7 +254,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .SingleOrDefaultAsync();
     }
 
-    public async Task<AccessCache> AddNewAccess(Guid accessTokenId, Guid? deviceId)
+    public async Task<AccessCache> AccessAdd(Guid accessTokenId, Guid? deviceId)
     {
         var accessToken = await vhContext.AccessTokens
             .Where(x => x.AccessTokenId == accessTokenId)
@@ -292,7 +288,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         return access;
     }
 
-    public void UpdateSession(SessionCache session)
+    public void SessionUpdate(SessionCache session)
     {
         var model = new SessionModel
         {
@@ -304,7 +300,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             ExtraData = session.ExtraData,
             CreatedTime = session.CreatedTime,
             LastUsedTime = session.LastUsedTime,
-            AdExpirationTime = session.AdExpirationTime,
             ClientVersion = session.ClientVersion,
             EndTime = session.EndTime,
             ErrorCode = session.ErrorCode,
@@ -315,6 +310,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             IsArchived = session.IsArchived,
             Country = session.Country,
             DeviceIp = session.DeviceIp,
+            AdExpirationTime = session.AdExpirationTime,
             IsAdReward = session.IsAdReward
         };
 
@@ -326,9 +322,11 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.ErrorMessage).IsModified = true;
         entry.Property(x => x.ErrorCode).IsModified = true;
         entry.Property(x => x.IsArchived).IsModified = true;
+        entry.Property(x => x.AdExpirationTime).IsModified = true;
+        entry.Property(x => x.IsAdReward).IsModified = true;
     }
 
-    public void UpdateAccess(AccessCache access)
+    public void AccessUpdate(AccessCache access)
     {
         var model = new AccessModel
         {
@@ -353,13 +351,13 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         entry.Property(x => x.TotalSentTraffic).IsModified = true;
     }
 
-    public async Task<SessionModel> AddSession(SessionCache session)
+    public async Task<SessionModel> SessionAdd(SessionCache session)
     {
         var entry = await vhContext.Sessions.AddAsync(session.ToModel());
         return entry.Entity;
     }
 
-    public async Task AddAccessUsages(AccessUsageModel[] sessionUsages)
+    public async Task AccessUsageAdd(AccessUsageModel[] sessionUsages)
     {
         await vhContext.AccessUsages.AddRangeAsync(sessionUsages);
     }
@@ -380,6 +378,22 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         if (includeFarmProfile) query = query.Include(server => server.ServerFarm!.ServerProfile);
 
         return query.SingleAsync();
+    }
+
+    public Task<ServerFarmCache> ServerFarmGet(Guid farmId)
+    {
+        return vhContext.ServerFarms
+            .Where(farm => farm.ServerFarmId == farmId)
+            .Select(farm => new ServerFarmCache
+            {
+                ProjectId = farm.ProjectId,
+                ServerFarmId = farm.ServerFarmId,
+                ServerFarmName = farm.ServerFarmName,
+                TokenJson = farm.TokenJson,
+                PushTokenToClient = farm.PushTokenToClient
+            })
+            .AsNoTracking()
+            .SingleAsync();
     }
 
     public async Task<ServerFarmModel> ServerFarmGet(Guid projectId, Guid serverFarmId,
@@ -403,7 +417,9 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             query = query
                 .Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
                 .ThenInclude(server => server.AccessPoints)
-                .AsSplitQuery();
+                .Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
+                .ThenInclude(server => server.Location)
+                .AsSingleQuery();
 
         var farmModel = await query.SingleAsync();
         FillCertificate(farmModel);
@@ -423,7 +439,8 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
 
     public async Task AddAndSaveServerStatuses(ServerStatusBaseModel[] serverStatuses)
     {
-        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
+        await using var transaction = vhContext.Database.CurrentTransaction == null
+            ? await vhContext.Database.BeginTransactionAsync() : null;
 
         // remove old IsLast
         var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
@@ -455,29 +472,6 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
         await vhContext.ServerStatuses.AddRangeAsync(models);
         await vhContext.SaveChangesAsync();
 
-        /*
-        // save new statuses
-        var values = models.Select(x =>
-            "\r\n(" +
-            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
-            $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
-            $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
-            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
-            ")");
-
-        var sql =
-            $"\r\nINSERT INTO {nameof(vhContext.ServerStatuses)} (" +
-            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
-            $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
-            $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
-            $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
-            ") " +
-            $"VALUES {string.Join(',', values)}";
-
-        // AddRange has issue on unique index; we got desperate
-        await vhContext.Database.ExecuteSqlRawAsync(sql);
-        */
-
         if (transaction != null)
             await vhContext.Database.CommitTransactionAsync();
 
@@ -497,5 +491,38 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
             .Where(x => x.ProjectId == projectId)
             .Where(x => x.ClientId == clientId)
             .SingleOrDefaultAsync();
+    }
+
+    public Task<LocationModel?> LocationFind(string countryCode, string? regionCode, string? cityCode)
+    {
+        return vhContext.Locations
+            .Where(x => x.CountryCode == countryCode)
+            .Where(x => x.RegionCode == (regionCode ?? "-"))
+            .Where(x => x.CityCode == (cityCode ?? "-"))
+            .SingleOrDefaultAsync();
+    }
+
+    public Task<AccessTokenModel> AccessTokenGet(Guid projectId, Guid accessTokenId, bool includeFarm = false)
+    {
+        var query = vhContext.AccessTokens
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .Where(x => x.AccessTokenId == accessTokenId);
+
+        if (includeFarm)
+            query = query.Include(x => x.ServerFarm);
+
+        return query.SingleAsync();
+    }
+
+    public async Task<LocationModel> LocationAdd(LocationModel location)
+    {
+        var entry = await vhContext.Locations.AddAsync(location);
+        return entry.Entity;
+    }
+
+    public async Task<DeviceModel> DeviceAdd(DeviceModel device)
+    {
+        var entry = await vhContext.Devices.AddAsync(device);
+        return entry.Entity;
     }
 }

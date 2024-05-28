@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -8,7 +9,6 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Access;
 using ServerState = VpnHood.AccessServer.Api.ServerState;
@@ -91,6 +91,7 @@ public class CertificateTest
 
         await server.Reload();
         Assert.AreEqual(ServerState.Idle, server.Server.ServerState);
+        Assert.IsFalse(farm.ServerFarm.UseHostName);
 
         // create new certificate
         await farm.CertificateReplace(new CertificateCreateParams
@@ -130,11 +131,13 @@ public class CertificateTest
         await server.WaitForState(ServerState.Idle);
 
         // Wait for signin the certificate
-        await VhTestUtil.AssertEqualsWait(true, async () =>
+        await TestUtil.AssertEqualsWait(true, async () =>
         {
             await farm.Reload();
             return farm.ServerFarm.Certificate!.IsValidated;
         });
+
+        Assert.IsTrue(farm.ServerFarm.UseHostName);
 
         // Create a token and make sure it is valid and there is no CertificateHash
         var accessToken = await farm.CreateAccessToken();
@@ -148,13 +151,19 @@ public class CertificateTest
         var testApp = await TestApp.Create(new Dictionary<string, string?>
         {
             [$"CertificateValidator:{nameof(CertificateValidatorOptions.Interval)}"] = TimeSpan.FromSeconds(1).ToString(),
-            [$"CertificateValidator:{nameof(CertificateValidatorOptions.Due)}"] = TimeSpan.FromSeconds(1).ToString(),
+            [$"CertificateValidator:{nameof(CertificateValidatorOptions.Due)}"] = TimeSpan.FromSeconds(1).ToString()
         });
 
-        await testApp.VhContext.Certificates.ExecuteDeleteAsync();
+        // disable old AutoValidate to prevent jon validate old certificates in test
+        var validatingCertificates = await testApp.VhContext.Certificates
+            .Where(x=>x.AutoValidate).ToArrayAsync();
+        foreach (var validatingCertificate in validatingCertificates)
+            validatingCertificate.AutoValidate = false;
+        await testApp.VhContext.SaveChangesAsync();
 
         // create farm and server
         using var farm = await ServerFarmDom.Create(testApp, serverCount: 0);
+        Assert.IsFalse(farm.ServerFarm.UseHostName);
         farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(4);
         farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(4);
         Assert.IsNotNull(farm.ServerFarm.Certificate);
@@ -181,7 +190,7 @@ public class CertificateTest
 
         // wait for auto validate to fail
         testApp.Logger.LogInformation("Test: Waiting for validation to fail.");
-        await VhTestUtil.AssertEqualsWait(false, async () =>
+        await TestUtil.AssertEqualsWait(false, async () =>
         {
             await farm.Reload();
             return string.IsNullOrEmpty(farm.ServerFarm.Certificate.ValidateError);
@@ -193,7 +202,7 @@ public class CertificateTest
 
         // wait for auto validating
         testApp.Logger.LogInformation("Test: Waiting for ValidateInprogress to be true.");
-        await VhTestUtil.AssertEqualsWait(true, async () =>
+        await TestUtil.AssertEqualsWait(true, async () =>
         {
             await farm.Reload();
             return farm.ServerFarm.Certificate.ValidateInprogress;
@@ -215,11 +224,12 @@ public class CertificateTest
         // wait for auto validating
         testApp.Logger.LogInformation("Test: Waiting for ValidateInprogress to be false.");
         Assert.IsNotNull(farm.ServerFarm.Certificate);
-        await VhTestUtil.AssertEqualsWait(false, async () =>
+        await TestUtil.AssertEqualsWait(false, async () =>
         {
             await farm.Reload();
             return farm.ServerFarm.Certificate.ValidateInprogress;
         });
+        Assert.IsTrue(farm.ServerFarm.UseHostName);
         Assert.IsTrue(farm.ServerFarm.Certificate.IsValidated);
         Assert.IsNull(farm.ServerFarm.Certificate.ValidateErrorTime);
         Assert.IsFalse(farm.ServerFarm.Certificate.ValidateInprogress);

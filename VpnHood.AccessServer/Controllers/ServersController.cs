@@ -19,24 +19,23 @@ public class ServersController(
 {
     [HttpPost]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
-    public Task<VpnServer> Create(Guid projectId, ServerCreateParams createParams)
+    public Task<ServerData> Create(Guid projectId, ServerCreateParams createParams)
     {
         return serverService.Create(projectId, createParams);
     }
 
     [HttpPatch("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ServerWrite)]
-    public Task<VpnServer> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
+    public Task<ServerData> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         return serverService.Update(projectId, serverId, updateParams);
     }
 
     [HttpGet("{serverId:guid}")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ServerData> Get(Guid projectId, Guid serverId)
+    public Task<ServerData> Get(Guid projectId, Guid serverId)
     {
-        var list = await serverService.List(projectId, serverId: serverId);
-        return list.Single();
+        return serverService.Get(projectId, serverId: serverId);
     }
 
     [HttpDelete("{serverId:guid}")]

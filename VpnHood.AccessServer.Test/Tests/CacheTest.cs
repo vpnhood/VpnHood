@@ -1,7 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using GrayMint.Common.Utils;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -21,7 +21,7 @@ public class CacheTest
         var sessionDom = await accessTokenDom.CreateSession();
         await sessionDom.CloseSession();
 
-        await VhTestUtil.AssertEqualsWait(true, 
+        await TestUtil.AssertEqualsWait(true, 
             async () => await testApp.VhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom.SessionId && x.EndTime != null), 
             "Session has not been synced yet.");
     }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Enums;
+using VpnHood.AccessServer.Repos;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Services;

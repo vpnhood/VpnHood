@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.ServerProfiles;
@@ -160,7 +161,7 @@ public class ServerProfileService(
         if (string.IsNullOrEmpty(serverConfigJson))
             return null;
 
-        var serverConfig = VhUtil.JsonDeserialize<ServerConfig>(serverConfigJson);
+        var serverConfig = GmUtil.JsonDeserialize<ServerConfig>(serverConfigJson);
 
         if (!string.IsNullOrEmpty(serverConfig.ConfigCode))
             throw new ArgumentException($"You can not set {nameof(serverConfig.ConfigCode)}.", nameof(serverConfig));

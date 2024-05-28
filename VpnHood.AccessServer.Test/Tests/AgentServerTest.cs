@@ -188,10 +188,36 @@ public class AgentServerTest
     }
 
     [TestMethod]
+    public async Task Configure_should_update_farm_server_token_and_update_cache()
+    {
+        // create serverInfo
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        var serverDom = await farm.AddNewServer();
+        
+        // create a session to make sure agent cache the objects
+        var accessToken = await farm.CreateAccessToken();
+        await accessToken.CreateSession();
+
+        // reconfig server by new endpoints
+        serverDom.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverDom.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        await serverDom.Configure();
+
+        // create new session to see if agent cache has been updated
+        var sessionDom = await accessToken.CreateSession();
+        var token = Common.Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey!);
+        Assert.IsNotNull(token.ServerToken.HostEndPoints);
+        Assert.AreEqual(
+            token.ServerToken.HostEndPoints.First(x=>x.AddressFamily==AddressFamily.InterNetwork).Address, 
+            serverDom.ServerInfo.PublicIpAddresses.First());
+    }
+
+
+    [TestMethod]
     public async Task Configure_UDP_for_first_time_only()
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
-        var serverDom = await farm.AddNewServer(false);
+        var serverDom = await farm.AddNewServer(configure: false);
 
         // create serverInfo and configure
         var publicIp = await farm.TestApp.NewIpV6();
@@ -224,7 +250,7 @@ public class AgentServerTest
         var farmCreateParams = new ServerFarmCreateParams { TokenUrl = new Uri("http://localhost:8080/farm1-token") };
         using var farm = await ServerFarmDom.Create(serverCount: 0, createParams: farmCreateParams);
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
-        var serverDom = await farm.AddNewServer(false);
+        var serverDom = await farm.AddNewServer(configure: false);
 
         // create serverInfo and configure
         var publicIp = await farm.TestApp.NewIpV6();
@@ -290,7 +316,7 @@ public class AgentServerTest
     {
         using var farm = await ServerFarmDom.Create(serverCount: 0);
         var testApp = farm.TestApp;
-        var serverDom = await farm.AddNewServer(false, false);
+        var serverDom = await farm.AddNewServer(configure: false, sendStatus: false);
 
         // create serverInfo
         var privateIpV4 = await testApp.NewIpV4();
@@ -470,55 +496,6 @@ public class AgentServerTest
     }
 
     [TestMethod]
-    public async Task LoadBalancer()
-    {
-        using var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
-
-        // Create and init servers
-        var serverDom1 = await farm.AddNewServer();
-        var serverDom2 = await farm.AddNewServer();
-        var serverDom3 = await farm.AddNewServer(sendStatus: false);
-        var serverDom4 = await farm.AddNewServer(configure: false);
-        var serverDom5 = await farm.AddNewServer(configure: false, sendStatus: false);
-        var serverDom6 = await farm.AddNewServer();
-
-        // configure serverDom5 with ipv6
-        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()
-        ];
-        serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
-        await serverDom5.Configure();
-
-        // make sure all accessPoints are initialized
-        await farm.ReloadServers();
-
-        // create access token
-        var accessTokenDom = await farm.CreateAccessToken();
-
-        // create sessions
-        for (var i = 0; i < 10; i++)
-        {
-            var addressFamily = i == 9 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork; //only one IPv6 request
-            var sessionDom = await accessTokenDom.CreateSession(addressFamily: addressFamily, autoRedirect: true);
-
-            // find the server that create the session
-            var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
-            serverDom.ServerInfo.Status.SessionCount++;
-            await serverDom.SendStatus();
-        }
-
-        // some server should not be selected
-        Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount, "Should not use server in Configuring state.");
-        Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount, "Should not use server in Configuring state.");
-        Assert.AreEqual(1, serverDom5.ServerStatus.SessionCount, "IpVersion was not respected.");
-
-        // each server sessions must be 3
-        Assert.AreEqual(3, serverDom1.ServerStatus.SessionCount);
-        Assert.AreEqual(3, serverDom2.ServerStatus.SessionCount);
-        Assert.AreEqual(3, serverDom6.ServerStatus.SessionCount);
-    }
-
-    [TestMethod]
     public async Task Fail_Configure_by_old_version()
     {
         using var farm = await ServerFarmDom.Create();
@@ -542,7 +519,7 @@ public class AgentServerTest
         const long gb = 0x40000000;
 
         var sampler = await ServerFarmDom.Create(serverCount: 0);
-        var sampleServer = await sampler.AddNewServer(false);
+        var sampleServer = await sampler.AddNewServer(configure: false);
 
         sampleServer.ServerInfo.TotalMemory = 60L * gb;
         await sampleServer.Configure();

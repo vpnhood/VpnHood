@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
@@ -34,7 +35,7 @@ public class ServerTest
         //-----------
         // check: Create
         //-----------
-        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
+        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}"};
         var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
         var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
@@ -46,7 +47,7 @@ public class ServerTest
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true);
+        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true, gatewayIpV4: IPAddress.Parse("5.0.0.1"));
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.Configure(false);
         await serverDom.Reload();
@@ -56,6 +57,7 @@ public class ServerTest
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.SendStatus();
         await serverDom.Reload();
+        Assert.AreEqual("5", serverDom.Server.Location?.CountryCode);
         Assert.AreEqual(ServerState.Idle, serverDom.Server.ServerState);
 
         // ServerState.Active
@@ -240,12 +242,12 @@ public class ServerTest
         // add another server
         var server2Dom = await farm.AddNewServer(new ServerCreateParams
         {
-            AccessPoints = new[] {await farm.TestApp.NewAccessPoint()}
+            AccessPoints = new[] { await farm.TestApp.NewAccessPoint() }
         });
         var server2TokenIp = server2Dom.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         accessToken = await farm.CreateAccessToken();
         token = await accessToken.GetToken();
-        
+
         // both server AccessPoint must exist
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server2TokenIp.IpAddress));
@@ -270,15 +272,15 @@ public class ServerTest
 
         // active 2
         sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic{Received = 100, Sent = 50 }});
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic { Received = 100, Sent = 50 } });
         sampleServer = await farm.AddNewServer();
         await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
 
         // notInstalled 4
-        await farm.AddNewServer(false);
-        await farm.AddNewServer(false);
-        await farm.AddNewServer(false);
-        await farm.AddNewServer(false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
 
         // idle1
         sampleServer = await farm.AddNewServer();
@@ -372,7 +374,7 @@ public class ServerTest
 
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();
-        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x=> x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
+        Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
             "AccessPoints have not been updated in FarmToken.");
     }
 }

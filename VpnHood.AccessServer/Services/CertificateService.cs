@@ -1,8 +1,8 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos.Certificates;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.AccessServer.Repos;
 using VpnHood.Server.Access;
 
 namespace VpnHood.AccessServer.Services;
@@ -15,18 +15,17 @@ public class CertificateService(
     {
         // make sure farm belong to this project
         var serverFarm = await vhRepo.ServerFarmGet(projectId, serverFarmId, includeCertificates: true);
-
+        serverFarm.UseHostName = false; // disable hostname for self-signed certificate
+        
         // remove all farm certificates
         foreach (var cert in serverFarm.Certificates!)
             await vhRepo.CertificateDelete(projectId, cert.CertificateId);
 
         var certificate = BuildSelfSinged(serverFarm.ProjectId, serverFarmId: serverFarm.ServerFarmId, createParams: createParams);
         await vhRepo.AddAsync(certificate);
-        await vhRepo.SaveChangesAsync();
 
         // invalidate farm cache
-        await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
-
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
         return certificate.ToDto();
     }
 
@@ -42,11 +41,9 @@ public class CertificateService(
         // replace with the new one
         var certificate = BuildByImport(serverFarm.ProjectId, serverFarm.ServerFarmId, importParams);
         await vhRepo.AddAsync(certificate);
-        await vhRepo.SaveChangesAsync();
 
         // invalidate farm cache
-        await serverConfigureService.InvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
-
+        await serverConfigureService.SaveChangesAndInvalidateServerFarm(certificate.ProjectId, serverFarmId, true);
         return certificate.ToDto();
     }
 

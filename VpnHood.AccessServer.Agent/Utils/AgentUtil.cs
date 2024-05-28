@@ -13,4 +13,5 @@ public static class AgentUtil
         bufferSize = Math.Min(bufferSize, 8192); //81920, it looks it doesn't have effect
         return (int)bufferSize;
     }
+
 }

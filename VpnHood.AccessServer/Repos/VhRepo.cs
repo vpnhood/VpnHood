@@ -1,9 +1,10 @@
 ﻿using GrayMint.Common.Generics;
 using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Models;
-using VpnHood.AccessServer.Persistence.Views;
+using VpnHood.AccessServer.Repos.Views;
 
-namespace VpnHood.AccessServer.Persistence;
+namespace VpnHood.AccessServer.Repos;
 
 public class VhRepo(VhContext vhContext)
     : RepoBase(vhContext)
@@ -18,11 +19,12 @@ public class VhRepo(VhContext vhContext)
     public Task<ServerModel> ServerGet(Guid projectId, Guid serverId, bool includeFarm = false, bool includeFarmProfile = false)
     {
         var query = vhContext.Servers
+            .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerId == serverId);
 
-        if (includeFarm) query.Include(server => server.ServerFarm);
-        if (includeFarmProfile) query.Include(server => server.ServerFarm!.ServerProfile);
+        if (includeFarm) query = query.Include(server => server.ServerFarm);
+        if (includeFarmProfile) query = query.Include(server => server.ServerFarm!.ServerProfile);
 
         return query.SingleAsync();
     }
@@ -30,12 +32,43 @@ public class VhRepo(VhContext vhContext)
     public Task<ServerModel[]> ServerList(Guid projectId, Guid? serverFarmId = null, Guid? serverProfileId = null)
     {
         var query = vhContext.Servers
+            .Include(x => x.Location)
             .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Where(x => x.ServerFarmId == serverFarmId || serverFarmId == null)
             .Where(x => x.ServerFarm!.ServerProfileId == serverProfileId || serverProfileId == null);
 
         return query.ToArrayAsync();
     }
+
+    public async Task<ServerModel[]> ServerSearch(Guid projectId,
+        string? search,
+        Guid? serverId = null,
+        Guid? serverFarmId = null,
+        int recordIndex = 0,
+        int recordCount = int.MaxValue)
+    {
+        await using var trans = await vhContext.WithNoLockTransaction();
+        var servers = await vhContext.Servers
+            .Include(server => server.ServerFarm)
+            .Include(server => server.Location)
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .Where(server => serverId == null || server.ServerId == serverId)
+            .Where(server => serverFarmId == null || server.ServerFarmId == serverFarmId)
+            .Where(x =>
+                string.IsNullOrEmpty(search) ||
+                x.ServerName.Contains(search) ||
+                x.ServerId.ToString() == search ||
+                x.ServerFarmId.ToString() == search)
+            .OrderBy(x => x.ServerId)
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .AsNoTracking()
+            .ToArrayAsync();
+
+        return servers;
+
+    }
+
 
     public Task<ServerProfileModel> ServerProfileGet(Guid projectId, Guid serverProfileId)
     {
@@ -151,7 +184,7 @@ public class VhRepo(VhContext vhContext)
         foreach (var accessToken in accessTokens)
             accessToken.IsDeleted = true;
 
-        return accessTokens.Select(x=>x.AccessTokenId).ToArray();
+        return accessTokens.Select(x => x.AccessTokenId).ToArray();
     }
 
     public Task<CertificateModel> CertificateGet(Guid projectId, Guid certificateId,
@@ -237,7 +270,8 @@ public class VhRepo(VhContext vhContext)
             query = query.Include(x => x.Certificates!.Where(y => !y.IsDeleted && y.IsDefault));
 
         if (includeServers)
-            query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted));
+            query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
+                .ThenInclude(x=>x.Location);
 
         if (includeAccessTokens)
             query = query.Include(farm => farm.AccessTokens!.Where(accessToken => !accessToken.IsDeleted));
@@ -284,7 +318,7 @@ public class VhRepo(VhContext vhContext)
                     IsDeleted = x.IsDeleted,
                     IsDefault = x.IsDefault,
                     ProjectId = x.ProjectId,
-                    ServerFarmId = x.ServerFarmId,
+                    ServerFarmId = x.ServerFarmId
                 },
                 ServerFarm = x.ServerFarm!,
                 ServerProfileName = x.ServerFarm!.ServerProfile!.ServerProfileName,
@@ -312,12 +346,12 @@ public class VhRepo(VhContext vhContext)
         return results;
     }
 
-    public async Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount, TimeSpan retryInterval)
+    public Task<CertificateModel[]> CertificateExpiringList(TimeSpan expireBy, int maxErrorCount, TimeSpan retryInterval)
     {
         var expirationTime = DateTime.UtcNow + expireBy;
         var errorTime = DateTime.UtcNow - retryInterval;
 
-        var certificates = await vhContext.Certificates
+        var certificates = vhContext.Certificates
             .Where(x => !x.IsDeleted && x.AutoValidate)
             .Where(x => x.ValidateErrorCount < maxErrorCount)
             .Where(x => x.ValidateErrorTime < errorTime)

@@ -1,11 +1,11 @@
 ﻿using System.Net.Mime;
+using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos.Certificates;
 using VpnHood.AccessServer.Dtos.ServerFarms;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 

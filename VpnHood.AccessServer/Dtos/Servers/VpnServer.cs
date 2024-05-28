@@ -7,6 +7,7 @@ public class VpnServer
     public required string ServerName { get; init; }
     public required Guid ServerFarmId { get; init; }
     public required string? ServerFarmName { get; init; }
+    public required Location? Location { get; init; }
     public required string? Version { get; init; }
     public required string? EnvironmentVersion { get; init; }
     public required string? OsInfo { get; init; }

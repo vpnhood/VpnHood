@@ -1,8 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
+using GrayMint.Common.Utils;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 
@@ -20,7 +19,6 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public static async Task<ServerDom> Attach(TestApp testApp, Guid serverId)
     {
         var serverData = await testApp.ServersClient.GetAsync(testApp.ProjectId, serverId);
@@ -33,8 +31,8 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         {
             Version = server.Version != null ? Version.Parse(server.Version) : new Version(),
             EnvironmentVersion = server.EnvironmentVersion != null ? Version.Parse(server.EnvironmentVersion) : new Version(),
-            PrivateIpAddresses = Array.Empty<IPAddress>(),
-            PublicIpAddresses = Array.Empty<IPAddress>(),
+            PrivateIpAddresses = [],
+            PublicIpAddresses = [],
             MachineName = server.MachineName,
             LogicalCoreCount = server.LogicalCoreCount ?? 0,
             OsInfo = server.OsInfo,
@@ -70,14 +68,18 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         Server = serverData.Server;
     }
 
-    public static async Task<ServerDom> Create(TestApp testApp, ServerCreateParams createParams, bool configure = true, bool sendStatus = true)
+    public static async Task<ServerDom> Create(TestApp testApp, ServerCreateParams createParams,
+        bool configure = true, bool sendStatus = true, int? logicalCore = null, IPAddress? gatewayIpV4 = null)
     {
-        var server = await testApp.ServersClient.CreateAsync(testApp.ProjectId, createParams);
+        var serverData = await testApp.ServersClient.CreateAsync(testApp.ProjectId, createParams);
 
         var myServer = new ServerDom(
             testApp: testApp,
-            server: server,
-            serverInfo: await testApp.NewServerInfo(randomStatus: false)
+            server: serverData.Server,
+            serverInfo: await testApp.NewServerInfo(
+                randomStatus: false,
+                logicalCore: logicalCore,
+                gatewayIpV4: gatewayIpV4)
             );
 
         if (configure)
@@ -89,14 +91,22 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
         return myServer;
     }
 
-    public static Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true, bool sendStatus = true)
+    public static async Task<ServerDom> Create(TestApp testApp, Guid serverFarmId, bool configure = true,
+        bool sendStatus = true, IPAddress? gatewayIpV4 = null, int? logicalCore = null)
     {
-        return Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId }, configure, sendStatus);
+        var serverDom = await Create(testApp, new ServerCreateParams { ServerFarmId = serverFarmId },
+            configure: configure,
+            sendStatus: sendStatus,
+            logicalCore: logicalCore,
+            gatewayIpV4: gatewayIpV4);
+
+        return serverDom;
     }
 
     public async Task Update(ServerUpdateParams updateParams)
     {
-        Server = await TestApp.ServersClient.UpdateAsync(TestApp.ProjectId, ServerId, updateParams);
+        var serverData = await TestApp.ServersClient.UpdateAsync(TestApp.ProjectId, ServerId, updateParams);
+        Server = serverData.Server;
     }
 
     public async Task Configure(bool updateStatus = true)
@@ -139,7 +149,7 @@ public class ServerDom(TestApp testApp, VpnServer server, ServerInfo serverInfo)
 
     public async Task WaitForState(ServerState state)
     {
-        await VhTestUtil.AssertEqualsWait(state, async () =>
+        await TestUtil.AssertEqualsWait(state, async () =>
         {
             await Reload();
             return Server.ServerState;

@@ -1,14 +1,15 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text.Json;
+using GrayMint.Common.Utils;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Agent.Utils;
-using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Persistence.Caches;
 using VpnHood.AccessServer.Persistence.Enums;
 using VpnHood.AccessServer.Persistence.Models;
 using VpnHood.AccessServer.Persistence.Utils;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
@@ -23,6 +24,8 @@ public class AgentService(
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     SessionService sessionService,
+    [FromKeyedServices(Program.LocationProviderServer)] IIpLocationProvider ipLocationProvider,
+    IHttpClientFactory httpClientFactory,
     VhAgentRepo vhAgentRepo)
 {
     private readonly AgentOptions _agentOptions = agentOptions.Value;
@@ -47,23 +50,11 @@ public class AgentService(
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public async Task<SessionResponse> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, 
+    public async Task<SessionResponse> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession,
         Traffic traffic, string? adData)
     {
         var server = await GetServer(serverId);
         return await sessionService.AddUsage(server, sessionId, traffic, closeSession, adData);
-    }
-
-    [HttpGet("certificates/{hostEndPoint}")]
-    //todo: deprecated
-    public async Task<byte[]> GetCertificate(Guid serverId, string hostEndPoint)
-    {
-        var server = await GetServer(serverId);
-        logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
-            server.ServerId, hostEndPoint);
-
-        var serverFarm = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeCertificate: true);
-        return serverFarm.Certificate!.RawData;
     }
 
     private async Task CheckServerVersion(ServerCache server, string? version)
@@ -123,10 +114,12 @@ public class AgentService(
         UpdateServerStatus(server, serverInfo.Status, true);
 
         // ready for update
-        var serverModel = await vhAgentRepo.ServerGet(server.ProjectId, serverId);
-        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, serverModel.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
+        var serverFarmModel = await vhAgentRepo.ServerFarmGet(server.ProjectId, server.ServerFarmId, includeServersAndAccessPoints: true, includeCertificate: true);
+        var serverModel = serverFarmModel.Servers!.Single(x => x.ServerId == serverId);
 
         // update cache
+        var gatewayIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+        var gatewayIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
         serverModel.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         serverModel.OsInfo = serverInfo.OsInfo;
         serverModel.MachineName = serverInfo.MachineName;
@@ -134,27 +127,59 @@ public class AgentService(
         serverModel.TotalMemory = serverInfo.TotalMemory ?? 0;
         serverModel.LogicalCoreCount = serverInfo.LogicalCoreCount;
         serverModel.Version = serverInfo.Version.ToString();
+        serverModel.GatewayIpV4 = gatewayIpV4?.ToString();
+        serverModel.GatewayIpV6 = gatewayIpV6?.ToString();
+        serverModel.Location ??= await GetIpLocation(gatewayIpV4 ?? gatewayIpV6);
 
         // calculate access points
         if (serverModel.AutoConfigure)
-        {
-            var accessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
-
-            // check if access points has been changed, then update host token and access points
-            if (JsonSerializer.Serialize(accessPoints) != JsonSerializer.Serialize(serverModel.AccessPoints))
-            {
-                serverModel.AccessPoints = accessPoints;
-                FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
-            }
-        }
+            serverModel.AccessPoints = BuildServerAccessPoints(serverModel.ServerId, serverFarmModel.Servers!, serverInfo);
 
         // update if there is any change & update cache
+        var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarmModel);
         await vhAgentRepo.SaveChangesAsync();
         await cacheService.InvalidateServer(server.ServerId);
+        if (isFarmUpdated)
+            await cacheService.InvalidateServerFarm(server.ServerFarmId, includeServers: false);
 
         // update cache
         var serverConfig = GetServerConfig(serverModel, serverFarmModel);
         return serverConfig;
+    }
+
+    private async Task<LocationModel?> GetIpLocation(IPAddress? ipAddress)
+    {
+        if (ipAddress == null)
+            return null;
+
+        try
+        {
+            using var httpClient = httpClientFactory.CreateClient();
+            var ipLocation = await ipLocationProvider.GetLocation(httpClient, ipAddress);
+            var location = await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
+            if (location == null)
+            {
+                location = new LocationModel
+                {
+                    LocationId = 0,
+                    CountryCode = ipLocation.CountryCode,
+                    CountryName = ipLocation.CountryName,
+                    RegionCode = ipLocation.RegionCode ?? LocationModel.UnknownCode,
+                    RegionName = ipLocation.RegionName,
+                    CityCode = ipLocation.CityCode ?? LocationModel.UnknownCode,
+                    CityName = ipLocation.CityName,
+                    ContinentCode = ipLocation.ContinentCode
+                };
+                location = await vhAgentRepo.LocationAdd(location);
+            }
+
+            return location;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Could not retrieve IP location. IP: {IP}", VhUtil.RedactIpAddress(ipAddress));
+            return null;
+        }
     }
 
     private ServerConfig GetServerConfig(ServerModel serverModel,
@@ -205,7 +230,7 @@ public class AgentService(
         {
             try
             {
-                var serverProfileConfig = VhUtil.JsonDeserialize<ServerConfig>(serverProfileConfigJson);
+                var serverProfileConfig = GmUtil.JsonDeserialize<ServerConfig>(serverProfileConfigJson);
                 serverConfig.Merge(serverProfileConfig);
             }
             catch (Exception ex)

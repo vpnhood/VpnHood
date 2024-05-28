@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
+using GrayMint.Common.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -72,14 +72,14 @@ public class ServerProfileTest
             ServerConfig = JsonSerializer.Serialize(serverConfig)
         });
         Assert.IsNotNull(serverProfileDom.ServerProfile.ServerConfig);
-        var serverConfig2 = VhUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
+        var serverConfig2 = GmUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
         Assert.AreEqual(serverConfig.SessionOptions.NetScanLimit, serverConfig2.SessionOptions.NetScanLimit);
 
         // -----------
         // get
         // -----------
         await serverProfileDom.Reload();
-        serverConfig2 = VhUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
+        serverConfig2 = GmUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
         Assert.AreEqual(serverConfig.SessionOptions.NetScanLimit, serverConfig2.SessionOptions.NetScanLimit);
 
         // -----------
@@ -90,7 +90,7 @@ public class ServerProfileTest
         {
             ServerConfig = new PatchOfString { Value = JsonSerializer.Serialize(serverConfig) }
         });
-        serverConfig2 = VhUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
+        serverConfig2 = GmUtil.JsonDeserialize<ServerConfig>(serverProfileDom.ServerProfile.ServerConfig);
         Assert.AreEqual(serverConfig.SessionOptions.NetScanLimit, serverConfig2.SessionOptions.NetScanLimit);
 
         // -----------

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using VpnHood.AccessServer.Persistence.Models;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Persistence;
 
@@ -21,6 +22,7 @@ public class VhContext : DbContext
     public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
     public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
     public virtual DbSet<ServerProfileModel> ServerProfiles { get; set; } = default!;
+    public virtual DbSet<LocationModel> Locations { get; set; } = default!;
 
     protected VhContext()
     {
@@ -72,6 +74,14 @@ public class VhContext : DbContext
             entity
                 .Property(e => e.ProjectName)
                 .HasMaxLength(200);
+
+            entity
+                .Property(e => e.IsDeleted)
+                .HasDefaultValue(false);
+
+            entity
+                .Property(e => e.IsEnabled)
+                .HasDefaultValue(true);
 
             entity
                 .HasOne(e => e.LetsEncryptAccount)
@@ -156,8 +166,13 @@ public class VhContext : DbContext
                 .IsFixedLength();
 
             entity
-                .Property(e => e.Url)
-                .HasMaxLength(255);
+                .Property(e => e.Description)
+                .HasMaxLength(200);
+
+            entity
+                .Property(e => e.AdRequirement)
+                .HasDefaultValue(AdRequirement.None)
+                .HasMaxLength(50);
 
             entity
                 .Property(e => e.IsDeleted)
@@ -285,6 +300,13 @@ public class VhContext : DbContext
                     ap.WithOwner().HasForeignKey(nameof(ServerModel.ServerId));
                 });
 
+            entity
+                .HasOne(e => e.Location)
+                .WithMany(d => d.Servers)
+                .HasForeignKey(e => e.LocationId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+
             //entity.Property(e => e.AccessPoints)
             //    .HasColumnType("varchar(200)")
             //    .HasConversion(
@@ -359,7 +381,7 @@ public class VhContext : DbContext
 
             entity
                 .Property(e => e.PushTokenToClient)
-                .HasDefaultValue(false);
+                .HasDefaultValue(true);
 
             entity
                 .Property(e => e.ServerFarmName)
@@ -523,5 +545,20 @@ public class VhContext : DbContext
                 .Property(x => x.IsDeleted)
                 .HasDefaultValue(false);
         });
+
+        modelBuilder.Entity<LocationModel>(entity =>
+        {
+            entity
+                .HasKey(x => x.LocationId);
+
+            entity
+                .HasIndex(x => new { x.CountryCode, x.RegionCode, x.CityCode })
+                .IsUnique();
+
+            entity
+                .Property(x => x.RegionName)
+                .HasMaxLength(50);
+        });
+
     }
 }

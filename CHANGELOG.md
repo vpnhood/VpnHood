@@ -1,4 +1,4 @@
-# Upcoming
+# v4.5.520
 ### Client
 * Feature: Allow to select servers by country if the server supports it
 * Feature: Auto pause and resume when the server is not reachable

@@ -1,3 +1,18 @@
+# v4.5.520
+### Client
+* Feature: Allow to select servers by country if the server supports it
+* Feature: Auto pause and resume when the server is not reachable
+* Update: User IncludeIpRanges and ExcludeIpRanges in settings instead of CustomIpRanges
+* Update: Try to fix accesskey when it is not valid by missing the padding characters
+* Update: Countries IP ranges
+* Fix: Some wrong message in disconnect
+
+### Server
+* Improve: Optimize server reconfiguration at runtime
+* Feature: Support selecting server location when controlled by HttpAccessManager
+* Feature: Enable hot restart for FileAccessManager
+* Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
+
 # v4.4.506
 ### Client
 * Update: Android: Show Notification & QuickLaunch Request after connect

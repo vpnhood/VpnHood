@@ -21,7 +21,6 @@ public class Tunnel : IJob, IAsyncDisposable
     private readonly HashSet<StreamProxyChannel> _streamProxyChannels = [];
     private readonly List<IDatagramChannel> _datagramChannels = [];
     private readonly Timer _speedMonitorTimer;
-    private bool _disposed;
     private int _maxDatagramChannelCount;
     private Traffic _lastTraffic = new();
     private readonly Traffic _trafficUsage = new();
@@ -404,17 +403,11 @@ public class Tunnel : IJob, IAsyncDisposable
     }
 
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-    public ValueTask DisposeAsync()
+    private readonly AsyncLock _disposeLock = new();
+    private bool _disposed;
+    public async ValueTask DisposeAsync()
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore()
-    {
+        using var lockResult = await _disposeLock.LockAsync();
         if (_disposed) return;
         _disposed = true;
 

@@ -14,7 +14,7 @@ public class DnsConfigurationTest
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = [IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.2")];
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -30,7 +30,7 @@ public class DnsConfigurationTest
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = [IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.2")];
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -54,7 +54,7 @@ public class DnsConfigurationTest
         {
             ExcludeIpRanges = clientDnsServers.Select(x => new IpRange(x)).ToArray()
         };
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -78,7 +78,7 @@ public class DnsConfigurationTest
         {
             IncludeIpRanges = [IpRange.Parse("10.10.10.10-10.10.10.11")]
         };
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

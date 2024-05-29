@@ -3,7 +3,7 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.Services;
 
-internal class AppBaseUiService 
+internal class AppUiServiceBase 
     : IAppUiService
 {
     public bool IsQuickLaunchSupported => false;

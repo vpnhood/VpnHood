@@ -4,13 +4,16 @@ using System.Text.Json;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using Microsoft.Extensions.Logging;
 using Swan.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Messaging;
+using VpnHood.Tunneling;
 
 // ReSharper disable UnusedMember.Local
 
@@ -31,16 +34,18 @@ public class TestEmbedIoAccessManager : IDisposable
         BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
+        {
             _webServer.Start();
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} is listening to {BaseUri}");
+        }
     }
 
     public Uri BaseUri { get; }
-    public IPEndPoint? RedirectHostEndPoint { get; set; }
     public HttpException? HttpException { get; set; }
-    public Dictionary<string, IPEndPoint?> Regions { get; set; } = new();
 
     public void Dispose()
     {
+        Stop();
         _webServer.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -60,6 +65,7 @@ public class TestEmbedIoAccessManager : IDisposable
 
     public void Stop()
     {
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} has stopped listening to {BaseUri}");
         _webServer.Dispose();
     }
 
@@ -111,28 +117,6 @@ public class TestEmbedIoAccessManager : IDisposable
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
             var res = await AccessManager.Session_Create(sessionRequestEx);
-
-            if (!sessionRequestEx.AllowRedirect)
-                return res;
-            
-            if (embedIoAccessManager.RedirectHostEndPoint != null &&
-                !sessionRequestEx.HostEndPoint.Equals(embedIoAccessManager.RedirectHostEndPoint))
-            {
-                res.RedirectHostEndPoint = embedIoAccessManager.RedirectHostEndPoint;
-                res.ErrorCode = SessionErrorCode.RedirectHost;
-            }
-
-            // manage region
-            if (sessionRequestEx.RegionId != null)
-            {
-                var redirectEndPoint = embedIoAccessManager.Regions[sessionRequestEx.RegionId];
-                if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
-                {
-                    res.RedirectHostEndPoint = embedIoAccessManager.Regions[sessionRequestEx.RegionId];
-                    res.ErrorCode = SessionErrorCode.RedirectHost;
-                }
-            }
-
             return res;
         }
 

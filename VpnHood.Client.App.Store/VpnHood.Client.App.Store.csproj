@@ -19,7 +19,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.4.506</Version>
+		<Version>4.5.520</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -35,7 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Store.Api" Version="1.0.34" />
+		<PackageReference Include="VpnHood.Store.Api" Version="1.0.36" />
 	</ItemGroup>
 
 </Project>

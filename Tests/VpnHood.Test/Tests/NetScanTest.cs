@@ -17,7 +17,7 @@ public class NetScanTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.NetScanTimeout = TimeSpan.FromSeconds(100);
         fileAccessManagerOptions.SessionOptions.NetScanLimit = 1;
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

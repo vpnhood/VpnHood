@@ -17,8 +17,6 @@ public class StreamProxyChannel : IChannel, IJob
     private const int BufferSizeDefault = TunnelDefaults.StreamProxyBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 0x1000;
-    private bool _disposed;
-
     public JobSection JobSection { get; } = new(TunnelDefaults.TcpCheckInterval);
     public bool Connected { get; private set; }
     public Traffic Traffic { get; } = new();
@@ -173,24 +171,20 @@ public class StreamProxyChannel : IChannel, IJob
         }
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(true);
     }
 
-    public ValueTask DisposeAsync(bool graceful)
+    private bool _disposed;
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync(bool graceful)
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore(graceful);
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore(bool graceful)
-    {
-        Connected = false;
+        using var lockResult = await _disposeLock.LockAsync();
+        if (_disposed) return;
         _disposed = true;
+
+        Connected = false;
         await Task.WhenAll(
             _hostTcpClientStream.DisposeAsync(graceful).AsTask(),
             _tunnelTcpClientStream.DisposeAsync(graceful).AsTask());

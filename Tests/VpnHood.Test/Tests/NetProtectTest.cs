@@ -12,7 +12,7 @@ public class NetProtectTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
         fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 0;
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -36,7 +36,7 @@ public class NetProtectTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.SessionOptions.TcpConnectTimeout = TimeSpan.FromSeconds(1);
         fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount = 1;
-        await using var server = TestHelper.CreateServer(fileAccessManagerOptions);
+        await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

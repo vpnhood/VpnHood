@@ -122,7 +122,7 @@ public class CheckNewVersionTest : TestBase
     public async Task Current_is_old_after_connect_to_vpn()
     {
         // create server and token
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // Set invalid file version to raise error
@@ -140,7 +140,7 @@ public class CheckNewVersionTest : TestBase
         // set new version
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1), DateTime.UtcNow, TimeSpan.Zero);
         await app.Connect(clientProfile.ClientProfileId);
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.Connected);
+        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
         await VhTestUtil.AssertEqualsWait(VersionStatus.Old, () => app.State.VersionStatus);
     }
 }

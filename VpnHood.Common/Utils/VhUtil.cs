@@ -56,6 +56,27 @@ public static class VhUtil
         }
     }
 
+    private static string FixBase64String(string base64)
+    {
+        base64 = base64.Trim();
+        var padding = base64.Length % 4;
+        if (padding > 0)
+            base64 = base64.PadRight(base64.Length + (4 - padding), '=');
+        return base64;
+    }
+
+    public static byte[] ConvertFromBase64AndFixPadding(string base64)
+    {
+        try
+        {
+            return Convert.FromBase64String(base64);
+        }
+        catch (FormatException)
+        {
+            return Convert.FromBase64String(FixBase64String(base64));
+        }
+    }
+
     public static void DirectoryCopy(string sourcePath, string destinationPath, bool recursive)
     {
         // Get the subdirectories for the specified directory.
@@ -103,7 +124,7 @@ public static class VhUtil
     public static async Task RunTask(Task task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         if (timeout == TimeSpan.Zero)
-            timeout = TimeSpan.FromMilliseconds(-1);
+            timeout = Timeout.InfiniteTimeSpan;
 
         var timeoutTask = Task.Delay(timeout, cancellationToken);
         await Task.WhenAny(task, timeoutTask);
@@ -187,8 +208,8 @@ public static class VhUtil
                 return default;
 
             var json = File.ReadAllText(filePath);
-            var appAccount = JsonDeserialize<T>(json, options);
-            return appAccount;
+            var obj = JsonDeserialize<T>(json, options);
+            return obj;
         }
         catch (Exception ex)
         {
@@ -367,6 +388,11 @@ public static class VhUtil
         return json;
     }
 
+    public static T GetRequiredInstance<T>(T? obj)
+    {
+        return obj ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet.");
+    }
+
     public static DateTime RemoveMilliseconds(DateTime dateTime)
     {
         return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Kind);
@@ -378,5 +404,39 @@ public static class VhUtil
             .FirstOrDefault(attr => attr.Key == key);
 
         return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
+    }
+
+    public static async Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> body, int maxDegreeOfParallelism,
+        CancellationToken cancellationToken)
+    {
+        var tasks = new List<Task>();
+        foreach (var t in source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            tasks.Add(body(t));
+            if (tasks.Count == maxDegreeOfParallelism)
+            {
+                await Task.WhenAny(tasks);
+                foreach (var completedTask in tasks.Where(x => x.IsCompleted).ToArray())
+                    tasks.Remove(completedTask);
+            }
+        }
+        await Task.WhenAll(tasks);
+    }
+
+    public static bool TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

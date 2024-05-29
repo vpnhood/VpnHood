@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.Settings;
 public class AppSettings
 {
     private readonly object _saveLock = new();
-    public event EventHandler? Saved;
+    public event EventHandler? BeforeSave;
 
     [JsonIgnore] 
     public string SettingsFilePath { get; private set; } = null!;
@@ -18,19 +18,17 @@ public class AppSettings
     public DateTime ConfigTime { get; set; } = DateTime.Now;
     public UserSettings UserSettings { get; set; } = new();
     public Guid ClientId { get; set; } = Guid.NewGuid();
-    public string? LastCountryIpGroupId { get; set; }
-
 
     public void Save()
     {
+        BeforeSave?.Invoke(this, EventArgs.Empty);
+
         lock (_saveLock)
         {
             ConfigTime = DateTime.Now;
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
         }
-
-        Saved?.Invoke(this, EventArgs.Empty);
     }
 
     internal static AppSettings Load(string settingsFilePath)

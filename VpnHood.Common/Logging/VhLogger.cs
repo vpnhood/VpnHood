@@ -95,10 +95,10 @@ public static class VhLogger
     public static string FormatHostName(string? dnsName)
     {
         if (dnsName == null) return "<null>";
+        if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
+            return Format(ipEndPoint);
 
-        return IPEndPointConverter.TryParse(dnsName, out var ipEndPoint) 
-            ? Format(ipEndPoint) 
-            : VhUtil.RedactHostName(dnsName);
+        return IsAnonymousMode ? VhUtil.RedactHostName(dnsName) : dnsName;
     }
 
     public static string FormatIpPacket(string ipPacketText)

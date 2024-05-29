@@ -1,7 +1,7 @@
-# v4.5.519
+# Upcoming
 ### Client
 * Feature: Allow to select servers by country if the server supports it
-* Feature: Auto pause and resume when server is not reachable
+* Feature: Auto pause and resume when the server is not reachable
 * Update: User IncludeIpRanges and ExcludeIpRanges in settings instead of CustomIpRanges
 * Update: Try to fix accesskey when it is not valid by missing the padding characters
 * Update: Countries IP ranges

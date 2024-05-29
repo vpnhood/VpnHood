@@ -30,18 +30,23 @@ public class Diagnoser
         }
     }
 
-    public async Task Connect(VpnHoodConnect clientConnect, CancellationToken cancellationToken)
+    public async Task Connect(VpnHoodClient vpnHoodClient, CancellationToken cancellationToken)
     {
         try
         {
-            await clientConnect.Connect(cancellationToken);
+            await vpnHoodClient.Connect(cancellationToken);
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
         {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
             if (!await NetworkCheck())
                 throw new NoInternetException();
+
             throw;
         }
         finally
@@ -50,7 +55,7 @@ public class Diagnoser
         }
     }
 
-    public async Task Diagnose(VpnHoodConnect clientConnect, CancellationToken cancellationToken)
+    public async Task Diagnose(VpnHoodClient vpnHoodClient, CancellationToken cancellationToken)
     {
         try
         {
@@ -61,7 +66,7 @@ public class Diagnoser
 
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(clientConnect.Client.Token.ServerToken);
+            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(vpnHoodClient.Token.ServerToken);
             var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, true);
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");
@@ -70,7 +75,7 @@ public class Diagnoser
 
             // VpnConnect
             IsWorking = false;
-            await clientConnect.Connect(cancellationToken);
+            await vpnHoodClient.Connect(cancellationToken);
 
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;

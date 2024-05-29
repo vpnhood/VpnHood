@@ -13,7 +13,6 @@ using VpnHood.Server.Access.Messaging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
-using VpnHood.Tunneling.Channels.Streams;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -108,7 +107,9 @@ public class Session : IAsyncDisposable, IJob
 
     public Task RunJob()
     {
-        return Sync(true, false);
+        return IsDisposed 
+            ? Task.CompletedTask 
+            : Sync(true, false);
     }
 
     public bool UseUdpChannel
@@ -281,6 +282,12 @@ public class Session : IAsyncDisposable, IJob
         throw new NotImplementedException();
     }
 
+    public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream, CancellationToken cancellationToken)
+    {
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+        await clientStream.DisposeAsync();
+    }
+
     public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
         await Sync(force: true, closeSession: false, adData: request.AdData);
@@ -327,10 +334,6 @@ public class Session : IAsyncDisposable, IJob
 
             // send response
             await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
-
-            // MaxEncryptChunk
-            if (clientStream.Stream is BinaryStreamCustom binaryStream)
-                binaryStream.MaxEncryptChunk = TunnelDefaults.TcpProxyEncryptChunkCount;
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,

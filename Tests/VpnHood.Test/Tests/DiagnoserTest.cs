@@ -10,7 +10,7 @@ public class DiagnoserTest : TestBase
     public async Task NormalConnect_NoInternet()
     {
         // create server
-        await using var server = TestHelper.CreateServer();
+        await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
         token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
 

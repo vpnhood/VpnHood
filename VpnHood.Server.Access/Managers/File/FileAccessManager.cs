@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -23,6 +24,7 @@ public class FileAccessManager : IAccessManager
     public string StoragePath { get; }
     public FileAccessManagerSessionController SessionController { get; }
     public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
+    public string SessionsFolderPath => Path.Combine(StoragePath, "sessions");
     public X509Certificate2 DefaultCert { get; }
     public ServerStatus? ServerStatus { get; private set; }
     public ServerInfo? ServerInfo { get; private set; }
@@ -34,7 +36,7 @@ public class FileAccessManager : IAccessManager
 
         StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
         ServerConfig = options;
-        SessionController = new FileAccessManagerSessionController();
+        SessionController = new FileAccessManagerSessionController(SessionsFolderPath);
         Directory.CreateDirectory(StoragePath);
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
@@ -64,13 +66,15 @@ public class FileAccessManager : IAccessManager
     }
 
     private ServerToken GetAndUpdateServerToken() => GetAndUpdateServerToken(ServerConfig, DefaultCert, Path.Combine(StoragePath, "server-token", "enc-server-token"));
-    private static ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
+    private ServerToken GetAndUpdateServerToken(FileAccessManagerOptions serverConfig, X509Certificate2 certificate, string encServerTokenFilePath)
     {
         // PublicEndPoints
         var publicEndPoints = serverConfig.PublicEndPoints ?? serverConfig.TcpEndPointsValue;
         if (!publicEndPoints.Any() || publicEndPoints.Any(x => x.Address.Equals(IPAddress.Any) || x.Address.Equals(IPAddress.IPv6Any)))
             throw new Exception("PublicEndPoints has not been configured properly.");
 
+
+        var serverLocation = LoadServerLocation().Result;
         var serverToken = new ServerToken
         {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
@@ -80,7 +84,8 @@ public class FileAccessManager : IAccessManager
             IsValidHostName = serverConfig.IsValidHostName,
             Secret = serverConfig.ServerSecretValue,
             Url = serverConfig.ServerTokenUrl,
-            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow)
+            CreatedTime = VhUtil.RemoveMilliseconds(DateTime.UtcNow),
+            ServerLocations = serverLocation != null ? [serverLocation] : null
         };
 
         // write encrypted server token
@@ -101,13 +106,53 @@ public class FileAccessManager : IAccessManager
         return serverToken;
     }
 
-    public byte[] LoadServerSecret()
+    private byte[] LoadServerSecret()
     {
         var serverSecretFile = Path.Combine(CertsFolderPath, "secret");
-        if (!System.IO.File.Exists(serverSecretFile))
-            System.IO.File.WriteAllText(serverSecretFile, Convert.ToBase64String(VhUtil.GenerateKey(128)));
+        var secretBase64 = TryToReadFile(serverSecretFile);
+        if (string.IsNullOrEmpty(secretBase64))
+        {
+            secretBase64 = Convert.ToBase64String(VhUtil.GenerateKey(128));
+            System.IO.File.WriteAllText(serverSecretFile, secretBase64);
+        }
 
-        return Convert.FromBase64String(System.IO.File.ReadAllText(serverSecretFile));
+        return Convert.FromBase64String(secretBase64);
+    }
+
+    private async Task<string?> LoadServerLocation()
+    {
+        try
+        {
+            var serverCountryFile = Path.Combine(StoragePath, "server_location");
+            var serverLocation = TryToReadFile(serverCountryFile);
+            if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService)
+            {
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Server");
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient());
+                serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
+                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation);
+            }
+
+            VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
+            return serverLocation;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not read server location.");
+            return null;
+        }
+    }
+    private static string? TryToReadFile(string filePath)
+    {
+        try
+        {
+            return System.IO.File.Exists(filePath) ? System.IO.File.ReadAllText(filePath) : null;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "Could not read file: {FilePath}", filePath);
+            return null;
+        }
     }
 
     public virtual Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
@@ -144,6 +189,7 @@ public class FileAccessManager : IAccessManager
             };
 
         var ret = SessionController.CreateSession(sessionRequestEx, accessItem);
+        ret.ServerLocation = _serverToken.ServerLocations?.FirstOrDefault();
 
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
@@ -199,6 +245,7 @@ public class FileAccessManager : IAccessManager
     private async Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
         bool closeSession)
     {
+
         // find token
         var tokenId = SessionController.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
@@ -295,7 +342,7 @@ public class FileAccessManager : IAccessManager
         string? tokenName = null,
         int maxTrafficByteCount = 0,
         DateTime? expirationTime = null,
-        AdShow adShow = AdShow.None)
+        AdRequirement adRequirement = AdRequirement.None)
     {
         // generate key
         var aes = Aes.Create();
@@ -308,7 +355,7 @@ public class FileAccessManager : IAccessManager
             MaxTraffic = maxTrafficByteCount,
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
-            AdShow = adShow,
+            AdRequirement = adRequirement,
             Token = new Token
             {
                 IssuedAt = DateTime.UtcNow,
@@ -413,7 +460,7 @@ public class FileAccessManager : IAccessManager
         public DateTime? ExpirationTime { get; set; }
         public int MaxClientCount { get; set; }
         public long MaxTraffic { get; set; }
-        public AdShow AdShow { get; set; }
+        public AdRequirement AdRequirement { get; set; }
         public required Token Token { get; set; }
 
         [JsonIgnore]

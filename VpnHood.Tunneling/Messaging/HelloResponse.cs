@@ -31,5 +31,6 @@ public class HelloResponse : SessionResponse
     public string? AccessKey { get; set; }
     // todo: deprecated in version 504 or later
     public bool IsAdRequired { get; set; }
-    public AdShow AdShow { get; set; } = AdShow.None;
+    public AdRequirement AdRequirement { get; set; } = AdRequirement.None;
+    public string? ServerLocation { get; set; }
 }

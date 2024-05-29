@@ -20,4 +20,8 @@ public class SessionResponse
     [JsonConverter(typeof(IPEndPointConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
+    
+    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public IPEndPoint[]? RedirectHostEndPoints { get; set; }
 }

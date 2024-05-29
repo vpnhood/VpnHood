@@ -1,6 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common.Converters;
 using VpnHood.Common.Jobs;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Messaging;
@@ -9,16 +14,44 @@ namespace VpnHood.Server.Access.Managers.File;
 
 public class FileAccessManagerSessionController : IDisposable, IJob
 {
+    private const string SessionFileExtension = "session";
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private readonly TimeSpan _adRequiredTimeout = TimeSpan.FromMinutes(4);
-    private uint _lastSessionId;
+    private ulong _lastSessionId;
+    private readonly string _sessionsFolderPath;
+    public JobSection JobSection { get; } = new();
 
-    public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
+    public ConcurrentDictionary<ulong, Session> Sessions { get; }
 
-    public FileAccessManagerSessionController()
+    public FileAccessManagerSessionController(string sessionsFolderPath)
     {
         JobRunner.Default.Add(this);
+        _sessionsFolderPath = sessionsFolderPath;
+        Directory.CreateDirectory(sessionsFolderPath);
+
+        // load all previous sessions to dictionary
+        Sessions = LoadAllSessions(sessionsFolderPath);
+    }
+
+    private static ConcurrentDictionary<ulong, Session> LoadAllSessions(string sessionsFolderPath)
+    {
+        // read all session from files
+        var sessions = new ConcurrentDictionary<ulong, Session>();
+        foreach (var filePath in Directory.GetFiles(sessionsFolderPath, $"*.{SessionFileExtension}"))
+        {
+            var session = VhUtil.JsonDeserializeFile<Session>(filePath);
+            if (session == null)
+            {
+                VhLogger.Instance.LogError("Could not load session file. File: {File}", filePath);
+                VhUtil.TryDeleteFile(filePath);
+                continue;
+            }
+
+            sessions.TryAdd(session.SessionId, session);
+        }
+
+        return sessions;
     }
 
     public Task RunJob()
@@ -27,7 +60,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
         return Task.CompletedTask;
     }
 
-    public JobSection JobSection { get; } = new();
+    private string GetSessionFilePath(ulong sessionId)
+    {
+        return Path.Combine(_sessionsFolderPath, $"{sessionId}.{SessionFileExtension}");
+    }
 
     private void CleanupSessions()
     {
@@ -40,7 +76,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
                 (x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime));
 
         foreach (var item in timeoutSessions)
+        {
             Sessions.TryRemove(item.Key, out _);
+            VhUtil.TryDeleteFile(GetSessionFilePath(item.Key));
+        }
     }
 
     public string? TokenIdFromSessionId(ulong sessionId)
@@ -65,9 +104,15 @@ public class FileAccessManagerSessionController : IDisposable, IJob
                 ErrorMessage = "Could not validate the request."
             };
 
+
+        //increment session id using atomic operation
+        lock(Sessions)
+            _lastSessionId++;
+
         // create a new session
         var session = new Session
         {
+            SessionId = _lastSessionId,
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = FastDateTime.Now,
@@ -77,7 +122,7 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             HostEndPoint = sessionRequestEx.HostEndPoint,
             ClientIp = sessionRequestEx.ClientIp,
             ExtraData = sessionRequestEx.ExtraData,
-            ExpirationTime = accessItem.AdShow is AdShow.Required ? DateTime.UtcNow + _adRequiredTimeout : null
+            ExpirationTime = accessItem.AdRequirement is AdRequirement.Required ? DateTime.UtcNow + _adRequiredTimeout : null
         };
 
         //create response
@@ -87,10 +132,10 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             return ret;
 
         // add the new session to collection
-        session.SessionId = ++_lastSessionId;
         Sessions.TryAdd(session.SessionId, session);
-        ret.SessionId = session.SessionId;
+        System.IO.File.WriteAllText(GetSessionFilePath(session.SessionId), JsonSerializer.Serialize(session));
 
+        ret.SessionId = session.SessionId;
         return ret;
     }
 
@@ -204,39 +249,44 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null,
-            IsAdRequired = accessItem.AdShow is AdShow.Required,
-            AdShow = accessItem.AdShow
+            IsAdRequired = accessItem.AdRequirement is AdRequirement.Required,
+            AdRequirement = accessItem.AdRequirement
         };
     }
 
     public void CloseSession(ulong sessionId)
     {
-        if (Sessions.TryGetValue(sessionId, out var session))
-        {
-            if (session.ErrorCode == SessionErrorCode.Ok)
-                session.ErrorCode = SessionErrorCode.SessionClosed;
-            session.Kill();
-        }
+        if (!Sessions.TryGetValue(sessionId, out var session))
+            return;
+
+        if (session.ErrorCode == SessionErrorCode.Ok)
+            session.ErrorCode = SessionErrorCode.SessionClosed;
+
+        session.Kill();
     }
 
     public class Session
     {
-        public uint SessionId { get; internal set; }
+        public required ulong SessionId { get; init; }
         public required string TokenId { get; init; }
-        public ClientInfo ClientInfo { get; internal set; } = null!;
-        public byte[] SessionKey { get; internal set; } = null!;
-        public DateTime CreatedTime { get; internal set; } = FastDateTime.Now;
-        public DateTime LastUsedTime { get; internal set; } = FastDateTime.Now;
-        public DateTime? EndTime { get; internal set; }
+        public required ClientInfo ClientInfo { get; init; }
+        public required byte[] SessionKey { get; init; }
+        public DateTime CreatedTime { get; init; } = FastDateTime.Now;
+        public DateTime LastUsedTime { get; init; } = FastDateTime.Now;
+        public DateTime? EndTime { get; set; }
         public DateTime? ExpirationTime { get; set; }
         public bool IsAlive => EndTime == null;
-        public SessionSuppressType SuppressedBy { get; internal set; }
-        public SessionSuppressType SuppressedTo { get; internal set; }
-        public SessionErrorCode ErrorCode { get; internal set; }
-        public string? ErrorMessage { get; internal set; }
-        public IPEndPoint HostEndPoint { get; internal set; } = null!;
-        public IPAddress? ClientIp { get; internal set; }
-        public string? ExtraData { get; internal set; }
+        public SessionSuppressType SuppressedBy { get; set; }
+        public SessionSuppressType SuppressedTo { get; set; }
+        public SessionErrorCode ErrorCode { get; set; }
+        public string? ErrorMessage { get; init; }
+        public string? ExtraData { get; init; }
+
+        [JsonConverter(typeof(IPEndPointConverter))]
+        public required IPEndPoint HostEndPoint { get; set; }
+        
+        [JsonConverter(typeof(IPAddressConverter))]
+        public IPAddress? ClientIp { get; init; }
 
         public void Kill()
         {

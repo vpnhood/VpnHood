@@ -81,24 +81,17 @@ public class ClientProfileService
         if (updateParams.ClientProfileName != null)
         {
             var name = updateParams.ClientProfileName.Value?.Trim();
+            if (name == clientProfile.Token.Name?.Trim()) name = null; // set default if the name is same as token name
             if (name?.Length == 0) name = null;
             clientProfile.ClientProfileName = name;
         }
 
-        // update region
-        if (updateParams.RegionId != null)
-        {
-            if (updateParams.RegionId.Value != null &&
-                clientProfile.Token.ServerToken.Regions?.SingleOrDefault(x => x.RegionId == updateParams.RegionId) == null)
-                throw new NotExistsException("RegionId does not exist.");
-
-            clientProfile.RegionId = updateParams.RegionId;
-        }
+        if (updateParams.IsFavorite != null)
+            clientProfile.IsFavorite = updateParams.IsFavorite.Value;
 
         Save();
         return clientProfile;
     }
-
 
     public ClientProfile ImportAccessKey(string accessKey)
     {

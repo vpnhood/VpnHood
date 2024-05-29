@@ -15,6 +15,17 @@ public class TestAccessManager : IAccessManager
     private readonly object _lockeObject = new();
     private readonly HttpAccessManager _httpAccessManager;
     public int SessionGetCounter { get; private set; }
+    public DateTime? LastConfigureTime { get; private set; }
+    public ServerInfo? LastServerInfo { get; private set; }
+    public ServerStatus? LastServerStatus { get; private set; }
+
+    public TestEmbedIoAccessManager EmbedIoAccessManager { get; }
+    public IAccessManager BaseAccessManager { get; }
+
+    public bool IsMaintenanceMode => _httpAccessManager.IsMaintenanceMode;
+    public IPEndPoint? RedirectHostEndPoint { get; set; }
+    public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
+
 
     public TestAccessManager(IAccessManager baseAccessManager)
     {
@@ -26,15 +37,6 @@ public class TestAccessManager : IAccessManager
             LoggerEventId = GeneralEventId.AccessManager
         };
     }
-
-    public DateTime? LastConfigureTime { get; private set; }
-    public ServerInfo? LastServerInfo { get; private set; }
-    public ServerStatus? LastServerStatus { get; private set; }
-
-    public TestEmbedIoAccessManager EmbedIoAccessManager { get; }
-    public IAccessManager BaseAccessManager { get; }
-
-    public bool IsMaintenanceMode => _httpAccessManager.IsMaintenanceMode;
 
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
@@ -59,9 +61,32 @@ public class TestAccessManager : IAccessManager
         return _httpAccessManager.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
-    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        return _httpAccessManager.Session_Create(sessionRequestEx);
+        var ret = await _httpAccessManager.Session_Create(sessionRequestEx);
+
+        if (!sessionRequestEx.AllowRedirect)
+            return ret;
+
+        if (RedirectHostEndPoint != null &&
+            !sessionRequestEx.HostEndPoint.Equals(RedirectHostEndPoint))
+        {
+            ret.RedirectHostEndPoint = RedirectHostEndPoint;
+            ret.ErrorCode = SessionErrorCode.RedirectHost;
+        }
+
+        // manage region
+        if (sessionRequestEx.ServerLocation != null)
+        {
+            var redirectEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
+            if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint))
+            {
+                ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
+                ret.ErrorCode = SessionErrorCode.RedirectHost;
+            }
+        }
+        
+        return ret;
     }
 
     public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)

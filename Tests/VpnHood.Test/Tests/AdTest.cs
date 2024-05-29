@@ -61,10 +61,10 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Flexible);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -86,10 +86,10 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Flexible);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -102,7 +102,7 @@ public class AdTest : TestBase
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<AdException>(() => app.Connect(clientProfile.ClientProfileId));
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
+        await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
 
     [TestMethod]
@@ -112,10 +112,10 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -128,7 +128,7 @@ public class AdTest : TestBase
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
         await Assert.ThrowsExceptionAsync<AdException>(() => app.Connect(clientProfile.ClientProfileId));
-        await TestHelper.WaitForClientStateAsync(app, AppConnectionState.None);
+        await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
 
     [TestMethod]
@@ -138,10 +138,10 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
@@ -164,10 +164,10 @@ public class AdTest : TestBase
         using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
             TestHelper.CreateFileAccessManagerOptions());
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adShow: AdShow.Required);
+        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
         fileAccessManager.RejectAllAds = true; // server will reject all ads
 

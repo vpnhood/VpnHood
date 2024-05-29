@@ -6,7 +6,7 @@ using VpnHood.Tunneling;
 
 namespace VpnHood.Client.App;
 
-public class AppLogService
+public class AppLogService : IDisposable
 {
     private StreamLogger? _streamLogger;
 
@@ -23,15 +23,15 @@ public class AppLogService
         return File.ReadAllTextAsync(LogFilePath);
     }
 
-    public void Start(AppLogSettings logSettings, bool diagnose)
+    public void Start(AppLogSettings logSettings)
     {
         VhLogger.IsAnonymousMode = logSettings.LogAnonymous;
-        VhLogger.IsDiagnoseMode = diagnose | logSettings.LogVerbose;
+        VhLogger.IsDiagnoseMode = logSettings.LogVerbose;
         VhLogger.Instance = NullLogger.Instance;
         VhLogger.Instance = CreateLogger(
             addToConsole: logSettings.LogToConsole,
-            addToFile: logSettings.LogToFile | diagnose,
-            verbose: diagnose,
+            addToFile: logSettings.LogToFile,
+            verbose: logSettings.LogVerbose,
             removeLastFile: true);
     }
 
@@ -99,5 +99,10 @@ public class AppLogService
 
         var logger = loggerFactory.CreateLogger("");
         return new SyncLogger(logger);
+    }
+
+    public void Dispose()
+    {
+        Stop();
     }
 }

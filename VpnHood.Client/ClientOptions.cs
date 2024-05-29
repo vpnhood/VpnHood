@@ -7,6 +7,12 @@ namespace VpnHood.Client;
 
 public class ClientOptions
 {
+    public static ClientOptions Default { get; } = new();
+
+#if DEBUG
+    public int ProtocolVersion { get; set; }
+#endif
+
     /// <summary>
     ///     a never used IPv4 that must be outside the local network
     /// </summary>
@@ -20,6 +26,8 @@ public class ClientOptions
     public bool AutoDisposePacketCapture { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan ReconnectTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
+    public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; }
     public bool IncludeLocalNetwork { get; set; }
@@ -34,9 +42,5 @@ public class ClientOptions
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool DropUdpPackets { get; set; }
     public string? AppGa4MeasurementId { get; set; }
-    public string? RegionId { get; set; }
-
-#if DEBUG
-    public int ProtocolVersion { get; set; }
-#endif
+    public string? ServerLocation { get; set; }
 }

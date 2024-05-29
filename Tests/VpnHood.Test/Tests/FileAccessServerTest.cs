@@ -16,7 +16,7 @@ public class FileAccessManagerTest : TestBase
 
         var fileAccessManager = TestHelper.CreateFileAccessManager(options);
         using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(testAccessManager);
 
         var accessItem = fileAccessManager.AccessItem_Create();
         Assert.AreEqual(fileAccessManager.ServerConfig.TcpEndPointsValue.First().Port, accessItem.Token.ServerToken.HostPort);
@@ -28,11 +28,9 @@ public class FileAccessManagerTest : TestBase
     public async Task Crud()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var fileAccessManagerOptions = new FileAccessManagerOptions
-        {
-            TcpEndPoints = [new IPEndPoint(IPAddress.Any, 8000)],
-            PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")]
-        };
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions.TcpEndPoints = [new IPEndPoint(IPAddress.Any, 8000)];
+        fileAccessManagerOptions.PublicEndPoints = [IPEndPoint.Parse("127.0.0.1:8000")];
         var accessManager1 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
         //add two tokens

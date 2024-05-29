@@ -1,14 +1,28 @@
-﻿using VpnHood.Common;
+﻿using System.Text.Json.Serialization;
+using VpnHood.Common;
 
 namespace VpnHood.Client.App.ClientProfiles;
 
 public class ClientProfile
 {
-    public required Guid ClientProfileId { get; set; }
+    public required Guid ClientProfileId { get; init; }
     public required string? ClientProfileName { get; set; }
-    public string? RegionId { get; set; }
-    public required Token Token { get; set; }
+    public bool IsFavorite { get; set; }
     public bool IsForAccount { get; set; }
+    
+    private Token _token = default!;
+    public required Token Token
+    {
+        get => _token;
+        set
+        {
+            _token = value;
+            ServerLocationInfos = ClientServerLocationInfo.AddCategoryGaps(value.ServerToken.ServerLocations);
+        }
+    }
+
+    [JsonIgnore]
+    public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
 
     public ClientProfileInfo ToInfo()
     {
@@ -18,11 +32,5 @@ public class ClientProfile
     public ClientProfileBaseInfo ToBaseInfo()
     {
         return new ClientProfileBaseInfo(this);
-    }
-
-    public HostRegionInfo? GetRegionInfo()
-    {
-        var region = Token.ServerToken.Regions?.SingleOrDefault(x => x.RegionId == RegionId);
-        return region != null ? new HostRegionInfo(region) : null;
     }
 }

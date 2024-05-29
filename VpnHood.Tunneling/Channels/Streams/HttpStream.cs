@@ -14,7 +14,6 @@ public class HttpStream : ChunkStream
     private int _remainingChunkBytes;
     private readonly byte[] _chunkHeaderBuffer = new byte[10];
     private readonly byte[] _nextLineBuffer = new byte[2];
-    private bool _disposed;
     private bool _isHttpHeaderSent;
     private bool _isHttpHeaderRead;
     private bool _isFinished;
@@ -304,18 +303,12 @@ public class HttpStream : ChunkStream
         }
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-    public override ValueTask DisposeAsync()
+    private bool _disposed;
+    private readonly AsyncLock _disposeLock = new();
+    public override async ValueTask DisposeAsync()
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore()
-    {
-        // prevent other caller requests
+        using var lockResult = await _disposeLock.LockAsync();
+        if (_disposed) return;
         _disposed = true;
 
         // close stream

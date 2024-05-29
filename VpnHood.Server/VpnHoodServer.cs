@@ -190,7 +190,6 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
             _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
-            await _serverHost.Stop();
             await SendStatusToAccessManager(false);
         }
     }
@@ -378,17 +377,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             .GetResult();
     }
 
-    private readonly object _disposeLock = new();
-    private ValueTask? _disposeTask;
-    public ValueTask DisposeAsync()
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync()
     {
-        lock (_disposeLock)
-            _disposeTask ??= DisposeAsyncCore();
-        return _disposeTask.Value;
-    }
-
-    private async ValueTask DisposeAsyncCore()
-    {
+        using var lockResult = await _disposeLock.LockAsync();
         if (_disposed) return;
         _disposed = true;
 

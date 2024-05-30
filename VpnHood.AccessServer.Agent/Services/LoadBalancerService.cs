@@ -41,7 +41,7 @@ public class LoadBalancerService(
         if (!allowRedirect)
         {
             if (servers.All(x => x.ServerId != currentServer.ServerId))
-                throw new SessionExceptionEx(SessionErrorCode.AccessError, "You do not have access to this server.");
+                throw new SessionExceptionEx(SessionErrorCode.AccessError, "This server can not serve you at the moment.");
 
             return;
         }
@@ -99,6 +99,7 @@ public class LoadBalancerService(
         var farmServers = servers
             .Where(server =>
                 server.IsReady &&
+                (!server.AllowInAutoLocation || requestLocation.CountryCode == "*") &&
                 server.ServerFarmId == serverFarmId &&
                 server.LocationInfo.IsMatch(requestLocation))
             .OrderBy(CalcServerLoad)

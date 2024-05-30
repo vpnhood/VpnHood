@@ -47,6 +47,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                     ServerProfileId = x.Server.ServerFarm!.ServerProfileId,
                     ServerStatus = x,
                     LocationInfo = x.Server.Location != null ? ServerLocationInfo.Parse(x.Server.Location.ToPath()) : autoServerLocation,
+                    AllowInAutoLocation = x.Server!.AllowInAutoLocation,
                     LogicalCoreCount = x.Server.LogicalCoreCount ?? 1
                 },
                 Farm = new ServerFarmCache
@@ -163,6 +164,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 ServerProfileId = x.ServerFarm!.ServerProfileId,
                 ServerStatus = x.ServerStatuses!.FirstOrDefault(),
                 LocationInfo = x.Location != null ? ServerLocationInfo.Parse(x.Location.ToPath()) : autoServerLocation,
+                AllowInAutoLocation = x.AllowInAutoLocation,
                 LogicalCoreCount = x.LogicalCoreCount ?? 1
             })
             .AsNoTracking()

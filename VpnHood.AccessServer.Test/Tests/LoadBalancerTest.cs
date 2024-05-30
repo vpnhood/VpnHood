@@ -2,12 +2,27 @@
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
 public class LoadBalancerTest
 {
+    [TestMethod]
+    public async Task No_redirect_when_first_try_is_best()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+
+        // Create and init servers
+        await farm.AddNewServer();
+
+        var accessTokenDom = await farm.CreateAccessToken();
+        var sessionDom = await accessTokenDom.CreateSession(autoRedirect: false);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
+    }
+
     [TestMethod]
     public async Task By_availability()
     {

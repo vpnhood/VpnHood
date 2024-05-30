@@ -74,6 +74,7 @@ public class ServerService(
             GatewayIpV4 = null,
             GatewayIpV6 = null,
             LocationId = null,
+            AllowInAutoLocation = false,
             IsDeleted = false
         };
 
@@ -104,6 +105,7 @@ public class ServerService(
             server.ServerFarmId = serverFarm.ServerFarmId;
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
+        if (updateParams.AllowInAutoLocation != null) server.AllowInAutoLocation = updateParams.AllowInAutoLocation;
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
         if (updateParams.AccessPoints != null)

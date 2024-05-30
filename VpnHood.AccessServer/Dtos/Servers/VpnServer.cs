@@ -23,5 +23,6 @@ public class VpnServer
     public required ServerState ServerState { get; set; }
     public required ServerStatusEx? ServerStatus { get; set; }
     public required AccessPoint[] AccessPoints { get; init; }
+    public required bool AllowInAutoLocation { get; init; }
 
 }

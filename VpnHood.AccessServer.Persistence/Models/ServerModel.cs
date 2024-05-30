@@ -26,6 +26,7 @@ public class ServerModel
     public required bool IsDeleted { get; set; }
     public required string? GatewayIpV4 { get; set; }
     public required string? GatewayIpV6 { get; set; }
+    public required bool AllowInAutoLocation { get; set; }
     public required List<AccessPointModel> AccessPoints { get; set; } = [];
 
     public virtual ProjectModel? Project { get; set; }

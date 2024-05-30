@@ -23,6 +23,7 @@ public class ServerCache
     public required int LogicalCoreCount { get; init; }
     public required AccessPointModel[] AccessPoints { get; init; }
     public required ServerStatusBaseModel? ServerStatus { get; set; }
+    public required bool AllowInAutoLocation { get; set; }
     public bool IsReady => ServerState is ServerState.Idle or ServerState.Active;
     public ServerState ServerState { get; set; }
     public ServerCache UpdateState(TimeSpan lostServerThreshold)

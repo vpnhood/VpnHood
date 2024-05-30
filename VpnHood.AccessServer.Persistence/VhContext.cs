@@ -277,6 +277,10 @@ public class VhContext : DbContext
                 .IsFixedLength();
 
             entity
+                .Property(e => e.AllowInAutoLocation)
+                .HasDefaultValue(true);
+
+            entity
                 .Property(e => e.IsDeleted)
                 .HasDefaultValue(false);
 

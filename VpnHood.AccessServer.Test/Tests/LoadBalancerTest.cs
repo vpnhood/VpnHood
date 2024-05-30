@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
@@ -9,6 +10,27 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class LoadBalancerTest
 {
+    [TestMethod]
+    public async Task AllowInAutoLocation_is_false()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+
+        // Create and init servers
+        var serverDom = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
+        await serverDom.Update(new ServerUpdateParams { AllowInAutoLocation = new PatchOfBoolean { Value = false } });
+
+        // fail if the location in auto
+        var accessTokenDom = await farm.CreateAccessToken();
+        var sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, assertError: false);
+        Assert.AreEqual(SessionErrorCode.AccessError, sessionDom.SessionResponseEx.ErrorCode);
+
+        // fail if the location in set
+        sessionDom = await accessTokenDom.CreateSession(autoRedirect: false, assertError: false, serverLocation: "10/*");
+        Assert.AreEqual(SessionErrorCode.Ok, sessionDom.SessionResponseEx.ErrorCode);
+
+    }
+
     [TestMethod]
     public async Task No_redirect_when_first_try_is_best()
     {

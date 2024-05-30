@@ -8395,6 +8395,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<AccessPoint> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<AccessPoint>();
 
+        [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
+        public bool AllowInAutoLocation { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -8558,6 +8561,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public PatchOfAccessPointOf? AccessPoints { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
+        public PatchOfBoolean? AllowInAutoLocation { get; set; } = default!;
 
     }
 

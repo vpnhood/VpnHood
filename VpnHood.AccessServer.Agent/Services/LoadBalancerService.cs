@@ -77,7 +77,7 @@ public class LoadBalancerService(
         var bestTcpEndPoint = tcpEndPoints.First();
         var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint =>
             bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
-        if (currentServer.ServerId != bestServer.ServerFarmId)
+        if (currentServer.ServerId != bestServer.ServerId)
         {
             memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
             throw new SessionExceptionEx(new SessionResponseEx
@@ -99,8 +99,8 @@ public class LoadBalancerService(
         var farmServers = servers
             .Where(server =>
                 server.IsReady &&
-                (!server.AllowInAutoLocation || requestLocation.CountryCode == "*") &&
                 server.ServerFarmId == serverFarmId &&
+                (server.AllowInAutoLocation || requestLocation.CountryCode != "*") &&
                 server.LocationInfo.IsMatch(requestLocation))
             .OrderBy(CalcServerLoad)
             .ToArray();

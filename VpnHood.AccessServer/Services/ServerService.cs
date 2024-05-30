@@ -74,7 +74,7 @@ public class ServerService(
             GatewayIpV4 = null,
             GatewayIpV6 = null,
             LocationId = null,
-            AllowInAutoLocation = false,
+            AllowInAutoLocation = true,
             IsDeleted = false
         };
 

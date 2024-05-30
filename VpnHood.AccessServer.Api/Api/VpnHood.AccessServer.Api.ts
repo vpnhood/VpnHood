@@ -6433,6 +6433,7 @@ export class VpnServer implements IVpnServer {
     serverState!: ServerState;
     serverStatus?: ServerStatusEx | null;
     accessPoints!: AccessPoint[];
+    allowInAutoLocation!: boolean;
 
     constructor(data?: IVpnServer) {
         if (data) {
@@ -6475,6 +6476,7 @@ export class VpnServer implements IVpnServer {
             else {
                 this.accessPoints = <any>null;
             }
+            this.allowInAutoLocation = _data["allowInAutoLocation"] !== undefined ? _data["allowInAutoLocation"] : <any>null;
         }
     }
 
@@ -6511,6 +6513,7 @@ export class VpnServer implements IVpnServer {
             for (let item of this.accessPoints)
                 data["accessPoints"].push(item.toJSON());
         }
+        data["allowInAutoLocation"] = this.allowInAutoLocation !== undefined ? this.allowInAutoLocation : <any>null;
         return data;
     }
 }
@@ -6536,6 +6539,7 @@ export interface IVpnServer {
     serverState: ServerState;
     serverStatus?: ServerStatusEx | null;
     accessPoints: AccessPoint[];
+    allowInAutoLocation: boolean;
 }
 
 export class Location implements ILocation {
@@ -6794,6 +6798,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
     generateNewSecret?: PatchOfBoolean | null;
     autoConfigure?: PatchOfBoolean | null;
     accessPoints?: PatchOfAccessPointOf | null;
+    allowInAutoLocation?: PatchOfBoolean | null;
 
     constructor(data?: IServerUpdateParams) {
         if (data) {
@@ -6811,6 +6816,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
             this.generateNewSecret = _data["generateNewSecret"] ? PatchOfBoolean.fromJS(_data["generateNewSecret"]) : <any>null;
             this.autoConfigure = _data["autoConfigure"] ? PatchOfBoolean.fromJS(_data["autoConfigure"]) : <any>null;
             this.accessPoints = _data["accessPoints"] ? PatchOfAccessPointOf.fromJS(_data["accessPoints"]) : <any>null;
+            this.allowInAutoLocation = _data["allowInAutoLocation"] ? PatchOfBoolean.fromJS(_data["allowInAutoLocation"]) : <any>null;
         }
     }
 
@@ -6828,6 +6834,7 @@ export class ServerUpdateParams implements IServerUpdateParams {
         data["generateNewSecret"] = this.generateNewSecret ? this.generateNewSecret.toJSON() : <any>null;
         data["autoConfigure"] = this.autoConfigure ? this.autoConfigure.toJSON() : <any>null;
         data["accessPoints"] = this.accessPoints ? this.accessPoints.toJSON() : <any>null;
+        data["allowInAutoLocation"] = this.allowInAutoLocation ? this.allowInAutoLocation.toJSON() : <any>null;
         return data;
     }
 }
@@ -6838,6 +6845,7 @@ export interface IServerUpdateParams {
     generateNewSecret?: PatchOfBoolean | null;
     autoConfigure?: PatchOfBoolean | null;
     accessPoints?: PatchOfAccessPointOf | null;
+    allowInAutoLocation?: PatchOfBoolean | null;
 }
 
 export class PatchOfAccessPointOf implements IPatchOfAccessPointOf {

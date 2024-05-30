@@ -14,7 +14,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
 
     public int CompareTo(ServerLocationInfo other)
     {
-        var countryComparison = string.Compare(CountryCode, other.CountryCode, StringComparison.OrdinalIgnoreCase);
+        var countryComparison = string.Compare(CountryName, other.CountryName, StringComparison.OrdinalIgnoreCase);
         return countryComparison != 0 ? countryComparison : string.Compare(RegionName, other.RegionName, StringComparison.OrdinalIgnoreCase);
     }
 

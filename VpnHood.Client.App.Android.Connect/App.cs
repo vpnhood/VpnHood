@@ -14,7 +14,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     Icon = "@mipmap/appicon",
     Banner = "@mipmap/banner", // for TV
     NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
-    SupportsRtl = true, AllowBackup = true)]
+    SupportsRtl = true, AllowBackup = true, Debuggable = true)] //todo:  Debuggable
 
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AssemblyInfo.AdMonApplicationId)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)

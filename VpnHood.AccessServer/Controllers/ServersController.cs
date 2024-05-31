@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos.Servers;
-using VpnHood.AccessServer.Report.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
-using ServerStatusHistory = VpnHood.AccessServer.Report.Views.ServerStatusHistory;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -12,9 +10,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize]
 [Route("/api/v{version:apiVersion}/projects/{projectId}/servers")]
 public class ServersController(
-    ReportUsageService reportUsageService,
-    ServerService serverService,
-    SubscriptionService subscriptionService)
+    ServerService serverService)
     : ControllerBase
 {
     [HttpPost]
@@ -86,17 +82,5 @@ public class ServersController(
     public Task<ServersStatusSummary> GetStatusSummary(Guid projectId, Guid? serverFarmId = null)
     {
         return serverService.GetStatusSummary(projectId, serverFarmId);
-    }
-
-    [HttpGet("status-history")]
-    [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ServerStatusHistory[]> GetStatusHistory(Guid projectId,
-        DateTime? usageBeginTime, DateTime? usageEndTime = null, Guid? serverId = null)
-    {
-        if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
-        await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
-
-        var ret = await reportUsageService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
-        return ret;
     }
 }

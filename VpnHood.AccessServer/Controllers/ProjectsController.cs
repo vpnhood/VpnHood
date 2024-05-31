@@ -3,7 +3,6 @@ using GrayMint.Authorization.Abstractions.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.Report.Views;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 
@@ -38,14 +37,6 @@ public class ProjectsController(
     public Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
         return projectService.Update(projectId, updateParams);
-    }
-
-    [HttpGet("{projectId:guid}/usage")]
-    [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
-        Guid? serverFarmId = null, Guid? serverId = null)
-    {
-        return projectService.GetUsage(projectId, usageBeginTime, usageEndTime, serverFarmId, serverId);
     }
 
     [HttpGet]

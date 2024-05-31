@@ -9,13 +9,14 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class SyncTest
 {
-    private static async Task<ServerStatusModel> AddServerStatus(VhContext vhContext, Guid projectId, Guid serverId,
+    private static async Task<ServerStatusModel> AddServerStatus(VhContext vhContext, Guid projectId, Guid serverFarmId, Guid serverId, 
         bool isLast)
     {
         var entityEntry = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
             ProjectId = projectId,
             ServerId = serverId,
+            ServerFarmId = serverFarmId,
             CreatedTime = DateTime.UtcNow,
             AvailableMemory = 0,
             CpuUsage = 0,
@@ -41,9 +42,9 @@ public class SyncTest
         var vhContext = farm.TestApp.VhContext;
         var vhReportContext = farm.TestApp.VhReportContext;
 
-        var entity1 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, serverDom.ServerId, true);
-        var entity2 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, serverDom.ServerId, false);
-        var entity3 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, serverDom.ServerId, false);
+        var entity1 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, farm.ServerFarmId, serverDom.ServerId, true);
+        var entity2 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, farm.ServerFarmId, serverDom.ServerId, false);
+        var entity3 = await AddServerStatus(vhContext, farm.TestApp.ProjectId, farm.ServerFarmId, serverDom.ServerId, false);
         await vhContext.SaveChangesAsync();
 
         await farm.TestApp.Sync(false); // do not flush

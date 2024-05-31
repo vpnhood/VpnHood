@@ -5,6 +5,7 @@ public class ServerStatusArchive
     public required long ServerStatusId { get; set; }
     public required Guid ProjectId { get; init; }
     public required Guid ServerId { get; init; }
+    public required Guid ServerFarmId { get; init; }
     public required int SessionCount { get; set; }
     public required int TcpConnectionCount { get; set; }
     public required int UdpConnectionCount { get; set; }

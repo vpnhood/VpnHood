@@ -461,6 +461,7 @@ public class VhAgentRepo(VhContext vhContext, ILogger<VhAgentRepo> logger)
                 AvailableMemory = x.AvailableMemory,
                 CpuUsage = x.CpuUsage,
                 ServerId = x.ServerId,
+                ServerFarmId = x.ServerFarmId,
                 IsConfigure = x.IsConfigure,
                 ProjectId = x.ProjectId,
                 SessionCount = x.SessionCount,

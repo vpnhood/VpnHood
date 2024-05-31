@@ -54,6 +54,7 @@ public static class ArchiveConverter
         return new ServerStatusArchive
         {
             ServerStatusId = model.ServerStatusId,
+            ServerFarmId = model.ServerFarmId,
             ServerId = model.ServerId,
             ProjectId = model.ProjectId,
             CreatedTime = model.CreatedTime,

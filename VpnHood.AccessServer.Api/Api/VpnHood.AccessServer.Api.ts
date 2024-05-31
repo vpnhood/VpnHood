@@ -1484,9 +1484,23 @@ export class ProjectsClient {
         }
         return Promise.resolve<Project>(null as any);
     }
+}
+
+export class ReportClient {
+    protected instance: AxiosInstance;
+    protected baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, instance?: AxiosInstance) {
+
+        this.instance = instance || axios.create();
+
+        this.baseUrl = baseUrl ?? "";
+
+    }
 
     getUsage(projectId: string, usageBeginTime: Date | null, usageEndTime?: Date | null | undefined, serverFarmId?: string | null | undefined, serverId?: string | null | undefined, cancelToken?: CancelToken): Promise<Usage> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/usage?";
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/report/usage?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
@@ -1544,6 +1558,74 @@ export class ProjectsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<Usage>(null as any);
+    }
+
+    getStatusHistory(projectId: string, usageBeginTime: Date | null, usageEndTime?: Date | null | undefined, serverFarmId?: string | null | undefined, serverId?: string | null | undefined, cancelToken?: CancelToken): Promise<ServerStatusHistory[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/report/status-history?";
+        if (projectId === undefined || projectId === null)
+            throw new Error("The parameter 'projectId' must be defined.");
+        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
+        if (usageBeginTime === undefined)
+            throw new Error("The parameter 'usageBeginTime' must be defined.");
+        else if(usageBeginTime !== null)
+            url_ += "usageBeginTime=" + encodeURIComponent(usageBeginTime ? "" + usageBeginTime.toISOString() : "") + "&";
+        if (usageEndTime !== undefined && usageEndTime !== null)
+            url_ += "usageEndTime=" + encodeURIComponent(usageEndTime ? "" + usageEndTime.toISOString() : "") + "&";
+        if (serverFarmId !== undefined && serverFarmId !== null)
+            url_ += "serverFarmId=" + encodeURIComponent("" + serverFarmId) + "&";
+        if (serverId !== undefined && serverId !== null)
+            url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetStatusHistory(_response);
+        });
+    }
+
+    protected processGetStatusHistory(response: AxiosResponse): Promise<ServerStatusHistory[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(ServerStatusHistory.fromJS(item));
+            }
+            else {
+                result200 = <any>null;
+            }
+            return Promise.resolve<ServerStatusHistory[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<ServerStatusHistory[]>(null as any);
     }
 }
 
@@ -2951,72 +3033,6 @@ export class ServersClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<ServersStatusSummary>(null as any);
-    }
-
-    getStatusHistory(projectId: string, usageBeginTime: Date | null, usageEndTime?: Date | null | undefined, serverId?: string | null | undefined, cancelToken?: CancelToken): Promise<ServerStatusHistory[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/servers/status-history?";
-        if (projectId === undefined || projectId === null)
-            throw new Error("The parameter 'projectId' must be defined.");
-        url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
-        if (usageBeginTime === undefined)
-            throw new Error("The parameter 'usageBeginTime' must be defined.");
-        else if(usageBeginTime !== null)
-            url_ += "usageBeginTime=" + encodeURIComponent(usageBeginTime ? "" + usageBeginTime.toISOString() : "") + "&";
-        if (usageEndTime !== undefined && usageEndTime !== null)
-            url_ += "usageEndTime=" + encodeURIComponent(usageEndTime ? "" + usageEndTime.toISOString() : "") + "&";
-        if (serverId !== undefined && serverId !== null)
-            url_ += "serverId=" + encodeURIComponent("" + serverId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processGetStatusHistory(_response);
-        });
-    }
-
-    protected processGetStatusHistory(response: AxiosResponse): Promise<ServerStatusHistory[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(ServerStatusHistory.fromJS(item));
-            }
-            else {
-                result200 = <any>null;
-            }
-            return Promise.resolve<ServerStatusHistory[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<ServerStatusHistory[]>(null as any);
     }
 }
 
@@ -5480,6 +5496,54 @@ export interface IProjectUpdateParams {
     adRewardSecret?: PatchOfString | null;
 }
 
+export class ServerStatusHistory implements IServerStatusHistory {
+    time!: Date;
+    sessionCount!: number;
+    tunnelTransferSpeed!: number;
+    serverCount!: number;
+
+    constructor(data?: IServerStatusHistory) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.time = _data["time"] ? new Date(_data["time"].toString()) : <any>null;
+            this.sessionCount = _data["sessionCount"] !== undefined ? _data["sessionCount"] : <any>null;
+            this.tunnelTransferSpeed = _data["tunnelTransferSpeed"] !== undefined ? _data["tunnelTransferSpeed"] : <any>null;
+            this.serverCount = _data["serverCount"] !== undefined ? _data["serverCount"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ServerStatusHistory {
+        data = typeof data === 'object' ? data : {};
+        let result = new ServerStatusHistory();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["time"] = this.time ? this.time.toISOString() : <any>null;
+        data["sessionCount"] = this.sessionCount !== undefined ? this.sessionCount : <any>null;
+        data["tunnelTransferSpeed"] = this.tunnelTransferSpeed !== undefined ? this.tunnelTransferSpeed : <any>null;
+        data["serverCount"] = this.serverCount !== undefined ? this.serverCount : <any>null;
+        return data;
+    }
+}
+
+export interface IServerStatusHistory {
+    time: Date;
+    sessionCount: number;
+    tunnelTransferSpeed: number;
+    serverCount: number;
+}
+
 export class ServerFarmData implements IServerFarmData {
     serverFarm!: ServerFarm;
     accessPoints!: AccessPointView[];
@@ -7199,54 +7263,6 @@ export interface IServersStatusSummary {
     tunnelSendSpeed: number;
     tunnelReceiveSpeed: number;
     usingBandwidth: number;
-}
-
-export class ServerStatusHistory implements IServerStatusHistory {
-    time!: Date;
-    sessionCount!: number;
-    tunnelTransferSpeed!: number;
-    serverCount!: number;
-
-    constructor(data?: IServerStatusHistory) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.time = _data["time"] ? new Date(_data["time"].toString()) : <any>null;
-            this.sessionCount = _data["sessionCount"] !== undefined ? _data["sessionCount"] : <any>null;
-            this.tunnelTransferSpeed = _data["tunnelTransferSpeed"] !== undefined ? _data["tunnelTransferSpeed"] : <any>null;
-            this.serverCount = _data["serverCount"] !== undefined ? _data["serverCount"] : <any>null;
-        }
-    }
-
-    static fromJS(data: any): ServerStatusHistory {
-        data = typeof data === 'object' ? data : {};
-        let result = new ServerStatusHistory();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["time"] = this.time ? this.time.toISOString() : <any>null;
-        data["sessionCount"] = this.sessionCount !== undefined ? this.sessionCount : <any>null;
-        data["tunnelTransferSpeed"] = this.tunnelTransferSpeed !== undefined ? this.tunnelTransferSpeed : <any>null;
-        data["serverCount"] = this.serverCount !== undefined ? this.serverCount : <any>null;
-        return data;
-    }
-}
-
-export interface IServerStatusHistory {
-    time: Date;
-    sessionCount: number;
-    tunnelTransferSpeed: number;
-    serverCount: number;
 }
 
 export class ApiKey implements IApiKey {

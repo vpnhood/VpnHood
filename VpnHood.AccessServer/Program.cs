@@ -99,6 +99,7 @@ public class Program
             .AddScoped<AgentCacheClient>()
             .AddScoped<AgentSystemClient>()
             .AddScoped<AccessTokensService>()
+            .AddScoped<ReportService>()
             .AddSingleton<IAcmeOrderFactory, AcmeOrderFactory>();
 
         // Report Service

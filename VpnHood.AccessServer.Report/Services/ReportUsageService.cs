@@ -24,12 +24,16 @@ public class ReportUsageService(
         return dateTime != null ? ToUtcWithKind(dateTime.Value) : null;
     }
 
-    public async Task<Usage> GetUsage(Guid projectId,
+    public async Task<Usage> GetUsage(Guid? projectId,
         DateTime usageBeginTime, DateTime? usageEndTime = null,
         Guid? serverFarmId = null, Guid? serverId = null, Guid? deviceId = null)
     {
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
+
+        if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided");
+        if (serverId != null) projectId = null;
+        if (deviceId != null) projectId = null;
 
         // check cache
         var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
@@ -41,11 +45,11 @@ public class ReportUsageService(
         await using var transReport = await vhReportContext.WithNoLockTransaction();
         var query = vhReportContext.AccessUsages
             .Where(accessUsage =>
-                (accessUsage.ProjectId == projectId) &&
-                (accessUsage.CreatedTime >= usageBeginTime) &&
+                (projectId == null || accessUsage.ProjectId == projectId) &&
                 (serverId == null || accessUsage.ServerId == serverId) &&
                 (deviceId == null || accessUsage.DeviceId == deviceId) &&
                 (serverFarmId == null || accessUsage.ServerId == serverFarmId) &&
+                (accessUsage.CreatedTime >= usageBeginTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
             .GroupBy(accessUsage => accessUsage.DeviceId)
             .Select(g => new
@@ -73,18 +77,21 @@ public class ReportUsageService(
         return res;
     }
 
-    public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid projectId,
-        DateTime usageBeginTime, DateTime? usageEndTime = null, Guid? serverId = null)
+    public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid? projectId,
+        DateTime usageBeginTime, DateTime? usageEndTime = null, Guid? serverFarmId = null, Guid ? serverId = null)
     {
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
         usageEndTime ??= DateTime.UtcNow;
 
+        if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided");
+        if (serverId != null) projectId = null;
+
         // no lock
         await using var transReport = await vhReportContext.WithNoLockTransaction();
 
         // check cache
-        var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
+        var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}",
             usageBeginTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
             return cacheRes;
@@ -100,6 +107,7 @@ public class ReportUsageService(
         var serverStatuses = vhReportContext.ServerStatuses
             .Where(x =>
                 x.ProjectId == projectId &&
+                (serverFarmId == null || x.ServerId == serverId) &&
                 (serverId == null || x.ServerId == serverId) &&
                 x.CreatedTime >= usageBeginTime &&
                 x.CreatedTime <= usageEndTime)

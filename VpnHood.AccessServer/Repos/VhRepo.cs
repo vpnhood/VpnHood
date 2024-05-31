@@ -59,7 +59,7 @@ public class VhRepo(VhContext vhContext)
                 x.ServerName.Contains(search) ||
                 x.ServerId.ToString() == search ||
                 x.ServerFarmId.ToString() == search)
-            .OrderBy(x => x.ServerId)
+            .OrderBy(x => x.ServerName)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking()

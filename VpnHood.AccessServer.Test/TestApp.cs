@@ -40,6 +40,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public ServerFarmsClient ServerFarmsClient => new(HttpClient);
     public ServersClient ServersClient => new(HttpClient);
+    public ReportClient ReportClient => new(HttpClient);
     public AccessTokensClient AccessTokensClient => new(HttpClient);
     public ProjectsClient ProjectsClient => new(HttpClient);
     public IpLocksClient IpLocksClient => new(HttpClient);

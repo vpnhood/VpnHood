@@ -388,6 +388,7 @@ public class AgentService(
             ServerStatusId = 0,
             ProjectId = server.ProjectId,
             ServerId = server.ServerId,
+            ServerFarmId = server.ServerFarmId,
             IsConfigure = isConfigure,
             IsLast = true,
             CreatedTime = DateTime.UtcNow,

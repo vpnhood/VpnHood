@@ -63,6 +63,7 @@ public class LoadBalancerService(
         if (tcpEndPoints.Length == 0)
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any free server.");
 
+        // todo
         // deprecated: 505 client and later
         // client should send no redirect flag. for older version we keep last state in memory to prevent re-redirect
         var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{locationPath}";
@@ -119,14 +120,14 @@ public class LoadBalancerService(
 
         // find all servers with access in tokens
         servers = servers
-            .Where(server => 
+            .Where(server =>
                 server.ServerFarmId == serverFarmId &&
-                server.IsEnabled && 
+                server.IsEnabled &&
                 server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken))
             .ToArray();
-        
+
         // at-least one server must be ready
-        return servers.Length > 0 && servers.All(x=>x.IsReady);
+        return servers.Length > 0 && servers.All(x => x.IsReady);
     }
 
 

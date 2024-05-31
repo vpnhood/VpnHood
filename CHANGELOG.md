@@ -1,3 +1,7 @@
+# Upcoming
+### Client
+* Update: Disable "Exclude My Country" when unable to load IP location database
+
 # v4.5.520
 ### Client
 * Feature: Allow to select servers by country if the server supports it

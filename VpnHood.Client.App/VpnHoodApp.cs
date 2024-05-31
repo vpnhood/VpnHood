@@ -593,8 +593,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // try to get by ip group
         if (_appPersistState.ClientCountryCode == null && _useIpGroupManager)
         {
-            var ipGroupManager = await GetIpGroupManager();
-            _appPersistState.ClientCountryCode ??= await ipGroupManager.GetCountryCodeByCurrentIp();
+            try
+            {
+                var ipGroupManager = await GetIpGroupManager();
+                _appPersistState.ClientCountryCode ??= await ipGroupManager.GetCountryCodeByCurrentIp();
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not find country code.");
+            }
         }
 
         // return last country
@@ -685,23 +692,39 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
-        _ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
-
-        // ignore country ip groups if not required usually by tests
-        if (!_useIpGroupManager)
-            return _ipGroupManager;
-
         // AddFromIp2Location if hash has been changed
         try
         {
+            var ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath);
+            
+            // ignore country ip groups if not required usually by tests
+            if (!_useIpGroupManager)
+            {
+                _ipGroupManager = ipGroupManager;
+                return _ipGroupManager;
+            }
+
             _isLoadingIpGroup = true;
             FireConnectionStateChanged();
             await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
             using var zipArchive = new ZipArchive(memZipStream);
             var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ??
                         throw new Exception("Could not find ip2location database.");
-            await _ipGroupManager.InitByIp2LocationZipStream(entry);
-            return _ipGroupManager;
+            
+            await ipGroupManager.InitByIp2LocationZipStream(entry);
+            _ipGroupManager = ipGroupManager;
+            return ipGroupManager;
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not load ip location database.");
+            if (!UserSettings.TunnelClientCountry)
+            {
+                UserSettings.TunnelClientCountry = true;
+                Settings.Save();
+            }
+            
+            throw new Exception($"Could not load ip location database so I can not exclude your country. Message: {ex.Message}", ex);
         }
         finally
         {

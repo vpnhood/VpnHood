@@ -20,6 +20,7 @@ public class IpGroupManager
     private string VersionFilePath => Path.Combine(StorageFolder, "version.txt");
     private string GetIpGroupFilePath(string ipGroup) => Path.Combine(IpGroupsFolderPath, ipGroup + ".json");
     public string StorageFolder { get; }
+    public bool IsEmpty => _ipGroups == null || _ipGroups.Length == 0;
 
     private IpGroupManager(string storageFolder)
     {

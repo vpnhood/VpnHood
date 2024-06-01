@@ -38,7 +38,7 @@ public class IpGroupManager
         using var streamReader = new StreamReader(ipLocationsStream);
         while (!streamReader.EndOfStream)
         {
-            var line = await streamReader.ReadLineAsync();
+            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             var items = line.Replace("\"", "").Split(',');
             if (items.Length != 4)
                 continue;
@@ -75,7 +75,7 @@ public class IpGroupManager
             var ipGroup = item.Value;
             var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroup.IpGroupId}.json");
             await using var fileStream = File.Create(filePath);
-            await JsonSerializer.SerializeAsync(fileStream, ipGroup.IpRanges);
+            await JsonSerializer.SerializeAsync(fileStream, ipGroup.IpRanges).ConfigureAwait(false);
         }
 
         // creating IpGroups
@@ -84,13 +84,13 @@ public class IpGroupManager
         _sortedIpRanges = null;
 
         // save
-        await File.WriteAllTextAsync(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
+        await File.WriteAllTextAsync(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups)).ConfigureAwait(false);
     }
 
     public async Task<IpRange[]> GetIpRanges(string ipGroupId)
     {
         var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroupId}.json");
-        var json = await File.ReadAllTextAsync(filePath);
+        var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
         return JsonSerializer.Deserialize<IpRange[]>(json) ?? throw new Exception($"Could not deserialize {filePath}!");
     }
 
@@ -100,11 +100,11 @@ public class IpGroupManager
         // load all groups
         try
         {
-            await _sortedIpRangesSemaphore.WaitAsync();
+            await _sortedIpRangesSemaphore.WaitAsync().ConfigureAwait(false);
             _ipRangeGroups.Clear();
             List<IpRange> ipRanges = [];
             foreach (var ipGroup in IpGroups)
-            foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId))
+            foreach (var ipRange in await GetIpRanges(ipGroup.IpGroupId).ConfigureAwait(false))
             {
                 ipRanges.Add(ipRange);
                 _ipRangeGroups.Add(ipRange, ipGroup);
@@ -119,7 +119,7 @@ public class IpGroupManager
 
     public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress)
     {
-        await LoadIpRangeGroups();
+        await LoadIpRangeGroups().ConfigureAwait(false);
         var findIpRange = IpRange.FindInSortedRanges(_sortedIpRanges!, ipAddress);
         return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
     }

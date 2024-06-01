@@ -123,14 +123,14 @@ public class ApiClientBase : ApiClientCommon
     protected async Task<string> HttpSendAsync(HttpMethod httpMethod, string urlPart,
         Dictionary<string, object?>? parameters = null, object? data = null, CancellationToken cancellationToken = default)
     {
-        var res = await HttpSendExAsync<HttpNoResult>(httpMethod, urlPart, parameters, data, cancellationToken);
+        var res = await HttpSendExAsync<HttpNoResult>(httpMethod, urlPart, parameters, data, cancellationToken).ConfigureAwait(false);
         return res.Text;
     }
 
     protected async Task<T> HttpSendAsync<T>(HttpMethod httpMethod, string urlPart,
         Dictionary<string, object?>? parameters = null, object? data = null, CancellationToken cancellationToken = default)
     {
-        var res = await HttpSendExAsync<T>(httpMethod, urlPart, parameters, data, cancellationToken);
+        var res = await HttpSendExAsync<T>(httpMethod, urlPart, parameters, data, cancellationToken).ConfigureAwait(false);
         return res.Object;
     }
 
@@ -149,13 +149,14 @@ public class ApiClientBase : ApiClientCommon
             request.Content = content;
         }
 
-        return await HttpSendAsync<T>(urlPart, parameters, request, cancellationToken);
+        // don't return Task as request will be disposed
+        return await HttpSendAsync<T>(urlPart, parameters, request, cancellationToken).ConfigureAwait(false);
     }
 
     protected async Task<string> HttpSendAsync(string urlPart, Dictionary<string, object?>? parameters,
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var res = await HttpSendAsync<HttpNoResult>(urlPart, parameters, request, cancellationToken);
+        var res = await HttpSendAsync<HttpNoResult>(urlPart, parameters, request, cancellationToken).ConfigureAwait(false);
         return res.Text;
     }
 
@@ -164,7 +165,7 @@ public class ApiClientBase : ApiClientCommon
     {
         try
         {
-            var ret = await HttpSendAsyncImpl<T>(urlPart, parameters, request, cancellationToken);
+            var ret = await HttpSendAsyncImpl<T>(urlPart, parameters, request, cancellationToken).ConfigureAwait(false);
 
             // report the log
             Logger.LogInformation(LoggerEventId, "API Called. Method: {Method}, Uri: {RequestUri} => StatusCode: {StatusCode}.",
@@ -284,9 +285,9 @@ public class ApiClientBase : ApiClientCommon
         return HttpSendAsync(HttpMethod.Patch, urlPart, parameters, data, cancellationToken);
     }
 
-    protected async Task HttpDeleteAsync(string urlPart,
+    protected Task HttpDeleteAsync(string urlPart,
         Dictionary<string, object?>? parameters = null, CancellationToken cancellationToken = default)
     {
-        await HttpSendAsync(HttpMethod.Delete, urlPart, parameters, null, cancellationToken);
+        return HttpSendAsync(HttpMethod.Delete, urlPart, parameters, null, cancellationToken);
     }
 }

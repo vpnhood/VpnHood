@@ -31,7 +31,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly Dictionary<IPAddress, bool> _includeIps = new();
     private readonly int _maxDatagramChannelCount;
     private readonly IPacketCapture _packetCapture;
-    private readonly SendingPackets _sendingPacket = new();
+    private readonly SendingPackets _sendingPackets = new();
     private readonly ClientHost _clientHost;
     private readonly SemaphoreSlim _datagramChannelsSemaphore = new(1, 1);
     private readonly IIpRangeProvider? _ipRangeProvider;
@@ -328,14 +328,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         try
         {
-            lock (_sendingPacket) // this method should not be called in multi-thread, if so we need to allocate the list per call
+            lock (_sendingPackets) // this method should not be called in multi-thread, if so we need to allocate the list per call
             {
-                _sendingPacket.Clear(); // prevent reallocation in this intensive event
-                var tunnelPackets = _sendingPacket.TunnelPackets;
-                var tcpHostPackets = _sendingPacket.TcpHostPackets;
-                var passthruPackets = _sendingPacket.PassthruPackets;
-                var proxyPackets = _sendingPacket.ProxyPackets;
-                var droppedPackets = _sendingPacket.DroppedPackets;
+                _sendingPackets.Clear(); // prevent reallocation in this intensive event
+                var tunnelPackets = _sendingPackets.TunnelPackets;
+                var tcpHostPackets = _sendingPackets.TcpHostPackets;
+                var passthruPackets = _sendingPackets.PassthruPackets;
+                var proxyPackets = _sendingPackets.ProxyPackets;
+                var droppedPackets = _sendingPackets.DroppedPackets;
                 foreach (var ipPacket in e.IpPackets)
                 {
                     if (_disposed) return;
@@ -420,14 +420,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 if (_autoWaitTime != null)
                 {
                     if (FastDateTime.Now - _autoWaitTime.Value < AutoWaitTimeout)
-                    {
                         tunnelPackets.Clear();
-                    }
                     else
-                    {
-                        State = ClientState.Connecting;
                         _autoWaitTime = null;
-                    }
                 }
 
                 // send packets
@@ -437,6 +432,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
                 if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
             }
+
+            // set state outside the lock as it may raise an event
+            if (_autoWaitTime == null && State == ClientState.Waiting)
+                State = ClientState.Connecting;
         }
         catch (Exception ex)
         {
@@ -856,6 +855,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             {
                 _autoWaitTime = now;
                 State = ClientState.Waiting;
+                VhLogger.Instance.LogWarning("Client is paused because of too many connection errors.");
             }
 
             // set connecting state if it could not establish any connection

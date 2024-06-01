@@ -7,7 +7,7 @@ internal class Program
         try
         {
             using var serverApp = new ServerApp();
-            await serverApp.Start(args);
+            await serverApp.Start(args).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

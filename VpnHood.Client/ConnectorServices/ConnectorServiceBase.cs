@@ -72,8 +72,8 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
             "\r\n";
 
         // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken);
-        await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken);
+        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).ConfigureAwait(false);
+        await HttpUtil.ReadHeadersAsync(sslStream, cancellationToken).ConfigureAwait(false);
         return binaryStreamType == BinaryStreamType.None
             ? new TcpClientStream(tcpClient, sslStream, streamId)
             : new TcpClientStream(tcpClient, new BinaryStreamStandard(tcpClient.GetStream(), streamId, useBuffer), streamId, ReuseStreamClient);
@@ -90,7 +90,7 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
 
         // Client.SessionTimeout does not affect in ConnectAsync
         VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connecting to Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
-        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout, cancellationToken);
+        await VhUtil.RunTask(tcpClient.ConnectAsync(tcpEndPoint.Address, tcpEndPoint.Port), TcpConnectTimeout, cancellationToken).ConfigureAwait(false);
 
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -99,9 +99,10 @@ internal class ConnectorServiceBase : IAsyncDisposable, IJob
         {
             TargetHost = hostName,
             EnabledSslProtocols = SslProtocols.None // auto
-        }, cancellationToken);
+        }, cancellationToken)
+        .ConfigureAwait(false);
 
-        var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken);
+        var clientStream = await CreateClientStream(tcpClient, sslStream, streamId, cancellationToken).ConfigureAwait(false);
         lock (Stat) Stat.CreatedConnectionCount++;
         return clientStream;
     }

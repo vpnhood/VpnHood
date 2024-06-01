@@ -48,7 +48,7 @@ public class GooglePlayBillingService: IAppBillingService
 
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        await EnsureConnected();
+        await EnsureConnected().ConfigureAwait(false);
 
         // Check if the purchase subscription is supported on the user's device
         try
@@ -76,7 +76,7 @@ public class GooglePlayBillingService: IAppBillingService
         // Get products list from GooglePlay.
         try
         {
-            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams);
+            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
             if (response.Result.ResponseCode != BillingResponseCode.Ok) throw new Exception($"Could not get products from google play. BillingResponseCode: {response.Result.ResponseCode}");
             if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
 
@@ -107,7 +107,7 @@ public class GooglePlayBillingService: IAppBillingService
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
         var appUiContext = (AndroidUiContext)uiContext;
-        await EnsureConnected();
+        await EnsureConnected().ConfigureAwait(false);
 
         if (_authenticationService.UserId == null)
             throw new AuthenticationException();
@@ -138,7 +138,7 @@ public class GooglePlayBillingService: IAppBillingService
                 throw CreateBillingResultException(billingResult);
 
             _taskCompletionSource = new TaskCompletionSource<string>();
-            var orderId = await _taskCompletionSource.Task;
+            var orderId = await _taskCompletionSource.Task.ConfigureAwait(false);
             return orderId;
         }
         catch (TaskCanceledException ex)
@@ -165,7 +165,7 @@ public class GooglePlayBillingService: IAppBillingService
 
         try
         {
-            var billingResult = await _billingClient.StartConnectionAsync();
+            var billingResult = await _billingClient.StartConnectionAsync().ConfigureAwait(false);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw new Exception(billingResult.DebugMessage);

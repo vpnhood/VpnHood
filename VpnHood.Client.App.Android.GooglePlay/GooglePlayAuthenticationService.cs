@@ -24,7 +24,7 @@ public class GooglePlayAuthenticationService(string firebaseClientId)
         var appUiContext = (AndroidUiContext)uiContext;
 
         using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
-        var account = await googleSignInClient.SilentSignInAsync();
+        var account = await googleSignInClient.SilentSignInAsync().ConfigureAwait(false);
         return account?.IdToken ?? throw new AuthenticationException("Could not perform SilentSignIn by Google.");
     }
 
@@ -39,7 +39,7 @@ public class GooglePlayAuthenticationService(string firebaseClientId)
             _taskCompletionSource = new TaskCompletionSource<GoogleSignInAccount>();
             appUiContext.ActivityEvent.ActivityResultEvent += Activity_OnActivityResult;
             appUiContext.ActivityEvent.Activity.StartActivityForResult(googleSignInClient.SignInIntent, SignInIntentId);
-            var account = await _taskCompletionSource.Task;
+            var account = await _taskCompletionSource.Task.ConfigureAwait(false);
 
             if (account.IdToken == null)
                 throw new ArgumentNullException(account.IdToken);
@@ -63,7 +63,7 @@ public class GooglePlayAuthenticationService(string firebaseClientId)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var googleSignInClient = GoogleSignIn.GetClient(appUiContext.Activity, _googleSignInOptions);
-        await googleSignInClient.SignOutAsync();
+        await googleSignInClient.SignOutAsync().ConfigureAwait(false);
     }
 
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
@@ -77,7 +77,7 @@ public class GooglePlayAuthenticationService(string firebaseClientId)
     {
         try
         {
-            var googleSignInAccount = await GoogleSignIn.GetSignedInAccountFromIntentAsync(intent);
+            var googleSignInAccount = await GoogleSignIn.GetSignedInAccountFromIntentAsync(intent).ConfigureAwait(false);
             _taskCompletionSource?.SetResult(googleSignInAccount);
         }
         catch (Exception e)

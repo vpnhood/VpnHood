@@ -26,7 +26,7 @@ public class GooglePlayAdService(
         try
         {
             if (_rewardedAdLoadCallback != null && _lastLoadRewardedAdTime.AddHours(1) < DateTime.Now)
-                return await _rewardedAdLoadCallback.Task;
+                return await _rewardedAdLoadCallback.Task.ConfigureAwait(false);
 
             _rewardedAdLoadCallback = new MyRewardedAdLoadCallback();
             var adRequest = new AdRequest.Builder().Build();
@@ -34,10 +34,10 @@ public class GooglePlayAdService(
 
             var cancellationTask = new TaskCompletionSource();
             cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(_rewardedAdLoadCallback.Task, cancellationTask.Task);
+            await Task.WhenAny(_rewardedAdLoadCallback.Task, cancellationTask.Task).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rewardedAd = await _rewardedAdLoadCallback.Task;
+            var rewardedAd = await _rewardedAdLoadCallback.Task.ConfigureAwait(false);
             _lastLoadRewardedAdTime = DateTime.Now;
             return rewardedAd;
         }
@@ -56,7 +56,7 @@ public class GooglePlayAdService(
         var activity = appUiContext.Activity;
 
         // create ad custom data
-        var rewardedAd = await LoadRewardedAd(activity, cancellationToken);
+        var rewardedAd = await LoadRewardedAd(activity, cancellationToken).ConfigureAwait(false);
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before showing the ad.");
 
@@ -77,7 +77,7 @@ public class GooglePlayAdService(
         // wait for earn reward or dismiss
         var cancellationTask = new TaskCompletionSource();
         cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask, cancellationTask.Task);
+        await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask, cancellationTask.Task).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
 
         // check task errors

@@ -28,7 +28,7 @@ public static class VhTestUtil
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
-            await Task.Delay(waitTime);
+            await Task.Delay(waitTime).ConfigureAwait(false);
             actualValue = valueFactory();
         }
 
@@ -38,14 +38,14 @@ public static class VhTestUtil
     private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory, int timeout = 5000)
     {
         const int waitTime = 100;
-        var actualValue = await valueFactory();
+        var actualValue = await valueFactory().ConfigureAwait(false);
         for (var elapsed = 0; elapsed < timeout; elapsed += waitTime)
         {
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
-            await Task.Delay(waitTime);
-            actualValue = await valueFactory();
+            await Task.Delay(waitTime).ConfigureAwait(false);
+            actualValue = await valueFactory().ConfigureAwait(false);
         }
 
         return actualValue;
@@ -62,21 +62,21 @@ public static class VhTestUtil
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<TValue> valueFactory,
         string? message = null, int timeout = 5000)
     {
-        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout);
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout).ConfigureAwait(false);
         AssertEquals(expectedValue, actualValue, message);
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
         string? message = null, int timeout = 5000)
     {
-        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout);
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeout).ConfigureAwait(false);
         AssertEquals(expectedValue, actualValue, message);
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Task<TValue> task,
         string? message = null, int timeout = 5000)
     {
-        var actualValue = await WaitForValue(expectedValue, () => task, timeout);
+        var actualValue = await WaitForValue(expectedValue, () => task, timeout).ConfigureAwait(false);
         AssertEquals(expectedValue, actualValue, message);
     }
 
@@ -96,7 +96,7 @@ public static class VhTestUtil
     {
         try
         {
-            await task;
+            await task.ConfigureAwait(false);
             throw new AssertException($"Expected {expectedStatusCode} but the actual was OK. {message}");
         }
         catch (ApiException ex)
@@ -119,7 +119,7 @@ public static class VhTestUtil
     {
         try
         {
-            await task;
+            await task.ConfigureAwait(false);
             throw new AssertException($"Expected {expectedExceptionType} exception but was OK. {message}");
         }
         catch (ApiException ex)
@@ -142,7 +142,7 @@ public static class VhTestUtil
     {
         try
         {
-            await task;
+            await task.ConfigureAwait(false);
             throw new AssertException($"Expected kind of {nameof(NotExistsException)} but was OK. {message}");
         }
         catch (ApiException ex)
@@ -165,7 +165,7 @@ public static class VhTestUtil
     {
         try
         {
-            await task;
+            await task.ConfigureAwait(false);
             throw new AssertException($"Expected kind of {nameof(AlreadyExistsException)} but was OK. {message}");
         }
         catch (ApiException ex)

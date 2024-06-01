@@ -87,7 +87,7 @@ public class JobRunner
         // run jobs
         foreach (var job in jobs)
         {
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync().ConfigureAwait(false);
             _ = RunJob(job);
         }
     }
@@ -104,7 +104,7 @@ public class JobRunner
         // run the job
         try
         {
-            await job.RunJob();
+            await job.RunJob().ConfigureAwait(false);
         }
         catch (ObjectDisposedException)
         {

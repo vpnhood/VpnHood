@@ -22,9 +22,9 @@ public class StoreBillingService(StoreAccountService storeAccountService, IAppBi
         try
         {
             PurchaseState = BillingPurchaseState.Started;
-            var providerOrderId = await billingService.Purchase(uiContext, planId);
+            var providerOrderId = await billingService.Purchase(uiContext, planId).ConfigureAwait(false);
             PurchaseState = BillingPurchaseState.Processing;
-            await storeAccountService.WaitForProcessProviderOrder(providerOrderId);
+            await storeAccountService.WaitForProcessProviderOrder(providerOrderId).ConfigureAwait(false);
             return providerOrderId;
 
         }

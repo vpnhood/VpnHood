@@ -20,7 +20,7 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
         try
         {
-            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
+            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task.ConfigureAwait(false);
             var updateAvailability = appUpdateInfo.UpdateAvailability();
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
@@ -33,16 +33,16 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
 
             // Show Google Play update dialog
             var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
-            var updateFlowResult = await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task;
+            var updateFlowResult = await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task.ConfigureAwait(false);
             if (updateFlowResult.IntValue() != -1)
                 throw new Exception("Could not start update flow.");
 
             // Wait for download complete
-            await googlePlayDownloadStateListener.WaitForCompletion();
+            await googlePlayDownloadStateListener.WaitForCompletion().ConfigureAwait(false);
 
             // Start install downloaded update
             var installUpdateTask = appUpdateManager.CompleteUpdate();
-            var installUpdateStatus = await new GooglePlayTaskCompleteListener<Integer>(installUpdateTask).Task;
+            var installUpdateStatus = await new GooglePlayTaskCompleteListener<Integer>(installUpdateTask).Task.ConfigureAwait(false);
 
             // Could not start install
             if (installUpdateStatus.IntValue() != -1)

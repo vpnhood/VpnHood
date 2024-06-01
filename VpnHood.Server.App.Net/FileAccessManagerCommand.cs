@@ -20,14 +20,14 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         var tokenIdArg = cmdApp.Argument("tokenId", "tokenId to print");
         cmdApp.OnExecuteAsync(async _ =>
         {
-            await PrintToken(tokenIdArg.Value!);
+            await PrintToken(tokenIdArg.Value!).ConfigureAwait(false);
             return 0;
         });
     }
 
     private async Task PrintToken(string tokenId)
     {
-        var accessItem = await fileAccessManager.AccessItem_Read(tokenId);
+        var accessItem = await fileAccessManager.AccessItem_Read(tokenId).ConfigureAwait(false);
         if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
         var hostName = accessItem.Token.ServerToken.HostName + (accessItem.Token.ServerToken.IsValidHostName ? "" : " (Fake)");
         var endPoints = accessItem.Token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
@@ -71,7 +71,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
                 );
 
             Console.WriteLine("The following token has been generated: ");
-            await PrintToken(accessItem.Token.TokenId);
+            await PrintToken(accessItem.Token.TokenId).ConfigureAwait(false);
             Console.WriteLine($"Store Token Count: {accessManager.AccessItem_Count()}");
             return 0;
         });

@@ -46,7 +46,7 @@ internal class UdpProxy : ITimeoutItem
 
         try
         {
-            await _sendSemaphore.WaitAsync();
+            await _sendSemaphore.WaitAsync().ConfigureAwait(false);
 
             if (VhLogger.IsDiagnoseMode)
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
@@ -56,7 +56,7 @@ internal class UdpProxy : ITimeoutItem
             if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
                 _udpClient.DontFragment = noFragment.Value; // Never call this for IPv6, it will throw exception for any value
 
-            var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint);
+            var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint).ConfigureAwait(false);
             if (sentBytes != datagram.Length)
                 VhLogger.Instance.LogWarning(
                     $"Couldn't send all udp bytes. Requested: {datagram.Length}, Sent: {sentBytes}");
@@ -80,14 +80,14 @@ internal class UdpProxy : ITimeoutItem
     {
         while (!Disposed)
         {
-            var udpResult = await _udpClient.ReceiveAsync();
+            var udpResult = await _udpClient.ReceiveAsync().ConfigureAwait(false);
             LastUsedTime = FastDateTime.Now;
 
             // create packet for audience
             var ipPacket = PacketUtil.CreateUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
 
             // send packet to audience
-            await _packetReceiver.OnPacketReceived(ipPacket);
+            await _packetReceiver.OnPacketReceived(ipPacket).ConfigureAwait(false);
         }
     }
 

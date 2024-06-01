@@ -237,6 +237,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
+    //todo: add non async overload for client
     public Task SendPacket(IPPacket ipPacket)
     {
         return SendPackets(new[] { ipPacket });
@@ -254,7 +255,7 @@ public class Tunnel : IJob, IAsyncDisposable
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there is some packet
-            await _packetSentEvent.WaitAsync(1000); //Wait 1000 to prevent deadlock.
+            await _packetSentEvent.WaitAsync(1000).ConfigureAwait(false); //Wait 1 seconds to prevent deadlock.
             if (_disposed) return;
 
             // check timeout
@@ -347,7 +348,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
                     try
                     {
-                        await channel.SendPacket(packets.ToArray());
+                        await channel.SendPacket(packets.ToArray()).ConfigureAwait(false);
                     }
                     catch
                     {
@@ -361,7 +362,7 @@ public class Tunnel : IJob, IAsyncDisposable
                 // wait for next new packets
                 else
                 {
-                    await _packetSenderSemaphore.WaitAsync();
+                    await _packetSenderSemaphore.WaitAsync().ConfigureAwait(false);
                 }
             } // while
         }
@@ -407,7 +408,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private bool _disposed;
     public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync();
+        using var lockResult = await _disposeLock.LockAsync().ConfigureAwait(false);
         if (_disposed) return;
         _disposed = true;
 
@@ -420,7 +421,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
 
         // Stop speed monitor
-        await _speedMonitorTimer.DisposeAsync();
+        await _speedMonitorTimer.DisposeAsync().ConfigureAwait(false);
         Speed.Sent = 0;
         Speed.Received = 0;
 
@@ -429,6 +430,6 @@ public class Tunnel : IJob, IAsyncDisposable
         _packetSentEvent.Release();
 
         // dispose all channels
-        await Task.WhenAll(disposeTasks);
+        await Task.WhenAll(disposeTasks).ConfigureAwait(false);
     }
 }

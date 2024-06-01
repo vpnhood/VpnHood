@@ -166,7 +166,7 @@ public class Session : IAsyncDisposable, IJob
 
     private async Task Sync(bool force, bool closeSession, string? adData = null)
     {
-        using var syncLock = await _syncLock.LockAsync();
+        using var syncLock = await _syncLock.LockAsync().ConfigureAwait(false);
         if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
             return;
 
@@ -191,18 +191,18 @@ public class Session : IAsyncDisposable, IJob
         try
         {
             SessionResponse = closeSession
-                ? await _accessManager.Session_Close(SessionId, traffic)
-                : await _accessManager.Session_AddUsage(SessionId, traffic, adData);
+                ? await _accessManager.Session_Close(SessionId, traffic).ConfigureAwait(false)
+                : await _accessManager.Session_AddUsage(SessionId, traffic, adData).ConfigureAwait(false);
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
-                await DisposeAsync(false, false);
+                await DisposeAsync(false, false).ConfigureAwait(false);
         }
         catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound)
         {
             SessionResponse.ErrorCode = SessionErrorCode.AccessError;
             SessionResponse.ErrorMessage = "Session Not Found.";
-            await DisposeAsync(false, false);
+            await DisposeAsync(false, false).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -253,7 +253,7 @@ public class Session : IAsyncDisposable, IJob
     public async Task ProcessTcpDatagramChannelRequest(TcpDatagramChannelRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
         // send OK reply
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).ConfigureAwait(false);
 
         // Disable UdpChannel
         UseUdpChannel = false;
@@ -269,7 +269,7 @@ public class Session : IAsyncDisposable, IJob
         }
         catch
         {
-            await channel.DisposeAsync();
+            await channel.DisposeAsync().ConfigureAwait(false);
             throw;
         }
     }
@@ -284,15 +284,15 @@ public class Session : IAsyncDisposable, IJob
 
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
-        await clientStream.DisposeAsync();
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).ConfigureAwait(false);
+        await clientStream.DisposeAsync().ConfigureAwait(false);
     }
 
     public async Task ProcessAdRewardRequest(AdRewardRequest request, IClientStream clientStream, CancellationToken cancellationToken)
     {
-        await Sync(force: true, closeSession: false, adData: request.AdData);
-        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
-        await clientStream.DisposeAsync();
+        await Sync(force: true, closeSession: false, adData: request.AdData).ConfigureAwait(false);
+        await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).ConfigureAwait(false);
+        await clientStream.DisposeAsync().ConfigureAwait(false);
     }
 
     public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream, CancellationToken cancellationToken)
@@ -325,7 +325,8 @@ public class Session : IAsyncDisposable, IJob
             isRequestedEpException = true;
             await VhUtil.RunTask(
                 tcpClientHost.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                _tcpConnectTimeout, cancellationToken);
+                _tcpConnectTimeout, cancellationToken)
+                .ConfigureAwait(false);
             isRequestedEpException = false;
 
             //tracking
@@ -333,7 +334,7 @@ public class Session : IAsyncDisposable, IJob
                 true, true, null);
 
             // send response
-            await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken);
+            await StreamUtil.WriteJsonAsync(clientStream.Stream, SessionResponse, cancellationToken).ConfigureAwait(false);
 
             // add the connection
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
@@ -347,8 +348,8 @@ public class Session : IAsyncDisposable, IJob
         catch (Exception ex)
         {
             tcpClientHost?.Dispose();
-            if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync();
-            if (streamProxyChannel != null) await streamProxyChannel.DisposeAsync();
+            if (tcpClientStreamHost != null) await tcpClientStreamHost.DisposeAsync().ConfigureAwait(false);
+            if (streamProxyChannel != null) await streamProxyChannel.DisposeAsync().ConfigureAwait(false);
 
             if (isRequestedEpException)
                 throw new ServerSessionException(clientStream.IpEndPointPair.RemoteEndPoint,
@@ -424,7 +425,7 @@ public class Session : IAsyncDisposable, IJob
 
         // Sync must before dispose, Some dispose may take time
         if (sync)
-            await Sync(true, byUser);
+            await Sync(true, byUser).ConfigureAwait(false);
 
         Tunnel.PacketReceived -= Tunnel_OnPacketReceived;
         _ = Tunnel.DisposeAsync();

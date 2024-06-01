@@ -92,8 +92,8 @@ public class PingProxyPool : IPacketProxyPool, IJob
                 new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
 
-        var result = await sendTask;
-        await _packetProxyReceiver.OnPacketReceived(result);
+        var result = await sendTask.ConfigureAwait(false);
+        await _packetProxyReceiver.OnPacketReceived(result).ConfigureAwait(false);
     }
 
     public Task RunJob()

@@ -823,7 +823,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (ex.SessionResponse.AccessUsage != null)
                 SessionStatus.AccessUsage = ex.SessionResponse.AccessUsage;
 
-            // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
+            // SessionException means that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
 
             // close session if server has ended the session

@@ -34,7 +34,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     {
         try
         {
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync().ConfigureAwait(false);
 
             // add random packet iv
             _randomGenerator.GetBytes(_sendIv);
@@ -55,8 +55,8 @@ public abstract class UdpChannelTransmitter : IDisposable
                 buffer[_sendIv.Length + i] ^= _sendHeadKeyBuffer[i]; //simple XOR with generated unique key
 
             var ret = ipEndPoint != null
-                ? await _udpClient.SendAsync(buffer, bufferLength, ipEndPoint)
-                : await _udpClient.SendAsync(buffer, bufferLength);
+                ? await _udpClient.SendAsync(buffer, bufferLength, ipEndPoint).ConfigureAwait(false)
+                : await _udpClient.SendAsync(buffer, bufferLength).ConfigureAwait(false);
 
             if (ret != bufferLength)
                 throw new Exception($"UdpClient: Send {ret} bytes instead {buffer.Length} bytes.");
@@ -90,7 +90,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             try
             {
                 remoteEndPoint = null;
-                var udpResult = await _udpClient.ReceiveAsync();
+                var udpResult = await _udpClient.ReceiveAsync().ConfigureAwait(false);
                 remoteEndPoint = udpResult.RemoteEndPoint;
                 var buffer = udpResult.Buffer;
                 if (buffer.Length < HeaderLength)

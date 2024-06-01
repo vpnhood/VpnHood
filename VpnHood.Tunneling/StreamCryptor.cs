@@ -76,7 +76,7 @@ public class StreamCryptor : AsyncStreamDecorator
     public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
         CancellationToken cancellationToken)
     {
-        var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
+        var readCount = await _stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
         Decrypt(buffer, offset, readCount);
         return readCount;
     }
@@ -100,8 +100,8 @@ public class StreamCryptor : AsyncStreamDecorator
             _bufferCryptor.Dispose();
 
         if (!_leaveOpen)
-            await _stream.DisposeAsync();
+            await _stream.DisposeAsync().ConfigureAwait(false);
 
-        await base.DisposeAsync();
+        await base.DisposeAsync().ConfigureAwait(false);
     }
 }

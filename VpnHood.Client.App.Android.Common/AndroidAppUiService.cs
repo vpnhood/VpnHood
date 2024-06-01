@@ -23,8 +23,10 @@ public class AndroidAppUiService : IAppUiService
 
         // request for adding tile
         // result. 0: reject, 1: already granted, 2: granted 
-        var res = await QuickLaunchTileService.RequestAddTile(appUiContext.Activity)
-.WaitAsync(cancellationToken);
+        var res = await QuickLaunchTileService
+            .RequestAddTile(appUiContext.Activity)
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
         return res != 0;
     }
 
@@ -48,7 +50,9 @@ public class AndroidAppUiService : IAppUiService
             // request for notification
             _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
             appUiContext.Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
-            var res = await _requestPostNotificationsCompletionTask.Task.WaitAsync(cancellationToken);
+            var res = await _requestPostNotificationsCompletionTask.Task
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
             return res == Permission.Granted;
         }
         finally

@@ -44,10 +44,10 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
     {
         while (IsStarted && !cancellationToken.IsCancellationRequested)
         {
-            using var client = await tcpListener.AcceptTcpClientAsync();
+            using var client = await tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
             try
             {
-                await HandleRequest(client, token, keyAuthorization, cancellationToken);
+                await HandleRequest(client, token, keyAuthorization, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -59,7 +59,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
     private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization, CancellationToken cancellationToken)
     {
         await using var stream = client.GetStream();
-        var headers = await HttpUtil.ParseHeadersAsync(stream, cancellationToken)
+        var headers = await HttpUtil.ParseHeadersAsync(stream, cancellationToken).ConfigureAwait(false)
             ?? throw new Exception("Connection has been closed before receiving any request.");
 
         if (!headers.Any()) return;
@@ -74,8 +74,8 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
             ? HttpResponseBuilder.Http01(keyAuthorization)
             : HttpResponseBuilder.NotFound();
 
-        await stream.WriteAsync(response, 0, response.Length, cancellationToken);
-        await stream.FlushAsync(cancellationToken);
+        await stream.WriteAsync(response, 0, response.Length, cancellationToken).ConfigureAwait(false);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // use dispose

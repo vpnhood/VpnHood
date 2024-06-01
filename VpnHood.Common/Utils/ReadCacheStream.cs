@@ -34,12 +34,12 @@ public class ReadCacheStream : AsyncStreamDecorator
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache
         if (_cacheRemain == 0 && count > _cache.Length)
-            return await base.ReadAsync(buffer, offset, count, cancellationToken);
+            return await base.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
 
         // fill cache
         if (_cacheRemain == 0 && count <= _cache.Length)
         {
-            _cacheRemain = await base.ReadAsync(_cache, 0, _cache.Length, cancellationToken);
+            _cacheRemain = await base.ReadAsync(_cache, 0, _cache.Length, cancellationToken).ConfigureAwait(false);
             _cacheOffset = 0;
 
         }

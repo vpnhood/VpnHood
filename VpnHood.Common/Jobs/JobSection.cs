@@ -51,7 +51,7 @@ public class JobSection
         if (!jobLock.IsEntered)
             return false;
 
-        await action();
+        await action().ConfigureAwait(false);
         return true;
     }
 

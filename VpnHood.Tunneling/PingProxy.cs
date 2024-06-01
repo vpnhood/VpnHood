@@ -23,13 +23,13 @@ public class PingProxy : ITimeoutItem
 
         try
         {
-            await _finishSemaphore.WaitAsync();
+            await _finishSemaphore.WaitAsync().ConfigureAwait(false);
             IsBusy = true;
 
             LastUsedTime = FastDateTime.Now;
             return ipPacket.Version == IPVersion.IPv4
-                ? await SendIpV4(ipPacket.Extract<IPv4Packet>())
-                : await SendIpV6(ipPacket.Extract<IPv6Packet>());
+                ? await SendIpV4(ipPacket.Extract<IPv4Packet>()).ConfigureAwait(false)
+                : await SendIpV6(ipPacket.Extract<IPv6Packet>()).ConfigureAwait(false);
         }
         finally
         {
@@ -50,7 +50,7 @@ public class PingProxy : ITimeoutItem
 
         var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, icmpPacket.Data, pingOptions);
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, icmpPacket.Data, pingOptions).ConfigureAwait(false);
 
         if (pingReply.Status != IPStatus.Success)
             throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}");
@@ -79,7 +79,7 @@ public class PingProxy : ITimeoutItem
 
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
         var pingData = icmpPacket.Bytes[8..];
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions);
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions).ConfigureAwait(false);
 
         // IcmpV6 packet generation is not fully implemented by packetNet
         // So create all packet in buffer

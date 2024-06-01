@@ -206,23 +206,25 @@ public class Ga4Tracker
         {
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync($"* Sending {name}...");
-                await Console.Out.WriteLineAsync($"Url: {requestMessage.RequestUri}");
-                await Console.Out.WriteLineAsync($"Headers: {JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true })}");
+                await Console.Out.WriteLineAsync($"* Sending {name}...").ConfigureAwait(false);
+                await Console.Out.WriteLineAsync($"Url: {requestMessage.RequestUri}").ConfigureAwait(false);
+                await Console.Out.WriteLineAsync(
+                    $"Headers: {JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true })}").ConfigureAwait(false);
             }
 
             if (jsonData != null)
             {
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(jsonData));
                 requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                await Console.Out.WriteLineAsync($"Data: {JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true })}");
+                await Console.Out.WriteLineAsync(
+                    $"Data: {JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true })}").ConfigureAwait(false);
             }
 
-            var res = await HttpClient.SendAsync(requestMessage);
+            var res = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync("Result: ");
-                await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync());
+                await Console.Out.WriteLineAsync("Result: ").ConfigureAwait(false);
+                await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync()).ConfigureAwait(false);
             }
         }
         catch

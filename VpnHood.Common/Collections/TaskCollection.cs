@@ -23,7 +23,7 @@ public class TaskCollection : IAsyncDisposable, IJob
     }
     public async ValueTask DisposeAsync()
     {
-        await Task.WhenAll(_tasks.Keys);
+        await Task.WhenAll(_tasks.Keys).ConfigureAwait(false);
     }
 
     public Task RunJob()

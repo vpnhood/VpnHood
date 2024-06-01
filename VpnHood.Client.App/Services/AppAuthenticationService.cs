@@ -12,14 +12,14 @@ internal class AppAuthenticationService(VpnHoodApp vpnHoodApp, IAppAuthenticatio
 
     public async Task SignInWithGoogle(IUiContext uiContext)
     {
-        await accountService.SignInWithGoogle(uiContext);
-        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile:true);
+        await accountService.SignInWithGoogle(uiContext).ConfigureAwait(false);
+        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile:true).ConfigureAwait(false);
     }
 
     public async Task SignOut(IUiContext uiContext)
     {
-        await accountService.SignOut(uiContext);
-        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true);
+        await accountService.SignOut(uiContext).ConfigureAwait(false);
+        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true).ConfigureAwait(false);
     }
 
     public void Dispose()

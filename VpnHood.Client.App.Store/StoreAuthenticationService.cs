@@ -80,7 +80,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
             if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow)
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value });
+                ApiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value }).ConfigureAwait(false);
                 return ApiKey;
             }
         }
@@ -95,11 +95,11 @@ public class StoreAuthenticationService : IAppAuthenticationService
             if (uiContext == null)
                 throw new Exception("UI context is not available.");
 
-            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext) : null;
+            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext).ConfigureAwait(false) : null;
             if (!string.IsNullOrWhiteSpace(idToken))
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken });
+                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken }).ConfigureAwait(false);
                 return ApiKey;
             }
         }
@@ -116,8 +116,8 @@ public class StoreAuthenticationService : IAppAuthenticationService
         if (_externalAuthenticationService == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _externalAuthenticationService.SignIn(uiContext);
-        await SignInToVpnHoodStore(idToken, true);
+        var idToken = await _externalAuthenticationService.SignIn(uiContext).ConfigureAwait(false);
+        await SignInToVpnHoodStore(idToken, true).ConfigureAwait(false);
     }
 
     public async Task SignOut(IUiContext uiContext)
@@ -128,7 +128,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
 
 
         if (_externalAuthenticationService != null)
-            await _externalAuthenticationService.SignOut(uiContext);
+            await _externalAuthenticationService.SignOut(uiContext).ConfigureAwait(false);
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
@@ -136,16 +136,18 @@ public class StoreAuthenticationService : IAppAuthenticationService
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
         try
         {
-            ApiKey = await authenticationClient.SignInAsync(new SignInRequest
-            {
-                IdToken = idToken,
-                RefreshTokenType = RefreshTokenType.None
-            });
+            ApiKey = await authenticationClient.SignInAsync(
+                new SignInRequest
+                {
+                    IdToken = idToken,
+                    RefreshTokenType = RefreshTokenType.None
+                })
+                .ConfigureAwait(false);
         }
         catch (ApiException ex)
         {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
-                await SignUpToVpnHoodStore(idToken);
+                await SignUpToVpnHoodStore(idToken).ConfigureAwait(false);
             else
                 throw;
         }
@@ -154,11 +156,13 @@ public class StoreAuthenticationService : IAppAuthenticationService
     private async Task SignUpToVpnHoodStore(string idToken)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-        ApiKey = await authenticationClient.SignUpAsync(new SignUpRequest
-        {
-            IdToken = idToken,
-            RefreshTokenType = RefreshTokenType.None
-        });
+        ApiKey = await authenticationClient.SignUpAsync(
+            new SignUpRequest
+            {
+                IdToken = idToken,
+                RefreshTokenType = RefreshTokenType.None
+            })
+            .ConfigureAwait(false);
     }
 
     public void Dispose()
@@ -175,9 +179,9 @@ public class StoreAuthenticationService : IAppAuthenticationService
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext);
+            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext).ConfigureAwait(false);
             request.Headers.Authorization = apiKey != null ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : null;
-            return await base.SendAsync(request, cancellationToken);
+            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
         }
     }
 }

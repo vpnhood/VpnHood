@@ -33,7 +33,7 @@ public class DiagnoseUtil
         Exception? exception = null;
         while (tasks.Length > 0)
         {
-            var task = await Task.WhenAny(tasks);
+            var task = await Task.WhenAny(tasks).ConfigureAwait(false);
             exception = task.Result;
             if (task.Result == null)
                 return null; //at least one task is success
@@ -53,7 +53,7 @@ public class DiagnoseUtil
 
             using var httpClient = new HttpClient();
             httpClient.Timeout = TimeSpan.FromMilliseconds(timeout);
-            var result = await httpClient.GetStringAsync(uri);
+            var result = await httpClient.GetStringAsync(uri).ConfigureAwait(false);
             if (result.Length < 100)
                 throw new Exception("The http response data length is not expected!");
 
@@ -82,7 +82,7 @@ public class DiagnoseUtil
                 "UdpTest: {UdpTestStatus}, DnsName: {DnsName}, NsServer: {NsServer}, Timeout: {Timeout}...",
                 "Started", dnsName, nsIpEndPoint, timeout);
 
-            var res = await GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout);
+            var res = await GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout).ConfigureAwait(false);
             if (res.AddressList.Length == 0)
                 throw new Exception("Could not find any host!");
 
@@ -113,7 +113,7 @@ public class DiagnoseUtil
                 "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}, Timeout: {Timeout}...",
                 "Started", logIpAddress, timeout);
 
-            var pingReply = await ping.SendPingAsync(ipAddress, timeout);
+            var pingReply = await ping.SendPingAsync(ipAddress, timeout).ConfigureAwait(false);
             if (pingReply.Status != IPStatus.Success)
                 throw new Exception($"Status: {pingReply.Status}");
 
@@ -175,8 +175,8 @@ public class DiagnoseUtil
         var buffer = ms.ToArray();
         udpClient.Client.SendTimeout = timeout;
         udpClient.Client.ReceiveTimeout = timeout;
-        await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint);
-        var receiveTask = await VhUtil.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout));
+        await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint).ConfigureAwait(false);
+        var receiveTask = await VhUtil.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout)).ConfigureAwait(false);
         buffer = receiveTask.Buffer;
 
         //The response message has the same header and question structure, so we move index to the answer part directly.

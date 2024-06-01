@@ -43,7 +43,7 @@ public class IpGroupManager
         {
             try
             {
-                oldVersion = await File.ReadAllTextAsync(VersionFilePath);
+                oldVersion = await File.ReadAllTextAsync(VersionFilePath).ConfigureAwait(false);
                 if (oldVersion == newVersion)
                     return;
             }
@@ -66,7 +66,7 @@ public class IpGroupManager
         // Loading the ip2Location stream
         VhLogger.Instance.LogTrace("Loading the ip2Location stream...");
         await using var ipLocationsStream = archiveEntry.Open();
-        var ipGroupNetworks = await LoadIp2Location(ipLocationsStream);
+        var ipGroupNetworks = await LoadIp2Location(ipLocationsStream).ConfigureAwait(false);
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogTrace("Building the IpGroups directory structure...");
@@ -74,7 +74,7 @@ public class IpGroupManager
         foreach (var ipGroupNetwork in ipGroupNetworks)
         {
             ipGroupNetwork.Value.IpRanges = ipGroupNetwork.Value.IpRanges.ToArray().Sort().ToList();
-            await File.WriteAllTextAsync(GetIpGroupFilePath(ipGroupNetwork.Key), JsonSerializer.Serialize(ipGroupNetwork.Value.IpRanges));
+            await File.WriteAllTextAsync(GetIpGroupFilePath(ipGroupNetwork.Key), JsonSerializer.Serialize(ipGroupNetwork.Value.IpRanges)).ConfigureAwait(false);
         }
 
         // write IpGroups file
@@ -86,10 +86,10 @@ public class IpGroupManager
                 })
             .OrderBy(x => x.IpGroupName)
             .ToArray();
-        await File.WriteAllTextAsync(IpGroupsFilePath, JsonSerializer.Serialize(ipGroups));
+        await File.WriteAllTextAsync(IpGroupsFilePath, JsonSerializer.Serialize(ipGroups)).ConfigureAwait(false);
 
         // write version
-        await File.WriteAllTextAsync(VersionFilePath, newVersion);
+        await File.WriteAllTextAsync(VersionFilePath, newVersion).ConfigureAwait(false);
         _ipGroups = null; // clear cache
     }
 
@@ -100,7 +100,7 @@ public class IpGroupManager
         using var streamReader = new StreamReader(ipLocationsStream);
         while (!streamReader.EndOfStream)
         {
-            var line = await streamReader.ReadLineAsync();
+            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             var items = line.Replace("\"", "").Split(',');
             if (items.Length != 4)
                 continue;
@@ -147,7 +147,7 @@ public class IpGroupManager
         if (!File.Exists(IpGroupsFilePath))
             return [];
 
-        var json = await File.ReadAllTextAsync(IpGroupsFilePath);
+        var json = await File.ReadAllTextAsync(IpGroupsFilePath).ConfigureAwait(false);
         _ipGroups =  VhUtil.JsonDeserialize<IpGroup[]>(json);
         return _ipGroups;
     }
@@ -155,7 +155,7 @@ public class IpGroupManager
     public async Task<IEnumerable<IpRange>> GetIpRanges(string ipGroupId)
     {
         var filePath = GetIpGroupFilePath(ipGroupId);
-        var json = await File.ReadAllTextAsync(filePath);
+        var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
         var ipRanges = JsonSerializer.Deserialize<IpRange[]>(json) ?? throw new Exception($"Could not deserialize {filePath}!");
         var ip4MappedRanges = ipRanges.Where(x => x.AddressFamily==AddressFamily.InterNetwork).Select(x => x.MapToIPv6());
         var ret = ipRanges.Concat(ip4MappedRanges);
@@ -165,13 +165,13 @@ public class IpGroupManager
     // it is sequential search
     public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress, string? lastIpGroupId)
     {
-        var ipGroups = await GetIpGroups();
+        var ipGroups = await GetIpGroups().ConfigureAwait(false);
         var lastIpGroup = ipGroups.FirstOrDefault(x => x.IpGroupId == lastIpGroupId);
 
         // IpGroup
         if (lastIpGroup != null)
         {
-            var ipRanges = await GetIpRanges(lastIpGroup.IpGroupId);
+            var ipRanges = await GetIpRanges(lastIpGroup.IpGroupId).ConfigureAwait(false);
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))
                 return lastIpGroup;
         }
@@ -179,7 +179,7 @@ public class IpGroupManager
         // iterate through all groups
         foreach (var ipGroup in ipGroups)
         {
-            var ipRanges = await GetIpRanges(ipGroup.IpGroupId);
+            var ipRanges = await GetIpRanges(ipGroup.IpGroupId).ConfigureAwait(false);
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))
                 return ipGroup;
         }
@@ -192,13 +192,13 @@ public class IpGroupManager
         try
         {
             var ipAddress =
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork) ??
-                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
+                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetwork).ConfigureAwait(false) ??
+                await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6).ConfigureAwait(false);
 
             if (ipAddress == null)
                 return null;
 
-            var ipGroup = await FindIpGroup(ipAddress, null);
+            var ipGroup = await FindIpGroup(ipAddress, null).ConfigureAwait(false);
             return ipGroup?.IpGroupId;
         }
         catch (Exception ex)

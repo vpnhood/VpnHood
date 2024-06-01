@@ -28,9 +28,9 @@ internal class AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountService accou
             return _appAccount;
 
         // Update cache from server and update local cache
-        _appAccount = await accountService.GetAccount();
+        _appAccount = await accountService.GetAccount().ConfigureAwait(false);
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
-        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount));
+        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).ConfigureAwait(false);
 
         return _appAccount;
     }

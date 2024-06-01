@@ -27,10 +27,10 @@ public class StoreAccountService : IAppAccountService, IDisposable
 
         var httpClient = Authentication.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
-        var currentUser = await authenticationClient.GetCurrentUserAsync();
+        var currentUser = await authenticationClient.GetCurrentUserAsync().ConfigureAwait(false);
 
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
-        var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(_storeAppId, false, false);
+        var activeSubscription = await currentVpnUserClient.ListSubscriptionsAsync(_storeAppId, false, false).ConfigureAwait(false);
         var subscriptionLastOrder = activeSubscription.SingleOrDefault()?.LastOrder;
 
         var appAccount = new AppAccount
@@ -55,7 +55,7 @@ public class StoreAccountService : IAppAccountService, IDisposable
         {
             try
             {
-                var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(_storeAppId, providerOrderId);
+                var subscriptionOrder = await currentVpnUserClient.GetSubscriptionOrderByProviderOrderIdAsync(_storeAppId, providerOrderId).ConfigureAwait(false);
                 if (subscriptionOrder.IsProcessed)
                     return;
                 throw new Exception("Order has not processed yet.");
@@ -65,7 +65,7 @@ public class StoreAccountService : IAppAccountService, IDisposable
                 // We might encounter a ‘not exist’ exception. Therefore, we need to wait for Google to send the provider order to the Store.
                 VhLogger.Instance.LogWarning(ex, ex.Message);
                 if (counter == 5) throw;
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
             }
         }
     }
@@ -76,12 +76,12 @@ public class StoreAccountService : IAppAccountService, IDisposable
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
 
         // todo: add includeAccessKey parameter and return accessKey in accessToken
-        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId));
+        var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId)).ConfigureAwait(false);
 
         var accessKeyList = new List<string>();
         foreach (var accessToken in accessTokens)
         {
-            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(_storeAppId, accessToken.AccessTokenId);
+            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(_storeAppId, accessToken.AccessTokenId).ConfigureAwait(false);
             accessKeyList.Add(accessKey);
         }
 

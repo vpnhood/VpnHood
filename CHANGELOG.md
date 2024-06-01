@@ -1,6 +1,7 @@
 # Upcoming
 ### Client
 * Update: Disable "Exclude My Country" when unable to load IP location database
+* Fix: Freeze network on some si
 
 # v4.5.520
 ### Client

@@ -410,11 +410,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             $"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
         // calculate packetCaptureIpRanges
-        var packetCaptureIpRanges = IpNetwork.All.ToIpRanges();
+        var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges()) ;
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
-            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
+            packetCaptureIpRanges = packetCaptureIpRanges.IntersectNew(UserSettings.PacketCaptureIncludeIpRanges);
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
-            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
+            packetCaptureIpRanges = packetCaptureIpRanges.ExcludeNew(UserSettings.PacketCaptureExcludeIpRanges);
 
         // create clientOptions
         var clientOptions = new ClientOptions
@@ -425,7 +425,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IncludeLocalNetwork = UserSettings.IncludeLocalNetwork,
             IpRangeProvider = this,
             AdProvider = this,
-            PacketCaptureIncludeIpRanges = packetCaptureIpRanges.ToArray(),
+            PacketCaptureIncludeIpRanges = packetCaptureIpRanges,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,

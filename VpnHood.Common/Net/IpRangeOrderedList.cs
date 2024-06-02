@@ -5,9 +5,12 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Net;
 
-public class IpRangeOrderedList(IEnumerable<IpRange> orderedList) : IOrderedEnumerable<IpRange>, IReadOnlyList<IpRange>
+public class IpRangeOrderedList : IOrderedEnumerable<IpRange>, IReadOnlyList<IpRange>
 {
-    private readonly List<IpRange> _orderedList = Sort(orderedList);
+    private readonly List<IpRange> _orderedList;
+
+    public IpRangeOrderedList() => _orderedList = [];
+    public IpRangeOrderedList(IEnumerable<IpRange> ipRanges) => _orderedList = Sort(ipRanges);
 
     public bool Exists(IPAddress ipAddress)
     {

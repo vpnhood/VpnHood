@@ -22,20 +22,17 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client =
             new VpnHoodClient(TestHelper.CreatePacketCapture(), Guid.NewGuid(), token, new ClientOptions
             {
-                PacketCaptureIncludeIpRanges =
-                [
-                    IpRange.Parse("230.0.0.0-230.0.0.200")
-                ]
+                PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
             });
 
         await client.Connect();
 
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.0")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.10")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.100")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.150")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.200")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.220")));
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.0")));
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.10")));
+        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.100")));
+        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.150")));
+        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.200")));
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.220")));
 
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("230.0.0.50")));
     }
@@ -54,21 +51,18 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client =
             new VpnHoodClient(TestHelper.CreatePacketCapture(), Guid.NewGuid(), token, new ClientOptions
             {
-                PacketCaptureIncludeIpRanges =
-                [
-                    IpRange.Parse("230.0.0.0-230.0.0.200")
-                ]
+                PacketCaptureIncludeIpRanges = new IpRangeOrderedList([IpRange.Parse("230.0.0.0-230.0.0.200")])
             });
 
         await client.Connect();
 
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.0")));
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.10")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.100")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.150")));
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.200")));
+        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.0")));
+        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.10")));
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.100")));
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.150")));
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.200")));
 
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.220"))); //block by client
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.220"))); //block by client
         Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("230.0.0.50")));
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("230.0.0.220")));
     }
@@ -89,11 +83,11 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client = new VpnHoodClient(TestHelper.CreatePacketCapture(), Guid.NewGuid(), token, new ClientOptions());
         await client.Connect();
 
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("192.168.0.100")), "LocalNetWorks failed");
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.110")), "Excludes failed");
-        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.50")), "Includes failed");
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.240")), "Includes failed");
-        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.254")), "Includes failed");
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("192.168.0.100")), "LocalNetWorks failed");
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.110")), "Excludes failed");
+        Assert.IsTrue(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.50")), "Includes failed");
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.240")), "Includes failed");
+        Assert.IsFalse(client.PacketCaptureIncludeIpRanges.Exists(IPAddress.Parse("230.0.0.254")), "Includes failed");
 
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("192.168.0.100")));
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("230.0.0.110")));
@@ -116,10 +110,10 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client = new VpnHoodClient(TestHelper.CreatePacketCapture(), Guid.NewGuid(), token, new ClientOptions());
         await client.Connect();
 
-        Assert.IsFalse(client.IncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.110")), "Excludes failed");
-        Assert.IsTrue(client.IncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.50")), "Includes failed");
-        Assert.IsFalse(client.IncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.240")), "Includes failed");
-        Assert.IsFalse(client.IncludeIpRanges.IsInSortedRanges(IPAddress.Parse("230.0.0.254")), "Includes & Excludes failed");
+        Assert.IsFalse(client.IncludeIpRanges.Exists(IPAddress.Parse("230.0.0.110")), "Excludes failed");
+        Assert.IsTrue(client.IncludeIpRanges.Exists(IPAddress.Parse("230.0.0.50")), "Includes failed");
+        Assert.IsFalse(client.IncludeIpRanges.Exists(IPAddress.Parse("230.0.0.240")), "Includes failed");
+        Assert.IsFalse(client.IncludeIpRanges.Exists(IPAddress.Parse("230.0.0.254")), "Includes & Excludes failed");
 
         Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("230.0.0.110")));
         Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.Exists(IPAddress.Parse("230.0.0.50")));

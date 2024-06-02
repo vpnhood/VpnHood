@@ -220,14 +220,14 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToArray();
 
         // assign to workers
-        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
+        serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().UnionNew(dnsServerIpRanges).ToArray();
         serverHost.NetFilterPacketCaptureIncludeIpRanges = netFilterOptions.GetFinalPacketCaptureIncludeIpRanges().Union(dnsServerIpRanges).ToArray();
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
-        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges).ToArray();
+        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().ExcludeNew(dnsServerIpRanges);
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)
-            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x))).ToArray();
+            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.UnionNew(privateAddresses.Select(x => new IpRange(x)));
     }
 
     private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)

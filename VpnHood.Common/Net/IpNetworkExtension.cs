@@ -14,6 +14,12 @@ public static class IpNetworkExtension
         return IpNetwork.ToIpRange(ipNetworks);
     }
 
+    public static IpRangeOrderedList ToIpRangesNew(this IEnumerable<IpNetwork> ipNetworks)
+    {
+        return new IpRangeOrderedList(ipNetworks.Select(x => x.ToIpRange()));
+    }
+
+
     public static IOrderedEnumerable<IpNetwork> ToIpNetworks(this IEnumerable<IpRange> ipRanges)
     {
         return IpNetwork.FromIpRange(ipRanges);

@@ -1,5 +1,6 @@
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Store;
 
@@ -22,9 +23,9 @@ public class StoreBillingService(StoreAccountService storeAccountService, IAppBi
         try
         {
             PurchaseState = BillingPurchaseState.Started;
-            var providerOrderId = await billingService.Purchase(uiContext, planId).ConfigureAwait(false);
+            var providerOrderId = await billingService.Purchase(uiContext, planId).VhConfigureAwait();
             PurchaseState = BillingPurchaseState.Processing;
-            await storeAccountService.WaitForProcessProviderOrder(providerOrderId).ConfigureAwait(false);
+            await storeAccountService.WaitForProcessProviderOrder(providerOrderId).VhConfigureAwait();
             return providerOrderId;
 
         }

@@ -259,7 +259,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async ValueTask DisposeAsync()
     {
-        await Disconnect().ConfigureAwait(false);
+        await Disconnect().VhConfigureAwait();
         Device.Dispose();
         LogService.Dispose();
         DisposeSingleton();
@@ -299,10 +299,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // disconnect current connection
         if (!IsIdle)
-            await Disconnect(true).ConfigureAwait(false);
+            await Disconnect(true).VhConfigureAwait();
 
         // request features for the first time
-        await RequestFeatures(cancellationToken).ConfigureAwait(false);
+        await RequestFeatures(cancellationToken).VhConfigureAwait();
 
         // set use default clientProfile and serverLocation
         serverLocation ??= UserSettings.ServerLocation;
@@ -348,7 +348,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // it slows down tests and does not need to be logged in normal situation
             if (diagnose)
-                VhLogger.Instance.LogInformation("Country: {Country}", await GetClientCountry().ConfigureAwait(false));
+                VhLogger.Instance.LogInformation("Country: {Country}", await GetClientCountry().VhConfigureAwait());
 
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
@@ -358,7 +358,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             cancellationToken = linkedCts.Token;
 
             // connect
-            await ConnectInternal(clientProfile.Token, _activeServerLocation, userAgent, true, cancellationToken).ConfigureAwait(false);
+            await ConnectInternal(clientProfile.Token, _activeServerLocation, userAgent, true, cancellationToken).VhConfigureAwait();
         }
         catch (Exception ex)
         {
@@ -386,7 +386,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task<IPacketCapture> CreatePacketCapture()
     {
         // create packet capture
-        var packetCapture = await Device.CreatePacketCapture(UiContext).ConfigureAwait(false);
+        var packetCapture = await Device.CreatePacketCapture(UiContext).VhConfigureAwait();
 
         // init packet capture
         if (packetCapture.IsMtuSupported)
@@ -440,16 +440,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // Create Client with a new PacketCapture
         if (_client != null) throw new Exception("Last client has not been disposed properly.");
-        var packetCapture = await CreatePacketCapture().ConfigureAwait(false);
+        var packetCapture = await CreatePacketCapture().VhConfigureAwait();
         _client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
         _client.StateChanged += Client_StateChanged;
 
         try
         {
             if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(_client, cancellationToken).ConfigureAwait(false);
+                await Diagnoser.Diagnose(_client, cancellationToken).VhConfigureAwait();
             else
-                await Diagnoser.Connect(_client, cancellationToken).ConfigureAwait(false);
+                await Diagnoser.Connect(_client, cancellationToken).VhConfigureAwait();
 
             // set connected time
             ConnectedTime = DateTime.Now;
@@ -467,16 +467,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception)
         {
-            await _client.DisposeAsync().ConfigureAwait(false);
+            await _client.DisposeAsync().VhConfigureAwait();
             _client = null;
 
             // try to update token from url after connection or error if ResponseAccessKey is not set
             // check _client is not null to make sure 
             if (allowUpdateToken && !string.IsNullOrEmpty(token.ServerToken.Url) &&
-                await ClientProfileService.UpdateServerTokenByUrl(token).ConfigureAwait(false))
+                await ClientProfileService.UpdateServerTokenByUrl(token).VhConfigureAwait())
             {
                 token = ClientProfileService.GetToken(token.TokenId);
-                await ConnectInternal(token, serverLocationInfo, userAgent, false, cancellationToken).ConfigureAwait(false);
+                await ConnectInternal(token, serverLocationInfo, userAgent, false, cancellationToken).VhConfigureAwait();
                 return;
             }
 
@@ -494,7 +494,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 Settings.IsQuickLaunchEnabled =
-                    await Services.UiService.RequestQuickLaunch(RequiredUiContext, cancellationToken).ConfigureAwait(false);
+                    await Services.UiService.RequestQuickLaunch(RequiredUiContext, cancellationToken).VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -512,7 +512,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 Settings.IsNotificationEnabled =
-                    await Services.UiService.RequestNotification(RequiredUiContext, cancellationToken).ConfigureAwait(false);
+                    await Services.UiService.RequestNotification(RequiredUiContext, cancellationToken).VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -581,7 +581,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Client");
-                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient()).ConfigureAwait(false);
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient()).VhConfigureAwait();
                 _appPersistState.ClientCountryCode = ipLocation.CountryCode;
             }
             catch (Exception ex)
@@ -595,8 +595,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         {
             try
             {
-                var ipGroupManager = await GetIpGroupManager().ConfigureAwait(false);
-                _appPersistState.ClientCountryCode ??= await ipGroupManager.GetCountryCodeByCurrentIp().ConfigureAwait(false);
+                var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
+                _appPersistState.ClientCountryCode ??= await ipGroupManager.GetCountryCodeByCurrentIp().VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -612,7 +612,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         if (Services.AdService == null) throw new Exception("AdService has not been initialized.");
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        await Services.AdService.ShowAd(RequiredUiContext, adData, cancellationToken).ConfigureAwait(false);
+        await Services.AdService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
         return adData;
     }
 
@@ -633,7 +633,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AsyncLock _disconnectLock = new();
     public async Task Disconnect(bool byUser = false)
     {
-        using var lockAsync = await _disconnectLock.LockAsync().ConfigureAwait(false);
+        using var lockAsync = await _disconnectLock.LockAsync().VhConfigureAwait();
         if (_isDisconnecting || IsIdle)
             return;
 
@@ -658,7 +658,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // close client
             // do not wait for bye if user request disconnection
             if (_client != null)
-                await _client.DisposeAsync(waitForBye: !byUser).ConfigureAwait(false);
+                await _client.DisposeAsync(waitForBye: !byUser).VhConfigureAwait();
 
             LogService.Stop();
         }
@@ -682,20 +682,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<IpGroup[]> GetIpGroups()
     {
-        var ipGroupManager = await GetIpGroupManager().ConfigureAwait(false);
-        return await ipGroupManager.GetIpGroups().ConfigureAwait(false);
+        var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
+        return await ipGroupManager.GetIpGroups().VhConfigureAwait();
     }
 
     private async Task<IpGroupManager> GetIpGroupManager()
     {
-        using var asyncLock = await AsyncLock.LockAsync("GetIpGroupManager").ConfigureAwait(false);
+        using var asyncLock = await AsyncLock.LockAsync("GetIpGroupManager").VhConfigureAwait();
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
         // AddFromIp2Location if hash has been changed
         try
         {
-            var ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath).ConfigureAwait(false);
+            var ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath).VhConfigureAwait();
             
             // ignore country ip groups if not required usually by tests
             if (!_useIpGroupManager)
@@ -711,7 +711,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ??
                         throw new Exception("Could not find ip2location database.");
             
-            await ipGroupManager.InitByIp2LocationZipStream(entry).ConfigureAwait(false);
+            await ipGroupManager.InitByIp2LocationZipStream(entry).VhConfigureAwait();
             _ipGroupManager = ipGroupManager;
             return ipGroupManager;
         }
@@ -754,7 +754,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // check version by app container
         try
         {
-            if (UiContext != null && Services.UpdaterService != null && await Services.UpdaterService.Update(UiContext).ConfigureAwait(false))
+            if (UiContext != null && Services.UpdaterService != null && await Services.UpdaterService.Update(UiContext).VhConfigureAwait())
             {
                 VersionCheckPostpone();
                 return;
@@ -766,11 +766,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // check version by UpdateInfoUrl
-        _versionCheckResult = await VersionCheckByUpdateInfo().ConfigureAwait(false);
+        _versionCheckResult = await VersionCheckByUpdateInfo().VhConfigureAwait();
 
         // save the result
         if (_versionCheckResult != null)
-            await File.WriteAllTextAsync(VersionCheckFilePath, JsonSerializer.Serialize(_versionCheckResult)).ConfigureAwait(false);
+            await File.WriteAllTextAsync(VersionCheckFilePath, JsonSerializer.Serialize(_versionCheckResult)).VhConfigureAwait();
 
         else if (File.Exists(VersionCheckFilePath))
             File.Delete(VersionCheckFilePath);
@@ -786,7 +786,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogTrace("Retrieving the latest publish info...");
 
             using var httpClient = new HttpClient();
-            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl).ConfigureAwait(false);
+            var publishInfoJson = await httpClient.GetStringAsync(Features.UpdateInfoUrl).VhConfigureAwait();
             var latestPublishInfo = VhUtil.JsonDeserialize<PublishInfo>(publishInfoJson);
             VersionStatus versionStatus;
 
@@ -837,12 +837,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // exclude client country IPs
         if (!UserSettings.TunnelClientCountry)
         {
-            var ipGroupManager = await GetIpGroupManager().ConfigureAwait(false);
-            var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode).ConfigureAwait(false);
+            var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
+            var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode).VhConfigureAwait();
             _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
             VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
             if (ipGroup != null)
-                ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId).ConfigureAwait(false));
+                ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId).VhConfigureAwait());
         }
 
         return ipRanges.ToArray();
@@ -858,9 +858,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // update profiles
         // get access tokens from account
-        var account = await Services.AccountService.GetAccount().ConfigureAwait(false);
+        var account = await Services.AccountService.GetAccount().VhConfigureAwait();
         var accessKeys = account?.SubscriptionId != null
-            ? await Services.AccountService.GetAccessKeys(account.SubscriptionId).ConfigureAwait(false)
+            ? await Services.AccountService.GetAccessKeys(account.SubscriptionId).VhConfigureAwait()
             : [];
         ClientProfileService.UpdateFromAccount(accessKeys);
 

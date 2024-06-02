@@ -60,8 +60,8 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         Connected = true;
         try
         {
-            await ReadTask(_cancellationTokenSource.Token).ConfigureAwait(false);
-            await SendClose().ConfigureAwait(false);
+            await ReadTask(_cancellationTokenSource.Token).VhConfigureAwait();
+            await SendClose().VhConfigureAwait();
         }
         finally
         {
@@ -82,7 +82,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
         try
         {
-            await _sendSemaphore.WaitAsync(_cancellationTokenSource.Token).ConfigureAwait(false);
+            await _sendSemaphore.WaitAsync(_cancellationTokenSource.Token).VhConfigureAwait();
 
             // check channel connectivity
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -105,7 +105,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
                 bufferIndex += ipPacket.TotalLength;
             }
 
-            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, _cancellationTokenSource.Token).ConfigureAwait(false);
+            await _clientStream.Stream.WriteAsync(buffer, 0, bufferIndex, _cancellationTokenSource.Token).VhConfigureAwait();
             LastActivityTime = FastDateTime.Now;
             Traffic.Sent += bufferIndex;
         }
@@ -125,7 +125,7 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             await using var streamPacketReader = new StreamPacketReader(stream);
             while (!cancellationToken.IsCancellationRequested && !_isCloseReceived)
             {
-                var ipPackets = await streamPacketReader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                var ipPackets = await streamPacketReader.ReadAsync(cancellationToken).VhConfigureAwait();
                 if (ipPackets == null || _disposed)
                     break;
 
@@ -228,13 +228,13 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
     private readonly AsyncLock _disposeLock = new();
     public async ValueTask DisposeAsync(bool graceful)
     {
-        using var lockResult = await _disposeLock.LockAsync().ConfigureAwait(false);
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
 
         if (graceful)
-            await SendClose().ConfigureAwait(false); // this won't throw any error
+            await SendClose().VhConfigureAwait(); // this won't throw any error
 
-        await _clientStream.DisposeAsync(graceful).ConfigureAwait(false);
+        await _clientStream.DisposeAsync(graceful).VhConfigureAwait();
         _disposed = true;
     }
 }

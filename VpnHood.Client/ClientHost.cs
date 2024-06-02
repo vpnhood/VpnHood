@@ -71,7 +71,7 @@ internal class ClientHost(
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var tcpClient = await tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+                var tcpClient = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
                 _ = ProcessClient(tcpClient, cancellationToken);
             }
         }
@@ -202,7 +202,7 @@ internal class ClientHost(
                     new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
                     new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                     channelId, cancellationToken)
-                    .ConfigureAwait(false);
+                    .VhConfigureAwait();
                 return;
             }
 
@@ -218,7 +218,7 @@ internal class ClientHost(
             };
 
             // read the response
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).ConfigureAwait(false);
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).VhConfigureAwait();
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
@@ -231,8 +231,8 @@ internal class ClientHost(
         }
         catch (Exception ex)
         {
-            if (channel != null) await channel.DisposeAsync().ConfigureAwait(false);
-            if (requestResult != null) await requestResult.DisposeAsync().ConfigureAwait(false);
+            if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
+            if (requestResult != null) await requestResult.DisposeAsync().VhConfigureAwait();
             orgTcpClient.Dispose();
             VhLogger.LogError(GeneralEventId.StreamProxyChannel, ex, "");
         }

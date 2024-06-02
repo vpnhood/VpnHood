@@ -72,7 +72,7 @@ public class SessionManager : IAsyncDisposable, IJob
         {
             try
             {
-                await syncTask.Task.ConfigureAwait(false);
+                await syncTask.Task.VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -100,7 +100,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
         session.SessionResponse.ErrorMessage = "Could not add session to collection.";
         session.SessionResponse.ErrorCode = SessionErrorCode.SessionError;
-        await session.DisposeAsync().ConfigureAwait(false);
+        await session.DisposeAsync().VhConfigureAwait();
         throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session,
             session.SessionResponse, requestId);
 
@@ -123,7 +123,7 @@ public class SessionManager : IAsyncDisposable, IJob
             TokenId = helloRequest.TokenId,
             ServerLocation = helloRequest.ServerLocation,
             AllowRedirect = helloRequest.AllowRedirect
-        }).ConfigureAwait(false);
+        }).VhConfigureAwait();
 
         // Access Error should not pass to the client in create session
         if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)
@@ -134,7 +134,7 @@ public class SessionManager : IAsyncDisposable, IJob
             throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponseEx, helloRequest);
 
         // create the session and add it to list
-        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest.RequestId).ConfigureAwait(false);
+        var session = await CreateSessionInternal(sessionResponseEx, ipEndPointPair, helloRequest.RequestId).VhConfigureAwait();
 
         // Anonymous Report to GA
         _ = GaTrackNewSession(helloRequest.ClientInfo);
@@ -166,7 +166,7 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
     {
-        using var recoverLock = await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").ConfigureAwait(false);
+        using var recoverLock = await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").VhConfigureAwait();
         var session = GetSessionById(sessionRequest.SessionId);
         if (session != null)
             return session;
@@ -180,7 +180,7 @@ public class SessionManager : IAsyncDisposable, IJob
         {
             var sessionResponse = await _accessManager.Session_Get(sessionRequest.SessionId,
                 ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address)
-                .ConfigureAwait(false);
+                .VhConfigureAwait();
 
             // Check session key for recovery
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
@@ -192,7 +192,7 @@ public class SessionManager : IAsyncDisposable, IJob
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
             // create the session even if it contains error to prevent many calls
-            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery").ConfigureAwait(false);
+            session = await CreateSessionInternal(sessionResponse, ipEndPointPair, "recovery").VhConfigureAwait();
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
                 "Session has been recovered. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
@@ -213,8 +213,8 @@ public class SessionManager : IAsyncDisposable, IJob
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
                 ErrorMessage = ex.Message
-            }, ipEndPointPair, "dead-recovery").ConfigureAwait(false);
-            await session.DisposeAsync().ConfigureAwait(false);
+            }, ipEndPointPair, "dead-recovery").VhConfigureAwait();
+            await session.DisposeAsync().VhConfigureAwait();
             throw;
         }
     }
@@ -231,7 +231,7 @@ public class SessionManager : IAsyncDisposable, IJob
         // try to restore session if not found
         else
         {
-            session = await RecoverSession(requestBase, ipEndPointPair).ConfigureAwait(false);
+            session = await RecoverSession(requestBase, ipEndPointPair).VhConfigureAwait();
         }
 
         if (session.SessionResponse.ErrorCode != SessionErrorCode.Ok)
@@ -257,10 +257,10 @@ public class SessionManager : IAsyncDisposable, IJob
     public async Task RunJob()
     {
         // anonymous heart_beat reporter
-        await _heartbeatSection.Enter(SendHeartbeat).ConfigureAwait(false);
+        await _heartbeatSection.Enter(SendHeartbeat).VhConfigureAwait();
 
         // clean disposed sessions
-        await Cleanup().ConfigureAwait(false);
+        await Cleanup().VhConfigureAwait();
     }
 
     private Task SendHeartbeat()
@@ -285,7 +285,7 @@ public class SessionManager : IAsyncDisposable, IJob
             .Where(x => !x.IsDisposed && x.SessionResponse.AccessUsage?.ExpirationTime < utcNow);
 
         foreach (var session in timeoutSessions)
-            await session.Sync().ConfigureAwait(false);
+            await session.Sync().VhConfigureAwait();
     }
 
     private async Task RemoveTimeoutSession()
@@ -299,15 +299,15 @@ public class SessionManager : IAsyncDisposable, IJob
         foreach (var session in timeoutSessions)
         {
             Sessions.Remove(session.Key, out _);
-            await session.Value.DisposeAsync().ConfigureAwait(false);
+            await session.Value.DisposeAsync().VhConfigureAwait();
         }
     }
 
 
     private async Task Cleanup()
     {
-        await CloseExpiredSessions().ConfigureAwait(false);
-        await RemoveTimeoutSession().ConfigureAwait(false);
+        await CloseExpiredSessions().VhConfigureAwait();
+        await RemoveTimeoutSession().VhConfigureAwait();
     }
 
     public Session? GetSessionById(ulong sessionId)
@@ -324,18 +324,18 @@ public class SessionManager : IAsyncDisposable, IJob
     {
         // find in session
         if (Sessions.TryGetValue(sessionId, out var session))
-            await session.Close().ConfigureAwait(false);
+            await session.Close().VhConfigureAwait();
     }
 
     private bool _disposed;
     private readonly AsyncLock _disposeLock = new();
     public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync().ConfigureAwait(false);
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
 
-        await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask())).ConfigureAwait(false);
+        await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask())).VhConfigureAwait();
     }
 }
 

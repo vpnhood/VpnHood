@@ -49,9 +49,9 @@ public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
         // get json from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         requestMessage.Headers.Add("User-Agent", userAgent);
-        var responseMessage = await httpClient.SendAsync(requestMessage).ConfigureAwait(false);
+        var responseMessage = await httpClient.SendAsync(requestMessage).VhConfigureAwait();
         responseMessage.EnsureSuccessStatusCode();
-        var json = await responseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
 
         var apiLocation = VhUtil.JsonDeserialize<ApiLocation>(json);
         var ipLocation = new IpLocation

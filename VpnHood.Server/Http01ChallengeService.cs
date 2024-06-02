@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Utils;
 
@@ -44,10 +45,10 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
     {
         while (IsStarted && !cancellationToken.IsCancellationRequested)
         {
-            using var client = await tcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+            using var client = await tcpListener.AcceptTcpClientAsync().VhConfigureAwait();
             try
             {
-                await HandleRequest(client, token, keyAuthorization, cancellationToken).ConfigureAwait(false);
+                await HandleRequest(client, token, keyAuthorization, cancellationToken).VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -59,7 +60,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
     private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization, CancellationToken cancellationToken)
     {
         await using var stream = client.GetStream();
-        var headers = await HttpUtil.ParseHeadersAsync(stream, cancellationToken).ConfigureAwait(false)
+        var headers = await HttpUtil.ParseHeadersAsync(stream, cancellationToken).VhConfigureAwait()
             ?? throw new Exception("Connection has been closed before receiving any request.");
 
         if (!headers.Any()) return;
@@ -74,8 +75,8 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
             ? HttpResponseBuilder.Http01(keyAuthorization)
             : HttpResponseBuilder.NotFound();
 
-        await stream.WriteAsync(response, 0, response.Length, cancellationToken).ConfigureAwait(false);
-        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+        await stream.WriteAsync(response, 0, response.Length, cancellationToken).VhConfigureAwait();
+        await stream.FlushAsync(cancellationToken).VhConfigureAwait();
     }
 
     // use dispose

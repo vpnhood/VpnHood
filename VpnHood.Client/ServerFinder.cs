@@ -35,7 +35,7 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
         });
 
         // find endpoint status
-        HostEndPointStatus = await VerifyServersStatus(connectors, cancellationToken).ConfigureAwait(false);
+        HostEndPointStatus = await VerifyServersStatus(connectors, cancellationToken).VhConfigureAwait();
         return HostEndPointStatus.FirstOrDefault(x=>x.Value).Key; //todo check if it is null
     }
 
@@ -51,12 +51,12 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
             await VhUtil.ParallelForEachAsync(connectors, async connector =>
             {
-                var serverStatus = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token).ConfigureAwait(false);
+                var serverStatus = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token).VhConfigureAwait();
                 hostEndPointStatus[connector.EndPointInfo.TcpEndPoint] = serverStatus;
                 if (serverStatus)
                     linkedCancellationTokenSource.Cancel(); // no need to continue, we find a server
 
-            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).ConfigureAwait(false);
+            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).VhConfigureAwait();
 
         }
         catch (OperationCanceledException)
@@ -79,7 +79,7 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
                     Message = "Hi, How are you?"
                 }, 
                 cancellationToken)
-                .ConfigureAwait(false);
+                .VhConfigureAwait();
 
             // this should be already handled by the connector and never happen
             if (requestResult.Response.ErrorCode != SessionErrorCode.Ok)

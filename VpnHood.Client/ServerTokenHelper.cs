@@ -17,7 +17,7 @@ public class ServerTokenHelper
             try
             {
                 VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...", VhLogger.FormatHostName(serverToken.HostName));
-                var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName).ConfigureAwait(false);
+                var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName).VhConfigureAwait();
                 if (!VhUtil.IsNullOrEmpty(hostEntities.AddressList))
                 {
                     return hostEntities.AddressList
@@ -39,7 +39,7 @@ public class ServerTokenHelper
 
     public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken)
     {
-        var endPoints = await ResolveHostEndPointsInternal(serverToken).ConfigureAwait(false);
+        var endPoints = await ResolveHostEndPointsInternal(serverToken).VhConfigureAwait();
         if (VhUtil.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint from AccessToken!");
 
@@ -48,13 +48,13 @@ public class ServerTokenHelper
 
         if (ipV6EndPoints.Length == 0) return ipV4EndPoints;
         if (ipV4EndPoints.Length == 0) return ipV6EndPoints;
-        var publicAddressesIpV6 = await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6).ConfigureAwait(false);
+        var publicAddressesIpV6 = await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6).VhConfigureAwait();
         return publicAddressesIpV6 != null ? ipV6EndPoints : ipV4EndPoints; //return IPv6 if user has access to IpV6
     }
 
     public static async Task<IPEndPoint> ResolveHostEndPoint(ServerToken serverToken)
     {
-        var endPoints = await ResolveHostEndPoints(serverToken).ConfigureAwait(false);
+        var endPoints = await ResolveHostEndPoints(serverToken).VhConfigureAwait();
         if (VhUtil.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint!");
 

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using VpnHood.Common.Jobs;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 
@@ -23,7 +24,7 @@ public class TaskCollection : IAsyncDisposable, IJob
     }
     public async ValueTask DisposeAsync()
     {
-        await Task.WhenAll(_tasks.Keys).ConfigureAwait(false);
+        await Task.WhenAll(_tasks.Keys).VhConfigureAwait();
     }
 
     public Task RunJob()

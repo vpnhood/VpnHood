@@ -1,5 +1,6 @@
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services;
 
@@ -15,8 +16,8 @@ internal class AppBillingService(VpnHoodApp vpnHoodApp, IAppBillingService billi
 
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
-        var ret = await billingService.Purchase(uiContext, planId).ConfigureAwait(false);
-        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true).ConfigureAwait(false);
+        var ret = await billingService.Purchase(uiContext, planId).VhConfigureAwait();
+        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true).VhConfigureAwait();
         return ret;
     }
 

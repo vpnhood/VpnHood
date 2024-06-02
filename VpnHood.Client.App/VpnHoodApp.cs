@@ -679,14 +679,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
         }
     }
-
-    public async Task<IpGroup[]> GetIpGroups()
-    {
-        var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
-        return await ipGroupManager.GetIpGroups().VhConfigureAwait();
-    }
-
-    private async Task<IpGroupManager> GetIpGroupManager()
+    
+    public async Task<IpGroupManager> GetIpGroupManager()
     {
         using var asyncLock = await AsyncLock.LockAsync("GetIpGroupManager").VhConfigureAwait();
         if (_ipGroupManager != null)

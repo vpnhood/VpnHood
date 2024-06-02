@@ -79,8 +79,9 @@ public class ClientAppTest : TestBase
         // ************
         // *** TEST ***: 
         await using var app1 = TestHelper.CreateClientApp();
-        var ipGroups = await app1.GetIpGroups();
-        Assert.IsFalse(ipGroups.Any(x => x.IpGroupId == "us"),
+        var ipGroupsManager = await app1.GetIpGroupManager();
+        var ipGroupIds = await ipGroupsManager.GetIpGroupIds();
+        Assert.IsFalse(ipGroupIds.Any(x => x == "us"),
             "Countries should not be extracted in test due to performance.");
         await app1.DisposeAsync();
 
@@ -89,8 +90,9 @@ public class ClientAppTest : TestBase
         var appOptions = TestHelper.CreateClientAppOptions();
         appOptions.UseIpGroupManager = true;
         await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
-        var ipGroups2 = await app2.GetIpGroups();
-        Assert.IsTrue(ipGroups2.Any(x => x.IpGroupId == "us"),
+        ipGroupsManager = await app2.GetIpGroupManager();
+        ipGroupIds = await ipGroupsManager.GetIpGroupIds();
+        Assert.IsTrue(ipGroupIds.Any(x => x == "us"),
             "Countries has not been extracted.");
     }
 

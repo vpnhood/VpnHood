@@ -6,23 +6,23 @@ namespace VpnHood.Server;
 
 public class NetFilter : INetFilter
 {
-    private readonly IpRange[] _loopbackIpRange = IpNetwork.ToIpRange(IpNetwork.LoopbackNetworksV4.Concat(IpNetwork.LoopbackNetworksV6)).ToArray();
-    private IpRange[] _sortedBlockedIpRanges = [];
+    private readonly IpRangeOrderedList _loopbackIpRange = IpNetwork.LoopbackNetworksV4.Concat(IpNetwork.LoopbackNetworksV6).ToIpRangesNew();
+    private IpRangeOrderedList _blockedIpRanges = new([]);
 
     public NetFilter()
     {
         BlockedIpRanges = _loopbackIpRange;
     }
 
-    public IpRange[] BlockedIpRanges
+    public IpRangeOrderedList BlockedIpRanges
     {
-        get => _sortedBlockedIpRanges;
-        set => _sortedBlockedIpRanges = value.Concat(_loopbackIpRange).Sort().ToArray();
+        get => _blockedIpRanges;
+        set => _blockedIpRanges = _loopbackIpRange.UnionNew(value);
     }
 
-    public virtual bool IsIpAddressBlocked(IPAddress ipAddress)
+    private bool IsIpAddressBlocked(IPAddress ipAddress)
     {
-        return IpRange.IsInSortedRanges(BlockedIpRanges, ipAddress);
+        return BlockedIpRanges.Exists(ipAddress);
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable

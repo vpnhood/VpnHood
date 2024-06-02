@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.Common;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Managers.File;
 
 namespace VpnHood.Server.App;
@@ -20,14 +21,14 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         var tokenIdArg = cmdApp.Argument("tokenId", "tokenId to print");
         cmdApp.OnExecuteAsync(async _ =>
         {
-            await PrintToken(tokenIdArg.Value!).ConfigureAwait(false);
+            await PrintToken(tokenIdArg.Value!).VhConfigureAwait();
             return 0;
         });
     }
 
     private async Task PrintToken(string tokenId)
     {
-        var accessItem = await fileAccessManager.AccessItem_Read(tokenId).ConfigureAwait(false);
+        var accessItem = await fileAccessManager.AccessItem_Read(tokenId).VhConfigureAwait();
         if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
         var hostName = accessItem.Token.ServerToken.HostName + (accessItem.Token.ServerToken.IsValidHostName ? "" : " (Fake)");
         var endPoints = accessItem.Token.ServerToken.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
@@ -71,7 +72,7 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
                 );
 
             Console.WriteLine("The following token has been generated: ");
-            await PrintToken(accessItem.Token.TokenId).ConfigureAwait(false);
+            await PrintToken(accessItem.Token.TokenId).VhConfigureAwait();
             Console.WriteLine($"Store Token Count: {accessManager.AccessItem_Count()}");
             return 0;
         });

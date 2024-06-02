@@ -117,8 +117,8 @@ public static class VhUtil
 
     public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        await RunTask((Task)task, timeout, cancellationToken).ConfigureAwait(false);
-        return await task.ConfigureAwait(false);
+        await RunTask((Task)task, timeout, cancellationToken).VhConfigureAwait();
+        return await task.VhConfigureAwait();
     }
 
     public static async Task RunTask(Task task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
@@ -127,13 +127,13 @@ public static class VhUtil
             timeout = Timeout.InfiniteTimeSpan;
 
         var timeoutTask = Task.Delay(timeout, cancellationToken);
-        await Task.WhenAny(task, timeoutTask).ConfigureAwait(false);
+        await Task.WhenAny(task, timeoutTask).VhConfigureAwait();
 
         cancellationToken.ThrowIfCancellationRequested();
         if (timeoutTask.IsCompleted)
             throw new TimeoutException();
 
-        await task.ConfigureAwait(false);
+        await task.VhConfigureAwait();
     }
 
     public static bool IsNullOrEmpty<T>([NotNullWhen(false)] IEnumerable<T>? array)
@@ -417,12 +417,12 @@ public static class VhUtil
             tasks.Add(body(t));
             if (tasks.Count == maxDegreeOfParallelism)
             {
-                await Task.WhenAny(tasks).ConfigureAwait(false);
+                await Task.WhenAny(tasks).VhConfigureAwait();
                 foreach (var completedTask in tasks.Where(x => x.IsCompleted).ToArray())
                     tasks.Remove(completedTask);
             }
         }
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        await Task.WhenAll(tasks).VhConfigureAwait();
     }
 
     public static bool TryDeleteFile(string filePath)

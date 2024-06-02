@@ -255,7 +255,7 @@ public class Tunnel : IJob, IAsyncDisposable
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there is some packet
-            await _packetSentEvent.WaitAsync(1000).ConfigureAwait(false); //Wait 1 seconds to prevent deadlock.
+            await _packetSentEvent.WaitAsync(1000).VhConfigureAwait(); //Wait 1 seconds to prevent deadlock.
             if (_disposed) return;
 
             // check timeout
@@ -348,7 +348,7 @@ public class Tunnel : IJob, IAsyncDisposable
 
                     try
                     {
-                        await channel.SendPacket(packets.ToArray()).ConfigureAwait(false);
+                        await channel.SendPacket(packets.ToArray()).VhConfigureAwait();
                     }
                     catch
                     {
@@ -362,7 +362,7 @@ public class Tunnel : IJob, IAsyncDisposable
                 // wait for next new packets
                 else
                 {
-                    await _packetSenderSemaphore.WaitAsync().ConfigureAwait(false);
+                    await _packetSenderSemaphore.WaitAsync().VhConfigureAwait();
                 }
             } // while
         }
@@ -408,7 +408,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private bool _disposed;
     public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync().ConfigureAwait(false);
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
 
@@ -421,7 +421,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
 
         // Stop speed monitor
-        await _speedMonitorTimer.DisposeAsync().ConfigureAwait(false);
+        await _speedMonitorTimer.DisposeAsync().VhConfigureAwait();
         Speed.Sent = 0;
         Speed.Received = 0;
 
@@ -430,6 +430,6 @@ public class Tunnel : IJob, IAsyncDisposable
         _packetSentEvent.Release();
 
         // dispose all channels
-        await Task.WhenAll(disposeTasks).ConfigureAwait(false);
+        await Task.WhenAll(disposeTasks).VhConfigureAwait();
     }
 }

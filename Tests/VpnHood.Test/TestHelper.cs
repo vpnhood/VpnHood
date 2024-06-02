@@ -332,7 +332,7 @@ internal static class TestHelper
         clientId ??= Guid.NewGuid();
         clientOptions ??= CreateClientOptions();
         if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout) clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
-        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList();
         clientOptions.IncludeLocalNetwork = true;
 
         var client = new VpnHoodClient(

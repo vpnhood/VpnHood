@@ -33,7 +33,7 @@ public class ClientOptions
     public bool IncludeLocalNetwork { get; set; }
     public IIpRangeProvider? IpRangeProvider { get; set; }
     public IAdProvider? AdProvider { get; set; }
-    public IpRange[] PacketCaptureIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; set; } = new (IpNetwork.All.ToIpRanges());
     public SocketFactory SocketFactory { get; set; } = new();
     public int MaxDatagramChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();

@@ -80,7 +80,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
             if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow)
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value }).ConfigureAwait(false);
+                ApiKey = await authenticationClient.RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value }).VhConfigureAwait();
                 return ApiKey;
             }
         }
@@ -95,11 +95,11 @@ public class StoreAuthenticationService : IAppAuthenticationService
             if (uiContext == null)
                 throw new Exception("UI context is not available.");
 
-            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext).ConfigureAwait(false) : null;
+            var idToken = _externalAuthenticationService != null ? await _externalAuthenticationService.SilentSignIn(uiContext).VhConfigureAwait() : null;
             if (!string.IsNullOrWhiteSpace(idToken))
             {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken }).ConfigureAwait(false);
+                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken }).VhConfigureAwait();
                 return ApiKey;
             }
         }
@@ -116,8 +116,8 @@ public class StoreAuthenticationService : IAppAuthenticationService
         if (_externalAuthenticationService == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _externalAuthenticationService.SignIn(uiContext).ConfigureAwait(false);
-        await SignInToVpnHoodStore(idToken, true).ConfigureAwait(false);
+        var idToken = await _externalAuthenticationService.SignIn(uiContext).VhConfigureAwait();
+        await SignInToVpnHoodStore(idToken, true).VhConfigureAwait();
     }
 
     public async Task SignOut(IUiContext uiContext)
@@ -128,7 +128,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
 
 
         if (_externalAuthenticationService != null)
-            await _externalAuthenticationService.SignOut(uiContext).ConfigureAwait(false);
+            await _externalAuthenticationService.SignOut(uiContext).VhConfigureAwait();
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
@@ -142,12 +142,12 @@ public class StoreAuthenticationService : IAppAuthenticationService
                     IdToken = idToken,
                     RefreshTokenType = RefreshTokenType.None
                 })
-                .ConfigureAwait(false);
+                .VhConfigureAwait();
         }
         catch (ApiException ex)
         {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
-                await SignUpToVpnHoodStore(idToken).ConfigureAwait(false);
+                await SignUpToVpnHoodStore(idToken).VhConfigureAwait();
             else
                 throw;
         }
@@ -162,7 +162,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
                 IdToken = idToken,
                 RefreshTokenType = RefreshTokenType.None
             })
-            .ConfigureAwait(false);
+            .VhConfigureAwait();
     }
 
     public void Dispose()
@@ -179,9 +179,9 @@ public class StoreAuthenticationService : IAppAuthenticationService
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext).ConfigureAwait(false);
+            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext).VhConfigureAwait();
             request.Headers.Authorization = apiKey != null ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : null;
-            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            return await base.SendAsync(request, cancellationToken).VhConfigureAwait();
         }
     }
 }

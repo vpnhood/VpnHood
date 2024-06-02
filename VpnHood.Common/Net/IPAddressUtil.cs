@@ -3,6 +3,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Net;
 
@@ -23,7 +24,7 @@ public static class IPAddressUtil
 
         var ipV4Task = GetPrivateIpAddress(AddressFamily.InterNetwork);
         var ipV6Task = GetPrivateIpAddress(AddressFamily.InterNetworkV6);
-        await Task.WhenAll(ipV4Task, ipV6Task).ConfigureAwait(false);
+        await Task.WhenAll(ipV4Task, ipV6Task).VhConfigureAwait();
 
         if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
         if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
@@ -41,7 +42,7 @@ public static class IPAddressUtil
             var ping2 = ping.SendPingAsync("2001:4860:4860::8844");
             try
             {
-                if ((await pingTask.ConfigureAwait(false)).Status == IPStatus.Success)
+                if ((await pingTask.VhConfigureAwait()).Status == IPStatus.Success)
                     return true;
             }
             catch
@@ -51,7 +52,7 @@ public static class IPAddressUtil
 
             try
             {
-                if ((await ping2.ConfigureAwait(false)).Status == IPStatus.Success)
+                if ((await ping2.VhConfigureAwait()).Status == IPStatus.Success)
                     return true;
             }
             catch
@@ -72,8 +73,8 @@ public static class IPAddressUtil
         var ret = new List<IPAddress>();
 
         //note: api.ipify.org may not work in parallel call
-        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, TimeSpan.FromSeconds(4)).ConfigureAwait(false);
+        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, TimeSpan.FromSeconds(10)).VhConfigureAwait();
+        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, TimeSpan.FromSeconds(4)).VhConfigureAwait();
 
         if (ipV4Task != null) ret.Add(ipV4Task);
         if (ipV6Task != null) ret.Add(ipV6Task);
@@ -117,7 +118,7 @@ public static class IPAddressUtil
             using var httpClient = new HttpClient(handler);
 
             httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
-            var json = await httpClient.GetStringAsync(url).ConfigureAwait(false);
+            var json = await httpClient.GetStringAsync(url).VhConfigureAwait();
             var document = JsonDocument.Parse(json);
             var ipString = document.RootElement.GetProperty("ip").GetString();
             var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());

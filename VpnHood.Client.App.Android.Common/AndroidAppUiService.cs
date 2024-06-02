@@ -4,6 +4,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Common.Utils;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.Client.App.Droid.Common;
@@ -26,7 +27,7 @@ public class AndroidAppUiService : IAppUiService
         var res = await QuickLaunchTileService
             .RequestAddTile(appUiContext.Activity)
             .WaitAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .VhConfigureAwait();
         return res != 0;
     }
 
@@ -52,7 +53,7 @@ public class AndroidAppUiService : IAppUiService
             appUiContext.Activity.RequestPermissions([Manifest.Permission.PostNotifications], RequestPostNotificationId);
             var res = await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
-                .ConfigureAwait(false);
+                .VhConfigureAwait();
             return res == Permission.Granted;
         }
         finally

@@ -5,6 +5,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -48,7 +49,7 @@ public class GooglePlayBillingService: IAppBillingService
 
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        await EnsureConnected().ConfigureAwait(false);
+        await EnsureConnected().VhConfigureAwait();
 
         // Check if the purchase subscription is supported on the user's device
         try
@@ -76,7 +77,7 @@ public class GooglePlayBillingService: IAppBillingService
         // Get products list from GooglePlay.
         try
         {
-            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
+            var response = await _billingClient.QueryProductDetailsAsync(productDetailsParams).VhConfigureAwait();
             if (response.Result.ResponseCode != BillingResponseCode.Ok) throw new Exception($"Could not get products from google play. BillingResponseCode: {response.Result.ResponseCode}");
             if (!response.ProductDetails.Any()) throw new Exception($"Product list is empty. ProductList: {response.ProductDetails}");
 
@@ -107,7 +108,7 @@ public class GooglePlayBillingService: IAppBillingService
     public async Task<string> Purchase(IUiContext uiContext, string planId)
     {
         var appUiContext = (AndroidUiContext)uiContext;
-        await EnsureConnected().ConfigureAwait(false);
+        await EnsureConnected().VhConfigureAwait();
 
         if (_authenticationService.UserId == null)
             throw new AuthenticationException();
@@ -138,7 +139,7 @@ public class GooglePlayBillingService: IAppBillingService
                 throw CreateBillingResultException(billingResult);
 
             _taskCompletionSource = new TaskCompletionSource<string>();
-            var orderId = await _taskCompletionSource.Task.ConfigureAwait(false);
+            var orderId = await _taskCompletionSource.Task.VhConfigureAwait();
             return orderId;
         }
         catch (TaskCanceledException ex)
@@ -165,7 +166,7 @@ public class GooglePlayBillingService: IAppBillingService
 
         try
         {
-            var billingResult = await _billingClient.StartConnectionAsync().ConfigureAwait(false);
+            var billingResult = await _billingClient.StartConnectionAsync().VhConfigureAwait();
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw new Exception(billingResult.DebugMessage);

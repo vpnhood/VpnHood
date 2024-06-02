@@ -11,4 +11,15 @@ public static class VhTaskExtensions
     {
         return await task.ConfigureAwait(false);
     }
+
+    public static async ValueTask VhConfigureAwait(this ValueTask task)
+    {
+        await task.ConfigureAwait(false);
+    }
+
+    public static async ValueTask<T> VhConfigureAwait<T>(this ValueTask<T> task)
+    {
+        return await task.ConfigureAwait(false);
+    }
+
 }

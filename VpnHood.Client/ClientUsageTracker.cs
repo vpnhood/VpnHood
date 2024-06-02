@@ -33,7 +33,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
 
     public async Task Report()
     {
-        using var lockAsync = await _reportLock.LockAsync().ConfigureAwait(false);
+        using var lockAsync = await _reportLock.LockAsync().VhConfigureAwait();
 
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
@@ -56,7 +56,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
             }
         };
 
-        await _ga4Tracker.Track(tagEvent).ConfigureAwait(false);
+        await _ga4Tracker.Track(tagEvent).VhConfigureAwait();
         _lastTraffic = traffic;
         _lastRequestCount = requestCount;
         _lastConnectionCount = connectionCount;
@@ -68,7 +68,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         {
             // Make sure no exception in dispose
             if (_clientStat.SessionTraffic - _lastTraffic != new Traffic())
-                await Report().ConfigureAwait(false);
+                await Report().VhConfigureAwait();
         }
         catch
         {

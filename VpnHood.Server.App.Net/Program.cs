@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Server.App;
+﻿using VpnHood.Common.Utils;
+
+namespace VpnHood.Server.App;
 
 internal class Program
 {
@@ -7,7 +9,7 @@ internal class Program
         try
         {
             using var serverApp = new ServerApp();
-            await serverApp.Start(args).ConfigureAwait(false);
+            await serverApp.Start(args).VhConfigureAwait();
         }
         catch (Exception ex)
         {

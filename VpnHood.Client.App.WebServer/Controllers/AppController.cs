@@ -128,9 +128,11 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Get, "/ip-groups")]
-    public Task<IpGroup[]> GetIpGroups()
+    public async Task<IpGroupInfo[]> GetIpGroups()
     {
-        return App.GetIpGroups();
+        var ipGroupManager = await App.GetIpGroupManager().VhConfigureAwait();
+        var ipGroupIds = await ipGroupManager.GetIpGroupIds().VhConfigureAwait();
+        return ipGroupIds.Select(x=>new IpGroupInfo{IpGroupId = x}).ToArray();
     }
 
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]

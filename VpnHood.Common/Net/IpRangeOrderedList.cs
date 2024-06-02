@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Net;
+using System.Text.Json;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Net;
 
@@ -71,6 +73,8 @@ public class IpRangeOrderedList(IEnumerable<IpRange> orderedList) : IOrderedEnum
     public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public int Count => _orderedList.Count;
+    public static IpRangeOrderedList Empty { get; } = new([]);
+
     public IpRange this[int index] => _orderedList[index];
 
     private class IpRangeSearchComparer : IComparer<IpRange>
@@ -82,4 +86,17 @@ public class IpRangeOrderedList(IEnumerable<IpRange> orderedList) : IOrderedEnum
             return +1;
         }
     }
+
+    public Task Save(string filePath)
+    {
+        return File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(_orderedList));
+    }
+
+    public static async Task<IpRangeOrderedList> Load(string filePath)
+    {
+        var json = await File.ReadAllTextAsync(filePath);
+        var list = VhUtil.JsonDeserialize<IpRange[]>(json);
+        return new IpRangeOrderedList(list);
+    }
+
 }

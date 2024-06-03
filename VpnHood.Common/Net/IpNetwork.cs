@@ -58,11 +58,6 @@ public class IpNetwork
     public static IpNetwork[] All { get; } = [AllV4, AllV6];
     public static IpNetwork[] None { get; } = [];
 
-    public static bool IsAll(IOrderedEnumerable<IpNetwork> ipNetworks)
-    {
-        return ipNetworks.SequenceEqual(All);
-    }
-
     public static IEnumerable<IpNetwork> FromRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
     {
         if (firstIpAddress.AddressFamily != lastIpAddress.AddressFamily)
@@ -110,6 +105,11 @@ public class IpNetwork
             .ToIpNetworks();
     }
 
+    public IpRange ToIpRange()
+    {
+        return new IpRange(FirstIpAddress, LastIpAddress);
+    }
+
     public static IpNetwork Parse(string value)
     {
         try
@@ -121,11 +121,6 @@ public class IpNetwork
         {
             throw new FormatException($"Could not parse IPNetwork from: {value}.");
         }
-    }
-
-    public IpRange ToIpRange()
-    {
-        return new IpRange(FirstIpAddress, LastIpAddress);
     }
 
     public override string ToString()

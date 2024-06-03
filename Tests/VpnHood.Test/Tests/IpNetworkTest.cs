@@ -38,9 +38,9 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("192.169.0.0 - 255.255.255.255"),
             IpRange.Parse(":: - 99:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
             IpRange.Parse("AA::01:0000 - FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF")
-        };
+        }.ToOrderedList();
 
-        CollectionAssert.AreEqual(expected, ipRanges.InvertNew().ToArray());
+        CollectionAssert.AreEqual(expected.ToArray(), ipRanges.InvertNew().ToArray());
 
         // check network
         CollectionAssert.AreEqual(expected.ToIpNetworks().ToArray(), ipRanges.InvertNew().ToIpNetworks().ToArray());

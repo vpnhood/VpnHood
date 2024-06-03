@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Common.Net;
+﻿using System.Linq;
+
+namespace VpnHood.Common.Net;
 
 public static class IpRangeExtension
 {
@@ -7,7 +9,17 @@ public static class IpRangeExtension
         return new IpRangeOrderedList(ipRanges);
     }
 
-    public static IOrderedEnumerable<IpNetwork> ToIpNetworks(this IEnumerable<IpRange> ipRanges)
+    public static bool IsAll(this IpRangeOrderedList ipRanges)
+    {
+        return ipRanges.ToIpNetworks().IsAll();
+    }
+
+    public static bool IsEmpty(this IpRangeOrderedList ipRanges)
+    {
+        return !ipRanges.ToIpNetworks().Any();
+    }
+
+    public static IOrderedEnumerable<IpNetwork> ToIpNetworks(this IpRangeOrderedList ipRanges)
     {
         var ipNetworkList = new List<IpNetwork>();
         foreach (var ipRange in ipRanges)
@@ -23,6 +35,7 @@ public static class IpRangeExtension
 
     public static IEnumerable<IpRange> Intersect(this IEnumerable<IpRange> first, IEnumerable<IpRange> second)
     {
+        // prevent use Linq.Intersect in mistake. it is bug prone.
         throw new NotSupportedException($"Use {nameof(IpRangeOrderedList)}.Intersect.");
     }
 }

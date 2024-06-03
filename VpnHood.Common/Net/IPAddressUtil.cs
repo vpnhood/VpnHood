@@ -163,6 +163,11 @@ public static class IPAddressUtil
         Verify(ipAddress1);
         Verify(ipAddress2);
 
+        // resolve mapped addresses
+        if (ipAddress1.IsIPv4MappedToIPv6) ipAddress1 = ipAddress1.MapToIPv4();
+        if (ipAddress2.IsIPv4MappedToIPv6) ipAddress2 = ipAddress2.MapToIPv4();
+
+        // compare
         if (ipAddress1.AddressFamily == AddressFamily.InterNetwork &&
             ipAddress2.AddressFamily == AddressFamily.InterNetworkV6)
             return -1;

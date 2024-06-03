@@ -50,6 +50,7 @@ public class IpRangeOrderedList :
 
     public bool IsInRange(IPAddress ipAddress)
     {
+        if (ipAddress.IsIPv4MappedToIPv6) ipAddress = ipAddress.MapToIPv4();
         var res = _orderedList.BinarySearch(new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
         return res >= 0;
     }

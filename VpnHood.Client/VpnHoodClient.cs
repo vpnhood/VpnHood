@@ -709,7 +709,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.IntersectNew(sessionResponse.PacketCaptureIncludeIpRanges);
 
             // IncludeIpRanges
-            if (!VhUtil.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToIpNetworks().IsAll())
+            if (!VhUtil.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToOrderedList().IsAll())
                 IncludeIpRanges = IncludeIpRanges.IntersectNew(sessionResponse.IncludeIpRanges);
 
             // Get IncludeIpRange for clientIp

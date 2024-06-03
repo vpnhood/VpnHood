@@ -291,7 +291,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // exclude server if ProtectSocket is not supported to prevent loop
         if (!_packetCapture.CanProtectSocket)
-            includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostIpAddress) });
+            includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         // exclude local networks
         if (!IncludeLocalNetwork)
@@ -716,7 +716,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress).VhConfigureAwait() : null;
             if (!VhUtil.IsNullOrEmpty(filterIpRanges))
             {
-                filterIpRanges = filterIpRanges.Concat(DnsServers.Select((x => new IpRange(x)))).ToArray();
+                filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
                 IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
             }
 

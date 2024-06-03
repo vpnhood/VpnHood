@@ -217,7 +217,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
         IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers)
     {
-        var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToArray();
+        var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToOrderedList();
 
         // assign to workers
         serverHost.NetFilterIncludeIpRanges = netFilterOptions.GetFinalIncludeIpRanges().Union(dnsServerIpRanges).ToArray();

@@ -304,7 +304,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             new IpRange(_clientHost.CatcherAddressIpV6)
         });
 
-        _packetCapture.IncludeNetworks = includeIpRanges.Sort().ToIpNetworks().ToArray(); //sort and unify
+        _packetCapture.IncludeNetworks = includeIpRanges.ToIpNetworks().ToArray(); //sort and unify
         VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", _packetCapture.IncludeNetworks.Select(x => x.ToString()))}");
     }
 
@@ -491,7 +491,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return isInRange;
 
         // check include
-        isInRange = IncludeIpRanges.Exists(ipAddress);
+        isInRange = IncludeIpRanges.Contains(ipAddress);
 
         // cache the result
         // we really don't need to keep that much ips in the cache

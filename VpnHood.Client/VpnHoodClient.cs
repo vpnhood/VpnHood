@@ -287,18 +287,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _packetCapture.AddIpV6Address = true; //lets block ipV6 if not supported
 
         // Start with user PacketCaptureIncludeIpRanges
-        var includeIpRanges = (IEnumerable<IpRange>)PacketCaptureIncludeIpRanges;
+        var includeIpRanges = PacketCaptureIncludeIpRanges;
 
         // exclude server if ProtectSocket is not supported to prevent loop
         if (!_packetCapture.CanProtectSocket)
-            includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostIpAddress) });
+            includeIpRanges = includeIpRanges.ExcludeNew(new[] { new IpRange(hostIpAddress) });
 
         // exclude local networks
         if (!IncludeLocalNetwork)
-            includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+            includeIpRanges = includeIpRanges.ExcludeNew(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included
-        includeIpRanges = includeIpRanges.Concat(new[]
+        includeIpRanges = includeIpRanges.UnionNew(new[]
         {
             new IpRange(_clientHost.CatcherAddressIpV4),
             new IpRange(_clientHost.CatcherAddressIpV6)

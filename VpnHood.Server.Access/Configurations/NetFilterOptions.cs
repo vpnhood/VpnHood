@@ -33,7 +33,7 @@ public class NetFilterOptions
 
     public IpRangeOrderedList GetFinalIncludeIpRanges()
     {
-        var includeIpRanges = IpNetwork.All.ToIpRangesNew();
+        var includeIpRanges = IpNetwork.All.ToIpRanges();
         if (!VhUtil.IsNullOrEmpty(IncludeIpRanges))
             includeIpRanges = includeIpRanges.Intersect(IncludeIpRanges);
 

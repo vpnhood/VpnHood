@@ -831,12 +831,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // exclude client country IPs
         if (!UserSettings.TunnelClientCountry)
         {
+            VhLogger.Instance.LogTrace("Finding Country IPs for split tunneling. Country: {Country}", _appPersistState.ClientCountryName);
             var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
-            var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode).VhConfigureAwait();
-            _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
-            VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
-            if (ipGroup != null)
-                ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId).VhConfigureAwait());
+            try
+            {
+                _isLoadingIpGroup = true;
+                var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode).VhConfigureAwait();
+                _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
+                VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
+                if (ipGroup != null)
+                    ipRanges = ipRanges.Exclude(ipGroup.IpRanges);
+
+            }
+            finally
+            {
+                _isLoadingIpGroup = false;
+            }
         }
 
         return ipRanges;

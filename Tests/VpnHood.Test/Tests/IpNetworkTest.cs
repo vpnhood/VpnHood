@@ -109,7 +109,7 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("30.30.10.50 - 30.30.10.100"),
             IpRange.Parse("20.20.10.50 - 20.20.10.55"),
             IpRange.Parse("20.20.10.60 - 20.20.10.100")
-        };
+        }.ToOrderedList();
 
         var ipRanges2 = new[]
         {
@@ -118,13 +118,13 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("190.190.11.1 - 190.190.11.50"), //ignore
             IpRange.Parse("30.30.10.70 - 30.30.10.110"),
             IpRange.Parse("20.20.10.0 - 20.20.10.90")
-        };
+        }.ToOrderedList();
 
         // Expected
         // AA::FFF5 - AA::FFF6
         var ranges = swap
-            ? ipRanges2.ToOrderedList().Intersect(ipRanges1) 
-            : ipRanges1.ToOrderedList().Intersect(ipRanges2);
+            ? ipRanges2.Intersect(ipRanges1) 
+            : ipRanges1.Intersect(ipRanges2);
 
         var i = 0;
         Assert.AreEqual("20.20.10.50-20.20.10.55", ranges[i++].ToString().ToUpper());

@@ -22,7 +22,7 @@ public class NetFilter : INetFilter
 
     private bool IsIpAddressBlocked(IPAddress ipAddress)
     {
-        return BlockedIpRanges.Exists(ipAddress);
+        return BlockedIpRanges.Contains(ipAddress);
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable

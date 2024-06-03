@@ -12,7 +12,7 @@ public class IpRangeOrderedList : IOrderedEnumerable<IpRange>, IReadOnlyList<IpR
     public IpRangeOrderedList() => _orderedList = [];
     public IpRangeOrderedList(IEnumerable<IpRange> ipRanges) => _orderedList = Sort(ipRanges);
 
-    public bool Exists(IPAddress ipAddress)
+    public bool Contains(IPAddress ipAddress)
     {
         var res = _orderedList.BinarySearch(new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
         return res >= 0;

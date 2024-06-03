@@ -10,42 +10,63 @@ public class IpRangeOrderedList :
     IReadOnlyList<IpRange>
 {
     private readonly List<IpRange> _orderedList;
+    public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(Func<IpRange, TKey> keySelector, IComparer<TKey> comparer, bool descending) =>
+        descending ? _orderedList.OrderByDescending(keySelector, comparer) : _orderedList.OrderBy(keySelector, comparer);
 
-    public IpRangeOrderedList() => _orderedList = [];
-    public IpRangeOrderedList(IEnumerable<IpRange> ipRanges) => _orderedList = Sort(ipRanges);
+    public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    public int Count => _orderedList.Count;
+    public static IpRangeOrderedList Empty { get; } = new([]);
+
+    public IpRange this[int index] => _orderedList[index];
+
+    public IpRangeOrderedList()
+    {
+        _orderedList = [];
+    }
+
+    public IpRangeOrderedList(IEnumerable<IpRange> ipRanges)
+    {
+        _orderedList = Sort(ipRanges);
+    }
+
+    public Task Save(string filePath)
+    {
+        return File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(_orderedList));
+    }
 
     public bool IsAll()
     {
         return this.ToIpNetworks().IsAll();
     }
 
-    public bool Contains(IPAddress ipAddress)
+    public bool IsInRange(IPAddress ipAddress)
     {
         var res = _orderedList.BinarySearch(new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
         return res >= 0;
     }
 
-    public IpRangeOrderedList IntersectNew(IEnumerable<IpRange> ipRanges)
+    public IpRangeOrderedList Intersect(IEnumerable<IpRange> ipRanges)
     {
         return new IpRangeOrderedList(IpRange.Intersect(_orderedList, ipRanges));
     }
 
-    public IpRangeOrderedList ExcludeNew(IpRange ipRange)
+    public IpRangeOrderedList Exclude(IpRange ipRange)
     {
         return new IpRangeOrderedList(IpRange.Exclude(_orderedList, new[] { ipRange }));
     }
 
-    public IpRangeOrderedList ExcludeNew(IEnumerable<IpRange> ipRanges)
+    public IpRangeOrderedList Exclude(IEnumerable<IpRange> ipRanges)
     {
         return new IpRangeOrderedList(IpRange.Exclude(_orderedList, ipRanges));
     }
 
-    public IpRangeOrderedList InvertNew(bool includeIPv4 = true, bool includeIPv6 = true)
+    public IpRangeOrderedList Invert(bool includeIPv4 = true, bool includeIPv6 = true)
     {
         return new IpRangeOrderedList(IpRange.Invert(_orderedList, includeIPv4, includeIPv6));
     }
 
-    public IpRangeOrderedList UnionNew(IEnumerable<IpRange> ipRanges)
+    public IpRangeOrderedList Union(IEnumerable<IpRange> ipRanges)
     {
         return new IpRangeOrderedList(_orderedList.Concat(ipRanges));
     }
@@ -77,16 +98,12 @@ public class IpRangeOrderedList :
         return res;
     }
 
-    public IOrderedEnumerable<IpRange> CreateOrderedEnumerable<TKey>(Func<IpRange, TKey> keySelector, IComparer<TKey> comparer, bool descending) =>
-        descending ? _orderedList.OrderByDescending(keySelector, comparer) : _orderedList.OrderBy(keySelector, comparer);
-
-    public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    public int Count => _orderedList.Count;
-    public static IpRangeOrderedList Empty { get; } = new([]);
-
-    public IpRange this[int index] => _orderedList[index];
-
+    public static async Task<IpRangeOrderedList> Load(string filePath)
+    {
+        var json = await File.ReadAllTextAsync(filePath);
+        var list = VhUtil.JsonDeserialize<IpRange[]>(json);
+        return new IpRangeOrderedList(list);
+    }
     private class IpRangeSearchComparer : IComparer<IpRange>
     {
         public int Compare(IpRange x, IpRange y)
@@ -96,17 +113,4 @@ public class IpRangeOrderedList :
             return +1;
         }
     }
-
-    public Task Save(string filePath)
-    {
-        return File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(_orderedList));
-    }
-
-    public static async Task<IpRangeOrderedList> Load(string filePath)
-    {
-        var json = await File.ReadAllTextAsync(filePath);
-        var list = VhUtil.JsonDeserialize<IpRange[]>(json);
-        return new IpRangeOrderedList(list);
-    }
-
 }

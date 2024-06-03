@@ -291,14 +291,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // exclude server if ProtectSocket is not supported to prevent loop
         if (!_packetCapture.CanProtectSocket)
-            includeIpRanges = includeIpRanges.ExcludeNew(new[] { new IpRange(hostIpAddress) });
+            includeIpRanges = includeIpRanges.Exclude(new[] { new IpRange(hostIpAddress) });
 
         // exclude local networks
         if (!IncludeLocalNetwork)
-            includeIpRanges = includeIpRanges.ExcludeNew(IpNetwork.LocalNetworks.ToIpRanges());
+            includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         // Make sure CatcherAddress is included
-        includeIpRanges = includeIpRanges.UnionNew(new[]
+        includeIpRanges = includeIpRanges.Union(new[]
         {
             new IpRange(_clientHost.CatcherAddressIpV4),
             new IpRange(_clientHost.CatcherAddressIpV6)
@@ -491,7 +491,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return isInRange;
 
         // check include
-        isInRange = IncludeIpRanges.Contains(ipAddress);
+        isInRange = IncludeIpRanges.IsInRange(ipAddress);
 
         // cache the result
         // we really don't need to keep that much ips in the cache
@@ -706,18 +706,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // PacketCaptureIpRanges
             if (!VhUtil.IsNullOrEmpty(sessionResponse.PacketCaptureIncludeIpRanges))
-                PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.IntersectNew(sessionResponse.PacketCaptureIncludeIpRanges);
+                PacketCaptureIncludeIpRanges = PacketCaptureIncludeIpRanges.Intersect(sessionResponse.PacketCaptureIncludeIpRanges);
 
             // IncludeIpRanges
             if (!VhUtil.IsNullOrEmpty(sessionResponse.IncludeIpRanges) && !sessionResponse.IncludeIpRanges.ToOrderedList().IsAll())
-                IncludeIpRanges = IncludeIpRanges.IntersectNew(sessionResponse.IncludeIpRanges);
+                IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges);
 
             // Get IncludeIpRange for clientIp
             var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress).VhConfigureAwait() : null;
             if (!VhUtil.IsNullOrEmpty(filterIpRanges))
             {
                 filterIpRanges = filterIpRanges.Concat(DnsServers.Select((x => new IpRange(x)))).ToArray();
-                IncludeIpRanges = IncludeIpRanges.IntersectNew(filterIpRanges);
+                IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
             }
 
             // set DNS after setting IpFilters
@@ -729,7 +729,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (VhUtil.IsNullOrEmpty(DnsServers))
             {
                 DnsServers = VhUtil.IsNullOrEmpty(sessionResponse.DnsServers) ? IPAddressUtil.GoogleDnsServers : sessionResponse.DnsServers;
-                IncludeIpRanges = IncludeIpRanges.UnionNew(DnsServers.Select(IpRange.FromIpAddress));
+                IncludeIpRanges = IncludeIpRanges.Union(DnsServers.Select(IpRange.FromIpAddress));
             }
 
             if (VhUtil.IsNullOrEmpty(DnsServers?.Where(IsInIpRange).ToArray())) // make sure there is at least one DNS server

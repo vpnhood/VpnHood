@@ -39,6 +39,10 @@ public class IpRange
     public IPAddress FirstIpAddress { get; }
     public IPAddress LastIpAddress { get; }
     public BigInteger Total => new BigInteger(LastIpAddress.GetAddressBytes(), true, true) - new BigInteger(FirstIpAddress.GetAddressBytes(), true, true) + 1;
+    public IEnumerable<IpNetwork> ToIpNetworks()
+    {
+        return IpNetwork.FromRange(FirstIpAddress, LastIpAddress);
+    }
 
     public static IOrderedEnumerable<IpRange> Sort(IEnumerable<IpRange> ipRanges, bool unify = true)
     {

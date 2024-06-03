@@ -28,11 +28,6 @@ public static class IpRangeExtension
         return ipNetworkList.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
-    public static IEnumerable<IpNetwork> ToIpNetworks(this IpRange ipRange)
-    {
-        return IpNetwork.FromRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
-    }
-
     public static IEnumerable<IpRange> Intersect(this IEnumerable<IpRange> first, IEnumerable<IpRange> second)
     {
         // prevent use Linq.Intersect in mistake. it is bug prone.

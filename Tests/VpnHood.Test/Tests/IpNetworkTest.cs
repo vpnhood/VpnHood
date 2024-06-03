@@ -53,7 +53,7 @@ public class IpNetworkTest : TestBase
         var ipNetwork = IpNetwork.Parse("192.168.23.23/32");
         var inverted = ipNetwork.Invert().ToArray();
         Assert.AreEqual(32, inverted.Length);
-        CollectionAssert.AreEqual(new[] { ipNetwork }, inverted.ToIpRangesNew().Invert(true, false).ToIpNetworks().ToArray());
+        CollectionAssert.AreEqual(new[] { ipNetwork }, inverted.ToIpRanges().Invert(true, false).ToIpNetworks().ToArray());
 
         ipNetwork = IpNetwork.AllV4;
         Assert.AreEqual(0, ipNetwork.Invert().ToArray().Length);

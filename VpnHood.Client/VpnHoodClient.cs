@@ -75,7 +75,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public SessionStatus SessionStatus { get; private set; } = new();
     public Version Version { get; }
     public bool IncludeLocalNetwork { get; }
-    public IpRangeOrderedList IncludeIpRanges { get; private set; } = new (IpNetwork.All.ToIpRangesNew());
+    public IpRangeOrderedList IncludeIpRanges { get; private set; } = new(IpNetwork.All.ToIpRanges());
     public IpRangeOrderedList PacketCaptureIncludeIpRanges { get; private set; }
     public string UserAgent { get; }
     public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
@@ -260,7 +260,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _packetCapture.StartCapture();
 
             // disable IncludeIpRanges if it contains all networks
-            if (IncludeIpRanges.ToIpNetworks().IsAll())
+            if (IncludeIpRanges.IsAll())
                 IncludeIpRanges = [];
 
             State = ClientState.Connected;
@@ -478,7 +478,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsInIpRange(IPAddress ipAddress)
     {
         // all IPs are included if there is no filter
-        if (VhUtil.IsNullOrEmpty(IncludeIpRanges))
+        if (IncludeIpRanges.Count == 0)
             return true;
 
         // check tcp-loopback
@@ -1102,7 +1102,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public bool IsUdpChannelSupported => _client.HostUdpEndPoint != null;
         public bool IsWaitingForAd => _client._isWaitingForAd;
         public bool IsDnsServersAccepted { get; internal set; }
-        public ServerLocationInfo? ServerLocationInfo{ get; internal set; }
+        public ServerLocationInfo? ServerLocationInfo { get; internal set; }
 
         internal ClientStat(VpnHoodClient vpnHoodClient)
         {

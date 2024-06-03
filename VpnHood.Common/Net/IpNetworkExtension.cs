@@ -16,13 +16,6 @@ public static class IpNetworkExtension
             .ToOrderedList();
     }
 
-    public static IpRangeOrderedList ToIpRangesNew(this IEnumerable<IpNetwork> ipNetworks)
-    {
-        return ipNetworks
-            .Select(x => x.ToIpRange())
-            .ToOrderedList();
-    }
-
     public static bool IsAll(this IOrderedEnumerable<IpNetwork> ipNetworks)
     {
         return ipNetworks.SequenceEqual(IpNetwork.All);

@@ -105,7 +105,7 @@ public class WinDivertPacketCapture : IPacketCapture
         var phraseX = "true";
         if (IncludeNetworks != null)
         {
-            var ipRanges = IpNetwork.ToIpRange(IncludeNetworks);
+            var ipRanges = IncludeNetworks.ToIpRanges();
             var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
                 ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
                 : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");

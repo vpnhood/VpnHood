@@ -107,7 +107,12 @@ public class IpNetwork
 
     public IOrderedEnumerable<IpNetwork> Invert()
     {
-        return Invert(new[] { this }, AddressFamily == AddressFamily.InterNetwork, AddressFamily == AddressFamily.InterNetworkV6);
+        return new[] { this }
+            .ToIpRanges()
+            .Invert(
+                includeIPv4: AddressFamily == AddressFamily.InterNetwork,
+                includeIPv6: AddressFamily == AddressFamily.InterNetworkV6)
+            .ToIpNetworks();
     }
 
     public static IpNetwork Parse(string value)
@@ -123,39 +128,9 @@ public class IpNetwork
         }
     }
 
-    public static IOrderedEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
-    {
-        return FromIpRange(ToIpRange(ipNetworks));
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Invert(IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
-    {
-        return FromIpRange(IpRange.Invert(ToIpRange(ipNetworks), includeIPv4, includeIPv6));
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Intersect(IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
-    {
-        return FromIpRange(IpRange.Intersect(ToIpRange(ipNetworks1), ToIpRange(ipNetworks2)));
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Union(IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
-    {
-        return FromIpRange(IpRange.Union(ToIpRange(ipNetworks1), ToIpRange(ipNetworks2)));
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Exclude(IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
-    {
-        return FromIpRange(IpRange.Exclude(ToIpRange(ipNetworks), ToIpRange(excludeIpNetworks)));
-    }
-
     public IpRange ToIpRange()
     {
         return new IpRange(FirstIpAddress, LastIpAddress);
-    }
-
-    public static IEnumerable<IpRange> ToIpRange(IEnumerable<IpNetwork> ipNetworks)
-    {
-        return ipNetworks.Select(x => x.ToIpRange()).Sort();
     }
 
     public static IOrderedEnumerable<IpNetwork> FromIpRange(IEnumerable<IpRange> ipRanges)

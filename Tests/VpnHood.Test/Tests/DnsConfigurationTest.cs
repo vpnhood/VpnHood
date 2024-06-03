@@ -86,7 +86,7 @@ public class DnsConfigurationTest
         await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions);
 
         foreach (var serverDnsServer in serverDnsServers)
-            Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.Exists(serverDnsServer));
+            Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.Contains(serverDnsServer));
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
     }
 }

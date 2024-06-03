@@ -6,17 +6,21 @@ public static class IpNetworkExtension
 {
     public static IOrderedEnumerable<IpNetwork> Sort(this IEnumerable<IpNetwork> ipNetworks)
     {
-        return IpNetwork.Sort(ipNetworks);
+        var ipNetworkList = new List<IpNetwork>();
+        foreach (var ipRange in ipNetworkList.ToIpRangesNew())
+            ipNetworkList.AddRange(ipRange.ToIpNetworks());
+
+        return ipNetworkList.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
-    public static IEnumerable<IpRange> ToIpRanges(this IEnumerable<IpNetwork> ipNetworks)
+    public static IpRangeOrderedList ToIpRanges(this IEnumerable<IpNetwork> ipNetworks)
     {
-        return IpNetwork.ToIpRange(ipNetworks);
+        return ipNetworks.Select(x => x.ToIpRange()).ToOrderedList();
     }
 
     public static IpRangeOrderedList ToIpRangesNew(this IEnumerable<IpNetwork> ipNetworks)
     {
-        return new IpRangeOrderedList(ipNetworks.Select(x => x.ToIpRange()));
+        return ipNetworks.Select(x => x.ToIpRange()).ToOrderedList();
     }
 
 
@@ -30,40 +34,14 @@ public static class IpNetworkExtension
         return IpNetwork.FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
     }
 
-    public static IOrderedEnumerable<IpNetwork> Invert(this IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
-    {
-        return IpNetwork.Invert(ipNetworks, includeIPv4, includeIPv6);
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Intersect(this IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
-    {
-        return IpNetwork.Intersect(ipNetworks1, ipNetworks2);
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Union(IEnumerable<IpNetwork> ipNetworks1, IEnumerable<IpNetwork> ipNetworks2)
-    {
-        return IpNetwork.Union(ipNetworks1, ipNetworks2);
-    }
-
-    public static IOrderedEnumerable<IpNetwork> Exclude(this IEnumerable<IpNetwork> ipNetworks, IEnumerable<IpNetwork> excludeIpNetworks)
-    {
-        return IpNetwork.Exclude(ipNetworks, excludeIpNetworks);
-    }
-
     public static bool IsAll(this IOrderedEnumerable<IpNetwork> ipNetworks)
     {
         return IpNetwork.IsAll(ipNetworks);
     }
 
-
     public static IOrderedEnumerable<IpRange> Exclude(this IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
         return IpRange.Exclude(ipRanges, excludeIpRanges);
-    }
-
-    public static IOrderedEnumerable<IpRange> Sort(this IEnumerable<IpRange> ipRanges, bool unify = true)
-    {
-        return IpRange.Sort(ipRanges, unify);
     }
 
     public static IOrderedEnumerable<IpRange> Invert(this IEnumerable<IpRange> ipRanges,

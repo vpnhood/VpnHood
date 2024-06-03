@@ -44,7 +44,8 @@ public class IpRangeOrderedList :
 
     public bool IsAll()
     {
-        return ToIpNetworks().IsAll();
+        // use ToIpRanges for All to improve performance
+        return IpNetwork.All.ToIpRanges().SequenceEqual(this);
     }
 
     public bool IsInRange(IPAddress ipAddress)
@@ -53,9 +54,9 @@ public class IpRangeOrderedList :
         return res >= 0;
     }
 
-    public bool IsEmpty()
+    public bool IsNone()
     {
-        return ToIpNetworks().Any();
+        return _orderedList.Count == 0;
     }
 
     public IOrderedEnumerable<IpNetwork> ToIpNetworks()

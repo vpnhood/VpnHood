@@ -6,7 +6,7 @@ namespace VpnHood.Server;
 
 public class NetFilter : INetFilter
 {
-    private readonly IpRangeOrderedList _loopbackIpRange = IpNetwork.LoopbackNetworksV4.Concat(IpNetwork.LoopbackNetworksV6).ToIpRangesNew();
+    private readonly IpRangeOrderedList _loopbackIpRange = IpNetwork.LoopbackNetworks.ToIpRanges();
     private IpRangeOrderedList _blockedIpRanges = new([]);
 
     public NetFilter()

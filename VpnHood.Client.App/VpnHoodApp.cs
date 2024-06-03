@@ -412,9 +412,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges()) ;
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
-            packetCaptureIpRanges = packetCaptureIpRanges.IntersectNew(UserSettings.PacketCaptureIncludeIpRanges);
+            packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
-            packetCaptureIpRanges = packetCaptureIpRanges.ExcludeNew(UserSettings.PacketCaptureExcludeIpRanges);
+            packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
 
         // create clientOptions
         var clientOptions = new ClientOptions
@@ -825,8 +825,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // calculate packetCaptureIpRanges
         var ipRanges = IpNetwork.All.ToIpRanges();
-        if (!VhUtil.IsNullOrEmpty(UserSettings.IncludeIpRanges)) ipRanges = ipRanges.IntersectNew(UserSettings.IncludeIpRanges);
-        if (!VhUtil.IsNullOrEmpty(UserSettings.ExcludeIpRanges)) ipRanges = ipRanges.ExcludeNew(UserSettings.ExcludeIpRanges);
+        if (!VhUtil.IsNullOrEmpty(UserSettings.IncludeIpRanges)) ipRanges = ipRanges.Intersect(UserSettings.IncludeIpRanges);
+        if (!VhUtil.IsNullOrEmpty(UserSettings.ExcludeIpRanges)) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
 
         // exclude client country IPs
         if (!UserSettings.TunnelClientCountry)
@@ -836,7 +836,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
             VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
             if (ipGroup != null)
-                ipRanges = ipRanges.ExcludeNew(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId).VhConfigureAwait());
+                ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId).VhConfigureAwait());
         }
 
         return ipRanges.ToArray();

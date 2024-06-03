@@ -1,26 +1,30 @@
-﻿using System.Net;
-
-namespace VpnHood.Common.Net;
+﻿namespace VpnHood.Common.Net;
 
 public static class IpNetworkExtension
 {
     public static IOrderedEnumerable<IpNetwork> Sort(this IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks.ToIpRanges().ToIpNetworks();
+        return ipNetworks
+            .ToIpRanges()
+            .ToIpNetworks();
     }
 
     public static IpRangeOrderedList ToIpRanges(this IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks.Select(x => x.ToIpRange()).ToOrderedList();
+        return ipNetworks
+            .Select(x => x.ToIpRange())
+            .ToOrderedList();
     }
 
     public static IpRangeOrderedList ToIpRangesNew(this IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks.Select(x => x.ToIpRange()).ToOrderedList();
+        return ipNetworks
+            .Select(x => x.ToIpRange())
+            .ToOrderedList();
     }
 
     public static bool IsAll(this IOrderedEnumerable<IpNetwork> ipNetworks)
     {
-        return IpNetwork.IsAll(ipNetworks);
+        return ipNetworks.SequenceEqual(IpNetwork.All);
     }
 }

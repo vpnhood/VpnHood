@@ -63,12 +63,7 @@ public class IpNetwork
         return ipNetworks.SequenceEqual(All);
     }
 
-    public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
-    {
-        return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
-    }
-
-    public static IEnumerable<IpNetwork> FromIpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
+    public static IEnumerable<IpNetwork> FromRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
     {
         if (firstIpAddress.AddressFamily != lastIpAddress.AddressFamily)
             throw new ArgumentException("AddressFamilies don't match!");
@@ -109,7 +104,7 @@ public class IpNetwork
     {
         return new[] { this }
             .ToIpRanges()
-            .Invert(
+            .InvertNew(
                 includeIPv4: AddressFamily == AddressFamily.InterNetwork,
                 includeIPv6: AddressFamily == AddressFamily.InterNetworkV6)
             .ToIpNetworks();
@@ -131,15 +126,6 @@ public class IpNetwork
     public IpRange ToIpRange()
     {
         return new IpRange(FirstIpAddress, LastIpAddress);
-    }
-
-    public static IOrderedEnumerable<IpNetwork> FromIpRange(IEnumerable<IpRange> ipRanges)
-    {
-        var ipNetworks = new List<IpNetwork>();
-        foreach (var ipRange in IpRange.Sort(ipRanges))
-            ipNetworks.AddRange(FromIpRange(ipRange));
-
-        return ipNetworks.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
     }
 
     public override string ToString()

@@ -821,7 +821,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
+    public async Task<IpRangeOrderedList?> GetIncludeIpRanges(IPAddress clientIp)
     {
         // calculate packetCaptureIpRanges
         var ipRanges = IpNetwork.All.ToIpRanges();
@@ -839,7 +839,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ipRanges = ipRanges.Exclude(await ipGroupManager.GetIpRanges(ipGroup.IpGroupId).VhConfigureAwait());
         }
 
-        return ipRanges.ToArray();
+        return ipRanges;
     }
 
     public async Task RefreshAccount(bool updateCurrentClientProfile = false)

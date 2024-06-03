@@ -47,13 +47,13 @@ public class NetFilterOptions
     {
         var packetCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
         if (!IncludeLocalNetworkValue)
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.ExcludeNew(IpNetwork.LocalNetworks.ToIpRanges());
 
         if (!VhUtil.IsNullOrEmpty(PacketCaptureIncludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Intersect(PacketCaptureIncludeIpRanges);
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.IntersectNew(PacketCaptureIncludeIpRanges);
 
         if (!VhUtil.IsNullOrEmpty(PacketCaptureExcludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(PacketCaptureExcludeIpRanges);
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.ExcludeNew(PacketCaptureExcludeIpRanges);
 
         return packetCaptureIncludeIpRanges;
     }

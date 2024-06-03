@@ -1,6 +1,4 @@
-﻿using System.Linq;
-
-namespace VpnHood.Common.Net;
+﻿namespace VpnHood.Common.Net;
 
 public static class IpRangeExtension
 {

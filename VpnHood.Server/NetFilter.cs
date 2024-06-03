@@ -17,12 +17,12 @@ public class NetFilter : INetFilter
     public IpRangeOrderedList BlockedIpRanges
     {
         get => _blockedIpRanges;
-        set => _blockedIpRanges = _loopbackIpRange.UnionNew(value);
+        set => _blockedIpRanges = _loopbackIpRange.Union(value);
     }
 
     private bool IsIpAddressBlocked(IPAddress ipAddress)
     {
-        return BlockedIpRanges.Contains(ipAddress);
+        return BlockedIpRanges.IsInRange(ipAddress);
     }
 
     // ReSharper disable once ReturnTypeCanBeNotNullable

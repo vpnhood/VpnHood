@@ -35,10 +35,10 @@ public class NetFilterOptions
     {
         var includeIpRanges = IpNetwork.All.ToIpRangesNew();
         if (!VhUtil.IsNullOrEmpty(IncludeIpRanges))
-            includeIpRanges = includeIpRanges.IntersectNew(IncludeIpRanges);
+            includeIpRanges = includeIpRanges.Intersect(IncludeIpRanges);
 
         if (!VhUtil.IsNullOrEmpty(ExcludeIpRanges))
-            includeIpRanges = includeIpRanges.ExcludeNew(ExcludeIpRanges);
+            includeIpRanges = includeIpRanges.Exclude(ExcludeIpRanges);
 
         return includeIpRanges;
     }
@@ -47,24 +47,24 @@ public class NetFilterOptions
     {
         var packetCaptureIncludeIpRanges = IpNetwork.All.ToIpRanges();
         if (!IncludeLocalNetworkValue)
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.ExcludeNew(IpNetwork.LocalNetworks.ToIpRanges());
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
 
         if (!VhUtil.IsNullOrEmpty(PacketCaptureIncludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.IntersectNew(PacketCaptureIncludeIpRanges);
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Intersect(PacketCaptureIncludeIpRanges);
 
         if (!VhUtil.IsNullOrEmpty(PacketCaptureExcludeIpRanges))
-            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.ExcludeNew(PacketCaptureExcludeIpRanges);
+            packetCaptureIncludeIpRanges = packetCaptureIncludeIpRanges.Exclude(PacketCaptureExcludeIpRanges);
 
         return packetCaptureIncludeIpRanges;
     }
 
     public IpRangeOrderedList GetBlockedIpRanges()
     {
-        var includeIpRanges = GetFinalIncludeIpRanges().IntersectNew(GetFinalPacketCaptureIncludeIpRanges());
+        var includeIpRanges = GetFinalIncludeIpRanges().Intersect(GetFinalPacketCaptureIncludeIpRanges());
         if (BlockIpV6Value)
-            includeIpRanges = includeIpRanges.ExcludeNew(IpNetwork.AllV6.ToIpRange());
+            includeIpRanges = includeIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
 
-        return includeIpRanges.InvertNew();
+        return includeIpRanges.Invert();
     }
 
 }

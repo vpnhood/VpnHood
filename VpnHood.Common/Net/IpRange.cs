@@ -157,30 +157,6 @@ public class IpRange
             IPAddressUtil.Compare(ipAddress, LastIpAddress) <= 0;
     }
 
-    /// <summary>
-    ///     Search in ipRanges using binary search
-    /// </summary>
-    /// <param name="sortedIpRanges">a sorted ipRanges</param>
-    /// <param name="ipAddress">search value</param>
-    /// <returns></returns>
-    public static bool IsInSortedRanges(IpRange[] sortedIpRanges, IPAddress ipAddress)
-    {
-        return FindInSortedRanges(sortedIpRanges, ipAddress) != null;
-    }
-
-    /// <param name="sortedIpRanges">a sorted ipRanges</param>
-    /// <param name="ipAddress">search value</param>
-    public static IpRange? FindInSortedRanges(IpRange[] sortedIpRanges, IPAddress ipAddress)
-    {
-        var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
-        return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
-    }
-
-    public static IOrderedEnumerable<IpRange> Union(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
-    {
-        return Sort(ipRanges1.Concat(ipRanges2));
-    }
-
     public static IOrderedEnumerable<IpRange> Exclude(IEnumerable<IpRange> ipRanges, IEnumerable<IpRange> excludeIpRanges)
     {
         return Intersect(ipRanges, Invert(excludeIpRanges));
@@ -243,15 +219,5 @@ public class IpRange
             }
 
         return ipRanges;
-    }
-
-    private class IpRangeSearchComparer : IComparer<IpRange>
-    {
-        public int Compare(IpRange x, IpRange y)
-        {
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 && IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0) return 0;
-            if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) < 0) return -1;
-            return +1;
-        }
     }
 }

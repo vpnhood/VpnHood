@@ -99,7 +99,7 @@ public class IpNetwork
     {
         return new[] { this }
             .ToIpRanges()
-            .InvertNew(
+            .Invert(
                 includeIPv4: AddressFamily == AddressFamily.InterNetwork,
                 includeIPv6: AddressFamily == AddressFamily.InterNetworkV6)
             .ToIpNetworks();

@@ -89,17 +89,17 @@ public class IpRangeOrderedList :
 
     public IpRangeOrderedList Exclude(IpRangeOrderedList ipRanges)
     {
-        return Intersect(Invert(ipRanges));
+        return Intersect(ipRanges.Invert());
     }
 
     public IpRangeOrderedList Intersect(IEnumerable<IpRange> ipRanges)
     {
-        return Intersect(_orderedList, ipRanges.ToOrderedList());
+        return Intersect(ipRanges.ToOrderedList());
     }
 
     public IpRangeOrderedList Intersect(IpRangeOrderedList ipRanges)
     {
-        return Intersect(_orderedList, ipRanges);
+        return Intersect(this, ipRanges);
     }
 
     public IpRangeOrderedList Invert(bool includeIPv4 = true, bool includeIPv6 = true)
@@ -134,44 +134,35 @@ public class IpRangeOrderedList :
         return res;
     }
 
-    private static IpRangeOrderedList Intersect(IEnumerable<IpRange> ipRanges1, IEnumerable<IpRange> ipRanges2)
+    private static IpRangeOrderedList Intersect(IpRangeOrderedList ipRanges1, IpRangeOrderedList ipRanges2)
     {
-        // ReSharper disable once PossibleMultipleEnumeration
         var v4SortedRanges1 = ipRanges1
-            .Where(x => x.AddressFamily == AddressFamily.InterNetwork)
-            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+            .Where(x => x.AddressFamily == AddressFamily.InterNetwork);
 
-        // ReSharper disable once PossibleMultipleEnumeration
         var v4SortedRanges2 = ipRanges2
-            .Where(x => x.AddressFamily == AddressFamily.InterNetwork)
-            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+            .Where(x => x.AddressFamily == AddressFamily.InterNetwork);
 
-        // ReSharper disable once PossibleMultipleEnumeration
         var v6SortedRanges1 = ipRanges1
-            .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)
-            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+            .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
 
-        // ReSharper disable once PossibleMultipleEnumeration
         var v6SortedRanges2 = ipRanges2
-            .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6)
-            .OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+            .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
 
-
-        var ipRangesV4 = IntersectInternal(v4SortedRanges1, v4SortedRanges2);
-        var ipRangesV6 = IntersectInternal(v6SortedRanges1, v6SortedRanges2);
+        //all range are ordered as the following process does not change the order
+        var ipRangesV4 = IntersectInternal(v4SortedRanges1, v4SortedRanges2.ToArray());
+        var ipRangesV6 = IntersectInternal(v6SortedRanges1, v6SortedRanges2.ToArray());
         var ret = ipRangesV4.Concat(ipRangesV6);
-        return ret.ToOrderedList();
+        
+        return new IpRangeOrderedList(ret);
     }
 
-    private static IEnumerable<IpRange> IntersectInternal(IEnumerable<IpRange> ipRanges1,
-        IEnumerable<IpRange> ipRanges2)
+    private static IEnumerable<IpRange> IntersectInternal(
+        IEnumerable<IpRange> orderedIpRanges1,
+        IpRange[] orderedIpRanges2)
     {
-        ipRanges1 = Sort(ipRanges1);
-        ipRanges2 = Sort(ipRanges2);
-
         var ipRanges = new List<IpRange>();
-        foreach (var ipRange1 in ipRanges1)
-            foreach (var ipRange2 in ipRanges2)
+        foreach (var ipRange1 in orderedIpRanges1)
+            foreach (var ipRange2 in orderedIpRanges2)
             {
                 if (ipRange1.IsInRange(ipRange2.FirstIpAddress))
                     ipRanges.Add(new IpRange(ipRange2.FirstIpAddress,

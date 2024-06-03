@@ -40,10 +40,10 @@ public class IpNetworkTest : TestBase
             IpRange.Parse("AA::01:0000 - FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF")
         }.ToOrderedList();
 
-        CollectionAssert.AreEqual(expected.ToArray(), ipRanges.InvertNew().ToArray());
+        CollectionAssert.AreEqual(expected.ToArray(), ipRanges.Invert().ToArray());
 
         // check network
-        CollectionAssert.AreEqual(expected.ToIpNetworks().ToArray(), ipRanges.InvertNew().ToIpNetworks().ToArray());
+        CollectionAssert.AreEqual(expected.ToIpNetworks().ToArray(), ipRanges.Invert().ToIpNetworks().ToArray());
         CollectionAssert.AreEqual(ipRangesSorted, ipRanges.ToArray());
     }
 
@@ -53,7 +53,7 @@ public class IpNetworkTest : TestBase
         var ipNetwork = IpNetwork.Parse("192.168.23.23/32");
         var inverted = ipNetwork.Invert().ToArray();
         Assert.AreEqual(32, inverted.Length);
-        CollectionAssert.AreEqual(new[] { ipNetwork }, inverted.ToIpRangesNew().InvertNew(true, false).ToIpNetworks().ToArray());
+        CollectionAssert.AreEqual(new[] { ipNetwork }, inverted.ToIpRangesNew().Invert(true, false).ToIpNetworks().ToArray());
 
         ipNetwork = IpNetwork.AllV4;
         Assert.AreEqual(0, ipNetwork.Invert().ToArray().Length);
@@ -61,7 +61,7 @@ public class IpNetworkTest : TestBase
         ipNetwork = IpNetwork.AllV6;
         Assert.AreEqual(0, ipNetwork.Invert().ToArray().Length);
 
-        CollectionAssert.AreEqual(IpNetwork.All, Array.Empty<IpNetwork>().ToIpRanges().InvertNew().ToIpNetworks().ToArray());
+        CollectionAssert.AreEqual(IpNetwork.All, Array.Empty<IpNetwork>().ToIpRanges().Invert().ToIpNetworks().ToArray());
     }
 
     [TestMethod]
@@ -87,13 +87,13 @@ public class IpNetworkTest : TestBase
         };
 
         var ipRangeOrderedList = ipRanges.ToOrderedList();
-        Assert.IsFalse(ipRangeOrderedList.Contains(IPAddress.Parse("9.9.9.7")));
-        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("8.8.8.8")));
-        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("9.9.9.9")));
-        Assert.IsFalse(ipRangeOrderedList.Contains(IPAddress.Parse("4.4.4.5")));
-        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("4.4.4.3")));
-        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("FF::F0")));
-        Assert.IsFalse(ipRangeOrderedList.Contains(IPAddress.Parse("AF::F0")));
+        Assert.IsFalse(ipRangeOrderedList.IsInRange(IPAddress.Parse("9.9.9.7")));
+        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("8.8.8.8")));
+        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("9.9.9.9")));
+        Assert.IsFalse(ipRangeOrderedList.IsInRange(IPAddress.Parse("4.4.4.5")));
+        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("4.4.4.3")));
+        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("FF::F0")));
+        Assert.IsFalse(ipRangeOrderedList.IsInRange(IPAddress.Parse("AF::F0")));
     }
 
     [TestMethod]
@@ -123,8 +123,8 @@ public class IpNetworkTest : TestBase
         // Expected
         // AA::FFF5 - AA::FFF6
         var ranges = swap
-            ? ipRanges2.ToOrderedList().IntersectNew(ipRanges1) 
-            : ipRanges1.ToOrderedList().IntersectNew(ipRanges2);
+            ? ipRanges2.ToOrderedList().Intersect(ipRanges1) 
+            : ipRanges1.ToOrderedList().Intersect(ipRanges2);
 
         var i = 0;
         Assert.AreEqual("20.20.10.50-20.20.10.55", ranges[i++].ToString().ToUpper());

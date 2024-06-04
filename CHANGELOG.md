@@ -1,8 +1,12 @@
 # Upcoming
 ### Client
 * Update: Disable "Exclude My Country" when unable to load the IP location database
+* Update: Automaticcaly disconnect client after changing exclude my country settings
 * Improve: Performance & Speed on the connection when the user has select exclude my country
 * Fix: Freeze network on some situation
+
+### Server
+* Update: Improve performance
 
 # v4.5.520
 ### Client

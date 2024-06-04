@@ -1,6 +1,8 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
+using System.Text.Json;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -12,8 +14,6 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
-
-// ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
 
@@ -72,15 +72,45 @@ public class ClientAppTest : TestBase
         }
     }
 
-    [TestMethod]
-    public async Task ip_groups_must_be_loaded()
+    private static async Task UpdateIp2LocationFile()
     {
+        // update current ipLocation in app project after a week
+        var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
+        var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.Client.App", "Resources", "IpLocations.zip");
+        if (File.GetCreationTime(ipLocationFile) >= DateTime.Now - TimeSpan.FromDays(7))
+            return;
+
+        // find token
+        var userSecretFile = Path.Combine(Path.GetDirectoryName(solutionFolder)!, ".user", "credentials.json");
+        var document = JsonDocument.Parse(await File.ReadAllTextAsync(userSecretFile));
+        var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
+
+        // copy zip to memory
+        var httpClient = new HttpClient();
+        // ReSharper disable once StringLiteralTypo
+        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(
+            $"https://www.ip2location.com/download/?token={ip2LocationToken}&file=DB1LITECSVIPV6");
+        using var ipLocationZipStream = new MemoryStream();
+        await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream);
+        ipLocationZipStream.Position = 0;
+
+        // build new ipLocation file
+        using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
+        await using var crvStream = ipLocationZipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV")!.Open();
+        await IpGroupBuilder.BuildIpGroupArchiveFromIp2Location(crvStream, ipLocationFile);
+    }
+
+    [TestMethod]
+    public async Task IpLocations_must_be_loaded()
+    {
+        await UpdateIp2LocationFile();
+
         var appOptions = TestHelper.CreateClientAppOptions();
         appOptions.UseInternalLocationService = true;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         var ipGroupsManager = await app.GetIpGroupManager();
         var ipGroupIds = await ipGroupsManager.GetIpGroupIds();
-        Assert.IsTrue(ipGroupIds.Any(x => x == "us"), 
+        Assert.IsTrue(ipGroupIds.Any(x => x == "us"),
             "Countries has not been extracted.");
     }
 

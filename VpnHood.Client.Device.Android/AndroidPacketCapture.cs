@@ -113,13 +113,13 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         _outStream?.Write(ipPacket.Bytes);
     }
 
-    public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
+    public void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
             _outStream?.Write(ipPacket.Bytes);
     }
 
-    public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         throw new NotSupportedException();
     }

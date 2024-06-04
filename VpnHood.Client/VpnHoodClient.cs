@@ -152,7 +152,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPAddress[] DnsServers
     {
         get => _dnsServers;
-        set
+        private set
         {
             _dnsServersIpV4 = value.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
             _dnsServersIpV6 = value.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
@@ -721,11 +721,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
 
             // set DNS after setting IpFilters
+            VhLogger.Instance.LogInformation("Configuring Client DNS servers... DnsServers: {DnsServers}", string.Join(", ", DnsServers.Select(x => x.ToString())));
             Stat.IsDnsServersAccepted = VhUtil.IsNullOrEmpty(DnsServers) || DnsServers.Any(IsInIpRange); // no servers means accept default
-            DnsServers = DnsServers.Where(IsInIpRange).ToArray();
             if (!Stat.IsDnsServersAccepted)
                 VhLogger.Instance.LogWarning("Client DNS servers have been ignored because the server does not route them.");
 
+            DnsServers = DnsServers.Where(IsInIpRange).ToArray();
             if (VhUtil.IsNullOrEmpty(DnsServers))
             {
                 DnsServers = VhUtil.IsNullOrEmpty(sessionResponse.DnsServers) ? IPAddressUtil.GoogleDnsServers : sessionResponse.DnsServers;
@@ -734,11 +735,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             if (VhUtil.IsNullOrEmpty(DnsServers?.Where(IsInIpRange).ToArray())) // make sure there is at least one DNS server
                 throw new Exception("Could not specify any DNS server. The server is not configured properly.");
-
-            // Preparing tunnel
-            Tunnel.MaxDatagramChannelCount = sessionResponse.MaxDatagramChannelCount != 0
-                ? Tunnel.MaxDatagramChannelCount = Math.Min(_maxDatagramChannelCount, sessionResponse.MaxDatagramChannelCount)
-                : _maxDatagramChannelCount;
 
             // report Suppressed
             if (sessionResponse.SuppressedTo == SessionSuppressType.YourSelf)
@@ -750,6 +746,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // show ad if required
             if (sessionResponse.IsAdRequired || sessionResponse.AdRequirement is not AdRequirement.None)
                 await ShowAd(sessionResponse.AdRequirement is AdRequirement.Flexible, cancellationToken).VhConfigureAwait();
+
+            // Preparing tunnel
+            VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
+            Tunnel.MaxDatagramChannelCount = sessionResponse.MaxDatagramChannelCount != 0
+                ? Tunnel.MaxDatagramChannelCount = Math.Min(_maxDatagramChannelCount, sessionResponse.MaxDatagramChannelCount)
+                : _maxDatagramChannelCount;
 
             // manage datagram channels
             await ManageDatagramChannels(cancellationToken).VhConfigureAwait();

@@ -72,27 +72,15 @@ public class ClientAppTest : TestBase
         }
     }
 
-
     [TestMethod]
-    public async Task Load_country_ip_groups()
+    public async Task ip_groups_must_be_loaded()
     {
-        // ************
-        // *** TEST ***: 
-        await using var app1 = TestHelper.CreateClientApp();
-        var ipGroupsManager = await app1.GetIpGroupManager();
-        var ipGroupIds = await ipGroupsManager.GetIpGroupIds();
-        Assert.IsFalse(ipGroupIds.Any(x => x == "us"),
-            "Countries should not be extracted in test due to performance.");
-        await app1.DisposeAsync();
-
-        // ************
-        // *** TEST ***: 
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.UseIpGroupManager = true;
-        await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
-        ipGroupsManager = await app2.GetIpGroupManager();
-        ipGroupIds = await ipGroupsManager.GetIpGroupIds();
-        Assert.IsTrue(ipGroupIds.Any(x => x == "us"),
+        appOptions.UseInternalLocationService = true;
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        var ipGroupsManager = await app.GetIpGroupManager();
+        var ipGroupIds = await ipGroupsManager.GetIpGroupIds();
+        Assert.IsTrue(ipGroupIds.Any(x => x == "us"), 
             "Countries has not been extracted.");
     }
 

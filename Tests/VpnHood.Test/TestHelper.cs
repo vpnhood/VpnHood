@@ -362,7 +362,7 @@ internal static class TestHelper
         {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            UseIpGroupManager = false,
+            UseInternalLocationService = false,
             UseExternalLocationService = false,
             LogVerbose = LogVerbose
         };

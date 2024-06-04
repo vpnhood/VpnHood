@@ -12,7 +12,7 @@ public class AppOptions
     public SocketFactory? SocketFactory { get; set; }
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
     public Uri? UpdateInfoUrl { get; set; }
-    public bool UseIpGroupManager { get; set; } = true;
+    public bool UseInternalLocationService { get; set; } = true;
     public bool UseExternalLocationService { get; set; } = true;
     public AppResource Resource { get; set; } = new();
     public string? AppGa4MeasurementId { get; set; } = "G-4LE99XKZYE";

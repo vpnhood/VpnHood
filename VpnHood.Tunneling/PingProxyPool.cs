@@ -3,6 +3,7 @@ using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -92,8 +93,8 @@ public class PingProxyPool : IPacketProxyPool, IJob
                 new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
 
-        var result = await sendTask;
-        await _packetProxyReceiver.OnPacketReceived(result);
+        var result = await sendTask.VhConfigureAwait();
+        await _packetProxyReceiver.OnPacketReceived(result).VhConfigureAwait();
     }
 
     public Task RunJob()

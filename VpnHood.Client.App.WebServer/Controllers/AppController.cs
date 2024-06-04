@@ -6,6 +6,7 @@ using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.App.WebServer.Api;
 using VpnHood.Client.Device;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.WebServer.Controllers;
 
@@ -14,7 +15,7 @@ internal class AppController : WebApiController, IAppController
     private static VpnHoodApp App => VpnHoodApp.Instance;
     private async Task<T> GetRequestDataAsync<T>()
     {
-        var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
+        var json = await HttpContext.GetRequestBodyAsByteArrayAsync().VhConfigureAwait();
         var res = JsonSerializer.Deserialize<T>(json,
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         
@@ -24,12 +25,12 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Patch, "/configure")]
     public async Task<AppConfig> Configure(ConfigParams configParams)
     {
-        configParams = await GetRequestDataAsync<ConfigParams>();
+        configParams = await GetRequestDataAsync<ConfigParams>().VhConfigureAwait();
         App.Services.AppCultureService.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null) App.Resource.Strings = configParams.Strings;
 
         App.UpdateUi();
-        return await GetConfig();
+        return await GetConfig().VhConfigureAwait();
     }
 
     [Route(HttpVerbs.Get, "/config")]
@@ -104,7 +105,7 @@ internal class AppController : WebApiController, IAppController
     [Route(HttpVerbs.Put, "/user-settings")]
     public async Task SetUserSettings(UserSettings userSettings)
     {
-        userSettings = await GetRequestDataAsync<UserSettings>();
+        userSettings = await GetRequestDataAsync<UserSettings>().VhConfigureAwait();
         App.Settings.UserSettings = userSettings;
         App.Settings.Save();
     }
@@ -115,8 +116,8 @@ internal class AppController : WebApiController, IAppController
         Response.ContentType = MimeType.PlainText;
         await using var stream = HttpContext.OpenResponseStream();
         await using var streamWriter = new StreamWriter(stream);
-        var log = await App.LogService.GetLog();
-        await streamWriter.WriteAsync(log);
+        var log = await App.LogService.GetLog().VhConfigureAwait();
+        await streamWriter.WriteAsync(log).VhConfigureAwait();
         return "";
     }
 
@@ -127,15 +128,17 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Get, "/ip-groups")]
-    public Task<IpGroup[]> GetIpGroups()
+    public async Task<IpGroupInfo[]> GetIpGroups()
     {
-        return App.GetIpGroups();
+        var ipGroupManager = await App.GetIpGroupManager().VhConfigureAwait();
+        var ipGroupIds = await ipGroupManager.GetIpGroupIds().VhConfigureAwait();
+        return ipGroupIds.Select(x=>new IpGroupInfo{IpGroupId = x}).ToArray();
     }
 
     [Route(HttpVerbs.Patch, "/client-profiles/{clientProfileId}")]
     public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
-        updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>();
+        updateParams = await GetRequestDataAsync<ClientProfileUpdateParams>().VhConfigureAwait();
         var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
         return clientProfile.ToInfo();
     }
@@ -144,7 +147,7 @@ internal class AppController : WebApiController, IAppController
     public async Task DeleteClientProfile(Guid clientProfileId)
     {
         if (clientProfileId == App.CurrentClientProfile?.ClientProfileId)
-            await App.Disconnect(true);
+            await App.Disconnect(true).VhConfigureAwait();
 
         App.ClientProfileService.Remove(clientProfileId);
     }

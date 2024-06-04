@@ -4,6 +4,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install;
 using Xamarin.Google.Android.Play.Core.Install.Model;
@@ -20,7 +21,7 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
         using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
         try
         {
-            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task;
+            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task.VhConfigureAwait();
             var updateAvailability = appUpdateInfo.UpdateAvailability();
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
@@ -33,16 +34,16 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
 
             // Show Google Play update dialog
             var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Flexible).Build());
-            var updateFlowResult = await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task;
+            var updateFlowResult = await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task.VhConfigureAwait();
             if (updateFlowResult.IntValue() != -1)
                 throw new Exception("Could not start update flow.");
 
             // Wait for download complete
-            await googlePlayDownloadStateListener.WaitForCompletion();
+            await googlePlayDownloadStateListener.WaitForCompletion().VhConfigureAwait();
 
             // Start install downloaded update
             var installUpdateTask = appUpdateManager.CompleteUpdate();
-            var installUpdateStatus = await new GooglePlayTaskCompleteListener<Integer>(installUpdateTask).Task;
+            var installUpdateStatus = await new GooglePlayTaskCompleteListener<Integer>(installUpdateTask).Task.VhConfigureAwait();
 
             // Could not start install
             if (installUpdateStatus.IntValue() != -1)

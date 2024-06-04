@@ -142,7 +142,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         context.Response.ContentType = MimeType.Json;
         await using var text = context.OpenResponseText(new UTF8Encoding(false));
         await text.WriteAsync(JsonSerializer.Serialize(data, 
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }))
+            .VhConfigureAwait();
     }
 
     // manage SPA fallback

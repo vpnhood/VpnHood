@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using VpnHood.Common.Utils;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Ga4Tracking;
@@ -206,23 +207,25 @@ public class Ga4Tracker
         {
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync($"* Sending {name}...");
-                await Console.Out.WriteLineAsync($"Url: {requestMessage.RequestUri}");
-                await Console.Out.WriteLineAsync($"Headers: {JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true })}");
+                await Console.Out.WriteLineAsync($"* Sending {name}...").VhConfigureAwait();
+                await Console.Out.WriteLineAsync($"Url: {requestMessage.RequestUri}").VhConfigureAwait();
+                await Console.Out.WriteLineAsync(
+                    $"Headers: {JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true })}").VhConfigureAwait();
             }
 
             if (jsonData != null)
             {
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(jsonData));
                 requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                await Console.Out.WriteLineAsync($"Data: {JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true })}");
+                await Console.Out.WriteLineAsync(
+                    $"Data: {JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true })}").VhConfigureAwait();
             }
 
-            var res = await HttpClient.SendAsync(requestMessage);
+            var res = await HttpClient.SendAsync(requestMessage).VhConfigureAwait();
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync("Result: ");
-                await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync());
+                await Console.Out.WriteLineAsync("Result: ").VhConfigureAwait();
+                await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync()).VhConfigureAwait();
             }
         }
         catch

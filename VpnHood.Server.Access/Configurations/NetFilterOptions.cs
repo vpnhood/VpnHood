@@ -31,7 +31,7 @@ public class NetFilterOptions
         BlockIpV6 = BlockIpV6Value;
     }
 
-    public IEnumerable<IpRange> GetFinalIncludeIpRanges()
+    public IpRangeOrderedList GetFinalIncludeIpRanges()
     {
         var includeIpRanges = IpNetwork.All.ToIpRanges();
         if (!VhUtil.IsNullOrEmpty(IncludeIpRanges))
@@ -58,11 +58,11 @@ public class NetFilterOptions
         return packetCaptureIncludeIpRanges;
     }
 
-    public IEnumerable<IpRange> GetBlockedIpRanges()
+    public IpRangeOrderedList GetBlockedIpRanges()
     {
         var includeIpRanges = GetFinalIncludeIpRanges().Intersect(GetFinalPacketCaptureIncludeIpRanges());
         if (BlockIpV6Value)
-            includeIpRanges = includeIpRanges.Exclude(new[] { IpNetwork.AllV6.ToIpRange() });
+            includeIpRanges = includeIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
 
         return includeIpRanges.Invert();
     }

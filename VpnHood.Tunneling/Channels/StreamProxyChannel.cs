@@ -73,7 +73,7 @@ public class StreamProxyChannel : IChannel, IJob
                 _hostTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamBufferSize,
                 CancellationToken.None, CancellationToken.None); // host => tunnel
 
-            await Task.WhenAny(tunnelCopyTask, hostCopyTask);
+            await Task.WhenAny(tunnelCopyTask, hostCopyTask).VhConfigureAwait();
         }
         finally
         {
@@ -110,7 +110,7 @@ public class StreamProxyChannel : IChannel, IJob
         try
         {
             await CopyToInternalAsync(source, destination, isDestinationTunnel, bufferSize,
-                sourceCancellationToken, destinationCancellationToken);
+                sourceCancellationToken, destinationCancellationToken).VhConfigureAwait();
             _isFinished = true;
         }
         catch (Exception ex)
@@ -151,14 +151,14 @@ public class StreamProxyChannel : IChannel, IJob
         while (!sourceCancellationToken.IsCancellationRequested && !destinationCancellationToken.IsCancellationRequested)
         {
             // read from source
-            var bytesRead = await source.ReadAsync(readBuffer, preserveCount, readBuffer.Length - preserveCount, sourceCancellationToken);
+            var bytesRead = await source.ReadAsync(readBuffer, preserveCount, readBuffer.Length - preserveCount, sourceCancellationToken).VhConfigureAwait();
 
             // check end of the stream
             if (bytesRead == 0)
                 break;
 
             // write to destination
-            await destination.WriteAsync(readBuffer, preserveCount, bytesRead, destinationCancellationToken);
+            await destination.WriteAsync(readBuffer, preserveCount, bytesRead, destinationCancellationToken).VhConfigureAwait();
 
             // calculate transferred bytes
             if (isSendingToTunnel)
@@ -180,13 +180,14 @@ public class StreamProxyChannel : IChannel, IJob
     private readonly AsyncLock _disposeLock = new();
     public async ValueTask DisposeAsync(bool graceful)
     {
-        using var lockResult = await _disposeLock.LockAsync();
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
 
         Connected = false;
         await Task.WhenAll(
             _hostTcpClientStream.DisposeAsync(graceful).AsTask(),
-            _tunnelTcpClientStream.DisposeAsync(graceful).AsTask());
+            _tunnelTcpClientStream.DisposeAsync(graceful).AsTask())
+            .VhConfigureAwait();
     }
 }

@@ -217,7 +217,7 @@ internal static class TestHelper
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null, 
+    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null,
         string? serverLocation = null)
     {
         storagePath ??= CreateAccessManagerWorkingDir();
@@ -332,7 +332,7 @@ internal static class TestHelper
         clientId ??= Guid.NewGuid();
         clientOptions ??= CreateClientOptions();
         if (clientOptions.ConnectTimeout == new ClientOptions().ConnectTimeout) clientOptions.ConnectTimeout = TimeSpan.FromSeconds(3);
-        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToOrderedList();
         clientOptions.IncludeLocalNetwork = true;
 
         var client = new VpnHoodClient(
@@ -362,7 +362,7 @@ internal static class TestHelper
         {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            UseIpGroupManager = false,
+            UseInternalLocationService = false,
             UseExternalLocationService = false,
             LogVerbose = LogVerbose
         };
@@ -434,5 +434,12 @@ internal static class TestHelper
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
+    }
+    public static string GetParentDirectory(string path, int level = 1)
+    {
+        for (var i = 0; i < level; i++)
+            path = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
+
+        return path;
     }
 }

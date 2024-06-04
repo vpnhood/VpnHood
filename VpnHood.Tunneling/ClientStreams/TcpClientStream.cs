@@ -67,7 +67,7 @@ public class TcpClientStream : IClientStream
     public bool Disposed { get; private set; }
     public async ValueTask DisposeAsync(bool graceful)
     {
-        using var lockResult = await _disposeLock.LockAsync();
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (Disposed) return;
         Disposed = true;
 
@@ -77,7 +77,7 @@ public class TcpClientStream : IClientStream
             Stream? newStream = null;
             try
             {
-                newStream = await chunkStream.CreateReuse();
+                newStream = await chunkStream.CreateReuse().VhConfigureAwait();
                 _ = _reuseCallback.Invoke(new TcpClientStream(TcpClient, newStream, ClientStreamId, _reuseCallback, false));
 
                 VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,
@@ -88,15 +88,15 @@ public class TcpClientStream : IClientStream
                 VhLogger.LogError(GeneralEventId.TcpLife, ex,
                     "Could not reuse the TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
 
-                if (newStream != null) await newStream.DisposeAsync();
-                await Stream.DisposeAsync();
+                if (newStream != null) await newStream.DisposeAsync().VhConfigureAwait();
+                await Stream.DisposeAsync().VhConfigureAwait();
                 TcpClient.Dispose();
             }
         }
         else
         {
             // close streams
-            await Stream.DisposeAsync(); // first close stream 2
+            await Stream.DisposeAsync().VhConfigureAwait(); // first close stream 2
             TcpClient.Dispose();
 
             VhLogger.Instance.LogTrace(GeneralEventId.TcpLife,

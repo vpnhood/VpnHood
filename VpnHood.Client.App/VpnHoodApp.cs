@@ -30,7 +30,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FileNamePersistState = "state.json";
     private const string FolderNameProfiles = "profiles";
     private readonly SocketFactory? _socketFactory;
-    private readonly bool _useIpGroupManager;
+    private readonly bool _useInternalLocationService;
     private readonly bool _useExternalLocationService;
     private readonly string? _appGa4MeasurementId;
     private bool _hasConnectRequested;
@@ -56,10 +56,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool? _logVerbose;
     private readonly bool? _logAnonymous;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
-    private string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
-    private string IpGroupsFolderPath => Path.Combine(TempFolderPath, "ipgroups");
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
-
+    public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
     public bool IsIdle => ConnectionState == AppConnectionState.None;
@@ -96,7 +94,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
-        _useIpGroupManager = options.UseIpGroupManager;
+        _useInternalLocationService = options.UseInternalLocationService;
         _useExternalLocationService = options.UseExternalLocationService;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
@@ -410,7 +408,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             $"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
         // calculate packetCaptureIpRanges
-        var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges()) ;
+        var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges());
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
             packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
         if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
@@ -591,7 +589,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // try to get by ip group
-        if (_appPersistState.ClientCountryCode == null && _useIpGroupManager)
+        if (_appPersistState.ClientCountryCode == null && _useInternalLocationService)
         {
             try
             {
@@ -679,52 +677,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
         }
     }
-    
+
     public async Task<IpGroupManager> GetIpGroupManager()
     {
-        using var asyncLock = await AsyncLock.LockAsync("GetIpGroupManager").VhConfigureAwait();
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
-        // AddFromIp2Location if hash has been changed
-        try
-        {
-            var ipGroupManager = await IpGroupManager.Create(IpGroupsFolderPath).VhConfigureAwait();
-            
-            // ignore country ip groups if not required usually by tests
-            if (!_useIpGroupManager)
-            {
-                _ipGroupManager = ipGroupManager;
-                return _ipGroupManager;
-            }
-
-            _isLoadingIpGroup = true;
-            FireConnectionStateChanged();
-            await using var memZipStream = new MemoryStream(App.Resource.IP2LOCATION_LITE_DB1_IPV6_CSV);
-            using var zipArchive = new ZipArchive(memZipStream);
-            var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.IPV6.CSV") ??
-                        throw new Exception("Could not find ip2location database.");
-            
-            await ipGroupManager.InitByIp2LocationZipStream(entry).VhConfigureAwait();
-            _ipGroupManager = ipGroupManager;
-            return ipGroupManager;
-        }
-        catch (Exception ex)
-        {
-            VhLogger.Instance.LogError(ex, "Could not load ip location database.");
-            if (!UserSettings.TunnelClientCountry)
-            {
-                UserSettings.TunnelClientCountry = true;
-                Settings.Save();
-            }
-            
-            throw new Exception($"Could not load ip location database so I can not exclude your country. Message: {ex.Message}", ex);
-        }
-        finally
-        {
-            _isLoadingIpGroup = false;
-            FireConnectionStateChanged();
-        }
+        var zipArchive = new ZipArchive(new MemoryStream(App.Resource.iplocation_bin), ZipArchiveMode.Read, leaveOpen: false);
+        _ipGroupManager = await IpGroupManager.Create(zipArchive).VhConfigureAwait();
+        return _ipGroupManager;
     }
 
     public void VersionCheckPostpone()
@@ -829,24 +790,37 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!VhUtil.IsNullOrEmpty(UserSettings.ExcludeIpRanges)) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
 
         // exclude client country IPs
-        if (!UserSettings.TunnelClientCountry)
-        {
-            VhLogger.Instance.LogTrace("Finding Country IPs for split tunneling. Country: {Country}", _appPersistState.ClientCountryName);
-            var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
-            try
-            {
-                _isLoadingIpGroup = true;
-                var ipGroup = await ipGroupManager.FindIpGroup(clientIp, _appPersistState.ClientCountryCode).VhConfigureAwait();
-                _appPersistState.ClientCountryCode = ipGroup?.IpGroupId;
-                VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
-                if (ipGroup != null)
-                    ipRanges = ipRanges.Exclude(ipGroup.IpRanges);
+        if (UserSettings.TunnelClientCountry)
+            return ipRanges;
 
-            }
-            finally
+        VhLogger.Instance.LogTrace("Finding Country IPs for split tunneling. Country: {Country}", _appPersistState.ClientCountryName);
+        _isLoadingIpGroup = true;
+        FireConnectionStateChanged();
+        try
+        {
+            if (!_useInternalLocationService)
+                throw new InvalidOperationException("Could not use internal location service because it is disabled.");
+
+            var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
+            var ipGroup = await ipGroupManager.GetIpGroup(clientIp, _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name).VhConfigureAwait();
+            _appPersistState.ClientCountryCode = ipGroup.IpGroupId;
+            VhLogger.Instance.LogInformation("Client Country is: {Country}", _appPersistState.ClientCountryName);
+            ipRanges = ipRanges.Exclude(ipGroup.IpRanges);
+
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Could not get ip locations of your country.");
+            if (!UserSettings.TunnelClientCountry)
             {
-                _isLoadingIpGroup = false;
+                UserSettings.TunnelClientCountry = true;
+                Settings.Save();
             }
+        }
+
+        finally
+        {
+            _isLoadingIpGroup = false;
         }
 
         return ipRanges;

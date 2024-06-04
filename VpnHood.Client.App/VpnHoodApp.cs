@@ -55,6 +55,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VpnHoodClient? _client;
     private readonly bool? _logVerbose;
     private readonly bool? _logAnonymous;
+    private UserSettings _oldUserSettings;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -93,6 +94,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Settings.BeforeSave += SettingsBeforeSave;
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         SessionTimeout = options.SessionTimeout;
+        _oldUserSettings = VhUtil.JsonClone(UserSettings);
         _socketFactory = options.SocketFactory;
         _useInternalLocationService = options.UseInternalLocationService;
         _useExternalLocationService = options.UseExternalLocationService;
@@ -547,9 +549,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // check is disconnect required
             var disconnectRequired =
+                (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
                 (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
-                (state.CanDisconnect && _activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
-                (state.CanDisconnect && UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
+                (_activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
+                (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
 
             // disconnect
             if (state.CanDisconnect && disconnectRequired)
@@ -569,6 +572,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
 
         InitCulture();
+        _oldUserSettings = VhUtil.JsonClone(UserSettings);
     }
 
     public async Task<string?> GetClientCountry()

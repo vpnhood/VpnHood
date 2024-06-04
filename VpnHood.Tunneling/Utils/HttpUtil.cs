@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling.Utils;
 
@@ -18,7 +19,7 @@ public static class HttpUtil
             var lfCounter = 0;
             while (lfCounter < 4)
             {
-                var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken);
+                var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken).VhConfigureAwait();
                 if (bytesRead == 0)
                     return memStream.Length == 0
                         ? memStream // connection has been closed gracefully before sending anything
@@ -29,7 +30,7 @@ public static class HttpUtil
                 else
                     lfCounter = 0;
 
-                await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken);
+                await memStream.WriteAsync(readBuffer, 0, 1, cancellationToken).VhConfigureAwait();
 
                 if (memStream.Length > maxLength)
                     throw new Exception("HTTP header is too big.");
@@ -40,7 +41,7 @@ public static class HttpUtil
         }
         catch
         {
-            await memStream.DisposeAsync();
+            await memStream.DisposeAsync().VhConfigureAwait();
             throw;
         }
     }

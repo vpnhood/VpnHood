@@ -35,7 +35,7 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
         });
 
         // find endpoint status
-        HostEndPointStatus = await VerifyServersStatus(connectors, cancellationToken);
+        HostEndPointStatus = await VerifyServersStatus(connectors, cancellationToken).VhConfigureAwait();
         return HostEndPointStatus.FirstOrDefault(x=>x.Value).Key; //todo check if it is null
     }
 
@@ -51,12 +51,12 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
             await VhUtil.ParallelForEachAsync(connectors, async connector =>
             {
-                var serverStatus = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token);
+                var serverStatus = await VerifyServerStatus(connector, linkedCancellationTokenSource.Token).VhConfigureAwait();
                 hostEndPointStatus[connector.EndPointInfo.TcpEndPoint] = serverStatus;
                 if (serverStatus)
                     linkedCancellationTokenSource.Cancel(); // no need to continue, we find a server
 
-            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token);
+            }, maxDegreeOfParallelism, linkedCancellationTokenSource.Token).VhConfigureAwait();
 
         }
         catch (OperationCanceledException)
@@ -73,11 +73,13 @@ public class ServerFinder(int maxDegreeOfParallelism = 10)
         try
         {
             var requestResult = await connector.SendRequest<ServerStatusResponse>(
-            new ServerStatusRequest
-            {
-                RequestId = Guid.NewGuid().ToString(),
-                Message = "Hi, How are you?"
-            }, cancellationToken);
+                new ServerStatusRequest
+                {
+                    RequestId = Guid.NewGuid().ToString(),
+                    Message = "Hi, How are you?"
+                }, 
+                cancellationToken)
+                .VhConfigureAwait();
 
             // this should be already handled by the connector and never happen
             if (requestResult.Response.ErrorCode != SessionErrorCode.Ok)

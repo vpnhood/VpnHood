@@ -33,8 +33,8 @@ internal class ConnectorService(
         await using var mem = new MemoryStream();
         mem.WriteByte(1);
         mem.WriteByte(request.RequestCode);
-        await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
-        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken);
+        await StreamUtil.WriteJsonAsync(mem, request, cancellationToken).VhConfigureAwait();
+        var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, cancellationToken).VhConfigureAwait();
 
         // log the response
         VhLogger.Instance.LogTrace(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
@@ -57,8 +57,8 @@ internal class ConnectorService(
             try
             {
                 // we may use this buffer to encrypt so clone it for retry
-                await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken);
-                var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken);
+                await clientStream.Stream.WriteAsync((byte[])request.Clone(), cancellationToken).VhConfigureAwait();
+                var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
                 lock (Stat) Stat.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T>
                 {
@@ -78,13 +78,13 @@ internal class ConnectorService(
         }
 
         // create free connection
-        clientStream = await GetTlsConnectionToServer(requestId, cancellationToken);
+        clientStream = await GetTlsConnectionToServer(requestId, cancellationToken).VhConfigureAwait();
 
         // send request
         try
         {
-            await clientStream.Stream.WriteAsync(request, cancellationToken);
-            var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken);
+            await clientStream.Stream.WriteAsync(request, cancellationToken).VhConfigureAwait();
+            var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).VhConfigureAwait();
             return new ConnectorRequestResult<T>
             {
                 Response = response2,
@@ -100,7 +100,7 @@ internal class ConnectorService(
 
     private static async Task<T> ReadSessionResponse<T>(Stream stream, CancellationToken cancellationToken) where T : SessionResponse
     {
-        var message = await StreamUtil.ReadMessage(stream, cancellationToken);
+        var message = await StreamUtil.ReadMessage(stream, cancellationToken).VhConfigureAwait();
         try
         {
             var response = VhUtil.JsonDeserialize<T>(message);

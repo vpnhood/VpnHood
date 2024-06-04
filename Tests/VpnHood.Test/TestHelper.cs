@@ -217,7 +217,7 @@ internal static class TestHelper
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null, 
+    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null,
         string? serverLocation = null)
     {
         storagePath ??= CreateAccessManagerWorkingDir();
@@ -434,5 +434,12 @@ internal static class TestHelper
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
         JobSection.DefaultInterval = TimeSpan.FromMilliseconds(200);
+    }
+    public static string GetParentDirectory(string path, int level = 1)
+    {
+        for (var i = 0; i < level; i++)
+            path = Path.GetDirectoryName(path) ?? throw new Exception("Invalid path");
+
+        return path;
     }
 }

@@ -1,8 +1,7 @@
 ﻿using System.Collections;
 using System.Net;
 using System.Net.Sockets;
-using System.Text.Json;
-using VpnHood.Common.Utils;
+
 
 namespace VpnHood.Common.Net;
 
@@ -36,16 +35,46 @@ public class IpRangeOrderedList :
         _orderedList = orderedList;
     }
 
-
-    public Task Save(string filePath)
+    public void Serialize(Stream stream)
     {
-        return File.WriteAllTextAsync(filePath, JsonSerializer.Serialize(_orderedList));
+        // serialize to binary
+        using var writer = new BinaryWriter(stream);
+        writer.Write(_orderedList.Count);
+        foreach (var range in _orderedList)
+        {
+            var firstIpBytes = range.FirstIpAddress.GetAddressBytes();
+            var lastIpBytes = range.LastIpAddress.GetAddressBytes();
+
+            writer.Write((byte)firstIpBytes.Length);
+            writer.Write(firstIpBytes);
+            writer.Write((byte)lastIpBytes.Length);
+            writer.Write(lastIpBytes);
+        }
+    }
+
+    public static IpRangeOrderedList Deserialize(Stream stream)
+    {
+        using var reader = new BinaryReader(stream);
+        var length = reader.ReadInt32();
+        var ipRanges = new IpRange[length];
+        for (var i = 0; i < length; i++)
+        {
+            var firstIpLength = reader.ReadByte();
+            var firstIpBytes = reader.ReadBytes(firstIpLength);
+            var lastIpLength = reader.ReadByte();
+            var lastIpBytes = reader.ReadBytes(lastIpLength);
+            ipRanges[i] = new IpRange(new IPAddress(firstIpBytes), new IPAddress(lastIpBytes));
+        }
+
+        return new IpRangeOrderedList(ipRanges);
     }
 
     public bool IsAll()
     {
         // use ToIpRanges for All to improve performance
-        return IpNetwork.All.ToIpRanges().SequenceEqual(this);
+        return IpNetwork.All
+            .ToIpRanges()
+            .SequenceEqual(this);
     }
 
     public bool IsInRange(IPAddress ipAddress)
@@ -71,7 +100,9 @@ public class IpRangeOrderedList :
 
     public IpRangeOrderedList Union(IEnumerable<IpRange> ipRanges)
     {
-        return new IpRangeOrderedList(_orderedList.Concat(ipRanges));
+        // ReSharper disable PossibleMultipleEnumeration
+        return ipRanges.Any() ? new IpRangeOrderedList(_orderedList.Concat(ipRanges)) : this;
+        // ReSharper restore PossibleMultipleEnumeration
     }
 
     public IpRangeOrderedList Exclude(IPAddress ipAddress)
@@ -138,6 +169,10 @@ public class IpRangeOrderedList :
 
     private static IpRangeOrderedList Intersect(IpRangeOrderedList ipRanges1, IpRangeOrderedList ipRanges2)
     {
+        // performance optimization
+        if (ipRanges1.IsAll()) return ipRanges2;
+        if (ipRanges2.IsAll()) return ipRanges1;
+
         var v4SortedRanges1 = ipRanges1
             .Where(x => x.AddressFamily == AddressFamily.InterNetwork);
 
@@ -154,7 +189,7 @@ public class IpRangeOrderedList :
         var ipRangesV4 = IntersectInternal(v4SortedRanges1, v4SortedRanges2.ToArray());
         var ipRangesV6 = IntersectInternal(v6SortedRanges1, v6SortedRanges2.ToArray());
         var ret = ipRangesV4.Concat(ipRangesV6);
-        
+
         return new IpRangeOrderedList(ret);
     }
 
@@ -238,12 +273,6 @@ public class IpRangeOrderedList :
         return res;
     }
 
-    public static async Task<IpRangeOrderedList> Load(string filePath)
-    {
-        var json = await File.ReadAllTextAsync(filePath);
-        var list = VhUtil.JsonDeserialize<IpRange[]>(json);
-        return new IpRangeOrderedList(list);
-    }
     private class IpRangeSearchComparer : IComparer<IpRange>
     {
         public int Compare(IpRange x, IpRange y)

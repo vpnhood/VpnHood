@@ -16,7 +16,7 @@ public class IpGroupBuilder
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogTrace("Building the optimized Ip2Location archive...");
-        await using var outputStream = File.OpenWrite(outputZipFile);
+        await using var outputStream = File.Create(outputZipFile);
         using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
         foreach (var ipGroup in ipGroups)
         {

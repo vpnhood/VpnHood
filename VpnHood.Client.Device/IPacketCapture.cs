@@ -27,7 +27,7 @@ public interface IPacketCapture : IDisposable
     void StopCapture();
     void ProtectSocket(Socket socket);
     void SendPacketToInbound(IPPacket ipPacket);
-    void SendPacketToInbound(IEnumerable<IPPacket> packets);
+    void SendPacketToInbound(IList<IPPacket> packets);
     void SendPacketToOutbound(IPPacket ipPacket);
-    void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets);
+    void SendPacketToOutbound(IList<IPPacket> ipPackets);
 }

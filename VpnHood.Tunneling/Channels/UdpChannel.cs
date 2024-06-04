@@ -47,7 +47,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         {
             // this is shared buffer and client, so we need to sync
             // Using multiple UdpClient will not increase performance
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync().VhConfigureAwait();
 
             var bufferIndex = UdpChannelTransmitter.HeaderLength;
 
@@ -66,7 +66,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             if (_lastRemoteEp == null) throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
             if (_udpChannelTransmitter == null) throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
             var ret = await _udpChannelTransmitter.SendAsync(_lastRemoteEp, sessionId, 
-                sessionCryptoPosition, _buffer, bufferIndex, protocolVersion);
+                sessionCryptoPosition, _buffer, bufferIndex, protocolVersion).VhConfigureAwait();
 
             Traffic.Sent += ret;
             LastActivityTime = FastDateTime.Now;
@@ -74,7 +74,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         catch (Exception ex)
         {
             if (IsInvalidState(ex))
-                await DisposeAsync();
+                await DisposeAsync().VhConfigureAwait();
         }
         finally
         {

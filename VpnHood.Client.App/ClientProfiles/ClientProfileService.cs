@@ -178,7 +178,7 @@ public class ClientProfileService
         try
         {
             using var client = new HttpClient();
-            var encryptedServerToken = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20));
+            var encryptedServerToken = await VhUtil.RunTask(client.GetStringAsync(token.ServerToken.Url), TimeSpan.FromSeconds(20)).VhConfigureAwait();
             var newServerToken = ServerToken.Decrypt(token.ServerToken.Secret, encryptedServerToken);
 
             // return older only if token body is same and created time is newer

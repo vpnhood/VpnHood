@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -15,7 +16,7 @@ public static class StreamUtil
         CancellationToken cancellationToken)
     {
         var buffer = new byte[count];
-        if (!await ReadWaitForFillAsync(stream, buffer, 0, buffer.Length, cancellationToken))
+        if (!await ReadWaitForFillAsync(stream, buffer, 0, buffer.Length, cancellationToken).VhConfigureAwait())
             return null;
         return buffer;
     }
@@ -41,7 +42,7 @@ public static class StreamUtil
         while (totalRead != count)
         {
             var read = await stream.ReadAsync(buffer, startIndex + totalRead, count - totalRead,
-                cancellationToken);
+                cancellationToken).VhConfigureAwait();
             totalRead += read;
             if (read == 0)
                 return false;
@@ -76,7 +77,7 @@ public static class StreamUtil
 
     public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken, int maxLength = 0xFFFF)
     {
-        var message = await ReadMessage(stream, cancellationToken, maxLength);
+        var message = await ReadMessage(stream, cancellationToken, maxLength).VhConfigureAwait();
         var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
         return ret;
     }
@@ -85,7 +86,7 @@ public static class StreamUtil
         int maxLength = 0xFFFF)
     {
         // read length
-        var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken)
+        var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken).VhConfigureAwait()
                      ?? throw new Exception("Could not read message.");
 
         // check unauthorized exception
@@ -102,7 +103,7 @@ public static class StreamUtil
                 $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
-        buffer = await ReadWaitForFillAsync(stream, messageSize, cancellationToken);
+        buffer = await ReadWaitForFillAsync(stream, messageSize, cancellationToken).VhConfigureAwait();
         if (buffer == null)
             throw new Exception("Could not read Message Length!");
 

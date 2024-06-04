@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Jobs;
 
@@ -87,7 +88,7 @@ public class JobRunner
         // run jobs
         foreach (var job in jobs)
         {
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync().VhConfigureAwait();
             _ = RunJob(job);
         }
     }
@@ -104,7 +105,7 @@ public class JobRunner
         // run the job
         try
         {
-            await job.RunJob();
+            await job.RunJob().VhConfigureAwait();
         }
         catch (ObjectDisposedException)
         {

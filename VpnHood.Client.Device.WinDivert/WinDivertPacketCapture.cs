@@ -54,7 +54,7 @@ public class WinDivertPacketCapture : IPacketCapture
             $"{nameof(ProtectSocket)} is not supported by {GetType().Name}");
     }
 
-    public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
+    public void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
             SendPacket(ipPacket, false);
@@ -70,7 +70,7 @@ public class WinDivertPacketCapture : IPacketCapture
         SendPacket(ipPacket, true);
     }
 
-    public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
             SendPacket(ipPacket, true);

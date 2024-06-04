@@ -683,7 +683,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_ipGroupManager != null)
             return _ipGroupManager;
 
-        var zipArchive = new ZipArchive(new MemoryStream(App.Resource.iplocation_bin), ZipArchiveMode.Read, leaveOpen: false);
+        var zipArchive = new ZipArchive(new MemoryStream(App.Resource.IpLocations), ZipArchiveMode.Read, leaveOpen: false);
         _ipGroupManager = await IpGroupManager.Create(zipArchive).VhConfigureAwait();
         return _ipGroupManager;
     }

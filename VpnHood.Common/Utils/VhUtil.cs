@@ -225,7 +225,7 @@ public static class VhUtil
         return JsonSerializer.Serialize(obj1) == JsonSerializer.Serialize(obj2);
     }
 
-    public static T JsonClone<T>(object obj, JsonSerializerOptions? options = null)
+    public static T JsonClone<T>(T obj, JsonSerializerOptions? options = null)
     {
         var json = JsonSerializer.Serialize(obj, options);
         return JsonDeserialize<T>(json, options);

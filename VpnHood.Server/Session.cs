@@ -456,7 +456,7 @@ public class Session : IAsyncDisposable, IJob
                 PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
             ipPacket = session._netFilter.ProcessReply(ipPacket);
-            return session.Tunnel.SendPacket(ipPacket);
+            return session.Tunnel.SendPacketAsync(ipPacket, CancellationToken.None);
         }
 
         public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,

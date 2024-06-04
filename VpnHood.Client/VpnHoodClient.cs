@@ -427,8 +427,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                 // send packets
                 if (tunnelPackets.Count > 0 && ShouldManageDatagramChannels) _ = ManageDatagramChannels(_cancellationTokenSource.Token);
-                if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets).Wait(_cancellationTokenSource.Token);
-                if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
+                if (tunnelPackets.Count > 0) Tunnel.SendPackets(tunnelPackets, _cancellationTokenSource.Token);
+                if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets);
                 if (proxyPackets.Count > 0) _proxyManager.SendPackets(proxyPackets).Wait(_cancellationTokenSource.Token);
                 if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_clientHost.ProcessOutgoingPacket(tcpHostPackets));
             }

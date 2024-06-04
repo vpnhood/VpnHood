@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Win.Common;
 
@@ -25,7 +26,7 @@ public class WinAppUpdaterService : IAppUpdaterService
             var process = Process.Start(updaterFilePath, "/justcheck");
             if (process == null) return false;
             while (process is { HasExited: false })
-                await Task.Delay(500);
+                await Task.Delay(500).VhConfigureAwait();
 
             // install update
             if (process.ExitCode == 0)
@@ -33,7 +34,7 @@ public class WinAppUpdaterService : IAppUpdaterService
                 process = Process.Start(updaterFilePath);
                 if (process == null) return false;
                 while (process is { HasExited: false })
-                    await Task.Delay(500);
+                    await Task.Delay(500).VhConfigureAwait();
             }
 
             // https://www.advancedinstaller.com/user-guide/updater.html#updater-return-codes

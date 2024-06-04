@@ -128,9 +128,9 @@ public class FileAccessManager : IAccessManager
             if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService)
             {
                 var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Server");
-                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient());
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient()).VhConfigureAwait();
                 serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
-                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation);
+                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation).VhConfigureAwait();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
@@ -180,7 +180,7 @@ public class FileAccessManager : IAccessManager
 
     public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
+        var accessItem = await AccessItem_Read(sessionRequestEx.TokenId).VhConfigureAwait();
         if (accessItem == null)
             return new SessionResponseEx
             {
@@ -214,7 +214,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId);
+        var accessItem = await AccessItem_Read(tokenId).VhConfigureAwait();
         if (accessItem == null)
             return new SessionResponseEx
             {
@@ -256,7 +256,7 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessItem = await AccessItem_Read(tokenId);
+        var accessItem = await AccessItem_Read(tokenId).VhConfigureAwait();
         if (accessItem == null)
             return new SessionResponse
             {
@@ -265,7 +265,7 @@ public class FileAccessManager : IAccessManager
             };
 
         accessItem.AccessUsage.Traffic += traffic;
-        await WriteAccessItemUsage(accessItem);
+        await WriteAccessItemUsage(accessItem).VhConfigureAwait();
 
         if (closeSession)
             SessionController.CloseSession(sessionId);
@@ -323,7 +323,7 @@ public class FileAccessManager : IAccessManager
 
         foreach (var file in files)
         {
-            var accessItem = await AccessItem_Read(Path.GetFileNameWithoutExtension(file));
+            var accessItem = await AccessItem_Read(Path.GetFileNameWithoutExtension(file)).VhConfigureAwait();
             if (accessItem != null)
                 accessItems.Add(accessItem);
         }
@@ -384,7 +384,7 @@ public class FileAccessManager : IAccessManager
     public async Task AccessItem_Delete(string tokenId)
     {
         // remove index
-        _ = await AccessItem_Read(tokenId)
+        _ = await AccessItem_Read(tokenId).VhConfigureAwait()
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete files
@@ -398,14 +398,14 @@ public class FileAccessManager : IAccessManager
     {
         // read access item
         var fileName = GetAccessItemFileName(tokenId);
-        using var fileLock = await AsyncLock.LockAsync(fileName);
+        using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
         if (!System.IO.File.Exists(fileName))
             return null;
 
-        var json = await System.IO.File.ReadAllTextAsync(fileName);
+        var json = await System.IO.File.ReadAllTextAsync(fileName).VhConfigureAwait();
         var accessItem = VhUtil.JsonDeserialize<AccessItem>(json);
         accessItem.Token.ServerToken = _serverToken; // update server token
-        await ReadAccessItemUsage(accessItem);
+        await ReadAccessItemUsage(accessItem).VhConfigureAwait();
         return accessItem;
     }
 
@@ -424,10 +424,10 @@ public class FileAccessManager : IAccessManager
         try
         {
             var fileName = GetUsageFileName(accessItem.Token.TokenId);
-            using var fileLock = await AsyncLock.LockAsync(fileName);
+            using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
             if (System.IO.File.Exists(fileName))
             {
-                var json = await System.IO.File.ReadAllTextAsync(fileName);
+                var json = await System.IO.File.ReadAllTextAsync(fileName).VhConfigureAwait();
                 var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
                 accessItem.AccessUsage.Traffic = new Traffic { Sent = accessItemUsage.SentTraffic, Received = accessItemUsage.ReceivedTraffic };
             }
@@ -451,8 +451,8 @@ public class FileAccessManager : IAccessManager
 
         // write accessItem
         var fileName = GetUsageFileName(accessItem.Token.TokenId);
-        using var fileLock = await AsyncLock.LockAsync(fileName);
-        await System.IO.File.WriteAllTextAsync(fileName, json);
+        using var fileLock = await AsyncLock.LockAsync(fileName).VhConfigureAwait();
+        await System.IO.File.WriteAllTextAsync(fileName, json).VhConfigureAwait();
     }
 
     public class AccessItem

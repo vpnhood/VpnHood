@@ -25,7 +25,7 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
             if (_packetBufferCount < minPacketSize)
             {
                 var toRead = minPacketSize - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken);
+                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken).VhConfigureAwait();
                 _packetBufferCount += read;
                 
                 // is eof?
@@ -57,7 +57,7 @@ public class StreamPacketReader(Stream stream) : IAsyncDisposable
                 }
 
                 var toRead = packetLength - _packetBufferCount;
-                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken);
+                var read = await _stream.ReadAsync(_packetBuffer, _packetBufferCount, toRead, cancellationToken).VhConfigureAwait();
                 _packetBufferCount += read;
                 if (read == 0)
                     throw new Exception("Stream has been unexpectedly closed before reading the rest of packet.");

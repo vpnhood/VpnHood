@@ -136,7 +136,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             try
             {
                 androidUiContext.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
-                await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2)));
+                await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2))).VhConfigureAwait();
                 if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                     throw new Exception("Could not grant VPN permission in the given time.");
 
@@ -164,7 +164,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         // check is service started
         _startServiceTaskSource = new TaskCompletionSource<bool>();
-        await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+        await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(TimeSpan.FromSeconds(10))).VhConfigureAwait();
         if (_packetCapture == null)
             throw new Exception("Could not start VpnService in the given time.");
 

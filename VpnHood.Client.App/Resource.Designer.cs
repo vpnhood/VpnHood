@@ -128,19 +128,9 @@ namespace VpnHood.Client.App {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] iplocation {
+        internal static byte[] IpLocations {
             get {
-                object obj = ResourceManager.GetObject("iplocation", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] iplocation_bin {
-            get {
-                object obj = ResourceManager.GetObject("iplocation_bin", resourceCulture);
+                object obj = ResourceManager.GetObject("IpLocations", resourceCulture);
                 return ((byte[])(obj));
             }
         }

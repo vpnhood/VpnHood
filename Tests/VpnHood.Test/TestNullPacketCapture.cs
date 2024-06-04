@@ -47,7 +47,7 @@ internal class TestNullPacketCapture : IPacketCapture
         // nothing
     }
 
-    public void SendPacketToInbound(IEnumerable<IPPacket> packets)
+    public void SendPacketToInbound(IList<IPPacket> packets)
     {
         // nothing
     }
@@ -57,7 +57,7 @@ internal class TestNullPacketCapture : IPacketCapture
         // nothing
     }
 
-    public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+    public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         // nothing
     }

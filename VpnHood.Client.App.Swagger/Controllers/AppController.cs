@@ -73,7 +73,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpGet("ip-groups")]
-    public Task<IpGroup[]> GetIpGroups()
+    public Task<IpGroupInfo[]> GetIpGroups()
     {
         throw new NotImplementedException();
     }

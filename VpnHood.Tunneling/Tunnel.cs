@@ -237,15 +237,28 @@ public class Tunnel : IJob, IAsyncDisposable
         }
     }
 
-    public Task SendPacket(IPPacket ipPacket)
+    public Task SendPacketAsync(IPPacket ipPacket, CancellationToken cancellationToken)
     {
-        return SendPackets(new[] { ipPacket });
+        return SendPacketsAsync([ipPacket], cancellationToken);
     }
 
-    public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
+    public async Task SendPacketsAsync(IList<IPPacket> ipPackets, CancellationToken cancellationToken)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
+        await WaitForQueueAsync(cancellationToken);
+        EnqueuePackets(ipPackets);
+    }
+
+    public void SendPackets(IList<IPPacket> ipPackets, CancellationToken cancellationToke)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
+        WaitForQueue(cancellationToke);
+        EnqueuePackets(ipPackets);
+    }
+
+    private async Task WaitForQueueAsync(CancellationToken cancellationToken)
     {
         var dateTime = FastDateTime.Now;
-        if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
 
         // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to deadlock
         // ReSharper disable once InconsistentlySynchronizedField
@@ -254,14 +267,39 @@ public class Tunnel : IJob, IAsyncDisposable
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)
                 _packetSenderSemaphore.Release(releaseCount); // there is some packet
-            await _packetSentEvent.WaitAsync(1000); //Wait 1000 to prevent deadlock.
+            
+            await _packetSentEvent.WaitAsync(1000, cancellationToken).VhConfigureAwait(); //Wait 1 seconds to prevent deadlock.
             if (_disposed) return;
 
             // check timeout
             if (FastDateTime.Now - dateTime > _datagramPacketTimeout)
                 throw new TimeoutException("Could not send datagram packets.");
         }
+    }
 
+    private void WaitForQueue(CancellationToken cancellationToken)
+    {
+        var dateTime = FastDateTime.Now;
+
+        // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to deadlock
+        // ReSharper disable once InconsistentlySynchronizedField
+        while (_packetQueue.Count > MaxQueueLength)
+        {
+            var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
+            if (releaseCount > 0)
+                _packetSenderSemaphore.Release(releaseCount); // there is some packet
+
+            _packetSentEvent.Wait(1000, cancellationToken); //Wait 1 seconds to prevent deadlock.
+            if (_disposed) return;
+
+            // check timeout
+            if (FastDateTime.Now - dateTime > _datagramPacketTimeout)
+                throw new TimeoutException("Could not send datagram packets.");
+        }
+    }
+
+    private void EnqueuePackets(IList<IPPacket> ipPackets)
+    {
         // add all packets to the queue
         lock (_packetQueue)
         {
@@ -347,12 +385,12 @@ public class Tunnel : IJob, IAsyncDisposable
 
                     try
                     {
-                        await channel.SendPacket(packets.ToArray());
+                        await channel.SendPacket(packets.ToArray()).VhConfigureAwait();
                     }
                     catch
                     {
                         if (!_disposed)
-                            _ = SendPackets(packets); //resend packets
+                            _ = SendPacketsAsync(packets, CancellationToken.None); //resend packets
 
                         if (!channel.Connected && !_disposed)
                             throw; // this channel has error
@@ -361,7 +399,7 @@ public class Tunnel : IJob, IAsyncDisposable
                 // wait for next new packets
                 else
                 {
-                    await _packetSenderSemaphore.WaitAsync();
+                    await _packetSenderSemaphore.WaitAsync().VhConfigureAwait();
                 }
             } // while
         }
@@ -407,7 +445,7 @@ public class Tunnel : IJob, IAsyncDisposable
     private bool _disposed;
     public async ValueTask DisposeAsync()
     {
-        using var lockResult = await _disposeLock.LockAsync();
+        using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();
         if (_disposed) return;
         _disposed = true;
 
@@ -420,7 +458,7 @@ public class Tunnel : IJob, IAsyncDisposable
         }
 
         // Stop speed monitor
-        await _speedMonitorTimer.DisposeAsync();
+        await _speedMonitorTimer.DisposeAsync().VhConfigureAwait();
         Speed.Sent = 0;
         Speed.Received = 0;
 
@@ -429,6 +467,6 @@ public class Tunnel : IJob, IAsyncDisposable
         _packetSentEvent.Release();
 
         // dispose all channels
-        await Task.WhenAll(disposeTasks);
+        await Task.WhenAll(disposeTasks).VhConfigureAwait();
     }
 }

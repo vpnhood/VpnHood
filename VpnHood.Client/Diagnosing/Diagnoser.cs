@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Diagnosing;
 
@@ -34,7 +35,7 @@ public class Diagnoser
     {
         try
         {
-            await vpnHoodClient.Connect(cancellationToken);
+            await vpnHoodClient.Connect(cancellationToken).VhConfigureAwait();
         }
         catch (OperationCanceledException)
         {
@@ -44,7 +45,7 @@ public class Diagnoser
         {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck())
+            if (!await NetworkCheck().VhConfigureAwait())
                 throw new NoInternetException();
 
             throw;
@@ -61,13 +62,13 @@ public class Diagnoser
         {
             VhLogger.Instance.LogTrace("Checking the Internet connection...");
             IsWorking = true;
-            if (!await NetworkCheck())
+            if (!await NetworkCheck().VhConfigureAwait())
                 throw new NoInternetException();
 
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(vpnHoodClient.Token.ServerToken);
-            var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, true);
+            var hostEndPoint = await ServerTokenHelper.ResolveHostEndPoint(vpnHoodClient.Token.ServerToken).VhConfigureAwait();
+            var pingRes = await DiagnoseUtil.CheckPing([hostEndPoint.Address], NsTimeout, true).VhConfigureAwait();
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");
             else
@@ -75,12 +76,12 @@ public class Diagnoser
 
             // VpnConnect
             IsWorking = false;
-            await vpnHoodClient.Connect(cancellationToken);
+            await vpnHoodClient.Connect(cancellationToken).VhConfigureAwait();
 
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;
-            await Task.Delay(2000, cancellationToken); // connections can not be established on android immediately
-            if (!await NetworkCheck())
+            await Task.Delay(2000, cancellationToken).VhConfigureAwait(); // connections can not be established on android immediately
+            if (!await NetworkCheck().VhConfigureAwait())
                 throw new NoStableVpnException();
             VhLogger.Instance.LogTrace("VPN has been established and tested successfully.");
         }
@@ -102,7 +103,7 @@ public class Diagnoser
 
         var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 
-        await Task.WhenAll(taskPing, taskUdp, taskHttps);
+        await Task.WhenAll(taskPing, taskUdp, taskHttps).VhConfigureAwait();
         var hasInternet = taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
         return hasInternet;
     }

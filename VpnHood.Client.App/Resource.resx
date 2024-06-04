@@ -6,7 +6,7 @@
     Version 2.0
     
     The primary goals of this format is to allow a simple XML format 
-    that is mostly human-readable. The generation and parsing of the 
+    that is mostly human readable. The generation and parsing of the 
     various data types are done through the TypeConverter classes 
     associated with the data types.
     
@@ -139,9 +139,6 @@
   <data name="Exit" xml:space="preserve">
     <value>Exit</value>
   </data>
-  <data name="IP2LOCATION_LITE_DB1_IPV6_CSV" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Resources\IP2LOCATION-LITE-DB1.IPV6.CSV.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="Manage" xml:space="preserve">
     <value>Manage</value>
   </data>
@@ -157,7 +154,7 @@
   <data name="MsgUnsupportedContent" xml:space="preserve">
     <value>Unsupported file type.</value>
   </data>
-	<data name="MsgCantShowAd" xml:space="preserve">
+  <data name="MsgCantShowAd" xml:space="preserve">
     <value>This server requires a display Ad but could not display it.</value>
   </data>
   <data name="Open" xml:space="preserve">
@@ -165,5 +162,8 @@
   </data>
   <data name="OpenInBrowser" xml:space="preserve">
     <value>Open in Browser</value>
+  </data>
+  <data name="IpLocations" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\IpLocations.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

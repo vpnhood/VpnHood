@@ -194,7 +194,7 @@ public class TunnelTest : TestBase
         };
 
         // send packet to server through tunnel
-        await clientTunnel.SendPackets(packets.ToArray());
+        await clientTunnel.SendPacketsAsync(packets.ToArray(), CancellationToken.None);
         await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Length);
         await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Length);
     }

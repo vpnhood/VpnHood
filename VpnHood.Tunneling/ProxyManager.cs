@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Factory;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -42,7 +43,7 @@ public abstract class ProxyManager : IPacketProxyReceiver
     public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
-            await SendPacket(ipPacket);
+            await SendPacket(ipPacket).VhConfigureAwait();
     }
 
     public async Task SendPacket(IPPacket ipPacket)
@@ -63,14 +64,14 @@ public abstract class ProxyManager : IPacketProxyReceiver
             switch (ipPacket.Protocol)
             {
                 case ProtocolType.Udp:
-                    await _udpProxyPool.SendPacket(ipPacket);
+                    await _udpProxyPool.SendPacket(ipPacket).VhConfigureAwait();
                     break;
 
                 case ProtocolType.Icmp or ProtocolType.IcmpV6:
                     if (!IsPingSupported)
                         throw new NotSupportedException("Ping is not supported by this proxy.");
 
-                    await _pingProxyPool.SendPacket(ipPacket);
+                    await _pingProxyPool.SendPacket(ipPacket).VhConfigureAwait();
                     break;
 
                 default:
@@ -108,6 +109,6 @@ public abstract class ProxyManager : IPacketProxyReceiver
         lock (_channels)
             disposeTasks.AddRange(_channels.Select(channel => channel.DisposeAsync(false).AsTask()));
 
-        await Task.WhenAll(disposeTasks);
+        await Task.WhenAll(disposeTasks).VhConfigureAwait();
     }
 }

@@ -1,4 +1,4 @@
-# Upcoming
+# v4.5.521
 ### Client
 * Update: Disable "Exclude My Country" when unable to load the IP location database
 * Update: Automaticcaly disconnect client after changing exclude my country settings

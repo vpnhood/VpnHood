@@ -1560,8 +1560,8 @@ export class ReportClient {
         return Promise.resolve<Usage>(null as any);
     }
 
-    getStatusHistory(projectId: string, usageBeginTime: Date | null, usageEndTime?: Date | null | undefined, serverFarmId?: string | null | undefined, serverId?: string | null | undefined, cancelToken?: CancelToken): Promise<ServerStatusHistory[]> {
-        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/report/status-history?";
+    getServerStatusHistory(projectId: string, usageBeginTime: Date | null, usageEndTime?: Date | null | undefined, serverFarmId?: string | null | undefined, serverId?: string | null | undefined, cancelToken?: CancelToken): Promise<ServerStatusHistory[]> {
+        let url_ = this.baseUrl + "/api/v1/projects/{projectId}/report/server-status-history?";
         if (projectId === undefined || projectId === null)
             throw new Error("The parameter 'projectId' must be defined.");
         url_ = url_.replace("{projectId}", encodeURIComponent("" + projectId));
@@ -1593,11 +1593,11 @@ export class ReportClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetStatusHistory(_response);
+            return this.processGetServerStatusHistory(_response);
         });
     }
 
-    protected processGetStatusHistory(response: AxiosResponse): Promise<ServerStatusHistory[]> {
+    protected processGetServerStatusHistory(response: AxiosResponse): Promise<ServerStatusHistory[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {

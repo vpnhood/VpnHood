@@ -2957,7 +2957,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusHistory>> GetStatusHistoryAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusHistory>> GetServerStatusHistoryAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2973,10 +2973,10 @@ namespace VpnHood.AccessServer.Api
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                 
-                    // Operation Path: "api/v1/projects/{projectId}/report/status-history"
+                    // Operation Path: "api/v1/projects/{projectId}/report/server-status-history"
                     urlBuilder_.Append("api/v1/projects/");
                     urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/report/status-history");
+                    urlBuilder_.Append("/report/server-status-history");
                     urlBuilder_.Append('?');
                     urlBuilder_.Append(System.Uri.EscapeDataString("usageBeginTime")).Append('=').Append(System.Uri.EscapeDataString(usageBeginTime != null ? usageBeginTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture) : "")).Append('&');
                     if (usageEndTime != null)

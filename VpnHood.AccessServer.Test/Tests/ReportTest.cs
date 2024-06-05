@@ -37,7 +37,7 @@ public class ReportTest
     public async Task GetStatusHistory()
     {
         using var farm = await ServerFarmDom.Create();
-        var res = await farm.TestApp.ReportClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await farm.TestApp.ReportClient.GetServerStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
 }

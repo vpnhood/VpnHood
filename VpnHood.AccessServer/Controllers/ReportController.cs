@@ -26,9 +26,9 @@ public class ReportController(
             serverFarmId: serverFarmId, serverId: serverId);
     }
 
-    [HttpGet("status-history")]
+    [HttpGet("server-status-history")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
-    public async Task<ServerStatusHistory[]> GetStatusHistory(Guid projectId,
+    public async Task<ServerStatusHistory[]> GetServerStatusHistory(Guid projectId,
         DateTime? usageBeginTime, DateTime? usageEndTime = null, Guid? serverFarmId = null, Guid? serverId = null)
     {
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));

@@ -314,7 +314,11 @@ public class ServerService(
     {
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
+        var connectionInfo = new ConnectionInfo(
+            installParams.HostName.Trim(), 
+            hostPort, 
+            installParams.LoginUserName.Trim(), 
+            new PasswordAuthenticationMethod(installParams.LoginUserName.Trim(), installParams.LoginPassword.Trim()));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
@@ -323,9 +327,12 @@ public class ServerService(
     public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
         await using var keyStream = new MemoryStream(installParams.UserPrivateKey);
-        using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase);
+        using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase?.Trim());
 
-        var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
+        var connectionInfo = new ConnectionInfo(
+            installParams.HostName.Trim(), installParams.HostPort, 
+            installParams.LoginUserName.Trim(), 
+            new PrivateKeyAuthenticationMethod(installParams.LoginUserName.Trim(), privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
@@ -337,7 +344,7 @@ public class ServerService(
         sshClient.Connect();
 
         var linuxCommand = GetInstallScriptForLinux(appSettings, false);
-        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword, TimeSpan.FromMinutes(5));
+        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(), TimeSpan.FromMinutes(5));
 
         var check = sshClient.RunCommand("dir /opt/VpnHoodServer");
         var checkResult = check.Execute();

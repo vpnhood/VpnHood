@@ -133,6 +133,14 @@ public class SessionService(
         if (ipLock?.LockedTime != null)
             throw new SessionExceptionEx(SessionErrorCode.AccessLocked, "Your access has been locked! Please contact the support.");
 
+        // block bad ad requests clients
+        if (accessToken.AccessTokenId == Guid.Parse("77d58603-cdcb-4efc-992f-c132be1de0e3") && !string.IsNullOrEmpty(clientInfo.ClientVersion))
+        {
+            if (Version.TryParse(clientInfo.ClientVersion, out var clVersion) && clVersion.Build < 522)
+                throw new SessionExceptionEx(SessionErrorCode.AccessLocked,
+                    "Please update to the latest VpnHood! CONNECT app. The version should be 522 or later.");
+        }
+
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
         var device = await vhAgentRepo.DeviceFind(projectId, clientInfo.ClientId);

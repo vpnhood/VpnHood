@@ -333,10 +333,6 @@ public class VhContext : DbContext
                 .ValueGeneratedOnAdd();
 
             entity
-                .Property(e => e.ServerFarmId)
-                .HasDefaultValue(Guid.Empty); //todo: for migration
-
-            entity
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(x => x.ServerStatusId);
 

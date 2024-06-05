@@ -49,12 +49,12 @@ public static class ArchiveConverter
         };
     }
 
-    public static ServerStatusArchive ToArchive(this ServerStatusModel model)
+    public static ServerStatusArchive ToArchive(this ServerStatusModel model, Guid serverFarmId)
     {
         return new ServerStatusArchive
         {
             ServerStatusId = model.ServerStatusId,
-            ServerFarmId = model.ServerFarmId,
+            ServerFarmId = serverFarmId,
             ServerId = model.ServerId,
             ProjectId = model.ProjectId,
             CreatedTime = model.CreatedTime,

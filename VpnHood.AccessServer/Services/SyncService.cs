@@ -75,7 +75,12 @@ public class SyncService(
             var items = await vhContext
                 .ServerStatuses
                 .Where(x => !x.IsLast)
-                .OrderBy(x => x.ServerStatusId)
+                .Select(x=>new
+                {
+                    x.Server!.ServerFarmId,
+                    ServerStatus = x
+                })
+                .OrderBy(x => x.ServerStatus.ServerStatusId)
                 .Take(BatchCount)
                 .ToArrayAsync();
 
@@ -83,11 +88,11 @@ public class SyncService(
                 return;
 
             // add to report
-            await reportWriterService.Write(items.Select(x=>x.ToArchive()));
+            await reportWriterService.Write(items.Select(x=>x.ServerStatus.ToArchive(x.ServerFarmId)));
 
             // remove synced items
             logger.LogInformation("Removing old synced ServerStatuses from agent database. Count: {Count}", items.Length);
-            var ids = items.Select(x => x.ServerStatusId);
+            var ids = items.Select(x => x.ServerStatus.ServerStatusId);
             await vhContext.ServerStatuses
                 .Where(x => ids.Contains(x.ServerStatusId))
                 .ExecuteDeleteAsync();

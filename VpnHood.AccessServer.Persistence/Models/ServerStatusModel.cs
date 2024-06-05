@@ -4,7 +4,6 @@ public class ServerStatusBaseModel
 {
     public required long ServerStatusId { get; init; }
     public required Guid ProjectId { get; init; }
-    public required Guid ServerFarmId { get; init; }
     public required Guid ServerId { get; init; }
     public required int SessionCount { get; set; }
     public required int TcpConnectionCount { get; set; }

@@ -16,9 +16,9 @@ public class GooglePlayAdService(
     private DateTime _lastLoadRewardedAdTime = DateTime.MinValue;
 
 
-    public static GooglePlayAdService Create(string rewardedAdUnit)
+    public static GooglePlayAdService Create(string rewardedAdUnitId)
     {
-        var ret = new GooglePlayAdService(rewardedAdUnit);
+        var ret = new GooglePlayAdService(rewardedAdUnitId);
         return ret;
     }
 

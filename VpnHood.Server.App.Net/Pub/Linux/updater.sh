@@ -56,7 +56,7 @@ fi
 
 # Compare the update code
 if [ "$localUpdateCode" != "$onlineUpdateCode" ]; then
-    echo "The installed version can not be updated. You need to update it manaully!";
+    echo "The installed version can not be updated. You need to update it manually!";
     exit 1;
 fi
 

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Jar\unity-ads-4.3.0.aar" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+    <ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
+  </ItemGroup>
+</Project>

@@ -16,7 +16,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
     SupportsRtl = true, AllowBackup = true)]
 
-[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AssemblyInfo.AdMonApplicationId)]
+[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AssemblyInfo.AdMobApplicationId)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
@@ -43,7 +43,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = accountService,
-            AdService = GooglePlayAdService.Create(AssemblyInfo.RewardedAdUnitId),
+            AdServices = [
+                AdMobInterstitialAdService.Create(AssemblyInfo.InterstitialAdUnitId),
+                AdMobRewardedAdService.Create(AssemblyInfo.RewardedAdUnitId),
+                AdMobRewardedAdService.Create(AssemblyInfo.AppOpenAdUnitId)
+            ],
             UiService = new AndroidAppUiService()
         };
     }

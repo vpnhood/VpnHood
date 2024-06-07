@@ -5,23 +5,22 @@ using VpnHood.Client.Device.Droid;
 
 namespace VpnHood.Client.App.Android.Unity.Ads;
 
-public class UnityAdService(string adGameId, string adPlacementId, bool isTestMode) : IAppAdService
+public class UnityAdService(string adGameId) : IAppAdService
 {
     private DateTime _lastLoadRewardedAdTime = DateTime.MinValue;
-
-
-    public static UnityAdService Create(string adGameId, string adPlacementId, bool isTestMode)
+    public static UnityAdService Create(string adGameId)
     {
-        var ret = new UnityAdService(adGameId, adPlacementId, isTestMode);
+        var ret = new UnityAdService(adGameId);
         return ret;
     }
-
-    public Task ShowAd(IUiContext uiContext, string customData, CancellationToken cancellationToken)
+    
+    public AppAdNetworks NetworkName { get; } = AppAdNetworks.UnityAds;
+    public AppAdType AdType { get; } = AppAdType.InterstitialAd;
+    public Task ShowAd(IUiContext uiContext, CancellationToken cancellationToken, string? customData, bool? isTestMode)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
-
-        UnityAds.Initialize(appUiContext, adGameId, isTestMode, new AdInitializationListener(activity));
+        UnityAds.Initialize(activity, adGameId, isTestMode ?? false, new AdInitializationListener(activity));
     }
 
     private class AdInitializationListener(Activity activity) : Java.Lang.Object, IUnityAdsInitializationListener
@@ -87,6 +86,11 @@ public class UnityAdService(string adGameId, string adPlacementId, bool isTestMo
         }
     }
     public void Dispose()
+    {
+        throw new NotImplementedException();
+    }
+    
+    public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

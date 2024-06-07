@@ -50,8 +50,11 @@ public class LoadBalancerService(
         var accessPoints = new List<AccessPointModel>();
         foreach (var server in servers)
         {
-            accessPoints.AddRange(server.AccessPoints.Where(accessPoint =>
-                accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == addressFamily));
+            var serverAccessPoints = server.AccessPoints
+                .Where(x => x.IsPublic)
+                .OrderByDescending(x => x.IpAddress.AddressFamily); // prefer IPv6
+
+            accessPoints.AddRange(serverAccessPoints);
         }
 
         // convert access points to IPEndPoints
@@ -59,8 +62,13 @@ public class LoadBalancerService(
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
             .ToArray();
 
+        // find the best TcpEndPoint for this request
+        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is IpV4 the single redirect must be ipv4
+            addressFamily == AddressFamily.InterNetworkV6 ||
+            x.AddressFamily == AddressFamily.InterNetwork);
+
         // no server found
-        if (tcpEndPoints.Length == 0)
+        if (bestTcpEndPoint == null)
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any free server.");
 
         // todo
@@ -75,7 +83,6 @@ public class LoadBalancerService(
         }
 
         // redirect if current server does not serve the best TcpEndPoint
-        var bestTcpEndPoint = tcpEndPoints.First();
         var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint =>
             bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
         if (currentServer.ServerId != bestServer.ServerId)
@@ -84,7 +91,7 @@ public class LoadBalancerService(
             throw new SessionExceptionEx(new SessionResponseEx
             {
                 ErrorCode = SessionErrorCode.RedirectHost,
-                RedirectHostEndPoint = tcpEndPoints.First(),
+                RedirectHostEndPoint = bestTcpEndPoint,
                 RedirectHostEndPoints = tcpEndPoints.Take(100).ToArray()
             });
         }

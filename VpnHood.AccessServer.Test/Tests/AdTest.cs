@@ -27,7 +27,7 @@ public class AdTest
         // create session
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
-        Assert.IsTrue(sessionDom.SessionResponseEx.IsAdRequired);
+        Assert.AreEqual(AdRequirement.Required.ToString(), sessionDom.SessionResponseEx.AdRequirement.ToString());
 
         // extend session
         var sessionResponse = await sessionDom.AddUsage();
@@ -64,6 +64,7 @@ public class AdTest
         var sessionDom = await accessTokenDom.CreateSession(clientId: clientId);
         Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
         Assert.IsTrue(sessionDom.SessionResponseEx.IsAdRequired);
+        Assert.AreEqual(AdRequirement.Required.ToString(), sessionDom.SessionResponseEx.AdRequirement.ToString());
 
         // extend session
         var sessionResponse = await sessionDom.AddUsage();

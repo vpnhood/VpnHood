@@ -202,4 +202,59 @@ public class LoadBalancerTest
         Assert.AreEqual(1, serverDom4.ServerStatus.SessionCount);
         Assert.AreEqual(1, serverDom5.ServerStatus.SessionCount);
     }
+
+    [TestMethod]
+    public async Task Redirect_redirect_to_ipv4_when_server_has_no_ipv6()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+        farm.TestApp.AgentTestApp.AgentOptions.LostServerThreshold = TimeSpan.FromDays(1);
+
+        // Create and init servers
+        var serverDom1 = await farm.AddNewServer(configure: false);
+        serverDom1.ServerInfo = await farm.TestApp.NewServerInfo();
+        serverDom1.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        serverDom1.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4(), await farm.TestApp.NewIpV6()];
+        await serverDom1.Configure();
+
+        var serverDom2 = await farm.AddNewServer(configure: false);
+        serverDom2.ServerInfo = await farm.TestApp.NewServerInfo();
+        serverDom2.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4()];
+        serverDom2.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        await serverDom2.Configure();
+
+        var serverDom3 = await farm.AddNewServer(configure: false);
+        serverDom3.ServerInfo = await farm.TestApp.NewServerInfo();
+        serverDom3.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV4()];
+        serverDom3.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV4()];
+        await serverDom3.Configure();
+
+        var serverDom4 = await farm.AddNewServer(configure: false);
+        serverDom4.ServerInfo = await farm.TestApp.NewServerInfo();
+        serverDom4.ServerInfo.PrivateIpAddresses = [await farm.TestApp.NewIpV6()];
+        serverDom4.ServerInfo.PublicIpAddresses = [await farm.TestApp.NewIpV6()];
+        await serverDom4.Configure();
+
+
+        await farm.ReloadServers();
+
+        // create access token
+        var accessTokenDom = await farm.CreateAccessToken();
+
+        // create sessions for IpV6 clients
+        for (var i = 0; i < 4; i++)
+        {
+            var sessionDom = await accessTokenDom.CreateSession(autoRedirect: true, addressFamily: AddressFamily.InterNetworkV6);
+
+            // find the server that create the session
+            var serverDom = farm.FindServerByEndPoint(sessionDom.SessionRequestEx.HostEndPoint);
+            serverDom.ServerInfo.Status.SessionCount++;
+            await serverDom.SendStatus();
+        }
+
+        Assert.AreEqual(1, serverDom1.ServerStatus.SessionCount);
+        Assert.AreEqual(1, serverDom2.ServerStatus.SessionCount);
+        Assert.AreEqual(1, serverDom3.ServerStatus.SessionCount);
+        Assert.AreEqual(1, serverDom4.ServerStatus.SessionCount);
+    }
 }

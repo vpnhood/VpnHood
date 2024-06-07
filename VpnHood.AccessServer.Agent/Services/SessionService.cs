@@ -225,11 +225,12 @@ public class SessionService(
             UserAgent = device.UserAgent,
             ClientId = device.ClientId,
             IsAdReward = isAdRewardedDevice,
-            AdExpirationTime = isAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null
+            AdExpirationTime = isAdRequired ? DateTime.UtcNow + agentOptions.Value.AdRewardTimeout : null,
         };
 
         var ret = await BuildSessionResponse(session, access);
         ret.IsAdRequired = isAdRequired;
+        ret.AdRequirement = accessToken.AdRequirement;
         ret.ExtraData = session.ExtraData;
         ret.GaMeasurementId = project.GaMeasurementId;
         ret.ServerLocation = server.LocationInfo.ServerLocation;

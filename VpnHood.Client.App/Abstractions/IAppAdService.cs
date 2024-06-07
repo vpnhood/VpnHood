@@ -4,5 +4,8 @@ namespace VpnHood.Client.App.Abstractions;
 
 public interface IAppAdService : IDisposable
 {
-    Task ShowAd(IUiContext appUiContext, string customData, CancellationToken cancellationToken);
+    AppAdNetworks NetworkName { get; }
+    AppAdType AdType { get; }
+    Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken);
+    Task ShowAd(IUiContext uiContext, CancellationToken cancellationToken, string? customData, bool? isTestMode = false);
 }

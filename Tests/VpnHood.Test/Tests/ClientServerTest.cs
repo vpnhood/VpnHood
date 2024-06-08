@@ -10,6 +10,8 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
+using VpnHood.Test.AccessManagers;
+using VpnHood.Test.Device;
 using VpnHood.Tunneling;
 
 // ReSharper disable DisposeOnUsingVariable

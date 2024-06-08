@@ -3,7 +3,7 @@ using PacketDotNet;
 using VpnHood.Tunneling;
 using ProtocolType = PacketDotNet.ProtocolType;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Services;
 
 internal static class TestSocketProtector
 {

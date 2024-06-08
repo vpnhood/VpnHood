@@ -1,7 +1,7 @@
 ﻿using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Device;
 
 internal class TestDevice(TestDeviceOptions? options = default) : IDevice
 {

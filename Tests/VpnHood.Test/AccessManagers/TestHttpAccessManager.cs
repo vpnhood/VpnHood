@@ -3,7 +3,7 @@ using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.Http;
 using VpnHood.Tunneling;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.AccessManagers;
 
 public class TestHttpAccessManager : HttpAccessManager
 {

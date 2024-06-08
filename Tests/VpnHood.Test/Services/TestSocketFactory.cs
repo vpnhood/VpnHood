@@ -1,7 +1,7 @@
 ﻿using System.Net.Sockets;
 using VpnHood.Tunneling.Factory;
 
-namespace VpnHood.Test.Factory;
+namespace VpnHood.Test.Services;
 
 public class TestSocketFactory : SocketFactory
 {

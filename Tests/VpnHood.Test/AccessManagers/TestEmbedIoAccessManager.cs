@@ -17,7 +17,7 @@ using VpnHood.Tunneling;
 
 // ReSharper disable UnusedMember.Local
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.AccessManagers;
 
 public class TestEmbedIoAccessManager : IDisposable
 {

@@ -2,8 +2,9 @@
 using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Client.Device.WinDivert;
+using VpnHood.Test.Services;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Device;
 
 internal class TestPacketCapture(TestDeviceOptions deviceOptions) : WinDivertPacketCapture
 {
@@ -30,13 +31,13 @@ internal class TestPacketCapture(TestDeviceOptions deviceOptions) : WinDivertPac
     {
         var ignore = false;
 
-        ignore |= 
+        ignore |=
             ipPacket.Extract<UdpPacket>()?.DestinationPort == 53 &&
             deviceOptions.CaptureDnsAddresses != null &&
             deviceOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
 
         ignore |= TestSocketProtector.IsProtectedPacket(ipPacket);
-            
+
         // ignore protected packets
         if (ignore)
             SendPacketToOutbound(ipPacket);

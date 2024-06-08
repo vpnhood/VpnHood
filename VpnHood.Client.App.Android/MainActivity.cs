@@ -2,7 +2,6 @@
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
-using Java.Lang;
 using VpnHood.Client.App.Droid.Common.Activities;
 using VpnHood.Client.App.Droid.Properties;
 
@@ -36,7 +35,6 @@ public class MainActivity : AndroidAppMainActivity
 
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        JavaSystem.SetProperty("debug.checkjni", "true"); //todo: remove
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AssemblyInfo.DefaultSpaPort,

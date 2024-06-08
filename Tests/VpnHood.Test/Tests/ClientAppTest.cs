@@ -343,12 +343,11 @@ public class ClientAppTest : TestBase
     public async Task State_Waiting()
     {
         // create Access Manager and token
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        var token = TestHelper.CreateAccessToken(fileAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        var token = TestHelper.CreateAccessToken(accessManager);
 
         // create server
-        await using var server1 = await TestHelper.CreateServer(testAccessManager);
+        await using var server1 = await TestHelper.CreateServer(accessManager);
 
         // create app & connect
         var appOptions = TestHelper.CreateClientAppOptions();
@@ -369,7 +368,7 @@ public class ClientAppTest : TestBase
         });
 
         // start a new server & waiting for connected state
-        await using var server2 = await TestHelper.CreateServer(testAccessManager);
+        await using var server2 = await TestHelper.CreateServer(accessManager);
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () =>
         {
             await TestHelper.Test_Https(throwError: false, timeout: 100);
@@ -621,18 +620,17 @@ public class ClientAppTest : TestBase
     public async Task update_server_token_url_from_server()
     {
         // create Access Manager and token
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        var token = TestHelper.CreateAccessToken(fileAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        var token = TestHelper.CreateAccessToken(accessManager);
 
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
-        fileAccessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
-        fileAccessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
-        fileAccessManager.ClearCache();
+        accessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
+        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
+        accessManager.ClearCache();
 
         // create server and app
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        await using var server = await TestHelper.CreateServer(accessManager);
         await using var app = TestHelper.CreateClientApp();
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -640,8 +638,8 @@ public class ClientAppTest : TestBase
         await app.Connect(clientProfile1.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
 
-        Assert.AreEqual(fileAccessManager.ServerConfig.ServerTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
-        CollectionAssert.AreEqual(fileAccessManager.ServerConfig.ServerSecret, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
+        Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrl, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Url);
+        CollectionAssert.AreEqual(accessManager.ServerConfig.ServerSecret, app.ClientProfileService.GetToken(token.TokenId).ServerToken.Secret);
     }
 
     [TestMethod]
@@ -656,18 +654,16 @@ public class ClientAppTest : TestBase
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
         fileAccessManagerOptions1.ServerTokenUrl = $"http://{endPoint}/accesskey";
-        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions1);
-        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
-        await using var server1 = await TestHelper.CreateServer(testAccessManager1);
+        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1);
+        await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = TestHelper.CreateAccessToken(server1);
         await server1.DisposeAsync();
 
         // create server 2
         await Task.Delay(1100); // wait for new CreatedTime
         fileAccessManagerOptions1.TcpEndPoints = [VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, tcpEndPoint.Port + 1)];
-        var fileAccessManager2 = TestHelper.CreateFileAccessManager(storagePath: fileAccessManager1.StoragePath, options: fileAccessManagerOptions1);
-        using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
-        await using var server2 = await TestHelper.CreateServer(testAccessManager2);
+        var accessManager2 = TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath, options: fileAccessManagerOptions1);
+        await using var server2 = await TestHelper.CreateServer(accessManager2);
         var token2 = TestHelper.CreateAccessToken(server2);
 
         //update web server enc_server_token

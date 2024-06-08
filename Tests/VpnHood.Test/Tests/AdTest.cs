@@ -66,10 +66,8 @@ public class AdTest : TestBase
     public async Task flexible_ad_should_not_close_session_if_load_ad_failed()
     {
         // create server
-        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
-            TestHelper.CreateFileAccessManagerOptions());
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(), TestHelper.CreateFileAccessManagerOptions());
+        await using var server = await TestHelper.CreateServer(fileAccessManager);
 
         // create access item
         var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
@@ -91,18 +89,16 @@ public class AdTest : TestBase
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
         // create server
-        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
-            TestHelper.CreateFileAccessManagerOptions());
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
+        using var testAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(), TestHelper.CreateFileAccessManagerOptions());
         await using var server = await TestHelper.CreateServer(testAccessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
+        var accessItem = testAccessManager.AccessItem_Create(adRequirement: AdRequirement.Flexible);
         accessItem.Token.ToAccessKey();
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        var adService = new TestAdService(fileAccessManager);
+        var adService = new TestAdService(testAccessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailShow = true;
@@ -117,18 +113,16 @@ public class AdTest : TestBase
     public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server
-        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
-            TestHelper.CreateFileAccessManagerOptions());
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(), TestHelper.CreateFileAccessManagerOptions());
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
+        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        var adService = new TestAdService(fileAccessManager);
+        var adService = new TestAdService(accessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailShow = true;
@@ -143,18 +137,16 @@ public class AdTest : TestBase
     public async Task Session_expiration_must_increase_by_ad()
     {
         // create server
-        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
-            TestHelper.CreateFileAccessManagerOptions());
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(), TestHelper.CreateFileAccessManagerOptions());
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
+        var accessItem = accessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.AdServices = [new TestAdService(fileAccessManager)];
+        appOptions.AdServices = [new TestAdService(accessManager)];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
@@ -169,19 +161,17 @@ public class AdTest : TestBase
     public async Task Session_exception_should_be_short_if_ad_is_not_accepted()
     {
         // create server
-        using var fileAccessManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(),
-            TestHelper.CreateFileAccessManagerOptions());
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var testManager = new AdAccessManager(TestHelper.CreateAccessManagerWorkingDir(), TestHelper.CreateFileAccessManagerOptions());
+        await using var server = await TestHelper.CreateServer(testManager);
 
         // create access item
-        var accessItem = fileAccessManager.AccessItem_Create(adRequirement: AdRequirement.Required);
+        var accessItem = testManager.AccessItem_Create(adRequirement: AdRequirement.Required);
         accessItem.Token.ToAccessKey();
-        fileAccessManager.RejectAllAds = true; // server will reject all ads
+        testManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.AdServices = [new TestAdService(fileAccessManager)];
+        appOptions.AdServices = [new TestAdService(testManager)];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect

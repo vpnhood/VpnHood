@@ -53,6 +53,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="AccessManagers\" />
 	  <Folder Include="Services\" />
 	</ItemGroup>
 

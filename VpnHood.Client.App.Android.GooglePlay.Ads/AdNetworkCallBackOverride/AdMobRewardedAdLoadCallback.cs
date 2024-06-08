@@ -1,9 +1,9 @@
 using Android.Gms.Ads.Rewarded;
 using Android.Runtime;
 
-namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
+namespace VpnHood.Client.App.Droid.GooglePlay.Ads.AdNetworkCallBackOverride;
 
-public abstract class RewardedAdLoadCallback : Android.Gms.Ads.Rewarded.RewardedAdLoadCallback
+public abstract class AdMobRewardedAdLoadCallback : RewardedAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 
@@ -15,7 +15,7 @@ public abstract class RewardedAdLoadCallback : Android.Gms.Ads.Rewarded.Rewarded
 
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
-        var rewardedAdLoadCallback = GetObject<RewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+        var rewardedAdLoadCallback = GetObject<AdMobRewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var rewardedAd = GetObject<RewardedAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (rewardedAd != null)
             rewardedAdLoadCallback?.OnAdLoaded(rewardedAd);
@@ -23,7 +23,7 @@ public abstract class RewardedAdLoadCallback : Android.Gms.Ads.Rewarded.Rewarded
 
     // ReSharper disable once StringLiteralTypo
     [Register("onAdLoaded", "(Lcom/google/android/gms/ads/rewarded/RewardedAd;)V", "GetOnAdLoadedHandler")]
-    public virtual void OnAdLoaded(RewardedAd rewardedAd)
+    protected virtual void OnAdLoaded(RewardedAd rewardedAd)
     {
     }
 }

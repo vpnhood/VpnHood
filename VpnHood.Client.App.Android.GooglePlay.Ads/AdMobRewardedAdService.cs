@@ -61,8 +61,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         }
     }
 
-    public async Task ShowAd(IUiContext uiContext, CancellationToken cancellationToken, 
-        string? customData, bool? isTestMode = false)
+    public async Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;

@@ -614,7 +614,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
         //todo: select best provider
-        await Services.AdServices.First().ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+        var adService = Services.AdServices.First();
+        await adService.LoadAd(RequiredUiContext, cancellationToken).VhConfigureAwait();
+        await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
         return adData;
     }
 

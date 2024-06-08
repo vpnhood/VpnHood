@@ -157,7 +157,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Services = new AppServices
         {
             AppCultureService = options.CultureService ?? new AppCultureService(this),
-            AdService = options.AdService,
+            AdService = options.AdServices,
             AccountService =
                 options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,

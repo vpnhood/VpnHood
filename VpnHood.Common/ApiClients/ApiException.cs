@@ -1,6 +1,5 @@
-namespace VpnHood.Common.Client;
+namespace VpnHood.Common.ApiClients;
 
-[Obsolete("User ApiClient namespace instead.")]
 public sealed class ApiException : Exception
 {
     public int StatusCode { get; }

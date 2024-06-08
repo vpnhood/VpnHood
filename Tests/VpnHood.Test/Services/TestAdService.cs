@@ -7,6 +7,7 @@ namespace VpnHood.Test.Services;
 
 public class TestAdService(TestAccessManager accessManager) : IAppAdService
 {
+    private bool _isAddLoaded;
     public bool FailShow { get; set; }
     public bool FailLoad { get; set; }
     public string NetworkName => "";
@@ -14,19 +15,24 @@ public class TestAdService(TestAccessManager accessManager) : IAppAdService
 
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        if (FailLoad)
+            throw new AdLoadException("Load Ad failed.");
+
+        _isAddLoaded = true;
+        return Task.CompletedTask;
     }
 
     public Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
-        if (FailLoad)
-            throw new AdLoadException("Load Ad failed.");
+        if (!_isAddLoaded)
+            throw new AdLoadException("Not Ad has been loaded.");
 
         if (FailShow)
             throw new Exception("Ad failed.");
 
-        accessManager.AddAdData(customData ??
-                                throw new AdException("The custom data for the rewarded ads is required."));
+        if (!string.IsNullOrEmpty(customData))
+            accessManager.AddAdData(customData);
+
         return Task.CompletedTask;
     }
 

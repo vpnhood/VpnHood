@@ -3,7 +3,7 @@ using Android.Runtime;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride;
 
-public abstract class AdMobRewardedAdLoadCallback : RewardedAdLoadCallback
+public abstract class RewardedAdLoadCallback : Android.Gms.Ads.Rewarded.RewardedAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 
@@ -15,7 +15,7 @@ public abstract class AdMobRewardedAdLoadCallback : RewardedAdLoadCallback
 
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
-        var rewardedAdLoadCallback = GetObject<AdMobRewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+        var rewardedAdLoadCallback = GetObject<RewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var rewardedAd = GetObject<RewardedAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (rewardedAd != null)
             rewardedAdLoadCallback?.OnAdLoaded(rewardedAd);

@@ -370,7 +370,7 @@ public class FileAccessManager : IAccessManager
         var token = accessItem.Token;
 
         // Write accessItem without server-token
-        var accessItemClone = VhUtil.JsonClone<AccessItem>(accessItem);
+        var accessItemClone = VhUtil.JsonClone(accessItem);
         accessItemClone.Token.ServerToken = null!; // remove server token part
         System.IO.File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItemClone));
 

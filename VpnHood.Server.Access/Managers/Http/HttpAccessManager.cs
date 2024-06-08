@@ -113,7 +113,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpPostAsync<ServerConfig>("configure", null, serverInfo);
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
     }
 }

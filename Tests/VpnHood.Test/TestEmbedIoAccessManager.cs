@@ -21,16 +21,19 @@ namespace VpnHood.Test;
 
 public class TestEmbedIoAccessManager : IDisposable
 {
+    private readonly bool _autoDisposeBaseAccessManager;
     private WebServer _webServer;
 
-    public IAccessManager FileAccessManager { get; }
+    public IAccessManager BaseAccessManager { get; }
+    public Uri BaseUri { get; }
+    public HttpException? HttpException { get; set; }
 
-
-    public TestEmbedIoAccessManager(IAccessManager fileFileAccessManager, bool autoStart = true)
+    public TestEmbedIoAccessManager(IAccessManager baseAccessManager, bool autoStart = true, bool autoDisposeBaseAccessManager = true)
     {
+        _autoDisposeBaseAccessManager = autoDisposeBaseAccessManager;
         try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
 
-        FileAccessManager = fileFileAccessManager;
+        BaseAccessManager = baseAccessManager;
         BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
@@ -38,16 +41,6 @@ public class TestEmbedIoAccessManager : IDisposable
             _webServer.Start();
             VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} is listening to {BaseUri}");
         }
-    }
-
-    public Uri BaseUri { get; }
-    public HttpException? HttpException { get; set; }
-
-    public void Dispose()
-    {
-        Stop();
-        _webServer.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     public void Start()
@@ -80,9 +73,17 @@ public class TestEmbedIoAccessManager : IDisposable
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 
+    public void Dispose()
+    {
+        Stop();
+        _webServer.Dispose();
+        if (_autoDisposeBaseAccessManager)
+            BaseAccessManager.Dispose();
+    }
+
     private class ApiController(TestEmbedIoAccessManager embedIoAccessManager) : WebApiController
     {
-        private IAccessManager AccessManager => embedIoAccessManager.FileAccessManager;
+        private IAccessManager AccessManager => embedIoAccessManager.BaseAccessManager;
 
         protected override void OnBeforeHandler()
         {

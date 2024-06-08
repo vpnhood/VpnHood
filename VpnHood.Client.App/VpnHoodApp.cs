@@ -157,9 +157,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Services = new AppServices
         {
             AppCultureService = options.CultureService ?? new AppCultureService(this),
-            AdService = options.AdServices,
-            AccountService =
-                options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
+            AdServices = options.AdServices,
+            AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
             UiService = uiService
         };
@@ -612,9 +611,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
-        if (Services.AdService == null) throw new Exception("AdService has not been initialized.");
+        if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        await Services.AdService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+        //todo: select best provider
+        await Services.AdServices.First().ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
         return adData;
     }
 

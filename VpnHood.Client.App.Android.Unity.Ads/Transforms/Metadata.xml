@@ -1,0 +1,27 @@
+﻿<metadata>
+	<!--
+  This sample removes the class: android.support.v4.content.AsyncTaskLoader.LoadTask:
+  <remove-node path="/api/package[@name='android.support.v4.content']/class[@name='AsyncTaskLoader.LoadTask']" />
+  
+  This sample removes the method: android.support.v4.content.CursorLoader.loadInBackground:
+  <remove-node path="/api/package[@name='android.support.v4.content']/class[@name='CursorLoader']/method[@name='loadInBackground']" />
+  -->
+	<attr path="/api/package[@name='com.unity3d.services.store']/class[@name='StoreError']/field[@name='STORE_ERROR']" name="managedName">StoreErrorValue</attr>
+	<attr path="/api/package[@name='com.unity3d.services.core.request']/interface[@name='IWebRequestListener']/method[@name='onFailed']" name="managedName">onFailedEvent</attr>
+	<attr path="/api/package[@name='com.unity3d.services.core.webview.bridge']/class[@name='Invocation']" name="managedName">NewInvocation</attr>
+
+	<attr path="/api/package[@name='com.unity3d.services.ads.gmascar.bridges']/class[@name='MobileAdsBridge']/method[@name='getClassName' and count(parameter)=0]" name="visibility">protected</attr>
+	<attr path="/api/package[@name='com.unity3d.services.ads.gmascar.bridges']/class[@name='InitializationStatusBridge']/method[@name='getClassName' and count(parameter)=0]" name="visibility">protected</attr>
+	<attr path="/api/package[@name='com.unity3d.services.ads.gmascar.bridges']/class[@name='InitializeListenerBridge']/method[@name='getClassName' and count(parameter)=0]" name="visibility">protected</attr>
+
+	<attr path="/api/package[@name='com.unity3d.services.store.gpbl.bridges.billingclient.v4']/class[@name='BillingClientBridge.BuilderBridge']/method[@name='build' and count(parameter)=0]" name="managedOverride">override</attr>
+	<attr path="/api/package[@name='com.unity3d.services.store.gpbl.bridges.billingclient.v4']/class[@name='BillingClientBridge.BuilderBridge']/method[@name='build' and count(parameter)=0]" name="managedReturn">IBillingClient</attr>
+
+	<attr path="/api/package[@name='com.unity3d.services.ads.operation.load']/class[@name='LoadModuleDecorator']/method[@name='get' and count(parameter)=1 and parameter[1][@type='java.lang.String']]" name="managedReturn">Java.Lang.Object</attr>
+	<attr path="/api/package[@name='com.unity3d.services.ads.operation.load']/class[@name='LoadModuleDecorator']/method[@name='set' and count(parameter)=1]/parameter[@name='sharedObject']" name="managedType">Java.Lang.Object</attr>
+	<attr path="/api/package[@name='com.unity3d.services.ads.operation.load']/class[@name='LoadModuleDecorator']/method[@name='executeAdOperation' and count(parameter)=2]/parameter[@name='state']" name="managedType">Java.Lang.Object</attr>
+
+	<attr path="/api/package[@name='com.unity3d.services.ads.operation.show']/class[@name='ShowModuleDecorator']/method[@name='executeAdOperation' and count(parameter)=2]/parameter[@name='state']" name="managedType">Java.Lang.Object</attr>
+	<attr path="/api/package[@name='com.unity3d.services.ads.operation.show']/class[@name='ShowModuleDecorator']/method[@name='get' and count(parameter)=1 and parameter[1][@type='java.lang.String']]" name="managedReturn">Java.Lang.Object</attr>
+	<attr path="/api/package[@name='com.unity3d.services.ads.operation.show']/class[@name='ShowModuleDecorator']/method[@name='set' and count(parameter)=1]/parameter[@name='sharedObject']" name="managedType">Java.Lang.Object</attr>
+</metadata>

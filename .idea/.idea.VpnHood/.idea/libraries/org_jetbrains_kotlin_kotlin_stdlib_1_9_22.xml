@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="org.jetbrains.kotlin.kotlin-stdlib-1.9.22">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.nuget/packages/xamarin.kotlin.stdlib/1.9.22.1/jar/org.jetbrains.kotlin.kotlin-stdlib-1.9.22.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

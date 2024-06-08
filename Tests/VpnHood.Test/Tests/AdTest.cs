@@ -18,7 +18,16 @@ public class AdTest : TestBase
         public bool FailShow { get; set; }
         public bool FailLoad { get; set; }
 
-        public Task ShowAd(IUiContext uiContext, string customData, CancellationToken cancellationToken)
+        // TODO must be filled with actual value
+        public string NetworkName { get; } = "";
+        public AppAdType AdType { get; } = AppAdType.InterstitialAd;
+
+        public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ShowAd(IUiContext uiContext, CancellationToken cancellationToken, string? customData)
         {
             if (FailLoad)
                 throw new AdLoadException("Load Ad failed.");
@@ -26,7 +35,8 @@ public class AdTest : TestBase
             if (FailShow)
                 throw new Exception("Ad failed.");
 
-            accessManager.AddAdData(customData);
+            accessManager.AddAdData(customData ?? 
+                                    throw new AdException("The custom data for the rewarded ads is required."));
             return Task.CompletedTask;
         }
 
@@ -70,7 +80,7 @@ public class AdTest : TestBase
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
         var adService = new TestAdService(fileAccessManager);
-        appOptions.AdService = adService;
+        appOptions.AdServices = adService;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailLoad = true;
 
@@ -95,7 +105,7 @@ public class AdTest : TestBase
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
         var adService = new TestAdService(fileAccessManager);
-        appOptions.AdService = adService;
+        appOptions.AdServices = adService;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailShow = true;
 
@@ -121,7 +131,7 @@ public class AdTest : TestBase
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
         var adService = new TestAdService(fileAccessManager);
-        appOptions.AdService = adService;
+        appOptions.AdServices = adService;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailShow = true;
 
@@ -146,7 +156,7 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.AdService = new TestAdService(fileAccessManager);
+        appOptions.AdServices = new TestAdService(fileAccessManager);
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect
@@ -173,7 +183,7 @@ public class AdTest : TestBase
 
         // create client app
         var appOptions = TestHelper.CreateClientAppOptions();
-        appOptions.AdService = new TestAdService(fileAccessManager);
+        appOptions.AdServices = new TestAdService(fileAccessManager);
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
         // connect

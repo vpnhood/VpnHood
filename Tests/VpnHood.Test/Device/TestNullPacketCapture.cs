@@ -4,7 +4,7 @@ using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Common.Net;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Device;
 
 internal class TestNullPacketCapture : IPacketCapture
 {

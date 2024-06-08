@@ -5,7 +5,7 @@ using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Messaging;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.AccessManagers;
 
 public class TestAccessManager(string storagePath, FileAccessManagerOptions options)
     : FileAccessManager(storagePath, options)
@@ -66,7 +66,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
                 ret.ErrorCode = SessionErrorCode.RedirectHost;
             }
         }
-        
+
         return ret;
     }
 }

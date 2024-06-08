@@ -18,7 +18,9 @@ using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Messaging;
-using VpnHood.Test.Factory;
+using VpnHood.Test.AccessManagers;
+using VpnHood.Test.Device;
+using VpnHood.Test.Services;
 using VpnHood.Tunneling;
 using ProtocolType = PacketDotNet.ProtocolType;
 

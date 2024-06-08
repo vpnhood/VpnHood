@@ -22,8 +22,8 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         return ret;
     }
      
-    public AppAdNetworks NetworkName { get; } = AppAdNetworks.AdMob;
-    public AppAdType AdType { get; } = AppAdType.RewardedAd;
+    public string NetworkName => "AdMob";
+    public AppAdType AdType => AppAdType.RewardedAd;
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {

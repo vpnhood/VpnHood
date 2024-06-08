@@ -1,9 +1,8 @@
-﻿namespace VpnHood.Client.App.Abstractions
+﻿namespace VpnHood.Client.App.Abstractions;
+
+public enum AppAdType
 {
-    public enum AppAdType
-    {
-        InterstitialAd,
-        RewardedAd,
-        AppOpenAd
-    }
+    InterstitialAd,
+    RewardedAd,
+    AppOpenAd
 }

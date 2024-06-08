@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Common.Utils;

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Mime;
 using EmbedIO;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Client.App.WebServer;

@@ -43,6 +43,7 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 & "$solutionDir/VpnHood.Client.App.Android.Common/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App.Android.GooglePlay/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App.Android.GooglePlay.Core/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App.Android.Ads.AdMob/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App.Win.Common/_publish.ps1";
 & "$solutionDir/VpnHood.Server/_publish.ps1";
 & "$solutionDir/VpnHood.Server.Access/_publish.ps1";

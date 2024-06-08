@@ -1,13 +1,13 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.GooglePlay.Ads.AdNetworkCallBackOverride;
+using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Utils;
 
-namespace VpnHood.Client.App.Droid.GooglePlay.Ads;
+namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
 public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
 {

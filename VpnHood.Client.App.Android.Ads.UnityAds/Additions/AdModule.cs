@@ -1,9 +1,6 @@
 ﻿using Com.Unity3d.Services.Core.Webview.Bridge;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Com.Unity3d.Services.Ads.Operation
+namespace VpnHood.Client.App.Droid.Ads.VhUnityAds.Additions
 {
     public abstract partial class AdModule
     {

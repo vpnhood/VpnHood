@@ -19,16 +19,15 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Configure()
     {
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
 
-        Assert.IsNotNull(testAccessManager.LastServerInfo);
-        Assert.IsTrue(testAccessManager.LastServerInfo.FreeUdpPortV4 > 0);
+        Assert.IsNotNull(accessManager.LastServerInfo);
+        Assert.IsTrue(accessManager.LastServerInfo.FreeUdpPortV4 > 0);
         Assert.IsTrue(
-            testAccessManager.LastServerInfo.PrivateIpAddresses.All(
+            accessManager.LastServerInfo.PrivateIpAddresses.All(
                 x => x.AddressFamily != AddressFamily.InterNetworkV6) ||
-            testAccessManager.LastServerInfo?.FreeUdpPortV6 > 0);
+            accessManager.LastServerInfo?.FreeUdpPortV6 > 0);
     }
 
     [TestMethod]
@@ -38,16 +37,15 @@ public class ServerTest : TestBase
         var serverOptions = TestHelper.CreateFileAccessManagerOptions();
         serverOptions.SessionOptions.SyncCacheSize = 10000000;
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMicroseconds(200);
-        var fileAccessManager = TestHelper.CreateFileAccessManager(serverOptions);
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        var accessManager = TestHelper.CreateAccessManager(serverOptions);
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
 
         // check usage when usage should be 0
-        var sessionResponseEx = await testAccessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
+        var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
         Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received == 0);
 
         // lets do transfer
@@ -55,42 +53,41 @@ public class ServerTest : TestBase
 
         // check usage should still not be 0 after interval
         await Task.Delay(1000);
-        sessionResponseEx = await testAccessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
+        sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
         Assert.IsTrue(sessionResponseEx.AccessUsage!.Traffic.Received > 0);
     }
 
     [TestMethod]
     public async Task Reconfigure_Listeners()
     {
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        fileAccessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // change tcp end points
         var newTcpEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test,
             "Test: Changing access server TcpEndPoint. TcpEndPoint: {TcpEndPoint}", newTcpEndPoint);
-        fileAccessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
-        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode);
+        accessManager.ServerConfig.TcpEndPoints = [newTcpEndPoint];
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
+            () => accessManager.LastServerStatus!.ConfigCode);
         Assert.AreNotEqual(
-            VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, fileAccessManager.ServerConfig.TcpEndPoints[0].Port),
-            fileAccessManager.ServerConfig.TcpEndPoints[0]);
+            VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.TcpEndPoints[0].Port),
+            accessManager.ServerConfig.TcpEndPoints[0]);
 
         // change udp end points
         var newUdpEndPoint = VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback);
         VhLogger.Instance.LogTrace(GeneralEventId.Test,
             "Test: Changing access server UdpEndPoint. UdpEndPoint: {UdpEndPoint}", newUdpEndPoint);
-        fileAccessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
-        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode); 
+        accessManager.ServerConfig.UdpEndPoints = [newUdpEndPoint];
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
+            () => accessManager.LastServerStatus!.ConfigCode); 
 
         Assert.AreNotEqual(
-            VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, fileAccessManager.ServerConfig.UdpEndPoints[0].Port),
-            fileAccessManager.ServerConfig.UdpEndPoints[0]);
+            VhUtil.GetFreeUdpEndPoint(IPAddress.Loopback, accessManager.ServerConfig.UdpEndPoints[0].Port),
+            accessManager.ServerConfig.UdpEndPoints[0]);
     }
 
     [TestMethod]
@@ -98,8 +95,8 @@ public class ServerTest : TestBase
     {
         var serverEndPoint = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint]);
-        using var fileAccessManager = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
-        var serverConfig = fileAccessManager.ServerConfig;
+        using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        var serverConfig = accessManager.ServerConfig;
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);
         serverConfig.TrackingOptions.TrackClientIp = true;
         serverConfig.TrackingOptions.TrackLocalPort = true;
@@ -111,19 +108,18 @@ public class ServerTest : TestBase
         serverConfig.SessionOptions.SyncCacheSize = 2075;
         serverConfig.SessionOptions.TcpBufferSize = 2076;
         serverConfig.ServerSecret = VhUtil.GenerateKey();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
 
         var dateTime = DateTime.Now;
-        await using var server = await TestHelper.CreateServer(testAccessManager);
-        Assert.IsTrue(testAccessManager.LastConfigureTime > dateTime);
+        await using var server = await TestHelper.CreateServer(accessManager);
+        Assert.IsTrue(accessManager.LastConfigureTime > dateTime);
 
         dateTime = DateTime.Now;
-        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode);
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
+            () => accessManager.LastServerStatus!.ConfigCode);
 
         CollectionAssert.AreEqual(serverConfig.ServerSecret, server.SessionManager.ServerSecret);
-        Assert.IsTrue(testAccessManager.LastConfigureTime > dateTime);
+        Assert.IsTrue(accessManager.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
         Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp,
@@ -145,14 +141,13 @@ public class ServerTest : TestBase
     public async Task Close_session_by_client_disconnect()
     {
         // create server
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
-        Assert.IsTrue(fileAccessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
+        Assert.IsTrue(accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 
         await TestHelper.WaitForClientState(client, ClientState.Disposed);
@@ -164,9 +159,8 @@ public class ServerTest : TestBase
     {
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
-        using var fileAccessManager1 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions);
-        using var testAccessManager1 = new TestAccessManager(fileAccessManager1);
-        await using var server1 = await TestHelper.CreateServer(testAccessManager1);
+        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions);
+        await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
         var token = TestHelper.CreateAccessToken(server1);
@@ -176,11 +170,10 @@ public class ServerTest : TestBase
 
         // restart server and access manager
         await server1.DisposeAsync();
-        testAccessManager1.Dispose();
-        fileAccessManager1.Dispose();
-        using var fileAccessManager2 = TestHelper.CreateFileAccessManager(fileAccessManagerOptions, fileAccessManager1.StoragePath);
-        using var testAccessManager2 = new TestAccessManager(fileAccessManager2);
-        await using var server2 = await TestHelper.CreateServer(testAccessManager2);
+        accessManager1.Dispose();
+        accessManager1.Dispose();
+        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions, accessManager1.StoragePath);
+        await using var server2 = await TestHelper.CreateServer(accessManager2);
 
         VhLogger.Instance.LogInformation("Test: Sending another HTTP Request...");
         await TestHelper.Test_Https();
@@ -191,16 +184,15 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Recover_should_call_access_server_only_once()
     {
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // Create Client
-        var token1 = TestHelper.CreateAccessToken(fileAccessManager);
+        var token1 = TestHelper.CreateAccessToken(accessManager);
         await using var client = await TestHelper.CreateClient(token1);
 
         await server.DisposeAsync();
-        await using var server2 = await TestHelper.CreateServer(testAccessManager);
+        await using var server2 = await TestHelper.CreateServer(accessManager);
         await Task.WhenAll(
             TestHelper.Test_Https(timeout: 10000, throwError: false),
             TestHelper.Test_Https(timeout: 10000, throwError: false),
@@ -208,7 +200,7 @@ public class ServerTest : TestBase
             TestHelper.Test_Https(timeout: 10000, throwError: false)
         );
 
-        Assert.AreEqual(1, testAccessManager.SessionGetCounter);
+        Assert.AreEqual(1, accessManager.SessionGetCounter);
 
 
         await client.DisposeAsync();
@@ -236,15 +228,14 @@ public class ServerTest : TestBase
         // create server
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         accessManagerOptions.SessionOptions.SyncCacheSize = 1000000;
-        using var fileAccessManager = TestHelper.CreateFileAccessManager(accessManagerOptions);
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager(accessManagerOptions);
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
-        fileAccessManager.SessionController.Sessions.Clear();
+        accessManager.SessionController.Sessions.Clear();
         await server.SessionManager.SyncSessions();
 
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () =>
@@ -317,11 +308,9 @@ public class ServerTest : TestBase
         VhLogger.IsAnonymousMode = true;
 
         // create server
-        using var fileAccessManager = TestHelper.CreateFileAccessManager();
-        fileAccessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
-
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
+        await using var server = await TestHelper.CreateServer(accessManager);
 
         // set DnsChallenge
         var dnsChallenge = new DnsChallenge
@@ -330,29 +319,29 @@ public class ServerTest : TestBase
             Token = "DnsChallenge",
             Timeout = TimeSpan.FromSeconds(60)
         };
-        fileAccessManager.ServerConfig.DnsChallenge = dnsChallenge;
+        accessManager.ServerConfig.DnsChallenge = dnsChallenge;
 
         // notify server
-        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode);
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
+            () => accessManager.LastServerStatus!.ConfigCode);
 
         // server should listen to port 80 for HTTP-01 challenge
         var httpClient = new HttpClient();
-        var url = new Uri($"http://{fileAccessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{dnsChallenge.Token}");
+        var url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{dnsChallenge.Token}");
         var keyAuthorization = await httpClient.GetStringAsync(url);
         Assert.AreEqual(dnsChallenge.KeyAuthorization, keyAuthorization);
 
         // check invalid url
-        url = new Uri($"http://{fileAccessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
+        url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
         var response = await httpClient.GetAsync(url);
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
 
         // remove challenge and notify server
-        fileAccessManager.ServerConfig.DnsChallenge = null;
-        fileAccessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(fileAccessManager.ServerConfig.ConfigCode,
-            () => testAccessManager.LastServerStatus!.ConfigCode);
+        accessManager.ServerConfig.DnsChallenge = null;
+        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
+        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
+            () => accessManager.LastServerStatus!.ConfigCode);
 
         await Assert.ThrowsExceptionAsync<HttpRequestException>(() => httpClient.GetAsync(url));
 

@@ -27,6 +27,7 @@ public class AdTest : TestBase
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         adService.FailLoad = true;
+        adService.FailShow = true; // should not reach this state
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());

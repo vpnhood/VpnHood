@@ -6,7 +6,6 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Utils;
-using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
@@ -57,7 +56,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             _adLoadCallback = null;
             _lastLoadAdTime = DateTime.MinValue;
             if (ex is AdLoadException) throw;
-            throw new AdLoadException($"Failed to load {AdType.ToString()}.", ex);
+            throw new AdLoadException($"Failed to load {AdType}.", ex);
         }
     }
 
@@ -69,12 +68,11 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             throw new AdException("MainActivity has been destroyed before showing the ad.");
         
         if (_loadedAd == null)
-            throw new AdException($"The {AdType.ToString()} has not benn loaded.");
+            throw new AdException($"The {AdType} has not benn loaded.");
 
         // create ad custom data
-        var serverSideVerificationOptions = new ServerSideVerificationOptions.Builder()
-            .SetCustomData(customData ?? 
-                           throw new AdException("The custom data for the rewarded ads is required."))
+        var verificationOptions = new ServerSideVerificationOptions.Builder()
+            .SetCustomData(customData ?? "")
             .Build();
 
         var fullScreenContentCallback = new MyFullScreenContentCallback();
@@ -82,7 +80,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         activity.RunOnUiThread(() =>
         {
-            _loadedAd.SetServerSideVerificationOptions(serverSideVerificationOptions);
+            _loadedAd.SetServerSideVerificationOptions(verificationOptions);
             _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
             _loadedAd.Show(activity, userEarnedRewardListener);
         });
@@ -133,7 +131,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
         }
     }
-    private class MyOnUserEarnedRewardListener : Object, IOnUserEarnedRewardListener
+    private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener
     {
         private readonly TaskCompletionSource<IRewardItem> _earnedRewardCompletionSource = new();
         public Task<IRewardItem> UserEarnedRewardTask => _earnedRewardCompletionSource.Task;

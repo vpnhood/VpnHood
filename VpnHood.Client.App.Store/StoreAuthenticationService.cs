@@ -144,6 +144,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
                 })
                 .VhConfigureAwait();
         }
+        // store must update its nuget package to support UnregisteredUserException
         catch (ApiException ex)
         {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)

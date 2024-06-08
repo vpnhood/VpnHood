@@ -9,9 +9,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Common.Utils;
 
 // ReSharper disable UnusedMember.Global
-namespace VpnHood.Common.Client;
+namespace VpnHood.Common.ApiClients;
 
-[Obsolete("User ApiClient namespace instead.")]
 public class ApiClientBase : ApiClientCommon
 {
     private class HttpNoResult;

@@ -4,9 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Exceptions;
 
-namespace VpnHood.Common.Client;
+namespace VpnHood.Common.ApiClients;
 
-[Obsolete("User ApiClient namespace instead.")]
 public class ApiError
 {
     public string TypeName { get; set; }

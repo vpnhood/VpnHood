@@ -1,5 +1,4 @@
 ﻿using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Settings;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;

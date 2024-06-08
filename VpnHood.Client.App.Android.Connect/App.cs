@@ -1,9 +1,9 @@
 ﻿using System.Drawing;
 using Android.Runtime;
+using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
-using VpnHood.Client.App.Droid.GooglePlay.Ads;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Store;
 

@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Android Client App Common Library for Google Ads</Description>
+		<Description>VpnHood Android Ad Library for UnityAds</Description>
 		<TargetFramework>net8.0-android34.0</TargetFramework>
 		<SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Client.App.Droid.GooglePlay.Ads</RootNamespace>
+		<RootNamespace>VpnHood.Client.App.Droid.Ads.VhUnityAds</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -21,7 +21,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.3.477</Version>
+		<Version>4.5.522</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
@@ -35,10 +35,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="122.3.0.4" />
+	  <ProjectReference Include="..\VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj" />
+	  <ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
-	</ItemGroup>
 </Project>

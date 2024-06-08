@@ -5,7 +5,7 @@ using PacketDotNet;
 using VpnHood.Server;
 using VpnHood.Tunneling;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Services;
 
 public class TestNetFilter : NetFilter
 {

@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Device;
 
 internal class TestDeviceOptions
 {

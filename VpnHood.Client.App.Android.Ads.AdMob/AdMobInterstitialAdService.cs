@@ -56,7 +56,7 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
             _adLoadCallback = null;
             _lastLoadAdTime = DateTime.MinValue;
             if (ex is AdLoadException) throw;
-            throw new AdLoadException($"Failed to load {AdType.ToString()}.", ex);
+            throw new AdLoadException($"Failed to load {AdType}.", ex);
         }
     }
 
@@ -68,7 +68,7 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
             throw new AdException("MainActivity has been destroyed before showing the ad.");
         
         if (_loadedAd == null)
-            throw new AdException($"The {AdType.ToString()} has not benn loaded.");
+            throw new AdException($"The {AdType} has not benn loaded.");
 
         var fullScreenContentCallback = new MyFullScreenContentCallback();
 

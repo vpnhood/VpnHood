@@ -1,9 +1,4 @@
-﻿using Com.Unity3d.Services.Core.Webview.Bridge;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Com.Unity3d.Services.Ads.Operation.Show
+﻿namespace VpnHood.Client.App.Droid.Ads.VhUnityAds.Additions
 {
     public partial class ShowModuleDecorator
     {

@@ -1,9 +1,8 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 
-namespace VpnHood.Common.Client;
+namespace VpnHood.Common.ApiClients;
 
-[Obsolete("User ApiClient namespace instead.")]
 public abstract class ApiClientCommon
 {
     public Uri? DefaultBaseAddress { get; set; }

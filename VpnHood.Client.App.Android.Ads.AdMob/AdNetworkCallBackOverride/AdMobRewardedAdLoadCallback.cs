@@ -1,7 +1,7 @@
 using Android.Gms.Ads.Rewarded;
 using Android.Runtime;
 
-namespace VpnHood.Client.App.Droid.GooglePlay.Ads.AdNetworkCallBackOverride;
+namespace VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride;
 
 public abstract class AdMobRewardedAdLoadCallback : RewardedAdLoadCallback
 {

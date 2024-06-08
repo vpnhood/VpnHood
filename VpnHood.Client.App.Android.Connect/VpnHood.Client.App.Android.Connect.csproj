@@ -71,7 +71,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Ads\VpnHood.Client.App.Android.GooglePlay.Ads.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Android.Ads.AdMob\VpnHood.Client.App.Android.Ads.AdMob.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />

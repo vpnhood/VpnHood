@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+.idea/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -345,5 +346,4 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 /Foo
-
 /VpnHood.Client.App.Win.Setup/VpnHood.Client.App.Win.Setup-cache

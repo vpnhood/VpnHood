@@ -3,7 +3,6 @@ using Android.Gms.Ads.Rewarded;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
 using RewardedAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.RewardedAdLoadCallback;
@@ -12,9 +11,10 @@ namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
 public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 {
-    private MyRewardedAdLoadCallback? _adLoadCallback;
-    private DateTime _lastLoadAdTime = DateTime.MinValue;
     private RewardedAd? _loadedAd;
+    public string NetworkName => "AdMob";
+    public AppAdType AdType => AppAdType.RewardedAd;
+    public DateTime? AdLoadedTime { get; private set; }
 
     public static AdMobRewardedAdService Create(string adUnitId)
     {
@@ -22,8 +22,11 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         return ret;
     }
 
-    public string NetworkName => "AdMob";
-    public AppAdType AdType => AppAdType.RewardedAd;
+    public bool IsCountrySupported(string countryCode)
+    {
+        // these countries are not supported at all
+        return countryCode != "CN" && countryCode != "IR";
+    }
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
@@ -32,30 +35,29 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before loading the ad.");
 
-        // Ad already loaded
-        if (_adLoadCallback != null && _lastLoadAdTime.AddHours(1) < DateTime.Now)
-            _loadedAd = await _adLoadCallback.Task.VhConfigureAwait();
+        // reset the last loaded ad
+        AdLoadedTime = null;
+        _loadedAd = null;
 
         // Load a new Ad
         try
         {
-            _adLoadCallback = new MyRewardedAdLoadCallback();
+            var adLoadCallback = new MyRewardedAdLoadCallback();
             var adRequest = new AdRequest.Builder().Build();
-            activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, _adLoadCallback));
+            activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
             var cancellationTask = new TaskCompletionSource();
             cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(_adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
+            await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rewardedAd = await _adLoadCallback.Task.VhConfigureAwait();
-            _lastLoadAdTime = DateTime.Now;
+            var rewardedAd = await adLoadCallback.Task.VhConfigureAwait();
+            AdLoadedTime = DateTime.Now;
             _loadedAd = rewardedAd;
         }
+        // Throw AdLoadException except if user canceled the operation
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _adLoadCallback = null;
-            _lastLoadAdTime = DateTime.MinValue;
             if (ex is AdLoadException) throw;
             throw new AdLoadException($"Failed to load {AdType}.", ex);
         }
@@ -71,35 +73,40 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         if (_loadedAd == null)
             throw new AdException($"The {AdType} has not benn loaded.");
 
-        // create ad custom data
-        var verificationOptions = new ServerSideVerificationOptions.Builder()
-            .SetCustomData(customData ?? "")
-            .Build();
-
-        var fullScreenContentCallback = new MyFullScreenContentCallback();
-        var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
-
-        activity.RunOnUiThread(() =>
+        try
         {
-            _loadedAd.SetServerSideVerificationOptions(verificationOptions);
-            _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
-            _loadedAd.Show(activity, userEarnedRewardListener);
-        });
+            // create ad custom data
+            var verificationOptions = new ServerSideVerificationOptions.Builder()
+                .SetCustomData(customData ?? "")
+                .Build();
 
-        // wait for earn reward or dismiss
-        var cancellationTask = new TaskCompletionSource();
-        cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask,
-            cancellationTask.Task).VhConfigureAwait();
-        cancellationToken.ThrowIfCancellationRequested();
+            var fullScreenContentCallback = new MyFullScreenContentCallback();
+            var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
 
-        // check task errors
-        if (fullScreenContentCallback.DismissedTask.IsFaulted)
-            throw fullScreenContentCallback.DismissedTask.Exception;
+            activity.RunOnUiThread(() =>
+            {
+                _loadedAd.SetServerSideVerificationOptions(verificationOptions);
+                _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
+                _loadedAd.Show(activity, userEarnedRewardListener);
+            });
 
-        _adLoadCallback = null;
+            // wait for earn reward or dismiss
+            var cancellationTask = new TaskCompletionSource();
+            cancellationToken.Register(cancellationTask.SetResult);
+            await Task.WhenAny(fullScreenContentCallback.DismissedTask, userEarnedRewardListener.UserEarnedRewardTask,
+                cancellationTask.Task).VhConfigureAwait();
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // check task errors
+            if (fullScreenContentCallback.DismissedTask.IsFaulted)
+                throw fullScreenContentCallback.DismissedTask.Exception;
+        }
+        finally
+        {
+            _loadedAd = null;
+            AdLoadedTime = null;
+        }
     }
-
 
     private class MyRewardedAdLoadCallback : RewardedAdLoadCallback
     {

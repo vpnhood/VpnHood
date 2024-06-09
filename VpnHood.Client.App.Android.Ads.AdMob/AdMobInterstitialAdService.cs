@@ -3,27 +3,38 @@ using Android.Gms.Ads.Interstitial;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
 using InterstitialAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.InterstitialAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
-public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
+public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAdService
 {
-    private MyInterstitialAdLoadCallback? _adLoadCallback;
-    private DateTime _lastLoadAdTime = DateTime.MinValue;
     private InterstitialAd? _loadedAd;
+    public string NetworkName => "AdMob";
+    public AppAdType AdType => AppAdType.InterstitialAd;
+    public DateTime? AdLoadedTime {get; private set; }
 
-    public static AdMobInterstitialAdService Create(string adUnitId)
+    public static AdMobInterstitialAdService Create(string adUnitId, bool hasVideo)
     {
-        var ret = new AdMobInterstitialAdService(adUnitId);
+        var ret = new AdMobInterstitialAdService(adUnitId, hasVideo);
         return ret;
     }
 
-    public string NetworkName => "AdMob";
-    public AppAdType AdType => AppAdType.InterstitialAd;
+    public bool IsCountrySupported(string countryCode)
+    {
+        // these countries are not supported at all
+        if (countryCode == "CN")
+            return false;
+
+        // these countries video ad is not supported
+        if (hasVideo)
+            return countryCode == "IR";
+
+        return true;
+    }
+
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
@@ -32,30 +43,30 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before loading the ad.");
 
-        // Ad already loaded
-        if (_adLoadCallback != null && _lastLoadAdTime.AddHours(1) < DateTime.Now)
-            _loadedAd = await _adLoadCallback.Task.VhConfigureAwait();
+        // reset the last loaded ad
+        AdLoadedTime = null;
+        _loadedAd = null;
 
         // Load a new Ad
         try
         {
-            _adLoadCallback = new MyInterstitialAdLoadCallback();
+            var adLoadCallback = new MyInterstitialAdLoadCallback();
             var adRequest = new AdRequest.Builder().Build();
-            activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, _adLoadCallback));
+            activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
             var cancellationTask = new TaskCompletionSource();
             cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(_adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
+            await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
             cancellationToken.ThrowIfCancellationRequested();
 
-            var interstitialAd = await _adLoadCallback.Task.VhConfigureAwait();
-            _lastLoadAdTime = DateTime.Now;
+            var interstitialAd = await adLoadCallback.Task.VhConfigureAwait();
+            AdLoadedTime = DateTime.Now;
             _loadedAd = interstitialAd;
         }
+        // Throw AdLoadException except if user canceled the operation
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _adLoadCallback = null;
-            _lastLoadAdTime = DateTime.MinValue;
+            AdLoadedTime = null;
             if (ex is AdLoadException) throw;
             throw new AdLoadException($"Failed to load {AdType}.", ex);
         }
@@ -67,29 +78,35 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before showing the ad.");
-        
+
         if (_loadedAd == null)
             throw new AdException($"The {AdType} has not been loaded.");
 
-        var fullScreenContentCallback = new MyFullScreenContentCallback();
-
-        activity.RunOnUiThread(() =>
+        try
         {
-            _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
-            _loadedAd.Show(activity);
-        });
+            var fullScreenContentCallback = new MyFullScreenContentCallback();
+            activity.RunOnUiThread(() =>
+            {
+                _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
+                _loadedAd.Show(activity);
+            });
 
-        // wait for show or dismiss
-        var cancellationTask = new TaskCompletionSource();
-        cancellationToken.Register(cancellationTask.SetResult);
-        await Task.WhenAny(fullScreenContentCallback.DismissedTask, cancellationTask.Task).VhConfigureAwait();
-        cancellationToken.ThrowIfCancellationRequested();
+            // wait for show or dismiss
+            var cancellationTask = new TaskCompletionSource();
+            cancellationToken.Register(cancellationTask.SetResult);
+            await Task.WhenAny(fullScreenContentCallback.DismissedTask, cancellationTask.Task).VhConfigureAwait();
+            cancellationToken.ThrowIfCancellationRequested();
 
-        // check task errors
-        if (fullScreenContentCallback.DismissedTask.IsFaulted)
-            throw fullScreenContentCallback.DismissedTask.Exception;
+            // check task errors
+            if (fullScreenContentCallback.DismissedTask.IsFaulted)
+                throw fullScreenContentCallback.DismissedTask.Exception;
+        }
+        finally
+        {
+            _loadedAd = null;
+            AdLoadedTime = null;
+        }
 
-        _adLoadCallback = null;
     }
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {

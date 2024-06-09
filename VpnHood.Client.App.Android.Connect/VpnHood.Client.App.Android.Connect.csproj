@@ -115,4 +115,8 @@
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="VpnHood.Client.App.Android.Ads.UnityAds" Version="4.5.527" />
+	</ItemGroup>
+
 </Project>

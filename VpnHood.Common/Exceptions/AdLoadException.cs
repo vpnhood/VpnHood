@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Client.Exceptions;
+﻿namespace VpnHood.Common.Exceptions;
 
 public class AdLoadException : Exception
 {
@@ -8,6 +8,5 @@ public class AdLoadException : Exception
 
     public AdLoadException(string message, Exception innerException) : base(message, innerException)
     {
-
     }
 }

@@ -9,6 +9,8 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string TokenId { get; private set; } = clientProfile.Token.TokenId;
     public string[] HostNames { get; private set; } = GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName { get; private set; } = clientProfile.Token.ServerToken.IsValidHostName;
+    public bool IsBuiltIn { get; private set; } = clientProfile.IsBuiltIn;
+    public bool IsForAccount { get; private set; } = clientProfile.IsForAccount;
     public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = clientProfile.ServerLocationInfos;
 
     private static string[] GetEndPoints(ServerToken serverToken)

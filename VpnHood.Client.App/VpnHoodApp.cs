@@ -132,6 +132,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // add default test public server if not added yet
         ClientProfileService.TryRemoveByTokenId("5aacec55-5cac-457a-acad-3976969236f8"); //remove obsoleted public server
+        ClientProfileService.TryRemoveByTokenId("77d58603-cdcb-4efc-992f-c132be1de0e3"); //remove obsoleted public server (bad ad)
+        ClientProfileService.TryRemoveByTokenId("9c926156-28fa-4957-9616-38a17e5344ff"); //remove obsoleted public server (bad ad)
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
         Settings.UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId; // set first one as default
 

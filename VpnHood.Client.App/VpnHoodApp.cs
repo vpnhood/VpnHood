@@ -350,7 +350,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // it slows down tests and does not need to be logged in normal situation
             if (diagnose)
-                VhLogger.Instance.LogInformation("Country: {Country}", await GetClientCountry().VhConfigureAwait());
+                VhLogger.Instance.LogInformation("Country: {Country}", await GetClientCountryName().VhConfigureAwait());
 
             VhLogger.Instance.LogInformation("VpnHood Client is Connecting ...");
 
@@ -577,7 +577,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _oldUserSettings = VhUtil.JsonClone(UserSettings);
     }
 
-    public async Task<string?> GetClientCountry()
+    public async Task<string?> GetClientCountryName()
+    {
+        var countryCode = await GetClientCountryCode().VhConfigureAwait();
+        if (countryCode == null) return null;
+        var regionInfo = new RegionInfo(countryCode);
+
+        try { return regionInfo.Name; }
+        catch { return countryCode; }
+    }
+
+    public async Task<string?> GetClientCountryCode()
     {
         // try to get by external service
         if (_appPersistState.ClientCountryCode == null && _useExternalLocationService)
@@ -609,16 +619,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // return last country
-        return _appPersistState.ClientCountryName;
+        return _appPersistState.ClientCountryCode;
     }
 
     public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
         if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
+        var countryCode = await GetClientCountryCode();
+
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
         var adServices = Services.AdServices.Where(x =>
-            x.AdType == AppAdType.InterstitialAd &&
-            (_appPersistState.ClientCountryCode == null || x.IsCountrySupported(_appPersistState.ClientCountryCode)));
+            x.AdType == AppAdType.InterstitialAd && (countryCode == null || x.IsCountrySupported(countryCode)));
 
         foreach (var adService in adServices)
         {

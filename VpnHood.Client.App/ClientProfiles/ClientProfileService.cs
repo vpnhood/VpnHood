@@ -12,7 +12,6 @@ public class ClientProfileService
     private const string FilenameProfiles = "vpn_profiles.json";
     private readonly string _folderPath;
     private readonly List<ClientProfile> _clientProfiles;
-    private string[] _builtInAccessTokenIds = [];
 
     private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
 
@@ -56,7 +55,7 @@ public class ClientProfileService
             ?? throw new NotExistsException();
 
         // BuiltInToken should not be removed
-        if (_builtInAccessTokenIds.Any(tokenId => tokenId == clientProfile.Token.TokenId))
+        if (clientProfile.IsBuiltIn)
             throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
 
         _clientProfiles.Remove(clientProfile);
@@ -105,10 +104,11 @@ public class ClientProfileService
     }
 
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn, bool isForAccount = false)
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
+        bool isForAccount = false, bool isBuiltIn = false)
     {
         // make sure no one overwrites built-in tokens
-        if (!allowOverwriteBuiltIn && _builtInAccessTokenIds.Any(tokenId => tokenId == token.TokenId))
+        if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
             throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
 
         // update tokens
@@ -126,7 +126,8 @@ public class ClientProfileService
                 ClientProfileId = Guid.NewGuid(),
                 ClientProfileName = token.Name,
                 Token = token,
-                IsForAccount = isForAccount
+                IsForAccount = isForAccount,
+                IsBuiltIn = isBuiltIn
             });
 
         // save profiles
@@ -138,10 +139,15 @@ public class ClientProfileService
 
     internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
     {
-        var accessTokens = accessKeys.Select(Token.FromAccessKey).ToArray();
-        var clientProfiles = accessTokens.Select(token => ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true)).ToArray();
-        _builtInAccessTokenIds = clientProfiles.Select(clientProfile => clientProfile.Token.TokenId).ToArray();
-        return clientProfiles;
+        // insert & update new built-in access tokens
+        var accessTokens = accessKeys.Select(Token.FromAccessKey);
+        var clientProfiles = accessTokens.Select(token => ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true));
+
+        // remove old built-in client profiles that does not exist in the new list
+        if (_clientProfiles.RemoveAll(x => x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId))>0)
+            Save();
+
+        return clientProfiles.ToArray();
     }
 
     public Token UpdateTokenByAccessKey(Token token, string accessKey)

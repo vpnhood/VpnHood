@@ -9,7 +9,8 @@ public class ClientProfile
     public required string? ClientProfileName { get; set; }
     public bool IsFavorite { get; set; }
     public bool IsForAccount { get; set; }
-    
+    public bool IsBuiltIn { get; set; }
+
     private Token _token = default!;
     public required Token Token
     {
@@ -23,6 +24,7 @@ public class ClientProfile
 
     [JsonIgnore]
     public ClientServerLocationInfo[] ServerLocationInfos { get; private set; } = [];
+
 
     public ClientProfileInfo ToInfo()
     {

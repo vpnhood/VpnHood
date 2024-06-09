@@ -4,6 +4,7 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
@@ -614,7 +615,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
         //todo: select best provider
-        var adService = Services.AdServices.First();
+        var adService = Services.AdServices.Single(x => x.AdType == AppAdType.InterstitialAd);
         await adService.LoadAd(RequiredUiContext, cancellationToken).VhConfigureAwait();
         await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
         return adData;

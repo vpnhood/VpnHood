@@ -1,17 +1,17 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Rewarded;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Utils;
+using RewardedAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.RewardedAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
 public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 {
-    private MyAdLoadCallback? _adLoadCallback;
+    private MyRewardedAdLoadCallback? _adLoadCallback;
     private DateTime _lastLoadAdTime = DateTime.MinValue;
     private RewardedAd? _loadedAd;
 
@@ -38,7 +38,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         // Load a new Ad
         try
         {
-            _adLoadCallback = new MyAdLoadCallback();
+            _adLoadCallback = new MyRewardedAdLoadCallback();
             var adRequest = new AdRequest.Builder().Build();
             activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, _adLoadCallback));
 
@@ -100,7 +100,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
     }
     
 
-    private class MyAdLoadCallback : AdMobRewardedAdLoadCallback
+    private class MyRewardedAdLoadCallback : RewardedAdLoadCallback
     {
         private readonly TaskCompletionSource<RewardedAd> _loadedCompletionSource = new();
         public Task<RewardedAd> Task => _loadedCompletionSource.Task;

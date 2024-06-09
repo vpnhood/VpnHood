@@ -32,7 +32,6 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>4.5.522</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
@@ -43,11 +42,23 @@
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AdMobInterstitialAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_AD_UNIT_AdMobInterstitialAd)</_Parameter2>
+			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobInterstitial)</_Parameter2>
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AdMobInterstitialNoVideoAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_AD_UNIT_AdMobInterstitialNoVideo)</_Parameter2>
+			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobInterstitialNoVideo)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AdMobRewardedAdUnitId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobRewarded)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>UnityAdGameId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_PRO_AD_UnityAdGameId)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>UnityAdInterstitialPlacementId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_UnityAdInterstitial)</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
@@ -58,11 +69,23 @@
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AdMobInterstitialAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobInterstitialAd)</_Parameter2>
+			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobInterstitial)</_Parameter2>
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AdMobInterstitialNoVideoAdUnitId</_Parameter1>
 			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobInterstitialNoVideo)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AdMobRewardedAdUnitId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobRewarded)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>UnityAdGameId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_AD_UnityAdGameId)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>UnityAdInterstitialPlacementId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_UnityAdInterstitial)</_Parameter2>
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>StoreBaseUri</_Parameter1>

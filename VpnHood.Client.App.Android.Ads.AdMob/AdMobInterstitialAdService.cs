@@ -1,17 +1,17 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common.Utils;
+using InterstitialAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.InterstitialAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
 
 public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
 {
-    private MyAdLoadCallback? _adLoadCallback;
+    private MyInterstitialAdLoadCallback? _adLoadCallback;
     private DateTime _lastLoadAdTime = DateTime.MinValue;
     private InterstitialAd? _loadedAd;
 
@@ -38,7 +38,7 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
         // Load a new Ad
         try
         {
-            _adLoadCallback = new MyAdLoadCallback();
+            _adLoadCallback = new MyInterstitialAdLoadCallback();
             var adRequest = new AdRequest.Builder().Build();
             activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, _adLoadCallback));
 
@@ -68,7 +68,7 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
             throw new AdException("MainActivity has been destroyed before showing the ad.");
         
         if (_loadedAd == null)
-            throw new AdException($"The {AdType} has not benn loaded.");
+            throw new AdException($"The {AdType} has not been loaded.");
 
         var fullScreenContentCallback = new MyFullScreenContentCallback();
 
@@ -105,7 +105,7 @@ public class AdMobInterstitialAdService(string adUnitId) : IAppAdService
             _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
         }
     }
-    private class MyAdLoadCallback : AdMobInterstitialAdLoadCallback
+    private class MyInterstitialAdLoadCallback : InterstitialAdLoadCallback
     {
         private readonly TaskCompletionSource<InterstitialAd> _loadedCompletionSource = new();
         public Task<InterstitialAd> Task => _loadedCompletionSource.Task;

@@ -1,3 +1,8 @@
+### Client
+# Upcoming
+* Update: Use interesial Ad instead of rewarded
+* Feature: Support multiple ad network
+
 # v4.5.522
 ### Client
 * Update: Disable "Exclude My Country" when unable to load the IP location database

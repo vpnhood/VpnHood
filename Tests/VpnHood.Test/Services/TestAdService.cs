@@ -18,7 +18,7 @@ public class TestAdService(TestAccessManager accessManager) : IAppAdService
     {
         AdLoadedTime = null;
         if (FailLoad)
-            throw new AdLoadException("Load Ad failed.");
+            throw new AdException("Load Ad failed.");
 
         AdLoadedTime = DateTime.Now;
         return Task.CompletedTask;
@@ -27,7 +27,7 @@ public class TestAdService(TestAccessManager accessManager) : IAppAdService
     public Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         if (AdLoadedTime == null)
-            throw new AdLoadException("Not Ad has been loaded.");
+            throw new AdException("Not Ad has been loaded.");
 
         try
         {

@@ -39,28 +39,17 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         AdLoadedTime = null;
         _loadedAd = null;
 
-        // Load a new Ad
-        try
-        {
-            var adLoadCallback = new MyRewardedAdLoadCallback();
-            var adRequest = new AdRequest.Builder().Build();
-            activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        var adLoadCallback = new MyRewardedAdLoadCallback();
+        var adRequest = new AdRequest.Builder().Build();
+        activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
-            var cancellationTask = new TaskCompletionSource();
-            cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
-            cancellationToken.ThrowIfCancellationRequested();
+        var cancellationTask = new TaskCompletionSource();
+        cancellationToken.Register(cancellationTask.SetResult);
+        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
+        cancellationToken.ThrowIfCancellationRequested();
 
-            var rewardedAd = await adLoadCallback.Task.VhConfigureAwait();
-            AdLoadedTime = DateTime.Now;
-            _loadedAd = rewardedAd;
-        }
-        // Throw AdLoadException except if user canceled the operation
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            if (ex is AdLoadException) throw;
-            throw new AdLoadException($"Failed to load {AdType}.", ex);
-        }
+        _loadedAd = await adLoadCallback.Task.VhConfigureAwait();
+        AdLoadedTime = DateTime.Now;
     }
 
     public async Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
@@ -120,7 +109,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
+            _loadedCompletionSource.TrySetException(new AdException(addError.Message));
         }
     }
     private class MyFullScreenContentCallback : FullScreenContentCallback

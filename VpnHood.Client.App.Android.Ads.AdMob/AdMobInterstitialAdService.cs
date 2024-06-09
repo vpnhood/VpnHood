@@ -47,29 +47,17 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         AdLoadedTime = null;
         _loadedAd = null;
 
-        // Load a new Ad
-        try
-        {
-            var adLoadCallback = new MyInterstitialAdLoadCallback();
-            var adRequest = new AdRequest.Builder().Build();
-            activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        var adLoadCallback = new MyInterstitialAdLoadCallback();
+        var adRequest = new AdRequest.Builder().Build();
+        activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
-            var cancellationTask = new TaskCompletionSource();
-            cancellationToken.Register(cancellationTask.SetResult);
-            await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
-            cancellationToken.ThrowIfCancellationRequested();
+        var cancellationTask = new TaskCompletionSource();
+        cancellationToken.Register(cancellationTask.SetResult);
+        await Task.WhenAny(adLoadCallback.Task, cancellationTask.Task).VhConfigureAwait();
+        cancellationToken.ThrowIfCancellationRequested();
 
-            var interstitialAd = await adLoadCallback.Task.VhConfigureAwait();
-            AdLoadedTime = DateTime.Now;
-            _loadedAd = interstitialAd;
-        }
-        // Throw AdLoadException except if user canceled the operation
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            AdLoadedTime = null;
-            if (ex is AdLoadException) throw;
-            throw new AdLoadException($"Failed to load {AdType}.", ex);
-        }
+        _loadedAd = await adLoadCallback.Task.VhConfigureAwait();
+        AdLoadedTime = DateTime.Now;
     }
 
     public async Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
@@ -135,7 +123,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
+            _loadedCompletionSource.TrySetException(new AdException(addError.Message));
         }
     }
 

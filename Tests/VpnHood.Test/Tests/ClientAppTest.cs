@@ -73,6 +73,29 @@ public class ClientAppTest : TestBase
         }
     }
 
+    [TestMethod]
+    public async Task BuiltIn_AccessKeys_RemoveOldKeys()
+    {
+        var appOptions = TestHelper.CreateClientAppOptions();
+        var tokens1 = new[] { CreateToken(), CreateToken() };
+        appOptions.AccessKeys = tokens1.Select(x => x.ToAccessKey()).ToArray();
+
+        await using var app1 = TestHelper.CreateClientApp(appOptions: appOptions);
+        await app1.DisposeAsync();
+
+        // create app again
+        var tokens2 = new[] { CreateToken(), CreateToken() };
+        appOptions.AccessKeys = tokens2.Select(x => x.ToAccessKey()).ToArray();
+        await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
+
+        var clientProfiles = app2.ClientProfileService.List();
+        Assert.AreEqual(tokens2.Length, clientProfiles.Length);
+        Assert.AreEqual(tokens2[0].TokenId, clientProfiles[0].Token.TokenId);
+        Assert.AreEqual(tokens2[1].TokenId, clientProfiles[1].Token.TokenId);
+        foreach (var clientProfile in clientProfiles)
+            Assert.IsTrue(clientProfile.IsBuiltIn);
+    }
+
     private static async Task UpdateIp2LocationFile()
     {
         // update current ipLocation in app project after a week

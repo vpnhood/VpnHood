@@ -614,11 +614,30 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        //todo: select best provider
-        var adService = Services.AdServices.Single(x => x.AdType == AppAdType.InterstitialAd);
-        await adService.LoadAd(RequiredUiContext, cancellationToken).VhConfigureAwait();
-        await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
-        return adData;
+        var adServices = Services.AdServices.Where(x =>
+            x.AdType == AppAdType.InterstitialAd &&
+            (_appPersistState.ClientCountryCode == null || x.IsCountrySupported(_appPersistState.ClientCountryCode)));
+
+        foreach (var adService in adServices)
+        {
+            // find first successful ad network
+            try
+            {
+                await adService.LoadAd(RequiredUiContext, cancellationToken).VhConfigureAwait();
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogWarning(ex, "Could not load the ad. Network: {Network}.", adService.NetworkName);
+                continue;
+            }
+
+            // show the ad
+            await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+            return adData;
+        }
+
+        // could not load any ad
+        throw new AdLoadException($"Could not load any AD. Country: {_appPersistState.ClientCountryName}");
     }
 
     private void Client_StateChanged(object sender, EventArgs e)

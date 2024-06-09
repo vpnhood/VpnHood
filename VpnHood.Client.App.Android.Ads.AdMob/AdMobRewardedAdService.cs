@@ -33,7 +33,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
-            throw new AdException("MainActivity has been destroyed before loading the ad.");
+            throw new AdLoadException("MainActivity has been destroyed before loading the ad.");
 
         // reset the last loaded ad
         AdLoadedTime = null;
@@ -109,7 +109,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new AdException(addError.Message));
+            _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
         }
     }
     private class MyFullScreenContentCallback : FullScreenContentCallback

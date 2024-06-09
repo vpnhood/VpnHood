@@ -633,8 +633,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning(ex is AdLoadException ? ex.InnerException : ex, 
-                    "Could not load the ad. Network: {Network}.", adService.NetworkName);
+                VhLogger.Instance.LogWarning(ex, "Could not load the ad. Network: {Network}.", adService.NetworkName);
                 continue;
             }
 

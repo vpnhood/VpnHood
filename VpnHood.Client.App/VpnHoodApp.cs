@@ -625,9 +625,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             {
                 await adService.LoadAd(RequiredUiContext, cancellationToken).VhConfigureAwait();
             }
+            catch (OperationCanceledException)
+            {
+                throw; //don't continue if user canceled the operation
+            }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning(ex, "Could not load the ad. Network: {Network}.", adService.NetworkName);
+                VhLogger.Instance.LogWarning(ex is AdLoadException ? ex.InnerException : ex, 
+                    "Could not load the ad. Network: {Network}.", adService.NetworkName);
                 continue;
             }
 

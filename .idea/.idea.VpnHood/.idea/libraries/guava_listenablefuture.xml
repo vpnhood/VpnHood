@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="guava-listenablefuture">
-    <CLASSES>
-      <root url="jar://$USER_HOME$/.nuget/packages/xamarin.google.guava.listenablefuture/1.0.0.17/jar/guava-listenablefuture.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

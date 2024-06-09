@@ -4,6 +4,7 @@ using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Exceptions;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
 using RewardedAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.RewardedAdLoadCallback;
 
@@ -15,12 +16,12 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
     private DateTime _lastLoadAdTime = DateTime.MinValue;
     private RewardedAd? _loadedAd;
 
-     public static AdMobRewardedAdService Create(string adUnitId)
+    public static AdMobRewardedAdService Create(string adUnitId)
     {
         var ret = new AdMobRewardedAdService(adUnitId);
         return ret;
     }
-     
+
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.RewardedAd;
 
@@ -30,11 +31,11 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before loading the ad.");
-        
+
         // Ad already loaded
         if (_adLoadCallback != null && _lastLoadAdTime.AddHours(1) < DateTime.Now)
-            _loadedAd =  await _adLoadCallback.Task.VhConfigureAwait();
-        
+            _loadedAd = await _adLoadCallback.Task.VhConfigureAwait();
+
         // Load a new Ad
         try
         {
@@ -49,7 +50,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
             var rewardedAd = await _adLoadCallback.Task.VhConfigureAwait();
             _lastLoadAdTime = DateTime.Now;
-            _loadedAd =  rewardedAd;
+            _loadedAd = rewardedAd;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -66,7 +67,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
             throw new AdException("MainActivity has been destroyed before showing the ad.");
-        
+
         if (_loadedAd == null)
             throw new AdException($"The {AdType} has not benn loaded.");
 
@@ -98,7 +99,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         _adLoadCallback = null;
     }
-    
+
 
     private class MyRewardedAdLoadCallback : RewardedAdLoadCallback
     {
@@ -141,7 +142,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             _earnedRewardCompletionSource.TrySetResult(rewardItem);
         }
     }
-    
+
     public void Dispose()
     {
     }

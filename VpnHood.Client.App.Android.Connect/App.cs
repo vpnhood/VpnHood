@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using Android.Runtime;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
+using VpnHood.Client.App.Droid.Ads.VhUnityAds;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
@@ -46,7 +47,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdServices = [
                 AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialNoVideoAdUnitId, false),
-                AdMobRewardedAdService.Create(AssemblyInfo.AdMobRewardedAdUnitId)
+                UnityAdService.Create(AssemblyInfo.UnityAdGameId, AssemblyInfo.UnityInterstitialPlacementId, AssemblyInfo.IsDebugMode)
             ],
             UiService = new AndroidAppUiService()
         };

@@ -66,7 +66,6 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         // Throw AdLoadException except if user canceled the operation
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            AdLoadedTime = null;
             if (ex is AdLoadException) throw;
             throw new AdLoadException($"Failed to load {AdType}.", ex);
         }

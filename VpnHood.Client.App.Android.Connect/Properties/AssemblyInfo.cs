@@ -25,16 +25,14 @@ public static class AssemblyInfo
     
     // Ad network application id
     public const string AdMobApplicationId = "ca-app-pub-8662231806304184~1740102860";
-    // TODO fill value
-    public const string UnityAdApplicationId = "";
+    public const string UnityGameId = "5633286";
     
-    // TODO why we need the default value for unit ids?
     // Ad unit ids
-    public static string RewardedAdUnitId => GetMetadata("RewardedAdUnitId", "ca-app-pub-8662231806304184/1656979755");
-    public static string InterstitialAdUnitId => GetMetadata("InterstitialAdUnitId", "ca-app-pub-8662231806304184/1656979755");
-    public static string AppOpenAdUnitId => GetMetadata("AppOpenAdUnitId", "ca-app-pub-8662231806304184/1656979755");
+    // Default value is AdMob test unit id
+    public static string AdMobRewardedAdUnitId => GetMetadata("RewardedAdUnitId", "ca-app-pub-3940256099942544/5224354917");
+    public static string AdMobInterstitialAdUnitId => GetMetadata("InterstitialAdUnitId", "ca-app-pub-3940256099942544/1033173712");
+    public static string AdMobInterstitialNoVideoAdUnitId => GetMetadata("InterstitialVideoAdUnitId", "ca-app-pub-3940256099942544/8691691433");
     
-    // TODO why we need the default value for GlobalServersAccessKey?
     public static string GlobalServersAccessKey => GetMetadata("GlobalServersAccessKey", "vh://eyJ2Ijo0LCJuYW1lIjoiVnBuSG9vZCBTYW1wbGUiLCJzaWQiOiIxMzAwIiwidGlkIjoiYTM0Mjk4ZDktY2YwYi00MGEwLWI5NmMtZGJhYjYzMWQ2MGVjIiwiaWF0IjoiMjAyNC0wNS0xMFQwNjo1MDozNC42ODQ4NjI4WiIsInNlYyI6Im9wcTJ6M0M0ak9rdHNodXl3c0VKNXc9PSIsImFkIjpmYWxzZSwic2VyIjp7ImN0IjoiMjAyNC0wNC0xNVQxOTo0NDozOVoiLCJobmFtZSI6Im1vLmdpd293eXZ5Lm5ldCIsImhwb3J0IjowLCJpc3YiOmZhbHNlLCJzZWMiOiJ2YUJxVTlSQzNRSGFXNHhGNWliWUZ3PT0iLCJjaCI6IjNnWE9IZTVlY3VpQzlxK3NiTzdobExva1FiQT0iLCJ1cmwiOiJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vdnBuaG9vZC9WcG5Ib29kLkZhcm1LZXlzL21haW4vRnJlZV9lbmNyeXB0ZWRfdG9rZW4udHh0IiwiZXAiOlsiNTEuODEuMjEwLjE2NDo0NDMiLCJbMjYwNDoyZGMwOjIwMjozMDA6OjVjZV06NDQzIl19fQ==");
     private static string GetMetadata(string key, string defaultValue) => VhUtil.GetAssemblyMetadata(typeof(AssemblyInfo).Assembly, key, defaultValue);
     public static bool IsDebugMode

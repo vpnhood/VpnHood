@@ -62,7 +62,7 @@
   },
   "codeGenerators": {
     "openApiToCSharpClient": {
-      "clientBaseClass": "VpnHood.Common.Client.ApiClientCommon",
+      "clientBaseClass": "VpnHood.Common.ApiClients.ApiClientCommon",
       "configurationClass": null,
       "generateClientClasses": true,
       "generateClientInterfaces": false,
@@ -71,7 +71,7 @@
       "disposeHttpClient": false,
       "protectedMethods": [],
       "generateExceptionClasses": false,
-      "exceptionClass": "VpnHood.Common.Client.ApiException",
+      "exceptionClass": "VpnHood.Common.ApiClients.ApiException",
       "wrapDtoExceptions": true,
       "useHttpClientCreationMethod": false,
       "httpClientType": "System.Net.Http.HttpClient",

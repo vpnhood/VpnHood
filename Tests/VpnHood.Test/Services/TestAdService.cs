@@ -1,6 +1,7 @@
 ﻿using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
+using VpnHood.Common.Exceptions;
 using VpnHood.Test.AccessManagers;
 
 namespace VpnHood.Test.Services;

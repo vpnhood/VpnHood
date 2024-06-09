@@ -8,4 +8,6 @@ public interface IAppAdService : IDisposable
     AppAdType AdType { get; }
     Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken);
     Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken);
+    bool IsCountrySupported(string countryCode);
+    DateTime? AdLoadedTime { get; }
 }

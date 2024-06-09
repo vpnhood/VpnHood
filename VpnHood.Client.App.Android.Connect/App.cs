@@ -44,7 +44,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = accountService,
             AdServices = [
-                AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialAdUnitId),
+                AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialAdUnitId, true),
+                AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialNoVideoAdUnitId, false),
                 AdMobRewardedAdService.Create(AssemblyInfo.AdMobRewardedAdUnitId)
             ],
             UiService = new AndroidAppUiService()

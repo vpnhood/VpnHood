@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="androidx.datastore.datastore-core">
-    <CLASSES>
-      <root url="jar://$USER_HOME$/.nuget/packages/xamarin.androidx.datastore.core/1.0.0.3/jar/androidx.datastore.datastore-core.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

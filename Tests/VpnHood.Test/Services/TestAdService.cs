@@ -1,6 +1,5 @@
 ﻿using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common.Exceptions;
 using VpnHood.Test.AccessManagers;
 
@@ -8,33 +7,42 @@ namespace VpnHood.Test.Services;
 
 public class TestAdService(TestAccessManager accessManager) : IAppAdService
 {
-    private bool _isAddLoaded;
     public bool FailShow { get; set; }
     public bool FailLoad { get; set; }
     public string NetworkName => "";
     public AppAdType AdType => AppAdType.InterstitialAd;
+    public bool IsCountrySupported(string countryCode) => true;
+    public DateTime? AdLoadedTime { get; private set; }
 
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
+        AdLoadedTime = null;
         if (FailLoad)
             throw new AdLoadException("Load Ad failed.");
 
-        _isAddLoaded = true;
+        AdLoadedTime = DateTime.Now;
         return Task.CompletedTask;
     }
 
     public Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
-        if (!_isAddLoaded)
+        if (AdLoadedTime == null)
             throw new AdLoadException("Not Ad has been loaded.");
 
-        if (FailShow)
-            throw new Exception("Ad failed.");
+        try
+        {
+            if (FailShow)
+                throw new Exception("Ad failed.");
 
-        if (!string.IsNullOrEmpty(customData))
-            accessManager.AddAdData(customData);
+            if (!string.IsNullOrEmpty(customData))
+                accessManager.AddAdData(customData);
 
-        return Task.CompletedTask;
+            return Task.CompletedTask;
+        }
+        finally
+        {
+            AdLoadedTime = null;
+        }
     }
 
     public void Dispose()

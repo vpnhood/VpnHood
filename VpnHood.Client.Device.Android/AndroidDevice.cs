@@ -117,25 +117,20 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
     }
 
-    public async Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
+    private async Task PrepareVpnService(IActivityEvent? activityEvent)
     {
-        var androidUiContext = (AndroidUiContext?)uiContext;
-
-        // remove current if still exists
-        _packetCapture?.Dispose();
-
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-        using var prepareIntent = VpnService.Prepare(androidUiContext?.Activity ?? Application.Context);
+        using var prepareIntent = VpnService.Prepare(activityEvent?.Activity ?? Application.Context);
         if (prepareIntent != null)
         {
-            if (androidUiContext == null)
+            if (activityEvent == null)
                 throw new Exception("Please open the app and grant VPN permission to proceed.");
 
             _grantPermissionTaskSource = new TaskCompletionSource<bool>();
-            androidUiContext.ActivityEvent.ActivityResultEvent += Activity_OnActivityResult;
+            activityEvent.ActivityResultEvent += Activity_OnActivityResult;
             try
             {
-                androidUiContext.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
+                activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
                 await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2))).VhConfigureAwait();
                 if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
                     throw new Exception("Could not grant VPN permission in the given time.");
@@ -145,10 +140,18 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             }
             finally
             {
-                androidUiContext.ActivityEvent.ActivityResultEvent -= Activity_OnActivityResult;
+                activityEvent.ActivityResultEvent -= Activity_OnActivityResult;
             }
-
         }
+    }
+
+    public async Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
+    {
+        var androidUiContext = (AndroidUiContext?)uiContext;
+        await PrepareVpnService(androidUiContext?.ActivityEvent);
+
+        // remove current if still exists
+        _packetCapture?.Dispose();
 
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));

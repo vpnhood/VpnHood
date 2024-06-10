@@ -12,6 +12,7 @@ public class AppOptions
     public TimeSpan VersionCheckInterval { get; set; } = TimeSpan.FromHours(24);
     public Uri? UpdateInfoUrl { get; set; }
     public bool UseInternalLocationService { get; set; } = true;
+    public bool UseExternalLocationService { get; set; } = true;
     public AppResource Resource { get; set; } = new();
     public string? AppGa4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }

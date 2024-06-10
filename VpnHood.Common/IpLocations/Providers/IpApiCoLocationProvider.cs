@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using System.Threading;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Utils;
 
@@ -32,24 +33,24 @@ public class IpApiCoLocationProvider(string userAgent) : IIpLocationProvider
         public string? ContinentCode { get; set; }
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress)
+    public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken)
     {
         var uri = new Uri($"https://ipapi.co/{ipAddress}/json/");
-        return GetLocation(httpClient, uri, userAgent);
+        return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient)
+    public Task<IpLocation> GetLocation(HttpClient httpClient, CancellationToken cancellationToken)
     {
         var uri = new Uri("https://ipapi.co/json/");
-        return GetLocation(httpClient, uri, userAgent);
+        return GetLocation(httpClient, uri, userAgent, cancellationToken);
     }
 
-    private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent)
+    private static async Task<IpLocation> GetLocation(HttpClient httpClient, Uri url, string userAgent, CancellationToken cancellationToken)
     {
         // get json from the service provider
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
         requestMessage.Headers.Add("User-Agent", userAgent);
-        var responseMessage = await httpClient.SendAsync(requestMessage).VhConfigureAwait();
+        var responseMessage = await httpClient.SendAsync(requestMessage, cancellationToken).VhConfigureAwait();
         responseMessage.EnsureSuccessStatusCode();
         var json = await responseMessage.Content.ReadAsStringAsync().VhConfigureAwait();
 

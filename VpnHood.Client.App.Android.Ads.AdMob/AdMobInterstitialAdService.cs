@@ -24,6 +24,9 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
     public bool IsCountrySupported(string countryCode)
     {
+        // Make sure it is upper case
+        countryCode = countryCode.Trim().ToUpper(); 
+
         // these countries are not supported at all
         if (countryCode == "CN")
             return false;

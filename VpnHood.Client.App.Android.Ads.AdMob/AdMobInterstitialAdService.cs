@@ -30,7 +30,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         // these countries video ad is not supported
         if (hasVideo)
-            return countryCode == "IR";
+            return countryCode != "IR";
 
         return true;
     }

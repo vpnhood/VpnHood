@@ -387,6 +387,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task<IPacketCapture> CreatePacketCapture()
     {
+        if (UserSettings.DebugData1?.Contains("/null-capture") is true)
+            return new NullPacketCapture();
+
         // create packet capture
         var packetCapture = await Device.CreatePacketCapture(UiContext).VhConfigureAwait();
 

@@ -744,8 +744,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             // show ad if required
-            if (sessionResponse.IsAdRequired || sessionResponse.AdRequirement is not AdRequirement.None)
-                await ShowAd(sessionResponse.AdRequirement is AdRequirement.Flexible, cancellationToken).VhConfigureAwait();
+            if (sessionResponse.AdRequirement is not AdRequirement.None)
+                await ShowAd(sessionResponse.AdRequirement is AdRequirement.Required, cancellationToken).VhConfigureAwait();
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
@@ -905,7 +905,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ShowAd(bool flexible, CancellationToken cancellationToken)
+    private async Task ShowAd(bool required, CancellationToken cancellationToken)
     {
         if (SessionId == 0)
             throw new Exception("SessionId is not set.");
@@ -920,14 +920,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (!string.IsNullOrEmpty(adData))
                 _ = SendAdReward(adData, cancellationToken);
         }
-        catch (AdLoadException ex) when (flexible)
+        catch (AdLoadException ex)
         {
-            VhLogger.Instance.LogInformation(ex, "Could not show the flexible ad.");
+            if (required)
+                throw new AdException("Could not load the required ad.", ex);
+
+            VhLogger.Instance.LogInformation(ex, "Could not load the flexible ad.");
             // ignore exception for flexible ad if load failed
-        }
-        catch (AdException)
-        {
-            throw;
         }
         catch (Exception ex)
         {

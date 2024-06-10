@@ -42,7 +42,7 @@ internal class AppPersistState
                 return;
             
             // set country code and its name
-            _clientCountryCode = value;
+            _clientCountryCode = value?.ToUpper();
             try
             {
                 ClientCountryName = value!=null ? new RegionInfo(value).EnglishName : null;

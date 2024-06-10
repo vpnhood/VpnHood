@@ -24,6 +24,9 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
     public bool IsCountrySupported(string countryCode)
     {
+        // Make sure it is upper case
+        countryCode = countryCode.Trim().ToUpper(); 
+
         // these countries are not supported at all
         return countryCode != "CN" && countryCode != "IR";
     }

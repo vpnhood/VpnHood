@@ -12,6 +12,7 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.IpLocations;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -31,6 +32,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FolderNameProfiles = "profiles";
     private readonly SocketFactory? _socketFactory;
     private readonly bool _useInternalLocationService;
+    private readonly bool _useExternalLocationService;
     private readonly string? _appGa4MeasurementId;
     private bool _hasConnectRequested;
     private bool _hasDiagnoseStarted;
@@ -97,6 +99,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _oldUserSettings = VhUtil.JsonClone(UserSettings);
         _socketFactory = options.SocketFactory;
         _useInternalLocationService = options.UseInternalLocationService;
+        _useExternalLocationService = options.UseExternalLocationService;
         _appGa4MeasurementId = options.AppGa4MeasurementId;
         _versionCheckInterval = options.VersionCheckInterval;
         _reconnectTimeout = options.ReconnectTimeout;
@@ -386,7 +389,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task<IPacketCapture> CreatePacketCapture()
     {
         if (UserSettings.DebugData1?.Contains("/null-capture") is true)
+        {
+            VhLogger.Instance.LogWarning("Using NullPacketCapture. No packet will go through the VPN.");
             return new NullPacketCapture();
+        }
 
         // create packet capture
         var packetCapture = await Device.CreatePacketCapture(UiContext).VhConfigureAwait();
@@ -588,9 +594,24 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         _isFindingCountryCode = true;
 
-        // try to get by ip group
-        if (_appPersistState.ClientCountryCode == null && _useInternalLocationService)
+        if (_appPersistState.ClientCountryCode == null && _useExternalLocationService)
         {
+            try
+            {
+                using var cancellationTokenSource = new CancellationTokenSource(5000);
+                var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Client");
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient(), cancellationTokenSource.Token).VhConfigureAwait();
+                _appPersistState.ClientCountryCode = ipLocation.CountryCode;
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not get country code from IpApi service.");
+            }
+        }
+
+        // try to get by ip group (GetCountryCodeByCurrentIp use external service)
+        if (_appPersistState.ClientCountryCode == null && _useInternalLocationService && _useExternalLocationService)
+        { 
             try
             {
                 var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();

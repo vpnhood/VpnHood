@@ -47,7 +47,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdServices = [
                 AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialNoVideoAdUnitId, false),
-                UnityAdService.Create(AssemblyInfo.UnityAdGameId, AssemblyInfo.UnityInterstitialPlacementId, AssemblyInfo.IsDebugMode)
+                UnityAdService.Create(AssemblyInfo.UnityAdGameId, AssemblyInfo.UnityAdInterstitialPlacementId, AssemblyInfo.IsDebugMode)
             ],
             UiService = new AndroidAppUiService()
         };

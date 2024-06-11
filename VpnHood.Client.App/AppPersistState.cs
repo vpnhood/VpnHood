@@ -17,14 +17,6 @@ internal class AppPersistState
     public string FilePath { get; private set; } = null!;
 
     // prop
-    private string? _lastErrorMessage;
-    public string? LastErrorMessage
-    {
-        get => _lastErrorMessage;
-        set { _lastErrorMessage = value; Save(); }
-    }
-
-    // prop
     private ApiError? _lastError;
     public ApiError? LastError
     {

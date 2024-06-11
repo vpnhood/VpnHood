@@ -372,12 +372,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex)
         {
+            VhLogger.Instance.LogError(ex, "Could not connect to any server within the given time.");
+
             //user may disconnect before connection closed
-            if (!_hasDisconnectedByUser)
-            {
-                VhLogger.Instance.LogError(ex, "Could not connect.");
-                _appPersistState.LastError = new ApiError(ex);
-            }
+            _appPersistState.LastError = new ApiError(ex);
+            if (!_hasDisconnectedByUser && ex is OperationCanceledException)
+                _appPersistState.LastError = new ApiError(new Exception("Could not connect to any server within the given time.", ex));
 
             // don't wait for disconnect, it may cause deadlock
             _ = Disconnect();
@@ -655,14 +655,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 using var timeoutCts = new CancellationTokenSource(_adLoadTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adService.LoadAd(RequiredUiContext, linkedCts.Token).VhConfigureAwait();
             }
-            catch (OperationCanceledException)
-            {
-                throw; //don't continue if user canceled the operation
-            }
-            catch (Exception ex)
+            // do not catch if parent cancel the operation
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested) 
             {
                 VhLogger.Instance.LogWarning(ex, "Could not load the ad. Network: {Network}.", adService.NetworkName);
                 continue;

@@ -1,7 +1,7 @@
 using Android.Gms.Ads;
 using Android.Gms.Ads.AppOpen;
 using VpnHood.Client.App.Abstractions;
-using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride;
+using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;

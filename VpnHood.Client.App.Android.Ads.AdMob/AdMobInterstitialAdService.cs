@@ -5,9 +5,11 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
-using InterstitialAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.InterstitialAdLoadCallback;
+using InterstitialAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix.InterstitialAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
+
+using InterstitialAdLoadCallback = AdNetworkCallBackFix.InterstitialAdLoadCallback;
 
 public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAdService
 {

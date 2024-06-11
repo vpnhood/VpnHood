@@ -53,6 +53,10 @@
 			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobRewarded)</_Parameter2>
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AdMobAppOpenAdUnitId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobAppOpen)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>UnityAdGameId</_Parameter1>
 			<_Parameter2>$(VPNHOOD_PRO_AD_UnityAdGameId)</_Parameter2>
 		</AssemblyAttribute>
@@ -78,6 +82,10 @@
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AdMobRewardedAdUnitId</_Parameter1>
 			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobRewarded)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>AdMobAppOpenAdUnitId</_Parameter1>
+			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobAppOpen)</_Parameter2>
 		</AssemblyAttribute>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>UnityAdGameId</_Parameter1>

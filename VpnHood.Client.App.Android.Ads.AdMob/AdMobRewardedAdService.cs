@@ -5,12 +5,8 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
-using RewardedAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix.RewardedAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
-
-using RewardedAdLoadCallback = AdNetworkCallBackFix.RewardedAdLoadCallback;
-
 public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 {
     private RewardedAd? _loadedAd;
@@ -102,7 +98,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         }
     }
 
-    private class MyRewardedAdLoadCallback : RewardedAdLoadCallback
+    private class MyRewardedAdLoadCallback : AdNetworkCallBackFix.RewardedAdLoadCallback
     {
         private readonly TaskCompletionSource<RewardedAd> _loadedCompletionSource = new();
         public Task<RewardedAd> Task => _loadedCompletionSource.Task;

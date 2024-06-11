@@ -11,8 +11,7 @@ public class AppState
     public required DateTime ConfigTime { get; init; }
     public required DateTime? ConnectRequestTime { get; init; }
     public required AppConnectionState ConnectionState { get; init; }
-    public required string? LastError { get; init; }
-    public required ApiError? LastError2 { get; init; }
+    public required ApiError? LastError { get; init; }
     public required ClientProfileBaseInfo? ClientProfile { get; init; }
     public required ClientServerLocationInfo? ClientServerLocationInfo { get; init; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }

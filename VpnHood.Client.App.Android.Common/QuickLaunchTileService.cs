@@ -38,8 +38,8 @@ public class QuickLaunchTileService : TileService
         if (_isConnectByClick && VpnHoodApp.Instance.ConnectionState == AppConnectionState.None)
         {
             _isConnectByClick = false;
-            if (!string.IsNullOrEmpty(VpnHoodApp.Instance.State.LastError))
-                Toast.MakeText(this, VpnHoodApp.Instance.State.LastError, ToastLength.Long)?.Show();
+            if (VpnHoodApp.Instance.State.LastError!=null)
+                Toast.MakeText(this, VpnHoodApp.Instance.State.LastError?.Message, ToastLength.Long)?.Show();
         }
     }
 

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
@@ -21,6 +22,14 @@ internal class AppPersistState
     {
         get => _lastErrorMessage;
         set { _lastErrorMessage = value; Save(); }
+    }
+
+    // prop
+    private ApiError? _lastError;
+    public ApiError? LastError
+    {
+        get => _lastError;
+        set { _lastError = value; Save(); }
     }
 
     // prop

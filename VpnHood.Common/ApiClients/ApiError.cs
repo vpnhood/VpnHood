@@ -25,13 +25,23 @@ public class ApiError
 
     public ApiError(Exception ex)
     {
-        var exceptionType = GetExceptionType(ex);
+        if (ex is ApiException apiException)
+        {
+            TypeName = apiException.ExceptionTypeName ?? nameof(ApiException);
+            TypeFullName = apiException.ExceptionTypeFullName;
+        }
+        else
+        {
+            var exceptionType = GetExceptionType(ex);
+            TypeName = exceptionType.Name;
+            TypeFullName = exceptionType.FullName;
+        }
 
-        TypeName = exceptionType.Name;
-        TypeFullName = exceptionType.FullName;
+        // common properties
         Message = ex.Message;
         InnerMessage = ex.InnerException?.Message;
 
+        // data
         foreach (DictionaryEntry item in ex.Data)
         {
             var key = item.Key.ToString();

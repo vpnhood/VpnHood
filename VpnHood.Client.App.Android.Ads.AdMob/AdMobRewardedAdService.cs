@@ -5,9 +5,11 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
-using RewardedAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackOverride.RewardedAdLoadCallback;
+using RewardedAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix.RewardedAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
+
+using RewardedAdLoadCallback = AdNetworkCallBackFix.RewardedAdLoadCallback;
 
 public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 {

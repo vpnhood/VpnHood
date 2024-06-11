@@ -655,12 +655,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 using var timeoutCts = new CancellationTokenSource(_adLoadTimeout);
-                using var linkedCts =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adService.LoadAd(RequiredUiContext, linkedCts.Token).VhConfigureAwait();
             }
             // do not catch if parent cancel the operation
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested) 
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
                 VhLogger.Instance.LogWarning(ex, "Could not load the ad. Network: {Network}.", adService.NetworkName);
                 continue;
@@ -668,7 +667,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // show the ad
             await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
-            return adData;
+            //return adData; //rewarded ad has not been implemented yet
+            return "";
         }
 
         // could not load any ad
@@ -694,17 +694,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task Disconnect(bool byUser = false)
     {
         using var lockAsync = await _disconnectLock.LockAsync().VhConfigureAwait();
-        if (_isDisconnecting || IsIdle)
+
+        // use ConnectedTime == null to prevent multiple disconnect calls
+        if (_isDisconnecting || ConnectedTime is null)
             return;
 
         try
         {
+            // set disconnect reason by user
+            _hasDisconnectedByUser = byUser;
             if (byUser)
-            {
-                VhLogger.Instance.LogTrace("User requests disconnection.");
-                _hasDisconnectedByUser = true;
-            }
+                VhLogger.Instance.LogInformation("User has requested disconnection.");
 
+            // change state to disconnecting
             _isDisconnecting = true;
             FireConnectionStateChanged();
 

@@ -1,7 +1,8 @@
 ### Client
 # Upcoming
-* Update: Use interesial Ad instead of rewarded
-* Feature: Support multiple ad network
+* Update: Use Interstitial Ad instead of rewarded
+* Feature: Support multiple ad networks
+* Fix: Some error message after disconnection
 
 # v4.5.522
 ### Client

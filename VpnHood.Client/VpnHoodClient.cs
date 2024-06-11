@@ -8,6 +8,7 @@ using VpnHood.Client.ConnectorServices;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -975,7 +976,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (ex is SessionException sessionException)
             {
                 SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
-                SessionStatus.ErrorMessage = sessionException.SessionResponse.ErrorMessage;
+                SessionStatus.Error = new ApiError(sessionException);
                 SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
                 if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
                 {
@@ -986,7 +987,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             else
             {
                 SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
-                SessionStatus.ErrorMessage = ex.Message;
+                SessionStatus.Error = new ApiError(ex);
             }
         }
 

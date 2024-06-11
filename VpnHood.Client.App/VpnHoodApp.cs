@@ -11,6 +11,7 @@ using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.IpLocations;
 using VpnHood.Common.Jobs;
@@ -209,10 +210,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     or AppConnectionState.Diagnosing or AppConnectionState.Waiting),
                 ClientProfile = CurrentClientProfile?.ToBaseInfo(),
                 LogExists = IsIdle && File.Exists(LogService.LogFilePath),
-                LastError = _appPersistState.LastErrorMessage,
+                LastError = _appPersistState.LastError?.Message,
+                LastError2 = _appPersistState.LastError,
                 HasDiagnoseStarted = _hasDiagnoseStarted,
                 HasDisconnectedByUser = _hasDisconnectedByUser,
-                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _appPersistState.LastErrorMessage != null),
+                HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || _appPersistState.LastError != null),
                 SessionStatus = LastSessionStatus,
                 Speed = client?.Stat.Speed ?? new Traffic(),
                 AccountTraffic = client?.Stat.AccountTraffic ?? new Traffic(),
@@ -282,8 +284,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var clientProfile = CurrentClientProfile;
         if (clientProfile == null)
         {
-            _appPersistState.LastErrorMessage = "Could not start as service. No server is selected.";
-            throw new Exception(_appPersistState.LastErrorMessage);
+            var ex = new Exception("Could not start as service. No server is selected.");
+            _appPersistState.LastError = new ApiError(ex);
+            throw ex;
         }
 
         _ = Connect(clientProfile.ClientProfileId);
@@ -294,7 +297,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!IsIdle)
             return; //can just set in Idle State
 
-        _appPersistState.LastErrorMessage = null;
+        _appPersistState.LastError = null;
         _hasDiagnoseStarted = false;
         _hasDisconnectedByUser = false;
         _hasConnectRequested = false;
@@ -372,8 +375,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             //user may disconnect before connection closed
             if (!_hasDisconnectedByUser)
             {
-                VhLogger.Instance.LogError(ex.Message);
-                _appPersistState.LastErrorMessage = ex.Message;
+                VhLogger.Instance.LogError(ex, "Could not connect.");
+                _appPersistState.LastError = new ApiError(ex);
             }
 
             // don't wait for disconnect, it may cause deadlock
@@ -620,7 +623,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // try to get by ip group (GetCountryCodeByCurrentIp use external service)
         if (_appPersistState.ClientCountryCode == null && _useInternalLocationService && _useExternalLocationService)
-        { 
+        {
             try
             {
                 var ipGroupManager = await GetIpGroupManager().VhConfigureAwait();
@@ -643,7 +646,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var countryCode = await GetClientCountryCode();
 
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        var adServices = Services.AdServices.Where(x => 
+        var adServices = Services.AdServices.Where(x =>
             x.AdType == AppAdType.InterstitialAd && x.IsCountrySupported(countryCode));
 
         foreach (var adService in adServices)
@@ -708,8 +711,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
 
             // check diagnose
-            if (_hasDiagnoseStarted && _appPersistState.LastErrorMessage == null)
-                _appPersistState.LastErrorMessage = "Diagnoser has finished and no issue has been detected.";
+            if (_hasDiagnoseStarted && _appPersistState.LastError == null)
+                _appPersistState.LastError = new ApiError(new Exception("Diagnoser has finished and no issue has been detected."));
 
             // cancel current connecting if any
             _connectCts?.Cancel();
@@ -727,7 +730,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         finally
         {
-            _appPersistState.LastErrorMessage ??= LastSessionStatus?.ErrorMessage;
+            _appPersistState.LastError ??= LastSessionStatus?.Error;
             _activeClientProfileId = null;
             _activeServerLocation = null;
             _lastSessionStatus = _client?.SessionStatus;

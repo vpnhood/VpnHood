@@ -25,7 +25,7 @@ public class AppOptions
     public IAppAdService[] AdServices { get; set; } = [];
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
-    public TimeSpan AdLoadTimeout { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan AdLoadTimeout { get; set; } = TimeSpan.FromSeconds(20);
     public bool? LogVerbose { get; set; }
     public bool? LogAnonymous { get; set; }
 }

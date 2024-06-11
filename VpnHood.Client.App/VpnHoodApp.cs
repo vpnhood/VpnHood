@@ -450,33 +450,36 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // Create Client with a new PacketCapture
         if (_client != null) throw new Exception("Last client has not been disposed properly.");
         var packetCapture = await CreatePacketCapture().VhConfigureAwait();
-        _client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
-        _client.StateChanged += Client_StateChanged;
+        VpnHoodClient? client = null;
 
         try
         {
+            client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
+            client.StateChanged += Client_StateChanged;
+            _client = client;
+
             if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(_client, cancellationToken).VhConfigureAwait();
+                await Diagnoser.Diagnose(client, cancellationToken).VhConfigureAwait();
             else
-                await Diagnoser.Connect(_client, cancellationToken).VhConfigureAwait();
+                await Diagnoser.Connect(client, cancellationToken).VhConfigureAwait();
 
             // set connected time
             ConnectedTime = DateTime.Now;
 
             // update access token if ResponseAccessKey is set
-            if (_client.ResponseAccessKey != null)
-                token = ClientProfileService.UpdateTokenByAccessKey(token, _client.ResponseAccessKey);
+            if (client.ResponseAccessKey != null)
+                token = ClientProfileService.UpdateTokenByAccessKey(token, client.ResponseAccessKey);
 
             // check version after first connection
             _ = VersionCheck();
         }
-        catch (Exception) when (_client is null)
+        catch (Exception) when (client is null)
         {
             packetCapture.Dispose(); // don't miss to dispose when there is no client to handle it
         }
-        catch (Exception)
+        catch (Exception) 
         {
-            await _client.DisposeAsync().VhConfigureAwait();
+            await client.DisposeAsync().VhConfigureAwait();
             _client = null;
 
             // try to update token from url after connection or error if ResponseAccessKey is not set

@@ -5,11 +5,8 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Utils;
-using InterstitialAdLoadCallback = VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix.InterstitialAdLoadCallback;
 
 namespace VpnHood.Client.App.Droid.Ads.VhAdMob;
-
-using InterstitialAdLoadCallback = AdNetworkCallBackFix.InterstitialAdLoadCallback;
 
 public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAdService
 {
@@ -116,7 +113,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
             _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
         }
     }
-    private class MyInterstitialAdLoadCallback : InterstitialAdLoadCallback
+    private class MyInterstitialAdLoadCallback : AdNetworkCallBackFix.InterstitialAdLoadCallback
     {
         private readonly TaskCompletionSource<InterstitialAd> _loadedCompletionSource = new();
         public Task<InterstitialAd> Task => _loadedCompletionSource.Task;

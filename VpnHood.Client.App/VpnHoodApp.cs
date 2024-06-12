@@ -9,6 +9,7 @@ using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
+using VpnHood.Client.Device.Exceptions;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.ApiClients;
@@ -81,7 +82,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppServices Services { get; }
     public DateTime? ConnectedTime { get; private set; }
     public IUiContext? UiContext { get; set; }
-    public IUiContext RequiredUiContext => UiContext ?? throw new Exception("The main window app does not exists.");
+    public IUiContext RequiredUiContext => UiContext ?? throw new UiContextNotAvailableException();
 
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
@@ -656,6 +657,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 using var timeoutCts = new CancellationTokenSource(_adLoadTimeout);
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adService.LoadAd(RequiredUiContext, linkedCts.Token).VhConfigureAwait();
+            }
+            catch (UiContextNotAvailableException)
+            {
+                throw new AdException("Could not show the ad because the app window was not open.");
             }
             // do not catch if parent cancel the operation
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)

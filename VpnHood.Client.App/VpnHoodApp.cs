@@ -660,7 +660,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (UiContextNotAvailableException)
             {
-                throw new AdShowException("Could not show the ad because the app window was not open.");
+                throw new ShowAdException("Could not show the ad because the app window was not open.");
             }
             // do not catch if parent cancel the operation
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -674,9 +674,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             {
                 await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
             }
-            catch (Exception ex) when (ex is not AdShowException)
+            catch (Exception ex) when (ex is not ShowAdException)
             {
-                throw new AdShowException("Could not show the ad.", ex);
+                throw new ShowAdException("Could not show the ad.", ex);
             }
 
             //return adData; //rewarded ad has not been implemented yet
@@ -684,7 +684,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // could not load any ad
-        throw new AdLoadException($"Could not load any AD. Country: {_appPersistState.ClientCountryName}");
+        throw new LoadAdException($"Could not load any AD. Country: {_appPersistState.ClientCountryName}");
     }
 
     private void Client_StateChanged(object sender, EventArgs e)

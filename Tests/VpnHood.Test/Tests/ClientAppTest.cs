@@ -101,7 +101,7 @@ public class ClientAppTest : TestBase
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
         var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.Client.App", "Resources", "IpLocations.zip");
-        if (File.GetCreationTime(ipLocationFile) >= DateTime.Now - TimeSpan.FromDays(7))
+        if (File.GetCreationTime(ipLocationFile) <= DateTime.Now - TimeSpan.FromDays(7))
             return;
 
         // find token

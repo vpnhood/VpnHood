@@ -124,7 +124,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.Client.App.Android.Ads.UnityAds" Version="4.5.527" />
+	  <PackageReference Include="VpnHood.Client.App.Android.Ads.UnityAds" Version="4.5.529" />
 	</ItemGroup>
 
 </Project>

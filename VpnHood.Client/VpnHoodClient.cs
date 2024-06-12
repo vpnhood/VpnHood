@@ -921,7 +921,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (!string.IsNullOrEmpty(adData))
                 _ = SendAdReward(adData, cancellationToken);
         }
-        catch (AdLoadException ex)
+        catch (LoadAdException ex)
         {
             if (required)
                 throw new AdException("Could not load the required ad.", ex);

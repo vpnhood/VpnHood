@@ -43,7 +43,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
-            throw new AdLoadException("MainActivity has been destroyed before loading the ad.");
+            throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
 
         // reset the last loaded ad
         AdLoadedTime = null;
@@ -67,10 +67,10 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
-            throw new AdShowException("MainActivity has been destroyed before showing the ad.");
+            throw new ShowAdException("MainActivity has been destroyed before showing the ad.");
 
         if (_loadedAd == null)
-            throw new AdShowException($"The {AdType} has not been loaded.");
+            throw new ShowAdException($"The {AdType} has not been loaded.");
 
         try
         {
@@ -111,7 +111,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
+            _loadedCompletionSource.TrySetException(new LoadAdException(addError.Message));
         }
     }
 
@@ -127,7 +127,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
-            _dismissedCompletionSource.TrySetException(new AdShowException(adError.Message));
+            _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }
     }
 

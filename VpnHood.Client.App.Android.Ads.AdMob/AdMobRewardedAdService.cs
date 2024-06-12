@@ -58,10 +58,10 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
-            throw new AdException("MainActivity has been destroyed before showing the ad.");
+            throw new AdShowException("MainActivity has been destroyed before showing the ad.");
 
         if (_loadedAd == null)
-            throw new AdException($"The {AdType} has not benn loaded.");
+            throw new AdShowException($"The {AdType} has not been loaded.");
 
         try
         {
@@ -126,7 +126,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         public override void OnAdFailedToShowFullScreenContent(AdError adError)
         {
-            _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
+            _dismissedCompletionSource.TrySetException(new AdShowException(adError.Message));
         }
     }
     private class MyOnUserEarnedRewardListener : Java.Lang.Object, IOnUserEarnedRewardListener

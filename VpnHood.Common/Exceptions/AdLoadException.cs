@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Common.Exceptions;
 
-public class AdLoadException : Exception
+public class AdLoadException : AdException
 {
     public AdLoadException(string message) : base(message)
     {

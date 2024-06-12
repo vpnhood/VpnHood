@@ -660,7 +660,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (UiContextNotAvailableException)
             {
-                throw new AdException("Could not show the ad because the app window was not open.");
+                throw new AdShowException("Could not show the ad because the app window was not open.");
             }
             // do not catch if parent cancel the operation
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -670,7 +670,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // show the ad
-            await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+            try
+            {
+                await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+            }
+            catch (Exception ex) when (ex is not AdShowException)
+            {
+                throw new AdShowException("Could not show the ad.", ex);
+            }
+
             //return adData; //rewarded ad has not been implemented yet
             return "";
         }

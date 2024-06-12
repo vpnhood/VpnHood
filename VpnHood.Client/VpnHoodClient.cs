@@ -929,10 +929,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation(ex, "Could not load the flexible ad.");
             // ignore exception for flexible ad if load failed
         }
-        catch (Exception ex)
-        {
-            throw new AdException("Could not show the required ad.", ex);
-        }
         finally
         {
             _isWaitingForAd = false;

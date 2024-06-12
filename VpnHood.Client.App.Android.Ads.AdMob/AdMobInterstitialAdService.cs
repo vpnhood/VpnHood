@@ -67,10 +67,10 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
-            throw new AdException("MainActivity has been destroyed before showing the ad.");
+            throw new AdShowException("MainActivity has been destroyed before showing the ad.");
 
         if (_loadedAd == null)
-            throw new AdException($"The {AdType} has not been loaded.");
+            throw new AdShowException($"The {AdType} has not been loaded.");
 
         try
         {
@@ -98,21 +98,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         }
 
     }
-    private class MyFullScreenContentCallback : FullScreenContentCallback
-    {
-        private readonly TaskCompletionSource _dismissedCompletionSource = new();
-        public Task DismissedTask => _dismissedCompletionSource.Task;
 
-        public override void OnAdDismissedFullScreenContent()
-        {
-            _dismissedCompletionSource.TrySetResult();
-        }
-
-        public override void OnAdFailedToShowFullScreenContent(AdError adError)
-        {
-            _dismissedCompletionSource.TrySetException(new AdException(adError.Message));
-        }
-    }
     private class MyInterstitialAdLoadCallback : AdNetworkCallBackFix.InterstitialAdLoadCallback
     {
         private readonly TaskCompletionSource<InterstitialAd> _loadedCompletionSource = new();
@@ -126,6 +112,22 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
             _loadedCompletionSource.TrySetException(new AdLoadException(addError.Message));
+        }
+    }
+
+    private class MyFullScreenContentCallback : FullScreenContentCallback
+    {
+        private readonly TaskCompletionSource _dismissedCompletionSource = new();
+        public Task DismissedTask => _dismissedCompletionSource.Task;
+
+        public override void OnAdDismissedFullScreenContent()
+        {
+            _dismissedCompletionSource.TrySetResult();
+        }
+
+        public override void OnAdFailedToShowFullScreenContent(AdError adError)
+        {
+            _dismissedCompletionSource.TrySetException(new AdShowException(adError.Message));
         }
     }
 

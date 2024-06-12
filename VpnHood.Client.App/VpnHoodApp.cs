@@ -660,12 +660,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (UiContextNotAvailableException)
             {
-                throw new ShowAdException("Could not show the ad because the app window was not open.");
+                throw new ShowAdException("Could not show any ad because the app window was not open.");
             }
             // do not catch if parent cancel the operation
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                VhLogger.Instance.LogWarning(ex, "Could not load the ad. Network: {Network}.", adService.NetworkName);
+                VhLogger.Instance.LogWarning(ex, "Could not load any ad. Network: {Network}.", adService.NetworkName);
                 continue;
             }
 
@@ -676,7 +676,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex) when (ex is not ShowAdException)
             {
-                throw new ShowAdException("Could not show the ad.", ex);
+                throw new ShowAdException("Could not show any ad. Make sure the app window is open.", ex);
             }
 
             //return adData; //rewarded ad has not been implemented yet

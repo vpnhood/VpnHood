@@ -809,7 +809,7 @@ export class AppClient {
         return Promise.resolve<DeviceAppInfo[]>(null as any);
     }
 
-    getIpGroups( cancelToken?: CancelToken): Promise<IpGroup[]> {
+    getIpGroups( cancelToken?: CancelToken): Promise<IpGroupInfo[]> {
         let url_ = this.baseUrl + "/api/app/ip-groups";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -833,7 +833,7 @@ export class AppClient {
         });
     }
 
-    protected processGetIpGroups(response: AxiosResponse): Promise<IpGroup[]> {
+    protected processGetIpGroups(response: AxiosResponse): Promise<IpGroupInfo[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -850,18 +850,18 @@ export class AppClient {
             if (Array.isArray(resultData200)) {
                 result200 = [] as any;
                 for (let item of resultData200)
-                    result200!.push(IpGroup.fromJS(item));
+                    result200!.push(IpGroupInfo.fromJS(item));
             }
             else {
                 result200 = <any>null;
             }
-            return Promise.resolve<IpGroup[]>(result200);
+            return Promise.resolve<IpGroupInfo[]>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<IpGroup[]>(null as any);
+        return Promise.resolve<IpGroupInfo[]>(null as any);
     }
 
     versionCheck( cancelToken?: CancelToken): Promise<void> {
@@ -1868,7 +1868,7 @@ export class AppState implements IAppState {
     configTime!: Date;
     connectRequestTime?: Date | null;
     connectionState!: AppConnectionState;
-    lastError?: string | null;
+    lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
     clientServerLocationInfo?: ClientServerLocationInfo | null;
     serverLocationInfo?: ServerLocationInfo | null;
@@ -1915,7 +1915,7 @@ export class AppState implements IAppState {
             this.configTime = _data["configTime"] ? new Date(_data["configTime"].toString()) : <any>null;
             this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : <any>null;
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : <any>null;
-            this.lastError = _data["lastError"] !== undefined ? _data["lastError"] : <any>null;
+            this.lastError = _data["lastError"] ? ApiError.fromJS(_data["lastError"]) : <any>null;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : <any>null;
             this.clientServerLocationInfo = _data["clientServerLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["clientServerLocationInfo"]) : <any>null;
             this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
@@ -1955,7 +1955,7 @@ export class AppState implements IAppState {
         data["configTime"] = this.configTime ? this.configTime.toISOString() : <any>null;
         data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : <any>null;
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : <any>null;
-        data["lastError"] = this.lastError !== undefined ? this.lastError : <any>null;
+        data["lastError"] = this.lastError ? this.lastError.toJSON() : <any>null;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : <any>null;
         data["clientServerLocationInfo"] = this.clientServerLocationInfo ? this.clientServerLocationInfo.toJSON() : <any>null;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
@@ -1988,7 +1988,7 @@ export interface IAppState {
     configTime: Date;
     connectRequestTime?: Date | null;
     connectionState: AppConnectionState;
-    lastError?: string | null;
+    lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
     clientServerLocationInfo?: ClientServerLocationInfo | null;
     serverLocationInfo?: ServerLocationInfo | null;
@@ -2023,6 +2023,76 @@ export enum AppConnectionState {
     Connecting = "Connecting",
     Connected = "Connected",
     Disconnecting = "Disconnecting",
+}
+
+export class ApiError implements IApiError {
+    typeName!: string;
+    typeFullName?: string | null;
+    message!: string;
+    data!: { [key: string]: string; };
+    innerMessage?: string | null;
+
+    constructor(data?: IApiError) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.data = {};
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.typeName = _data["typeName"] !== undefined ? _data["typeName"] : <any>null;
+            this.typeFullName = _data["typeFullName"] !== undefined ? _data["typeFullName"] : <any>null;
+            this.message = _data["message"] !== undefined ? _data["message"] : <any>null;
+            if (_data["data"]) {
+                this.data = {} as any;
+                for (let key in _data["data"]) {
+                    if (_data["data"].hasOwnProperty(key))
+                        (<any>this.data)![key] = _data["data"][key] !== undefined ? _data["data"][key] : <any>null;
+                }
+            }
+            else {
+                this.data = <any>null;
+            }
+            this.innerMessage = _data["innerMessage"] !== undefined ? _data["innerMessage"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): ApiError {
+        data = typeof data === 'object' ? data : {};
+        let result = new ApiError();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["typeName"] = this.typeName !== undefined ? this.typeName : <any>null;
+        data["typeFullName"] = this.typeFullName !== undefined ? this.typeFullName : <any>null;
+        data["message"] = this.message !== undefined ? this.message : <any>null;
+        if (this.data) {
+            data["data"] = {};
+            for (let key in this.data) {
+                if (this.data.hasOwnProperty(key))
+                    (<any>data["data"])[key] = this.data[key] !== undefined ? this.data[key] : <any>null;
+            }
+        }
+        data["innerMessage"] = this.innerMessage !== undefined ? this.innerMessage : <any>null;
+        return data;
+    }
+}
+
+export interface IApiError {
+    typeName: string;
+    typeFullName?: string | null;
+    message: string;
+    data: { [key: string]: string; };
+    innerMessage?: string | null;
 }
 
 export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
@@ -2159,7 +2229,7 @@ export class SessionStatus implements ISessionStatus {
     accessUsage?: AccessUsage | null;
     suppressedTo!: SessionSuppressType;
     suppressedBy!: SessionSuppressType;
-    errorMessage?: string | null;
+    error?: ApiError | null;
 
     constructor(data?: ISessionStatus) {
         if (data) {
@@ -2176,7 +2246,7 @@ export class SessionStatus implements ISessionStatus {
             this.accessUsage = _data["accessUsage"] ? AccessUsage.fromJS(_data["accessUsage"]) : <any>null;
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : <any>null;
             this.suppressedBy = _data["suppressedBy"] !== undefined ? _data["suppressedBy"] : <any>null;
-            this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : <any>null;
+            this.error = _data["error"] ? ApiError.fromJS(_data["error"]) : <any>null;
         }
     }
 
@@ -2193,7 +2263,7 @@ export class SessionStatus implements ISessionStatus {
         data["accessUsage"] = this.accessUsage ? this.accessUsage.toJSON() : <any>null;
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : <any>null;
         data["suppressedBy"] = this.suppressedBy !== undefined ? this.suppressedBy : <any>null;
-        data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : <any>null;
+        data["error"] = this.error ? this.error.toJSON() : <any>null;
         return data;
     }
 }
@@ -2203,7 +2273,7 @@ export interface ISessionStatus {
     accessUsage?: AccessUsage | null;
     suppressedTo: SessionSuppressType;
     suppressedBy: SessionSuppressType;
-    errorMessage?: string | null;
+    error?: ApiError | null;
 }
 
 export enum SessionErrorCode {
@@ -2453,6 +2523,8 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
     tokenId!: string;
     hostNames!: string[];
     isValidHostName!: boolean;
+    isBuiltIn!: boolean;
+    isForAccount!: boolean;
     serverLocationInfos!: ClientServerLocationInfo[];
 
     constructor(data?: IClientProfileInfo) {
@@ -2476,6 +2548,8 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 this.hostNames = <any>null;
             }
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : <any>null;
+            this.isBuiltIn = _data["isBuiltIn"] !== undefined ? _data["isBuiltIn"] : <any>null;
+            this.isForAccount = _data["isForAccount"] !== undefined ? _data["isForAccount"] : <any>null;
             if (Array.isArray(_data["serverLocationInfos"])) {
                 this.serverLocationInfos = [] as any;
                 for (let item of _data["serverLocationInfos"])
@@ -2503,6 +2577,8 @@ export class ClientProfileInfo extends ClientProfileBaseInfo implements IClientP
                 data["hostNames"].push(item);
         }
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : <any>null;
+        data["isBuiltIn"] = this.isBuiltIn !== undefined ? this.isBuiltIn : <any>null;
+        data["isForAccount"] = this.isForAccount !== undefined ? this.isForAccount : <any>null;
         if (Array.isArray(this.serverLocationInfos)) {
             data["serverLocationInfos"] = [];
             for (let item of this.serverLocationInfos)
@@ -2517,6 +2593,8 @@ export interface IClientProfileInfo extends IClientProfileBaseInfo {
     tokenId: string;
     hostNames: string[];
     isValidHostName: boolean;
+    isBuiltIn: boolean;
+    isForAccount: boolean;
     serverLocationInfos: ClientServerLocationInfo[];
 }
 
@@ -2702,11 +2780,11 @@ export interface IDeviceAppInfo {
     iconPng: string;
 }
 
-export class IpGroup implements IIpGroup {
+export class IpGroupInfo implements IIpGroupInfo {
     ipGroupId!: string;
     ipGroupName!: string;
 
-    constructor(data?: IIpGroup) {
+    constructor(data?: IIpGroupInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -2722,9 +2800,9 @@ export class IpGroup implements IIpGroup {
         }
     }
 
-    static fromJS(data: any): IpGroup {
+    static fromJS(data: any): IpGroupInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new IpGroup();
+        let result = new IpGroupInfo();
         result.init(data);
         return result;
     }
@@ -2737,7 +2815,7 @@ export class IpGroup implements IIpGroup {
     }
 }
 
-export interface IIpGroup {
+export interface IIpGroupInfo {
     ipGroupId: string;
     ipGroupName: string;
 }

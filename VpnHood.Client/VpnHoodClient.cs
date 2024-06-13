@@ -314,8 +314,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         // manually manage DNS reply if DNS does not supported by _packetCapture
         if (!_packetCapture.IsDnsServersSupported)
-            foreach (var ipPacket in e.IpPackets)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < e.IpPackets.Length; i++)
+            {
+                var ipPacket = e.IpPackets[i];
                 UpdateDnsRequest(ipPacket, false);
+            }
 
         _packetCapture.SendPacketToInbound(e.IpPackets);
     }
@@ -337,8 +341,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var passthruPackets = _sendingPackets.PassthruPackets;
                 var proxyPackets = _sendingPackets.ProxyPackets;
                 var droppedPackets = _sendingPackets.DroppedPackets;
-                foreach (var ipPacket in e.IpPackets)
+                
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < e.IpPackets.Count; i++)
                 {
+                    var ipPacket = e.IpPackets[i];
                     if (_disposed) return;
                     var isIpV6 = ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6;
                     var udpPacket = ipPacket.Protocol == ProtocolType.Udp ? ipPacket.Extract<UdpPacket>() : null;

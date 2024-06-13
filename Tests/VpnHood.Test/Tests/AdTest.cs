@@ -78,7 +78,7 @@ public class AdTest : TestBase
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<AdException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<ShowAdException>(() => app.Connect(clientProfile.ClientProfileId));
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
 

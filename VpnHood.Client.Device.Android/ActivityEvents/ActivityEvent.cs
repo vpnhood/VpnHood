@@ -4,7 +4,7 @@ using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
 
-namespace VpnHood.Client.Device.Droid.Utils;
+namespace VpnHood.Client.Device.Droid.ActivityEvents;
 
 public class ActivityEvent : Activity, IActivityEvent
 {

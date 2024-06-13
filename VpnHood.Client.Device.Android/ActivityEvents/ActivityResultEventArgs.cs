@@ -1,6 +1,6 @@
 ﻿using Android.Content;
 
-namespace VpnHood.Client.Device.Droid.Utils;
+namespace VpnHood.Client.Device.Droid.ActivityEvents;
 
 public class ActivityResultEventArgs : EventArgs
 {

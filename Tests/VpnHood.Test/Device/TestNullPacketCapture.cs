@@ -2,6 +2,4 @@
 
 namespace VpnHood.Test.Device;
 
-internal class TestNullPacketCapture : NullPacketCapture
-{
-}
+internal class TestNullPacketCapture : NullPacketCapture;

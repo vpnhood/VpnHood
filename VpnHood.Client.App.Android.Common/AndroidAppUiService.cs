@@ -3,7 +3,7 @@ using Android.Content;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Client.Device.Droid.ActivityEvents;
 using VpnHood.Common.Utils;
 using Permission = Android.Content.PM.Permission;
 

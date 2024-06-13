@@ -21,8 +21,9 @@ public abstract class AppOpenAdLoadCallback : AppOpenAd.AppOpenAdLoadCallback
             adLoadCallback?.OnAdLoaded(appOpenAd);
     }
 
-    // ReSharper disable once StringLiteralTypo
+    // ReSharper disable StringLiteralTypo
     [Register("onAdLoaded", "(Lcom/google/android/gms/ads/appopen/AppOpenAd;)V", "GetOnAdLoadedHandler")]
+    // ReSharper restore StringLiteralTypo
     protected virtual void OnAdLoaded(AppOpenAd appOpenAd)
     {
     }

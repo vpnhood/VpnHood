@@ -4,7 +4,7 @@ using Android.Graphics.Drawables;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
-using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Client.Device.Droid.ActivityEvents;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 

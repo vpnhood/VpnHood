@@ -70,12 +70,12 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
         }
     }
 
-    public Task SendPacket(IPPacket[] ipPackets)
+    public Task SendPacket(IList<IPPacket> ipPackets)
     {
         return SendPacket(ipPackets, false);
     }
 
-    public async Task SendPacket(IPPacket[] ipPackets, bool disconnect)
+    public async Task SendPacket(IList<IPPacket> ipPackets, bool disconnect)
     {
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
@@ -89,18 +89,22 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
             if (!Connected)
                 throw new Exception($"The StreamDatagramChannel is disconnected. ChannelId: {ChannelId}.");
 
-            // check MTU
-            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
-            if (dataLen > Mtu)
-                throw new InvalidOperationException(
-                    $"Total packets length is too big for this StreamDatagramChannel. ChannelId {ChannelId}, MaxSize: {Mtu}, Packets Size: {dataLen}");
-
             // copy packets to buffer
             var buffer = _buffer;
             var bufferIndex = 0;
 
-            foreach (var ipPacket in ipPackets)
+            var dataLen = 0;
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < ipPackets.Count; i++)
             {
+                var ipPacket = ipPackets[i];
+
+                // check MTU
+                dataLen += ipPackets[i].TotalPacketLength;
+                if (dataLen > Mtu) throw new InvalidOperationException(
+                    $"Total packets length is too big for this StreamDatagramChannel. ChannelId {ChannelId}, MaxSize: {Mtu}, Packets Size: {dataLen}");
+
+                // copy to buffer
                 Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalLength);
                 bufferIndex += ipPacket.TotalLength;
             }
@@ -134,12 +138,16 @@ public class StreamDatagramChannel : IDatagramChannel, IJob
 
                 // check datagram message
                 List<IPPacket>? processedPackets = null;
-                foreach (var ipPacket in ipPackets)
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < ipPackets.Length; i++)
+                {
+                    var ipPacket = ipPackets[i];
                     if (ProcessMessage(ipPacket))
                     {
                         processedPackets ??= [];
                         processedPackets.Add(ipPacket);
                     }
+                }
 
                 // remove all processed packets
                 if (processedPackets != null)

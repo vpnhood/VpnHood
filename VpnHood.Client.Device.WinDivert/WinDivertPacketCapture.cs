@@ -56,8 +56,12 @@ public class WinDivertPacketCapture : IPacketCapture
 
     public void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
-        foreach (var ipPacket in ipPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++)
+        {
+            var ipPacket = ipPackets[i];
             SendPacket(ipPacket, false);
+        }
     }
 
     public void SendPacketToInbound(IPPacket ipPacket)
@@ -72,8 +76,12 @@ public class WinDivertPacketCapture : IPacketCapture
 
     public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
-        foreach (var ipPacket in ipPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++)
+        {
+            var ipPacket = ipPackets[i];
             SendPacket(ipPacket, true);
+        }
     }
 
     public IpNetwork[]? IncludeNetworks

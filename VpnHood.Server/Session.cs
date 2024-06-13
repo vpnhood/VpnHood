@@ -143,8 +143,10 @@ public class Session : IAsyncDisposable, IJob
             return;
 
         // filter requests
-        foreach (var ipPacket in e.IpPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < e.IpPackets.Length; i++)
         {
+            var ipPacket = e.IpPackets[i];
             var ipPacket2 = _netFilter.ProcessRequest(ipPacket);
             if (ipPacket2 == null)
             {
@@ -155,7 +157,6 @@ public class Session : IAsyncDisposable, IJob
             }
 
             _ = _proxyManager.SendPacket(ipPacket2);
-
         }
     }
 

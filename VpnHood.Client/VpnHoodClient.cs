@@ -925,7 +925,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             _isWaitingForAd = true;
             var adData = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken).VhConfigureAwait();
-            if (!string.IsNullOrEmpty(adData))
+            if (!string.IsNullOrEmpty(adData) && required)
                 _ = SendAdReward(adData, cancellationToken);
         }
         catch (LoadAdException ex)

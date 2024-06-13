@@ -679,8 +679,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new ShowAdException("Could not show any ad. Make sure the app window is open.", ex);
             }
 
-            //return adData; //rewarded ad has not been implemented yet
-            return "";
+            return adData; 
         }
 
         // could not load any ad

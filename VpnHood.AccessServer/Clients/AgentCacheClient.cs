@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using GrayMint.Common.Client;
+using GrayMint.Common.ApiClients;
 using VpnHood.AccessServer.Options;
 using VpnHood.AccessServer.Persistence.Caches;
 

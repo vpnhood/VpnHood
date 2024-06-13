@@ -129,7 +129,7 @@ public class AgentService(
         serverModel.Version = serverInfo.Version.ToString();
         serverModel.GatewayIpV4 = gatewayIpV4?.ToString();
         serverModel.GatewayIpV6 = gatewayIpV6?.ToString();
-        serverModel.Location ??= await GetIpLocation(gatewayIpV4 ?? gatewayIpV6);
+        serverModel.Location ??= await GetIpLocation(gatewayIpV4 ?? gatewayIpV6, CancellationToken.None);
 
         // calculate access points
         if (serverModel.AutoConfigure)
@@ -147,7 +147,7 @@ public class AgentService(
         return serverConfig;
     }
 
-    private async Task<LocationModel?> GetIpLocation(IPAddress? ipAddress)
+    private async Task<LocationModel?> GetIpLocation(IPAddress? ipAddress, CancellationToken cancellationToken)
     {
         if (ipAddress == null)
             return null;
@@ -155,7 +155,7 @@ public class AgentService(
         try
         {
             using var httpClient = httpClientFactory.CreateClient();
-            var ipLocation = await ipLocationProvider.GetLocation(httpClient, ipAddress);
+            var ipLocation = await ipLocationProvider.GetLocation(httpClient, ipAddress, cancellationToken);
             var location = await vhAgentRepo.LocationFind(ipLocation.CountryCode, ipLocation.RegionCode, ipLocation.CityCode);
             if (location == null)
             {

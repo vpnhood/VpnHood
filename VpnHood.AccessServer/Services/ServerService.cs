@@ -306,7 +306,11 @@ public class ServerService(
         var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhContext.SaveChangesAsync();
         if (isFarmUpdated)
-            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId, includeSevers: false);
+        {
+            var includeSevers = server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken);
+            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId, 
+                includeSevers: includeSevers);
+        }
 
     }
 

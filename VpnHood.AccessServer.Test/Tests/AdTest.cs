@@ -63,7 +63,6 @@ public class AdTest
         // create session
         var sessionDom = await accessTokenDom.CreateSession(clientId: clientId);
         Assert.IsTrue(sessionDom.SessionResponseEx.AccessUsage?.ExpirationTime < DateTime.UtcNow.AddMinutes(10));
-        Assert.IsTrue(sessionDom.SessionResponseEx.IsAdRequired);
         Assert.AreEqual(AdRequirement.Required.ToString(), sessionDom.SessionResponseEx.AdRequirement.ToString());
 
         // extend session
@@ -77,7 +76,6 @@ public class AdTest
         // next session should be auto rewarded
         var sessionDom2 = await accessTokenDom.CreateSession(clientId: clientId);
         Assert.IsNull(sessionDom2.SessionResponseEx.AccessUsage?.ExpirationTime);
-        Assert.IsFalse(sessionDom2.SessionResponseEx.IsAdRequired);
     }
 
 }

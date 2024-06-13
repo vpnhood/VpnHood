@@ -229,7 +229,6 @@ public class SessionService(
         };
 
         var ret = await BuildSessionResponse(session, access);
-        ret.IsAdRequired = isAdRequired;
         ret.AdRequirement = accessToken.AdRequirement;
         ret.ExtraData = session.ExtraData;
         ret.GaMeasurementId = project.GaMeasurementId;

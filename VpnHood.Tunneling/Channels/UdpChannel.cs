@@ -41,7 +41,7 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
         LastActivityTime = FastDateTime.Now;
     }
 
-    public async Task SendPacket(IPPacket[] ipPackets)
+    public async Task SendPacket(IList<IPPacket> ipPackets)
     {
         try
         {
@@ -52,8 +52,10 @@ public class UdpChannel(ulong sessionId, byte[] sessionKey, bool isServer, int p
             var bufferIndex = UdpChannelTransmitter.HeaderLength;
 
             // copy packets
-            foreach (var ipPacket in ipPackets)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < ipPackets.Count; i++)
             {
+                var ipPacket = ipPackets[i];
                 Buffer.BlockCopy(ipPacket.Bytes, 0, _buffer, bufferIndex, ipPacket.TotalLength);
                 bufferIndex += ipPacket.TotalPacketLength;
             }

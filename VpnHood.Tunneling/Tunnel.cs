@@ -303,9 +303,12 @@ public class Tunnel : IJob, IAsyncDisposable
         // add all packets to the queue
         lock (_packetQueue)
         {
-            // ReSharper disable once PossibleMultipleEnumeration
-            foreach (var ipPacket in ipPackets)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < ipPackets.Count; i++)
+            {
+                var ipPacket = ipPackets[i];
                 _packetQueue.Enqueue(ipPacket);
+            }
 
             var releaseCount = DatagramChannelCount - _packetSenderSemaphore.CurrentCount;
             if (releaseCount > 0)

@@ -277,10 +277,14 @@ public static class PacketUtil
         return packet;
     }
 
-    public static void LogPackets(IEnumerable<IPPacket> ipPackets, string operation)
+    public static void LogPackets(IList<IPPacket> ipPackets, string operation)
     {
-        foreach (var ipPacket in ipPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++)
+        {
+            var ipPacket = ipPackets[i];
             LogPacket(ipPacket, operation);
+        }
     }
 
     public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information, Exception? exception = null)

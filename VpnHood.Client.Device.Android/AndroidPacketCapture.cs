@@ -115,8 +115,12 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     public void SendPacketToInbound(IList<IPPacket> ipPackets)
     {
-        foreach (var ipPacket in ipPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++)
+        {
+            var ipPacket = ipPackets[i];
             _outStream?.Write(ipPacket.Bytes);
+        }
     }
 
     public void SendPacketToOutbound(IList<IPPacket> ipPackets)

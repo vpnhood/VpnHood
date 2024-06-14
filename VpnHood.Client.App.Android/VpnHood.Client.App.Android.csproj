@@ -44,10 +44,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.2" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj" />

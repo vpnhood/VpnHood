@@ -1,5 +1,7 @@
 ﻿using System.Drawing;
 using Android.Runtime;
+using Firebase.Crashlytics;
+using Firebase;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Ads.VhUnityAds;
 using VpnHood.Client.App.Droid.Common;
@@ -23,6 +25,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions CreateAppOptions()
     {
         var appSettings = AppSettings.Create();
+        InitFirebaseCrashlytics(appSettings);
 
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.FirebaseClientId);
@@ -52,6 +55,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             ],
             UiService = new AndroidAppUiService()
         };
+    }
+
+    private void InitFirebaseCrashlytics(AppSettings appSettings)
+    {
+        var firebaseOptions = new FirebaseOptions.Builder()
+            .SetProjectId(appSettings.FirebaseProjectId)
+            .SetApplicationId(appSettings.FirebaseApplicationId)
+            .SetApiKey(appSettings.FirebaseApiKey)
+            .Build();
+
+        FirebaseApp.InitializeApp(this, firebaseOptions);
+        FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
     }
 }
 

@@ -2,7 +2,11 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
+using Firebase;
+using Firebase.Crashlytics;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Droid.Common.Activities;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -22,6 +26,14 @@ namespace VpnHood.Client.App.Droid.Connect;
 [IntentFilter([TileService.ActionQsTilePreferences])]
 public class MainActivity : AndroidAppMainActivity
 {
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+        
+        // Initialize Firebase
+        InitFirebaseCrashlytics();
+    }
+
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
@@ -29,5 +41,21 @@ public class MainActivity : AndroidAppMainActivity
             DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
             ListenToAllIps = AppSettings.Instance.ListenToAllIps
         });
+    }
+
+    private void InitFirebaseCrashlytics()
+    {
+        var firebaseOptions = new FirebaseOptions.Builder()
+            .SetProjectId(AppSettings.Instance.FirebaseProjectId)
+            .SetApplicationId(AppSettings.Instance.FirebaseApplicationId)
+            .SetApiKey(AppSettings.Instance.FirebaseApiKey)
+            .Build();
+
+        var firebaseApp = FirebaseApp.InitializeApp(Application.Context, firebaseOptions);
+        if (firebaseApp == null)
+            VhLogger.Instance.LogError("The FirebaseApp is not initialized.");
+
+        // Initialize Crashlytics
+        FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);   
     }
 }

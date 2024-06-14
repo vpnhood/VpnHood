@@ -3,7 +3,6 @@ using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
-using VpnHood.Client.App.Droid.Connect.Properties;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -27,8 +26,8 @@ public class MainActivity : AndroidAppMainActivity
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
-            DefaultSpaPort = AssemblyInfo.DefaultSpaPort,
-            ListenToAllIps = AssemblyInfo.ListenToAllIps
+            DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
+            ListenToAllIps = AppSettings.Instance.ListenToAllIps
         });
     }
 }

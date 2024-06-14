@@ -64,9 +64,15 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             .SetApplicationId(appSettings.FirebaseApplicationId)
             .SetApiKey(appSettings.FirebaseApiKey)
             .Build();
-
-        FirebaseApp.InitializeApp(this, firebaseOptions);
-        FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
+        try
+        {
+            FirebaseApp.InitializeApp(this, firebaseOptions);
+            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 }
 

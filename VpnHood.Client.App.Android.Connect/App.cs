@@ -3,7 +3,6 @@ using Android.Runtime;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Ads.VhUnityAds;
 using VpnHood.Client.App.Droid.Common;
-using VpnHood.Client.App.Droid.Connect.Properties;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
 using VpnHood.Client.App.Store;
@@ -17,17 +16,19 @@ namespace VpnHood.Client.App.Droid.Connect;
     NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
     SupportsRtl = true, AllowBackup = true)]
 
-[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AssemblyInfo.AdMobApplicationId)]
+[MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppSettings.AdMobApplicationId)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
     protected override AppOptions CreateAppOptions()
     {
+        var appSettings = AppSettings.Create();
+
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(AssemblyInfo.FirebaseClientId);
-        var authenticationService = new StoreAuthenticationService(storageFolderPath, AssemblyInfo.StoreBaseUri, AssemblyInfo.StoreAppId, googlePlayAuthenticationService, AssemblyInfo.IsDebugMode);
+        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.FirebaseClientId);
+        var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri, appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
         var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
-        var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, AssemblyInfo.StoreAppId);
+        var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
 
         var resources = DefaultAppResource.Resource;
         resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
@@ -36,18 +37,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppOptions
         {
             StorageFolderPath = storageFolderPath,
-            AccessKeys = [AssemblyInfo.GlobalServersAccessKey],
+            AccessKeys = [appSettings.DefaultAccessKey],
             Resource = DefaultAppResource.Resource,
-            UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
+            UpdateInfoUrl = appSettings.UpdateInfoUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = accountService,
             AdServices = [
-                AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialAdUnitId, true),
-                AdMobInterstitialAdService.Create(AssemblyInfo.AdMobInterstitialNoVideoAdUnitId, false),
-                UnityAdService.Create(AssemblyInfo.UnityAdGameId, AssemblyInfo.UnityAdInterstitialPlacementId, AssemblyInfo.IsDebugMode)
+                AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
+                AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
+                UnityAdService.Create(appSettings.UnityAdGameId, appSettings.UnityAdInterstitialPlacementId, AppSettings.IsDebugMode)
             ],
             UiService = new AndroidAppUiService()
         };

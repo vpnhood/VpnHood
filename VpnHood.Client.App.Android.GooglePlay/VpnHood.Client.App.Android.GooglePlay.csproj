@@ -34,7 +34,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
 		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="121.0.0.1" />
 		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.1.0.2" />
 	</ItemGroup>

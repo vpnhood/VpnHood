@@ -14,22 +14,22 @@ internal class AppSettings : Singleton<AppSettings>
     public string DefaultAccessKey { get; init; } = "vh://eyJ2Ijo0LCJuYW1lIjoiVnBuSG9vZCBTYW1wbGUiLCJzaWQiOiIxMzAwIiwidGlkIjoiYTM0Mjk4ZDktY2YwYi00MGEwLWI5NmMtZGJhYjYzMWQ2MGVjIiwiaWF0IjoiMjAyNC0wNS0xMFQwNjo1MDozNC42ODQ4NjI4WiIsInNlYyI6Im9wcTJ6M0M0ak9rdHNodXl3c0VKNXc9PSIsImFkIjpmYWxzZSwic2VyIjp7ImN0IjoiMjAyNC0wNC0xNVQxOTo0NDozOVoiLCJobmFtZSI6Im1vLmdpd293eXZ5Lm5ldCIsImhwb3J0IjowLCJpc3YiOmZhbHNlLCJzZWMiOiJ2YUJxVTlSQzNRSGFXNHhGNWliWUZ3PT0iLCJjaCI6IjNnWE9IZTVlY3VpQzlxK3NiTzdobExva1FiQT0iLCJ1cmwiOiJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vdnBuaG9vZC9WcG5Ib29kLkZhcm1LZXlzL21haW4vRnJlZV9lbmNyeXB0ZWRfdG9rZW4udHh0IiwiZXAiOlsiNTEuODEuMjEwLjE2NDo0NDMiLCJbMjYwNDoyZGMwOjIwMjozMDA6OjVjZV06NDQzIl19fQ==";
     
     // Firebase authentication
-    public string FirebaseClientId { get; init; } = "YOUR_FIREBASE_CLIENT_ID";
-    
+    public string FirebaseClientId { get; init; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
+
     // Firebase Crashlytics
-    public string FirebaseProjectId { get; init; } = "YOUR_FIREBASE_PROJECT_ID";
-    public string FirebaseApplicationId { get; init; } = "YOUR_FIREBASE_APPLICATION_ID";
-    public string FirebaseApiKey { get; init; } = "YOUR_FIREBASE_APPLICATION_ID";
+    public string FirebaseProjectId { get; init; } = "client-xxxxx"; //YOUR_FIREBASE_PROJECT_ID
+    public string FirebaseApplicationId { get; init; } = "0:000000000000:android:0000000000000000000000"; //YOUR_FIREBASE_APPLICATION_ID
+    public string FirebaseApiKey { get; init; } = "xxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxx"; //YOUR_FIREBASE_API_KEY
 
     // VpnHood Store server
     public Uri StoreBaseUri { get; init; } = new ("https://store-api.vpnhood.com");
-    public Guid StoreAppId { get; init; } = Guid.Parse("00000000-0000-0000-0000-000000000000"); // YOUR_VPNHOOD_STORE_APP_ID
+    public Guid StoreAppId { get; init; } = Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
     public bool StoreIgnoreSslVerification { get; init; }
 
     // AdMob
     // Default value is AdMob test AdUnit id, References: https://developers.google.com/admob/android/test-ads
     // NOTE: AdMobApplicationId MUST BE SET
-    public const string AdMobApplicationId = "ca-app-pub-8662231806304184~1740102860"; // YOUR_ADMOB_APP_ID
+    public const string AdMobApplicationId = "ca-app-pub-8662231806304184~1740102860"; //YOUR_ADMOB_APP_ID
     public string AdMobInterstitialAdUnitId { get; init; } = "ca-app-pub-3940256099942544/8691691433";
     public string AdMobInterstitialNoVideoAdUnitId { get; init; } = "ca-app-pub-3940256099942544/1033173712";
     public string AdMobRewardedAdUnitId { get; init; } = "ca-app-pub-3940256099942544/5224354917";

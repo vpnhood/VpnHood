@@ -35,73 +35,17 @@
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(Configuration)'=='Release'">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>GlobalServersAccessKey</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_PUBLIC_ACCESSKEY)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobInterstitialAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobInterstitial)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobInterstitialNoVideoAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobInterstitialNoVideo)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobRewardedAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobRewarded)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobAppOpenAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_AdMobAppOpen)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>UnityAdGameId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_AD_UnityAdGameId)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>UnityAdInterstitialPlacementId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_AD_UNIT_UnityAdInterstitial)</_Parameter2>
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)'=='Debug'">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>GlobalServersAccessKey</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_PUBLIC_ACCESSKEY)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobInterstitialAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobInterstitial)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobInterstitialNoVideoAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobInterstitialNoVideo)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobRewardedAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobRewarded)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AdMobAppOpenAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_AdMobAppOpen)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>UnityAdGameId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UnityAdGameId)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>UnityAdInterstitialPlacementId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT_UnityAdInterstitial)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>StoreBaseUri</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_STORE_BASE_URI)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>StoreAppId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_STORE_APP_ID)</_Parameter2>
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 

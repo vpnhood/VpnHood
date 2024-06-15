@@ -10,13 +10,13 @@ using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAuthenticationService(string firebaseClientId) 
+public class GooglePlayAuthenticationService(string googleSignInClientId) 
     : IAppAuthenticationExternalService
 {
     private const int SignInIntentId = 20200;
     private TaskCompletionSource<GoogleSignInAccount>? _taskCompletionSource;
     private readonly GoogleSignInOptions _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-        .RequestIdToken(firebaseClientId)
+        .RequestIdToken(googleSignInClientId)
         .RequestEmail()
         .Build();
 

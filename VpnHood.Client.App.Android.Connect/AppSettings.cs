@@ -13,13 +13,13 @@ internal class AppSettings : Singleton<AppSettings>
     // It is limited and can not be used in production.
     public string DefaultAccessKey { get; init; } = "vh://eyJ2Ijo0LCJuYW1lIjoiVnBuSG9vZCBTYW1wbGUiLCJzaWQiOiIxMzAwIiwidGlkIjoiYTM0Mjk4ZDktY2YwYi00MGEwLWI5NmMtZGJhYjYzMWQ2MGVjIiwiaWF0IjoiMjAyNC0wNi0xNFQyMjozMjo1NS44OTQ5ODAyWiIsInNlYyI6Im9wcTJ6M0M0ak9rdHNodXl3c0VKNXc9PSIsInNlciI6eyJjdCI6IjIwMjQtMDYtMDVUMDQ6MTU6MzZaIiwiaG5hbWUiOiJtby5naXdvd3l2eS5uZXQiLCJocG9ydCI6MCwiaXN2IjpmYWxzZSwic2VjIjoidmFCcVU5UkMzUUhhVzR4RjVpYllGdz09IiwiY2giOiIzZ1hPSGU1ZWN1aUM5cStzYk83aGxMb2tRYkE9IiwidXJsIjoiaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL3Zwbmhvb2QvVnBuSG9vZC5GYXJtS2V5cy9tYWluL0ZyZWVfZW5jcnlwdGVkX3Rva2VuLnR4dCIsImVwIjpbIjUxLjgxLjIxMC4xNjQ6NDQzIiwiWzI2MDQ6MmRjMDoyMDI6MzAwOjo1Y2VdOjQ0MyJdLCJsb2MiOlsiVVMvT3JlZ29uIiwiVVMvVmlyZ2luaWEiXX19";
     
-    // Firebase authentication
-    public string FirebaseClientId { get; init; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
+    // Google sign-in (It is created through Firebase)
+    public string GoogleSignInClientId { get; init; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
     // Firebase Crashlytics
-    public string FirebaseProjectId { get; init; } = "client-xxxxx"; //YOUR_FIREBASE_PROJECT_ID
-    public string FirebaseApplicationId { get; init; } = "0:000000000000:android:0000000000000000000000"; //YOUR_FIREBASE_APPLICATION_ID
-    public string FirebaseApiKey { get; init; } = "xxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxx"; //YOUR_FIREBASE_API_KEY
+    public string? FirebaseProjectId { get; init; } //YOUR_FIREBASE_PROJECT_ID "client-xxxxx"
+    public string? FirebaseApplicationId { get; init; } //YOUR_FIREBASE_APPLICATION_ID "0:000000000000:android:0000000000000000000000"
+    public string? FirebaseApiKey { get; init; } //YOUR_FIREBASE_API_KEY "xxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxx"
 
     // VpnHood Store server
     public Uri StoreBaseUri { get; init; } = new ("https://store-api.vpnhood.com");

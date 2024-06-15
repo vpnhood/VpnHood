@@ -24,6 +24,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.github\workflows\nuget-production.yml = .github\workflows\nuget-production.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{4CE00B3B-7097-490C-B63E-ED6564E4DB39}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\PubVersion.json = Pub\PubVersion.json
+		Pub\PublishService.ps1 = Pub\PublishService.ps1
+		Pub\VersionBump.ps1 = Pub\VersionBump.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -25,10 +25,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions CreateAppOptions()
     {
         var appSettings = AppSettings.Create();
-        InitFirebaseCrashlytics(appSettings);
+        if (appSettings is { FirebaseProjectId: not null, FirebaseApplicationId: not null, FirebaseApiKey: not null })
+            InitFirebaseCrashlytics(appSettings);
 
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.FirebaseClientId);
+        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.GoogleSignInClientId);
         var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri, appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
         var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
         var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
@@ -59,19 +60,19 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
     private void InitFirebaseCrashlytics(AppSettings appSettings)
     {
-        var firebaseOptions = new FirebaseOptions.Builder()
-            .SetProjectId(appSettings.FirebaseProjectId)
-            .SetApplicationId(appSettings.FirebaseApplicationId)
-            .SetApiKey(appSettings.FirebaseApiKey)
-            .Build();
         try
         {
+            var firebaseOptions = new FirebaseOptions.Builder()
+                .SetProjectId(appSettings.FirebaseProjectId)
+                .SetApplicationId(appSettings.FirebaseApplicationId)
+                .SetApiKey(appSettings.FirebaseApiKey)
+                .Build();
             FirebaseApp.InitializeApp(this, firebaseOptions);
             FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
         }
-        catch (Exception e)
+        catch
         {
-            Console.WriteLine(e);
+            // ignored
         }
     }
 }

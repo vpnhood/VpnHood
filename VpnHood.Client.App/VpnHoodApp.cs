@@ -38,6 +38,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _useExternalLocationService;
     private readonly string? _appGa4MeasurementId;
     private bool _hasConnectRequested;
+    private bool _hasDisconnectRequested;
     private bool _hasDiagnoseStarted;
     private bool _hasDisconnectedByUser;
     private Guid? _activeClientProfileId;
@@ -301,6 +302,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.LastError = null;
         _hasDiagnoseStarted = false;
         _hasDisconnectedByUser = false;
+        _hasDisconnectRequested = false;
         _hasConnectRequested = false;
         _connectRequestTime = null;
     }
@@ -337,6 +339,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isConnecting = true;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = true;
+            _hasDisconnectRequested = false;
             _hasDiagnoseStarted = diagnose;
             _connectRequestTime = DateTime.Now;
             FireConnectionStateChanged();
@@ -376,15 +379,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not connect to any server within the given time.");
 
             //user may disconnect before connection closed
-            _appPersistState.LastError = new ApiError(ex);
-            if (!_hasDisconnectedByUser && ex is OperationCanceledException)
-                _appPersistState.LastError = new ApiError(new Exception("Could not connect to any server within the given time.", ex));
+            if (!_hasDisconnectedByUser)
+                _appPersistState.LastError = ex is OperationCanceledException
+                    ? new ApiError(new Exception("Could not connect to any server within the given time.", ex))
+                    : new ApiError(ex);
 
             // don't wait for disconnect, it may cause deadlock
             _ = Disconnect();
 
             if (throwException)
+            {
+                if (_hasDisconnectedByUser)
+                    throw new OperationCanceledException("Connection has been canceled by the user.", ex);
+
                 throw;
+            }
         }
         finally
         {
@@ -687,7 +696,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 throw new LoadAdException("Could not show any ad.", ex);
             }
 
-            return adData; 
+            return adData;
         }
 
         // could not load any ad
@@ -713,9 +722,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task Disconnect(bool byUser = false)
     {
         using var lockAsync = await _disconnectLock.LockAsync().VhConfigureAwait();
-        if (_isDisconnecting) 
+        if (_isDisconnecting || _hasDisconnectRequested)
             return;
-        
+        _hasDisconnectRequested = true;
+
         try
         {
             // set disconnect reason by user

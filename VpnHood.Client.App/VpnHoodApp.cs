@@ -713,11 +713,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task Disconnect(bool byUser = false)
     {
         using var lockAsync = await _disconnectLock.LockAsync().VhConfigureAwait();
-
-        // use ConnectedTime == null to prevent multiple disconnect calls
-        if (_isDisconnecting || ConnectedTime is null)
+        if (_isDisconnecting) 
             return;
-
+        
         try
         {
             // set disconnect reason by user

@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Ga4.Ga4Tracking;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;

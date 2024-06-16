@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>510</ApplicationVersion>
-		<ApplicationDisplayVersion>4.5.510</ApplicationDisplayVersion>
+		<ApplicationVersion>530</ApplicationVersion>
+		<ApplicationDisplayVersion>4.5.530</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,35 +30,22 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.5.510</Version>
+		<Version>4.5.530</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<BaseOutputPath></BaseOutputPath>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
-	<ItemGroup Condition="'$(Configuration)'=='Release'">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>GlobalServersAccessKey</_Parameter1>
-			<_Parameter2>$(VPNHOOD_PRO_PUBLIC_ACCESSKEY)</_Parameter2>
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(Configuration)'=='Debug'">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>GlobalServersAccessKey</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_PUBLIC_ACCESSKEY)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>RewardedAdUnitId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_AD_UNIT)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>StoreBaseUri</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_STORE_BASE_URI)</_Parameter2>
-		</AssemblyAttribute>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>StoreAppId</_Parameter1>
-			<_Parameter2>$(VPNHOOD_DEV_STORE_APP_ID)</_Parameter2>
+			<_Parameter1>AppSettings</_Parameter1>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
@@ -71,13 +58,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Ads\VpnHood.Client.App.Android.GooglePlay.Ads.csproj" />
+		<ProjectReference Include="..\VpnHood.Client.App.Android.Ads.AdMob\VpnHood.Client.App.Android.Ads.AdMob.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Resources\VpnHood.Client.App.Resources.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App.Store\VpnHood.Client.App.Store.csproj" />
 		<ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.Client.App.Android.Ads.UnityAds" Version="4.5.532" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
 	</ItemGroup>
 
 </Project>

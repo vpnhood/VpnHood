@@ -29,8 +29,6 @@ public class HelloResponse : SessionResponse
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public string? AccessKey { get; set; }
-    // todo: deprecated in version 504 or later
-    public bool IsAdRequired { get; set; }
     public AdRequirement AdRequirement { get; set; } = AdRequirement.None;
     public string? ServerLocation { get; set; }
 }

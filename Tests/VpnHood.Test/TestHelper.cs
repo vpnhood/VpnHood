@@ -18,7 +18,9 @@ using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
 using VpnHood.Server.Access.Managers.File;
 using VpnHood.Server.Access.Messaging;
-using VpnHood.Test.Factory;
+using VpnHood.Test.AccessManagers;
+using VpnHood.Test.Device;
+using VpnHood.Test.Services;
 using VpnHood.Tunneling;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -204,11 +206,21 @@ internal static class TestHelper
         ).Token;
     }
 
+    private static FileAccessManager GetFileAccessManagerFromServer(VpnHoodServer server)
+    {
+        var accessManager = server.AccessManager;
+        return accessManager switch
+        {
+            FileAccessManager fileAccessManager => fileAccessManager,
+            TestHttpAccessManager { EmbedIoAccessManager.BaseAccessManager: FileAccessManager fileAccessManager } => fileAccessManager,
+            _ => throw new InvalidOperationException("Could not get FileAccessManager from the server.")
+        };
+    }
+
     public static Token CreateAccessToken(VpnHoodServer server,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {
-        var testAccessManager = (TestAccessManager)server.AccessManager;
-        var fileAccessManager = (FileAccessManager)testAccessManager.BaseAccessManager;
+        var fileAccessManager = GetFileAccessManagerFromServer(server);
         return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime);
     }
 
@@ -217,7 +229,7 @@ internal static class TestHelper
         return Path.Combine(WorkingPath, $"AccessManager_{Guid.NewGuid()}");
     }
 
-    public static FileAccessManager CreateFileAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null,
+    public static TestAccessManager CreateAccessManager(FileAccessManagerOptions? options = null, string? storagePath = null,
         string? serverLocation = null)
     {
         storagePath ??= CreateAccessManagerWorkingDir();
@@ -228,7 +240,7 @@ internal static class TestHelper
         }
 
         options ??= CreateFileAccessManagerOptions();
-        return new FileAccessManager(storagePath, options);
+        return new TestAccessManager(storagePath, options);
     }
 
     public static FileAccessManagerOptions CreateFileAccessManagerOptions(IPEndPoint[]? tcpEndPoints = null)
@@ -256,18 +268,27 @@ internal static class TestHelper
         return options;
     }
 
-    public static Task<VpnHoodServer> CreateServer(IAccessManager? accessManager = null, bool autoStart = true, TimeSpan? configureInterval = null)
+    public static Task<VpnHoodServer> CreateServer(
+        IAccessManager? accessManager = null, 
+        bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
-        return CreateServer(accessManager, null, autoStart, configureInterval);
+        return CreateServer(accessManager, null, 
+            autoStart: autoStart, 
+            configureInterval: configureInterval, 
+            useHttpAccessManager: useHttpAccessManager);
     }
 
-    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
+    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true, 
+        TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
-        return CreateServer(null, options, autoStart, configureInterval);
+        return CreateServer(null, options, 
+            autoStart: autoStart, 
+            configureInterval: configureInterval, 
+            useHttpAccessManager: useHttpAccessManager);
     }
 
-    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, bool autoStart,
-        TimeSpan? configureInterval = null)
+    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, 
+        bool autoStart,  TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException($"Could not set both {nameof(accessManager)} and {nameof(fileAccessManagerOptions)}.");
@@ -275,8 +296,15 @@ internal static class TestHelper
         var autoDisposeAccessManager = false;
         if (accessManager == null)
         {
-            accessManager = new TestAccessManager(CreateFileAccessManager(fileAccessManagerOptions));
+            accessManager = CreateAccessManager(fileAccessManagerOptions);
             autoDisposeAccessManager = true;
+        }
+
+        // use HttpAccessManager 
+        if (useHttpAccessManager && accessManager is not TestHttpAccessManager)
+        {
+            accessManager = TestHttpAccessManager.Create(accessManager, autoDisposeBaseAccessManager: autoDisposeAccessManager);
+            autoDisposeAccessManager = true; //Delegate dispose control to TestHttpAccessManager
         }
 
         // ser server options

@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Client;
-using VpnHood.Test.Factory;
+using VpnHood.Test.Services;
 using VpnHood.Tunneling;
 using ProtocolType = PacketDotNet.ProtocolType;
 

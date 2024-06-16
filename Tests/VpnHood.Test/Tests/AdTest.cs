@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.App;
-using VpnHood.Common.Exceptions;
+using VpnHood.Client.App.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Services;
@@ -50,11 +50,12 @@ public class AdTest : TestBase
         var adService = new TestAdService(accessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        adService.FailShow = true;
+        app.UiContext = null;
+        //adService.FailShow = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<ShowAdException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
 
@@ -74,11 +75,12 @@ public class AdTest : TestBase
         var adService = new TestAdService(accessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        adService.FailShow = true;
+        app.UiContext = null;
+        //adService.FailShow = true;
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessItem.Token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<ShowAdException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
     }
 

@@ -34,7 +34,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.11" />
+	  <PackageReference Include="Xamarin.Google.Android.Play.Core" Version="1.10.3.12" />
 	</ItemGroup>
 
 	<ItemGroup>

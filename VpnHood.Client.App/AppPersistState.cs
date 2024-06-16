@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 
@@ -16,11 +17,11 @@ internal class AppPersistState
     public string FilePath { get; private set; } = null!;
 
     // prop
-    private string? _lastErrorMessage;
-    public string? LastErrorMessage
+    private ApiError? _lastError;
+    public ApiError? LastError
     {
-        get => _lastErrorMessage;
-        set { _lastErrorMessage = value; Save(); }
+        get => _lastError;
+        set { _lastError = value; Save(); }
     }
 
     // prop
@@ -42,7 +43,7 @@ internal class AppPersistState
                 return;
             
             // set country code and its name
-            _clientCountryCode = value;
+            _clientCountryCode = value?.ToUpper();
             try
             {
                 ClientCountryName = value!=null ? new RegionInfo(value).EnglishName : null;

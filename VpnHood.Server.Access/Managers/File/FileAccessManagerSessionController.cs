@@ -249,7 +249,6 @@ public class FileAccessManagerSessionController : IDisposable, IJob
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null,
-            IsAdRequired = accessItem.AdRequirement is AdRequirement.Required,
             AdRequirement = accessItem.AdRequirement
         };
     }

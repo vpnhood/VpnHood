@@ -31,7 +31,7 @@ try
 
     # Compare the update code
     if ( "$localUpdateCode" -ne "$onlineUpdateCode" ){
-        throw "The installed version can not be updated. You need to update it manaully!";
+        throw "The installed version can not be updated. You need to update it manually!";
     }
 
     # Compare Version

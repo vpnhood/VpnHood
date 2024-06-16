@@ -3,7 +3,7 @@ param(
 	[Parameter(Mandatory=$true)] [bool][switch]$install_service 
 ) ;
 
-$projectDir = Split-Path -parent $PSScriptRoot;
+$projectDir = $PSScriptRoot;
 $solutionDir = Split-Path -parent $projectDir;
 $dataDir = (Split-Path -parent $solutionDir) + "\.user\access-stage.vpnhood.com";
 $secrets = (Get-Content "$dataDir\secrets.json" | Out-String | ConvertFrom-Json);

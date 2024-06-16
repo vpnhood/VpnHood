@@ -76,7 +76,7 @@ chmod +x "$exeFile";
 "$exeFile" "$@";' -replace "{exeFileR}", "$versionTag/$assemblyName" -replace "`r`n", "`n";
 
 New-Item -ItemType Directory -Path $outputDir -Force > $null
-$script | Out-File "$executerFile" -Encoding ASCII;
+$script | Out-File "$executerFile" -Encoding ASCII -NoNewline;
 
 # upload executer
 $remoteDest = "$remote" +":$remoteDir/$executerFileName";

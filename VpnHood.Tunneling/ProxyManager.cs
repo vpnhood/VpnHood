@@ -40,10 +40,14 @@ public abstract class ProxyManager : IPacketProxyReceiver
             : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpClientCount, logScope: options.LogScope);
     }
 
-    public async Task SendPackets(IEnumerable<IPPacket> ipPackets)
+    public async Task SendPackets(IList<IPPacket> ipPackets)
     {
-        foreach (var ipPacket in ipPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i = 0; i < ipPackets.Count; i++)
+        {
+            var ipPacket = ipPackets[i];
             await SendPacket(ipPacket).VhConfigureAwait();
+        }
     }
 
     public async Task SendPacket(IPPacket ipPacket)

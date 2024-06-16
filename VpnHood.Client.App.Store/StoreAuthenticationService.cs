@@ -3,7 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Store.Api;
@@ -144,6 +144,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
                 })
                 .VhConfigureAwait();
         }
+        // store must update its nuget package to support UnregisteredUserException
         catch (ApiException ex)
         {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)

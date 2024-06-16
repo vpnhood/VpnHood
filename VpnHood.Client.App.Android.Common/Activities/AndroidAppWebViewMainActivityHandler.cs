@@ -2,12 +2,12 @@
 using Android.Views;
 using Android.Webkit;
 using VpnHood.Client.App.WebServer;
-using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Client.Device.Droid.ActivityEvents;
 
 namespace VpnHood.Client.App.Droid.Common.Activities;
 
 public class AndroidAppWebViewMainActivityHandler(
-    IActivityEvent activityEvent, 
+    IActivityEvent activityEvent,
     AndroidMainActivityWebViewOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
@@ -51,8 +51,11 @@ public class AndroidAppWebViewMainActivityHandler(
         // set window background color
         if (backgroundColor != null)
         {
-            ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value);
-            ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value);
+            try { ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value); }
+            catch { /* ignore */ }
+
+            try { ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value); }
+            catch { /* ignore */ }
         }
     }
 

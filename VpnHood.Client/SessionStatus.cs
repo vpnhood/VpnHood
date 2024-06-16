@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Messaging;
+﻿using VpnHood.Common.ApiClients;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client;
 
@@ -8,5 +9,5 @@ public class SessionStatus
     public AccessUsage? AccessUsage { get; internal set; }
     public SessionSuppressType SuppressedTo { get; internal set; }
     public SessionSuppressType SuppressedBy { get; internal set; }
-    public string? ErrorMessage { get; internal set; }
+    public ApiError? Error { get; internal set; }
 }

@@ -2,9 +2,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
-using Java.Lang;
 using VpnHood.Client.App.Droid.Common.Activities;
-using VpnHood.Client.App.Droid.Connect.Properties;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -14,7 +12,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     MainLauncher = true,
     Exported = true,
     WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
-    LaunchMode = LaunchMode.SingleInstance, 
+    // LaunchMode = LaunchMode.SingleInstance, if set; then open the app after minimize will not show ad activity
     ScreenOrientation = ScreenOrientation.Unspecified,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
@@ -26,11 +24,10 @@ public class MainActivity : AndroidAppMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        JavaSystem.SetProperty("debug.checkjni", "true"); //todo: remove
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
-            DefaultSpaPort = AssemblyInfo.DefaultSpaPort,
-            ListenToAllIps = AssemblyInfo.ListenToAllIps
+            DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
+            ListenToAllIps = AppSettings.Instance.ListenToAllIps
         });
     }
 }

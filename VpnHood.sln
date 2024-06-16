@@ -75,6 +75,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{18FA0808-A
 		Pub\Core\Common.ps1 = Pub\Core\Common.ps1
 		Pub\Core\PublishAndroidApp.ps1 = Pub\Core\PublishAndroidApp.ps1
 		Pub\Core\PublishNuget.ps1 = Pub\Core\PublishNuget.ps1
+		Pub\Core\VersionBump.ps1 = Pub\Core\VersionBump.ps1
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.GooglePlay", "VpnHood.Client.App.Android.GooglePlay\VpnHood.Client.App.Android.GooglePlay.csproj", "{0F4C6018-BE2F-4041-8816-F2E4E95CCDBC}"
@@ -93,7 +94,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Maui.Com
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Maui", "Maui", "{5796A333-9E01-484E-88BA-FE2291CA8932}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.App.Abstractions", "VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj", "{235F3F4A-F075-477D-9923-FE2360FB7EEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Abstractions", "VpnHood.Client.App.Abstractions\VpnHood.Client.App.Abstractions.csproj", "{235F3F4A-F075-477D-9923-FE2360FB7EEA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App.Android.Ads.AdMob", "VpnHood.Client.App.Android.Ads.AdMob\VpnHood.Client.App.Android.Ads.AdMob.csproj", "{D666EB32-78AA-4F7B-9CE0-D430C34E3118}"
 EndProject

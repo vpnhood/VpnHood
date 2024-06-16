@@ -60,20 +60,20 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
     private void InitFirebaseCrashlytics(AppSettings appSettings)
     {
-        try
-        {
-            var firebaseOptions = new FirebaseOptions.Builder()
-                .SetProjectId(appSettings.FirebaseProjectId)
-                .SetApplicationId(appSettings.FirebaseApplicationId)
-                .SetApiKey(appSettings.FirebaseApiKey)
-                .Build();
-            FirebaseApp.InitializeApp(this, firebaseOptions);
-            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
-        }
-        catch
-        {
-            // ignored
-        }
+        //try
+        //{
+        //    var firebaseOptions = new FirebaseOptions.Builder()
+        //        .SetProjectId(appSettings.FirebaseProjectId)
+        //        .SetApplicationId(appSettings.FirebaseApplicationId)
+        //        .SetApiKey(appSettings.FirebaseApiKey)
+        //        .Build();
+        //    FirebaseApp.InitializeApp(this, firebaseOptions);
+        //    FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
+        //}
+        //catch
+        //{
+        //    // ignored
+        //}
     }
 }
 

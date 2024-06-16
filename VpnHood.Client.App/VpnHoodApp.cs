@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Services;
 using VpnHood.Client.App.Settings;
 using VpnHood.Client.Device;
@@ -660,7 +661,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (UiContextNotAvailableException)
             {
-                throw new ShowAdException("Could not show any ad because the app window was not open.");
+                throw new ShowAdNoUiException();
             }
             // do not catch if parent cancel the operation
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -669,14 +670,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 continue;
             }
 
+
             // show the ad
             try
             {
                 await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+                if (UiContext == null)
+                    throw new ShowAdNoUiException();
             }
-            catch (Exception ex) when (ex is not ShowAdException)
+            catch (Exception ex)
             {
-                throw new ShowAdException("Could not show any ad. Make sure the app window is open.", ex);
+                if (UiContext == null)
+                    throw new ShowAdNoUiException();
+
+                // let's treat unknown error same as LoadException in thi version
+                throw new LoadAdException("Could not show any ad.", ex);
             }
 
             return adData; 

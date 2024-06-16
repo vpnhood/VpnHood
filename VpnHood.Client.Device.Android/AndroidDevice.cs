@@ -147,11 +147,13 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
     public async Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
     {
-        var androidUiContext = (AndroidUiContext?)uiContext;
-        await PrepareVpnService(androidUiContext?.ActivityEvent);
-
         // remove current if still exists
         _packetCapture?.Dispose();
+        _packetCapture = null;
+
+        // prepare vpn service
+        var androidUiContext = (AndroidUiContext?)uiContext;
+        await PrepareVpnService(androidUiContext?.ActivityEvent);
 
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
@@ -204,7 +206,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     {
         _packetCapture = null;
     }
-
 
     private static string EncodeToBase64(Drawable drawable, int quality)
     {

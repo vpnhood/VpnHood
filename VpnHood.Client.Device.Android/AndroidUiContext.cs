@@ -1,4 +1,4 @@
-﻿using VpnHood.Client.Device.Droid.Utils;
+﻿using VpnHood.Client.Device.Droid.ActivityEvents;
 
 namespace VpnHood.Client.Device.Droid;
 

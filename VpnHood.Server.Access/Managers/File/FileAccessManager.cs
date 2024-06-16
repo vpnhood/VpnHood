@@ -127,10 +127,11 @@ public class FileAccessManager : IAccessManager
             var serverLocation = TryToReadFile(serverCountryFile);
             if (string.IsNullOrEmpty(serverLocation) && ServerConfig.UseExternalLocationService)
             {
+                using var cancellationTokenSource = new CancellationTokenSource(5000);
                 var ipLocationProvider = new IpLocationProviderFactory().CreateDefault("VpnHood-Server");
-                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient()).VhConfigureAwait();
+                var ipLocation = await ipLocationProvider.GetLocation(new HttpClient(), cancellationTokenSource.Token).VhConfigureAwait();
                 serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName, ipLocation.CityName);
-                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation).VhConfigureAwait();
+                await System.IO.File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None).VhConfigureAwait();
             }
 
             VhLogger.Instance.LogInformation("ServerLocation: {ServerLocation}", serverLocation ?? "Unknown");
@@ -370,7 +371,7 @@ public class FileAccessManager : IAccessManager
         var token = accessItem.Token;
 
         // Write accessItem without server-token
-        var accessItemClone = VhUtil.JsonClone<AccessItem>(accessItem);
+        var accessItemClone = VhUtil.JsonClone(accessItem);
         accessItemClone.Token.ServerToken = null!; // remove server token part
         System.IO.File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItemClone));
 

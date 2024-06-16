@@ -1,3 +1,4 @@
 <resources>
   <string name="app_name">VpnHood!</string>
+  <string name="com.crashlytics.android.build_id">1</string>
 </resources>

@@ -580,7 +580,6 @@ internal class ServerHost : IAsyncDisposable, IJob
             TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue - TunnelDefaults.ClientRequestTimeoutDelta,
             AccessKey = sessionResponse.AccessKey,
             DnsServers = DnsServers,
-            IsAdRequired = sessionResponse.IsAdRequired,
             AdRequirement = sessionResponse.AdRequirement,
             ServerLocation = sessionResponse.ServerLocation
         };

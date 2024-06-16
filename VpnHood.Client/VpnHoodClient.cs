@@ -8,6 +8,7 @@ using VpnHood.Client.ConnectorServices;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -313,8 +314,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         // manually manage DNS reply if DNS does not supported by _packetCapture
         if (!_packetCapture.IsDnsServersSupported)
-            foreach (var ipPacket in e.IpPackets)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < e.IpPackets.Length; i++)
+            {
+                var ipPacket = e.IpPackets[i];
                 UpdateDnsRequest(ipPacket, false);
+            }
 
         _packetCapture.SendPacketToInbound(e.IpPackets);
     }
@@ -336,8 +341,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var passthruPackets = _sendingPackets.PassthruPackets;
                 var proxyPackets = _sendingPackets.ProxyPackets;
                 var droppedPackets = _sendingPackets.DroppedPackets;
-                foreach (var ipPacket in e.IpPackets)
+                
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < e.IpPackets.Count; i++)
                 {
+                    var ipPacket = e.IpPackets[i];
                     if (_disposed) return;
                     var isIpV6 = ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6;
                     var udpPacket = ipPacket.Protocol == ProtocolType.Udp ? ipPacket.Extract<UdpPacket>() : null;
@@ -744,8 +752,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             // show ad if required
-            if (sessionResponse.IsAdRequired || sessionResponse.AdRequirement is not AdRequirement.None)
-                await ShowAd(sessionResponse.AdRequirement is AdRequirement.Flexible, cancellationToken).VhConfigureAwait();
+            if (sessionResponse.AdRequirement is not AdRequirement.None)
+                await ShowAd(sessionResponse.AdRequirement is AdRequirement.Required, cancellationToken).VhConfigureAwait();
 
             // Preparing tunnel
             VhLogger.Instance.LogInformation("Configuring Datagram Channels...");
@@ -905,7 +913,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ShowAd(bool flexible, CancellationToken cancellationToken)
+    private async Task ShowAd(bool required, CancellationToken cancellationToken)
     {
         if (SessionId == 0)
             throw new Exception("SessionId is not set.");
@@ -917,20 +925,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             _isWaitingForAd = true;
             var adData = await _adProvider.ShowAd(SessionId.ToString(), cancellationToken).VhConfigureAwait();
-            _ = SendAdReward(adData, cancellationToken);
+            if (!string.IsNullOrEmpty(adData) && required)
+                _ = SendAdReward(adData, cancellationToken);
         }
-        catch (AdLoadException ex) when (flexible)
+        catch (LoadAdException ex)
         {
-            VhLogger.Instance.LogInformation(ex, "Could not show the flexible ad.");
+            if (required)
+                throw new LoadAdException("Could not load or show the required ad.", ex);
+
+            VhLogger.Instance.LogInformation(ex, "Could not load or show the flexible ad.");
             // ignore exception for flexible ad if load failed
-        }
-        catch (AdException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new AdException("Could not show the required ad.", ex);
         }
         finally
         {
@@ -975,7 +979,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (ex is SessionException sessionException)
             {
                 SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
-                SessionStatus.ErrorMessage = sessionException.SessionResponse.ErrorMessage;
+                SessionStatus.Error = new ApiError(sessionException);
                 SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
                 if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
                 {
@@ -986,7 +990,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             else
             {
                 SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
-                SessionStatus.ErrorMessage = ex.Message;
+                SessionStatus.Error = new ApiError(ex);
             }
         }
 

@@ -5,18 +5,18 @@ using Android.Gms.Common.Apis;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
-using VpnHood.Client.Device.Droid.Utils;
+using VpnHood.Client.Device.Droid.ActivityEvents;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
-public class GooglePlayAuthenticationService(string firebaseClientId) 
+public class GooglePlayAuthenticationService(string googleSignInClientId) 
     : IAppAuthenticationExternalService
 {
     private const int SignInIntentId = 20200;
     private TaskCompletionSource<GoogleSignInAccount>? _taskCompletionSource;
     private readonly GoogleSignInOptions _googleSignInOptions = new GoogleSignInOptions.Builder(GoogleSignInOptions.DefaultSignIn)
-        .RequestIdToken(firebaseClientId)
+        .RequestIdToken(googleSignInClientId)
         .RequestEmail()
         .Build();
 

@@ -14,13 +14,12 @@ public class FileAccessManagerTest : TestBase
         var options = TestHelper.CreateFileAccessManagerOptions();
         options.IsValidHostName = true;
 
-        var fileAccessManager = TestHelper.CreateFileAccessManager(options);
-        using var testAccessManager = new TestAccessManager(fileAccessManager);
-        await using var server = await TestHelper.CreateServer(testAccessManager);
+        var accessManager = TestHelper.CreateAccessManager(options);
+        await using var server = await TestHelper.CreateServer(accessManager);
 
-        var accessItem = fileAccessManager.AccessItem_Create();
-        Assert.AreEqual(fileAccessManager.ServerConfig.TcpEndPointsValue.First().Port, accessItem.Token.ServerToken.HostPort);
-        Assert.AreEqual(fileAccessManager.ServerConfig.IsValidHostName, accessItem.Token.ServerToken.IsValidHostName);
+        var accessItem = accessManager.AccessItem_Create();
+        Assert.AreEqual(accessManager.ServerConfig.TcpEndPointsValue.First().Port, accessItem.Token.ServerToken.HostPort);
+        Assert.AreEqual(accessManager.ServerConfig.IsValidHostName, accessItem.Token.ServerToken.IsValidHostName);
         Assert.IsNull(accessItem.Token.ServerToken.CertificateHash);
     }
 
@@ -101,7 +100,7 @@ public class FileAccessManagerTest : TestBase
     public async Task AddUsage()
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-        var accessManager1 = TestHelper.CreateFileAccessManager(storagePath: storagePath);
+        var accessManager1 = TestHelper.CreateAccessManager(storagePath: storagePath);
 
         //add token
         var accessItem1 = accessManager1.AccessItem_Create();
@@ -146,7 +145,7 @@ public class FileAccessManagerTest : TestBase
         Assert.AreEqual(30, response.AccessUsage?.Traffic.Received);
 
         // check restore
-        var accessManager2 = TestHelper.CreateFileAccessManager(storagePath: storagePath);
+        var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
         response = await accessManager2.Session_Create(sessionRequestEx1);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.Traffic.Sent);

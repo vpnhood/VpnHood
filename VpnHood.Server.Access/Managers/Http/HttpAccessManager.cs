@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -113,7 +113,7 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpPostAsync<ServerConfig>("configure", null, serverInfo);
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
     }
 }

@@ -87,7 +87,7 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public IPPacket[] ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
+    public IPPacket[] ProcessOutgoingPacket(IList<IPPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
             throw new InvalidOperationException($"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
@@ -95,8 +95,10 @@ internal class ClientHost(
         _ipPackets.Clear(); // prevent reallocation in this intensive method
         var ret = _ipPackets;
 
-        foreach (var ipPacket in ipPackets)
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for (var i=0; i< ipPackets.Count; i++)
         {
+            var ipPacket = ipPackets[i];
             var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
             var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
             TcpPacket? tcpPacket = null;
@@ -156,7 +158,7 @@ internal class ClientHost(
             }
         }
 
-        return ret.ToArray(); //it is a shared buffer; sto ToArray is necessary
+        return ret.ToArray(); //it is a shared buffer; to ToArray is necessary
     }
 
     private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)

@@ -98,11 +98,11 @@ public class ServerToken
     public bool IsTokenUpdated(ServerToken newServerToken)
     {
         // create first server token by removing its created time
-        var serverToken1 = VhUtil.JsonClone<ServerToken>(this);
+        var serverToken1 = VhUtil.JsonClone(this);
         serverToken1.CreatedTime = DateTime.MinValue;
 
         // create second server token by removing its created time
-        var serverToken2 = VhUtil.JsonClone<ServerToken>(newServerToken);
+        var serverToken2 = VhUtil.JsonClone(newServerToken);
         serverToken2.CreatedTime = DateTime.MinValue;
 
         // compare

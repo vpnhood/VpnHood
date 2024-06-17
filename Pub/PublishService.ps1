@@ -57,6 +57,7 @@ $remoteDest = "$remote" +":$remoteDir";
 ssh -i $userPrivateKeyFile $remote "sudo mkdir -p $remoteDir; sudo chown $remoteUser $remoteDir";
 scp -r -i $userPrivateKeyFile $outputDir $remoteDest;
 scp -r -i $userPrivateKeyFile "$outputDir/appsettings.json" $remoteDest;
+scp -r -i $userPrivateKeyFile "$outputDir/nlog.config" $remoteDest;
 
 # set execute permission
 ssh -i $userPrivateKeyFile $remote "chmod +x $remoteDir/$versionTag/$assemblyName";

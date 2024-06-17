@@ -9,7 +9,7 @@ $dataDir = (Split-Path -parent $solutionDir) + "\.user\access-stage.vpnhood.com"
 $secrets = (Get-Content "$dataDir\secrets.json" | Out-String | ConvertFrom-Json);
 
 . "$solutionDir\pub\PublishService" `
-	-AppName "VpnHoodAgent-stage-test" `
+	-AppName "VpnHoodAgent-stage" `
 	-remoteHost $secrets.ServerIp `
 	-remoteUser $secrets.UserName `
 	-configDir "$dataDir\configs" `

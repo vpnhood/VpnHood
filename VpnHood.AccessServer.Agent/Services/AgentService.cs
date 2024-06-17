@@ -21,6 +21,7 @@ namespace VpnHood.AccessServer.Agent.Services;
 
 public class AgentService(
     ILogger<AgentService> logger,
+    ILogger<AgentService.ServerStatusLogger> serverStatusLogger,
     IOptions<AgentOptions> agentOptions,
     CacheService cacheService,
     SessionService sessionService,
@@ -29,6 +30,8 @@ public class AgentService(
     VhAgentRepo vhAgentRepo)
 {
     private readonly AgentOptions _agentOptions = agentOptions.Value;
+
+    public class ServerStatusLogger;
 
     public async Task<ServerCache> GetServer(Guid serverId)
     {
@@ -72,6 +75,8 @@ public class AgentService(
             await cacheService.InvalidateServer(serverModel.ServerId);
 
         }
+
+        logger.LogInformation("OldServer. ServerId: {ServerId}, Version: {Version}", server.ServerId, version);
         throw new NotSupportedException(errorMessage);
     }
 
@@ -79,7 +84,12 @@ public class AgentService(
     public async Task<ServerCommand> UpdateServerStatus(Guid serverId, ServerStatus serverStatus)
     {
         var server = await GetServer(serverId);
+
+        // check version
         await CheckServerVersion(server, server.Version);
+
+        // update status
+        serverStatusLogger.LogInformation("Updating server status. ServerId: {ServerId}, SessionCount: {SessionCount}", server.ServerId, serverStatus.SessionCount);
         UpdateServerStatus(server, serverStatus, false);
 
         // remove LastConfigCode if server send its status

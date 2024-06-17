@@ -13,11 +13,11 @@ public class HealthController(
 {
     [HttpGet("Status")]
     [AllowAnonymous]
-    public async Task<string> Status() //it is foo
+    public async Task<string> Status(int delay) //it is foo
     {
         _ = cacheService;
         _ = logger;
-        await Task.Delay(0);
+        await Task.Delay(delay);
         return "OK";
     }
 }

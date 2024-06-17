@@ -1,4 +1,4 @@
-# Upcoming
+# v4.5.532
 ### Client
 * Update: Use Interstitial Ad instead of rewarded
 * Update: Show client country when Exclude My Country is enabled

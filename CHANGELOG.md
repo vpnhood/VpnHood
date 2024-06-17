@@ -1,8 +1,11 @@
+# v4.5.532
 ### Client
-# Upcoming
 * Update: Use Interstitial Ad instead of rewarded
+* Update: Show client country when Exclude My Country is enabled
 * Feature: Support multiple ad networks
+* Feature: Add Turkey, German, and Hindi languages
 * Fix: Some error message after disconnection
+* Fix: Disconnect button doesn't work while connecting
 
 # v4.5.522
 ### Client

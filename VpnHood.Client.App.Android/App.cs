@@ -17,6 +17,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     protected override AppOptions CreateAppOptions() => new()
     {
         Resource = DefaultAppResource.Resource,
+        AccessKeys = AssemblyInfo.IsDebugMode ? [ClientOptions.SampleAccessKey] : [];
         UpdateInfoUrl = AssemblyInfo.UpdateInfoUrl,
         IsAddAccessKeySupported = true,
         UpdaterService = AssemblyInfo.CreateUpdaterService(),

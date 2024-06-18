@@ -1,15 +1,21 @@
-$solutionDir = Split-Path -parent $PSScriptRoot;
-$publishProfile = Join-Path -Path $solutionDir  -ChildPath "Properties\PublishProfiles\VhAccessServer - ZipDeploy.pubxml"
+param( 
+	[Parameter(Mandatory=$true)] [int]$bump,
+	[Parameter(Mandatory=$true)] [bool][switch]$install_service 
+) ;
 
-# commit and push git
-$gitDir = "$solutionDir/.git";
-git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publishing";
-git --git-dir=$gitDir --work-tree=$solutionDir pull;
-git --git-dir=$gitDir --work-tree=$solutionDir push;
+$projectDir = $PSScriptRoot;
+$solutionDir = Split-Path -parent $projectDir;
+$dataDir = (Split-Path -parent $solutionDir) + "\.user\console-stage.vpnhood.com";
+$secrets = (Get-Content "$dataDir\secrets.json" | Out-String | ConvertFrom-Json);
 
-# swtich to main branch
-git --git-dir=$gitDir --work-tree=$solutionDir checkout main
-git --git-dir=$gitDir --work-tree=$solutionDir pull --strategy-option theirs;
-git --git-dir=$gitDir --work-tree=$solutionDir merge development;
-git --git-dir=$gitDir --work-tree=$solutionDir push;
-git --git-dir=$gitDir --work-tree=$solutionDir checkout development
+. "$solutionDir\pub\PublishService" `
+	-AppName "VpnHoodConsole-stage" `
+	-remoteHost $secrets.ServerIp `
+	-remoteUser $secrets.UserName `
+	-configDir "$dataDir\configs" `
+	-userPrivateKeyFile "$dataDir\ssh.openssh" `
+	-executerFileName "vhconsole" `
+	-projectDir $projectDir `
+	-bump $bump `
+	-install_service $install_service;
+	

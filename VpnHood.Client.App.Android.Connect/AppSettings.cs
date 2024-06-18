@@ -24,7 +24,7 @@ internal class AppSettings : Singleton<AppSettings>
     // VpnHood Store server
     public Uri StoreBaseUri { get; init; } = new ("https://store-api.vpnhood.com");
     public Guid StoreAppId { get; init; } = Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
-    public bool StoreIgnoreSslVerification { get; init; }
+    public bool StoreIgnoreSslVerification { get; init; } = IsDebugMode;
 
     // AdMob
     // Default value is AdMob test AdUnit id, References: https://developers.google.com/admob/android/test-ads

@@ -1,6 +1,7 @@
 ﻿using Android.Gms.Ads;
 using Android.Gms.Ads.Interstitial;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
@@ -111,6 +112,9 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
+            if (addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase))
+                _loadedCompletionSource.TrySetException(new AdNoFillException(addError.Message));
+            
             _loadedCompletionSource.TrySetException(new LoadAdException(addError.Message));
         }
     }

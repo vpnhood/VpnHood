@@ -112,10 +112,10 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            if (addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase))
-                _loadedCompletionSource.TrySetException(new AdNoFillException(addError.Message));
-            
-            _loadedCompletionSource.TrySetException(new LoadAdException(addError.Message));
+            _loadedCompletionSource.TrySetException(
+                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
+                    ? new NoFillAdException(addError.Message)
+                    : new LoadAdException(addError.Message));
         }
     }
 

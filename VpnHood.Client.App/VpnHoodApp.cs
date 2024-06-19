@@ -679,7 +679,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             {
                 throw new ShowAdNoUiException();
             }
-            catch (AdNoFillException)
+            catch (NoFillAdException)
             {
                 noFillAdNetworks.Add(adService.NetworkName);
                 continue;

@@ -111,12 +111,13 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            if (addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)) 
-                _loadedCompletionSource.TrySetException(new AdNoFillException(addError.Message));
-            
-            _loadedCompletionSource.TrySetException(new LoadAdException(addError.Message));
+            _loadedCompletionSource.TrySetException(
+                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
+                    ? new NoFillAdException(addError.Message)
+                    : new LoadAdException(addError.Message));
         }
     }
+
     private class MyFullScreenContentCallback : FullScreenContentCallback
     {
         private readonly TaskCompletionSource _dismissedCompletionSource = new();

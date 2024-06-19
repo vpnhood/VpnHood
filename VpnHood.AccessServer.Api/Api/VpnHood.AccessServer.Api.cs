@@ -8114,6 +8114,12 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
         public int ServerCount { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
+        public int CpuUsage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
+        public long AvailableMemory { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]

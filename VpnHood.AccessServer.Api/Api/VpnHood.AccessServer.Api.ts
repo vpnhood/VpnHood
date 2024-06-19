@@ -5501,6 +5501,8 @@ export class ServerStatusHistory implements IServerStatusHistory {
     sessionCount!: number;
     tunnelTransferSpeed!: number;
     serverCount!: number;
+    cpuUsage!: number;
+    availableMemory!: number;
 
     constructor(data?: IServerStatusHistory) {
         if (data) {
@@ -5517,6 +5519,8 @@ export class ServerStatusHistory implements IServerStatusHistory {
             this.sessionCount = _data["sessionCount"] !== undefined ? _data["sessionCount"] : <any>null;
             this.tunnelTransferSpeed = _data["tunnelTransferSpeed"] !== undefined ? _data["tunnelTransferSpeed"] : <any>null;
             this.serverCount = _data["serverCount"] !== undefined ? _data["serverCount"] : <any>null;
+            this.cpuUsage = _data["cpuUsage"] !== undefined ? _data["cpuUsage"] : <any>null;
+            this.availableMemory = _data["availableMemory"] !== undefined ? _data["availableMemory"] : <any>null;
         }
     }
 
@@ -5533,6 +5537,8 @@ export class ServerStatusHistory implements IServerStatusHistory {
         data["sessionCount"] = this.sessionCount !== undefined ? this.sessionCount : <any>null;
         data["tunnelTransferSpeed"] = this.tunnelTransferSpeed !== undefined ? this.tunnelTransferSpeed : <any>null;
         data["serverCount"] = this.serverCount !== undefined ? this.serverCount : <any>null;
+        data["cpuUsage"] = this.cpuUsage !== undefined ? this.cpuUsage : <any>null;
+        data["availableMemory"] = this.availableMemory !== undefined ? this.availableMemory : <any>null;
         return data;
     }
 }
@@ -5542,6 +5548,8 @@ export interface IServerStatusHistory {
     sessionCount: number;
     tunnelTransferSpeed: number;
     serverCount: number;
+    cpuUsage: number;
+    availableMemory: number;
 }
 
 export class ServerFarmData implements IServerFarmData {

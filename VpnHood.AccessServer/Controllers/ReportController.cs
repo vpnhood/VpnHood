@@ -34,7 +34,11 @@ public class ReportController(
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
 
-        var ret = await reportUsageService.GetServersStatusHistory(projectId, usageBeginTime.Value, usageEndTime, serverId);
+        var ret = await reportUsageService.GetServersStatusHistory(
+            projectId: projectId,
+            usageBeginTime: usageBeginTime.Value, usageEndTime: usageEndTime, 
+            serverFarmId: serverFarmId, serverId: serverId);
+
         return ret;
     }
 }

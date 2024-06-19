@@ -25,15 +25,17 @@ public class ReportUsageService(
     }
 
     public async Task<Usage> GetUsage(Guid? projectId,
-        DateTime usageBeginTime, DateTime? usageEndTime = null,
-        Guid? serverFarmId = null, Guid? serverId = null, Guid? deviceId = null)
+        DateTime usageBeginTime, DateTime? usageEndTime,
+        Guid? serverFarmId, Guid? serverId, Guid? deviceId)
     {
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
 
         if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided");
-        if (serverId != null) projectId = null;
-        if (deviceId != null) projectId = null;
+        if (serverFarmId != null && (serverId != null || deviceId != null)) throw new ArgumentException("serverId and deviceId must be null when serverFarmId is provided.");
+        if (serverId != null && deviceId != null) throw new ArgumentException("deviceId must be null when serverId is provided.");
+        if (serverId != null) { projectId = null; }
+        if (deviceId != null) { projectId = null; }
 
         // check cache
         var cacheKey = ReportUtil.GenerateCacheKey($"project_usage_{projectId}_{serverFarmId}_{serverId}_{deviceId}",
@@ -45,12 +47,12 @@ public class ReportUsageService(
         await using var transReport = await vhReportContext.WithNoLockTransaction();
         var query = vhReportContext.AccessUsages
             .Where(accessUsage =>
-                (projectId == null || accessUsage.ProjectId == projectId) &&
-                (serverId == null || accessUsage.ServerId == serverId) &&
-                (deviceId == null || accessUsage.DeviceId == deviceId) &&
-                (serverFarmId == null || accessUsage.ServerId == serverFarmId) &&
+                (accessUsage.ProjectId == projectId || projectId == null) &&
+                (accessUsage.ServerFarmId == serverFarmId || serverFarmId == null) &&
+                (accessUsage.ServerId == serverId || serverId == null) &&
+                (accessUsage.DeviceId == deviceId || deviceId == null) &&
                 (accessUsage.CreatedTime >= usageBeginTime) &&
-                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
+                (accessUsage.CreatedTime <= usageEndTime || usageEndTime == null))
             .GroupBy(accessUsage => accessUsage.DeviceId)
             .Select(g => new
             {
@@ -78,14 +80,15 @@ public class ReportUsageService(
     }
 
     public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid? projectId,
-        DateTime usageBeginTime, DateTime? usageEndTime = null, Guid? serverFarmId = null, Guid ? serverId = null)
+        DateTime usageBeginTime, DateTime? usageEndTime, Guid? serverFarmId, Guid? serverId)
     {
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
         usageEndTime ??= DateTime.UtcNow;
 
-        if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided");
-        if (serverId != null) projectId = null;
+        if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided.");
+        if (serverFarmId != null && serverId != null) throw new ArgumentException("serverId must be null when serverFarmId is provided.");
+        if (serverId != null) { projectId = null; serverFarmId = null; }
 
         // no lock
         await using var transReport = await vhReportContext.WithNoLockTransaction();
@@ -106,9 +109,9 @@ public class ReportUsageService(
         // per server in status interval
         var serverStatuses = vhReportContext.ServerStatuses
             .Where(x =>
-                x.ProjectId == projectId &&
-                (serverFarmId == null || x.ServerId == serverId) &&
-                (serverId == null || x.ServerId == serverId) &&
+                (x.ProjectId == projectId || projectId == null) &&
+                (x.ServerFarmId == serverFarmId || serverFarmId == null) &&
+                (x.ServerId == serverId || serverId == null) &&
                 x.CreatedTime >= usageBeginTime &&
                 x.CreatedTime <= usageEndTime)
             .GroupBy(serverStatus => new
@@ -123,7 +126,9 @@ public class ReportUsageService(
                 g.Key.Minutes,
                 g.Key.ServerId,
                 SessionCount = g.Max(x => x.SessionCount),
-                TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed)
+                TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
+                CpuUsage = serverId != null ? g.Max(x => x.CpuUsage ?? 0) : 0,
+                Memory = serverId != null ? g.Max(x => x.AvailableMemory ?? 0) : 0,
             });
 
         // sum of max in status interval
@@ -133,7 +138,9 @@ public class ReportUsageService(
             {
                 Minutes = g.Key,
                 SessionCount = g.Sum(x => x.SessionCount),
-                TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed)
+                TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
+                CpuUsage = serverId != null ? g.Sum(x => x.CpuUsage) : 0,
+                Memory = serverId != null ? g.Sum(x => x.Memory) : 0,
                 // ServerCount = g.Count() 
             });
 
@@ -145,7 +152,9 @@ public class ReportUsageService(
                 {
                     Time = baseTime.AddMinutes(g.Key * step2 * step1),
                     SessionCount = g.Max(y => y.SessionCount),
-                    TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed)
+                    TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
+                    CpuUsage = serverId != null ? g.Sum(x => x.CpuUsage) : 0,
+                    AvailableMemory = serverId != null ? g.Sum(x => x.Memory) :0,
                     // ServerCount = g.Max(y=>y.ServerCount) 
                 })
             .OrderBy(x => x.Time);

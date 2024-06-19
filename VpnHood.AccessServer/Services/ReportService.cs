@@ -9,8 +9,8 @@ public class ReportService(
     SubscriptionService subscriptionService,
     VhRepo vhRepo)
 {
-    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
-    Guid? serverFarmId = null, Guid? serverId = null)
+    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime,
+    Guid? serverFarmId, Guid? serverId)
     {
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
@@ -19,14 +19,14 @@ public class ReportService(
         if (serverFarmId != null) _ = await vhRepo.ServerFarmGet(projectId, serverFarmId.Value);
         if (serverId != null) _ = await vhRepo.ServerGet(projectId, serverId.Value);
 
-        var usage = await reportUsageService.GetUsage(projectId: projectId, 
+        var usage = await reportUsageService.GetUsage(projectId: projectId,
             usageBeginTime: usageBeginTime.Value, usageEndTime: usageEndTime,
-            serverFarmId: serverFarmId, serverId: serverId);
+            serverFarmId: serverFarmId, serverId: serverId, deviceId: null);
         return usage;
     }
 
     public async Task<ServerStatusHistory[]> GetServerStatusHistory(Guid projectId,
-        DateTime? usageBeginTime, DateTime? usageEndTime = null, Guid? serverFarmId = null, Guid? serverId = null)
+        DateTime? usageBeginTime, DateTime? usageEndTime, Guid? serverFarmId, Guid? serverId)
     {
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);

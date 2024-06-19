@@ -659,21 +659,33 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var adServices = Services.AdServices.Where(x =>
             x.AdType == AppAdType.InterstitialAd && x.IsCountrySupported(countryCode));
 
+        var noFillAdNetworks = new List<string>();
         foreach (var adService in adServices)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             // find first successful ad network
             try
             {
+                if (noFillAdNetworks.Contains(adService.NetworkName))
+                    continue;
+
                 using var timeoutCts = new CancellationTokenSource(_adLoadTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adService.LoadAd(RequiredUiContext, linkedCts.Token).VhConfigureAwait();
             }
             catch (UiContextNotAvailableException)
             {
                 throw new ShowAdNoUiException();
             }
+            catch (AdNoFillException)
+            {
+                noFillAdNetworks.Add(adService.NetworkName);
+                continue;
+            }
             // do not catch if parent cancel the operation
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            catch (Exception ex)
             {
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. Network: {Network}.", adService.NetworkName);
                 continue;

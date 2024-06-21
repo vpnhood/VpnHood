@@ -437,10 +437,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges());
-        if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
+        if (UserSettings.PacketCaptureIncludeIpRanges.Any())
             packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
 
-        if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
+        if (UserSettings.PacketCaptureExcludeIpRanges.Any())
             packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
 
         // create clientOptions
@@ -889,8 +889,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // calculate packetCaptureIpRanges
         var ipRanges = IpNetwork.All.ToIpRanges();
-        if (!VhUtil.IsNullOrEmpty(UserSettings.IncludeIpRanges)) ipRanges = ipRanges.Intersect(UserSettings.IncludeIpRanges);
-        if (!VhUtil.IsNullOrEmpty(UserSettings.ExcludeIpRanges)) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
+        if (UserSettings.IncludeIpRanges.Any()) ipRanges = ipRanges.Intersect(UserSettings.IncludeIpRanges);
+        if (UserSettings.ExcludeIpRanges.Any()) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
 
         // exclude client country IPs
         if (UserSettings.TunnelClientCountry)

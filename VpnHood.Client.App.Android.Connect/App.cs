@@ -3,7 +3,6 @@ using Android.Runtime;
 using Firebase.Crashlytics;
 using Firebase;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
-using VpnHood.Client.App.Droid.Ads.VhUnityAds;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -52,7 +51,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdServices = [
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
-                UnityAdService.Create(appSettings.UnityAdGameId, appSettings.UnityAdInterstitialPlacementId, AppSettings.IsDebugMode)
             ],
             UiService = new AndroidAppUiService()
         };

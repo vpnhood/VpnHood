@@ -68,7 +68,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Client.App.Android.Ads.UnityAds" Version="4.5.532" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
 	</ItemGroup>
 

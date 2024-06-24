@@ -1,7 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using PacketDotNet.Ieee80211;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -43,7 +45,8 @@ internal class ClientHost(
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
         _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-        VhLogger.Instance.LogInformation($"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+        VhLogger.Instance.LogInformation(
+            $"{VhLogger.FormatType(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
@@ -58,7 +61,8 @@ internal class ClientHost(
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, $"Could not create listener on {VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0))}!");
+            VhLogger.Instance.LogError(ex,
+                $"Could not create listener on {VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0))}!");
         }
     }
 
@@ -90,13 +94,14 @@ internal class ClientHost(
     public IPPacket[] ProcessOutgoingPacket(IList<IPPacket> ipPackets)
     {
         if (_localEndpointIpV4 == null)
-            throw new InvalidOperationException($"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
+            throw new InvalidOperationException(
+                $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
 
         _ipPackets.Clear(); // prevent reallocation in this intensive method
         var ret = _ipPackets;
 
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i=0; i< ipPackets.Count; i++)
+        for (var i = 0; i < ipPackets.Count; i++)
         {
             var ipPacket = ipPackets[i];
             var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
@@ -106,6 +111,7 @@ internal class ClientHost(
             try
             {
                 tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                GetSniFromPackets(tcpPacket);
 
                 // check local endpoint
                 if (localEndPoint == null)
@@ -118,7 +124,8 @@ internal class ClientHost(
                 // redirect to inbound
                 if (Equals(ipPacket.DestinationAddress, loopbackAddress))
                 {
-                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
+                    var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipPacket.Version, ipPacket.Protocol,
+                                      tcpPacket.DestinationPort)
                                   ?? throw new Exception("Could not find incoming tcp destination in NAT.");
 
                     ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -133,7 +140,8 @@ internal class ClientHost(
                     var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
                     var natItem = sync
                         ? vpnHoodClient.Nat.Add(ipPacket, true)
-                        : vpnHoodClient.Nat.Get(ipPacket) ?? throw new Exception("Could not find outgoing tcp destination in NAT.");
+                        : vpnHoodClient.Nat.Get(ipPacket) ??
+                          throw new Exception("Could not find outgoing tcp destination in NAT.");
 
                     tcpPacket.SourcePort = natItem.NatId; // 1
                     ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
@@ -149,11 +157,14 @@ internal class ClientHost(
                 if (tcpPacket != null)
                 {
                     ret.Add(PacketUtil.CreateTcpResetReply(ipPacket, true));
-                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.", LogLevel.Error, ex);
+                    PacketUtil.LogPacket(ipPacket,
+                        "ClientHost: Error in processing packet. Dropping packet and sending TCP rest.", LogLevel.Error,
+                        ex);
                 }
                 else
                 {
-                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.", LogLevel.Error, ex);
+                    PacketUtil.LogPacket(ipPacket, "ClientHost: Error in processing packet. Dropping packet.",
+                        LogLevel.Error, ex);
                 }
             }
         }
@@ -183,8 +194,10 @@ internal class ClientHost(
                 ? IPVersion.IPv4
                 : IPVersion.IPv6;
 
-            var natItem = (NatItemEx?)vpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port)
-                          ?? throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
+            var natItem =
+                (NatItemEx?)vpnHoodClient.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port)
+                ?? throw new Exception(
+                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgTcpClient.Client.RemoteEndPoint)}");
 
             // create a scope for the logger
             using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
@@ -201,9 +214,9 @@ internal class ClientHost(
             {
                 var channelId = Guid.NewGuid() + ":client";
                 await vpnHoodClient.AddPassthruTcpStream(
-                    new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
-                    new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                    channelId, cancellationToken)
+                        new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                        channelId, cancellationToken)
                     .VhConfigureAwait();
                 return;
             }
@@ -220,13 +233,15 @@ internal class ClientHost(
             };
 
             // read the response
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).VhConfigureAwait();
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken)
+                .VhConfigureAwait();
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
-            var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
+            var orgTcpClientStream =
+                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             vpnHoodClient.Tunnel.AddChannel(channel);
@@ -254,4 +269,67 @@ internal class ClientHost(
 
         return default;
     }
+
+    public static string? GetSniFromPackets(TcpPacket tcpPacket)
+    {
+        var payloadData = tcpPacket.PayloadData;
+        if (payloadData == null || payloadData.Length == 0) 
+            return null;
+
+        if (payloadData[0] != 0x16 || payloadData[5] != 0x01)
+            return null;
+
+        int sessionIdLength = payloadData[43];
+        var cipherSuitesLength = (payloadData[44 + sessionIdLength] << 8) | payloadData[44 + sessionIdLength + 1];
+        int compressionMethodsLength = payloadData[44 + sessionIdLength + 2 + cipherSuitesLength];
+        var extensionsStart = 44 + sessionIdLength + 2 + cipherSuitesLength + 1 + compressionMethodsLength;
+        if (extensionsStart + 2 >= payloadData.Length) 
+            return null;
+
+        var extensionsLength = (payloadData[extensionsStart] << 8) | payloadData[extensionsStart + 1];
+        var currentPos = extensionsStart + 2;
+        if (currentPos + extensionsLength > payloadData.Length) 
+            return null;
+
+        while (currentPos < extensionsStart + 2 + extensionsLength)
+        {
+            if (currentPos + 4 > payloadData.Length) 
+                return null;
+
+            var extensionType = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
+            var extensionLength = (payloadData[currentPos + 2] << 8) | payloadData[currentPos + 3];
+            currentPos += 4;
+
+            if (currentPos + extensionLength > payloadData.Length) 
+                return null;
+
+            if (extensionType == 0x0000)
+            {
+                if (currentPos + 2 > payloadData.Length) 
+                    return null;
+
+                var serverNameListLength = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
+                currentPos += 2;
+
+                if (currentPos + serverNameListLength > payloadData.Length) 
+                    return null;
+
+                // int serverNameType = payloadData[currentPos];
+                var serverNameLength = (payloadData[currentPos + 1] << 8) | payloadData[currentPos + 2];
+                currentPos += 3;
+
+                if (currentPos + serverNameLength > payloadData.Length) 
+                    return null;
+
+                var sni = Encoding.ASCII.GetString(payloadData, currentPos, serverNameLength);
+                Console.WriteLine(sni);
+                return sni;
+            }
+
+            currentPos += extensionLength;
+        }
+
+        return null;
+    }
+
 }

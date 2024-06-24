@@ -1,5 +1,7 @@
 ﻿using Android.Content;
 using Android.Webkit;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Droid.Common;
 
@@ -23,9 +25,16 @@ internal class AndroidAppWebViewClient : WebViewClient
         if (uri.AbsolutePath == "/" || string.IsNullOrEmpty(uri.AbsolutePath))
             return false;
 
-        var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
-        intent.SetFlags(ActivityFlags.NewTask);
-        Application.Context.StartActivity(intent);
+        try
+        {
+            var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
+            intent.SetFlags(ActivityFlags.NewTask);
+            Application.Context.StartActivity(intent);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, $"Could not launch any activity for {url}");
+        }
 
         return true;
     }

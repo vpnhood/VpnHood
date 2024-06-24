@@ -2,6 +2,7 @@ using Android.Gms.Ads;
 using Android.Gms.Ads.AppOpen;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
+using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Exceptions;
@@ -123,7 +124,10 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
 
         public override void OnAdFailedToLoad(LoadAdError addError)
         {
-            _loadedCompletionSource.TrySetException(new LoadAdException(addError.Message));
+            _loadedCompletionSource.TrySetException(
+                addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
+                    ? new NoFillAdException(addError.Message)
+                    : new LoadAdException(addError.Message));
         }
     }
 

@@ -1,3 +1,9 @@
+# v4.5.534
+### Client
+* Improve: App filter UI/UX
+* Improve: TV UX
+
+
 # v4.5.532
 ### Client
 * Update: Use Interstitial Ad instead of rewarded

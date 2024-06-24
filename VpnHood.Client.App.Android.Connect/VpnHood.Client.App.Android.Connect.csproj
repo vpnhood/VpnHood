@@ -68,7 +68,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.0.0" />
 	</ItemGroup>
 
 </Project>

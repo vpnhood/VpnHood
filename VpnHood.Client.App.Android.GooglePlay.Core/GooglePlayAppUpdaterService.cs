@@ -86,7 +86,7 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
                     break;
 
                 case InstallStatus.Canceled:
-                    _taskCompletionSource.SetCanceled();
+                    _taskCompletionSource.TrySetCanceled();
                     break;
 
                 case InstallStatus.Failed:

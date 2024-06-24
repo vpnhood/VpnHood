@@ -437,10 +437,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // calculate packetCaptureIpRanges
         var packetCaptureIpRanges = new IpRangeOrderedList(IpNetwork.All.ToIpRanges());
-        if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureIncludeIpRanges))
+        if (UserSettings.PacketCaptureIncludeIpRanges.Any())
             packetCaptureIpRanges = packetCaptureIpRanges.Intersect(UserSettings.PacketCaptureIncludeIpRanges);
 
-        if (!VhUtil.IsNullOrEmpty(UserSettings.PacketCaptureExcludeIpRanges))
+        if (UserSettings.PacketCaptureExcludeIpRanges.Any())
             packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
 
         // create clientOptions
@@ -659,21 +659,33 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var adServices = Services.AdServices.Where(x =>
             x.AdType == AppAdType.InterstitialAd && x.IsCountrySupported(countryCode));
 
+        var noFillAdNetworks = new List<string>();
         foreach (var adService in adServices)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             // find first successful ad network
             try
             {
+                if (noFillAdNetworks.Contains(adService.NetworkName))
+                    continue;
+
                 using var timeoutCts = new CancellationTokenSource(_adLoadTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adService.LoadAd(RequiredUiContext, linkedCts.Token).VhConfigureAwait();
             }
             catch (UiContextNotAvailableException)
             {
                 throw new ShowAdNoUiException();
             }
+            catch (NoFillAdException)
+            {
+                noFillAdNetworks.Add(adService.NetworkName);
+                continue;
+            }
             // do not catch if parent cancel the operation
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            catch (Exception ex)
             {
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. Network: {Network}.", adService.NetworkName);
                 continue;
@@ -877,8 +889,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // calculate packetCaptureIpRanges
         var ipRanges = IpNetwork.All.ToIpRanges();
-        if (!VhUtil.IsNullOrEmpty(UserSettings.IncludeIpRanges)) ipRanges = ipRanges.Intersect(UserSettings.IncludeIpRanges);
-        if (!VhUtil.IsNullOrEmpty(UserSettings.ExcludeIpRanges)) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
+        if (UserSettings.IncludeIpRanges.Any()) ipRanges = ipRanges.Intersect(UserSettings.IncludeIpRanges);
+        if (UserSettings.ExcludeIpRanges.Any()) ipRanges = ipRanges.Exclude(UserSettings.ExcludeIpRanges);
 
         // exclude client country IPs
         if (UserSettings.TunnelClientCountry)

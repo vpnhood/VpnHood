@@ -93,6 +93,8 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             var intent = new Intent(Intent.ActionMain);
             intent.AddCategory(Intent.CategoryLauncher);
             var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
+
+            var currentAppId = Application.Context.PackageName;
             foreach (var resolveInfo in resolveInfoList)
             {
                 if (resolveInfo.ActivityInfo == null)
@@ -101,7 +103,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
                 var appName = resolveInfo.LoadLabel(packageManager);
                 var appId = resolveInfo.ActivityInfo.PackageName;
                 var icon = resolveInfo.LoadIcon(packageManager);
-                if (appName is "" or null || appId is "" or null || icon == null)
+                if (appName is "" or null || appId is "" or null || icon == null || appId == currentAppId)
                     continue;
 
                 var deviceAppInfo = new DeviceAppInfo

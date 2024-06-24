@@ -1,11 +1,7 @@
-# v4.5.534
+# Upcoming
 ### Client
-* Improve: App filter UI/UX
-* Improve: TV UX
-
-
-# v4.5.532
-### Client
+* Improve: App Filter page
+* Improve: Android TV
 * Update: Use Interstitial Ad instead of rewarded
 * Update: Show client country when Exclude My Country is enabled
 * Feature: Support multiple ad networks

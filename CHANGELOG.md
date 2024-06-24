@@ -1,13 +1,16 @@
-# v4.5.531
-# Upcoming
+# v4.5.535
+### Client
+* Improve: App Filter page
+* Improve: Android TV
 * Update: Use Interstitial Ad instead of rewarded
+* Update: Show client country when Exclude My Country is enabled
 * Feature: Support multiple ad networks
 * Feature: Add Turkey, German, and Hindi languages
 * Fix: Some error message after disconnection
 * Fix: Disconnect button doesn't work while connecting
 
 # v4.5.522
-# v4.5.531
+### Client
 * Update: Disable "Exclude My Country" when unable to load the IP location database
 * Update: Automatically disconnect client after changing exclude my country settings
 * Improve: Performance & Speed on the connection when the user has selected exclude my country
@@ -17,7 +20,7 @@
 * Update: Improve performance
 
 # v4.5.520
-# v4.5.531
+### Client
 * Feature: Allow to select servers by country if the server supports it
 * Feature: Auto pause and resume when the server is not reachable
 * Update: User IncludeIpRanges and ExcludeIpRanges in settings instead of CustomIpRanges
@@ -32,7 +35,7 @@
 * Deprecate: ServerProtocol Version 2 (451) is deprecated and no longer supported
 
 # v4.4.506
-# v4.5.531
+### Client
 * Update: Android: Show Notification & QuickLaunch Request after connect
 * Update: Display AD without VPN
 * Fix: Android: Crash when starting as always-on, but there is no selected server
@@ -44,7 +47,7 @@
 * Update: Support Flexible Ad
 
 # v4.4.500 
-# v4.5.531
+### Client
 * Update: Retry failed connection if the access token is updated from the server token URL
 * Update: Move VpnHood Public Servers to VpnHood Connect App
 * Fix: Ad service
@@ -58,7 +61,7 @@
 * Feature: Ad reward service
 
 # v4.3.485
-# v4.5.531
+### Client
 * Feature: Accept DNS Servers from the connected Server
 * Feature: Multi-language Support (Arabic, Chinese, English, Persian, Portuguese, Russian, Spanish)
 * Feature: Support Billing integration
@@ -75,7 +78,7 @@
 * Update: Faster shutdown
 
 # v3.3.475
-# v4.5.531
+### Client
 * Feature: Update UI when the server does not support UDP tunnel
 * Fix: Crash when pressing "Disconnect" while connecting
 * Fix: Remove the "No data has been received" message before the connection is established
@@ -87,18 +90,18 @@
 * Feature: Support HTTP-01 DNS challenge to auto-verify domains
 
 # v3.3.463
-# v4.5.531
+### Client
 * Fix: The "Connect" button for free public servers does not work under certain circumstances
 
 # v3.3.462
-# v4.5.531
+### Client
 * Fix: Pull the recent tokens from the server & URL
 
 ### Server
 * Fix: Push the recent tokens to clients
 
 # v3.3.454
-# v4.5.531
+### Client
 * Update: New Access Token format
 * Update: Use OS encryption for TLS
 * Feature: Enable updating server endpoints by Url
@@ -118,7 +121,7 @@
 * Deprecate: Server ProtocolVersion 3 is deprecated and no longer supported
 
 # v3.2.439
-# v4.5.531
+### Client
 * Update: Improve Performance
 * Feature: Add the initializing state to the connection state
 * Feature: Android Set the navigation button background color
@@ -138,13 +141,13 @@
 * Android: Upgrade to Android API 34
 
 # v3.1.436 
-# v4.5.531
+### Client
 * Update: Improve UI
 * Fix: Android: Keyboard cover input fields in the UI
 * Fix: Android: Frequently asking to add the system tile
 
 # v3.1.430 
-# v4.5.531
+### Client
 * Update: Improve UI
 * Update: Windows: Remove from the taskbar on minimize
 * Update: Android: Ask for notification permission
@@ -160,7 +163,7 @@
 * Client: Create Api.ts generated for TypeScript by nswag
 
 # v3.0.429
-# v4.5.531
+### Client
 * Android: Fix not showing apps in AppFilter
 
 # v3.0.428
@@ -169,13 +172,13 @@
 * Fix: AutoUpdater
 
 # v3.0.427
-# v4.5.531
+### Client
 * Feature: Android: Support opening (key) as VpnHood Key file
 * Update: Windows: Fix Windows Firewall Configuration
 * Update: Windows: Set fixed window size
 
 # v3.0.423
-# v4.5.531
+### Client
 * Feature: Android: Support opening Cinderella file (CDY) as VpnHood Key file
 * Feature: Android: Changing file signature for no-google-store APK
 * Update: Remove the legacy Protocol Version 3
@@ -187,11 +190,11 @@
 * Fix: Collection was modified error, which caused connection freeze temporary
  
 # v3.0.416
-# v4.5.531
+### Client
 * Feature: Offer Premium if VpnHood Public server selected
 
 # v3.0.412
-# v4.5.531
+### Client
 * Fix: Invalid UDP packet signature
 * Fix: Android: setMetered error
 
@@ -200,7 +203,7 @@
 * Update: Reduce server default logging
 
 # v3.0.411
-# v4.5.531
+### Client
 * Feature: Client Protocol Version 4 
 * Feature: TCP connection reuse
 * Feature: Allow Drop UDP packets
@@ -238,7 +241,7 @@
 * Fix: Restart listener on servers by UdpEndPoints changes
 
 # v2.9.369
-# v4.5.531 & Server
+### Client & Server
 * Feature: Use shared UDP port 
 * Feature: Improve protocol anonymity and anti-fingerprinting for UDP 
 * Feature: Add Server Secret in addition to session secret
@@ -255,18 +258,18 @@
 * Update: Improve server security 
 
 # v2.8.360
-# v4.5.531
+### Client
 * Fix: Used traffic was not displayed correctly
 
 ### Server
 * Fix: Used traffic was not reported correctly
 
 # v2.7.357
-# v4.5.531
+### Client
 * Fix: Windows: Too long filter expression error
 
 # v2.7.356
-# v4.5.531
+### Client
 * Feature: Windows: Add "Open in Browser" item to system menu
 * Update: windows: ""Open in browser" if WebView is not initialized properly
 
@@ -279,7 +282,7 @@
 * Update: Use 24h in filename in track archives
 
 # v2.7.350
-# v4.5.531
+### Client
 * Feature: Follow server-supported networks by IP range
 * Update: Performance improvement
 * Windows: Fix Auto Updater
@@ -293,7 +296,7 @@
 * Update: log file archive format
 
 # v2.6.346
-# v4.5.531
+### Client
 * Update: Improve stability when using no UDP mode
 
 ### Server
@@ -301,7 +304,7 @@
 * Fix: IpV6 detection
 
 # v2.6.342
-# v4.5.531
+### Client
 * Fix: UDP port memory leak
 * Feature: Notify when a new version is available
 * Update: Add the build version on the top right of the screen
@@ -323,7 +326,7 @@
 * Feature: Add Linux-arm64 installation
 
 # v2.6.336
-# v4.5.531
+### Client
 * Update: Optimizing UDP Processing
 * Update: Improving Garbage Collector
 * Update: Async Disposal
@@ -362,7 +365,7 @@
 * Feature: Add TcpChannelCount control
 
 # v2.6.326
-# v4.5.531
+### Client
 * Feature: Windows: Compile as Win-x64. NET runtime is not required anymore.
 * Feature: Windows: WebView2 is optional. Run UI in the default web browser if WebView2 was not installed
 * Fix: Unable to connect to IpV6 supported site on chrome when server IpV6 is not configured
@@ -385,7 +388,7 @@
 * Update: Change config JSON property name for SessionOptions and TrackingOptions
 
 # v2.5.323
-# v4.5.531
+### Client
 * Update: Improve messages of disconnection reason
 * Feature: Replace Always ON with auto-reconnect
 * Fix: Anonymize VpnHood Server IP in diagnose  
@@ -402,7 +405,7 @@
 * Update: Remove extra trace log from OS
 
 # v2.4.320
-# v4.5.531
+### Client
 * Update: Upgrade to .NET 7
 
 ### Server
@@ -418,7 +421,7 @@
 * Fix: Preventing running multiple instances from once location
 
 # v2.4.318
-# v4.5.531
+### Client
 * Feature: Show a message a device disconnected by your device
 * Feature: Android TV support
 * Update: Updating IP Location Database
@@ -428,16 +431,16 @@
 * Fix: Randomly select previous profile in UI
 
 # v2.4.310
-# v4.5.531
+### Client
 * Update: Removing Google Ads
 
 # v2.4.307
-# v4.5.531
+### Client
 * Feature: Add basic advertising support. Ouch!
 * Update: Upgrade to android 12.1
 
 # v2.4.304
-# v4.5.531
+### Client
 * Fix: Trimming AccessKey
 * Update: Improve detecting countries
 
@@ -447,7 +450,7 @@
 * Update: Add destination port in tracking
 
 # v2.4.303
-# v4.5.531
+### Client
 * Update: Simplify Client's Country exclusion
 
 ### Server
@@ -457,7 +460,7 @@
 * Update: Move VpnHood.Client.WebUI to a standalone repo
 
 # v2.4.299
-# v4.5.531
+### Client
 * Fix: Windows: Installation Package
 
 # v2.4.297
@@ -465,7 +468,7 @@
 * Fix: Reporting Negative usage
 
 # v2.4.296
-# v4.5.531
+### Client
 * Fix: Windows: WebView2 could not be installed on some devices
 
 ### Server
@@ -475,7 +478,7 @@
 * Fix: Synching sessions to access server on shut down
 
 # v2.4.295
-# v4.5.531
+### Client
 * Update: Tune TCP connections for games
 * Fix: Error when setting PacketCapture include filter
 
@@ -486,7 +489,7 @@
 * Fix: LogLevel.Trace in DiagnoseMode
 
 # v2.4.292
-# v4.5.531
+### Client
 * Update: Improve stability and memory usage
 
 ### Server
@@ -500,7 +503,7 @@
 * Fix: UDP Packet loss
 
 # v2.3.291
-# v4.5.531
+### Client
 * Fix: Android: Improve performance and stability in Android
 * Fix: Add time-stamp to logger
 
@@ -509,7 +512,7 @@
 * Fix: Catch a lost packet when removing TcpDatagramChannel
 
 # v2.3.290
-# v4.5.531
+### Client
 * Fix: Crash on Android 12
 
 ### Server
@@ -518,7 +521,7 @@
 * Update: Use NLog.config in app binary folder if it does not exists in working folder
 
 # v2.3.289
-# v4.5.531
+### Client
 * Update: Add Logging Policy Warning
 * Update: Create Private Server Link
 
@@ -527,7 +530,7 @@
 * Fix: Maintenance mode detection
 
 # v2.3.287
-# v4.5.531
+### Client
 * Update: Upgrade to .NET 6
 * Update: Diagnose just check some HTTPS sites to check internet connectivity
 * Update: Windows: Disable right click on App WebView
@@ -540,7 +543,7 @@
 * Fix: Redact IP addresses in the log 
 
 # v2.2.283
-# v4.5.531
+### Client
 * Feature: Allow to have multi-endpoints in AccessToken
 * Feature: Create IPv6 tunnel when a client has access to a server by IPv6
 * Feature: Add "Exclude Local Network" to UI settings
@@ -568,7 +571,7 @@
 * Update: Improve the speed of establishing the connection
 
 # v2.0.271
-# v4.5.531
+### Client
 * Feature: Server Redirection
 * Feature: Server Maintenance mode detection
 * Feature: Validate packets integrity in UdpChannel
@@ -596,7 +599,7 @@
 * Update: Decouple access manager from server to access server
 
 # v1.3.254
-# v4.5.531
+### Client
 * Feature: Android: Add Manage button to the system notification
 * Fix: Casual packet loss!
 * Fix: Empty error message after immediate disconnection
@@ -608,7 +611,7 @@
 * Fix: Casual packet loss!
 
 # v1.3.253
-# v4.5.531
+### Client
 * Feature: IpFilter by countries
 * Feature: Android: Exclude local networks from VPN
 * Feature: Android: Add disconnect to device notification bar
@@ -620,7 +623,7 @@
 * Update: Improve Performance and Memory usage
 
 # v1.2.250
-# v4.5.531
+### Client
 * Update: Display error for unsupported client
 * Fix: Random Crash!
 * Fix: No error message when Client lost the connection
@@ -636,11 +639,11 @@
 * Update: Significantly optimize performance & stability
 * Update: Improve power usage
 
-# v4.5.531
+### Client
 * Fix: Attempting to connect after stopping the VPN
 
 # v1.2.248
-# v4.5.531
+### Client
 * Feature: Windows 7 Support
 * Feature: Add "What's New" link in the main menu
 * Fix: Windows: Display Main window location depending on TaskBar position
@@ -665,27 +668,27 @@
 * Upgrade to SharpPcap 6.0
 
 # v1.1.242
-# v4.5.531
+### Client
 * Update: Windows: Installer check for new updates before installation
 
 # v1.1.241
-# v4.5.531
+### Client
 * Fix: Freeze in Disconnecting state
 * Fix: Reconnection
 
 # v1.1.240
-# v4.5.531
+### Client
 * Fix: Diagnostic report "No Internet", when there is internet 
 * Update: Windows: Change Updater
 
 # v1.1.238
-# v4.5.531
+### Client
 * Feature: Set allowed or disallowed Apps that can use VPN
 * Update: Windows & Linux: Check TargetFramework before update
 * Update: Show warning for Public Server
 
 # v1.1.236
-# v4.5.531
+### Client
 * Fix: Android: Crash when sending feedback on Android 11
 * Fix: Connection already in progress error when changing server
 * Update: Show traffic speed
@@ -696,12 +699,12 @@
 * Fix: Linux: Stop working after server update
 
 # v1.1.235
-# v4.5.531
+### Client
 * New: New public server
 * New: Windows: Bypass local network from tunneling
 
 # v1.1.232
-# v4.5.531
+### Client
 * New: Android: Prevent landscape orientation
 * Update: Significantly improve speed and stability
 * Update: Automatically remove profiles when token does not exist
@@ -731,7 +734,7 @@
 * Change: rename "run" command to "start"
 
 # v1.1.202
-# v4.5.531
+### Client
 * New: Change server list page
 * New: Android: Change system status bar color to match UI
 * New: Windows: Change icon on notification area by connection status
@@ -742,7 +745,7 @@
 * Update: Start new log file on every run
 
 # v1.1.197
-# v4.5.531
+### Client
 * Fix: rejecting AccessKey with vh://
 
 ### Server
@@ -751,7 +754,7 @@
 * Fix: "Permission Denied" error in Linux while sending some UDP packets
 
 # v1.1.195
-# v4.5.531
+### Client
 * Feature: Modern UI
 * Feature: Show usage if there is any limitation
 * Feature: Windows: reconnect last connection after auto update
@@ -762,7 +765,7 @@
 * Fix: Use last command line argument after auto update
 
 # v1.1.187
-# v4.5.531
+### Client
 * Feature: Windows: Use new standalone UI
 * Feature: Windows: Add Context menu to system tray
 * Update: Add Microsoft WebView2 Edge to Windows Installer prerequisites
@@ -774,7 +777,7 @@
 * Update: Support multiple public IP and Amazon ElasticIP
 
 # v1.1.184
-# v4.5.531
+### Client
 * Feature: Auto Configure Windows Defender Firewall
 * Update: Improve diagnosing
 * Fix: Significantly Improve connection stability & speed
@@ -796,7 +799,7 @@
 # v1.1.176
 * Feature: Client can detect its expired session
 
-# v4.5.531
+### Client
 * Change: Always Open the main window at start if App is already running
 
 ### Developer
@@ -814,7 +817,7 @@
 # v1.1.91
 * Fix: AppUpdater throw error if UpdateUrl in publish.json was empty string
 
-# v4.5.531
+### Client
 * Update: Add client prefix to Bug Report File Name
 * Update: Close Bug Report bottom page after sending report
 * Update: Separate SPA from VpnHood.Client.App.UI. Make it easier for developers to use custom SPA

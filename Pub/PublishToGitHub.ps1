@@ -1,8 +1,5 @@
 . "$PSScriptRoot/Core/Common.ps1"
 
-# update maui nugets
-Push-Location -Path "$solutionDir/VpnHood.Client.App.Maui.Common";
-
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
 
@@ -19,7 +16,6 @@ $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -For
 $releaseNote = $changeLog;
 $releaseNote = $releaseNote.SubString($releaseNote.IndexOf("`n")); # remove version tag
 $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# ")); # remove other version
-# $releaseNote += "To see a list of all changes visit: [Changelog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
 $releaseNote | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 if ($isLatest)
 {

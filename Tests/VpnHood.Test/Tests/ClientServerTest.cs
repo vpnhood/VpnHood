@@ -90,7 +90,6 @@ public class ClientServerTest : TestBase
         Assert.AreEqual("us/california", client.Stat.ServerLocationInfo?.ServerLocation);
     }
 
-
     [TestMethod]
     public async Task TcpChannel()
     {

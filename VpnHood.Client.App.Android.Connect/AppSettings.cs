@@ -1,5 +1,6 @@
 using VpnHood.Common.Utils;
 // ReSharper disable StringLiteralTypo
+// ReSharper disable CommentTypo
 
 namespace VpnHood.Client.App.Droid.Connect;
 

@@ -23,15 +23,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 {
     protected override AppOptions CreateAppOptions()
     {
+        var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var appSettings = AppSettings.Create();
         if (appSettings is { FirebaseProjectId: not null, FirebaseApplicationId: not null, FirebaseApiKey: not null })
             InitFirebaseCrashlytics(appSettings);
 
-        var storageFolderPath = AppOptions.DefaultStorageFolderPath;
-        var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.GoogleSignInClientId);
-        var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri, appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
-        var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
-        var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
 
         var resources = DefaultAppResource.Resource;
         resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
@@ -47,13 +43,31 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsAddAccessKeySupported = false,
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
-            AccountService = accountService,
+            AccountService = CreateAppAccountService(appSettings, storageFolderPath),
             AdServices = [
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
             ],
             UiService = new AndroidAppUiService()
         };
+    }
+
+    private static StoreAccountService? CreateAppAccountService(AppSettings appSettings, string storageFolderPath)
+    {
+        try
+        {
+            var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.GoogleSignInClientId);
+            var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri, appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
+            var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
+            var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
+            return accountService;
+
+        }
+        catch (Exception)
+        {
+            // ignored
+            return null;
+        }
     }
 
     private void InitFirebaseCrashlytics(AppSettings appSettings)

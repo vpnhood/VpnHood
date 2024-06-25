@@ -6,6 +6,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling;

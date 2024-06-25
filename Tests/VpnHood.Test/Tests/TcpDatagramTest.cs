@@ -7,6 +7,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.DatagramMessaging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Test.Tests;
 

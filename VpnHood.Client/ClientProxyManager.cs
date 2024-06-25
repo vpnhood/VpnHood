@@ -3,6 +3,7 @@ using VpnHood.Client.Device;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Client;
 

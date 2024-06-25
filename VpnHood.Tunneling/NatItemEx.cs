@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 

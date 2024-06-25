@@ -18,6 +18,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Tunneling.Utils;
 using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -190,8 +191,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync(false);
     }
 
-    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, string channelId,
-        CancellationToken cancellationToken)
+    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, 
+        string channelId, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
         using var cancellationTokenSource = new CancellationTokenSource(ConnectorService.RequestTimeout);
@@ -205,6 +206,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create and add the channel
         var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
+
+        // flush initBuffer
+        await tcpClient.GetStream().WriteAsync(initBuffer, linkedCancellationTokenSource.Token);
 
         try { _proxyManager.AddChannel(bypassChannel); }
         catch { await bypassChannel.DisposeAsync().VhConfigureAwait(); throw; }

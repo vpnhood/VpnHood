@@ -1,9 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using PacketDotNet.Ieee80211;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -12,6 +10,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
@@ -111,7 +110,6 @@ internal class ClientHost(
             try
             {
                 tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                GetSniFromPackets(tcpPacket);
 
                 // check local endpoint
                 if (localEndPoint == null)
@@ -209,17 +207,34 @@ internal class ClientHost(
             if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
-            // Check IpFilter
+            // Filter by IP
             if (!vpnHoodClient.IsInIpRange(natItem.DestinationAddress))
             {
                 var channelId = Guid.NewGuid() + ":client";
                 await vpnHoodClient.AddPassthruTcpStream(
                         new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                        channelId, cancellationToken)
+                        channelId, [], cancellationToken)
                     .VhConfigureAwait();
                 return;
             }
+
+            // Filter by SNI
+            var initBuffer = new byte[0];
+            //var bufCount = await orgTcpClient.GetStream().ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken);
+            //initBuffer = initBuffer[..bufCount];
+            //var sni = TlsUtil.ExtractSni(initBuffer);
+            //if (sni != null && false)
+            //{
+            //    Console.WriteLine(sni);
+            //    var channelId = Guid.NewGuid() + ":client";
+            //    await vpnHoodClient.AddPassthruTcpStream(
+            //            new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
+            //            new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+            //            channelId, initBuffer, cancellationToken)
+            //        .VhConfigureAwait();
+            //    return;
+            //}
 
             // Create the Request
             var request = new StreamProxyChannelRequest
@@ -240,9 +255,13 @@ internal class ClientHost(
             // create a StreamProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
-            var orgTcpClientStream =
+            var orgTcpClientStream = 
                 new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
+            // flush initBuffer
+            await proxyClientStream.Stream.WriteAsync(initBuffer, cancellationToken);
+
+            // add stream proxy
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
             vpnHoodClient.Tunnel.AddChannel(channel);
         }
@@ -269,67 +288,4 @@ internal class ClientHost(
 
         return default;
     }
-
-    public static string? GetSniFromPackets(TcpPacket tcpPacket)
-    {
-        var payloadData = tcpPacket.PayloadData;
-        if (payloadData == null || payloadData.Length == 0) 
-            return null;
-
-        if (payloadData[0] != 0x16 || payloadData[5] != 0x01)
-            return null;
-
-        int sessionIdLength = payloadData[43];
-        var cipherSuitesLength = (payloadData[44 + sessionIdLength] << 8) | payloadData[44 + sessionIdLength + 1];
-        int compressionMethodsLength = payloadData[44 + sessionIdLength + 2 + cipherSuitesLength];
-        var extensionsStart = 44 + sessionIdLength + 2 + cipherSuitesLength + 1 + compressionMethodsLength;
-        if (extensionsStart + 2 >= payloadData.Length) 
-            return null;
-
-        var extensionsLength = (payloadData[extensionsStart] << 8) | payloadData[extensionsStart + 1];
-        var currentPos = extensionsStart + 2;
-        if (currentPos + extensionsLength > payloadData.Length) 
-            return null;
-
-        while (currentPos < extensionsStart + 2 + extensionsLength)
-        {
-            if (currentPos + 4 > payloadData.Length) 
-                return null;
-
-            var extensionType = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
-            var extensionLength = (payloadData[currentPos + 2] << 8) | payloadData[currentPos + 3];
-            currentPos += 4;
-
-            if (currentPos + extensionLength > payloadData.Length) 
-                return null;
-
-            if (extensionType == 0x0000)
-            {
-                if (currentPos + 2 > payloadData.Length) 
-                    return null;
-
-                var serverNameListLength = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
-                currentPos += 2;
-
-                if (currentPos + serverNameListLength > payloadData.Length) 
-                    return null;
-
-                // int serverNameType = payloadData[currentPos];
-                var serverNameLength = (payloadData[currentPos + 1] << 8) | payloadData[currentPos + 2];
-                currentPos += 3;
-
-                if (currentPos + serverNameLength > payloadData.Length) 
-                    return null;
-
-                var sni = Encoding.ASCII.GetString(payloadData, currentPos, serverNameLength);
-                Console.WriteLine(sni);
-                return sni;
-            }
-
-            currentPos += extensionLength;
-        }
-
-        return null;
-    }
-
 }

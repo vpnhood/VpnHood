@@ -5,6 +5,7 @@ using PacketDotNet;
 using VpnHood.Client;
 using VpnHood.Test.Services;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 

@@ -8,7 +8,7 @@ using VpnHood.Common.Net;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 // ReSharper disable UnusedMember.Global
-namespace VpnHood.Tunneling;
+namespace VpnHood.Tunneling.Utils;
 
 public static class PacketUtil
 {
@@ -322,12 +322,12 @@ public static class PacketUtil
                     }
 
                 case ProtocolType.Tcp:
-                {
-                    eventId = GeneralEventId.Tcp;
-                    var tcpPacket = ExtractTcp(ipPacket);
-                    packetPayload = tcpPacket.PayloadData ?? [];
-                    break;
-                }
+                    {
+                        eventId = GeneralEventId.Tcp;
+                        var tcpPacket = ExtractTcp(ipPacket);
+                        packetPayload = tcpPacket.PayloadData ?? [];
+                        break;
+                    }
             }
 
             VhLogger.Instance.Log(logLevel, eventId, exception,
@@ -338,7 +338,7 @@ public static class PacketUtil
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(GeneralEventId.Packet,
-                ex, "Could not extract packet for log. Packet: {Packet}, Message: {Message}, Exception: {Exception}", 
+                ex, "Could not extract packet for log. Packet: {Packet}, Message: {Message}, Exception: {Exception}",
                 Format(ipPacket), message, exception);
         }
     }

@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 using PacketDotNet;
-using VpnHood.Tunneling;
+using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Services;

@@ -5,6 +5,7 @@ using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling.Exceptions;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 

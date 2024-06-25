@@ -21,7 +21,7 @@ public class WinDivertPacketCapture : IPacketCapture
     private IpNetwork[]? _includeNetworks;
     private WinDivertHeader? _lastCaptureHeader;
     
-    public short ProtectedTtl {get; init; } = 211;
+    public const short ProtectedTtl = 111;
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public bool Started => _device.Started;
@@ -46,7 +46,7 @@ public class WinDivertPacketCapture : IPacketCapture
 
     }
 
-    public virtual bool CanProtectSocket => false;
+    public virtual bool CanProtectSocket => true;
 
     public virtual void ProtectSocket(Socket socket)
     {

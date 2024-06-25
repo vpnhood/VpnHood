@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 

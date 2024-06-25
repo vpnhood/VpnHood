@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using PacketDotNet;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling.DatagramMessaging;
 

@@ -61,7 +61,18 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
                 .HasDefaultValue(Guid.Empty); //todo: for migration
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.ServerFarmId, e.CreatedTime })
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .IncludeProperties(e => new
+                {
+                    e.ServerFarmId,
+                    e.ServerId,
+                    e.SessionCount,
+                    e.TunnelSendSpeed,
+                    e.TunnelReceiveSpeed
+                });
+
+            entity
+                .HasIndex(e => new { e.ServerFarmId, e.CreatedTime })
                 .IncludeProperties(e => new
                 {
                     e.ServerId,
@@ -91,8 +102,11 @@ public partial class VhReportContext(DbContextOptions<VhReportContext> options) 
             entity.Property(e => e.AccessUsageId)
                 .ValueGeneratedNever();
 
-            entity.HasIndex(e => new { e.ProjectId, e.ServerFarmId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
+            entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .IncludeProperties(e => new { e.ServerFarmId, e.ServerId, e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
+
+            entity.HasIndex(e => new { e.ServerFarmId, e.CreatedTime })
+                .IncludeProperties(e => new { e.SessionId, e.ServerId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.HasIndex(e => new { e.AccessTokenId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });

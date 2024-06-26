@@ -75,7 +75,8 @@ public class ServerService(
             GatewayIpV6 = null,
             LocationId = null,
             AllowInAutoLocation = true,
-            IsDeleted = false
+            HostUrl = createParams.HostUrl?.ToString(),
+            IsDeleted = false,
         };
 
         // add server and update FarmToken
@@ -106,6 +107,7 @@ public class ServerService(
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.AllowInAutoLocation != null) server.AllowInAutoLocation = updateParams.AllowInAutoLocation;
+        if (updateParams.HostUrl != null) server.HostUrl = updateParams.HostUrl?.ToString();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
         if (updateParams.AccessPoints != null)

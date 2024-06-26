@@ -10,7 +10,7 @@ public class ReportService(
     VhRepo vhRepo)
 {
     public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime,
-    Guid? serverFarmId, Guid? serverId)
+    Guid? serverFarmId, Guid? serverId, Guid? deviceId)
     {
         if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
         await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime: usageBeginTime, usageEndTime: usageEndTime);
@@ -18,10 +18,11 @@ public class ReportService(
         // validate serverFarmId and serverId because report service does not check permissions
         if (serverFarmId != null) _ = await vhRepo.ServerFarmGet(projectId, serverFarmId.Value);
         if (serverId != null) _ = await vhRepo.ServerGet(projectId, serverId.Value);
+        if (deviceId != null) _ = await vhRepo.ServerGet(projectId, deviceId.Value);
 
         var usage = await reportUsageService.GetUsage(projectId: projectId,
             usageBeginTime: usageBeginTime.Value, usageEndTime: usageEndTime,
-            serverFarmId: serverFarmId, serverId: serverId, deviceId: null);
+            serverFarmId: serverFarmId, serverId: serverId, deviceId: deviceId);
         return usage;
     }
 

@@ -31,10 +31,11 @@ public class ReportUsageService(
         usageBeginTime = ToUtcWithKind(usageBeginTime);
         usageEndTime = ToUtcWithKind(usageEndTime);
 
-        if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided");
-        if (serverFarmId != null && (serverId != null || deviceId != null)) throw new ArgumentException("serverId and deviceId must be null when serverFarmId is provided.");
-        if (serverId != null && deviceId != null) throw new ArgumentException("deviceId must be null when serverId is provided.");
-        if (serverId != null) { projectId = null; }
+        if (deviceId != null && serverId != null) throw new ArgumentException("serverId must be null when deviceId is provided.");
+        if (deviceId != null && serverFarmId != null) throw new ArgumentException("serverFarmId must be null when deviceId is provided.");
+
+        if (serverFarmId != null) { projectId = null; }
+        if (serverId != null) { projectId = null; serverFarmId = null; }
         if (deviceId != null) { projectId = null; }
 
         // check cache
@@ -86,8 +87,7 @@ public class ReportUsageService(
         usageEndTime = ToUtcWithKind(usageEndTime);
         usageEndTime ??= DateTime.UtcNow;
 
-        if (serverFarmId != null && projectId == null) throw new ArgumentException("projectId is required when serverFarmId is provided.");
-        if (serverFarmId != null && serverId != null) throw new ArgumentException("serverId must be null when serverFarmId is provided.");
+        if (serverFarmId != null) { projectId = null; }
         if (serverId != null) { projectId = null; serverFarmId = null; }
 
         // no lock
@@ -128,7 +128,7 @@ public class ReportUsageService(
                 SessionCount = g.Max(x => x.SessionCount),
                 TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
                 CpuUsage = serverId != null ? g.Max(x => x.CpuUsage ?? 0) : 0,
-                Memory = serverId != null ? g.Max(x => x.AvailableMemory ?? 0) : 0,
+                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory ?? 0) : 0,
             });
 
         // sum of max in status interval
@@ -139,8 +139,8 @@ public class ReportUsageService(
                 Minutes = g.Key,
                 SessionCount = g.Sum(x => x.SessionCount),
                 TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
-                CpuUsage = serverId != null ? g.Sum(x => x.CpuUsage) : 0,
-                Memory = serverId != null ? g.Sum(x => x.Memory) : 0,
+                CpuUsage = serverId != null ? g.Max(x => x.CpuUsage) : 0,
+                AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0,
                 // ServerCount = g.Count() 
             });
 
@@ -153,8 +153,8 @@ public class ReportUsageService(
                     Time = baseTime.AddMinutes(g.Key * step2 * step1),
                     SessionCount = g.Max(y => y.SessionCount),
                     TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
-                    CpuUsage = serverId != null ? g.Sum(x => x.CpuUsage) : 0,
-                    AvailableMemory = serverId != null ? g.Sum(x => x.Memory) :0,
+                    CpuUsage = serverId != null ? g.Max(x => x.CpuUsage) : 0,
+                    AvailableMemory = serverId != null ? g.Max(x => x.AvailableMemory) : 0,
                     // ServerCount = g.Max(y=>y.ServerCount) 
                 })
             .OrderBy(x => x.Time);
@@ -177,7 +177,6 @@ public class ReportUsageService(
 
         return res.ToArray();
     }
-
 
     public async Task<Dictionary<Guid, Usage>> GetAccessTokensUsage(Guid projectId, Guid[]? accessTokenIds = null, Guid? serverFarmId = null,
         DateTime? usageBeginTime = null, DateTime? usageEndTime = null)

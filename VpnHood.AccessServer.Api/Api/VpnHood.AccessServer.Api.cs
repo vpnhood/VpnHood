@@ -2867,7 +2867,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Usage> GetUsageAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Usage> GetUsageAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Guid? deviceId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2900,6 +2900,10 @@ namespace VpnHood.AccessServer.Api
                     if (serverId != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("serverId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (deviceId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("deviceId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(deviceId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     urlBuilder_.Length--;
 
@@ -8560,6 +8564,9 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
         public bool AllowInAutoLocation { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
+        public System.Uri? HostUrl { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -8700,6 +8707,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerFarmId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
+        public System.Uri? HostUrl { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public System.Collections.Generic.ICollection<AccessPoint>? AccessPoints { get; set; } = default!;
 
@@ -8726,6 +8736,9 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
         public PatchOfBoolean? AllowInAutoLocation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
+        public PatchOfUri? HostUrl { get; set; } = default!;
 
     }
 

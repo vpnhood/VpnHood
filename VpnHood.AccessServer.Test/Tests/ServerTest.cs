@@ -35,7 +35,11 @@ public class ServerTest
         //-----------
         // check: Create
         //-----------
-        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}"};
+        var server1ACreateParam = new ServerCreateParams
+        {
+            ServerName = $"{Guid.NewGuid()}",
+            HostUrl = new Uri("http://localhost/foo")
+        };
         var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
         var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
@@ -43,6 +47,7 @@ public class ServerTest
         // check: Get
         //-----------
         await serverDom.Reload();
+        Assert.AreEqual(server1ACreateParam.HostUrl, serverDom.Server.HostUrl);
         Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
@@ -78,13 +83,15 @@ public class ServerTest
         {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
             AutoConfigure = new PatchOfBoolean { Value = !serverDom.Server.AutoConfigure },
-            GenerateNewSecret = new PatchOfBoolean { Value = false }
+            GenerateNewSecret = new PatchOfBoolean { Value = false },
+            HostUrl = new PatchOfUri{Value = new Uri("http://localhost/foo2")}
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
         var install1C = await serverDom.Client.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
+        Assert.AreEqual(serverUpdateParam.HostUrl.Value, serverDom.Server.HostUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
 
         //-----------

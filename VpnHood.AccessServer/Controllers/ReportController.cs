@@ -19,11 +19,11 @@ public class ReportController(
     [HttpGet("usage")]
     [AuthorizeProjectPermission(Permissions.ProjectRead)]
     public Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
-        Guid? serverFarmId = null, Guid? serverId = null)
+        Guid? serverFarmId = null, Guid? serverId = null, Guid? deviceId = null)
     {
         return reportService.GetUsage(projectId: projectId,
             usageBeginTime: usageBeginTime, usageEndTime: usageEndTime,
-            serverFarmId: serverFarmId, serverId: serverId);
+            serverFarmId: serverFarmId, serverId: serverId, deviceId: deviceId);
     }
 
     [HttpGet("server-status-history")]

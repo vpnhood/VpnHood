@@ -3,7 +3,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -122,30 +122,5 @@ public class ProjectTest
         var userRole = userRoles.Items.First();
         Assert.AreEqual(testApp.ProjectOwnerApiKey.UserId, userRole.User?.UserId);
         Assert.AreEqual(Roles.ProjectOwner.RoleId, userRole.Role.RoleId);
-    }
-
-    [TestMethod]
-    public async Task GetUsage()
-    {
-        using var farm = await ServerFarmDom.Create();
-        var accessTokenDom1 = await farm.CreateAccessToken();
-        var accessTokenDom2 = await farm.CreateAccessToken();
-
-        var sessionDom = await accessTokenDom1.CreateSession();
-        await sessionDom.AddUsage();
-       
-        sessionDom = await accessTokenDom1.CreateSession();
-        await sessionDom.AddUsage();
-
-        sessionDom = await accessTokenDom2.CreateSession();
-        await sessionDom.AddUsage();
-
-        sessionDom = await accessTokenDom2.CreateSession();
-        await sessionDom.AddUsage();
-
-        await farm.TestApp.Sync();
-
-        var res = await farm.TestApp.ProjectsClient.GetUsageAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
-        Assert.AreEqual(4, res.DeviceCount);
     }
 }

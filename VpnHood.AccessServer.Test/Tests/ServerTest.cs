@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Test.Dom;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Access;
@@ -35,7 +35,11 @@ public class ServerTest
         //-----------
         // check: Create
         //-----------
-        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}"};
+        var server1ACreateParam = new ServerCreateParams
+        {
+            ServerName = $"{Guid.NewGuid()}",
+            HostUrl = new Uri("http://localhost/foo")
+        };
         var serverDom = await farm1.AddNewServer(server1ACreateParam, configure: false);
         var install1A = await farm1.TestApp.ServersClient.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
 
@@ -43,6 +47,7 @@ public class ServerTest
         // check: Get
         //-----------
         await serverDom.Reload();
+        Assert.AreEqual(server1ACreateParam.HostUrl, serverDom.Server.HostUrl);
         Assert.AreEqual(server1ACreateParam.ServerName, serverDom.Server.ServerName);
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
@@ -78,13 +83,15 @@ public class ServerTest
         {
             ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
             AutoConfigure = new PatchOfBoolean { Value = !serverDom.Server.AutoConfigure },
-            GenerateNewSecret = new PatchOfBoolean { Value = false }
+            GenerateNewSecret = new PatchOfBoolean { Value = false },
+            HostUrl = new PatchOfUri{Value = new Uri("http://localhost/foo2")}
         };
         await serverDom.Update(serverUpdateParam);
         await serverDom.Reload();
         var install1C = await serverDom.Client.GetInstallManualAsync(testApp.ProjectId, serverDom.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.ManagementSecret, install1C.AppSettings.ManagementSecret);
         Assert.AreEqual(serverUpdateParam.AutoConfigure.Value, serverDom.Server.AutoConfigure);
+        Assert.AreEqual(serverUpdateParam.HostUrl.Value, serverDom.Server.HostUrl);
         Assert.AreEqual(serverUpdateParam.ServerName.Value, serverDom.Server.ServerName);
 
         //-----------
@@ -257,61 +264,6 @@ public class ServerTest
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == server1TokenIp.IpAddress));
     }
 
-
-    [TestMethod]
-    public async Task GetStatusSummary()
-    {
-        using var farm = await ServerFarmDom.Create(serverCount: 0);
-        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
-        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
-
-        // lost
-        var sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 10 });
-        await Task.Delay(2000);
-
-        // active 2
-        sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic { Received = 100, Sent = 50 } });
-        sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
-
-        // notInstalled 4
-        await farm.AddNewServer(configure: false);
-        await farm.AddNewServer(configure: false);
-        await farm.AddNewServer(configure: false);
-        await farm.AddNewServer(configure: false);
-
-        // idle1
-        sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
-
-        // idle2
-        sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
-
-        // idle3
-        sampleServer = await farm.AddNewServer();
-        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
-
-        var liveUsageSummary = await farm.TestApp.ServersClient.GetStatusSummaryAsync(farm.TestApp.ProjectId);
-        Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
-        Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
-        Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
-        Assert.AreEqual(1, liveUsageSummary.LostServerCount);
-        Assert.AreEqual(3, liveUsageSummary.IdleServerCount);
-        Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
-        Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
-    }
-
-    [TestMethod]
-    public async Task GetStatusHistory()
-    {
-        using var farm = await ServerFarmDom.Create();
-        var res = await farm.TestApp.ServersClient.GetStatusHistoryAsync(farm.ProjectId, DateTime.UtcNow.AddDays(-1));
-        Assert.IsTrue(res.Count > 0);
-    }
-
     [TestMethod]
     public async Task Crud_AccessPoints()
     {
@@ -376,5 +328,52 @@ public class ServerTest
         var token = await accessToken.GetToken();
         Assert.IsTrue(token.ServerToken.HostEndPoints!.Any(x => x.Address.ToString() == accessPoint3.IpAddress && x.Port == accessPoint3.TcpPort),
             "AccessPoints have not been updated in FarmToken.");
+    }
+
+    [TestMethod]
+    public async Task GetStatusSummary()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(1);
+        farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(1);
+        farm.TestApp.AgentTestApp.AgentOptions.LostServerThreshold = TimeSpan.FromSeconds(2);
+
+        // lost
+        var sampleServer = await farm.AddNewServer();
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 10 });
+        await Task.Delay(2000);
+
+        // active 2
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 1, TunnelSpeed = new Traffic { Received = 100, Sent = 50 } });
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 2, TunnelSpeed = new Traffic { Received = 300, Sent = 200 } });
+
+        // notInstalled 4
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+        await farm.AddNewServer(configure: false);
+
+        // idle1
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
+
+        // idle2
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
+
+        // idle3
+        sampleServer = await farm.AddNewServer();
+        await sampleServer.SendStatus(new ServerStatus { SessionCount = 0 });
+
+        var liveUsageSummary = await farm.TestApp.ServersClient.GetStatusSummaryAsync(farm.TestApp.ProjectId);
+        Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
+        Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
+        Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
+        Assert.AreEqual(1, liveUsageSummary.LostServerCount);
+        Assert.AreEqual(3, liveUsageSummary.IdleServerCount);
+        Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
+        Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
     }
 }

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Testing.Platform.TestHost;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Options;
@@ -40,6 +39,7 @@ public class TestApp : IHttpClientFactory, IDisposable
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public ServerFarmsClient ServerFarmsClient => new(HttpClient);
     public ServersClient ServersClient => new(HttpClient);
+    public ReportClient ReportClient => new(HttpClient);
     public AccessTokensClient AccessTokensClient => new(HttpClient);
     public ProjectsClient ProjectsClient => new(HttpClient);
     public IpLocksClient IpLocksClient => new(HttpClient);

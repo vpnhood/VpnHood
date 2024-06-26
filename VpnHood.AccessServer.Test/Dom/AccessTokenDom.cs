@@ -57,7 +57,11 @@ public class AccessTokenDom(TestApp testApp, AccessToken accessToken)
             Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoint);
             Assert.IsNotNull(ret.SessionResponseEx.RedirectHostEndPoints);
             Assert.IsTrue(ret.SessionResponseEx.RedirectHostEndPoints.Any(x => x.Equals(ret.SessionResponseEx.RedirectHostEndPoint)));
-            Assert.AreEqual(ret.SessionRequestEx.HostEndPoint.AddressFamily, ret.SessionResponseEx.RedirectHostEndPoint.AddressFamily);
+            
+            // if clientIp is IPv4, then redirectHostEndPoint must be IPv4
+            if (ret.SessionRequestEx.HostEndPoint.AddressFamily == AddressFamily.InterNetwork)
+                Assert.AreEqual(ret.SessionRequestEx.HostEndPoint.AddressFamily, ret.SessionResponseEx.RedirectHostEndPoint.AddressFamily);
+            
             return await CreateSession(
                 ret.SessionResponseEx.RedirectHostEndPoint,
                 clientId: sessionRequestEx.ClientInfo.ClientId,

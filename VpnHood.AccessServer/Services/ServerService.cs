@@ -74,8 +74,9 @@ public class ServerService(
             GatewayIpV4 = null,
             GatewayIpV6 = null,
             LocationId = null,
-            AllowInAutoLocation = false,
-            IsDeleted = false
+            AllowInAutoLocation = true,
+            HostUrl = createParams.HostUrl?.ToString(),
+            IsDeleted = false,
         };
 
         // add server and update FarmToken
@@ -106,6 +107,7 @@ public class ServerService(
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.AllowInAutoLocation != null) server.AllowInAutoLocation = updateParams.AllowInAutoLocation;
+        if (updateParams.HostUrl != null) server.HostUrl = updateParams.HostUrl?.ToString();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
         if (updateParams.AccessPoints != null)
@@ -306,7 +308,11 @@ public class ServerService(
         var isFarmUpdated = FarmTokenBuilder.UpdateIfChanged(serverFarm);
         await vhContext.SaveChangesAsync();
         if (isFarmUpdated)
-            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId, includeSevers: false);
+        {
+            var includeSevers = server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken);
+            await agentCacheClient.InvalidateServerFarm(server.ServerFarmId, 
+                includeSevers: includeSevers);
+        }
 
     }
 
@@ -314,7 +320,11 @@ public class ServerService(
     {
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.LoginUserName, new PasswordAuthenticationMethod(installParams.LoginUserName, installParams.LoginPassword));
+        var connectionInfo = new ConnectionInfo(
+            installParams.HostName.Trim(), 
+            hostPort, 
+            installParams.LoginUserName.Trim(), 
+            new PasswordAuthenticationMethod(installParams.LoginUserName.Trim(), installParams.LoginPassword.Trim()));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
@@ -323,9 +333,12 @@ public class ServerService(
     public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
         await using var keyStream = new MemoryStream(installParams.UserPrivateKey);
-        using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase);
+        using var privateKey = new PrivateKeyFile(keyStream, installParams.UserPrivateKeyPassphrase?.Trim());
 
-        var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.LoginUserName, new PrivateKeyAuthenticationMethod(installParams.LoginUserName, privateKey));
+        var connectionInfo = new ConnectionInfo(
+            installParams.HostName.Trim(), installParams.HostPort, 
+            installParams.LoginUserName.Trim(), 
+            new PrivateKeyAuthenticationMethod(installParams.LoginUserName.Trim(), privateKey));
 
         var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.LoginPassword);
@@ -337,7 +350,7 @@ public class ServerService(
         sshClient.Connect();
 
         var linuxCommand = GetInstallScriptForLinux(appSettings, false);
-        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword, TimeSpan.FromMinutes(5));
+        var res = await AccessServerUtil.ExecuteSshCommand(sshClient, linuxCommand, loginPassword?.Trim(), TimeSpan.FromMinutes(5));
 
         var check = sshClient.RunCommand("dir /opt/VpnHoodServer");
         var checkResult = check.Execute();

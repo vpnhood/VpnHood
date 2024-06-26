@@ -22,7 +22,6 @@ public class ProjectService(
     SubscriptionService subscriptionService,
     AgentCacheClient agentCacheClient,
     CertificateService certificateService,
-    ReportUsageService usageReportService,
     IRoleProvider roleProvider)
 {
     public async Task<Project> Create(string ownerUserId)
@@ -194,16 +193,5 @@ public class ProjectService(
             .ToArrayAsync();
 
         return projects.Select(project => project.ToDto(appOptions.Value.AgentUrl));
-    }
-
-    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageBeginTime, DateTime? usageEndTime = null,
-        Guid? serverFarmId = null, Guid? serverId = null)
-    {
-        if (usageBeginTime == null) throw new ArgumentNullException(nameof(usageBeginTime));
-        await subscriptionService.VerifyUsageQueryPermission(projectId, usageBeginTime, usageEndTime);
-
-        var usage = await usageReportService.GetUsage(projectId, usageBeginTime.Value, usageEndTime,
-            serverFarmId: serverFarmId, serverId: serverId);
-        return usage;
     }
 }

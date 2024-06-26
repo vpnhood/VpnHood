@@ -50,8 +50,11 @@ public class LoadBalancerService(
         var accessPoints = new List<AccessPointModel>();
         foreach (var server in servers)
         {
-            accessPoints.AddRange(server.AccessPoints.Where(accessPoint =>
-                accessPoint.IsPublic && accessPoint.IpAddress.AddressFamily == addressFamily));
+            var serverAccessPoints = server.AccessPoints
+                .Where(x => x.IsPublic)
+                .OrderByDescending(x => x.IpAddress.AddressFamily); // prefer IPv6
+
+            accessPoints.AddRange(serverAccessPoints);
         }
 
         // convert access points to IPEndPoints
@@ -59,10 +62,16 @@ public class LoadBalancerService(
             .Select(accessPoint => new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))
             .ToArray();
 
+        // find the best TcpEndPoint for this request
+        var bestTcpEndPoint = tcpEndPoints.FirstOrDefault(x => // if client is IpV4 the single redirect must be ipv4
+            addressFamily == AddressFamily.InterNetworkV6 ||
+            x.AddressFamily == AddressFamily.InterNetwork);
+
         // no server found
-        if (tcpEndPoints.Length == 0)
+        if (bestTcpEndPoint == null)
             throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any free server.");
 
+        // todo
         // deprecated: 505 client and later
         // client should send no redirect flag. for older version we keep last state in memory to prevent re-redirect
         var cacheKey = $"LastDeviceServer/{currentServer.ServerFarmId}/{device.DeviceId}/{locationPath}";
@@ -74,16 +83,15 @@ public class LoadBalancerService(
         }
 
         // redirect if current server does not serve the best TcpEndPoint
-        var bestTcpEndPoint = tcpEndPoints.First();
         var bestServer = servers.First(x => x.AccessPoints.Any(accessPoint =>
             bestTcpEndPoint.Equals(new IPEndPoint(accessPoint.IpAddress, accessPoint.TcpPort))));
-        if (currentServer.ServerId != bestServer.ServerFarmId)
+        if (currentServer.ServerId != bestServer.ServerId)
         {
             memoryCache.Set(cacheKey, bestServer.ServerId, TimeSpan.FromMinutes(5));
             throw new SessionExceptionEx(new SessionResponseEx
             {
                 ErrorCode = SessionErrorCode.RedirectHost,
-                RedirectHostEndPoint = tcpEndPoints.First(),
+                RedirectHostEndPoint = bestTcpEndPoint,
                 RedirectHostEndPoints = tcpEndPoints.Take(100).ToArray()
             });
         }
@@ -99,8 +107,8 @@ public class LoadBalancerService(
         var farmServers = servers
             .Where(server =>
                 server.IsReady &&
-                (!server.AllowInAutoLocation || requestLocation.CountryCode == "*") &&
                 server.ServerFarmId == serverFarmId &&
+                (server.AllowInAutoLocation || requestLocation.CountryCode != "*") &&
                 server.LocationInfo.IsMatch(requestLocation))
             .OrderBy(CalcServerLoad)
             .ToArray();
@@ -119,14 +127,14 @@ public class LoadBalancerService(
 
         // find all servers with access in tokens
         servers = servers
-            .Where(server => 
+            .Where(server =>
                 server.ServerFarmId == serverFarmId &&
-                server.IsEnabled && 
+                server.IsEnabled &&
                 server.AccessPoints.Any(x => x.AccessPointMode == AccessPointMode.PublicInToken))
             .ToArray();
-        
+
         // at-least one server must be ready
-        return servers.Length > 0 && servers.All(x=>x.IsReady);
+        return servers.Length > 0 && servers.All(x => x.IsReady);
     }
 
 

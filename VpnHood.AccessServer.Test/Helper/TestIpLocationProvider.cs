@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer.Test.Helper;
 
 public class TestIpLocationProvider : IIpLocationProvider
 {
-    public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress)
+    public Task<IpLocation> GetLocation(HttpClient httpClient, IPAddress ipAddress, CancellationToken cancellationToken)
     {
         return Task.FromResult(new IpLocation
         {
@@ -20,8 +20,8 @@ public class TestIpLocationProvider : IIpLocationProvider
         });
     }
 
-    public Task<IpLocation> GetLocation(HttpClient httpClient)
+    public Task<IpLocation> GetLocation(HttpClient httpClient, CancellationToken cancellationToken)
     {
-        return GetLocation(httpClient, IPAddress.Parse("127.0.0.1"));
+        return GetLocation(httpClient, IPAddress.Parse("127.0.0.1"), cancellationToken);
     }
 }

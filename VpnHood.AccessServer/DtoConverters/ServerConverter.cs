@@ -33,7 +33,8 @@ public static class ServerConverter
             LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
-            AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray()
+            AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),
+            HostUrl = model.HostUrl!=null ? new Uri(model.HostUrl) : null,
         };
     }
 

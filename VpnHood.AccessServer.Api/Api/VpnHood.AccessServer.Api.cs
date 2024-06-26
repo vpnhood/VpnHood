@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Api
     using System = global::System;
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessesClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class AccessesClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -48,7 +48,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<AccessData> GetAsync(System.Guid projectId, System.Guid accessId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -102,14 +102,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<AccessData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -127,7 +127,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ListResultOfAccessData> ListAsync(System.Guid projectId, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.Guid? accessId = null, System.DateTime? beginTime = null, System.DateTime? endTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -207,14 +207,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ListResultOfAccessData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -264,7 +264,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -280,7 +280,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -341,7 +341,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessTokensClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class AccessTokensClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -365,7 +365,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<AccessToken> CreateAsync(System.Guid projectId, AccessTokenCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -422,14 +422,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<AccessToken>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -447,7 +447,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ListResultOfAccessTokenData> ListAsync(System.Guid projectId, string? search = null, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -527,14 +527,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ListResultOfAccessTokenData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -552,7 +552,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task DeleteManyAsync(System.Guid projectId, System.Collections.Generic.IEnumerable<System.Guid> accessTokenIds, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -610,7 +610,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -628,7 +628,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<AccessToken> UpdateAsync(System.Guid projectId, System.Guid accessTokenId, AccessTokenUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -689,14 +689,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<AccessToken>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -714,7 +714,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<AccessTokenData> GetAsync(System.Guid projectId, System.Guid accessTokenId, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -778,14 +778,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<AccessTokenData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -803,7 +803,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -858,7 +858,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -876,7 +876,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<string> GetAccessKeyAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -931,14 +931,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -988,7 +988,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -1004,7 +1004,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -1065,7 +1065,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class DevicesClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class DevicesClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -1089,7 +1089,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<DeviceData> GetAsync(System.Guid projectId, System.Guid deviceId, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -1153,14 +1153,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<DeviceData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1178,7 +1178,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Device> UpdateAsync(System.Guid projectId, System.Guid deviceId, DeviceUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -1239,14 +1239,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Device>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1264,7 +1264,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Device> FindByClientIdAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -1318,14 +1318,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Device>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1343,7 +1343,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<DeviceData>> ListAsync(System.Guid projectId, System.Guid? deviceId = null, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -1415,14 +1415,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<DeviceData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1440,7 +1440,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<DeviceData>> ListUsagesAsync(System.Guid projectId, System.Guid? accessTokenId = null, System.Guid? serverFarmId = null, System.DateTime? usageBeginTime = null, System.DateTime? usageEndTime = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -1516,14 +1516,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<DeviceData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1573,7 +1573,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -1589,7 +1589,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -1650,7 +1650,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class HealthClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class HealthClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -1674,7 +1674,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<string> GetAsync(string check, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (check == null)
@@ -1723,14 +1723,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1780,7 +1780,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -1796,7 +1796,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -1857,7 +1857,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class IpLocksClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class IpLocksClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -1881,7 +1881,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<IpLock> CreateAsync(System.Guid projectId, IpLockCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -1938,14 +1938,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<IpLock>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -1963,7 +1963,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<IpLock>> ListAsync(System.Guid projectId, string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -2027,14 +2027,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<IpLock>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2052,7 +2052,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<IpLock> UpdateAsync(System.Guid projectId, string ip, IpLockUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -2113,14 +2113,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<IpLock>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2138,7 +2138,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, string ip, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -2193,7 +2193,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2211,7 +2211,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<IpLock> GetAsync(System.Guid projectId, string ip, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -2265,14 +2265,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<IpLock>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2322,7 +2322,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -2338,7 +2338,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -2399,7 +2399,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProjectsClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class ProjectsClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -2423,7 +2423,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Project> CreateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -2469,14 +2469,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Project>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2494,7 +2494,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Project>> ListAsync(string? search = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -2553,14 +2553,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<Project>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2578,7 +2578,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Project> GetAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -2627,14 +2627,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Project>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2652,7 +2652,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Project> UpdateAsync(System.Guid projectId, ProjectUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -2708,104 +2708,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Project>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Usage> GetUsageAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
-        {
-            if (projectId == null)
-                throw new System.ArgumentNullException("projectId");
-
-            var client_ = _httpClient;
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-                    request_.Method = new System.Net.Http.HttpMethod("GET");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
-
-                    var urlBuilder_ = new System.Text.StringBuilder();
-                
-                    // Operation Path: "api/v1/projects/{projectId}/usage"
-                    urlBuilder_.Append("api/v1/projects/");
-                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/usage");
-                    urlBuilder_.Append('?');
-                    urlBuilder_.Append(System.Uri.EscapeDataString("usageBeginTime")).Append('=').Append(System.Uri.EscapeDataString(usageBeginTime != null ? usageBeginTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture) : "")).Append('&');
-                    if (usageEndTime != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime")).Append('=').Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
-                    if (serverFarmId != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
-                    if (serverId != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("serverId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
-                    urlBuilder_.Length--;
-
-                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
-
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-
-                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
-
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
-                        foreach (var item_ in response_.Headers)
-                            headers_[item_.Key] = item_.Value;
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-
-                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
-
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
-                        {
-                            var objectResponse_ = await ReadObjectResponseAsync<Usage>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -2855,7 +2765,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -2871,7 +2781,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -2932,7 +2842,324 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServerFarmsClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class ReportClient : VpnHood.Common.ApiClients.ApiClientCommon
+    {
+        private System.Net.Http.HttpClient _httpClient;
+        private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
+
+    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public ReportClient(System.Net.Http.HttpClient httpClient)
+    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        {
+            _httpClient = httpClient;
+        }
+
+        private static System.Text.Json.JsonSerializerOptions CreateSerializerSettings()
+        {
+            var settings = new System.Text.Json.JsonSerializerOptions();
+            UpdateJsonSerializerSettings(settings);
+            return settings;
+        }
+
+        protected System.Text.Json.JsonSerializerOptions JsonSerializerSettings { get { return _settings.Value; } }
+
+        static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<Usage> GetUsageAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Guid? deviceId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (projectId == null)
+                throw new System.ArgumentNullException("projectId");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/v1/projects/{projectId}/report/usage"
+                    urlBuilder_.Append("api/v1/projects/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/report/usage");
+                    urlBuilder_.Append('?');
+                    urlBuilder_.Append(System.Uri.EscapeDataString("usageBeginTime")).Append('=').Append(System.Uri.EscapeDataString(usageBeginTime != null ? usageBeginTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture) : "")).Append('&');
+                    if (usageEndTime != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime")).Append('=').Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (serverFarmId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (serverId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("serverId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (deviceId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("deviceId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(deviceId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<Usage>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusHistory>> GetServerStatusHistoryAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverFarmId = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (projectId == null)
+                throw new System.ArgumentNullException("projectId");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/v1/projects/{projectId}/report/server-status-history"
+                    urlBuilder_.Append("api/v1/projects/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/report/server-status-history");
+                    urlBuilder_.Append('?');
+                    urlBuilder_.Append(System.Uri.EscapeDataString("usageBeginTime")).Append('=').Append(System.Uri.EscapeDataString(usageBeginTime != null ? usageBeginTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture) : "")).Append('&');
+                    if (usageEndTime != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime")).Append('=').Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (serverFarmId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("serverFarmId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverFarmId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (serverId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("serverId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ServerStatusHistory>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        protected struct ObjectResponseResult<T>
+        {
+            public ObjectResponseResult(T responseObject, string responseText)
+            {
+                this.Object = responseObject;
+                this.Text = responseText;
+            }
+
+            public T Object { get; }
+
+            public string Text { get; }
+        }
+
+        public bool ReadResponseAsString { get; set; }
+
+        protected virtual async System.Threading.Tasks.Task<ObjectResponseResult<T>> ReadObjectResponseAsync<T>(System.Net.Http.HttpResponseMessage response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Threading.CancellationToken cancellationToken)
+        {
+            if (response == null || response.Content == null)
+            {
+                return new ObjectResponseResult<T>(default(T)!, string.Empty);
+            }
+
+            if (ReadResponseAsString)
+            {
+                var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                try
+                {
+                    var typedBody = System.Text.Json.JsonSerializer.Deserialize<T>(responseText, JsonSerializerSettings);
+                    return new ObjectResponseResult<T>(typedBody!, responseText);
+                }
+                catch (System.Text.Json.JsonException exception)
+                {
+                    var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                }
+            }
+            else
+            {
+                try
+                {
+                    using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    {
+                        var typedBody = await System.Text.Json.JsonSerializer.DeserializeAsync<T>(responseStream, JsonSerializerSettings, cancellationToken).ConfigureAwait(false);
+                        return new ObjectResponseResult<T>(typedBody!, string.Empty);
+                    }
+                }
+                catch (System.Text.Json.JsonException exception)
+                {
+                    var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                }
+            }
+        }
+
+        private string ConvertToString(object? value, System.Globalization.CultureInfo cultureInfo)
+        {
+            if (value == null)
+            {
+                return "";
+            }
+
+            if (value is System.Enum)
+            {
+                var name = System.Enum.GetName(value.GetType(), value);
+                if (name != null)
+                {
+                    var field = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
+                    if (field != null)
+                    {
+                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
+                            as System.Runtime.Serialization.EnumMemberAttribute;
+                        if (attribute != null)
+                        {
+                            return attribute.Value != null ? attribute.Value : name;
+                        }
+                    }
+
+                    var converted = System.Convert.ToString(System.Convert.ChangeType(value, System.Enum.GetUnderlyingType(value.GetType()), cultureInfo));
+                    return converted == null ? string.Empty : converted;
+                }
+            }
+            else if (value is bool) 
+            {
+                return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
+            }
+            else if (value is byte[])
+            {
+                return System.Convert.ToBase64String((byte[]) value);
+            }
+            else if (value is string[])
+            {
+                return string.Join(",", (string[])value);
+            }
+            else if (value.GetType().IsArray)
+            {
+                var valueArray = (System.Array)value;
+                var valueTextArray = new string[valueArray.Length];
+                for (var i = 0; i < valueArray.Length; i++)
+                {
+                    valueTextArray[i] = ConvertToString(valueArray.GetValue(i), cultureInfo);
+                }
+                return string.Join(",", valueTextArray);
+            }
+
+            var result = System.Convert.ToString(value, cultureInfo);
+            return result == null ? "" : result;
+        }
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerFarmsClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -2956,7 +3183,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerFarmData> CreateAsync(System.Guid projectId, ServerFarmCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3013,14 +3240,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerFarmData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3038,7 +3265,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerFarmData>> ListAsync(System.Guid projectId, string? search = null, bool? includeSummary = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3106,14 +3333,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ServerFarmData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3131,7 +3358,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerFarmData> UpdateAsync(System.Guid projectId, System.Guid serverFarmId, ServerFarmUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3192,14 +3419,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerFarmData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3217,7 +3444,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerFarmData> GetAsync(System.Guid projectId, System.Guid serverFarmId, bool? includeSummary = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3277,14 +3504,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerFarmData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3302,7 +3529,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, System.Guid serverFarmId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3357,7 +3584,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3375,7 +3602,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ValidateTokenUrlResult> ValidateTokenUrlAsync(System.Guid projectId, System.Guid serverFarmId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3430,14 +3657,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ValidateTokenUrlResult>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3455,7 +3682,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<string> GetEncryptedTokenAsync(System.Guid projectId, System.Guid serverFarmId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3510,14 +3737,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3535,7 +3762,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Certificate> CertificateImportAsync(System.Guid projectId, System.Guid serverFarmId, CertificateImportParams importParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3597,14 +3824,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Certificate>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3622,7 +3849,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<Certificate> CertificateReplaceAsync(System.Guid projectId, System.Guid serverFarmId, CertificateCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3681,14 +3908,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<Certificate>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3738,7 +3965,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -3754,7 +3981,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -3815,7 +4042,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServerProfilesClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class ServerProfilesClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -3839,7 +4066,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerProfile> CreateAsync(System.Guid projectId, ServerProfileCreateParams? createParams = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3893,14 +4120,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerProfile>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -3918,7 +4145,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerProfileData>> ListAsync(System.Guid projectId, string? search = null, bool? includeSummary = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -3986,14 +4213,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ServerProfileData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4011,7 +4238,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerProfileData> GetAsync(System.Guid projectId, System.Guid serverProfileId, bool? includeSummary = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4071,14 +4298,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerProfileData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4096,7 +4323,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerProfile> UpdateAsync(System.Guid projectId, System.Guid serverProfileId, ServerProfileUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4157,14 +4384,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerProfile>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4182,7 +4409,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, System.Guid serverProfileId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4237,7 +4464,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4287,7 +4514,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -4303,7 +4530,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -4364,7 +4591,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServersClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class ServersClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -4388,7 +4615,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerData> CreateAsync(System.Guid projectId, ServerCreateParams createParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4445,14 +4672,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4470,7 +4697,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerData>> ListAsync(System.Guid projectId, string? search = null, System.Guid? serverId = null, System.Guid? serverFarmId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4542,14 +4769,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ServerData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4567,7 +4794,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerData> UpdateAsync(System.Guid projectId, System.Guid serverId, ServerUpdateParams updateParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4628,14 +4855,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4653,7 +4880,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerData> GetAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4707,14 +4934,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4732,7 +4959,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task DeleteAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4787,7 +5014,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4805,7 +5032,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task ReconfigureAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4862,7 +5089,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4880,7 +5107,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task InstallBySshUserPasswordAsync(System.Guid projectId, System.Guid serverId, ServerInstallBySshUserPasswordParams installParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -4943,7 +5170,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -4961,7 +5188,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task InstallBySshUserKeyAsync(System.Guid projectId, System.Guid serverId, ServerInstallBySshUserKeyParams installParams, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -5024,7 +5251,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5042,7 +5269,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServerInstallManual> GetInstallManualAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -5097,14 +5324,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServerInstallManual>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5122,7 +5349,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ServersStatusSummary> GetStatusSummaryAsync(System.Guid projectId, System.Guid? serverFarmId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
@@ -5178,100 +5405,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ServersStatusSummary>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusHistory>> GetStatusHistoryAsync(System.Guid projectId, System.DateTime? usageBeginTime, System.DateTime? usageEndTime = null, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
-        {
-            if (projectId == null)
-                throw new System.ArgumentNullException("projectId");
-
-            var client_ = _httpClient;
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-                    request_.Method = new System.Net.Http.HttpMethod("GET");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
-
-                    var urlBuilder_ = new System.Text.StringBuilder();
-                
-                    // Operation Path: "api/v1/projects/{projectId}/servers/status-history"
-                    urlBuilder_.Append("api/v1/projects/");
-                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-                    urlBuilder_.Append("/servers/status-history");
-                    urlBuilder_.Append('?');
-                    urlBuilder_.Append(System.Uri.EscapeDataString("usageBeginTime")).Append('=').Append(System.Uri.EscapeDataString(usageBeginTime != null ? usageBeginTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture) : "")).Append('&');
-                    if (usageEndTime != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime")).Append('=').Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
-                    if (serverId != null)
-                    {
-                        urlBuilder_.Append(System.Uri.EscapeDataString("serverId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
-                    }
-                    urlBuilder_.Length--;
-
-                    await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
-
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-
-                    await PrepareRequestAsync(client_, request_, url_, cancellationToken).ConfigureAwait(false);
-
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
-                        foreach (var item_ in response_.Headers)
-                            headers_[item_.Key] = item_.Value;
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-
-                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
-
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
-                        {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ServerStatusHistory>>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5321,7 +5462,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -5337,7 +5478,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -5398,7 +5539,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SystemClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class SystemClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -5422,7 +5563,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task SyncAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -5469,7 +5610,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5519,7 +5660,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -5535,7 +5676,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -5596,7 +5737,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class TeamClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class TeamClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -5620,7 +5761,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Project>> ListCurrentUserProjectsAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -5665,14 +5806,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<Project>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5690,7 +5831,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> ListCurrentUserResourcesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -5735,14 +5876,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<string>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5760,7 +5901,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> ListCurrentUserPermissionsAsync(string resourceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -5810,14 +5951,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<string>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5835,7 +5976,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> ResetBotApiKeyAsync(string userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (userId == null)
@@ -5886,14 +6027,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5911,7 +6052,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<User> UpdateBotAsync(string userId, TeamUpdateBotParam updateParam, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (userId == null)
@@ -5968,14 +6109,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<User>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -5993,7 +6134,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Role>> ListRolesAsync(string resourceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -6043,14 +6184,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<Role>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6068,7 +6209,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ListResultOfUserRole> ListUserRolesAsync(string resourceId, string? roleId = null, string? userId = null, string? search = null, bool? isBot = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -6144,14 +6285,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ListResultOfUserRole>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6169,7 +6310,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> AddNewBotAsync(string resourceId, string roleId, TeamAddBotParam addParam, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -6231,14 +6372,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6256,7 +6397,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<UserRole> AddUserByEmailAsync(string resourceId, string roleId, string email, TeamAddEmailParam? addParam = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -6319,14 +6460,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<UserRole>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6344,7 +6485,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<UserRole> AddUserAsync(string resourceId, string roleId, string userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -6404,14 +6545,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<UserRole>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6429,7 +6570,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task RemoveUserAsync(string resourceId, string roleId, string userId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (resourceId == null)
@@ -6489,7 +6630,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6507,7 +6648,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> CreateSystemApiKeyAsync(string secret, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -6564,14 +6705,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6621,7 +6762,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -6637,7 +6778,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -6698,7 +6839,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AuthenticationClient : VpnHood.Common.Client.ApiClientCommon
+    public partial class AuthenticationClient : VpnHood.Common.ApiClients.ApiClientCommon
     {
         private System.Net.Http.HttpClient _httpClient;
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
@@ -6722,7 +6863,7 @@ namespace VpnHood.AccessServer.Api
         static partial void UpdateJsonSerializerSettings(System.Text.Json.JsonSerializerOptions settings);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<User> GetCurrentUserAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -6767,14 +6908,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<User>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6792,7 +6933,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task SignOutAllAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -6839,7 +6980,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6857,7 +6998,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> ResetCurrentUserApiKeyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -6903,14 +7044,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -6928,7 +7069,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> SignInAsync(SignInRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (request == null)
@@ -6980,14 +7121,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -7005,7 +7146,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> SignUpAsync(SignUpRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (request == null)
@@ -7057,14 +7198,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -7082,7 +7223,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ApiKey> RefreshTokenAsync(RefreshTokenRequest request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (request == null)
@@ -7134,14 +7275,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<ApiKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -7159,7 +7300,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<FileResponse> GoogleSignInHandlerAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -7210,7 +7351,7 @@ namespace VpnHood.AccessServer.Api
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -7228,7 +7369,7 @@ namespace VpnHood.AccessServer.Api
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
+        /// <exception cref="VpnHood.Common.ApiClients.ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<string> GetGoogleSignInUrlAsync(string csrfToken, string? nonce = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (csrfToken == null)
@@ -7283,14 +7424,14 @@ namespace VpnHood.AccessServer.Api
                             var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new VpnHood.Common.Client.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new VpnHood.Common.ApiClients.ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new VpnHood.Common.Client.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new VpnHood.Common.ApiClients.ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -7340,7 +7481,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -7356,7 +7497,7 @@ namespace VpnHood.AccessServer.Api
                 catch (System.Text.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new VpnHood.Common.Client.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new VpnHood.Common.ApiClients.ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -7961,6 +8102,31 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ServerStatusHistory
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("time")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTime Time { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
+        public int SessionCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tunnelTransferSpeed")]
+        public long TunnelTransferSpeed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
+        public int ServerCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
+        public int CpuUsage { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
+        public long AvailableMemory { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ServerFarmData
     {
 
@@ -8395,6 +8561,12 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<AccessPoint> AccessPoints { get; set; } = new System.Collections.ObjectModel.Collection<AccessPoint>();
 
+        [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
+        public bool AllowInAutoLocation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
+        public System.Uri? HostUrl { get; set; } = default!;
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -8535,6 +8707,9 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerFarmId { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
+        public System.Uri? HostUrl { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public System.Collections.Generic.ICollection<AccessPoint>? AccessPoints { get; set; } = default!;
 
@@ -8558,6 +8733,12 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public PatchOfAccessPointOf? AccessPoints { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
+        public PatchOfBoolean? AllowInAutoLocation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
+        public PatchOfUri? HostUrl { get; set; } = default!;
 
     }
 
@@ -8698,25 +8879,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("usingBandwidth")]
         public long UsingBandwidth { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.0.7.0 (NJsonSchema v11.0.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ServerStatusHistory
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("time")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime Time { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("sessionCount")]
-        public int SessionCount { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("tunnelTransferSpeed")]
-        public long TunnelTransferSpeed { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("serverCount")]
-        public int ServerCount { get; set; } = default!;
 
     }
 

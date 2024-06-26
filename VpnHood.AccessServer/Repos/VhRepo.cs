@@ -59,7 +59,7 @@ public class VhRepo(VhContext vhContext)
                 x.ServerName.Contains(search) ||
                 x.ServerId.ToString() == search ||
                 x.ServerFarmId.ToString() == search)
-            .OrderBy(x => x.ServerId)
+            .OrderBy(x => x.ServerName)
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking()
@@ -233,6 +233,7 @@ public class VhRepo(VhContext vhContext)
     public Task<AccessPointView[]> AccessPointListByFarms(IEnumerable<Guid> farmIds)
     {
         var query = vhContext.Servers
+            .Where(x => !x.IsDeleted)
             .Where(x => farmIds.Contains(x.ServerFarmId))
             .Select(x => new AccessPointView
             {
@@ -271,7 +272,7 @@ public class VhRepo(VhContext vhContext)
 
         if (includeServers)
             query = query.Include(farm => farm.Servers!.Where(server => !server.IsDeleted))
-                .ThenInclude(x=>x.Location);
+                .ThenInclude(x => x.Location);
 
         if (includeAccessTokens)
             query = query.Include(farm => farm.AccessTokens!.Where(accessToken => !accessToken.IsDeleted));

@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common;
-using VpnHood.Common.Client;
+using VpnHood.Common.ApiClients;
 using VpnHood.Common.Utils;
 using Token = VpnHood.Common.Token;
 
@@ -272,7 +272,8 @@ public class ServerFarmTest
         var accessTokenDom = await farm.CreateAccessToken();
         var accessKey = await accessTokenDom.GetAccessKey();
         var token = Token.FromAccessKey(accessKey);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x =>
+            x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
 
         server = await farm.AddNewServer();
         server.Server.AccessPoints.First(x => x.AccessPointMode == AccessPointMode.Public).AccessPointMode =
@@ -282,21 +283,60 @@ public class ServerFarmTest
             AccessPoints = new PatchOfAccessPointOf { Value = server.Server.AccessPoints }
         });
         await server.Configure();
-
         await farm.ReloadServers();
-        var ss = farm.Servers;
 
         accessTokenDom = await farm.CreateAccessToken();
         accessKey = await accessTokenDom.GetAccessKey();
         token = Token.FromAccessKey(accessKey);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => 
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x =>
             x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
 
         // new session should return the updated token
         var sessionDom = await accessTokenDom.CreateSession();
         Assert.IsNotNull(sessionDom.SessionResponseEx.AccessKey);
         token = Token.FromAccessKey(sessionDom.SessionResponseEx.AccessKey);
-        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x => 
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x =>
             x.Address.Equals(server.ServerInfo.PublicIpAddresses.First())));
+    }
+
+    [TestMethod]
+    public async Task FarmToken_should_not_have_deleted_server_ip()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        var accessPoint1 = await farm.TestApp.NewAccessPoint();
+        var accessPoint2 = await farm.TestApp.NewAccessPoint();
+
+        // create farm with 2 servers
+        var server1 = await farm.AddNewServer(configure: false);
+        var server2 = await farm.AddNewServer(configure: false);
+        await server1.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = [accessPoint1] },
+            AutoConfigure = new PatchOfBoolean { Value = false }
+        });
+        await server2.Update(new ServerUpdateParams
+        {
+            AccessPoints = new PatchOfAccessPointOf { Value = [accessPoint2] },
+            AutoConfigure = new PatchOfBoolean { Value = false }
+        });
+        await server1.Configure();
+        await server2.Configure();
+
+        // get farm token
+        var accessTokenDom = await farm.CreateAccessToken();
+        var accessKey = await accessTokenDom.GetAccessKey();
+        var token = Token.FromAccessKey(accessKey);
+        Assert.IsTrue(token.ServerToken.HostEndPoints?.Any(x =>
+            x.Address.ToString() == accessPoint1.IpAddress));
+
+        // delete server1
+        await server2.Delete();
+
+        // check
+        accessTokenDom = await farm.CreateAccessToken();
+        accessKey = await accessTokenDom.GetAccessKey();
+        token = Token.FromAccessKey(accessKey);
+        Assert.IsFalse(token.ServerToken.HostEndPoints?.Any(x =>
+            x.Address.Equals(server2.ServerInfo.PublicIpAddresses.First())));
     }
 }

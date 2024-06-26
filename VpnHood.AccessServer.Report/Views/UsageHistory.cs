@@ -6,4 +6,6 @@ public class ServerStatusHistory
     public int SessionCount { get; set; }
     public long TunnelTransferSpeed { get; set; }
     public int ServerCount { get; set; }
+    public int CpuUsage { get; set; }
+    public long AvailableMemory { get; set; }
 }

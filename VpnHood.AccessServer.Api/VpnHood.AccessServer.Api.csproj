@@ -19,7 +19,7 @@
 		<Company>OmegaHood LLC</Company>
 		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
 		<PackageIcon>VpnHood.AccessServer.png</PackageIcon>
-		<Version>3.0.194.0-alpha</Version>
+		<Version>3.0.201.0-alpha</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
@@ -33,7 +33,7 @@
 	<ItemGroup>
 		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
 		<PackageReference Include="System.Text.Json" Version="8.0.3" />
-		<PackageReference Include="VpnHood.Common" Version="4.5.519-prerelease" />
+		<PackageReference Include="VpnHood.Common" Version="4.5.526-prerelease" />
 	</ItemGroup>
 
 </Project>

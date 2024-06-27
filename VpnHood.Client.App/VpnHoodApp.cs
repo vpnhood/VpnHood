@@ -59,10 +59,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private ClientProfile? _currentClientProfile;
     private VersionCheckResult? _versionCheckResult;
     private VpnHoodClient? _client;
-    private readonly bool? _logVerbose;
+    private readonly bool _logVerbose;
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
     private readonly TimeSpan _adLoadTimeout;
+    private readonly string[] _includeDomains;
+    private readonly string[] _excludeDomains;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -114,8 +116,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logVerbose = options.LogVerbose;
         _logAnonymous = options.LogAnonymous;
         _adLoadTimeout = options.AdLoadTimeout;
+        _excludeDomains = options.ExcludeDomains;
+        _includeDomains = options.IncludeDomains;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
-        LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog));
+        LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), isConsoleSupported: device.IsLogToConsoleSupported);
 
         // configure update job section
         JobSection = new JobSection(new JobOptions
@@ -128,13 +132,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         });
 
         // create start up logger
-        if (!device.IsLogToConsoleSupported) UserSettings.Logging.LogToConsole = false;
         LogService.Start(new AppLogSettings
         {
-            LogVerbose = options.LogVerbose ?? Settings.UserSettings.Logging.LogVerbose,
+            LogEventNames = AppLogService.GetLogEventNames(options.LogVerbose, UserSettings.DebugData1, UserSettings.Logging.LogEventNames),
             LogAnonymous = options.LogAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
             LogToConsole = UserSettings.Logging.LogToConsole,
-            LogToFile = UserSettings.Logging.LogToFile
+            LogToFile = UserSettings.Logging.LogToFile,
+            LogLevel = options.LogVerbose ? LogLevel.Trace : LogLevel.Information
         });
 
         // add default test public server if not added yet
@@ -345,12 +349,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             FireConnectionStateChanged();
             LogService.Start(new AppLogSettings
             {
-                LogVerbose = _logVerbose ?? Settings.UserSettings.Logging.LogVerbose | diagnose,
+                LogEventNames = AppLogService.GetLogEventNames(_logVerbose, UserSettings.DebugData1, UserSettings.Logging.LogEventNames),
                 LogAnonymous = _logAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
                 LogToConsole = UserSettings.Logging.LogToConsole,
-                LogToFile = UserSettings.Logging.LogToFile | diagnose
+                LogToFile = UserSettings.Logging.LogToFile | diagnose,
+                LogLevel = _logVerbose ? LogLevel.Trace : LogLevel.Information
             });
-
 
             // log general info
             VhLogger.Instance.LogInformation("AppVersion: {AppVersion}", GetType().Assembly.GetName().Version);
@@ -443,6 +447,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (UserSettings.PacketCaptureExcludeIpRanges.Any())
             packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
 
+        // help SNI logging
+        var includeDomains = _includeDomains.Concat(UserSettings.IncludeDomains).ToArray();
+        if (!includeDomains.Any() && UserSettings.DebugData1!=null && UserSettings.DebugData1.Contains($"/log:{GeneralEventId.Sni}", StringComparison.OrdinalIgnoreCase))
+            includeDomains = ["*"];
+
         // create clientOptions
         var clientOptions = new ClientOptions
         {
@@ -459,7 +468,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
             ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
-            UseUdpChannel = UserSettings.UseUdpChannel
+            UseUdpChannel = UserSettings.UseUdpChannel,
+            ExcludeDomains = _excludeDomains.Concat(UserSettings.ExcludeDomains).ToArray(),
+            IncludeDomains = includeDomains,
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;

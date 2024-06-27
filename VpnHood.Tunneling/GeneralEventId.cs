@@ -6,6 +6,7 @@ public static class GeneralEventId
 {
     public static EventId Essential = new((int)EventCode.Essential, nameof(Essential));
     public static EventId Session = new((int)EventCode.Session, nameof(Session));
+    public static EventId Sni = new((int)EventCode.Sni, nameof(Sni));
     public static EventId SessionTrack = new((int)EventCode.SessionTrack, nameof(SessionTrack));
     public static EventId Nat = new((int)EventCode.Nat, nameof(Nat));
     public static EventId Ping = new((int)EventCode.Ping, nameof(Ping));
@@ -30,6 +31,7 @@ public static class GeneralEventId
     {
         Essential = 10,
         Session,
+        Sni,
         Nat,
         Ping,
         Dns,

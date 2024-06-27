@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.ConnectorServices;
@@ -220,21 +221,9 @@ internal class ClientHost(
             }
 
             // Filter by SNI
-            var initBuffer = new byte[0];
-            //var bufCount = await orgTcpClient.GetStream().ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken);
-            //initBuffer = initBuffer[..bufCount];
-            //var sni = TlsUtil.ExtractSni(initBuffer);
-            //if (sni != null && false)
-            //{
-            //    Console.WriteLine(sni);
-            //    var channelId = Guid.NewGuid() + ":client";
-            //    await vpnHoodClient.AddPassthruTcpStream(
-            //            new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
-            //            new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-            //            channelId, initBuffer, cancellationToken)
-            //        .VhConfigureAwait();
-            //    return;
-            //}
+            var initBuffer = await ProcessDomainFilter(orgTcpClient, natItem, cancellationToken).VhConfigureAwait();
+            if (initBuffer == null) 
+                return;
 
             // Create the Request
             var request = new StreamProxyChannelRequest
@@ -255,7 +244,7 @@ internal class ClientHost(
             // create a StreamProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
                 $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
-            var orgTcpClientStream = 
+            var orgTcpClientStream =
                 new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
             // flush initBuffer
@@ -276,6 +265,55 @@ internal class ClientHost(
         {
             Interlocked.Decrement(ref _processingCount);
         }
+    }
+
+    // return null if stream is delegated otherwise the read buffer that must pass as initBuffer
+    private async Task<byte[]?> ProcessDomainFilter(TcpClient orgTcpClient, NatItemEx natItem, CancellationToken cancellationToken)
+    {
+        if (vpnHoodClient.IncludeDomains.Length == 0 && vpnHoodClient.ExcludeDomains.Length == 0)
+            return [];
+
+        // extract SNI
+        var initBuffer = new byte[1000];
+        var bufCount = await orgTcpClient.GetStream()
+            .ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken)
+            .VhConfigureAwait();
+
+        initBuffer = initBuffer[..bufCount];
+        var sni = TlsUtil.ExtractSni(initBuffer);
+        VhLogger.Instance.LogInformation(GeneralEventId.Sni,
+            "SNI: {SNI}, DestEp: {IP}",
+            sni, $"{natItem.DestinationAddress}");
+
+        if (sni == null)
+            return [];
+
+        // include filter
+        if (vpnHoodClient.IncludeDomains.Length > 0 &&
+            vpnHoodClient.IncludeDomains.Any(x => IsDomainMatch(sni, x)))
+            return initBuffer;
+
+        // exclude filter
+        if (vpnHoodClient.ExcludeDomains.Length > 0 &&
+            vpnHoodClient.ExcludeDomains.All(x => !IsDomainMatch(sni, x)))
+            return initBuffer;
+
+        // pass through
+        var channelId = Guid.NewGuid() + ":client";
+        await vpnHoodClient.AddPassthruTcpStream(
+                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
+                new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                channelId, initBuffer, cancellationToken)
+            .VhConfigureAwait();
+
+        return null;
+    }
+
+    public static bool IsDomainMatch(string input, string wildcardPattern)
+    {
+        // Escape special regex characters in the pattern, except for '*'
+        var escapedPattern = Regex.Escape(wildcardPattern).Replace(@"\*", ".*");
+        return Regex.IsMatch(input, "^" + escapedPattern + "$");
     }
 
     public ValueTask DisposeAsync()

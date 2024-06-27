@@ -144,7 +144,7 @@ public class ClientProfileService
         var clientProfiles = accessTokens.Select(token => ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true));
 
         // remove old built-in client profiles that does not exist in the new list
-        if (_clientProfiles.RemoveAll(x => x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId))>0)
+        if (_clientProfiles.RemoveAll(x => x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
             Save();
 
         return clientProfiles.ToArray();

@@ -118,6 +118,7 @@ internal class AppController : WebApiController, IAppController
         await using var streamWriter = new StreamWriter(stream);
         var log = await App.LogService.GetLog().VhConfigureAwait();
         await streamWriter.WriteAsync(log).VhConfigureAwait();
+        HttpContext.SetHandled();
         return "";
     }
 

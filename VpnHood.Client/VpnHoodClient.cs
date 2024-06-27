@@ -87,7 +87,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
-
+    public string[] IncludeDomains { get; set; }
+    public string[] ExcludeDomains { get; set; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -99,7 +100,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
-
+        
         SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? [];
         _allowAnonymousTracker = options.AllowAnonymousTracker;
@@ -127,6 +128,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
         _serverLocation = options.ServerLocation;
+        ExcludeDomains = options.ExcludeDomains;
+        IncludeDomains = options.IncludeDomains;
 
         // NAT
         Nat = new Nat(true);
@@ -1119,4 +1122,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _client = vpnHoodClient;
         }
     }
+}
+
+public class DomainFilter
+{
+    private string[] Blocks { get; set; } = [];
+    private string[] Includes { get; set; } = [];
+    private string[] Excludes { get; set; } = [];
+}
+
+public enum ProcessState
+{
+    None,
+    Block,
+    Exclude,
+    Include
 }

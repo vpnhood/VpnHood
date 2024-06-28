@@ -281,6 +281,7 @@ internal class ClientHost(
 
         initBuffer = initBuffer[..bufCount];
         var sni = TlsUtil.ExtractSni(initBuffer);
+        
         VhLogger.Instance.LogInformation(GeneralEventId.Sni,
             "SNI: {SNI}, DestEp: {IP}",
             sni, $"{natItem.DestinationAddress}");

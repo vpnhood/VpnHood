@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 using VpnHood.Client.Device;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling.Factory;
@@ -36,5 +37,10 @@ public class ClientSocketFactory(
     public void SetKeepAlive(Socket socket, bool enable)
     {
         socketFactory.SetKeepAlive(socket, enable);
+    }
+
+    public bool? IsInProcessPacket(PacketDotNet.ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        return packetCapture.IsInProcessPacket(protocol, localEndPoint, remoteEndPoint);
     }
 }

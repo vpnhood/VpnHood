@@ -49,7 +49,6 @@ public class AppLogService : IDisposable
             if (logSettings.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
                 return true;
 
-            if (eventId == GeneralEventId.Sni) return false; //this is sensitive data
             return eventId.Id == 0 || logSettings.LogEventNames.Contains("*");
         });
 
@@ -68,14 +67,17 @@ public class AppLogService : IDisposable
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
             // console
-            if (logToConsole && IsConsoleSupported)
+            if (logToConsole)
             {
-                builder.AddSimpleConsole(configure =>
-                {
-                    configure.TimestampFormat = "[HH:mm:ss.ffff] ";
-                    configure.IncludeScopes = true;
-                    configure.SingleLine = false;
-                });
+                if (IsConsoleSupported)
+                    builder.AddSimpleConsole(configure =>
+                    {
+                        configure.TimestampFormat = "[HH:mm:ss.ffff] ";
+                        configure.IncludeScopes = true;
+                        configure.SingleLine = false;
+                    });
+                else
+                    builder.AddProvider(new VhConsoleLogger());
             }
 
             if (logToFile)

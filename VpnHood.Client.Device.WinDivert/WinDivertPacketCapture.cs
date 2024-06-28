@@ -8,6 +8,7 @@ using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client.Device.WinDivert;
 
@@ -213,8 +214,6 @@ public class WinDivertPacketCapture : IPacketCapture
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
-    #region Applications Filter
-
     public bool CanExcludeApps => false;
     public bool CanIncludeApps => false;
 
@@ -245,5 +244,8 @@ public class WinDivertPacketCapture : IPacketCapture
         set => throw new NotSupportedException();
     }
 
-    #endregion
+    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        return null;
+    }
 }

@@ -17,11 +17,6 @@ internal class AppSettings : Singleton<AppSettings>
     // Google sign-in (It is created through Firebase)
     public string GoogleSignInClientId { get; init; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
-    // Firebase Crashlytics
-    public string? FirebaseProjectId { get; init; } //YOUR_FIREBASE_PROJECT_ID "client-xxxxx"
-    public string? FirebaseApplicationId { get; init; } //YOUR_FIREBASE_APPLICATION_ID "0:000000000000:android:0000000000000000000000"
-    public string? FirebaseApiKey { get; init; } //YOUR_FIREBASE_API_KEY "xxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxx"
-
     // VpnHood Store server
     public Uri StoreBaseUri { get; init; } = new ("https://store-api.vpnhood.com");
     public Guid StoreAppId { get; init; } = Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID

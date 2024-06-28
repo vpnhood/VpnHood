@@ -50,10 +50,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Remove="xml\network_security_config.xml" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<AndroidResource Include="xml\network_security_config.xml" />
 	</ItemGroup>
 
@@ -68,7 +64,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="121.3.0.7" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <GoogleServicesJson Include="Properties\google-services.json" />
 	</ItemGroup>
 
 </Project>

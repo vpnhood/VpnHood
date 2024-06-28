@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "866504584967",
+    "project_id": "vpnhood-connect",
+    "storage_bucket": "vpnhood-connect.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866504584967:android:d399a6c7cd406cc1ad5fa2",
+        "android_client_info": {
+          "package_name": "com.vpnhood.connect.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866504584967-27dmiqabde6m6o7eao22o2svn3rv7bk4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vpnhood.connect.android",
+            "certificate_hash": "417565c5d672ae981a5de687ac44cc645ac2bd3e"
+          }
+        },
+        {
+          "client_id": "866504584967-immiavpqi0ed6iddu58263qhkqip5ie3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vpnhood.connect.android",
+            "certificate_hash": "8351933c075258a0c056e224d2905bd07dfe4158"
+          }
+        },
+        {
+          "client_id": "866504584967-lipctg311ui54ot4edrr64hs51jg8gf2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vpnhood.connect.android",
+            "certificate_hash": "11f9af16bf6eee9467d5137950a1eb9a27fb7d61"
+          }
+        },
+        {
+          "client_id": "866504584967-mqa61vv13fg70n2gvkojp9vr00bhgagk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFZ_IP7peUZ2G8HAhP3RwXPKB_MfRa4yw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866504584967-mqa61vv13fg70n2gvkojp9vr00bhgagk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

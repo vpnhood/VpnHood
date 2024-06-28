@@ -2,6 +2,7 @@
 using Android.Runtime;
 using Firebase.Crashlytics;
 using Firebase;
+using Firebase.Analytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
@@ -21,13 +22,14 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
+    private FirebaseAnalytics? _firebaseAnalytics;
     protected override AppOptions CreateAppOptions()
     {
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var appSettings = AppSettings.Create();
-        if (appSettings is { FirebaseProjectId: not null, FirebaseApplicationId: not null, FirebaseApiKey: not null })
-            InitFirebaseCrashlytics(appSettings);
-
+        // TODO Check the package name with the package name in the google-services.json, then call the following method.
+        // TODO If needed, the firebase should be transferred to the Main Activity. 
+        InitFirebaseCrashlytics();
 
         var resources = DefaultAppResource.Resource;
         resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
@@ -70,17 +72,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
     }
 
-    private void InitFirebaseCrashlytics(AppSettings appSettings)
+    private void InitFirebaseCrashlytics()
     {
         try
         {
-            var firebaseOptions = new FirebaseOptions.Builder()
-                .SetProjectId(appSettings.FirebaseProjectId)
-                .SetApplicationId(appSettings.FirebaseApplicationId)
-                .SetApiKey(appSettings.FirebaseApiKey)
-                .Build();
-            FirebaseApp.InitializeApp(this, firebaseOptions);
+            _firebaseAnalytics = FirebaseAnalytics.GetInstance(this);
             FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
+            _firebaseAnalytics.LogEvent("TestEventFromBackend", new Bundle());
         }
         catch
         {

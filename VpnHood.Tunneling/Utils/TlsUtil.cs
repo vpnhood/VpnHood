@@ -1,11 +1,33 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling.Utils;
 
 public static class SniExtractor
 {
+    public class SniData
+    {
+        public required string? Sni { get; init; }
+        public required byte[] ReadData { get; init; }
+    }
+
+    public static async Task<SniData> ExtractSni(Stream tcpStream, CancellationToken cancellationToken)
+    {
+        // extract SNI
+        var initBuffer = new byte[1000];
+        var bufCount = await tcpStream
+            .ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken)
+            .VhConfigureAwait();
+
+        return new SniData
+        {
+            Sni = ExtractSni(initBuffer[..bufCount]),
+            ReadData = initBuffer[..bufCount]
+        };
+    }
+
     public static string? ExtractSni(byte[] payloadData)
     {
         try

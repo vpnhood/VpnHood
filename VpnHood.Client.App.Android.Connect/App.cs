@@ -48,7 +48,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
             ],
-            UiService = new AndroidAppUiService()
+            UiService = new AndroidAppUiService(),
+            LogAnonymous = !AppSettings.IsDebugMode
         };
     }
 

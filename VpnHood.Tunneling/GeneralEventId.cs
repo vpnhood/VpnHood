@@ -50,6 +50,7 @@ public static class GeneralEventId
         Request,
         TcpLife,
         DnsChallenge,
+        DomainFilter,
         Test
     }
 }

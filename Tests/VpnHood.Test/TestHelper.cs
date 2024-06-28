@@ -384,7 +384,7 @@ internal static class TestHelper
         return client;
     }
 
-    public static AppOptions CreateClientAppOptions()
+    public static AppOptions CreateAppOptions()
     {
         var appOptions = new AppOptions
         {
@@ -392,7 +392,8 @@ internal static class TestHelper
             SessionTimeout = TimeSpan.FromSeconds(2),
             UseInternalLocationService = false,
             UseExternalLocationService = false,
-            LogVerbose = LogVerbose
+            LogVerbose = LogVerbose,
+            ShowAdPostDelay = TimeSpan.Zero
         };
         return appOptions;
     }
@@ -400,7 +401,7 @@ internal static class TestHelper
     public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default)
     {
         //create app
-        appOptions ??= CreateClientAppOptions();
+        appOptions ??= CreateAppOptions();
 
         var device = CreateDevice(deviceOptions);
         var clientApp = VpnHoodApp.Init(device, appOptions);

@@ -6,6 +6,7 @@ using PacketDotNet;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Client.Device;
+using VpnHood.Client.DomainFiltering;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.ApiClients;
@@ -59,7 +60,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly string? _serverLocation;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
-
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
@@ -87,8 +87,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
-    public string[] IncludeDomains { get; set; }
-    public string[] ExcludeDomains { get; set; }
+    public DomainFilterService DomainFilterService { get; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -128,8 +127,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
         _serverLocation = options.ServerLocation;
-        ExcludeDomains = options.ExcludeDomains;
-        IncludeDomains = options.IncludeDomains;
+        DomainFilterService = new DomainFilterService(options.DomainFilter);
 
         // NAT
         Nat = new Nat(true);
@@ -420,7 +418,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         // Udp
                         else if (ipPacket.Protocol == ProtocolType.Udp && !DropUdpPackets)
                         {
-                            if (IsInIpRange(ipPacket.DestinationAddress))
+                            if (IsInIpRange(ipPacket.DestinationAddress)) //todo add InInProcess
                                 tunnelPackets.Add(ipPacket);
                             else
                                 proxyPackets.Add(ipPacket);
@@ -454,7 +452,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");
+            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");  
         }
     }
 
@@ -509,7 +507,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         isInRange = IncludeIpRanges.IsInRange(ipAddress);
 
         // cache the result
-        // we really don't need to keep that much ips in the cache
+        // we don't need to keep that much ips in the cache
         if (_includeIps.Count > 0xFFFF)
         {
             VhLogger.Instance.LogInformation("Clearing IP filter cache!");
@@ -1122,19 +1120,4 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _client = vpnHoodClient;
         }
     }
-}
-
-public class DomainFilter
-{
-    private string[] Blocks { get; set; } = [];
-    private string[] Includes { get; set; } = [];
-    private string[] Excludes { get; set; } = [];
-}
-
-public enum ProcessState
-{
-    None,
-    Block,
-    Exclude,
-    Include
 }

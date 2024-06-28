@@ -63,8 +63,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
     private readonly TimeSpan _adLoadTimeout;
-    private readonly string[] _includeDomains;
-    private readonly string[] _excludeDomains;
+    private readonly TimeSpan _showAdPostDelay;
+
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -116,8 +116,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logVerbose = options.LogVerbose;
         _logAnonymous = options.LogAnonymous;
         _adLoadTimeout = options.AdLoadTimeout;
-        _excludeDomains = options.ExcludeDomains;
-        _includeDomains = options.IncludeDomains;
+        _showAdPostDelay = options.ShowAdPostDelay;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), isConsoleSupported: device.IsLogToConsoleSupported);
 
@@ -447,11 +446,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (UserSettings.PacketCaptureExcludeIpRanges.Any())
             packetCaptureIpRanges = packetCaptureIpRanges.Exclude(UserSettings.PacketCaptureExcludeIpRanges);
 
-        // help SNI logging
-        var includeDomains = _includeDomains.Concat(UserSettings.IncludeDomains).ToArray();
-        if (!includeDomains.Any() && UserSettings.DebugData1!=null && UserSettings.DebugData1.Contains($"/log:{GeneralEventId.Sni}", StringComparison.OrdinalIgnoreCase))
-            includeDomains = ["*"];
-
         // create clientOptions
         var clientOptions = new ClientOptions
         {
@@ -469,8 +463,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AppGa4MeasurementId = _appGa4MeasurementId,
             ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
             UseUdpChannel = UserSettings.UseUdpChannel,
-            ExcludeDomains = _excludeDomains.Concat(UserSettings.ExcludeDomains).ToArray(),
-            IncludeDomains = includeDomains,
+            DomainFilter = UserSettings.DomainFilter
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -674,7 +667,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         foreach (var adService in adServices)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             // find first successful ad network
             try
             {
@@ -707,6 +700,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
+                 await Task.Delay(_showAdPostDelay, cancellationToken); //wait for finishing trackers
                 if (UiContext == null)
                     throw new ShowAdNoUiException();
             }

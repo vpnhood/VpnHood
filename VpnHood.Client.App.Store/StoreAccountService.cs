@@ -75,8 +75,6 @@ public class StoreAccountService : IAppAccountService, IDisposable
     {
         var httpClient = Authentication.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
-
-        // todo: add includeAccessKey parameter and return accessKey in accessToken
         var accessTokens = await currentVpnUserClient.ListAccessTokensAsync(_storeAppId, subscriptionId: Guid.Parse(subscriptionId)).VhConfigureAwait();
 
         var accessKeyList = new List<string>();

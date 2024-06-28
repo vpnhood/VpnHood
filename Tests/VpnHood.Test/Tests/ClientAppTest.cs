@@ -51,7 +51,7 @@ public class ClientAppTest : TestBase
     [TestMethod]
     public async Task BuiltIn_AccessKeys_initialization()
     {
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         var tokens = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens.Select(x => x.ToAccessKey()).ToArray();
 
@@ -77,7 +77,7 @@ public class ClientAppTest : TestBase
     [TestMethod]
     public async Task BuiltIn_AccessKeys_RemoveOldKeys()
     {
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         var tokens1 = new[] { CreateToken(), CreateToken() };
         appOptions.AccessKeys = tokens1.Select(x => x.ToAccessKey()).ToArray();
 
@@ -130,7 +130,7 @@ public class ClientAppTest : TestBase
     {
         await UpdateIp2LocationFile();
 
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         appOptions.UseInternalLocationService = true;
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
         var ipGroupsManager = await app.GetIpGroupManager();
@@ -291,7 +291,7 @@ public class ClientAppTest : TestBase
         var clientProfiles = app1.ClientProfileService.List();
         await app1.DisposeAsync();
 
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         appOptions.StorageFolderPath = app1.StorageFolderPath;
 
         await using var app2 = TestHelper.CreateClientApp(appOptions: appOptions);
@@ -378,7 +378,7 @@ public class ClientAppTest : TestBase
         await using var server1 = await TestHelper.CreateServer(accessManager);
 
         // create app & connect
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
         appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);

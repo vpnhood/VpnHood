@@ -282,19 +282,6 @@ internal class ClientHost(
         initBuffer = initBuffer[..bufCount];
         var sni = TlsUtil.ExtractSni(initBuffer);
         
-        Console.WriteLine("------------- Domain -------------");
-        try
-        {
-            sni ??= "SNI is null";
-            Console.WriteLine(sni, $"{natItem.DestinationAddress}");
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        
-        Console.WriteLine("----------------------------------");
-        
         VhLogger.Instance.LogInformation(GeneralEventId.Sni,
             "SNI: {SNI}, DestEp: {IP}",
             sni, $"{natItem.DestinationAddress}");

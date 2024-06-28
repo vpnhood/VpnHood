@@ -7,18 +7,21 @@ using Android.Net;
 using Android.OS;
 using Android.Runtime;
 using Java.IO;
+using Java.Net;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using ProtocolType = PacketDotNet.ProtocolType;
+using Socket = System.Net.Sockets.Socket;
 
 namespace VpnHood.Client.Device.Droid;
 
 
 [Service(
-    Permission = Manifest.Permission.BindVpnService, 
-    Exported = true, 
+    Permission = Manifest.Permission.BindVpnService,
+    Exported = true,
     ForegroundServiceType = ForegroundService.TypeSystemExempted)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidPacketCapture : VpnService, IPacketCapture
@@ -29,6 +32,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private ParcelFileDescriptor? _mInterface;
     private int _mtu;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
+    private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context); //todo check android lower versions
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
@@ -184,7 +188,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private void AddAppFilter(Builder builder)
     {
         // Applications Filter
-        if (IncludeApps?.Length > 0)
+        if (IncludeApps != null)
         {
             // make sure to add current app if an allowed app exists
             var packageName = ApplicationContext?.PackageName ??
@@ -203,7 +207,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
                 }
         }
 
-        if (ExcludeApps?.Length > 0)
+        if (ExcludeApps != null)
         {
             var packageName = ApplicationContext?.PackageName ??
                               throw new Exception("Could not get the app PackageName!");
@@ -251,11 +255,28 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         return Task.FromResult(0);
     }
 
+    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()), localEndPoint.Port);
+        var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()), remoteEndPoint.Port);
+
+        if (OperatingSystem.IsAndroidVersionAtLeast(29))
+        {
+            var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
+            return uid == Process.MyUid();
+        }
+        else 
+        {
+        }
+
+        return null;
+    }
+
     protected virtual void ProcessPacket(IPPacket ipPacket)
     {
         try
         {
-            PacketReceivedFromInbound?.Invoke(this, 
+            PacketReceivedFromInbound?.Invoke(this,
                 new PacketReceivedEventArgs([ipPacket], this));
         }
         catch (Exception ex)
@@ -271,7 +292,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
         CloseVpn();
 
-        base.OnDestroy(); 
+        base.OnDestroy();
 
         Stopped?.Invoke(this, EventArgs.Empty);
     }
@@ -327,5 +348,13 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             VhLogger.Instance.LogError(ex, "Error while stopping the VpnService.");
         }
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _connectivityManager?.Dispose();
+
+        base.Dispose(disposing);
     }
 }

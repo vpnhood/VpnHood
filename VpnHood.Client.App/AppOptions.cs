@@ -30,4 +30,5 @@ public class AppOptions
     public bool? LogAnonymous { get; set; }
     public string[] IncludeDomains { get; set; } = [];
     public string[] ExcludeDomains { get; set; } = [];
+    public TimeSpan ShowAdPostDelay { get; set; } = TimeSpan.FromSeconds(3);
 }

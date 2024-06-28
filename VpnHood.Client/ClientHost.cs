@@ -1,9 +1,9 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.ConnectorServices;
+using VpnHood.Client.DomainFiltering;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -33,7 +33,6 @@ internal class ClientHost(
 
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
-
 
     public void Start()
     {
@@ -142,10 +141,19 @@ internal class ClientHost(
                         : vpnHoodClient.Nat.Get(ipPacket) ??
                           throw new Exception("Could not find outgoing tcp destination in NAT.");
 
+                    // set isInProcess
+                    if (sync)
+                    {
+                        natItem.IsInProcess = vpnHoodClient.SocketFactory.IsInProcessPacket(ProtocolType.Tcp,
+                            new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
+                            new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
+                    }
+
                     tcpPacket.SourcePort = natItem.NatId; // 1
                     ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
                     ipPacket.SourceAddress = loopbackAddress; //3
                     tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
+
                 }
 
                 PacketUtil.UpdateIpPacket(ipPacket);
@@ -208,22 +216,30 @@ internal class ClientHost(
             if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
+            // Filter by SNI
+            var filterResult = await vpnHoodClient.DomainFilterService.Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken);
+
+            if (filterResult.Action == DomainFilterAction.Block)
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.DomainFilter,
+                    "Domain has been blocked. Domain: {Domain}",
+                    VhLogger.FormatHostName(filterResult.DomainName));
+
+                throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
+            }
+
             // Filter by IP
-            if (!vpnHoodClient.IsInIpRange(natItem.DestinationAddress))
+            if (natItem.IsInProcess == true || filterResult.Action == DomainFilterAction.Exclude ||
+                (!vpnHoodClient.IsInIpRange(natItem.DestinationAddress) && filterResult.Action != DomainFilterAction.Include))
             {
                 var channelId = Guid.NewGuid() + ":client";
                 await vpnHoodClient.AddPassthruTcpStream(
                         new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                        channelId, [], cancellationToken)
+                        channelId, filterResult.ReadData, cancellationToken)
                     .VhConfigureAwait();
                 return;
             }
-
-            // Filter by SNI
-            var initBuffer = await ProcessDomainFilter(orgTcpClient, natItem, cancellationToken).VhConfigureAwait();
-            if (initBuffer == null) 
-                return;
 
             // Create the Request
             var request = new StreamProxyChannelRequest
@@ -248,7 +264,7 @@ internal class ClientHost(
                 new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
             // flush initBuffer
-            await proxyClientStream.Stream.WriteAsync(initBuffer, cancellationToken);
+            await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
             channel = new StreamProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream);
@@ -267,54 +283,6 @@ internal class ClientHost(
         }
     }
 
-    // return null if stream is delegated otherwise the read buffer that must pass as initBuffer
-    private async Task<byte[]?> ProcessDomainFilter(TcpClient orgTcpClient, NatItemEx natItem, CancellationToken cancellationToken)
-    {
-        if (vpnHoodClient.IncludeDomains.Length == 0 && vpnHoodClient.ExcludeDomains.Length == 0)
-            return [];
-
-        // extract SNI
-        var initBuffer = new byte[1000];
-        var bufCount = await orgTcpClient.GetStream()
-            .ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken)
-            .VhConfigureAwait();
-
-        initBuffer = initBuffer[..bufCount];
-        var sni = TlsUtil.ExtractSni(initBuffer);
-        VhLogger.Instance.LogInformation(GeneralEventId.Sni,
-            "SNI: {SNI}, DestEp: {IP}",
-            sni, $"{natItem.DestinationAddress}");
-
-        if (sni == null)
-            return [];
-
-        // include filter
-        if (vpnHoodClient.IncludeDomains.Length > 0 &&
-            vpnHoodClient.IncludeDomains.Any(x => IsDomainMatch(sni, x)))
-            return initBuffer;
-
-        // exclude filter
-        if (vpnHoodClient.ExcludeDomains.Length > 0 &&
-            vpnHoodClient.ExcludeDomains.All(x => !IsDomainMatch(sni, x)))
-            return initBuffer;
-
-        // pass through
-        var channelId = Guid.NewGuid() + ":client";
-        await vpnHoodClient.AddPassthruTcpStream(
-                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId),
-                new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                channelId, initBuffer, cancellationToken)
-            .VhConfigureAwait();
-
-        return null;
-    }
-
-    public static bool IsDomainMatch(string input, string wildcardPattern)
-    {
-        // Escape special regex characters in the pattern, except for '*'
-        var escapedPattern = Regex.Escape(wildcardPattern).Replace(@"\*", ".*");
-        return Regex.IsMatch(input, "^" + escapedPattern + "$");
-    }
 
     public ValueTask DisposeAsync()
     {

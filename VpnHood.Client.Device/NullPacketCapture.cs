@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Common.Net;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client.Device;
 
@@ -59,6 +60,11 @@ public class NullPacketCapture : IPacketCapture
     public virtual void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         // nothing
+    }
+
+    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        return null;
     }
 
     public virtual void Dispose()

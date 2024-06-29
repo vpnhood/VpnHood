@@ -1,10 +1,9 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Tunneling;
 using VpnHood.Tunneling.Utils;
 
-namespace VpnHood.Client.DomainFiltering;
+namespace VpnHood.Tunneling.DomainFiltering;
 
 public class DomainFilterService(DomainFilter domainFilter)
 {

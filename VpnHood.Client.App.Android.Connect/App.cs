@@ -1,7 +1,6 @@
 ﻿using System.Drawing;
 using Android.Runtime;
 using Firebase.Crashlytics;
-using Firebase;
 using Firebase.Analytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Common;

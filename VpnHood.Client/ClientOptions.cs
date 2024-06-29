@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Client.Abstractions;
-using VpnHood.Client.DomainFiltering;
 using VpnHood.Common.Net;
+using VpnHood.Tunneling.DomainFiltering;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client;

@@ -71,7 +71,7 @@ public class AppLogService : IDisposable
         {
             // console
             if (logToConsole) // AddSimpleConsole does not support event id
-                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: _singleLineConsole)); 
+                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: _singleLineConsole));
 
             if (logToFile)
             {

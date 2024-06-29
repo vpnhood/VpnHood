@@ -14,7 +14,6 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
     public string OsInfo => Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
-    public bool IsLogToConsoleSupported => true;
     public bool IsAlwaysOnSupported => false;
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();

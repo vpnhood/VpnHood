@@ -114,6 +114,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
+        _serverLocation = options.ServerLocation;
 
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
@@ -126,8 +127,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IncludeLocalNetwork = options.IncludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
-        _serverLocation = options.ServerLocation;
-        DomainFilterService = new DomainFilterService(options.DomainFilter);
+        DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
 
         // NAT
         Nat = new Nat(true);
@@ -1006,7 +1006,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         _ = DisposeAsync();
     }
-
 
     public ValueTask DisposeAsync()
     {

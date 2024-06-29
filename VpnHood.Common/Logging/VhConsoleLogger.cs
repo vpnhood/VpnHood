@@ -32,7 +32,7 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true) 
     {
         var text = FormatLog(logLevel, eventId, state, exception, formatter);
         if (singleLine)
-            text = text.Replace("\n", " ").Replace("\r", "");
+            text = text.Replace("\n", " ").Replace("\r", "").Trim();
 
         if (IsColorSupported)
         {

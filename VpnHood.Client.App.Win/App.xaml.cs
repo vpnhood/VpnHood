@@ -28,8 +28,9 @@ public partial class App : Application
                 UpdateInfoUrl = new Uri("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json"),
                 IsAddAccessKeySupported = true,
                 UpdaterService = new WinAppUpdaterService(),
-                SingleLineConsoleLog = false
-        });
+                SingleLineConsoleLog = false,
+                LogAnonymous = !IsDebugMode
+            });
 
             // initialize SPA
             ArgumentNullException.ThrowIfNull(DefaultAppResource.Resource.SpaZipData);
@@ -70,5 +71,17 @@ public partial class App : Application
         if (VpnHoodApp.IsInit) VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
 
         base.OnExit(e);
+    }
+
+    public static bool IsDebugMode
+    {
+        get
+        {
+#if DEBUG
+            return true;
+#else
+            return false;
+#endif
+        }
     }
 }

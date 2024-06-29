@@ -3,6 +3,7 @@
 * Fix: Filter apps does not work when no app is selected
 * Fix: Exclude the ad tracker from tunnel
 * Feature: Add domain filtering to engine
+* Feature: Add log to android logcat
 
 # v4.5.535
 ### Client

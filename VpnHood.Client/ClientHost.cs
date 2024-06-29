@@ -3,13 +3,13 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.ConnectorServices;
-using VpnHood.Client.DomainFiltering;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
+using VpnHood.Tunneling.DomainFiltering;
 using VpnHood.Tunneling.Messaging;
 using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -221,7 +221,7 @@ internal class ClientHost(
 
             if (filterResult.Action == DomainFilterAction.Block)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.DomainFilter,
+                VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",
                     VhLogger.FormatHostName(filterResult.DomainName));
 

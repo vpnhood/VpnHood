@@ -118,7 +118,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _adLoadTimeout = options.AdLoadTimeout;
         _showAdPostDelay = options.ShowAdPostDelay;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
-        LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), isConsoleSupported: device.IsLogToConsoleSupported);
+        LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
 
         // configure update job section
         JobSection = new JobSection(new JobOptions
@@ -463,7 +463,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AppGa4MeasurementId = _appGa4MeasurementId,
             ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
             UseUdpChannel = UserSettings.UseUdpChannel,
-            DomainFilter = UserSettings.DomainFilter
+            DomainFilter = UserSettings.DomainFilter,
+            ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase)
+
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;

@@ -31,4 +31,5 @@ public class AppOptions
     public string[] IncludeDomains { get; set; } = [];
     public string[] ExcludeDomains { get; set; } = [];
     public TimeSpan ShowAdPostDelay { get; set; } = TimeSpan.FromSeconds(3);
+    public bool SingleLineConsoleLog { get; set; } = true;
 }

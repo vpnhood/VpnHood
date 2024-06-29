@@ -5,12 +5,12 @@ using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling.DomainFiltering;
 
-public class DomainFilterService(DomainFilter domainFilter)
+public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
 {
     public async Task<DomainFilterResult> Process(Stream tlsStream, IPAddress remoteAddress, CancellationToken cancellationToken)
     {
         // none if domain filter is empty
-        if (domainFilter.Includes.Length == 0 && domainFilter.Excludes.Length == 0 && domainFilter.Blocks.Length == 0)
+        if (!forceLogSni && domainFilter.Includes.Length == 0 && domainFilter.Excludes.Length == 0 && domainFilter.Blocks.Length == 0)
             return new DomainFilterResult
             {
                 Action = DomainFilterAction.None

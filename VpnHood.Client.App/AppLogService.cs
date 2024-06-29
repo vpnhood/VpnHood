@@ -7,13 +7,14 @@ namespace VpnHood.Client.App;
 
 public class AppLogService : IDisposable
 {
+    private readonly bool _singleLineConsole;
     private StreamLogger? _streamLogger;
-    public bool IsConsoleSupported { get; }
     public string LogFilePath { get; }
+    public string[] LogEvents { get; private set; } = [];
 
-    public AppLogService(string logFilePath, bool isConsoleSupported)
+    public AppLogService(string logFilePath, bool singleLineConsole)
     {
-        IsConsoleSupported = isConsoleSupported;
+        _singleLineConsole = singleLineConsole;
         LogFilePath = logFilePath;
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
     }
@@ -28,11 +29,13 @@ public class AppLogService : IDisposable
         VhLogger.IsAnonymousMode = logSettings.LogAnonymous;
         VhLogger.IsDiagnoseMode = logSettings.LogEventNames.Contains("*");
         VhLogger.Instance = CreateLogger(logSettings, removeLastFile: true);
+        LogEvents = logSettings.LogEventNames;
     }
 
     public void Stop()
     {
         _streamLogger?.Dispose();
+        LogEvents = [];
     }
 
     private ILogger CreateLogger(AppLogSettings logSettings, bool removeLastFile)
@@ -67,18 +70,8 @@ public class AppLogService : IDisposable
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
             // console
-            if (logToConsole)
-            {
-                if (IsConsoleSupported)
-                    builder.AddSimpleConsole(configure =>
-                    {
-                        configure.TimestampFormat = "[HH:mm:ss.ffff] ";
-                        configure.IncludeScopes = true;
-                        configure.SingleLine = false;
-                    });
-                else
-                    builder.AddProvider(new VhConsoleLogger());
-            }
+            if (logToConsole) // AddSimpleConsole does not support event id
+                builder.AddProvider(new VhConsoleLogger(includeScopes: true, singleLine: _singleLineConsole)); 
 
             if (logToFile)
             {
@@ -109,7 +102,6 @@ public class AppLogService : IDisposable
         // use user settings
         return names.Count > 0 ? names.ToArray() : defaults;
     }
-
 
     public void Dispose()
     {

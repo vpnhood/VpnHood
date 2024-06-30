@@ -702,7 +702,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             try
             {
                 await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
-                 await Task.Delay(_showAdPostDelay, cancellationToken); //wait for finishing trackers
+                await Task.Delay(_showAdPostDelay, cancellationToken); //wait for finishing trackers
                 if (UiContext == null)
                     throw new ShowAdNoUiException();
             }

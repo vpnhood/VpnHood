@@ -32,7 +32,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private ParcelFileDescriptor? _mInterface;
     private int _mtu;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
-    private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context); //todo check android lower versions
+    private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
@@ -260,16 +260,13 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()), localEndPoint.Port);
         var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()), remoteEndPoint.Port);
 
-        if (OperatingSystem.IsAndroidVersionAtLeast(29))
-        {
-            var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
-            return uid == Process.MyUid();
-        }
-        else 
-        {
-        }
+        // Android 9 and below
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29))
+            return false; //not supported
 
-        return null;
+        // Android 10 and above
+        var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
+        return uid == Process.MyUid();
     }
 
     protected virtual void ProcessPacket(IPPacket ipPacket)
@@ -348,13 +345,5 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             VhLogger.Instance.LogError(ex, "Error while stopping the VpnService.");
         }
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-            _connectivityManager?.Dispose();
-
-        base.Dispose(disposing);
     }
 }

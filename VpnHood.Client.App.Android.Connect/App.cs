@@ -21,13 +21,10 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
-    private FirebaseAnalytics? _firebaseAnalytics;
     protected override AppOptions CreateAppOptions()
     {
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var appSettings = AppSettings.Create();
-        // TODO Check the package name with the package name in the google-services.json, then call the following method.
-        // TODO If needed, the firebase should be transferred to the Main Activity. 
         InitFirebaseCrashlytics();
 
         var resources = DefaultAppResource.Resource;
@@ -63,7 +60,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
             var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
             return accountService;
-
         }
         catch (Exception)
         {
@@ -76,9 +72,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         try
         {
-            _firebaseAnalytics = FirebaseAnalytics.GetInstance(this);
+            FirebaseAnalytics.GetInstance(this);
             FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
-            _firebaseAnalytics.LogEvent("TestEventFromBackend", new Bundle());
         }
         catch
         {

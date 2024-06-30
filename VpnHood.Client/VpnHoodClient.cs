@@ -772,7 +772,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (RedirectHostException ex) when (allowRedirect)
         {
-            // todo; init new connector
+            // todo: init new connector
             ConnectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
         }

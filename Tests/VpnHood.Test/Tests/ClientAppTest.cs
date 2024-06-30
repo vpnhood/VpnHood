@@ -748,7 +748,7 @@ public class ClientAppTest : TestBase
     public Task IncludeDomains()
     {
         throw new NotImplementedException();
-    }
+    }   
 
     [TestMethod]
     public Task ExcludeDomains()

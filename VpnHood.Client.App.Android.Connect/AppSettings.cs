@@ -31,10 +31,6 @@ internal class AppSettings : Singleton<AppSettings>
     public string AdMobRewardedAdUnitId { get; init; } = "ca-app-pub-3940256099942544/5224354917";
     public string AdMobAppOpenAdUnitId { get; init; } = "ca-app-pub-3940256099942544/9257395921";
     
-    // UnityAd
-    public string UnityAdGameId { get; init; } = "YOUR_UNITY_AD_UNIT_GAME_ID";
-    public string UnityAdInterstitialPlacementId { get; init; } = "YOUR_UNITY_INTERSTITIAL_AD_UNIT_PLACEMENT_ID";
-
     public static AppSettings Create()
     {
         var appSettingsJson = VhUtil.GetAssemblyMetadata(typeof(AppSettings).Assembly, "AppSettings", "");

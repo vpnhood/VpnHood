@@ -32,7 +32,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private ParcelFileDescriptor? _mInterface;
     private int _mtu;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
-    private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context); //todo check android lower versions
+    private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
@@ -345,13 +345,5 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             VhLogger.Instance.LogError(ex, "Error while stopping the VpnService.");
         }
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-            _connectivityManager?.Dispose();
-
-        base.Dispose(disposing);
     }
 }

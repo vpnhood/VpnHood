@@ -643,13 +643,13 @@ public class ClientServerTest : TestBase
         using var tcpClient3 = new TcpClient();
         using var tcpClient4 = new TcpClient();
 
-        await tcpClient1.ConnectAsync(TestConstants.HttpsUri1.Host, 443);
+        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);
         await Task.Delay(300);
-        await tcpClient2.ConnectAsync(TestConstants.HttpsUri1.Host, 443);
+        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint1);
         await Task.Delay(300);
-        await tcpClient3.ConnectAsync(TestConstants.HttpsUri2.Host, 443);
+        await tcpClient3.ConnectAsync(TestConstants.TcpEndPoint2);
         await Task.Delay(300);
-        await tcpClient4.ConnectAsync(TestConstants.HttpsUri2.Host, 443);
+        await tcpClient4.ConnectAsync(TestConstants.TcpEndPoint2);
         await Task.Delay(300);
 
         var session = server.SessionManager.GetSessionById(client.SessionId);

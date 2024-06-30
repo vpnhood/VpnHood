@@ -23,10 +23,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 {
     protected override AppOptions CreateAppOptions()
     {
+        // initialize Firebase services
+        try { FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
+        try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true); } catch { /* ignored */ }
+
+        // load app settings and resources
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var appSettings = AppSettings.Create();
-        InitFirebaseCrashlytics();
-
         var resources = DefaultAppResource.Resource;
         resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
@@ -65,19 +68,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         {
             // ignored
             return null;
-        }
-    }
-
-    private void InitFirebaseCrashlytics()
-    {
-        try
-        {
-            FirebaseAnalytics.GetInstance(this);
-            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true);
-        }
-        catch
-        {
-            // ignored
         }
     }
 }

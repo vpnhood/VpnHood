@@ -260,16 +260,13 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         var localAddress = new InetSocketAddress(InetAddress.GetByAddress(localEndPoint.Address.GetAddressBytes()), localEndPoint.Port);
         var remoteAddress = new InetSocketAddress(InetAddress.GetByAddress(remoteEndPoint.Address.GetAddressBytes()), remoteEndPoint.Port);
 
-        if (OperatingSystem.IsAndroidVersionAtLeast(29))
-        {
-            var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
-            return uid == Process.MyUid();
-        }
-        else 
-        {
-        }
+        // Android 9 and below
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29))
+            return false; //not supported
 
-        return null;
+        // Android 10 and above
+        var uid = _connectivityManager?.GetConnectionOwnerUid((int)protocol, localAddress, remoteAddress);
+        return uid == Process.MyUid();
     }
 
     protected virtual void ProcessPacket(IPPacket ipPacket)

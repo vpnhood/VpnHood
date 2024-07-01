@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>534</ApplicationVersion>
-		<ApplicationDisplayVersion>4.5.534</ApplicationDisplayVersion>
+		<ApplicationVersion>535</ApplicationVersion>
+		<ApplicationDisplayVersion>4.5.535</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.5.534</Version>
+		<Version>4.5.535</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -51,6 +51,10 @@
 
 	<ItemGroup>
 		<AndroidResource Include="xml\network_security_config.xml" />
+		<AndroidResource Update="Resources\xml\locales_config.xml">
+		  <SubType>Designer</SubType>
+		  <Generator>MSBuild:UpdateGeneratedFiles</Generator>
+		</AndroidResource>
 	</ItemGroup>
 
 	<ItemGroup>

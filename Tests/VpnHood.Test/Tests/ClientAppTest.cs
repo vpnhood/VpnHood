@@ -745,14 +745,58 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public Task IncludeDomains()
+    public async Task IncludeDomains()
     {
-        throw new NotImplementedException();
-    }   
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+
+        // create app
+        var appOptions = TestHelper.CreateAppOptions();
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        app.UserSettings.DomainFilter.Includes = [TestConstants.HttpsUri1.Host];
+
+        // connect
+        var token = TestHelper.CreateAccessToken(server);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+
+        // text include
+        var oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+
+        // text exclude
+        oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+    }
 
     [TestMethod]
-    public Task ExcludeDomains()
+    public async Task ExcludeDomains()
     {
-        throw new NotImplementedException();
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+
+        // create app
+        var appOptions = TestHelper.CreateAppOptions();
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
+
+        // connect
+        var token = TestHelper.CreateAccessToken(server);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+
+        // text include
+        var oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+
+        // text exclude
+        oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
     }
 }

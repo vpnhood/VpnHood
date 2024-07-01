@@ -28,8 +28,6 @@ public class AppOptions
     public TimeSpan AdLoadTimeout { get; set; } = TimeSpan.FromSeconds(20);
     public bool LogVerbose { get; set; }
     public bool? LogAnonymous { get; set; }
-    public string[] IncludeDomains { get; set; } = [];
-    public string[] ExcludeDomains { get; set; } = [];
     public TimeSpan ShowAdPostDelay { get; set; } = TimeSpan.FromSeconds(3);
     public bool SingleLineConsoleLog { get; set; } = true;
 }

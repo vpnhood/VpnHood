@@ -3,10 +3,8 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Test.Device;
 
-internal class TestDevice(TestDeviceOptions? options = default) : IDevice
+internal class TestDevice(TestDeviceOptions options, bool useNullPacketCapture) : IDevice
 {
-    private readonly TestDeviceOptions _options = options ?? new TestDeviceOptions();
-
 #pragma warning disable CS0067 // The event 'TestDevice.StartedAsService' is never used
     public event EventHandler? StartedAsService;
 #pragma warning restore CS0067 // The event 'TestDevice.StartedAsService' is never used
@@ -20,8 +18,11 @@ internal class TestDevice(TestDeviceOptions? options = default) : IDevice
 
     public Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
     {
-        var res = new TestPacketCapture(_options);
-        return Task.FromResult((IPacketCapture)res);
+        IPacketCapture res = useNullPacketCapture
+            ? new NullPacketCapture()
+            : new TestPacketCapture(options);
+
+        return Task.FromResult(res);
     }
     public void Dispose()
     {

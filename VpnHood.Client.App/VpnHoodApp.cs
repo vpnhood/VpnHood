@@ -55,6 +55,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly AppPersistState _appPersistState;
     private readonly TimeSpan _reconnectTimeout;
     private readonly TimeSpan _autoWaitTimeout;
+    private readonly TimeSpan _serverQueryTimeout;
     private CancellationTokenSource? _connectCts;
     private ClientProfile? _currentClientProfile;
     private VersionCheckResult? _versionCheckResult;
@@ -64,6 +65,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private UserSettings _oldUserSettings;
     private readonly TimeSpan _adLoadTimeout;
     private readonly TimeSpan _showAdPostDelay;
+    private readonly bool _autoDiagnose;
 
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
@@ -80,7 +82,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public ClientProfileService ClientProfileService { get; }
     public IDevice Device { get; }
     public JobSection JobSection { get; }
-    public TimeSpan TcpTimeout { get; set; } = new ClientOptions().ConnectTimeout;
+    public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public AppLogService LogService { get; }
     public AppResource Resource { get; }
     public AppServices Services { get; }
@@ -117,6 +119,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logAnonymous = options.LogAnonymous;
         _adLoadTimeout = options.AdLoadTimeout;
         _showAdPostDelay = options.ShowAdPostDelay;
+        _autoDiagnose = options.AutoDiagnose;
+        _serverQueryTimeout = options.ServerQueryTimeout;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
 
@@ -431,8 +435,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return packetCapture;
     }
 
-    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent,
-    bool allowUpdateToken, CancellationToken cancellationToken)
+    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent, 
+        bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
         VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
@@ -458,6 +462,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             PacketCaptureIncludeIpRanges = packetCaptureIpRanges,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
+            ServerQueryTimeout = _serverQueryTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             AppGa4MeasurementId = _appGa4MeasurementId,
@@ -484,8 +489,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (_hasDiagnoseStarted)
                 await Diagnoser.Diagnose(client, cancellationToken).VhConfigureAwait();
-            else
+            else if (_autoDiagnose)
                 await Diagnoser.Connect(client, cancellationToken).VhConfigureAwait();
+            else
+                await client.Connect(cancellationToken).VhConfigureAwait();
+
 
             // set connected time
             ConnectedTime = DateTime.Now;

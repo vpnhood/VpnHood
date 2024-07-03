@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
@@ -104,30 +106,69 @@ public static class IPAddressUtil
 
     public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, TimeSpan? timeout = null)
     {
-        try
+        try { return await GetPublicIpAddressByCloudflare(addressFamily, timeout); }
+        catch { /* continue next service */ }
+
+        try { return await GetPublicIpAddressByIpify(addressFamily, timeout); }
+        catch { /* ignore */ }
+
+        return null;
+    }
+
+    private class CustomHttpClientHandler(AddressFamily addressFamily) : HttpClientHandler
+    {
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            //var url = addressFamily == AddressFamily.InterNetwork
-            //    ? "https://api.ipify.org?format=json"
-            //    : "https://api6.ipify.org?format=json";
+            var uri = request.RequestUri;
+            var addresses = await Dns.GetHostAddressesAsync(uri.Host);
+            foreach (var address in addresses.Where(x => x.AddressFamily == addressFamily))
+            {
+                var endpoint = new IPEndPoint(address, uri.Port);
+                using var socket = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                await socket.ConnectAsync(endpoint);
+                await using var networkStream = new NetworkStream(socket, ownsSocket: false);
+                var response = await base.SendAsync(request, cancellationToken);
+                return response;
+            }
 
-            var url = addressFamily == AddressFamily.InterNetwork
-                ? "https://api4.my-ip.io/v2/ip.json"
-                : "https://api6.my-ip.io/v2/ip.json";
-
-            var handler = new HttpClientHandler { AllowAutoRedirect = true };
-            using var httpClient = new HttpClient(handler);
-
-            httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
-            var json = await httpClient.GetStringAsync(url).VhConfigureAwait();
-            var document = JsonDocument.Parse(json);
-            var ipString = document.RootElement.GetProperty("ip").GetString();
-            var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
-            return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
+            throw new Exception($"Could not find any ip for the AddressFamily: {addressFamily}");
         }
-        catch
-        {
-            return null;
-        }
+    }
+
+    private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily, TimeSpan? timeout = null)
+    {
+        const string url = "https://cloudflare.com/cdn-cgi/trace";
+
+        var handler = new CustomHttpClientHandler(addressFamily) { AllowAutoRedirect = true };
+        using var httpClient = new HttpClient(handler);
+        httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
+        var content = await httpClient.GetStringAsync(url).VhConfigureAwait();
+
+        // Split the response into lines
+        var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var ipLine = lines.SingleOrDefault(x => x.StartsWith("ip=", StringComparison.OrdinalIgnoreCase));
+        return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
+    }
+
+    private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily, TimeSpan? timeout = null)
+    {
+        //var url = addressFamily == AddressFamily.InterNetwork
+        //    ? "https://api.ipify.org?format=json"
+        //    : "https://api6.ipify.org?format=json";
+
+        var url = addressFamily == AddressFamily.InterNetwork
+            ? "https://api4.my-ip.io/v2/ip.json"
+            : "https://api6.my-ip.io/v2/ip.json";
+
+        var handler = new HttpClientHandler { AllowAutoRedirect = true };
+        using var httpClient = new HttpClient(handler);
+        httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
+        var json = await httpClient.GetStringAsync(url).VhConfigureAwait();
+        var document = JsonDocument.Parse(json);
+        var ipString = document.RootElement.GetProperty("ip").GetString();
+        var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
+        return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
     }
 
     public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)

@@ -217,7 +217,9 @@ internal class ClientHost(
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             // Filter by SNI
-            var filterResult = await vpnHoodClient.DomainFilterService.Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken);
+            var filterResult = await vpnHoodClient.DomainFilterService
+                .Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken)
+                .VhConfigureAwait();
 
             if (filterResult.Action == DomainFilterAction.Block)
             {

@@ -15,7 +15,9 @@ public class DiagnoserTest : TestBase
         token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
 
         // create client
-        await using var clientApp = TestHelper.CreateClientApp();
+        var appOptions = TestHelper.CreateAppOptions();
+        appOptions.AutoDiagnose = true;
+        await using var clientApp = TestHelper.CreateClientApp(appOptions: appOptions);
         var clientProfile = clientApp.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************

@@ -24,7 +24,6 @@ namespace VpnHood.Server;
 public class VpnHoodServer : IAsyncDisposable, IJob
 {
     private readonly bool _autoDisposeAccessManager;
-    private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
     private ApiError? _lastConfigError;
@@ -35,6 +34,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _sendStatusTask = Task.CompletedTask;
     private Http01ChallengeService? _http01ChallengeService;
 
+    public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
     public SessionManager SessionManager { get; }
@@ -61,7 +61,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _serverHost = new ServerHost(SessionManager);
+        ServerHost = new ServerHost(SessionManager);
 
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
         JobRunner.Default.Add(this);
@@ -161,11 +161,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
-            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions,
+            ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Reconfigure server host
-            await _serverHost.Configure(
+            await ServerHost.Configure(
                     serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue,
                     serverConfig.DnsServersValue, serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData))
                     .ToArray()).VhConfigureAwait();
@@ -394,7 +394,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         // wait for configuration
         try { await _configureTask.VhConfigureAwait(); } catch {/* no error */ }
         try { await _sendStatusTask.VhConfigureAwait(); } catch {/* no error*/ }
-        await _serverHost.DisposeAsync().VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
+        await ServerHost.DisposeAsync().VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync().VhConfigureAwait();
         _http01ChallengeService?.Dispose();
 

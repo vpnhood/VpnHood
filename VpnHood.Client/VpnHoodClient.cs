@@ -58,6 +58,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
     private readonly string? _serverLocation;
+    private readonly ServerFinder _serverFinder;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
     internal Nat Nat { get; }
@@ -115,6 +116,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
         _serverLocation = options.ServerLocation;
+        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken, serverQueryTimeout: options.ServerQueryTimeout);
 
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
@@ -246,7 +248,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var endPointInfo = new ConnectorEndPointInfo
             {
                 HostName = Token.ServerToken.HostName,
-                TcpEndPoint = await ServerTokenHelper.ResolveHostEndPoint(Token.ServerToken).VhConfigureAwait(),
+                TcpEndPoint = await _serverFinder.FindBestServerAsync(cancellationToken).VhConfigureAwait(),
                 CertificateHash = Token.ServerToken.CertificateHash
             };
             _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout);
@@ -773,6 +775,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (RedirectHostException ex) when (allowRedirect)
         {
             // todo: init new connector
+            // todo: use server finder
             ConnectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
         }
@@ -1013,6 +1016,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync(bool waitForBye)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

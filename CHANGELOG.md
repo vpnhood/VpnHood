@@ -5,6 +5,9 @@
 * Feature: Add domain filtering to engine
 * Feature: Add log to android logcat
 
+### Server
+* Update: Use Cloudflare for detecting the server's public IP
+
 # v4.5.535
 ### Client
 * Improve: App Filter page

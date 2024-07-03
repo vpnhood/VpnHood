@@ -269,26 +269,26 @@ internal static class TestHelper
     }
 
     public static Task<VpnHoodServer> CreateServer(
-        IAccessManager? accessManager = null, 
+        IAccessManager? accessManager = null,
         bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
-        return CreateServer(accessManager, null, 
-            autoStart: autoStart, 
-            configureInterval: configureInterval, 
+        return CreateServer(accessManager, null,
+            autoStart: autoStart,
+            configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager);
     }
 
-    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true, 
+    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
         TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
-        return CreateServer(null, options, 
-            autoStart: autoStart, 
-            configureInterval: configureInterval, 
+        return CreateServer(null, options,
+            autoStart: autoStart,
+            configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager);
     }
 
-    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, 
-        bool autoStart,  TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
+    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions,
+        bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException($"Could not set both {nameof(accessManager)} and {nameof(fileAccessManagerOptions)}.");
@@ -329,10 +329,22 @@ internal static class TestHelper
         return server;
     }
 
+    public static TestDeviceOptions CreateDeviceOptions()
+    {
+        return new TestDeviceOptions();
+    }
+
     public static IDevice CreateDevice(TestDeviceOptions? options = default)
     {
-        return new TestDevice(options);
+        options ??= new TestDeviceOptions();
+        return new TestDevice(options, false);
     }
+
+    public static IDevice CreateNullDevice()
+    {
+        return new TestDevice(new TestDeviceOptions(), true);
+    }
+
 
     public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
     {
@@ -393,7 +405,10 @@ internal static class TestHelper
             UseInternalLocationService = false,
             UseExternalLocationService = false,
             LogVerbose = LogVerbose,
-            ShowAdPostDelay = TimeSpan.Zero
+            ShowAdPostDelay = TimeSpan.Zero,
+            ServerQueryTimeout = TimeSpan.FromSeconds(2),
+            AutoDiagnose = false,
+            SingleLineConsoleLog = false
         };
         return appOptions;
     }
@@ -403,7 +418,7 @@ internal static class TestHelper
         //create app
         appOptions ??= CreateAppOptions();
 
-        var device = CreateDevice(deviceOptions);
+        var device = deviceOptions != null ? CreateDevice(deviceOptions) : CreateNullDevice();
         var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;

@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -357,7 +358,7 @@ public class ClientAppTest : TestBase
         // create app
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<NoReachableServer>(() => app.Connect(clientProfile.ClientProfileId));
 
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
         Assert.IsFalse(app.State.LogExists);
@@ -382,7 +383,7 @@ public class ClientAppTest : TestBase
         appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
         appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
@@ -656,7 +657,7 @@ public class ClientAppTest : TestBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         accessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
-        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
+        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey(); //todo
         accessManager.ClearCache();
 
         // create server and app
@@ -752,7 +753,7 @@ public class ClientAppTest : TestBase
 
         // create app
         var appOptions = TestHelper.CreateAppOptions();
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         app.UserSettings.DomainFilter.Includes = [TestConstants.HttpsUri1.Host];
 
         // connect
@@ -780,7 +781,7 @@ public class ClientAppTest : TestBase
 
         // create app
         var appOptions = TestHelper.CreateAppOptions();
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
 
         // connect

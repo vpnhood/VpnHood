@@ -1,12 +1,15 @@
 # Upcoming
 ### Client
 * Fix: Filter apps does not work when no app is selected
-* Fix: Exclude the ad tracker from tunnel
+* Fix: Exclude the ad tracker from the tunnel
 * Feature: Add domain filtering to engine
-* Feature: Add log to android logcat
+* Feature: Add log to Android logcat
+* Feature: Try to find a reachable server among endpoints
+* Update: Improve performance and memory usage
 
 ### Server
 * Update: Use Cloudflare for detecting the server's public IP
+* Update: Improve performance and memory usage
 
 # v4.5.535
 ### Client

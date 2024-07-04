@@ -2,6 +2,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
+using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Common.Activities;
 
 namespace VpnHood.Client.App.Droid.Connect;
@@ -29,5 +30,12 @@ public class MainActivity : AndroidAppMainActivity
             DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
             ListenToAllIps = AppSettings.Instance.ListenToAllIps
         });
+    }
+
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+
+        _ = AdMobUtil.Initialize(this);
     }
 }

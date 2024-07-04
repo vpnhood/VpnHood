@@ -562,6 +562,7 @@ public class ServerHost : IAsyncDisposable, IJob
             AccessUsage = sessionResponse.AccessUsage,
             SuppressedBy = sessionResponse.SuppressedBy,
             RedirectHostEndPoint = sessionResponse.RedirectHostEndPoint,
+            RedirectHostEndPoints = sessionResponse.RedirectHostEndPoints,
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,

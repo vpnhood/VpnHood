@@ -100,7 +100,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
-        
+
         SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? [];
         _allowAnonymousTracker = options.AllowAnonymousTracker;
@@ -194,7 +194,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync(false);
     }
 
-    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, 
+    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
         string channelId, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
@@ -348,7 +348,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var passthruPackets = _sendingPackets.PassthruPackets;
                 var proxyPackets = _sendingPackets.ProxyPackets;
                 var droppedPackets = _sendingPackets.DroppedPackets;
-                
+
                 // ReSharper disable once ForCanBeConvertedToForeach
                 for (var i = 0; i < e.IpPackets.Count; i++)
                 {
@@ -454,7 +454,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");  
+            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");
         }
     }
 
@@ -775,8 +775,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (RedirectHostException ex) when (allowRedirect)
         {
             // todo: init new connector
-            // todo: use server finder
-            ConnectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
+            ConnectorService.EndPointInfo.TcpEndPoint = await _serverFinder.FindBestServerAsync(ex.RedirectHostEndPoints, cancellationToken);
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
         }
     }

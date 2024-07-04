@@ -17,7 +17,7 @@ public class ServerFinder(ISocketFactory socketFactory, ServerToken serverToken,
 {
     private HostStatus[] _hostEndPointStatus = [];
 
-    public static void Shuffle<T>(T[] array)
+    private static void Shuffle<T>(T[] array)
     {
         var rng = new Random();
         var n = array.Length;
@@ -36,8 +36,12 @@ public class ServerFinder(ISocketFactory socketFactory, ServerToken serverToken,
         if (!hostEndPoints.Any())
             throw new Exception("Could not find any server endpoint. Please check your access key.");
 
+        // for compatibility don't query server for single endpoint
+        if (hostEndPoints.Length == 1)
+            return hostEndPoints.First();
+
         // randomize endpoint 
-        Shuffle(hostEndPoints);
+        Shuffle(hostEndPoints); //todo check
 
         _hostEndPointStatus = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatus.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;

@@ -54,7 +54,7 @@ public class ServerFinderTest
     }
 
     [TestMethod]
-    public async Task Find_reachable_for_redirect()
+    public async Task Find_reachable_for_redirect_in_order()
     {
         var storageFolder = TestHelper.CreateAccessManagerWorkingDir();
         var servers = new List<VpnHoodServer>();
@@ -63,7 +63,7 @@ public class ServerFinderTest
         try
         {
             // create servers
-            for (var i = 0; i < 8; i++)
+            for (var i = 0; i < 10; i++)
             {
                 var accessManager = TestHelper.CreateAccessManager(storagePath: storageFolder);
                 var server = await TestHelper.CreateServer(accessManager);
@@ -94,10 +94,7 @@ public class ServerFinderTest
             var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
             await TestHelper.WaitForClientState(client, ClientState.Connected);
 
-            Assert.IsTrue(
-                servers[5].ServerHost.TcpEndPoints.First().Equals(client.HostTcpEndPoint) ||
-                servers[7].ServerHost.TcpEndPoints.First().Equals(client.HostTcpEndPoint)
-            );
+            Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
         }
         finally
         {

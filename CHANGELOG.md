@@ -9,6 +9,7 @@
 * Update: Improve performance and memory usage
 
 ### Server
+* Feature: Support multiple redirect endpoints
 * Update: Use Cloudflare for detecting the server's public IP
 * Update: Improve performance and memory usage
 

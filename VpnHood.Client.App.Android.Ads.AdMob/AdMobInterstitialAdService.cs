@@ -46,6 +46,11 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         if (activity.IsDestroyed)
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
 
+        // initialize
+        await AdMobUtil.Initialize(activity);
+        if (!AdMobUtil.ShouldLoadAd(AdLoadedTime))
+            return;
+
         // reset the last loaded ad
         AdLoadedTime = null;
         _loadedAd = null;

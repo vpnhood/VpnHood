@@ -19,6 +19,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public ServerInfo? LastServerInfo { get; private set; }
     public ServerStatus? LastServerStatus { get; private set; }
     public IPEndPoint? RedirectHostEndPoint { get; set; }
+    public IPEndPoint[]? RedirectHostEndPoints { get; set; }
     public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
     public bool RejectAllAds { get; set; }
 
@@ -66,6 +67,13 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             !sessionRequestEx.HostEndPoint.Equals(RedirectHostEndPoint))
         {
             ret.RedirectHostEndPoint = RedirectHostEndPoint;
+            ret.ErrorCode = SessionErrorCode.RedirectHost;
+        }
+
+        // manage new redirects
+        if (RedirectHostEndPoints != null)
+        {
+            ret.RedirectHostEndPoints = RedirectHostEndPoints;
             ret.ErrorCode = SessionErrorCode.RedirectHost;
         }
 

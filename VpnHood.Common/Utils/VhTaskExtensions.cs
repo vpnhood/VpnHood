@@ -1,25 +1,27 @@
-﻿namespace VpnHood.Common.Utils;
+﻿using System.Runtime.CompilerServices;
+
+namespace VpnHood.Common.Utils;
 
 public static class VhTaskExtensions
 {
-    public static async Task VhConfigureAwait(this Task task)
+    public static ConfiguredTaskAwaitable VhConfigureAwait(this Task task)
     {
-        await task.ConfigureAwait(false);
+        return task.ConfigureAwait(false);
     }
 
-    public static async Task<T> VhConfigureAwait<T>(this Task<T> task)
+    public static ConfiguredTaskAwaitable<T> VhConfigureAwait<T>(this Task<T> task)
     {
-        return await task.ConfigureAwait(false);
+        return task.ConfigureAwait(false);
     }
 
-    public static async ValueTask VhConfigureAwait(this ValueTask task)
+    public static ConfiguredValueTaskAwaitable VhConfigureAwait(this ValueTask task)
     {
-        await task.ConfigureAwait(false);
+        return task.ConfigureAwait(false);
     }
 
-    public static async ValueTask<T> VhConfigureAwait<T>(this ValueTask<T> task)
+    public static ConfiguredValueTaskAwaitable<T> VhConfigureAwait<T>(this ValueTask<T> task)
     {
-        return await task.ConfigureAwait(false);
+        return task.ConfigureAwait(false);
     }
 
 }

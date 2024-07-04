@@ -9,7 +9,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.App.ClientProfiles;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -358,7 +357,7 @@ public class ClientAppTest : TestBase
         // create app
         await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExceptionAsync<NoReachableServer>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExceptionAsync<TimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
 
         await TestHelper.WaitForAppState(app, AppConnectionState.None);
         Assert.IsFalse(app.State.LogExists);

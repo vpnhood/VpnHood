@@ -137,6 +137,9 @@ public class ClientAppTest : TestBase
         var ipGroupIds = await ipGroupsManager.GetIpGroupIds();
         Assert.IsTrue(ipGroupIds.Any(x => x == "us"),
             "Countries has not been extracted.");
+
+        // make sure GetIpRange works
+        Assert.IsTrue((await ipGroupsManager.GetIpRanges("US")).Any());
     }
 
     [TestMethod]

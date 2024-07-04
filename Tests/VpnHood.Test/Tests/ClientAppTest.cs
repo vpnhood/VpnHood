@@ -657,7 +657,7 @@ public class ClientAppTest : TestBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         accessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
-        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey(); //todo (compatibility for old server that does not support query
+        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey(); // It can not be changed in new version
         accessManager.ClearCache();
 
         // create server and app

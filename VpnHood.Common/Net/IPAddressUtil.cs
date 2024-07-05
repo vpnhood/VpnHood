@@ -1,6 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Net.Http;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
@@ -19,6 +17,23 @@ public static class IPAddressUtil
         IPAddress.Parse("001:4860:4860::8888"),
         IPAddress.Parse("2001:4860:4860::8844")
     ];
+
+    public static IPAddress[] KidsSafeCloudflareDnsServers { get; } =
+    [
+        IPAddress.Parse("1.1.1.3"),
+        IPAddress.Parse("1.0.0.3"),
+        IPAddress.Parse("2606:4700:4700::1113"),
+        IPAddress.Parse("2606:4700:4700::1003")
+    ];
+
+    public static IPAddress[] ReliableDnsServers { get; } =
+    [
+        GoogleDnsServers.First(x=>x.IsV4()),
+        GoogleDnsServers.First(x=>x.IsV6()),
+        KidsSafeCloudflareDnsServers.First(x=>x.IsV4()),
+        KidsSafeCloudflareDnsServers.First(x=>x.IsV6())
+    ];
+
 
     public static async Task<IPAddress[]> GetPrivateIpAddresses()
     {
@@ -40,27 +55,23 @@ public static class IPAddressUtil
         {
             // it may throw error if IPv6 is not supported before creating task
             var ping = new Ping();
-            var pingTask = ping.SendPingAsync("2001:4860:4860::8888");
-            var ping2 = ping.SendPingAsync("2001:4860:4860::8844");
-            try
+            var pingTasks = ReliableDnsServers
+                .Where(x => x.IsV6())
+                .Select(x => ping.SendPingAsync(x));
+
+            foreach (var pingTask in pingTasks)
             {
-                if ((await pingTask.VhConfigureAwait()).Status == IPStatus.Success)
-                    return true;
-            }
-            catch
-            {
-                //ignore
+                try
+                {
+                    if ((await pingTask.VhConfigureAwait()).Status == IPStatus.Success)
+                        return true;
+                }
+                catch
+                {
+                    //ignore
+                }
             }
 
-            try
-            {
-                if ((await ping2.VhConfigureAwait()).Status == IPStatus.Success)
-                    return true;
-            }
-            catch
-            {
-                // ignore
-            }
         }
         catch
         {
@@ -86,13 +97,16 @@ public static class IPAddressUtil
 
     public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
     {
+        using var udpClient = new UdpClient(addressFamily);
+        return GetPrivateIpAddress(udpClient);
+    }
+
+    public static Task<IPAddress?> GetPrivateIpAddress(UdpClient udpClient)
+    {
         try
         {
-            var remoteIp = addressFamily == AddressFamily.InterNetwork
-                ? IPAddress.Parse("8.8.8.8")
-                : IPAddress.Parse("2001:4860:4860::8888");
-
-            using var udpClient = new UdpClient(addressFamily);
+            var addressFamily = udpClient.Client.AddressFamily;
+            var remoteIp = KidsSafeCloudflareDnsServers.First(x => x.AddressFamily == addressFamily);
             udpClient.Connect(remoteIp, 53);
             var endPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
             var ipAddress = endPoint.Address;

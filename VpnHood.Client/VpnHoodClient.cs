@@ -68,7 +68,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public Version? ServerVersion { get; private set; }
     public IPAddress? PublicAddress { get; private set; }
-    public bool IsIpV6Supported { get; private set; }
+    public bool IsIpV6SupportedByServer { get; private set; }
+    public bool IsIpV6SupportedByClient { get; internal set; }
     public TimeSpan SessionTimeout { get; set; }
     public TimeSpan AutoWaitTimeout { get; set; }
     public TimeSpan ReconnectTimeout { get; set; }
@@ -226,12 +227,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (State != ClientState.None)
             throw new Exception("Connection is already in progress.");
 
+
         // report config
+        IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
             "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, IncludeLocalNetwork: {IncludeLocalNetwork}, " +
-            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
-            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads);
+            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
+            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads, IsIpV6SupportedByClient);
 
         // report version
         VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
@@ -362,7 +365,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     if (isDnsPacket)
                     {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6Supported)
+                        if (isIpV6 && !IsIpV6SupportedByServer)
                         {
                             droppedPackets.Add(ipPacket);
                         }
@@ -381,7 +384,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             passthruPackets.Add(ipPacket);
 
                         // Drop IPv6 if not support
-                        else if (isIpV6 && !IsIpV6Supported)
+                        else if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
                         // Check IPv6 control message such as Solicitations
@@ -403,7 +406,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     else
                     {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6Supported)
+                        if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
                         // Check IPv6 control message such as Solicitations
@@ -714,7 +717,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
-            IsIpV6Supported = sessionResponse.IsIpV6Supported;
+            IsIpV6SupportedByServer = sessionResponse.IsIpV6Supported;
             Stat.ServerLocationInfo = sessionResponse.ServerLocation != null ? ServerLocationInfo.Parse(sessionResponse.ServerLocation) : null;
             if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address, sessionResponse.UdpPort.Value);

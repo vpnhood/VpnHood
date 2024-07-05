@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Net;
 using VpnHood.Server.Access.Configurations;
+using VpnHood.Test.Device;
 
 namespace VpnHood.Test.Tests;
 
@@ -18,7 +19,7 @@ public class DnsConfigurationTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
         Assert.IsTrue(client.Stat.IsDnsServersAccepted);
@@ -36,7 +37,7 @@ public class DnsConfigurationTest
         var token = TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.DnsServers = [IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2")];
-        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions);
+        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(clientOptions.DnsServers, client.DnsServers);
         Assert.IsTrue(client.Stat.IsDnsServersAccepted);
@@ -60,7 +61,9 @@ public class DnsConfigurationTest
         var token = TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.DnsServers = clientDnsServers;
-        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions);
+        await using var client = await TestHelper.CreateClient(token, 
+            clientOptions: clientOptions, 
+            packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
         Assert.IsFalse(client.Stat.IsDnsServersAccepted);
@@ -82,8 +85,7 @@ public class DnsConfigurationTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        var clientOptions = TestHelper.CreateClientOptions();
-        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions);
+        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
 
         foreach (var serverDnsServer in serverDnsServers)
             Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(serverDnsServer));

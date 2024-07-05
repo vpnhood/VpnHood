@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>535</ApplicationVersion>
-		<ApplicationDisplayVersion>4.5.535</ApplicationDisplayVersion>
+		<ApplicationVersion>536</ApplicationVersion>
+		<ApplicationDisplayVersion>4.5.536</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.5.535</Version>
+		<Version>4.5.536</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -68,6 +68,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.534" />
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="121.3.0.7" />
 		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
 	</ItemGroup>

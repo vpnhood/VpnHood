@@ -18,6 +18,7 @@ namespace VpnHood.Client.App.Droid.Connect;
     SupportsRtl = true, AllowBackup = true)]
 
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppSettings.AdMobApplicationId)]
+[MetaData("com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING", Value = "true")]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {

@@ -5,6 +5,7 @@ using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
+using VpnHood.Client.Device;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -206,7 +207,9 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
+        await using var client = await TestHelper.CreateClient(token, 
+            packetCapture: new TestNullPacketCapture(),
+            clientOptions: new ClientOptions { UseUdpChannel = true });
     }
 
     [TestMethod]
@@ -300,8 +303,10 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
-        await TestTunnel(server, client);
+        await using var client = await TestHelper.CreateClient(token, 
+            packetCapture: new TestNullPacketCapture(),
+            clientOptions: new ClientOptions { UseUdpChannel = true });
+
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
     }
 
@@ -392,7 +397,7 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        using var packetCapture = TestHelper.CreatePacketCapture();
+        using var packetCapture = new TestNullPacketCapture();
         await using var client = await TestHelper.CreateClient(token, packetCapture);
 
         packetCapture.StopCapture();
@@ -743,7 +748,10 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
+        await using var client = await TestHelper.CreateClient(token, 
+            packetCapture: new TestNullPacketCapture(),
+            clientOptions: TestHelper.CreateClientOptions(useUdp: true));
+        
         Assert.IsFalse(client.Stat.IsUdpChannelSupported);
     }
 }

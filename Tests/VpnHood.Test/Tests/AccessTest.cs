@@ -1,9 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
@@ -17,6 +19,8 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
+        Console.WriteLine(await IPAddressUtil.GetPrivateIpAddress(addressFamily: AddressFamily.InterNetworkV6));
+        
     }
 
     [TestMethod]

@@ -92,7 +92,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             builder.SetMtu(Mtu);
 
         // DNS Servers
-        AddVpnServers(builder);
+        AddDnsServers(builder);
 
         // Routes
         AddRoutes(builder);
@@ -175,7 +175,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
     }
 
-    private void AddVpnServers(Builder builder)
+    private void AddDnsServers(Builder builder)
     {
         var dnsServers = VhUtil.IsNullOrEmpty(DnsServers) ? IPAddressUtil.GoogleDnsServers : DnsServers;
         if (!AddIpV6Address)

@@ -41,7 +41,7 @@ public class ServerFinder(ISocketFactory socketFactory, ServerToken serverToken,
             return hostEndPoints.First();
 
         // randomize endpoint 
-        Shuffle(hostEndPoints); //todo check
+        Shuffle(hostEndPoints);
 
         _hostEndPointStatus = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatus.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;

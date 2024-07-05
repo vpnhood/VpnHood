@@ -10,6 +10,6 @@ public class AppLogSettings
     public bool LogAnonymous { get; set; } = true;
     public string[] LogEventNames { get; set; }  = [];
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]  //todo check
+    [JsonConverter(typeof(JsonStringEnumConverter))] 
     public LogLevel LogLevel { get; set; }  = LogLevel.Information;
 }

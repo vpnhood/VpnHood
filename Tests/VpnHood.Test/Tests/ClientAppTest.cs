@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.App.ClientProfiles;
+using VpnHood.Client.Device;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -415,7 +416,7 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        using var packetCapture = TestHelper.CreatePacketCapture(new TestDeviceOptions { IsDnsServerSupported = true });
+        using var packetCapture = new TestNullPacketCapture();
         Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
         await using var client = await TestHelper.CreateClient(token, packetCapture);

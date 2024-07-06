@@ -5,5 +5,5 @@ public class AndroidMainActivityOptions
 {
     public string[] AccessKeySchemes { get; init; } = [];
     public string[] AccessKeyMimes { get; init; } = [];
-    public bool CheckForUpdateOnCreate { get; init; } = true;
+    public bool PreloadAd { get; init; }
 }

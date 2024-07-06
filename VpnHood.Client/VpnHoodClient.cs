@@ -58,6 +58,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
     private readonly string? _serverLocation;
+    private readonly ServerFinder _serverFinder;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
     internal Nat Nat { get; }
@@ -67,7 +68,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public Version? ServerVersion { get; private set; }
     public IPAddress? PublicAddress { get; private set; }
-    public bool IsIpV6Supported { get; private set; }
+    public bool IsIpV6SupportedByServer { get; private set; }
+    public bool IsIpV6SupportedByClient { get; internal set; }
     public TimeSpan SessionTimeout { get; set; }
     public TimeSpan AutoWaitTimeout { get; set; }
     public TimeSpan ReconnectTimeout { get; set; }
@@ -99,7 +101,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         if (!VhUtil.IsInfinite(_maxTcpDatagramLifespan) && _maxTcpDatagramLifespan < _minTcpDatagramLifespan)
             throw new ArgumentNullException(nameof(options.MaxTcpDatagramTimespan), $"{nameof(options.MaxTcpDatagramTimespan)} must be bigger or equal than {nameof(options.MinTcpDatagramTimespan)}.");
-        
+
         SocketFactory = new ClientSocketFactory(packetCapture, options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory)));
         DnsServers = options.DnsServers ?? [];
         _allowAnonymousTracker = options.AllowAnonymousTracker;
@@ -115,6 +117,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
         _serverLocation = options.ServerLocation;
+        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken, serverQueryTimeout: options.ServerQueryTimeout);
 
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
@@ -192,7 +195,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync(false);
     }
 
-    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, 
+    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
         string channelId, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
@@ -224,12 +227,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (State != ClientState.None)
             throw new Exception("Connection is already in progress.");
 
+
         // report config
+        IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
             "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, IncludeLocalNetwork: {IncludeLocalNetwork}, " +
-            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
-            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads);
+            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
+            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads, IsIpV6SupportedByClient);
 
         // report version
         VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
@@ -246,7 +251,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var endPointInfo = new ConnectorEndPointInfo
             {
                 HostName = Token.ServerToken.HostName,
-                TcpEndPoint = await ServerTokenHelper.ResolveHostEndPoint(Token.ServerToken).VhConfigureAwait(),
+                TcpEndPoint = await _serverFinder.FindBestServerAsync(cancellationToken).VhConfigureAwait(),
                 CertificateHash = Token.ServerToken.CertificateHash
             };
             _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout);
@@ -346,7 +351,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var passthruPackets = _sendingPackets.PassthruPackets;
                 var proxyPackets = _sendingPackets.ProxyPackets;
                 var droppedPackets = _sendingPackets.DroppedPackets;
-                
+
                 // ReSharper disable once ForCanBeConvertedToForeach
                 for (var i = 0; i < e.IpPackets.Count; i++)
                 {
@@ -360,7 +365,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     if (isDnsPacket)
                     {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6Supported)
+                        if (isIpV6 && !IsIpV6SupportedByServer)
                         {
                             droppedPackets.Add(ipPacket);
                         }
@@ -379,7 +384,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             passthruPackets.Add(ipPacket);
 
                         // Drop IPv6 if not support
-                        else if (isIpV6 && !IsIpV6Supported)
+                        else if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
                         // Check IPv6 control message such as Solicitations
@@ -401,7 +406,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     else
                     {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6Supported)
+                        if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
                         // Check IPv6 control message such as Solicitations
@@ -452,7 +457,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");  
+            VhLogger.Instance.LogError(ex, "Could not process the captured packets.");
         }
     }
 
@@ -712,7 +717,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
-            IsIpV6Supported = sessionResponse.IsIpV6Supported;
+            IsIpV6SupportedByServer = sessionResponse.IsIpV6Supported;
             Stat.ServerLocationInfo = sessionResponse.ServerLocation != null ? ServerLocationInfo.Parse(sessionResponse.ServerLocation) : null;
             if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address, sessionResponse.UdpPort.Value);
@@ -726,11 +731,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges);
 
             // Get IncludeIpRange for clientIp
-            var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress).VhConfigureAwait() : null;
-            if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+            if (_ipRangeProvider != null)
             {
-                filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
-                IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
+                var filterIpRanges = await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress, cancellationToken).VhConfigureAwait();
+                if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+                {
+                    filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
+                    IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
+                }
             }
 
             // set DNS after setting IpFilters
@@ -773,7 +781,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         catch (RedirectHostException ex) when (allowRedirect)
         {
             // todo: init new connector
-            ConnectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
+            ConnectorService.EndPointInfo.TcpEndPoint = await _serverFinder.FindBestServerAsync(ex.RedirectHostEndPoints, cancellationToken);
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
         }
     }
@@ -1013,6 +1021,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync(bool waitForBye)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

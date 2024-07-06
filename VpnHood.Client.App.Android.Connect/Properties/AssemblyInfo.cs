@@ -6,4 +6,3 @@
 // ReSharper disable StringLiteralTypo
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
-

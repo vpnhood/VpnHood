@@ -34,7 +34,8 @@ public class AndroidAppWebViewMainActivityHandler(
 
     private void InitSplashScreen()
     {
-        var imageView = new ImageView(ActivityEvent.Activity);
+        ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);
+        /*var imageView = new ImageView(ActivityEvent.Activity);
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
         var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
 
@@ -45,16 +46,15 @@ public class AndroidAppWebViewMainActivityHandler(
         imageView.SetScaleType(ImageView.ScaleType.CenterInside);
         if (backgroundColor != null) imageView.SetBackgroundColor(backgroundColor.Value);
         ActivityEvent.Activity.SetContentView(imageView);
-
         // set window background color
         if (backgroundColor != null)
         {
             try { ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value); }
-            catch { /* ignore */ }
+            catch { /* ignore #1# }
 
             try { ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value); }
-            catch { /* ignore */ }
-        }
+            catch { /* ignore #1# }
+        }*/
     }
 
     private void InitWebUi()

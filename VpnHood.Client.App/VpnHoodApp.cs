@@ -63,7 +63,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
     private readonly bool _autoDiagnose;
-    private readonly AppInternalAdService _internalAdService;
+    private readonly AppInternalAdService? _internalAdService;
 
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
@@ -114,7 +114,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logAnonymous = options.LogAnonymous;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
-        _internalAdService = new AppInternalAdService(options.AdServices, options.AdOptions);
+        _internalAdService = options.AdServices.Length > 0 ? new AppInternalAdService(options.AdServices, options.AdOptions) : null;
+        ActiveUiContext.OnChanged += ActiveUiContext_OnChanged;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
 
@@ -122,7 +123,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         JobSection = new JobSection(new JobOptions
         {
             Interval = options.VersionCheckInterval,
-            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5) 
+            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5)
                 ? TimeSpan.FromSeconds(2) // start immediately
                 : options.VersionCheckInterval,
             Name = "VersionCheck"
@@ -184,6 +185,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // initialize
         InitCulture();
         JobRunner.Default.Add(this);
+    }
+
+    private void ActiveUiContext_OnChanged(object sender, EventArgs e)
+    {
+        var uiContext = ActiveUiContext.Context;
+        if (IsIdle && _internalAdService?.IsPreloadApEnabled == true && uiContext != null)
+            _ = LoadAd(uiContext, CancellationToken.None);
     }
 
     public ClientProfile? CurrentClientProfile
@@ -275,6 +283,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Device.Dispose();
         LogService.Dispose();
         DisposeSingleton();
+        ActiveUiContext.OnChanged -= ActiveUiContext_OnChanged;
     }
 
     public static VpnHoodApp Init(IDevice device, AppOptions? options = default)
@@ -429,7 +438,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return packetCapture;
     }
 
-    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent, 
+    private async Task ConnectInternal(Token token, string? serverLocationInfo, string? userAgent,
         bool allowUpdateToken, CancellationToken cancellationToken)
     {
         // show token info
@@ -673,13 +682,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
+        if (_internalAdService == null) 
+            throw new Exception("AdService has not been initialized.");
+
         var countryCode = await GetClientCountryCode(cancellationToken);
         await _internalAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
     }
 
     public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
-        if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
+        if (_internalAdService == null) 
+            throw new Exception("AdService has not been initialized.");
+
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
         try
         {
@@ -792,7 +806,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // check version by app container
         try
         {
-            if (ActiveUiContext.Context != null && Services.UpdaterService != null && 
+            if (ActiveUiContext.Context != null && Services.UpdaterService != null &&
                 await Services.UpdaterService.Update(ActiveUiContext.RequiredContext).VhConfigureAwait())
             {
                 VersionCheckPostpone();

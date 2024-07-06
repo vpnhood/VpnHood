@@ -14,6 +14,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.RewardedAd;
     public DateTime? AdLoadedTime { get; private set; }
+    public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
     public static AdMobRewardedAdService Create(string adUnitId)
     {
@@ -39,8 +40,6 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         // initialize
         await AdMobUtil.Initialize(activity);
-        if (!AdMobUtil.ShouldLoadAd(AdLoadedTime))
-            return;
 
         // reset the last loaded ad
         AdLoadedTime = null;

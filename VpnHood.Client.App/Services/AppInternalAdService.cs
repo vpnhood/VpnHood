@@ -6,20 +6,15 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Device.Exceptions;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.Services;
 
-public class AppAdService(
-    IAppAdService[] adServices,
-    TimeSpan loadAdTimeout,
-    TimeSpan loadAdPostDelay,
-    TimeSpan showAdPostDelay)
+internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adOptions)
 {
-    public string? CountryCode { get; private set; }
     public IAppAdService[] AdServices => adServices;
     public IAppAdService? LoadedAdService { get; internal set; }
+
     public bool ShouldLoadAd()
     {
         return LoadedAdService?.AdLoadedTime == null ||
@@ -27,17 +22,15 @@ public class AppAdService(
     }
 
     private readonly AsyncLock _loadAdLock = new();
-    public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload, CancellationToken cancellationToken)
+
+    public async Task LoadAd(IUiContext uiContext, string? countryCode, bool forceReload,
+        CancellationToken cancellationToken)
     {
         using var lockAsync = await _loadAdLock.LockAsync(cancellationToken);
         if (!forceReload && !ShouldLoadAd())
             return;
 
         LoadedAdService = null;
-
-        // try to find country code if not provided
-        countryCode ??= await GetCountryCode(cancellationToken);
-        CountryCode = countryCode;
 
         // filter ad services by country code
         var filteredAdServices = adServices
@@ -54,10 +47,11 @@ public class AppAdService(
                 if (noFillAdNetworks.Contains(adService.NetworkName))
                     continue;
 
-                using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var timeoutCts = new CancellationTokenSource(adOptions.LoadAdTimeout);
+                using var linkedCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adService.LoadAd(uiContext, linkedCts.Token).VhConfigureAwait();
-                await Task.Delay(loadAdPostDelay, cancellationToken);
+                await Task.Delay(adOptions.LoadAdPostDelay, cancellationToken);
                 LoadedAdService = adService;
                 return;
             }
@@ -89,7 +83,7 @@ public class AppAdService(
         try
         {
             await LoadedAdService.ShowAd(uiContext, customData, cancellationToken).VhConfigureAwait();
-            await Task.Delay(showAdPostDelay, cancellationToken); //wait for finishing trackers
+            await Task.Delay(adOptions.ShowAdPostDelay, cancellationToken); //wait for finishing trackers
             if (ActiveUiContext.Context != uiContext) // some ad provider may not raise exception on minimize
                 throw new ShowAdNoUiException();
         }
@@ -112,19 +106,5 @@ public class AppAdService(
         if (string.IsNullOrEmpty(countryCode)) return "n/a";
         try { return new RegionInfo(countryCode).Name; }
         catch { return countryCode; }
-    }
-
-    private async Task<string?> GetCountryCode( CancellationToken cancellationToken)
-    {
-        try
-        {
-            CountryCode ??= await IPAddressUtil.GetCountryCodeByCloudflare(cancellationToken: cancellationToken);
-            return CountryCode;
-        }
-        catch 
-        {
-            return null;
-        }
-
     }
 }

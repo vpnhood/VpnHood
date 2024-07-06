@@ -731,11 +731,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges);
 
             // Get IncludeIpRange for clientIp
-            var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress).VhConfigureAwait() : null;
-            if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+            if (_ipRangeProvider != null)
             {
-                filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
-                IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
+                var filterIpRanges = await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress, cancellationToken).VhConfigureAwait();
+                if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+                {
+                    filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
+                    IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
+                }
             }
 
             // set DNS after setting IpFilters

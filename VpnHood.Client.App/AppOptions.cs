@@ -25,11 +25,10 @@ public class AppOptions
     public IAppAdService[] AdServices { get; set; } = [];
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
-    public TimeSpan AdLoadTimeout { get; set; } = TimeSpan.FromSeconds(20);
     public bool LogVerbose { get; set; }
     public bool? LogAnonymous { get; set; }
-    public string[] IncludeDomains { get; set; } = [];
-    public string[] ExcludeDomains { get; set; } = [];
-    public TimeSpan ShowAdPostDelay { get; set; } = TimeSpan.FromSeconds(3);
+    public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public bool SingleLineConsoleLog { get; set; } = true;
+    public bool AutoDiagnose { get; set; } = true;
+    public AppAdOptions AdOptions { get; set; } = new ();
 }

@@ -34,6 +34,8 @@ internal class ClientHost(
     public IPAddress CatcherAddressIpV4 { get; } = catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 { get; } = catcherAddressIpV6;
 
+    private bool IsIpV6Supported => vpnHoodClient is { IsIpV6SupportedByClient: true, IsIpV6SupportedByServer: true };
+
     public void Start()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(ClientHost));
@@ -109,6 +111,9 @@ internal class ClientHost(
 
             try
             {
+                if (ipPacket.Version == IPVersion.IPv6 && !IsIpV6Supported)
+                    throw new Exception("IPv6 is not supported.");
+
                 tcpPacket = PacketUtil.ExtractTcp(ipPacket);
 
                 // check local endpoint
@@ -184,6 +189,7 @@ internal class ClientHost(
         if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
         ConnectorRequestResult<SessionResponse>? requestResult = null;
         StreamProxyChannel? channel = null;
+        var ipVersion = IPVersion.IPv4;
 
         try
         {
@@ -197,7 +203,7 @@ internal class ClientHost(
 
             // get original remote from NAT
             var orgRemoteEndPoint = (IPEndPoint)orgTcpClient.Client.RemoteEndPoint;
-            var ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
+            ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
                 ? IPVersion.IPv4
                 : IPVersion.IPv6;
 
@@ -217,7 +223,9 @@ internal class ClientHost(
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             // Filter by SNI
-            var filterResult = await vpnHoodClient.DomainFilterService.Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken);
+            var filterResult = await vpnHoodClient.DomainFilterService
+                .Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken)
+                .VhConfigureAwait();
 
             if (filterResult.Action == DomainFilterAction.Block)
             {
@@ -272,6 +280,10 @@ internal class ClientHost(
         }
         catch (Exception ex)
         {
+            // disable IPv6 if detect the new network does not have IpV6
+            if (ipVersion == IPVersion.IPv6 && ex is SocketException { SocketErrorCode: SocketError.NetworkUnreachable })
+                vpnHoodClient.IsIpV6SupportedByClient = false;
+
             if (channel != null) await channel.DisposeAsync().VhConfigureAwait();
             if (requestResult != null) await requestResult.DisposeAsync().VhConfigureAwait();
             orgTcpClient.Dispose();

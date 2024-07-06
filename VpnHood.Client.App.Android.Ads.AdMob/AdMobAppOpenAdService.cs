@@ -48,7 +48,7 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
 
         // initialize
-        await AdMobUtil.Initialize(activity);
+        await AdMobUtil.Initialize(activity, cancellationToken);
 
         // reset the last loaded ad
         AdLoadedTime = null;

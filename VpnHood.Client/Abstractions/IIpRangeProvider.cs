@@ -5,5 +5,5 @@ namespace VpnHood.Client.Abstractions;
 
 public interface IIpRangeProvider
 {
-    Task<IpRangeOrderedList?> GetIncludeIpRanges(IPAddress clientIp);
+    Task<IpRangeOrderedList?> GetIncludeIpRanges(IPAddress clientIp, CancellationToken cancellationToken);
 }

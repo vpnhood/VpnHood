@@ -20,7 +20,7 @@ using Exception = System.Exception;
 
 namespace VpnHood.Server;
 
-internal class ServerHost : IAsyncDisposable, IJob
+public class ServerHost : IAsyncDisposable, IJob
 {
     private readonly HashSet<IClientStream> _clientStreams = [];
     private const int ServerProtocolVersion = 5;
@@ -37,6 +37,7 @@ internal class ServerHost : IAsyncDisposable, IJob
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public IPAddress[]? DnsServers { get; set; }
     public CertificateHostName[] Certificates { get; private set; } = [];
+    public IPEndPoint[] TcpEndPoints => _tcpListeners.Select(x => (IPEndPoint)x.LocalEndpoint).ToArray();
 
     public ServerHost(SessionManager sessionManager)
     {
@@ -561,6 +562,7 @@ internal class ServerHost : IAsyncDisposable, IJob
             AccessUsage = sessionResponse.AccessUsage,
             SuppressedBy = sessionResponse.SuppressedBy,
             RedirectHostEndPoint = sessionResponse.RedirectHostEndPoint,
+            RedirectHostEndPoints = sessionResponse.RedirectHostEndPoints,
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,

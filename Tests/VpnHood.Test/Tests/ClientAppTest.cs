@@ -137,6 +137,9 @@ public class ClientAppTest : TestBase
         var ipGroupIds = await ipGroupsManager.GetIpGroupIds();
         Assert.IsTrue(ipGroupIds.Any(x => x == "us"),
             "Countries has not been extracted.");
+
+        // make sure GetIpRange works
+        Assert.IsTrue((await ipGroupsManager.GetIpRanges("US")).Any());
     }
 
     [TestMethod]
@@ -382,7 +385,7 @@ public class ClientAppTest : TestBase
         appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
         appOptions.ReconnectTimeout = TimeSpan.FromSeconds(1);
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
-        await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId);
         await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
@@ -412,7 +415,7 @@ public class ClientAppTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        using var packetCapture = TestHelper.CreatePacketCapture(new TestDeviceOptions { IsDnsServerSupported = true });
+        using var packetCapture = new TestNullPacketCapture();
         Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
         await using var client = await TestHelper.CreateClient(token, packetCapture);
@@ -656,7 +659,7 @@ public class ClientAppTest : TestBase
         // Update ServerTokenUrl after token creation
         const string newTokenUrl = "http://127.0.0.100:6000";
         accessManager.ServerConfig.ServerTokenUrl = newTokenUrl;
-        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey();
+        accessManager.ServerConfig.ServerSecret = VhUtil.GenerateKey(); // It can not be changed in new version
         accessManager.ClearCache();
 
         // create server and app
@@ -745,14 +748,58 @@ public class ClientAppTest : TestBase
     }
 
     [TestMethod]
-    public Task IncludeDomains()
+    public async Task IncludeDomains()
     {
-        throw new NotImplementedException();
-    }   
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+
+        // create app
+        var appOptions = TestHelper.CreateAppOptions();
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        app.UserSettings.DomainFilter.Includes = [TestConstants.HttpsUri1.Host];
+
+        // connect
+        var token = TestHelper.CreateAccessToken(server);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+
+        // text include
+        var oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+
+        // text exclude
+        oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+    }
 
     [TestMethod]
-    public Task ExcludeDomains()
+    public async Task ExcludeDomains()
     {
-        throw new NotImplementedException();
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+
+        // create app
+        var appOptions = TestHelper.CreateAppOptions();
+        await using var app = TestHelper.CreateClientApp(appOptions: appOptions, deviceOptions: TestHelper.CreateDeviceOptions());
+        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsUri1.Host];
+
+        // connect
+        var token = TestHelper.CreateAccessToken(server);
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await TestHelper.WaitForAppState(app, AppConnectionState.Connected);
+
+        // text include
+        var oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
+        Assert.AreNotEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
+
+        // text exclude
+        oldReceivedByteCount = app.State.SessionTraffic.Received;
+        await TestHelper.Test_Https(uri: TestConstants.HttpsUri1);
+        Assert.AreEqual(oldReceivedByteCount, app.State.SessionTraffic.Received);
     }
 }

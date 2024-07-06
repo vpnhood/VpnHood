@@ -2,6 +2,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
+using VpnHood.Client.App.Droid.Ads.VhAdMob;
 using VpnHood.Client.App.Droid.Common.Activities;
 
 namespace VpnHood.Client.App.Droid.Connect;
@@ -27,7 +28,15 @@ public class MainActivity : AndroidAppMainActivity
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
-            ListenToAllIps = AppSettings.Instance.ListenToAllIps
+            ListenToAllIps = AppSettings.Instance.ListenToAllIps, // if true it will cause crash in network change
+            PreloadAd = true
         });
+    }
+
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        base.OnCreate(savedInstanceState);
+        
+        _ = AdMobUtil.Initialize(this, CancellationToken.None);
     }
 }

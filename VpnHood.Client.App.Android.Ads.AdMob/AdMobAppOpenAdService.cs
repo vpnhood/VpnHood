@@ -16,6 +16,7 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.AppOpenAd;
     public DateTime? AdLoadedTime { get; private set; }
+    public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
     public static AdMobAppOpenAdService Create(string adUnitId, bool hasVideo)
     {
@@ -25,6 +26,8 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
 
     public bool IsCountrySupported(string countryCode)
     {
+        countryCode = countryCode.Trim().ToUpper();
+
         // these countries are not supported at all
         if (countryCode == "CN")
             return false;
@@ -37,10 +40,8 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
     }
 
 
-    private readonly AsyncLock _loadAdLock = new();
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        using var lockAsync = await _loadAdLock.LockAsync(cancellationToken);
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
@@ -48,8 +49,6 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
 
         // initialize
         await AdMobUtil.Initialize(activity);
-        if (!AdMobUtil.ShouldLoadAd(AdLoadedTime))
-            return;
 
         // reset the last loaded ad
         AdLoadedTime = null;

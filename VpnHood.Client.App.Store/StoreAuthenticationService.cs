@@ -180,7 +180,7 @@ public class StoreAuthenticationService : IAppAuthenticationService
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var apiKey = await accountService.TryGetApiKey(VpnHoodApp.Instance.UiContext).VhConfigureAwait();
+            var apiKey = await accountService.TryGetApiKey(ActiveUiContext.Context).VhConfigureAwait();
             request.Headers.Authorization = apiKey != null ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value) : null;
             return await base.SendAsync(request, cancellationToken).VhConfigureAwait();
         }

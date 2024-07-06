@@ -165,6 +165,22 @@ public static class IPAddressUtil
         return ipLine != null ? IPAddress.Parse(ipLine.Split('=')[1]) : null;
     }
 
+    public static async Task<string?> GetCountryCodeByCloudflare(TimeSpan? timeout = default, CancellationToken cancellationToken = default)
+    {
+        const string url = "https://cloudflare.com/cdn-cgi/trace";
+
+        using var httpClient = new HttpClient();
+        httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
+        var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, url), cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStringAsync();
+
+        // Split the response into lines
+        var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        var ipLine = lines.SingleOrDefault(x => x.StartsWith("loc=", StringComparison.OrdinalIgnoreCase));
+        return ipLine?.Split('=')[1];
+    }
+
     private static async Task<IPAddress?> GetPublicIpAddressByIpify(AddressFamily addressFamily, TimeSpan? timeout = null)
     {
         //var url = addressFamily == AddressFamily.InterNetwork

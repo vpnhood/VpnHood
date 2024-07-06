@@ -10,4 +10,5 @@ public interface IAppAdService : IDisposable
     Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken);
     bool IsCountrySupported(string countryCode);
     DateTime? AdLoadedTime { get; }
+    TimeSpan AdLifeSpan { get; }
 }

@@ -10,6 +10,7 @@ public class AdMobUtil
 {
     private static readonly AsyncLock InitLock = new();
     public static bool IsInitialized { get; private set; }
+    public static TimeSpan DefaultAdTimeSpan { get; } = TimeSpan.FromMinutes(45);
     public static async Task Initialize(Context context)
     {
         using var lockAsync = await InitLock.LockAsync();
@@ -43,11 +44,5 @@ public class AdMobUtil
             // not success
             _loadedCompletionSource.TrySetException(new AdException("Could not initialize any ad adapter."));
         }
-    }
-
-    public static bool ShouldLoadAd(DateTime? lastLoadedTime, TimeSpan? lifeSpan = null)
-    {
-        lifeSpan??= TimeSpan.FromMinutes(45);
-        return lastLoadedTime == null || (DateTime.UtcNow - lifeSpan) > lastLoadedTime;
     }
 }

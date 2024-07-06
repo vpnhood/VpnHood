@@ -671,10 +671,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return _appPersistState.ClientCountryCode ?? RegionInfo.CurrentRegion.Name;
     }
 
-    public async Task LoadAd(CancellationToken cancellationToken)
+    public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var countryCode = await GetClientCountryCode(cancellationToken);
-        await _internalAdService.LoadAd(ActiveUiContext.RequiredContext, countryCode: countryCode, forceReload: false, cancellationToken);
+        await _internalAdService.LoadAd(uiContext, countryCode: countryCode, forceReload: false, cancellationToken);
     }
 
     public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
@@ -683,7 +683,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
         try
         {
-            await LoadAd(cancellationToken);
+            await LoadAd(ActiveUiContext.RequiredContext, cancellationToken);
             await _internalAdService.ShowAd(ActiveUiContext.RequiredContext, adData, cancellationToken);
             return adData;
         }

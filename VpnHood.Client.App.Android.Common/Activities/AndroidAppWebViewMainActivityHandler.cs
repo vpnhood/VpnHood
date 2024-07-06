@@ -11,10 +11,8 @@ public class AndroidAppWebViewMainActivityHandler(
     AndroidMainActivityWebViewOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
-    private readonly bool _checkForUpdateOnCreate = options.CheckForUpdateOnCreate;
     private bool _isWeViewVisible;
     public WebView? WebView { get; private set; }
-    protected override bool CheckForUpdateOnCreate => false; // parent should not do this
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -90,10 +88,6 @@ public class AndroidAppWebViewMainActivityHandler(
 
         if (VpnHoodApp.Instance.Resource.Colors.NavigationBarColor != null)
             ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resource.Colors.NavigationBarColor.Value.ToAndroidColor());
-
-        // request features after loading the webview, so SPA can update the localize the resources
-        if (_checkForUpdateOnCreate)
-            _ = VpnHoodApp.Instance.VersionCheck();
     }
 
     protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

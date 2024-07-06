@@ -49,6 +49,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdServices = [
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
+                //ChartboostService.Create()
             ],
             UiService = new AndroidAppUiService(),
             LogAnonymous = !AppSettings.IsDebugMode

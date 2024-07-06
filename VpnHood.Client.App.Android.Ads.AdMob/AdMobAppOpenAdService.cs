@@ -15,7 +15,8 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
     private AppOpenAd? _loadedAd;
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.AppOpenAd;
-    public DateTime? AdLoadedTime {get; private set; }
+    public DateTime? AdLoadedTime { get; private set; }
+    public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
     public static AdMobAppOpenAdService Create(string adUnitId, bool hasVideo)
     {
@@ -25,10 +26,12 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
 
     public bool IsCountrySupported(string countryCode)
     {
+        countryCode = countryCode.Trim().ToUpper();
+
         // these countries are not supported at all
         if (countryCode == "CN")
-            return false; 
-        
+            return false;
+
         // these countries video ad is not supported
         if (hasVideo)
             return countryCode != "IR";
@@ -43,6 +46,9 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
+
+        // initialize
+        await AdMobUtil.Initialize(activity, cancellationToken);
 
         // reset the last loaded ad
         AdLoadedTime = null;

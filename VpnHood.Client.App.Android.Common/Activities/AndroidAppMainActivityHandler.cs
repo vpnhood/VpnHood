@@ -2,6 +2,7 @@
 using Android.Content.Res;
 using Android.Runtime;
 using Android.Views;
+using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Client.Device.Droid.ActivityEvents;
 using Permission = Android.Content.PM.Permission;
@@ -12,15 +13,15 @@ public class AndroidAppMainActivityHandler
 {
     private readonly string[] _accessKeySchemes;
     private readonly string[] _accessKeyMimes;
+    private readonly bool _preloadAd;
     protected IActivityEvent ActivityEvent { get; }
-    protected virtual bool CheckForUpdateOnCreate { get; }
 
     public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options)
     {
         ActivityEvent = activityEvent;
+        _preloadAd = options.PreloadAd;
         _accessKeySchemes = options.AccessKeySchemes;
         _accessKeyMimes = options.AccessKeyMimes;
-        CheckForUpdateOnCreate = options.CheckForUpdateOnCreate;
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
@@ -33,13 +34,14 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
-        VpnHoodApp.Instance.UiContext = new AndroidUiContext(ActivityEvent);
+        ActiveUiContext.Context = new AndroidUiContext(ActivityEvent);
+
+        // preload ad
+        if (_preloadAd && VpnHoodApp.Instance.IsIdle)
+            _ = VpnHoodApp.Instance.LoadAd(ActiveUiContext.Context, CancellationToken.None);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
-
-        if (CheckForUpdateOnCreate)
-            _ = VpnHoodApp.Instance.VersionCheck();
     }
 
     protected virtual bool OnNewIntent(Intent? intent)
@@ -127,6 +129,6 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnDestroy()
     {
-        VpnHoodApp.Instance.UiContext = null;
+        ActiveUiContext.Context = null;
     }
 }

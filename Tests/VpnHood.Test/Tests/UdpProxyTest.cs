@@ -158,7 +158,7 @@ public class UdpProxyTest : TestBase
     [TestMethod]
     public async Task Max_UdpClients()
     {
-        var maxUdpCount = 3;
+        const int maxUdpCount = 3;
 
         // Create Server
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();

@@ -8,6 +8,7 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.Client.App.WebServer;
 using VpnHood.Client.App.Win.Common;
+using VpnHood.Client.Device;
 using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App.Win;
@@ -42,7 +43,7 @@ public partial class MainWindow : Window
 
         // initialize tray icon
         VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => Dispatcher.Invoke(UpdateIcon);
-        VpnHoodApp.Instance.UiContext = new WinUiContext();
+        ActiveUiContext.Context = new WinUiContext();
     }
 
 

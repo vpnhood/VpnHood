@@ -51,7 +51,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 //ChartboostService.Create()
             ],
             UiService = new AndroidAppUiService(),
-            LogAnonymous = !AppSettings.IsDebugMode
+            LogAnonymous = !AppSettings.IsDebugMode,
+            AdOptions = new AppAdOptions
+            {
+                PreloadAd = true
+            }
         };
     }
 

@@ -3,6 +3,7 @@ using Android.Runtime;
 using Firebase.Crashlytics;
 using Firebase.Analytics;
 using VpnHood.Client.App.Droid.Ads.VhAdMob;
+using VpnHood.Client.App.Droid.Ads.VhChartboost;
 using VpnHood.Client.App.Droid.Common;
 using VpnHood.Client.App.Droid.GooglePlay;
 using VpnHood.Client.App.Resources;
@@ -18,7 +19,9 @@ namespace VpnHood.Client.App.Droid.Connect;
     SupportsRtl = true, AllowBackup = true)]
 
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppSettings.AdMobApplicationId)]
+[MetaData("com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION", Value = "true")]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING", Value = "true")]
+
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
@@ -49,7 +52,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdServices = [
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
-                //ChartboostService.Create()
+                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation, true)
             ],
             UiService = new AndroidAppUiService(),
             LogAnonymous = !AppSettings.IsDebugMode

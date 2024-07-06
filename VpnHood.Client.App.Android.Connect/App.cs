@@ -50,9 +50,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = CreateAppAccountService(appSettings, storageFolderPath),
             AdServices = [
+                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
-                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation, true)
             ],
             UiService = new AndroidAppUiService(),
             LogAnonymous = !AppSettings.IsDebugMode,

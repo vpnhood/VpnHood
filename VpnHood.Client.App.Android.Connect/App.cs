@@ -55,7 +55,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation, true)
             ],
             UiService = new AndroidAppUiService(),
-            LogAnonymous = !AppSettings.IsDebugMode
+            LogAnonymous = !AppSettings.IsDebugMode,
+            AdOptions = new AppAdOptions
+            {
+                PreloadAd = true
+            }
         };
     }
 

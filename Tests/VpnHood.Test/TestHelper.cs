@@ -406,6 +406,7 @@ internal static class TestHelper
             UseExternalLocationService = false,
             LogVerbose = LogVerbose,
             ShowAdPostDelay = TimeSpan.Zero,
+            LoadAdPostDelay = TimeSpan.Zero,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
             SingleLineConsoleLog = false
@@ -425,7 +426,7 @@ internal static class TestHelper
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         clientApp.UserSettings.Logging.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
-        clientApp.UiContext = new TestAppUiContext();
+        ActiveUiContext.Context = new TestAppUiContext();
 
         return clientApp;
     }

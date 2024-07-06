@@ -28,14 +28,14 @@ public class MainActivity : AndroidAppMainActivity
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
-            ListenToAllIps = AppSettings.Instance.ListenToAllIps
+            ListenToAllIps = AppSettings.Instance.ListenToAllIps // if true it will cause crash in network change
         });
     }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
+        
         _ = AdMobUtil.Initialize(this);
     }
 }

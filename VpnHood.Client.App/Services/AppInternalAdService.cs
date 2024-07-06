@@ -14,6 +14,7 @@ internal class AppInternalAdService(IAppAdService[] adServices, AppAdOptions adO
 {
     public IAppAdService[] AdServices => adServices;
     public IAppAdService? LoadedAdService { get; internal set; }
+    public bool IsPreloadApEnabled => adOptions.PreloadAd;
 
     public bool ShouldLoadAd()
     {

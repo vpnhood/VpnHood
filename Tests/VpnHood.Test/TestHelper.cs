@@ -405,11 +405,14 @@ internal static class TestHelper
             UseInternalLocationService = false,
             UseExternalLocationService = false,
             LogVerbose = LogVerbose,
-            ShowAdPostDelay = TimeSpan.Zero,
-            LoadAdPostDelay = TimeSpan.Zero,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
-            SingleLineConsoleLog = false
+            SingleLineConsoleLog = false,
+            AdOptions = new AppAdOptions
+            {
+                ShowAdPostDelay = TimeSpan.Zero,
+                LoadAdPostDelay = TimeSpan.Zero
+            }
         };
         return appOptions;
     }

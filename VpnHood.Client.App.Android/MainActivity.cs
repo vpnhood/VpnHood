@@ -14,7 +14,7 @@ namespace VpnHood.Client.App.Droid;
     Exported = true,
     WindowSoftInputMode = SoftInput.AdjustResize, // resize app when keyboard is shown
     // LaunchMode = LaunchMode.SingleInstance, if set; then open the app after minimize will not show ad activity
-    ScreenOrientation = ScreenOrientation.Unspecified,
+    ScreenOrientation = ScreenOrientation.Portrait,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]

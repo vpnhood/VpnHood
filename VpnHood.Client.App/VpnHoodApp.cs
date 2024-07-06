@@ -4,7 +4,6 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
-using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
 using VpnHood.Client.App.Services;
@@ -63,9 +62,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly bool _logVerbose;
     private readonly bool? _logAnonymous;
     private UserSettings _oldUserSettings;
-    private readonly TimeSpan _adLoadTimeout;
-    private readonly TimeSpan _showAdPostDelay;
     private readonly bool _autoDiagnose;
+    private readonly AppAdService _adService;
 
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
@@ -87,8 +85,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppResource Resource { get; }
     public AppServices Services { get; }
     public DateTime? ConnectedTime { get; private set; }
-    public IUiContext? UiContext { get; set; }
-    public IUiContext RequiredUiContext => UiContext ?? throw new UiContextNotAvailableException();
 
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
@@ -99,8 +95,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Device = device;
         device.StartedAsService += DeviceOnStartedAsService;
 
-        StorageFolderPath = options.StorageFolderPath ??
-                            throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
         Settings = AppSettings.Load(Path.Combine(StorageFolderPath, FileNameSettings));
         Settings.BeforeSave += SettingsBeforeSave;
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
@@ -117,10 +112,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _versionCheckResult = VhUtil.JsonDeserializeFile<VersionCheckResult>(VersionCheckFilePath);
         _logVerbose = options.LogVerbose;
         _logAnonymous = options.LogAnonymous;
-        _adLoadTimeout = options.AdLoadTimeout;
-        _showAdPostDelay = options.ShowAdPostDelay;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
+        _adService = new AppAdService(options.AdServices, loadAdTimeout: options.LoadAdTimeout, loadAdPostDelay: options.LoadAdPostDelay , showAdPostDelay: options.ShowAdPostDelay);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
 
@@ -128,8 +122,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         JobSection = new JobSection(new JobOptions
         {
             Interval = options.VersionCheckInterval,
-            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5)
-                ? TimeSpan.FromSeconds(3)
+            DueTime = options.VersionCheckInterval > TimeSpan.FromSeconds(5) 
+                ? TimeSpan.FromSeconds(2) // start immediately
                 : options.VersionCheckInterval,
             Name = "VersionCheck"
         });
@@ -419,7 +413,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // create packet capture
-        var packetCapture = await Device.CreatePacketCapture(UiContext).VhConfigureAwait();
+        var packetCapture = await Device.CreatePacketCapture(ActiveUiContext.Context).VhConfigureAwait();
 
         // init packet capture
         if (packetCapture.IsMtuSupported)
@@ -532,14 +526,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task RequestFeatures(CancellationToken cancellationToken)
     {
         // QuickLaunch
-        if (UiContext != null &&
+        if (ActiveUiContext.Context != null &&
             Services.UiService.IsQuickLaunchSupported &&
             Settings.IsQuickLaunchEnabled is null)
         {
             try
             {
                 Settings.IsQuickLaunchEnabled =
-                    await Services.UiService.RequestQuickLaunch(RequiredUiContext, cancellationToken).VhConfigureAwait();
+                    await Services.UiService.RequestQuickLaunch(ActiveUiContext.RequiredContext, cancellationToken).VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -550,14 +544,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // Notification
-        if (UiContext != null &&
+        if (ActiveUiContext.Context != null &&
             Services.UiService.IsNotificationSupported &&
             Settings.IsNotificationEnabled is null)
         {
             try
             {
                 Settings.IsNotificationEnabled =
-                    await Services.UiService.RequestNotification(RequiredUiContext, cancellationToken).VhConfigureAwait();
+                    await Services.UiService.RequestNotification(ActiveUiContext.RequiredContext, cancellationToken).VhConfigureAwait();
             }
             catch (Exception ex)
             {
@@ -667,67 +661,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
         if (!Services.AdServices.Any()) throw new Exception("AdService has not been initialized.");
-        var countryCode = await GetClientCountryCode();
-
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-        var adServices = Services.AdServices.Where(x =>
-            x.AdType == AppAdType.InterstitialAd && x.IsCountrySupported(countryCode));
-
-        var noFillAdNetworks = new List<string>();
-        foreach (var adService in adServices)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // find first successful ad network
-            try
-            {
-                if (noFillAdNetworks.Contains(adService.NetworkName))
-                    continue;
-
-                using var timeoutCts = new CancellationTokenSource(_adLoadTimeout);
-                using var linkedCts =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                await adService.LoadAd(RequiredUiContext, linkedCts.Token).VhConfigureAwait();
-            }
-            catch (UiContextNotAvailableException)
-            {
-                throw new ShowAdNoUiException();
-            }
-            catch (NoFillAdException)
-            {
-                noFillAdNetworks.Add(adService.NetworkName);
-                continue;
-            }
-            // do not catch if parent cancel the operation
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogWarning(ex, "Could not load any ad. Network: {Network}.", adService.NetworkName);
-                continue;
-            }
-
-
-            // show the ad
-            try
-            {
-                await adService.ShowAd(RequiredUiContext, adData, cancellationToken).VhConfigureAwait();
-                await Task.Delay(_showAdPostDelay, cancellationToken); //wait for finishing trackers
-                if (UiContext == null)
-                    throw new ShowAdNoUiException();
-            }
-            catch (Exception ex)
-            {
-                if (UiContext == null)
-                    throw new ShowAdNoUiException();
-
-                // let's treat unknown error same as LoadException in thi version
-                throw new LoadAdException("Could not show any ad.", ex);
-            }
-
+            await _adService.LoadAd(ActiveUiContext.RequiredContext, await GetClientCountryCode(), forceReload: false, cancellationToken);
+            await _adService.ShowAd(ActiveUiContext.RequiredContext, adData, cancellationToken);
             return adData;
         }
-
-        // could not load any ad
-        throw new LoadAdException($"Could not load any AD. Country: {_appPersistState.ClientCountryName}");
+        catch (UiContextNotAvailableException)
+        {
+            throw new ShowAdNoUiException();
+        }
     }
 
     private void Client_StateChanged(object sender, EventArgs e)
@@ -819,15 +763,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _appPersistState.UpdateIgnoreTime = DateTime.Now;
     }
 
+    private readonly AsyncLock _versionCheckLock = new();
     public async Task VersionCheck(bool force = false)
     {
+        using var lockAsync = await _versionCheckLock.LockAsync().VhConfigureAwait();
         if (!force && _appPersistState.UpdateIgnoreTime + _versionCheckInterval > DateTime.Now)
             return;
 
         // check version by app container
         try
         {
-            if (UiContext != null && Services.UpdaterService != null && await Services.UpdaterService.Update(UiContext).VhConfigureAwait())
+            if (ActiveUiContext.Context != null && Services.UpdaterService != null && 
+                await Services.UpdaterService.Update(ActiveUiContext.RequiredContext).VhConfigureAwait())
             {
                 VersionCheckPostpone();
                 return;

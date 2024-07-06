@@ -1,5 +1,4 @@
-﻿using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Exceptions;
@@ -19,8 +18,7 @@ public class AccessTest : TestBase
     public async Task Foo()
     {
         await Task.Delay(0);
-        Console.WriteLine(await IPAddressUtil.GetPrivateIpAddress(addressFamily: AddressFamily.InterNetworkV6));
-        
+        Console.WriteLine(await IPAddressUtil.GetCountryCodeByCloudflare());
     }
 
     [TestMethod]

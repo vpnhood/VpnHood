@@ -31,6 +31,11 @@ internal class AppSettings : Singleton<AppSettings>
     public string AdMobRewardedAdUnitId { get; init; } = "ca-app-pub-3940256099942544/5224354917";
     public string AdMobAppOpenAdUnitId { get; init; } = "ca-app-pub-3940256099942544/9257395921";
     
+    // Chartboost
+    public string ChartboostAppId { get; init; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
+    public string ChartboostAppSignature { get; init; } = "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+    public string ChartboostAdLocation { get; init; } = "YOUR_CHARTBOOST_AD_LOCATION";
+    
     public static AppSettings Create()
     {
         var appSettingsJson = VhUtil.GetAssemblyMetadata(typeof(AppSettings).Assembly, "AppSettings", "");

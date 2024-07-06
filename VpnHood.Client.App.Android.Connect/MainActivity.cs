@@ -36,6 +36,6 @@ public class MainActivity : AndroidAppMainActivity
     {
         base.OnCreate(savedInstanceState);
         
-        _ = AdMobUtil.Initialize(this);
+        _ = AdMobUtil.Initialize(this, CancellationToken.None);
     }
 }

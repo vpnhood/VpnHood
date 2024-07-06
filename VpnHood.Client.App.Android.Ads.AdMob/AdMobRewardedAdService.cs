@@ -39,7 +39,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
 
         // initialize
-        await AdMobUtil.Initialize(activity);
+        await AdMobUtil.Initialize(activity, cancellationToken);
 
         // reset the last loaded ad
         AdLoadedTime = null;

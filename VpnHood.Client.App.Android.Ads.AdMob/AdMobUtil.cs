@@ -11,9 +11,9 @@ public class AdMobUtil
     private static readonly AsyncLock InitLock = new();
     public static bool IsInitialized { get; private set; }
     public static TimeSpan DefaultAdTimeSpan { get; } = TimeSpan.FromMinutes(45);
-    public static async Task Initialize(Context context)
+    public static async Task Initialize(Context context, CancellationToken cancellationToken)
     {
-        using var lockAsync = await InitLock.LockAsync();
+        using var lockAsync = await InitLock.LockAsync(cancellationToken);
         if (IsInitialized)
             return;
 

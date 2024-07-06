@@ -13,11 +13,13 @@ public class AndroidAppMainActivityHandler
 {
     private readonly string[] _accessKeySchemes;
     private readonly string[] _accessKeyMimes;
+    private readonly bool _preloadAd;
     protected IActivityEvent ActivityEvent { get; }
 
     public AndroidAppMainActivityHandler(IActivityEvent activityEvent, AndroidMainActivityOptions options)
     {
         ActivityEvent = activityEvent;
+        _preloadAd = options.PreloadAd;
         _accessKeySchemes = options.AccessKeySchemes;
         _accessKeyMimes = options.AccessKeyMimes;
 
@@ -33,6 +35,10 @@ public class AndroidAppMainActivityHandler
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
         ActiveUiContext.Context = new AndroidUiContext(ActivityEvent);
+
+        // preload ad
+        if (_preloadAd && VpnHoodApp.Instance.IsIdle)
+            _ = VpnHoodApp.Instance.LoadAd(ActiveUiContext.Context, CancellationToken.None);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);

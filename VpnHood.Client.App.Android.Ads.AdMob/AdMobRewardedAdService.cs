@@ -47,8 +47,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
 
         var adLoadCallback = new MyRewardedAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        //todo check RunOnUiThread
-        activity.RunOnUiThread(() => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback));
+        RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback);
 
         var cancellationTask = new TaskCompletionSource();
         cancellationToken.Register(cancellationTask.SetResult);

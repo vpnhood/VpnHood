@@ -3,8 +3,8 @@ namespace Ga4.Trackers;
 
 public interface ITracker
 {
-    public bool IsEnabled { get; set; }
-    public Task Track(IEnumerable<TrackEvent> trackEvents, Dictionary<string, object>? userProperties = null);
-    public Task Track(TrackEvent trackEvent, Dictionary<string, object>? userProperties = null) => Track([trackEvent], userProperties);
-    public Task TrackError(string action, Exception ex);
+    bool IsEnabled { get; set; }
+    Task Track(IEnumerable<TrackEvent> trackEvents);
+    Task Track(TrackEvent trackEvents);
+    Task TrackError(string action, Exception ex);
 }

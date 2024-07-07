@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers;
+using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.Abstractions;
@@ -13,6 +14,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
@@ -43,7 +45,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
     private readonly ITracker? _tracker;
-    private readonly string? _appGa4MeasurementId;
     private IPAddress[] _dnsServersIpV4 = [];
     private IPAddress[] _dnsServersIpV6 = [];
     private IPAddress[] _dnsServers = [];
@@ -113,7 +114,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
-        _appGa4MeasurementId = options.AppGa4MeasurementId;
+        _tracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
@@ -682,31 +683,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 // Anonymous server usage tracker
                 if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
                 {
-                    var ga4Tracking = new Ga4Tracker
+                    var ga4Tracking = new Ga4TagTracker()
                     {
                         SessionCount = 1,
                         MeasurementId = sessionResponse.GaMeasurementId,
-                        ApiSecret = string.Empty,
                         ClientId = ClientId.ToString(),
                         SessionId = SessionId.ToString(),
-                        UserAgent = UserAgent
+                        UserAgent = UserAgent,
+                        UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
                     };
 
-                    var useProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } };
-                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEventNames.SessionStart }, useProperties);
+                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart });
                 }
 
                 // Anonymous app usage tracker
-                if (!string.IsNullOrEmpty(_appGa4MeasurementId))
-                    _clientUsageTracker = new ClientUsageTracker(Stat, Version, new Ga4Tracker
-                    {
-                        MeasurementId = _appGa4MeasurementId,
-                        SessionCount = 1,
-                        ApiSecret = string.Empty,
-                        ClientId = ClientId.ToString(),
-                        SessionId = SessionId.ToString(),
-                        UserAgent = UserAgent
-                    });
+                if (_tracker != null)
+                    _clientUsageTracker = new ClientUsageTracker(Stat, _tracker);
             }
 
             // get session id

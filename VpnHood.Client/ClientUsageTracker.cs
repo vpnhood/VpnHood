@@ -16,14 +16,13 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
     private bool _disposed;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(25));
 
-    public ClientUsageTracker(VpnHoodClient.ClientStat clientStat, Version version, ITracker tracker)
+    public ClientUsageTracker(VpnHoodClient.ClientStat clientStat, ITracker tracker)
     {
         _clientStat = clientStat;
         _tracker = tracker;
         JobRunner.Default.Add(this);
 
-        var useProperties = new Dictionary<string, object> { { "client_version", version.ToString(3) } };
-        _ = tracker.Track(new TrackEvent { EventName = "session_start" }, useProperties);
+        _ = tracker.Track(new TrackEvent { EventName = "VpnConnected" });
     }
 
     public Task RunJob()

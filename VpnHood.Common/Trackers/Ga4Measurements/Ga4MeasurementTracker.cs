@@ -1,7 +1,7 @@
 ﻿// ReSharper disable once CheckNamespace
 namespace Ga4.Trackers.Ga4Measurements;
 
-public class Ga4MeasurementTracker : Ga4TrackerBase, IGa4MeasurementTracker
+public class Ga4MeasurementTracker : TrackerBase, IGa4MeasurementTracker
 {
     public required string ApiSecret { get; init; }
     public bool IsDebugEndPoint { get; set; }
@@ -12,11 +12,14 @@ public class Ga4MeasurementTracker : Ga4TrackerBase, IGa4MeasurementTracker
         return Track(tracks);
     }
 
-    public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events, Dictionary<string, object>? userProperties = null)
+    public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events)
     {
-        if (!IsEnabled) return Task.CompletedTask;
+        if (!IsEnabled) 
+            return Task.CompletedTask;
+
         var gaEventArray = ga4Events.Select(x => (Ga4MeasurementEvent)x.Clone()).ToArray();
-        if (!gaEventArray.Any()) throw new ArgumentException("Events can not be empty! ", nameof(ga4Events));
+        if (!gaEventArray.Any()) 
+            throw new ArgumentException("Events can not be empty! ", nameof(ga4Events));
 
         // updating events by default values
         foreach (var ga4Event in gaEventArray)
@@ -34,7 +37,7 @@ public class Ga4MeasurementTracker : Ga4TrackerBase, IGa4MeasurementTracker
             ClientId = ClientId,
             UserId = UserId,
             Events = gaEventArray,
-            UserProperties = userProperties != null && userProperties.Any() ? userProperties.ToDictionary(p => p.Key, p => new Ga4MeasurementPayload.UserProperty { Value = p.Value }) : null
+            UserProperties = UserProperties.Any() ? UserProperties.ToDictionary(p => p.Key, p => new Ga4MeasurementPayload.UserProperty { Value = p.Value }) : null
         };
 
         var baseUri = IsDebugEndPoint ? new Uri("https://www.google-analytics.com/debug/mp/collect") : new Uri("https://www.google-analytics.com/mp/collect");
@@ -43,7 +46,7 @@ public class Ga4MeasurementTracker : Ga4TrackerBase, IGa4MeasurementTracker
         return SendHttpRequest(requestMessage, "Measurement", ga4Payload);
     }
 
-    public override Task Track(IEnumerable<TrackEvent> trackEvents, Dictionary<string, object>? userProperties = null)
+    public override Task Track(IEnumerable<TrackEvent> trackEvents)
     {
         var ga4MeasurementEvents = trackEvents.Select(x =>
             new Ga4MeasurementEvent
@@ -52,6 +55,6 @@ public class Ga4MeasurementTracker : Ga4TrackerBase, IGa4MeasurementTracker
                 Parameters = x.Parameters
             });
 
-        return Track(ga4MeasurementEvents, userProperties);
+        return Track(ga4MeasurementEvents);
     }
 }

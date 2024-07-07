@@ -74,6 +74,11 @@ public class ServerApp : IDisposable
         _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
 
+        // create access server
+        AccessManager = AppSettings.HttpAccessManager != null
+            ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
+            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
+
         // tracker
         var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
         _tracker = new Ga4TagTracker
@@ -83,13 +88,12 @@ public class ServerApp : IDisposable
             SessionCount = 1,
             ClientId = anonyClientId,
             SessionId = Guid.NewGuid().ToString(),
-            IsEnabled = AppSettings.AllowAnonymousTracker
+            IsEnabled = AppSettings.AllowAnonymousTracker,
+            UserProperties = new Dictionary<string, object>
+            {
+                { "server_version", VpnHoodServer.ServerVersion },
+                { "access_manager", AccessManager.GetType().Name } }
         };
-
-        // create access server
-        AccessManager = AppSettings.HttpAccessManager != null
-            ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
-            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
     }
 
     private void InitFileLogger(string storagePath)
@@ -122,7 +126,6 @@ public class ServerApp : IDisposable
             _vpnHoodServer.Dispose();
         }
     }
-
     public static Guid GetServerId(string serverIdFile)
     {
         if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))

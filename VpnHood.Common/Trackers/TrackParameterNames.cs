@@ -1,7 +1,7 @@
 ﻿// ReSharper disable once CheckNamespace
-namespace Ga4.Trackers.Ga4Tags;
+namespace VpnHood.Common.Trackers;
 
-public class Ga4TagPropertyNames
+public class TrackParameterNames
 {
     public const string PageLocation = "page_location";
     public const string PageTitle = "page_title";

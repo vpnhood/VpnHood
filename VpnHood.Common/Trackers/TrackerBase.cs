@@ -5,7 +5,7 @@ using System.Text.Json;
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers;
 
-public abstract class Ga4TrackerBase : ITracker
+public abstract class TrackerBase : ITracker
 {
     private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
     private static HttpClient HttpClient => HttpClientLazy.Value;
@@ -22,6 +22,7 @@ public abstract class Ga4TrackerBase : ITracker
     public Dictionary<string, object> UserProperties { get; set; } = new();
 
     public abstract Task Track(IEnumerable<TrackEvent> trackEvents);
+    public Task Track(TrackEvent trackEvents) => Track([trackEvents]);
 
     public Task TrackError(string action, Exception ex)
     {
@@ -48,6 +49,9 @@ public abstract class Ga4TrackerBase : ITracker
 
     protected async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData = null)
     {
+        if (!IsEnabled)
+            return;
+
         try
         {
             // log

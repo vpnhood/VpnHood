@@ -71,6 +71,7 @@ public class ActivityEvent : Activity, IActivityEvent
     }
 
 
+    //todo: implement these events
     //protected override void OnResume()
     //{
     //    base.OnResume();

@@ -3,12 +3,12 @@ using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using VpnHood.Common.Utils;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Ga4Tracking;
 
-public class Ga4Tracker
+public class Ga4Tracker : IGa4TagTracker, IGa4MeasurementTracker
 {
     private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
     private static HttpClient HttpClient => HttpClientLazy.Value;
@@ -25,6 +25,9 @@ public class Ga4Tracker
     public bool IsAdminDebugView { get; set; }
     public bool IsLogEnabled => IsDebugEndPoint || IsAdminDebugView;
     public bool? IsMobile { get; init; } // GTag only
+    public ILogger? Logger { get; set; }
+    public EventId LoggerEventId { get; set; } = new (0, "Ga4Tracker");
+
 
 
     // private static string GetPlatform()
@@ -40,6 +43,22 @@ public class Ga4Tracker
     //
     //    return "Unknown";
     // }
+
+    public void UseSimpleLogger(bool singleLine = false)
+    {
+        using var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.AddSimpleConsole(configure =>
+            {
+                // ReSharper disable once StringLiteralTypo
+                configure.TimestampFormat = "[HH:mm:ss.ffff] ";
+                configure.IncludeScopes = false;
+                configure.SingleLine = singleLine;
+            });
+        });
+
+        Logger = loggerFactory.CreateLogger("");
+    }
 
     private void PrepareHttpHeaders(HttpHeaders httpHeaders)
     {
@@ -115,7 +134,7 @@ public class Ga4Tracker
         if (UserId != null) parameters.Add(("uid", UserId));
         if (ga4Event.DocumentLocation != null) parameters.Add(("dl", ga4Event.DocumentLocation)); // Document Location, Actual page's Pathname. It does not include the hostname, query String or Fragment. document.location.pathname. eg: "https://localhost"
         if (ga4Event.DocumentTitle != null) parameters.Add(("dt", ga4Event.DocumentTitle)); // Document Title, Actual page's Title, document.title. eg: "My page title"
-        if (ga4Event.DocumentReferrer!= null) parameters.Add(("dr", ga4Event.DocumentReferrer)); // Document Referrer, Actual page's Referrer, document.referrer. eg: "https://www.google.com"
+        if (ga4Event.DocumentReferrer != null) parameters.Add(("dr", ga4Event.DocumentReferrer)); // Document Referrer, Actual page's Referrer, document.referrer. eg: "https://www.google.com"
         if (ga4Event.IsFirstVisit) parameters.Add(("_fv", 1)); // first visit,  if the "_ga_THYNGSTER" cookie is not set, the first event will have this value present. This will internally create a new "first_visit" event on GA4. If this event is also a conversion the value will be "2" if not, will be "1"
 
         // It's the total engagement time in milliseconds since the last event.
@@ -207,32 +226,35 @@ public class Ga4Tracker
         {
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync($"* Sending {name}...").VhConfigureAwait();
-                await Console.Out.WriteLineAsync($"Url: {requestMessage.RequestUri}").VhConfigureAwait();
-                await Console.Out.WriteLineAsync(
-                    $"Headers: {JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true })}").VhConfigureAwait();
+                Logger?.LogInformation(LoggerEventId,
+                    "Sending Ga4Track: {name}, Url: {Url},  Headers: {Headers}",
+                    name, requestMessage.RequestUri, JsonSerializer.Serialize(requestMessage.Headers, new JsonSerializerOptions { WriteIndented = true }));
             }
 
             if (jsonData != null)
             {
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(jsonData));
                 requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                await Console.Out.WriteLineAsync(
-                    $"Data: {JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true })}").VhConfigureAwait();
+
+                if (IsLogEnabled)
+                {
+                    var data = JsonSerializer.Serialize(jsonData, new JsonSerializerOptions { WriteIndented = true });
+                    Logger?.LogInformation(LoggerEventId, "Ga4Track Data: {Data}", data);
+                }
             }
 
-            var res = await HttpClient.SendAsync(requestMessage).VhConfigureAwait();
+            var res = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
             if (IsLogEnabled)
             {
-                await Console.Out.WriteLineAsync("Result: ").VhConfigureAwait();
-                await Console.Out.WriteLineAsync(await res.Content.ReadAsStringAsync()).VhConfigureAwait();
+                var result = await res.Content.ReadAsStringAsync();
+                Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {Rrsult}", result);
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Logger?.LogError(LoggerEventId, ex, "Ga4Track could not send its track");
             if (IsDebugEndPoint)
                 throw;
         }
     }
-
 }

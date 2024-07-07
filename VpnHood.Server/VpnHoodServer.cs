@@ -365,7 +365,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
         return SessionManager.GaTracker.Track(new Ga4TagEvent
         {
-            EventName = Ga4TagEvents.SessionStart,
+            EventName = Ga4TagEventNames.SessionStart,
             Properties = new Dictionary<string, object>
             {
                 { "access_manager", AccessManager.GetType().Name }

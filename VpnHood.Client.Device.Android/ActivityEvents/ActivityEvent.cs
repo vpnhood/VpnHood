@@ -70,6 +70,21 @@ public class ActivityEvent : Activity, IActivityEvent
         base.OnActivityResult(requestCode, resultCode, data);
     }
 
+
+    //protected override void OnResume()
+    //{
+    //    base.OnResume();
+    //    ResumeEvent?.Invoke(this, EventArgs.Empty);
+    //}
+
+    //protected override void OnPause()
+    //{
+    //    PauseEvent?.Invoke(this, EventArgs.Empty);
+    //    base.OnPause();
+    //}
+
+
+
     protected override void OnDestroy()
     {
         DestroyEvent?.Invoke(this, EventArgs.Empty);

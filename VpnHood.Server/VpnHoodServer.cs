@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Ga4.Trackers;
-using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
@@ -12,6 +11,7 @@ using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
@@ -358,20 +358,14 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             return Task.CompletedTask;
 
         // track
-        var useProperties = new Dictionary<string, object>
-        {
-            { "server_version", ServerVersion },
-            { "access_manager", AccessManager.GetType().Name }
-        };
-
         return SessionManager.Tracker.Track(new TrackEvent
         {
-            EventName = Ga4TagEventNames.SessionStart,
+            EventName = TrackEventNames.SessionStart,
             Parameters = new Dictionary<string, object>
             {
                 { "access_manager", AccessManager.GetType().Name }
             }
-        }, useProperties);
+        });
     }
 
     public void Dispose()

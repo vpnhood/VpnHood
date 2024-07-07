@@ -1,12 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using Ga4.Trackers;
-using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
@@ -154,13 +154,13 @@ public class SessionManager : IAsyncDisposable, IJob
         var serverVersion = ServerVersion.ToString(3);
         return Tracker.Track([new TrackEvent
         {
-            EventName = Ga4TagEventNames.PageView,
+            EventName = TrackEventNames.PageView,
             Parameters = new Dictionary<string, object>
             {
                 { "client_version", clientInfo.ClientVersion },
                 { "server_version", serverVersion },
-                { Ga4TagPropertyNames.PageTitle, $"server_version/{serverVersion}" },
-                { Ga4TagPropertyNames.PageLocation, $"server_version/{serverVersion}" }
+                { TrackParameterNames.PageTitle, $"server_version/{serverVersion}" },
+                { TrackParameterNames.PageLocation, $"server_version/{serverVersion}" }
             }
         }]);
     }

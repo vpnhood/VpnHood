@@ -50,7 +50,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = CreateAppAccountService(appSettings, storageFolderPath),
             AdServices = [
-                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation, true),
+                //todo: change order
+                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
             ],

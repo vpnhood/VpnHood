@@ -2,6 +2,8 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
+using Ga4.Trackers;
+using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
@@ -19,6 +21,7 @@ using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -64,7 +67,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private UserSettings _oldUserSettings;
     private readonly bool _autoDiagnose;
     private readonly AppInternalAdService? _internalAdService;
-
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -89,12 +91,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private VpnHoodApp(IDevice device, AppOptions? options = default)
     {
         options ??= new AppOptions();
+        device.StartedAsService += DeviceOnStartedAsService;
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
 
-        Device = device;
-        device.StartedAsService += DeviceOnStartedAsService;
+        if (!string.IsNullOrEmpty(options.AppGa4MeasurementId) && options.Tracker != null)
+            throw new InvalidOperationException($"{nameof(options.Tracker)} and {nameof(options.AppGa4MeasurementId)} can not be set together in AppOptions.");
 
+        Device = device;
         StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
         Settings = AppSettings.Load(Path.Combine(StorageFolderPath, FileNameSettings));
         Settings.BeforeSave += SettingsBeforeSave;
@@ -165,6 +169,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAlwaysOnSupported = device.IsAlwaysOnSupported
         };
 
+        // Init tracker
+        if (options.Tracker != null)
+            options.Tracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
+
         // initialize services
         Services = new AppServices
         {
@@ -172,7 +180,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AdServices = options.AdServices,
             AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
-            UiService = uiService
+            UiService = uiService,
+            Tracker = options.Tracker,
         };
 
         // Clear last update status if version has changed
@@ -184,7 +193,30 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // initialize
         InitCulture();
+
         JobRunner.Default.Add(this);
+    }
+
+    private ITracker CreateBuildInTracker(string? userAgent)
+    {
+        if (string.IsNullOrEmpty(_appGa4MeasurementId))
+            throw new InvalidOperationException("AppGa4MeasurementId is required to create a built-in tracker.");
+
+        var tracker = new Ga4TagTracker
+        {
+            MeasurementId = _appGa4MeasurementId,
+            SessionCount = 1,
+            ClientId = Settings.ClientId.ToString(),
+            SessionId = Guid.NewGuid().ToString(),
+            UserProperties = new Dictionary<string, object> { { "client_version", Features.Version.ToString(3) } }
+        };
+
+        if (!string.IsNullOrEmpty(userAgent))
+            tracker.UserAgent = userAgent;
+
+        _ = tracker.Track(new TrackEvent { EventName = TrackEventNames.SessionStart });
+
+        return tracker;
     }
 
     private void ActiveUiContext_OnChanged(object sender, EventArgs e)
@@ -323,6 +355,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // disconnect current connection
         if (!IsIdle)
             await Disconnect(true).VhConfigureAwait();
+
+        // initialize built-in tracker
+        if (Services.Tracker == null && UserSettings.AllowAnonymousTracker && !string.IsNullOrEmpty(_appGa4MeasurementId))
+            Services.Tracker = CreateBuildInTracker(userAgent);
+
+        if (Services.Tracker != null)
+            Services.Tracker.IsEnabled = !UserSettings.AllowAnonymousTracker;
 
         // request features for the first time
         await RequestFeatures(cancellationToken).VhConfigureAwait();
@@ -468,7 +507,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ServerQueryTimeout = _serverQueryTimeout,
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
-            AppGa4MeasurementId = _appGa4MeasurementId,
             ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
@@ -478,6 +516,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
+
 
         // Create Client with a new PacketCapture
         if (_client != null) throw new Exception("Last client has not been disposed properly.");
@@ -682,7 +721,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        if (_internalAdService == null) 
+        if (_internalAdService == null)
             throw new Exception("AdService has not been initialized.");
 
         var countryCode = await GetClientCountryCode(cancellationToken);
@@ -691,7 +730,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async Task<string> ShowAd(string sessionId, CancellationToken cancellationToken)
     {
-        if (_internalAdService == null) 
+        if (_internalAdService == null)
             throw new Exception("AdService has not been initialized.");
 
         var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";

@@ -5,16 +5,17 @@ using System.Text.RegularExpressions;
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers.Ga4Tags;
 
-public class Ga4TagTracker : Ga4TrackerBase, IGa4TagTracker
+public class Ga4TagTracker : TrackerBase, IGa4TagTracker
 {
     public required int SessionCount { get; set; } = 1;
     public bool? IsMobile { get; init; }
 
-    public Task Track(Ga4TagEvent ga4Event, Dictionary<string, object>? userProperties = null)
+    public Task Track(Ga4TagEvent ga4Event)
     {
-        if (!IsEnabled) return Task.CompletedTask;
+        if (!IsEnabled) 
+            return Task.CompletedTask;
+
         var isMobile = IsMobile ?? CheckIsMobileByUserAgent(UserAgent);
-        userProperties ??= new Dictionary<string, object>();
 
         // ReSharper disable StringLiteralTypo
         var parameters = new List<(string, object)>
@@ -72,7 +73,7 @@ public class Ga4TagTracker : Ga4TrackerBase, IGa4TagTracker
         if (IsAdminDebugView) parameters.Add(("_dbg", 1)); // Analytics debug view
 
         // add user Properties
-        foreach (var userProperty in userProperties)
+        foreach (var userProperty in UserProperties)
         {
             var propName = userProperty.Value is int or long ? "upn" : "up";
             propName += "." + userProperty.Key;
@@ -97,13 +98,13 @@ public class Ga4TagTracker : Ga4TrackerBase, IGa4TagTracker
         return SendHttpRequest(requestMessage, "GTag");
     }
 
-    public async Task Track(IEnumerable<Ga4TagEvent> ga4Events, Dictionary<string, object>? userProperties = null)
+    public async Task Track(IEnumerable<Ga4TagEvent> ga4Events)
     {
         foreach (var ga4TagEvent in ga4Events)
-            await Track(ga4TagEvent, userProperties).ConfigureAwait(false);
+            await Track(ga4TagEvent).ConfigureAwait(false);
     }
 
-    public override Task Track(IEnumerable<TrackEvent> trackEvents, Dictionary<string, object>? userProperties = null)
+    public override Task Track(IEnumerable<TrackEvent> trackEvents)
     {
         var ga4TagEvents = trackEvents.Select(x =>
             new Ga4TagEvent
@@ -112,7 +113,7 @@ public class Ga4TagTracker : Ga4TrackerBase, IGa4TagTracker
                 Properties = x.Parameters
             });
 
-        return Track(ga4TagEvents, userProperties);
+        return Track(ga4TagEvents);
     }
 
     private static bool CheckIsMobileByUserAgent(string? userAgent)

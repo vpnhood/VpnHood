@@ -1,7 +1,7 @@
 ﻿// ReSharper disable once CheckNamespace
-namespace Ga4.Trackers.Ga4Tags;
+namespace VpnHood.Common.Trackers;
 
-public class Ga4TagEventNames
+public class TrackEventNames
 {
     public const string SessionStart = "session_start";
     public const string PageView = "page_view";

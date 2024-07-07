@@ -1,5 +1,5 @@
 ﻿// ReSharper disable once CheckNamespace
-namespace Ga4.Ga4Tracking;
+namespace Ga4.Trackers;
 
 public class TrackEvent
 {

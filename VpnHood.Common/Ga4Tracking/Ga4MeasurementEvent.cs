@@ -6,7 +6,7 @@ namespace Ga4.Ga4Tracking;
 public class Ga4MeasurementEvent : ICloneable
 {
     [JsonPropertyName("name")]
-    public required string Name { get; init; }
+    public required string EventName { get; init; }
 
     [JsonPropertyName("params")]
     public Dictionary<string, object> Parameters { get; set; } = new();
@@ -15,7 +15,7 @@ public class Ga4MeasurementEvent : ICloneable
     {
         var ret = new Ga4MeasurementEvent
         {
-            Name = Name,
+            EventName = EventName,
             Parameters = new Dictionary<string, object>(Parameters, StringComparer.OrdinalIgnoreCase)
         };
 

@@ -3,7 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers;
+using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
@@ -53,7 +54,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         SessionManager = new SessionManager(accessManager,
             options.NetFilter,
             options.SocketFactory,
-            options.GaTracker,
+            options.Tracker,
             ServerVersion,
             new SessionManagerOptions{ CleanupInterval = options.CleanupInterval });
 
@@ -190,7 +191,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             if (ex is SocketException socketException)
                 _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
 
-            _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
+            _ = SessionManager.Tracker?.TrackError("configure", ex);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
         }
@@ -353,7 +354,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
     private Task GaTrackStart()
     {
-        if (SessionManager.GaTracker == null)
+        if (SessionManager.Tracker == null)
             return Task.CompletedTask;
 
         // track
@@ -363,10 +364,10 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             { "access_manager", AccessManager.GetType().Name }
         };
 
-        return SessionManager.GaTracker.Track(new Ga4TagEvent
+        return SessionManager.Tracker.Track(new TrackEvent
         {
             EventName = Ga4TagEventNames.SessionStart,
-            Properties = new Dictionary<string, object>
+            Parameters = new Dictionary<string, object>
             {
                 { "access_manager", AccessManager.GetType().Name }
             }

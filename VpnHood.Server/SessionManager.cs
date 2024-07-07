@@ -153,13 +153,13 @@ public class SessionManager : IAsyncDisposable, IJob
         var serverVersion = ServerVersion.ToString(3);
         return GaTracker.Track(new Ga4TagEvent
         {
-            EventName = Ga4TagEvents.PageView,
+            EventName = Ga4TagEventNames.PageView,
             Properties = new Dictionary<string, object>
             {
                 { "client_version", clientInfo.ClientVersion },
                 { "server_version", serverVersion },
-                { Ga4TagProperties.PageTitle, $"server_version/{serverVersion}" },
-                { Ga4TagProperties.PageLocation, $"server_version/{serverVersion}" }
+                { Ga4TagPropertyNames.PageTitle, $"server_version/{serverVersion}" },
+                { Ga4TagPropertyNames.PageLocation, $"server_version/{serverVersion}" }
             }
         });
     }

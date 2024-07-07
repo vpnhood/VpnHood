@@ -12,6 +12,9 @@ public class ActiveUiContext : IUiContext
         get => _context;
         set
         {
+            if (_context == value)
+                return;
+
             _context = value;
             OnChanged?.Invoke(null, EventArgs.Empty);
         }

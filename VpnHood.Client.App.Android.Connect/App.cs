@@ -15,21 +15,23 @@ namespace VpnHood.Client.App.Droid.Connect;
     Label = "@string/app_name",
     Icon = "@mipmap/appicon",
     Banner = "@mipmap/banner", // for TV
-    NetworkSecurityConfig = "@xml/network_security_config",  // required for localhost
+    NetworkSecurityConfig = "@xml/network_security_config", // required for localhost
     SupportsRtl = true, AllowBackup = true)]
-
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppSettings.AdMobApplicationId)]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION", Value = "true")]
 [MetaData("com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING", Value = "true")]
-
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
     protected override AppOptions CreateAppOptions()
     {
         // initialize Firebase services
-        try { FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
-        try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true); } catch { /* ignored */ }
+        try
+        {
+            var analytics = FirebaseAnalytics.GetInstance(this);
+            analytics.SetUserId("");
+        }catch { /* ignored*/ }
+        try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true); }catch { /* ignored */ }
 
         // load app settings and resources
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
@@ -37,7 +39,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var resources = DefaultAppResource.Resource;
         resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
         resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
-        
+
         return new AppOptions
         {
             StorageFolderPath = storageFolderPath,
@@ -49,8 +51,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = CreateAppAccountService(appSettings, storageFolderPath),
-            AdServices = [
-                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation, true),
+            AdServices =
+            [
+                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature,
+                    appSettings.ChartboostAdLocation, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
             ],
@@ -68,9 +72,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         try
         {
             var googlePlayAuthenticationService = new GooglePlayAuthenticationService(appSettings.GoogleSignInClientId);
-            var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri, appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
+            var authenticationService = new StoreAuthenticationService(storageFolderPath, appSettings.StoreBaseUri,
+                appSettings.StoreAppId, googlePlayAuthenticationService, appSettings.StoreIgnoreSslVerification);
             var googlePlayBillingService = new GooglePlayBillingService(authenticationService);
-            var accountService = new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
+            var accountService =
+                new StoreAccountService(authenticationService, googlePlayBillingService, appSettings.StoreAppId);
             return accountService;
         }
         catch (Exception)
@@ -80,4 +86,3 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
     }
 }
-

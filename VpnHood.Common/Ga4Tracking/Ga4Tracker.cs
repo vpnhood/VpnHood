@@ -8,6 +8,23 @@ using Microsoft.Extensions.Logging;
 // ReSharper disable once CheckNamespace
 namespace Ga4.Ga4Tracking;
 
+public abstract class Ga4TrackerBase : ITracker
+{
+
+}
+
+public class Ga4MeasurementTracker : Ga4TrackerBase
+{
+
+}
+
+public class Ga4TagTracker : Ga4TrackerBase
+{
+
+}
+
+
+
 public class Ga4Tracker : IGa4TagTracker, IGa4MeasurementTracker
 {
     private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
@@ -26,7 +43,7 @@ public class Ga4Tracker : IGa4TagTracker, IGa4MeasurementTracker
     public bool IsLogEnabled => IsDebugEndPoint || IsAdminDebugView;
     public bool? IsMobile { get; init; } // GTag only
     public ILogger? Logger { get; set; }
-    public EventId LoggerEventId { get; set; } = new (0, "Ga4Tracker");
+    public EventId LoggerEventId { get; set; } = new(0, "Ga4Tracker");
 
 
 
@@ -169,6 +186,12 @@ public class Ga4Tracker : IGa4TagTracker, IGa4MeasurementTracker
         return SendHttpRequest(requestMessage, "GTag");
     }
 
+    public async Task Track(IEnumerable<Ga4TagEvent> ga4Events, Dictionary<string, object>? userProperties = null)
+    {
+        foreach (var ga4TagEvent in ga4Events)
+            await Track(ga4TagEvent, userProperties).ConfigureAwait(false);
+    }
+
     public Task Track(Ga4MeasurementEvent ga4Event)
     {
         var tracks = new[] { ga4Event };
@@ -204,8 +227,39 @@ public class Ga4Tracker : IGa4TagTracker, IGa4MeasurementTracker
         var requestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, $"?api_secret={ApiSecret}&measurement_id={MeasurementId}"));
         PrepareHttpHeaders(requestMessage.Headers);
         return SendHttpRequest(requestMessage, "Measurement", ga4Payload);
-
     }
+
+    public virtual Task Track(IEnumerable<TrackEvent> trackEvents, Dictionary<string, object>? userProperties = null)
+    {
+        return UseGa4TagAsDefault 
+            ? TrackByTag(trackEvents, userProperties) 
+            : TrackByMeasurement(trackEvents, userProperties);
+    }
+
+    private Task TrackByTag(IEnumerable<TrackEvent> trackEvents, Dictionary<string, object>? userProperties = null)
+    {
+        var ga4TagEvents = trackEvents.Select(x =>
+            new Ga4TagEvent
+            {
+                EventName = x.EventName,
+                Properties = x.Parameters
+            });
+
+        return Track(ga4TagEvents, userProperties);
+    }
+
+    private Task TrackByMeasurement(IEnumerable<TrackEvent> trackEvents, Dictionary<string, object>? userProperties = null)
+    {
+        var ga4MeasurementEvents = trackEvents.Select(x =>
+            new Ga4MeasurementEvent
+            {
+                EventName = x.EventName,
+                Parameters = x.Parameters
+            });
+
+        return Track(ga4MeasurementEvents, userProperties);
+    }
+
 
     public Task TrackErrorByTag(string action, string msg)
     {
@@ -246,7 +300,7 @@ public class Ga4Tracker : IGa4TagTracker, IGa4MeasurementTracker
             var res = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
             if (IsLogEnabled)
             {
-                var result = await res.Content.ReadAsStringAsync();
+                var result = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {Rrsult}", result);
             }
         }

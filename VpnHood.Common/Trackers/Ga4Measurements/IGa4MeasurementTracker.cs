@@ -1,8 +1,7 @@
 ﻿// ReSharper disable once CheckNamespace
-namespace Ga4.Ga4Tracking;
+namespace Ga4.Trackers.Ga4Measurements;
 
-public interface IGa4MeasurementTracker
+public interface IGa4MeasurementTracker : ITracker
 {
-    public bool IsEnabled { get; set; }
     public Task Track(IEnumerable<Ga4MeasurementEvent> ga4Events, Dictionary<string, object>? userProperties = null);
 }

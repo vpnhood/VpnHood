@@ -1,4 +1,4 @@
-﻿using Ga4.Ga4Tracking;
+﻿using Ga4.Trackers;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -23,7 +23,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         JobRunner.Default.Add(this);
 
         var useProperties = new Dictionary<string, object> { { "client_version", version.ToString(3) } };
-        _ = tracker.Track(new TrackEvent { EventName = Ga4TagEventNames.SessionStart }, useProperties);
+        _ = tracker.Track(new TrackEvent { EventName = "session_start" }, useProperties);
     }
 
     public Task RunJob()
@@ -56,7 +56,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
             }
         };
 
-        await _tracker.Track(trackEvent).VhConfigureAwait();
+        await _tracker.Track([trackEvent]).VhConfigureAwait();
         _lastTraffic = traffic;
         _lastRequestCount = requestCount;
         _lastConnectionCount = connectionCount;

@@ -439,4 +439,15 @@ public static class VhUtil
             return false;
         }
     }
+
+    public static void Shuffle<T>(T[] array)
+    {
+        var rng = new Random();
+        var n = array.Length;
+        for (var i = n - 1; i > 0; i--)
+        {
+            var j = rng.Next(i + 1);
+            (array[i], array[j]) = (array[j], array[i]);
+        }
+    }
 }

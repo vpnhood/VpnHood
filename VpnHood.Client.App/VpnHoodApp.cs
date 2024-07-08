@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.IO.Compression;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
@@ -189,7 +190,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // Apply settings but no error on start up
-        try { ApplySettings(); } catch (Exception ex) { VhLogger.Instance.LogError(ex, "Could not apply settings"); }
+        ApplySettings();
         
         // schedule job
         JobRunner.Default.Add(this);
@@ -197,44 +198,51 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ApplySettings()
     {
-        var state = State;
-        var client = _client; // it may be null
-        var disconnectRequired = false;
-        if (client != null)
+        try
         {
-            client.UseUdpChannel = UserSettings.UseUdpChannel;
-            client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
+            var state = State;
+            var client = _client; // it may be null
+            var disconnectRequired = false;
+            if (client != null)
+            {
+                client.UseUdpChannel = UserSettings.UseUdpChannel;
+                client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
 
-            // check is disconnect required
-            disconnectRequired =
-                (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
-                (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
-                (_activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
-                (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
+                // check is disconnect required
+                disconnectRequired =
+                    (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
+                    (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
+                    (_activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
+                    (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
+            }
+
+            // Enable trackers
+            if (Services.Tracker != null)
+                Services.Tracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
+
+            //lets refresh clientProfile
+            _currentClientProfile = null;
+
+            // set ServerLocation to null if the item is SameAsGlobalAuto
+            if (UserSettings.ServerLocation != null &&
+                CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.IsDefault == true)
+                UserSettings.ServerLocation = null;
+
+            // sync culture to app settings
+            Services.AppCultureService.SelectedCultures =
+                UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+
+            InitCulture();
+            _oldUserSettings = VhUtil.JsonClone(UserSettings);
+
+            // disconnect
+            if (state.CanDisconnect && disconnectRequired)
+                _ = Disconnect(true);
         }
-
-        // Enable trackers
-        if (Services.Tracker != null)
-            Services.Tracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
-
-        //lets refresh clientProfile
-        _currentClientProfile = null;
-
-        // set ServerLocation to null if the item is SameAsGlobalAuto
-        if (UserSettings.ServerLocation != null &&
-            CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.IsDefault == true)
-            UserSettings.ServerLocation = null;
-
-        // sync culture to app settings
-        Services.AppCultureService.SelectedCultures =
-            UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
-
-        InitCulture();
-        _oldUserSettings = VhUtil.JsonClone(UserSettings);
-
-        // disconnect
-        if (state.CanDisconnect && disconnectRequired)
-            _ = Disconnect(true);
+        catch (Exception ex)
+        {
+            ReportError(ex, "Could not apply settings.");
+        }
     }
 
     private ITracker CreateBuildInTracker(string? userAgent)
@@ -346,7 +354,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var connectionState = ConnectionState;
         if (connectionState == _lastConnectionState) return;
         _lastConnectionState = connectionState;
-        ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
+        try
+        {
+            ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            ReportError(ex, "Could not FireConnectionStateChanged");
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -462,12 +477,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not connect to any server within the given time.");
+            ReportError(ex, "Could not connect.");
 
             //user may disconnect before connection closed
             if (!_hasDisconnectedByUser)
                 _appPersistState.LastError = ex is OperationCanceledException
-                    ? new ApiError(new Exception("Could not connect to any server within the given time.", ex))
+                    ? new ApiError(new Exception("Could not connect to any server.", ex))
                     : new ApiError(ex);
 
             // don't wait for disconnect, it may cause deadlock
@@ -622,7 +637,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Could not add QuickLaunch.");
+                ReportError(ex, "Could not add QuickLaunch.");
             }
 
             Settings.Save();
@@ -640,7 +655,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Could not enable Notification.");
+                ReportError(ex, "Could not enable Notification.");
             }
 
             Settings.Save();
@@ -685,7 +700,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Could not get country code from Cloudflare service.");
+                ReportError(ex, "Could not get country code from Cloudflare service.");
             }
         }
 
@@ -701,7 +716,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Could not get country code from IpApi service.");
+                ReportError(ex, "Could not get country code from IpApi service.");
             }
         }
 
@@ -715,7 +730,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Could not find country code.");
+                ReportError(ex, "Could not find country code.");
             }
         }
 
@@ -801,7 +816,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Error in disconnecting.");
+            ReportError(ex, "Error in disconnecting.");
         }
         finally
         {
@@ -859,7 +874,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(ex, "Could not check version by VersionCheck.");
+            ReportWarning(ex, "Could not check version by VersionCheck.");
         }
 
         // check version by UpdateInfoUrl
@@ -919,7 +934,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(ex, "Could not retrieve the latest publish info information.");
+            ReportWarning(ex, "Could not retrieve the latest publish info information.");
             return null; // could not retrieve the latest publish info. try later
         }
     }
@@ -954,7 +969,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not get ip locations of your country.");
+            ReportError(ex, "Could not get ip locations of your country.");
             if (!UserSettings.TunnelClientCountry)
             {
                 UserSettings.TunnelClientCountry = true;
@@ -1008,6 +1023,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
             Settings.Save();
         }
+    }
+
+    private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
+    {
+        TrackUtils.TrackError(Services.Tracker, ex, message, action);
+        VhLogger.Instance.LogError(ex, message);
+    }
+
+    private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
+    {
+        TrackUtils.TrackError(Services.Tracker, ex, message, action);
+        VhLogger.Instance.LogWarning(ex, message);
     }
 
     public Task RunJob()

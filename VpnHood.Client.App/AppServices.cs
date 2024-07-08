@@ -10,5 +10,6 @@ public class AppServices
     public required IAppAdService[] AdServices { get; init; } = [];
     public required IAppUiService UiService { get; init; }
     public required IAppCultureService AppCultureService { get; init;}
-    public required ITracker? Tracker { get; set;}
+    public required ITracker? EndPointTracker { get; set;}
+    public required ITracker? UsageTracker { get; set;}
 }

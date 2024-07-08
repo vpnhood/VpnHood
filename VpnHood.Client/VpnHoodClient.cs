@@ -44,7 +44,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
-    private readonly ITracker? _tracker;
+    private readonly ITracker? _usageTracker;
     private IPAddress[] _dnsServersIpV4 = [];
     private IPAddress[] _dnsServersIpV6 = [];
     private IPAddress[] _dnsServers = [];
@@ -114,12 +114,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
-        _tracker = options.Tracker;
+        _usageTracker = options.UsageTracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
         _serverLocation = options.ServerLocation;
-        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken, serverQueryTimeout: options.ServerQueryTimeout);
+        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken, 
+            serverQueryTimeout: options.ServerQueryTimeout,
+            tracker: options.EndPointTracker);
 
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
@@ -232,6 +234,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // report config
         IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
+        _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
             "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, IncludeLocalNetwork: {IncludeLocalNetwork}, " +
@@ -697,8 +700,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 }
 
                 // Anonymous app usage tracker
-                if (_tracker != null)
-                    _clientUsageTracker = new ClientUsageTracker(Stat, _tracker);
+                if (_usageTracker != null)
+                    _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
             }
 
             // get session id

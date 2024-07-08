@@ -134,6 +134,7 @@ public static class VhLogger
         }
     }
 
+    // todo: check this
     public static bool IsSocketCloseException(Exception ex)
     {
         return (ex.InnerException != null && IsSocketCloseException(ex.InnerException)) ||
@@ -143,7 +144,7 @@ public static class VhLogger
             TaskCanceledException or
             SocketException
             {
-                SocketErrorCode: SocketError.ConnectionAborted or
+                SocketErrorCode: SocketError.ConnectionAborted or 
                 SocketError.OperationAborted or
                 SocketError.ConnectionReset or
                 SocketError.ConnectionRefused or

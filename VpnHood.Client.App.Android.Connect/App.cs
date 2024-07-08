@@ -25,10 +25,11 @@ namespace VpnHood.Client.App.Droid.Connect;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : VpnHoodAndroidApp(javaReference, transfer)
 {
+    private FirebaseAnalytics? _analytics;
     protected override AppOptions CreateAppOptions()
     {
         // initialize Firebase services
-        try { FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
+        try { _analytics = FirebaseAnalytics.GetInstance(this); } catch { /* ignored*/ }
         try { FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(true); } catch { /* ignored */ }
 
         // load app settings and resources
@@ -49,6 +50,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = CreateAppAccountService(appSettings, storageFolderPath),
+            Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
             AdServices = [
                 //todo: change order
                 ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
@@ -62,6 +64,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 PreloadAd = true
             }
         };
+    }
+
+    // Set the clientId as userId to the analytics
+    public override void OnCreate()
+    {
+        base.OnCreate();
+        _analytics?.SetUserId(VpnHoodApp.Instance.Settings.ClientId.ToString());
     }
 
     private static StoreAccountService? CreateAppAccountService(AppSettings appSettings, string storageFolderPath)
@@ -81,4 +90,3 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
     }
 }
-

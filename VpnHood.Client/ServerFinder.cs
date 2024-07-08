@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.ConnectorServices;
 using VpnHood.Client.Exceptions;
@@ -6,27 +7,28 @@ using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Client;
 
-public class ServerFinder(ISocketFactory socketFactory, ServerToken serverToken, 
-    TimeSpan serverQueryTimeout, int maxDegreeOfParallelism = 10)
+public class ServerFinder(
+    ISocketFactory socketFactory,
+    ServerToken serverToken,
+    TimeSpan serverQueryTimeout,
+    ITracker? tracker,
+    int maxDegreeOfParallelism = 10)
 {
-    private HostStatus[] _hostEndPointStatus = [];
-
-    private static void Shuffle<T>(T[] array)
+    private class HostStatus
     {
-        var rng = new Random();
-        var n = array.Length;
-        for (var i = n - 1; i > 0; i--)
-        {
-            var j = rng.Next(i + 1);
-            (array[i], array[j]) = (array[j], array[i]);
-        }
+        public required IPEndPoint TcpEndPoint { get; init; }
+        public bool? Available { get; set; }
     }
+
+    private HostStatus[] _hostEndPointStatuses = [];
+    public bool IncludeIpV6 { get; set; } = true;
 
     // There are much work to be done here
     public async Task<IPEndPoint> FindBestServerAsync(CancellationToken cancellationToken)
@@ -40,11 +42,18 @@ public class ServerFinder(ISocketFactory socketFactory, ServerToken serverToken,
         if (hostEndPoints.Length == 1)
             return hostEndPoints.First();
 
-        // randomize endpoint 
-        Shuffle(hostEndPoints);
+        // exclude ip v6 if not supported
+        if (!IncludeIpV6)
+            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
 
-        _hostEndPointStatus = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
-        var res = _hostEndPointStatus.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+        // randomize endpoint 
+        VhUtil.Shuffle(hostEndPoints);
+
+        // find the best server
+        _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
+        var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+
+        _ = TrackEndPointsAvailability([], _hostEndPointStatuses);
         return res ?? throw new NoReachableServer();
     }
 
@@ -57,20 +66,52 @@ public class ServerFinder(ISocketFactory socketFactory, ServerToken serverToken,
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
+        // exclude ip v6 if not supported
+        if (!IncludeIpV6)
+            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+
         // merge old values
         foreach (var hostStatus in hostStatuses)
-            hostStatus.Available = _hostEndPointStatus
+            hostStatus.Available = _hostEndPointStatuses
                 .FirstOrDefault(x => x.TcpEndPoint.Equals(hostStatus.TcpEndPoint))?.Available;
 
-        var result = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
-        var res = result.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+        var results = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
+        var res = results.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+
+        // track new endpoints availability 
+        _ = TrackEndPointsAvailability(_hostEndPointStatuses, results);
+
         return res ?? throw new NoReachableServer();
     }
 
-    private class HostStatus
+    private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
     {
-        public required IPEndPoint TcpEndPoint { get; init; }
-        public bool? Available { get; set; }
+        if (tracker is null)
+            return Task.CompletedTask;
+
+        // find new discovered statuses
+        var changesStatus = newStatuses
+            .Where(x =>
+                x.Available != null &&
+                !oldStatuses.Any(y => y.Available != x.Available && y.TcpEndPoint.Equals(x.TcpEndPoint)))
+            .ToArray();
+
+        var trackEvents = changesStatus
+            .Where(x => x.Available != null)
+            .Select(x => new TrackEvent
+            {
+                EventName = "server_status",
+                Parameters = new Dictionary<string, object>
+                {
+                    {"ip", x.TcpEndPoint.Address},
+                    {"ep", x.TcpEndPoint},
+                    {"ip_v6", x.TcpEndPoint.Address.IsV6()},
+                    {"value", x.Available!}
+                }
+            })
+            .ToArray();
+
+        return tracker.Track(trackEvents);
     }
 
     private async Task<HostStatus[]> VerifyServersStatus(IPEndPoint[] hostEndPoints, bool byOrder, CancellationToken cancellationToken)

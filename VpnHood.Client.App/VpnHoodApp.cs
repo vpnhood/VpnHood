@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
@@ -163,12 +164,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsBillingSupported = options.AccountService?.Billing != null,
             IsQuickLaunchSupported = uiService.IsQuickLaunchSupported,
             IsNotificationSupported = uiService.IsNotificationSupported,
-            IsAlwaysOnSupported = device.IsAlwaysOnSupported
+            IsAlwaysOnSupported = device.IsAlwaysOnSupported,
+            GaMeasurementId = options.AppGa4MeasurementId,
+            ClientId = Settings.ClientId.ToString()
         };
-
-        // Init tracker
-        if (options.Tracker != null)
-            options.Tracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
 
         // initialize services
         Services = new AppServices
@@ -178,7 +177,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
             UiService = uiService,
-            Tracker = options.Tracker,
+            EndPointTracker = options.EndPointTracker,
+            UsageTracker = options.UsageTracker
         };
 
         // Clear last update status if version has changed
@@ -189,9 +189,53 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // initialize
-        InitCulture();
-
+        ApplySettings();
         JobRunner.Default.Add(this);
+    }
+
+    private void ApplySettings()
+    {
+        var state = State;
+        var client = _client; // it may be null
+        var disconnectRequired = false;
+        if (client != null)
+        {
+            client.UseUdpChannel = UserSettings.UseUdpChannel;
+            client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
+
+            // check is disconnect required
+            disconnectRequired =
+                (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
+                (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
+                (_activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
+                (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
+        }
+
+        // Enable trackers
+        if (Services.UsageTracker != null)
+            Services.UsageTracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
+
+        if (Services.EndPointTracker != null)
+            Services.EndPointTracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
+
+        //lets refresh clientProfile
+        _currentClientProfile = null;
+
+        // set ServerLocation to null if the item is SameAsGlobalAuto
+        if (UserSettings.ServerLocation != null &&
+            CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.IsDefault == true)
+            UserSettings.ServerLocation = null;
+
+        // sync culture to app settings
+        Services.AppCultureService.SelectedCultures =
+            UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
+
+        InitCulture();
+        _oldUserSettings = VhUtil.JsonClone(UserSettings);
+
+        // disconnect
+        if (state.CanDisconnect && disconnectRequired)
+            _ = Disconnect(true);
     }
 
     private ITracker CreateBuildInTracker(string? userAgent)
@@ -353,12 +397,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (!IsIdle)
             await Disconnect(true).VhConfigureAwait();
 
-        // initialize built-in tracker
-        if (Services.Tracker == null && UserSettings.AllowAnonymousTracker && !string.IsNullOrEmpty(_appGa4MeasurementId))
-            Services.Tracker = CreateBuildInTracker(userAgent);
-
-        if (Services.Tracker != null)
-            Services.Tracker.IsEnabled = !UserSettings.AllowAnonymousTracker;
+        // initialize built-in tracker after acquire userAgent
+        if (Services.UsageTracker == null && UserSettings.AllowAnonymousTracker && !string.IsNullOrEmpty(_appGa4MeasurementId))
+            Services.UsageTracker = CreateBuildInTracker(userAgent);
 
         // request features for the first time
         await RequestFeatures(cancellationToken).VhConfigureAwait();
@@ -502,13 +543,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
             ConnectTimeout = TcpTimeout,
             ServerQueryTimeout = _serverQueryTimeout,
-            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
             DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets,
             ServerLocation = serverLocationInfo == ServerLocationInfo.Auto.ServerLocation ? null : serverLocationInfo,
             UseUdpChannel = UserSettings.UseUdpChannel,
             DomainFilter = UserSettings.DomainFilter,
-            ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase)
-
+            ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
+            AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
+            UsageTracker = Services.UsageTracker,
+            EndPointTracker = Services.EndPointTracker,
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
@@ -623,39 +665,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void SettingsBeforeSave(object sender, EventArgs e)
     {
-        var state = State;
-        var client = _client; // it may get null
-        if (client != null)
-        {
-            client.UseUdpChannel = UserSettings.UseUdpChannel;
-            client.DropUdpPackets = UserSettings.DebugData1?.Contains("/drop-udp") == true || UserSettings.DropUdpPackets;
-
-            // check is disconnect required
-            var disconnectRequired =
-                (_oldUserSettings.TunnelClientCountry != UserSettings.TunnelClientCountry) ||
-                (_activeClientProfileId != null && UserSettings.ClientProfileId != _activeClientProfileId) || //ClientProfileId has been changed
-                (_activeServerLocation != state.ClientServerLocationInfo?.ServerLocation) || //ClientProfileId has been changed
-                (UserSettings.IncludeLocalNetwork != client.IncludeLocalNetwork); // IncludeLocalNetwork has been changed
-
-            // disconnect
-            if (state.CanDisconnect && disconnectRequired)
-                _ = Disconnect(true);
-        }
-
-        //lets refresh clientProfile
-        _currentClientProfile = null;
-
-        // set ServerLocation to null if the item is SameAsGlobalAuto
-        if (UserSettings.ServerLocation != null &&
-            CurrentClientProfile?.ServerLocationInfos.FirstOrDefault(x => x.ServerLocation == UserSettings.ServerLocation)?.IsDefault == true)
-            UserSettings.ServerLocation = null;
-
-        // sync culture to app settings
-        Services.AppCultureService.SelectedCultures =
-            UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
-
-        InitCulture();
-        _oldUserSettings = VhUtil.JsonClone(UserSettings);
+        ApplySettings();
     }
 
     public static string GetCountryName(string countryCode)
@@ -1008,7 +1018,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public void UpdateUi()
     {
+        ApplySettings();
         UiHasChanged?.Invoke(this, EventArgs.Empty);
-        InitCulture();
     }
 }

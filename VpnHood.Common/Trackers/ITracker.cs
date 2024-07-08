@@ -6,5 +6,4 @@ public interface ITracker
     bool IsEnabled { get; set; }
     Task Track(IEnumerable<TrackEvent> trackEvents);
     Task Track(TrackEvent trackEvent);
-    Task TrackError(string action, Exception ex);
 }

@@ -56,7 +56,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             options.SocketFactory,
             options.Tracker,
             ServerVersion,
-            new SessionManagerOptions{ CleanupInterval = options.CleanupInterval });
+            new SessionManagerOptions { CleanupInterval = options.CleanupInterval });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
@@ -191,7 +191,8 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             if (ex is SocketException socketException)
                 _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
 
-            _ = SessionManager.Tracker?.TrackError("configure", ex);
+            if (SessionManager.Tracker != null)
+                _ = TrackUtils.TrackError(SessionManager.Tracker, "configure", ex);
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
         }

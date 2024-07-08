@@ -17,4 +17,11 @@ internal class TestTracker : ITracker
         TrackEvents.Add(trackEvent);
         return Task.CompletedTask;
     }
+
+    public TrackEvent? FindEvent(string eventName, string parameterName, object parameterValue)
+    {
+        return TrackEvents.FirstOrDefault(e => 
+            e.EventName == eventName && 
+            e.Parameters.ContainsKey(parameterName) && e.Parameters[parameterName].Equals(parameterValue));
+    }
 }

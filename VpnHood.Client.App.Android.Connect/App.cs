@@ -50,7 +50,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterService = new GooglePlayAppUpdaterService(),
             CultureService = AndroidAppAppCultureService.CreateIfSupported(),
             AccountService = CreateAppAccountService(appSettings, storageFolderPath),
-            UsageTracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
+            AllowEndPointTracker = appSettings.AllowEndPointTracker,
+            Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
             AdServices = [
                 //todo: change order
                 ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),

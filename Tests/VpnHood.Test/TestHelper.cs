@@ -353,14 +353,13 @@ internal static class TestHelper
 
     public static ClientOptions CreateClientOptions(bool useUdp = false)
     {
-        var tracker = new TestTracker();
         return new ClientOptions
         {
             AllowAnonymousTracker = true,
+            AllowEndPointTracker = true,
             MaxDatagramChannelCount = 1,
             UseUdpChannel = useUdp,
-            EndPointTracker = tracker,
-            UsageTracker = tracker
+            Tracker = new TestTracker()
         };
     }
 
@@ -408,9 +407,10 @@ internal static class TestHelper
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             AppGa4MeasurementId = null,
-            UsageTracker = tracker,
+            Tracker = tracker,
             UseInternalLocationService = false,
             UseExternalLocationService = false,
+            AllowEndPointTracker = true,
             LogVerbose = LogVerbose,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,

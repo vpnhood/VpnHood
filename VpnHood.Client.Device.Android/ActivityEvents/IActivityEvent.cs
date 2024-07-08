@@ -9,7 +9,9 @@ public interface IActivityEvent
     event EventHandler<NewIntentEventArgs> NewIntentEvent;
     event EventHandler<RequestPermissionsResultArgs> RequestPermissionsResultEvent;
     event EventHandler<KeyDownArgs> KeyDownEvent;
+    event EventHandler? PauseEvent;
+    event EventHandler? ResumeEvent;
     event EventHandler DestroyEvent;
-    public event EventHandler<Configuration>? ConfigurationChangedEvent;
+    event EventHandler<Configuration>? ConfigurationChangedEvent;
     Activity Activity { get; }
 }

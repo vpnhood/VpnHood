@@ -26,6 +26,8 @@ public class AndroidAppMainActivityHandler
         activityEvent.RequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
         activityEvent.ActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
         activityEvent.KeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
+        activityEvent.PauseEvent += (_, _) => OnPause();
+        activityEvent.ResumeEvent += (_, _) => OnResume();
         activityEvent.DestroyEvent += (_, _) => OnDestroy();
         activityEvent.ConfigurationChangedEvent += (_, args) => OnConfigurationChanged(args);
     }
@@ -119,6 +121,14 @@ public class AndroidAppMainActivityHandler
     protected virtual void OnConfigurationChanged(Configuration args)
     {
         VpnHoodApp.Instance.UpdateUi();
+    }
+
+    protected virtual void OnResume()
+    {
+    }
+
+    protected virtual void OnPause()
+    {
     }
 
     protected virtual void OnDestroy()

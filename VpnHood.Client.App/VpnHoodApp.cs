@@ -95,9 +95,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Directory.CreateDirectory(options.StorageFolderPath); //make sure directory exists
         Resource = options.Resource;
 
-        if (!string.IsNullOrEmpty(options.AppGa4MeasurementId) && options.Tracker != null)
-            throw new InvalidOperationException($"{nameof(options.Tracker)} and {nameof(options.AppGa4MeasurementId)} can not be set together in AppOptions.");
-
         Device = device;
         StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
         Settings = AppSettings.Load(Path.Combine(StorageFolderPath, FileNameSettings));

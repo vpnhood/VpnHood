@@ -5,7 +5,6 @@ using System.Text.Json;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using VpnHood.Client.Abstractions;
 using VpnHood.Client.App.ClientProfiles;
 using VpnHood.Client.App.Exceptions;
@@ -68,6 +67,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private UserSettings _oldUserSettings;
     private readonly bool _autoDiagnose;
     private readonly AppInternalAdService? _internalAdService;
+    private readonly bool _allowEndPointTracker;
     private SessionStatus? LastSessionStatus => _client?.SessionStatus ?? _lastSessionStatus;
     private string VersionCheckFilePath => Path.Combine(StorageFolderPath, "version.json");
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
@@ -117,9 +117,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
         _internalAdService = options.AdServices.Length > 0 ? new AppInternalAdService(options.AdServices, options.AdOptions) : null;
-        ActiveUiContext.OnChanged += ActiveUiContext_OnChanged;
+        _allowEndPointTracker = options.AllowEndPointTracker;
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
         LogService = new AppLogService(Path.Combine(StorageFolderPath, FileNameLog), options.SingleLineConsoleLog);
+        ActiveUiContext.OnChanged += ActiveUiContext_OnChanged;
 
         // configure update job section
         JobSection = new JobSection(new JobOptions
@@ -177,8 +178,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AccountService = options.AccountService != null ? new AppAccountService(this, options.AccountService) : null,
             UpdaterService = options.UpdaterService,
             UiService = uiService,
-            EndPointTracker = options.EndPointTracker,
-            UsageTracker = options.UsageTracker
+            Tracker = options.Tracker
         };
 
         // Clear last update status if version has changed
@@ -212,11 +212,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // Enable trackers
-        if (Services.UsageTracker != null)
-            Services.UsageTracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
-
-        if (Services.EndPointTracker != null)
-            Services.EndPointTracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
+        if (Services.Tracker != null)
+            Services.Tracker.IsEnabled = Settings.UserSettings.AllowAnonymousTracker;
 
         //lets refresh clientProfile
         _currentClientProfile = null;
@@ -398,8 +395,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             await Disconnect(true).VhConfigureAwait();
 
         // initialize built-in tracker after acquire userAgent
-        if (Services.UsageTracker == null && UserSettings.AllowAnonymousTracker && !string.IsNullOrEmpty(_appGa4MeasurementId))
-            Services.UsageTracker = CreateBuildInTracker(userAgent);
+        if (Services.Tracker == null && UserSettings.AllowAnonymousTracker && !string.IsNullOrEmpty(_appGa4MeasurementId))
+            Services.Tracker = CreateBuildInTracker(userAgent);
 
         // request features for the first time
         await RequestFeatures(cancellationToken).VhConfigureAwait();
@@ -549,8 +546,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DomainFilter = UserSettings.DomainFilter,
             ForceLogSni = LogService.LogEvents.Contains(nameof(GeneralEventId.Sni), StringComparer.OrdinalIgnoreCase),
             AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
-            UsageTracker = Services.UsageTracker,
-            EndPointTracker = Services.EndPointTracker,
+            AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
+            Tracker = Services.Tracker
         };
 
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;

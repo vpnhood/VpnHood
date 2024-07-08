@@ -100,7 +100,7 @@ public class ServerFinderTest
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
 
             // tracker should report unreachable servers
-            var testTracker = (TestTracker?)clientOptions.EndPointTracker;
+            var testTracker = (TestTracker?)clientOptions.Tracker;
             Assert.IsNotNull(testTracker);
             Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[0])?.Parameters["value"] is null or false);
             Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[1])?.Parameters["value"] is null or false);

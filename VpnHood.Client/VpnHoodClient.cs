@@ -114,14 +114,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
-        _usageTracker = options.UsageTracker;
+        _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
         _serverLocation = options.ServerLocation;
-        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken, 
+        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
             serverQueryTimeout: options.ServerQueryTimeout,
-            tracker: options.EndPointTracker);
+            tracker: options.AllowEndPointTracker ? options.Tracker : null);
 
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;

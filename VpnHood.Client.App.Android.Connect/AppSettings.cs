@@ -8,6 +8,7 @@ internal class AppSettings : Singleton<AppSettings>
 {
     public Uri? UpdateInfoUrl { get; init; }
     public bool ListenToAllIps { get; init; } = IsDebugMode;
+    public bool AllowEndPointTracker { get; init; } 
     public int? DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 9570;
     
     // This is a test access key, you should replace it with your own access key.

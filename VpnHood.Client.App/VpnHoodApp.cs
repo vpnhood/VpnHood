@@ -188,8 +188,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             File.Delete(VersionCheckFilePath);
         }
 
-        // initialize
-        ApplySettings();
+        // Apply settings but no error on start up
+        try { ApplySettings(); } catch (Exception ex) { VhLogger.Instance.LogError(ex, "Could not apply settings"); }
+        
+        // schedule job
         JobRunner.Default.Add(this);
     }
 
@@ -305,7 +307,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsWaitingForAd = client?.Stat.IsWaitingForAd is true,
                 ConnectRequestTime = _connectRequestTime,
                 IsUdpChannelSupported = client?.Stat.IsUdpChannelSupported,
-                CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture),
+                CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
                 VersionStatus = _versionCheckResult?.VersionStatus ?? VersionStatus.Unknown,
                 PurchaseState = Services.AccountService?.Billing?.PurchaseState,

@@ -154,12 +154,6 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         CloseVpn();
     }
 
-    void IDisposable.Dispose()
-    {
-        // The parent should not be disposed, never call parent dispose
-        CloseVpn();
-    }
-
     [return: GeneratedEnum]
     public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags,
         int startId)
@@ -232,7 +226,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             var buf = new byte[short.MaxValue];
             int read;
-            while ((read = _inStream.Read(buf)) > 0)
+            while (!_isClosing && (read = _inStream.Read(buf)) > 0)
             {
                 var packetBuffer = buf[..read]; // copy buffer for packet
                 var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer)?.Extract<IPPacket>();
@@ -294,8 +288,12 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         Stopped?.Invoke(this, EventArgs.Empty);
     }
 
+    private bool _isClosing;
     private void CloseVpn()
     {
+        if (Started || _isClosing) 
+            return;
+
         VhLogger.Instance.LogTrace("Closing VpnService...");
 
         // close streams
@@ -327,6 +325,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         }
 
         StopVpnService();
+        _isClosing = false;
     }
 
     private void StopVpnService()
@@ -345,5 +344,11 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
         {
             VhLogger.Instance.LogError(ex, "Error while stopping the VpnService.");
         }
+    }
+
+    void IDisposable.Dispose()
+    {
+        // The parent should not be disposed, never call parent dispose
+        CloseVpn();
     }
 }

@@ -22,7 +22,7 @@ public abstract class TrackerBase : ITracker
     public Dictionary<string, object> UserProperties { get; set; } = new();
 
     public abstract Task Track(IEnumerable<TrackEvent> trackEvents);
-    public Task Track(TrackEvent trackEvents) => Track([trackEvents]);
+    public Task Track(TrackEvent trackEvent) => Track([trackEvent]);
 
     public Task TrackError(string action, Exception ex)
     {

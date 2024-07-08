@@ -536,7 +536,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             else
                 await client.Connect(cancellationToken).VhConfigureAwait();
 
-
             // set connected time
             ConnectedTime = DateTime.Now;
 

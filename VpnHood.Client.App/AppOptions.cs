@@ -24,7 +24,8 @@ public class AppOptions
     public IAppUpdaterService? UpdaterService { get; set; }
     public IAppAccountService? AccountService { get; set; }
     public IAppAdService[] AdServices { get; set; } = [];
-    public ITracker? Tracker { get; set; }
+    public ITracker? UsageTracker { get; set; }
+    public ITracker? EndPointTracker { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
     public bool LogVerbose { get; set; }

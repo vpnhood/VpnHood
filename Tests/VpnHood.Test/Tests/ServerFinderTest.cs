@@ -3,6 +3,7 @@ using VpnHood.Client;
 using VpnHood.Server;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
+using VpnHood.Test.Services;
 
 namespace VpnHood.Test.Tests;
 
@@ -70,18 +71,19 @@ public class ServerFinderTest
                 servers.Add(server);
                 accessManagers.Add(accessManager);
             }
+            var serverEndPoints = servers.Select(x => x.ServerHost.TcpEndPoints.First()).ToArray();
 
             accessManagers[2].RedirectHostEndPoints =
-                [
-                    servers[4].ServerHost.TcpEndPoints.First(), 
-                    servers[5].ServerHost.TcpEndPoints.First(),
-                    servers[6].ServerHost.TcpEndPoints.First(),
-                    servers[7].ServerHost.TcpEndPoints.First()
-                ];
+            [
+                serverEndPoints[4],
+                serverEndPoints[5],
+                serverEndPoints[6],
+                serverEndPoints[7]
+            ];
 
             // create token by server[2]
             var token = TestHelper.CreateAccessToken(servers[0]);
-            token.ServerToken.HostEndPoints = [servers[2].ServerHost.TcpEndPoints.First()];
+            token.ServerToken.HostEndPoints = [serverEndPoints[1], serverEndPoints[2]];
 
             // stop some servers
             await servers[0].DisposeAsync();
@@ -91,10 +93,25 @@ public class ServerFinderTest
             await servers[6].DisposeAsync();
 
             // connect
-            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
+            var clientOptions = TestHelper.CreateClientOptions();
+            var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture(), clientOptions: clientOptions);
             await TestHelper.WaitForClientState(client, ClientState.Connected);
 
             Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.HostTcpEndPoint);
+
+            // tracker should report unreachable servers
+            var testTracker = (TestTracker?)clientOptions.EndPointTracker;
+            Assert.IsNotNull(testTracker);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[0])?.Parameters["value"] is null or false);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[1])?.Parameters["value"] is null or false);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[2])?.Parameters["value"] is true);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[3]) is null);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[4])?.Parameters["value"] is false);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[5])?.Parameters["value"] is true);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[6])?.Parameters["value"] is null or false);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[7])?.Parameters["value"] is null or true);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[8]) is null);
+            Assert.IsTrue(testTracker.FindEvent("server_status", "ep", serverEndPoints[9]) is null);
         }
         finally
         {

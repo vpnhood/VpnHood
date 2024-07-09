@@ -100,13 +100,13 @@ public class ServerFinder(
             .Where(x => x.Available != null)
             .Select(x => new TrackEvent
             {
-                EventName = "server_status",
+                EventName = "vh_server_status",
                 Parameters = new Dictionary<string, object>
                 {
                     {"ip", x.TcpEndPoint.Address},
                     {"ep", x.TcpEndPoint},
                     {"ip_v6", x.TcpEndPoint.Address.IsV6()},
-                    {"value", x.Available!}
+                    {"available", x.Available!}
                 }
             })
             .ToArray();

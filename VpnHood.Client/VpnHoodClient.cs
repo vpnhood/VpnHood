@@ -657,7 +657,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
                 ServerLocation = _serverLocation,
-                AllowRedirect = allowRedirect
+                AllowRedirect = allowRedirect,
+                IsIpV6Supported = IsIpV6SupportedByClient
             };
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();

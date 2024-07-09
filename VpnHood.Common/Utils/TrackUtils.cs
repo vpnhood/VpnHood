@@ -23,8 +23,8 @@ public static class TrackUtils
                 EventName = "exception",
                 Parameters = new Dictionary<string, object>
                 {
-                    { "page_location", "ex/" + action },
-                    { "page_title", message },
+                    { "method", action },
+                    { "message", message },
                     { "error_message", exception.Message },
                 }
             };

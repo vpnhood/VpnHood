@@ -1,5 +1,5 @@
 ﻿using System.Security.Authentication;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Exceptions;
 using VpnHood.AccessServer.Agent.Repos;
@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Persistence.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Messaging;
 using AsyncLock = GrayMint.Common.Utils.AsyncLock;
@@ -30,10 +31,10 @@ public class SessionService(
         if (string.IsNullOrEmpty(project.GaMeasurementId) || string.IsNullOrEmpty(project.GaApiSecret))
             return Task.CompletedTask;
 
-        var ga4Tracker = new Ga4Tracker
+        var ga4Tracker = new Ga4TagTracker
         {
             MeasurementId = project.GaMeasurementId,
-            ApiSecret = project.GaApiSecret,
+            // ApiSecret = project.GaApiSecret, //not used yet
             UserAgent = session.UserAgent ?? "",
             ClientId = session.ClientId.ToString(),
             SessionId = session.ServerId.ToString(),
@@ -43,7 +44,7 @@ public class SessionService(
 
         var ga4Event = new Ga4TagEvent
         {
-            EventName = Ga4TagEvents.PageView,
+            EventName = TrackEventNames.PageView,
             DocumentLocation = $"{server.ServerFarmName}/{server.ServerName}",
             DocumentTitle = $"{server.ServerFarmName}",
             Properties = new Dictionary<string, object>

@@ -237,7 +237,7 @@ public class TestApp : IHttpClientFactory, IDisposable
         return ret;
     }
 
-    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null, IPAddress? gatewayIpV4 = null)
+    public async Task<ServerInfo> NewServerInfo(bool randomStatus = false, int? logicalCore = null, IPAddress? publicIpV4 = null)
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
@@ -253,7 +253,7 @@ public class TestApp : IHttpClientFactory, IDisposable
             ],
             PublicIpAddresses =
             [
-                gatewayIpV4 ?? await NewIpV4(),
+                publicIpV4 ?? await NewIpV4(),
                 await NewIpV6(),
                 publicIp
             ],

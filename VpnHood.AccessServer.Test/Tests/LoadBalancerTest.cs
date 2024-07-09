@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -17,7 +18,7 @@ public class LoadBalancerTest
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
-        var serverDom = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
+        var serverDom = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"));
         await serverDom.Update(new ServerUpdateParams { AllowInAutoLocation = new PatchOfBoolean { Value = false } });
 
         // fail if the location in auto
@@ -60,8 +61,7 @@ public class LoadBalancerTest
         var serverDom6 = await farm.AddNewServer();
 
         // configure serverDom5 with ipv6
-        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()
-        ];
+        serverDom5.ServerInfo.PublicIpAddresses = [await serverDom5.TestApp.NewIpV6(), await serverDom5.TestApp.NewIpV6()];
         serverDom5.ServerInfo.PrivateIpAddresses = serverDom5.ServerInfo.PublicIpAddresses;
         await serverDom5.Configure();
 
@@ -102,11 +102,11 @@ public class LoadBalancerTest
         farm.TestApp.AgentTestApp.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromHours(1);
 
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
-        var serverDom2 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
-        var serverDom3 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("20.0.0.3"));
-        var serverDom4 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("30.0.0.4"));
-        var serverDom5 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("40.0.0.5"));
+        var serverDom1 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"));
+        var serverDom2 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"));
+        var serverDom3 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("20.0.0.3"));
+        var serverDom4 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("30.0.0.4"));
+        var serverDom5 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.5"));
 
         // create access token
         var accessTokenDom = await farm.CreateAccessToken();
@@ -137,11 +137,11 @@ public class LoadBalancerTest
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
-        var serverDom2 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
-        var serverDom3 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("20.0.0.3"));
-        var serverDom4 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("30.0.0.4"));
-        var serverDom5 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("40.0.0.5"));
+        var serverDom1 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"));
+        var serverDom2 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"));
+        var serverDom3 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("20.0.0.3"));
+        var serverDom4 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("30.0.0.4"));
+        var serverDom5 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.5"));
         await farm.ReloadServers();
 
         // create access token
@@ -165,7 +165,56 @@ public class LoadBalancerTest
         Assert.AreEqual(0, serverDom3.ServerStatus.SessionCount);
         Assert.AreEqual(0, serverDom4.ServerStatus.SessionCount);
         Assert.AreEqual(0, serverDom5.ServerStatus.SessionCount);
+
     }
+
+    [TestMethod]
+    public async Task By_location_redirect_list()
+    {
+        using var farm = await ServerFarmDom.Create(serverCount: 0);
+        farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
+
+        // Create and init servers
+        var serverDoms = new List<ServerDom>
+        {
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.0")),
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1")),
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse("20.0.0.2")),
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse("30.0.0.3")),
+            await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.4")),
+        };
+
+        serverDoms[0].ServerStatus.SessionCount = 10;
+        serverDoms[1].ServerStatus.SessionCount = 9;
+        serverDoms[2].ServerStatus.SessionCount = 8;
+        serverDoms[3].ServerStatus.SessionCount = 7;
+        serverDoms[4].ServerStatus.SessionCount = 6;
+        await farm.ReloadServers();
+        await Task.WhenAll(serverDoms.Select(x => x.SendStatus()));
+
+        // create access token
+        var accessTokenDom = await farm.CreateAccessToken();
+
+        // check redirect list for location 10
+        var sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: "10", assertError: false);
+        var redirectHostEndPoints = sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x=>x.Address.IsV4()).ToArray();
+        Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
+        Assert.AreEqual(2, redirectHostEndPoints.Length);
+        Assert.AreEqual(serverDoms[1].ServerInfo.PublicIpAddresses.First(x=>x.IsV4()), redirectHostEndPoints[0].Address);
+        Assert.AreEqual(serverDoms[0].ServerInfo.PublicIpAddresses.First(x=>x.IsV4()), redirectHostEndPoints[1].Address);
+
+        // check redirect list for location auto
+        sessionDom2 = await accessTokenDom.CreateSession(autoRedirect: false, serverLocation: null, assertError: false);
+        redirectHostEndPoints = sessionDom2.SessionResponseEx.RedirectHostEndPoints!.Where(x=>x.Address.IsV4()).ToArray();
+        Assert.AreEqual(sessionDom2.SessionResponseEx.ErrorCode, SessionErrorCode.RedirectHost);
+        Assert.AreEqual(5, redirectHostEndPoints.Length);
+        Assert.AreEqual(serverDoms[4].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[0].Address);
+        Assert.AreEqual(serverDoms[3].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[1].Address);
+        Assert.AreEqual(serverDoms[2].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[2].Address);
+        Assert.AreEqual(serverDoms[1].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[3].Address);
+        Assert.AreEqual(serverDoms[0].ServerInfo.PublicIpAddresses.First(x => x.IsV4()), redirectHostEndPoints[4].Address);
+    }
+
 
     [TestMethod]
     public async Task By_server_power()
@@ -174,11 +223,11 @@ public class LoadBalancerTest
         farm.TestApp.AgentTestApp.AgentOptions.AllowRedirect = true;
 
         // Create and init servers
-        var serverDom1 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 4);
-        var serverDom2 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"), logicalCore: 2);
-        var serverDom3 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("20.0.0.3"), logicalCore: 2);
-        var serverDom4 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("30.0.0.4"), logicalCore: 1);
-        var serverDom5 = await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("40.0.0.5"), logicalCore: 1);
+        var serverDom1 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"), logicalCore: 4);
+        var serverDom2 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"), logicalCore: 2);
+        var serverDom3 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("20.0.0.3"), logicalCore: 2);
+        var serverDom4 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("30.0.0.4"), logicalCore: 1);
+        var serverDom5 = await farm.AddNewServer(publicIpV4: IPAddress.Parse("40.0.0.5"), logicalCore: 1);
         await farm.ReloadServers();
 
         // create access token

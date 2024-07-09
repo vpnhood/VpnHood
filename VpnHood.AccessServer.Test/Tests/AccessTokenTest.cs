@@ -268,11 +268,11 @@ public class AccessTokenTest
         }, serverCount: 0);
 
         // create servers
-        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.1"));
-        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.0.0.2"));
-        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("10.1.0.3"));
-        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("11.1.0.4"));
-        await farm.AddNewServer(gatewayIpV4: IPAddress.Parse("11.2.0.5"));
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.1"));
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.0.0.2"));
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("10.1.0.3"));
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("11.1.0.4"));
+        await farm.AddNewServer(publicIpV4: IPAddress.Parse("11.2.0.5"));
 
         var accessToken = await farm.CreateAccessToken();
         var token = await accessToken.GetToken();

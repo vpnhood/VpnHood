@@ -99,17 +99,17 @@ public class ServerFarmDom : IDisposable
     }
 
     public async Task<ServerDom> AddNewServer(bool configure = true, bool sendStatus = true, 
-        IPAddress? gatewayIpV4 = null, int? logicalCore = null)
+        IPAddress? publicIpV4 = null, int? logicalCore = null)
     {
         var sampleServer = await ServerDom.Create(TestApp, ServerFarmId, configure, 
-            sendStatus, gatewayIpV4, logicalCore: logicalCore);
+            sendStatus, publicIpV4, logicalCore: logicalCore);
 
         Servers.Add(sampleServer);
         return sampleServer;
     }
 
     public async Task<ServerDom> AddNewServer(ServerCreateParams createParams, bool configure = true, 
-        bool sendStatus = true, IPAddress? gatewayIpV4 = null)
+        bool sendStatus = true, IPAddress? publicIpV4 = null)
     {
         // ReSharper disable once LocalizableElement
         if (createParams.ServerFarmId != ServerFarmId && createParams.ServerFarmId != Guid.Empty)
@@ -117,7 +117,7 @@ public class ServerFarmDom : IDisposable
 
         createParams.ServerFarmId = ServerFarmId;
         var sampleServer = await ServerDom.Create(TestApp, createParams, configure, sendStatus, 
-            gatewayIpV4: gatewayIpV4);
+            publicIpV4: publicIpV4);
 
         Servers.Add(sampleServer);
         return sampleServer;

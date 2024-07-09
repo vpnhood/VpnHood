@@ -41,7 +41,7 @@ public class LoadBalancerService(
         if (!allowRedirect)
         {
             if (servers.All(x => x.ServerId != currentServer.ServerId))
-                throw new SessionExceptionEx(SessionErrorCode.AccessError, "This server can not serve you at the moment.");
+                throw new SessionExceptionEx(SessionErrorCode.AccessError, "This server can not serve you at this moment.");
 
             return;
         }
@@ -69,7 +69,7 @@ public class LoadBalancerService(
 
         // no server found
         if (bestTcpEndPoint == null)
-            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any free server.");
+            throw new SessionExceptionEx(SessionErrorCode.AccessError, "Could not find any available server in the given location.");
 
         // todo
         // deprecated: 505 client and later

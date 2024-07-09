@@ -52,7 +52,7 @@ public class ServerTest
         Assert.AreEqual(ServerState.NotInstalled, serverDom.Server.ServerState);
 
         // ServerState.Configuring
-        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true, gatewayIpV4: IPAddress.Parse("5.0.0.1"));
+        serverDom.ServerInfo = await testApp.NewServerInfo(randomStatus: true, publicIpV4: IPAddress.Parse("5.0.0.1"));
         serverDom.ServerInfo.Status.SessionCount = 0;
         await serverDom.Configure(false);
         await serverDom.Reload();

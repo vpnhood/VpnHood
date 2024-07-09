@@ -123,7 +123,8 @@ public class SessionManager : IAsyncDisposable, IJob
             EncryptedClientId = helloRequest.EncryptedClientId,
             TokenId = helloRequest.TokenId,
             ServerLocation = helloRequest.ServerLocation,
-            AllowRedirect = helloRequest.AllowRedirect
+            AllowRedirect = helloRequest.AllowRedirect,
+            IsIpV6Supported = helloRequest.IsIpV6Supported
         }).VhConfigureAwait();
 
         // Access Error should not pass to the client in create session

@@ -20,11 +20,11 @@ public static class TrackUtils
         {
             var trackEvent = new TrackEvent
             {
-                EventName = "exception",
+                EventName = "vh_exception",
                 Parameters = new Dictionary<string, object>
                 {
-                    { "page_location", "ex/" + action },
-                    { "page_title", message },
+                    { "method", action },
+                    { "message", message },
                     { "error_message", exception.Message },
                 }
             };

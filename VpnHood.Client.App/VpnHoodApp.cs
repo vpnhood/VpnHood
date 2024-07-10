@@ -574,6 +574,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // Create Client with a new PacketCapture
         if (_client != null) throw new Exception("Last client has not been disposed properly.");
         var packetCapture = await CreatePacketCapture().VhConfigureAwait();
+        
+        
         VpnHoodClient? client = null;
 
         try

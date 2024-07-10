@@ -53,10 +53,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowEndPointTracker = appSettings.AllowEndPointTracker,
             Tracker = _analytics != null ? new AnalyticsTracker(_analytics) : null,
             AdServices = [
-                //todo: change order
-                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialAdUnitId, true),
                 AdMobInterstitialAdService.Create(appSettings.AdMobInterstitialNoVideoAdUnitId, false),
+                ChartboostService.Create(appSettings.ChartboostAppId, appSettings.ChartboostAppSignature, appSettings.ChartboostAdLocation)
             ],
             UiService = new AndroidAppUiService(),
             LogAnonymous = !AppSettings.IsDebugMode,

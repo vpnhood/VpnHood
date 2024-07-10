@@ -20,11 +20,6 @@ public class AnalyticsTracker(FirebaseAnalytics analytics) : ITracker
         return Task.CompletedTask;
     }
 
-    public Task TrackError(string action, Exception ex)
-    {
-        throw new NotImplementedException();
-    }
-
     private void TrackInternal(TrackEvent trackEvent)
     {
         if (!IsEnabled)
@@ -33,7 +28,6 @@ public class AnalyticsTracker(FirebaseAnalytics analytics) : ITracker
         var bundle = new Bundle();
         foreach (var parameter in trackEvent.Parameters)
             bundle.PutString(parameter.Key, parameter.Value.ToString());
-        
         analytics.LogEvent(trackEvent.EventName, bundle);
     }
 }

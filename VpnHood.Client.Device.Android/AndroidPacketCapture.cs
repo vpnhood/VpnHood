@@ -33,10 +33,12 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     private int _mtu;
     private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
     private readonly ConnectivityManager? _connectivityManager = ConnectivityManager.FromContext(Application.Context);
+    internal static TaskCompletionSource<AndroidPacketCapture>? StartServiceTaskCompletionSource { get; set; }
 
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public bool Started => _mInterface != null;
+    private bool _isServiceStarted;
     public IpNetwork[]? IncludeNetworks { get; set; }
     public bool CanSendPacketToOutbound => false;
     public bool CanExcludeApps => true;
@@ -147,18 +149,34 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
 
     public void StopCapture()
     {
-        if (!Started)
-            return;
-
         VhLogger.Instance.LogTrace("Stopping VPN Service...");
-        CloseVpn();
+        StopVpnService();
     }
 
     [return: GeneratedEnum]
-    public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags,
-        int startId)
+    public override StartCommandResult OnStartCommand(Intent? intent, 
+        [GeneratedEnum] StartCommandFlags flags, int startId)
     {
-        AndroidDevice.Instance.OnServiceStartCommand(this, intent);
+        // close Vpn if it is already started
+        CloseVpn();
+
+        // post vpn service start command
+        try
+        {
+            AndroidDevice.Instance.OnServiceStartCommand(this, intent);
+        }
+        catch (Exception ex)
+        {
+            StartServiceTaskCompletionSource?.TrySetException(ex);
+            StopVpnService();
+            return StartCommandResult.NotSticky;
+        }
+
+        // signal start command
+        if (intent?.Action == "connect")
+            StartServiceTaskCompletionSource?.TrySetResult(this);
+
+        _isServiceStarted = true;
         return StartCommandResult.Sticky;
     }
 
@@ -243,9 +261,7 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
                 VhLogger.Instance.LogError(ex, "Error occurred in Android ReadingPacketTask.");
         }
 
-        if (Started)
-            CloseVpn();
-
+        StopVpnService();
         return Task.FromResult(0);
     }
 
@@ -280,19 +296,15 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
     public override void OnDestroy()
     {
         VhLogger.Instance.LogTrace("VpnService has been destroyed!");
-
         CloseVpn();
-
         base.OnDestroy();
-
-        Stopped?.Invoke(this, EventArgs.Empty);
     }
 
     private bool _isClosing;
     private void CloseVpn()
     {
-        if (Started || _isClosing) 
-            return;
+        if (_mInterface == null || _isClosing) return;
+        _isClosing = true;
 
         VhLogger.Instance.LogTrace("Closing VpnService...");
 
@@ -324,12 +336,28 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
             _mInterface = null;
         }
 
-        StopVpnService();
+        try
+        {
+            Stopped?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+
+            VhLogger.Instance.LogError(ex, "Error while invoking Stopped event.");
+        }
+
         _isClosing = false;
     }
 
     private void StopVpnService()
     {
+        // make sure to close vpn; it has self check
+        CloseVpn();
+
+        // close the service
+        if (!_isServiceStarted) return;
+        _isServiceStarted = false;
+
         try
         {
             // it must be after _mInterface.Close
@@ -337,18 +365,25 @@ public class AndroidPacketCapture : VpnService, IPacketCapture
                 StopForeground(StopForegroundFlags.Remove);
             else
                 StopForeground(true);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogError(ex, "Error in StopForeground of VpnService.");
+        }
 
+        try
+        {
             StopSelf();
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Error while stopping the VpnService.");
+            VhLogger.Instance.LogError(ex, "Error in StopSelf of VpnService.");
         }
     }
 
     void IDisposable.Dispose()
     {
         // The parent should not be disposed, never call parent dispose
-        CloseVpn();
+        StopVpnService();
     }
 }

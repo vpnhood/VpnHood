@@ -21,7 +21,8 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         _clientStat = clientStat;
         _tracker = tracker;
         JobRunner.Default.Add(this);
-
+        
+        // TODO check with peter
         _ = tracker.Track(new TrackEvent { EventName = "VpnConnected" });
     }
 
@@ -42,6 +43,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         var requestCount = _clientStat.ConnectorStat.RequestCount;
         var connectionCount = _clientStat.ConnectorStat.CreatedConnectionCount;
 
+        // TODO check with peter
         var trackEvent = new TrackEvent
         {
             EventName = "usage",

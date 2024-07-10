@@ -56,7 +56,8 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
 
         var adLoadCallback = new MyInterstitialAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback);
+        // AdMob load ad must call from main thread
+        activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
         var cancellationTask = new TaskCompletionSource();
         cancellationToken.Register(cancellationTask.SetResult);

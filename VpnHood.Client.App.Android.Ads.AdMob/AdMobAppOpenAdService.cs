@@ -56,7 +56,7 @@ public class AdMobAppOpenAdService(string adUnitId, bool hasVideo) : IAppAdServi
 
         var adLoadCallback = new MyAppOpenAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback);
+        activity.RunOnUiThread(() => AppOpenAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
         var cancellationTask = new TaskCompletionSource();
         cancellationToken.Register(cancellationTask.SetResult);

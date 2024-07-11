@@ -49,7 +49,7 @@ In Windows, you cannot access IPv6 sites if your network is not already configur
 In Android, however, you will get an IPV6 address and access to all IPv6 sites regardless of your network configuration.
 
 ### Security Audit
-We are excited to announce that VpnHood has undergone a comprehensive security audit by the Open Tech Fund. The audit results are now available for public review. This audit reaffirms our commitment to providing a secure and reliable VPN service for our users. You can read the full report in [Open Tech Fund Security Audit Results](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
+We are excited to announce that VpnHood has undergone a comprehensive security audit by the Open Tech Fund. The audit results are now available for public review. This audit reaffirms our commitment to providing a secure and reliable VPN service for our users. You can read the full report [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
 
 ## FAQ & Documents
 Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) for the VpnHood documents.

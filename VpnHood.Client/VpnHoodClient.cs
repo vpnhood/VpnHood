@@ -59,7 +59,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ConnectorService? _connectorService;
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
-    private readonly string? _serverLocation;
     private readonly ServerFinder _serverFinder;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
@@ -118,8 +117,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
-        _serverLocation = options.ServerLocation;
         _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
+            serverLocation:  options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
             tracker: options.AllowEndPointTracker ? options.Tracker : null);
 
@@ -656,7 +655,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
-                ServerLocation = _serverLocation,
+                ServerLocation = _serverFinder.ServerLocation,
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = IsIpV6SupportedByClient
             };
@@ -702,7 +701,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
                 // Anonymous app usage tracker
                 if (_usageTracker != null)
+                {
+                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: true, _serverFinder.ServerLocation, isIpV6Supported: IsIpV6SupportedByClient));
                     _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
+                }
             }
 
             // get session id

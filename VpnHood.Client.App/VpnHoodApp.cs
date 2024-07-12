@@ -1029,13 +1029,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        TrackUtils.TrackError(Services.Tracker, ex, message, action);
+        Services.Tracker?.VhTrackErrorAsync(ex, message, action);
         VhLogger.Instance.LogError(ex, message);
     }
 
     private void ReportWarning(Exception ex, string message, [CallerMemberName] string action = "n/a")
     {
-        TrackUtils.TrackError(Services.Tracker, ex, message, action);
+        Services.Tracker?.VhTrackWarningAsync(ex, message, action);
         VhLogger.Instance.LogWarning(ex, message);
     }
 

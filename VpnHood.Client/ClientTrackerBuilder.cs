@@ -11,7 +11,7 @@ public static class ClientTrackerBuilder
     {
         return new TrackEvent
         {
-            EventName = "connect_attempt",
+            EventName = "vh_connect_attempt",
             Parameters = new Dictionary<string, object>
             {
                 { "server_location", serverLocation ?? "" },
@@ -39,7 +39,7 @@ public static class ClientTrackerBuilder
     {
         var trackEvent = new TrackEvent
         {
-            EventName = "usage",
+            EventName = "vh_usage",
             Parameters = new Dictionary<string, object>
             {
                 {"traffic_total", Math.Round(usage.Total / 1_000_000d)},

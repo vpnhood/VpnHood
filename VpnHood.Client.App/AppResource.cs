@@ -31,6 +31,7 @@ public class AppResource
     {
         public Color? NavigationBarColor { get; set; }
         public Color? WindowBackgroundColor { get; set; }
+        public Color? ProgressBarColor { get; set; }
     }
 
     public class AppIcons

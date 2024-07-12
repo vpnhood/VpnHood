@@ -21,9 +21,6 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         _clientStat = clientStat;
         _tracker = tracker;
         JobRunner.Default.Add(this);
-        
-        // TODO check with peter
-        _ = tracker.Track(new TrackEvent { EventName = "VpnConnected" });
     }
 
     public Task RunJob()
@@ -43,19 +40,7 @@ internal class ClientUsageTracker : IJob, IAsyncDisposable
         var requestCount = _clientStat.ConnectorStat.RequestCount;
         var connectionCount = _clientStat.ConnectorStat.CreatedConnectionCount;
 
-        // TODO check with peter
-        var trackEvent = new TrackEvent
-        {
-            EventName = "usage",
-            Parameters = new Dictionary<string, object>
-            {
-                {"traffic_total", Math.Round(usage.Total / 1_000_000d)},
-                {"traffic_sent", Math.Round(usage.Sent / 1_000_000d)},
-                {"traffic_received", Math.Round(usage.Received / 1_000_000d)},
-                {"requests", requestCount - _lastRequestCount},
-                {"connections", connectionCount - _lastConnectionCount}
-            }
-        };
+        var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount, connectionCount - _lastConnectionCount);
 
         await _tracker.Track([trackEvent]).VhConfigureAwait();
         _lastTraffic = traffic;

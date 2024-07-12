@@ -4,18 +4,21 @@ using VpnHood.Common.Logging;
 
 namespace VpnHood.Common.Utils;
 
-public static class TrackUtils
+public static class VhTrackerExtensions
 {
-    public static void TrackError(ITracker? tracker, Exception exception, string message, string action)
+    public static Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message, string action)
     {
-        _ = TrackErrorAsync(tracker, exception, message, action);
+        return VhTrackErrorAsync(tracker, exception, message, action, false);
     }
 
-    public static async Task TrackErrorAsync(ITracker? tracker, Exception exception, string message, string action)
+    public static Task VhTrackWarningAsync(this ITracker tracker, Exception exception, string message, string action)
     {
-        if (tracker == null)
-            return;
+        return VhTrackErrorAsync(tracker, exception, message, action, true);
+    }
 
+
+    private static async Task VhTrackErrorAsync(this ITracker tracker, Exception exception, string message, string action, bool isWarning)
+    {
         try
         {
             var trackEvent = new TrackEvent
@@ -26,6 +29,8 @@ public static class TrackUtils
                     { "method", action },
                     { "message", message },
                     { "error_message", exception.Message },
+                    { "error_type", exception.GetType().Name },
+                    { "error_level", isWarning ? "warning" : "error" }
                 }
             };
 

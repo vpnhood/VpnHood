@@ -16,10 +16,7 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Foo()
     {
-        //todo: add serverLocation in tracking
         //todo: check update sni
-        //todo: fix endpoint tracking
-        //todo: typo on changelog
 
         await Task.Delay(0);
     }

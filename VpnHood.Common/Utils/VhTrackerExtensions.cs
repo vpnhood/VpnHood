@@ -27,8 +27,7 @@ public static class VhTrackerExtensions
                 Parameters = new Dictionary<string, object>
                 {
                     { "method", action },
-                    { "message", message },
-                    { "error_message", exception.Message },
+                    { "message", message + ", " + exception.Message },
                     { "error_type", exception.GetType().Name },
                     { "error_level", isWarning ? "warning" : "error" }
                 }

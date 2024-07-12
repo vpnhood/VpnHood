@@ -1,4 +1,5 @@
-﻿using Android.Runtime;
+﻿using Android.Content.Res;
+using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using VpnHood.Client.App.WebServer;
@@ -12,7 +13,7 @@ public class AndroidAppWebViewMainActivityHandler(
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
     private bool _isWeViewVisible;
-    public WebView? WebView { get; private set; }
+    private WebView? WebView { get; set; }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -35,16 +36,30 @@ public class AndroidAppWebViewMainActivityHandler(
     private void InitLoadingPage()
     {
         ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);
-        
+            
         // set window background color
+        var linearLayout = ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id.myLayout);
         var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
-        if (backgroundColor != null)
+        if (linearLayout != null && backgroundColor != null)
         {
-            try { ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value); }
+            try { linearLayout.SetBackgroundColor(backgroundColor.Value); }
             catch { /* ignore */ }
 
+            try { ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value); }
+            catch { /* ignore */ }
+            
             try { ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value); }
-            catch { /* /* ignore */ }
+            catch { /* ignore */ }
+        }
+        
+        // set progressbar color
+        var progressBarColor = VpnHoodApp.Instance.Resource.Colors.ProgressBarColor?.ToAndroidColor();
+        var progressBar = ActivityEvent.Activity.FindViewById<ProgressBar>(_Microsoft.Android.Resource.Designer.Resource.Id.progressBar);
+        if (progressBar != null && progressBarColor != null)
+        {
+            try 
+            { progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value); }
+            catch { /* ignore */ }   
         }
     }
 

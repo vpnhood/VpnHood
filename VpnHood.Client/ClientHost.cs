@@ -261,15 +261,13 @@ internal class ClientHost(
             };
 
             // read the response
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken)
-                .VhConfigureAwait();
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).VhConfigureAwait();
             var proxyClientStream = requestResult.ClientStream;
 
             // create a StreamProxyChannel
             VhLogger.Instance.LogTrace(GeneralEventId.StreamProxyChannel,
-                $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
-            var orgTcpClientStream =
-                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
+                "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
+            var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), request.RequestId + ":host");
 
             // flush initBuffer
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);

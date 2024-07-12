@@ -39,6 +39,14 @@
 		<DefineConstants>$(DefineConstants);GOOGLE_PLAY</DefineConstants>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<AndroidResource Include="xml\network_security_config.xml" />
+		<AndroidResource Update="Resources\xml\locales_config.xml">
+			<SubType>Designer</SubType>
+			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
+		</AndroidResource>
+	</ItemGroup>
+	
 	<ItemGroup Condition="$(DefineConstants.Contains('GOOGLE_PLAY'))">
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>

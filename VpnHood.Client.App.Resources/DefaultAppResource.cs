@@ -10,7 +10,8 @@ public static class DefaultAppResource
         Colors = new AppResource.AppColors
         {
             NavigationBarColor = Color.FromArgb(18, 34, 114),
-            WindowBackgroundColor = Color.FromArgb(0x19, 0x40, 0xb0)
+            WindowBackgroundColor = Color.FromArgb(0x19, 0x40, 0xb0),
+            ProgressBarColor = Color.FromArgb(35, 201, 157),
         },
         Icons = new AppResource.AppIcons
         {

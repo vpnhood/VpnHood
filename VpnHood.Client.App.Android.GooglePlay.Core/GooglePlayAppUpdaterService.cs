@@ -39,7 +39,7 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
         {
             // return false to allow the alternative way
             // google play does not throw exception if user cancel exception
-            VhLogger.Instance.LogWarning(ex, "Could update the app using Google Play.");
+            VhLogger.Instance.LogWarning(ex, "Could not update the app using Google Play.");
             return false;
         }
     }

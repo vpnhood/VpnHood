@@ -36,8 +36,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var storageFolderPath = AppOptions.DefaultStorageFolderPath;
         var appSettings = AppSettings.Create();
         var resources = DefaultAppResource.Resource;
-        resources.Colors.NavigationBarColor = Color.FromArgb(100, 32, 25, 81);
-        resources.Colors.WindowBackgroundColor = Color.FromArgb(100, 32, 25, 81);
+        resources.Colors.NavigationBarColor = Color.FromArgb(21, 14, 61);
+        resources.Colors.WindowBackgroundColor = Color.FromArgb(21, 14, 61);
+        resources.Colors.ProgressBarColor = Color.FromArgb(231, 180, 129);
         
         return new AppOptions
         {

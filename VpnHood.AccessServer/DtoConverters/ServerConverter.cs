@@ -34,7 +34,7 @@ public static class ServerConverter
             Version = model.Version,
             AutoConfigure = model.AutoConfigure,
             AccessPoints = model.AccessPoints.Select(x => x.ToDto()).ToArray(),
-            HostUrl = model.HostUrl!=null ? new Uri(model.HostUrl) : null,
+            HostPanelUrl = model.HostPanelUrl!=null ? new Uri(model.HostPanelUrl) : null,
         };
     }
 

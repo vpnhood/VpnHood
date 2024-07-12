@@ -4,6 +4,6 @@ public class ServerCreateParams
 {
     public string? ServerName { get; init; }
     public required Guid ServerFarmId { get; init; }
-    public Uri? HostUrl { get; init; }
+    public Uri? HostPanelUrl { get; init; }
     public AccessPoint[]? AccessPoints { get; init; }
 }

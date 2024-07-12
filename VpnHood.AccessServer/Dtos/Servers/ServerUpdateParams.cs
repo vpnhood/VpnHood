@@ -9,5 +9,5 @@ public class ServerUpdateParams
     public Patch<bool>? AutoConfigure { get; set; }
     public Patch<AccessPoint[]>? AccessPoints { get; set; }
     public Patch<bool>? AllowInAutoLocation { get; set; }
-    public Patch<Uri>? HostUrl { get; set; }
+    public Patch<Uri?>? HostPanelUrl { get; set; }
 }

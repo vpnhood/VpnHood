@@ -8564,8 +8564,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
         public bool AllowInAutoLocation { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
-        public System.Uri? HostUrl { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
+        public System.Uri? HostPanelUrl { get; set; } = default!;
 
     }
 
@@ -8707,8 +8707,8 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid ServerFarmId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
-        public System.Uri? HostUrl { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
+        public System.Uri? HostPanelUrl { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("accessPoints")]
         public System.Collections.Generic.ICollection<AccessPoint>? AccessPoints { get; set; } = default!;
@@ -8737,8 +8737,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("allowInAutoLocation")]
         public PatchOfBoolean? AllowInAutoLocation { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("hostUrl")]
-        public PatchOfUri? HostUrl { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonPropertyName("hostPanelUrl")]
+        public PatchOfUri? HostPanelUrl { get; set; } = default!;
 
     }
 

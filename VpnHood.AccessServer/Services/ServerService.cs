@@ -75,7 +75,7 @@ public class ServerService(
             GatewayIpV6 = null,
             LocationId = null,
             AllowInAutoLocation = true,
-            HostUrl = createParams.HostUrl?.ToString(),
+            HostPanelUrl = createParams.HostPanelUrl?.ToString(),
             IsDeleted = false,
         };
 
@@ -107,7 +107,7 @@ public class ServerService(
         }
         if (updateParams.GenerateNewSecret?.Value == true) server.ManagementSecret = GmUtil.GenerateKey();
         if (updateParams.AllowInAutoLocation != null) server.AllowInAutoLocation = updateParams.AllowInAutoLocation;
-        if (updateParams.HostUrl != null) server.HostUrl = updateParams.HostUrl?.ToString();
+        if (updateParams.HostPanelUrl != null) server.HostPanelUrl = updateParams.HostPanelUrl?.ToString();
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.AutoConfigure != null) server.AutoConfigure = updateParams.AutoConfigure;
         if (updateParams.AccessPoints != null)

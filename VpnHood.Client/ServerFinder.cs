@@ -17,6 +17,7 @@ namespace VpnHood.Client;
 public class ServerFinder(
     ISocketFactory socketFactory,
     ServerToken serverToken,
+    string? serverLocation,
     TimeSpan serverQueryTimeout,
     ITracker? tracker,
     int maxDegreeOfParallelism = 10)
@@ -29,6 +30,7 @@ public class ServerFinder(
 
     private HostStatus[] _hostEndPointStatuses = [];
     public bool IncludeIpV6 { get; set; } = true;
+    public string? ServerLocation => serverLocation;
 
     // There are much work to be done here
     public async Task<IPEndPoint> FindBestServerAsync(CancellationToken cancellationToken)
@@ -39,6 +41,7 @@ public class ServerFinder(
             throw new Exception("Could not find any server endpoint. Please check your access key.");
 
         // for compatibility don't query server for single endpoint
+        // does not need on 535 or upper due to ServerStatusRequest
         if (hostEndPoints.Length == 1)
             return hostEndPoints.First();
 
@@ -54,7 +57,11 @@ public class ServerFinder(
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         _ = TrackEndPointsAvailability([], _hostEndPointStatuses);
-        return res ?? throw new NoReachableServer();
+        if (res != null)
+            return res;
+
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6));
+        throw new UnreachableServer(serverLocation: ServerLocation);
     }
 
     public async Task<IPEndPoint> FindBestServerAsync(IPEndPoint[] hostEndPoints, CancellationToken cancellationToken)
@@ -80,8 +87,11 @@ public class ServerFinder(
 
         // track new endpoints availability 
         _ = TrackEndPointsAvailability(_hostEndPointStatuses, results);
+        if (res != null)
+            return res;
 
-        return res ?? throw new NoReachableServer();
+        _ = tracker?.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: false, serverLocation: ServerLocation, isIpV6Supported: IncludeIpV6));
+        throw new UnreachableServer(serverLocation: ServerLocation);
     }
 
     private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
@@ -98,17 +108,7 @@ public class ServerFinder(
 
         var trackEvents = changesStatus
             .Where(x => x.Available != null)
-            .Select(x => new TrackEvent
-            {
-                EventName = "vh_server_status",
-                Parameters = new Dictionary<string, object>
-                {
-                    {"ip", x.TcpEndPoint.Address},
-                    {"ep", x.TcpEndPoint},
-                    {"ip_v6", x.TcpEndPoint.Address.IsV6()},
-                    {"available", x.Available!}
-                }
-            })
+            .Select(x => ClientTrackerBuilder.BuildEndPointStatus(x.TcpEndPoint, x.Available!.Value))
             .ToArray();
 
         return tracker.Track(trackEvents);
@@ -170,12 +170,12 @@ public class ServerFinder(
         try
         {
             var requestResult = await connector.SendRequest<ServerStatusResponse>(
-                new ServerStatusRequest
-                {
-                    RequestId = Guid.NewGuid().ToString(),
-                    Message = "Hi, How are you?"
-                },
-                cancellationToken)
+                    new ServerStatusRequest
+                    {
+                        RequestId = Guid.NewGuid().ToString(),
+                        Message = "Hi, How are you?"
+                    },
+                    cancellationToken)
                 .VhConfigureAwait();
 
             // this should be already handled by the connector and never happen
@@ -191,6 +191,10 @@ public class ServerFinder(
         catch (SessionException)
         {
             throw;
+        }
+        catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw; // query cancelled due to discovery cancellationToken
         }
         catch (Exception ex)
         {

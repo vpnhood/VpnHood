@@ -19,19 +19,22 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
         {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-            var appUpdateInfo = await new GooglePlayTaskCompleteListener<AppUpdateInfo>(appUpdateManager.AppUpdateInfo).Task.VhConfigureAwait();
+            var appUpdateInfo = await GooglePlayTaskCompleteListener<AppUpdateInfo>.Create(appUpdateManager.AppUpdateInfo).VhConfigureAwait();
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
             // So we return false if there is UpdateNotAvailable to let the alternative way works
-            var updateAvailability = appUpdateInfo.UpdateAvailability();
-            if (updateAvailability != UpdateAvailability.UpdateAvailable || 
-                !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate))
-                return false;
-
+            // TODO Trudy check
+            if (appUpdateInfo != null)
+            {
+                var updateAvailability = appUpdateInfo.UpdateAvailability();
+                if (updateAvailability != UpdateAvailability.UpdateAvailable || 
+                    !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate))
+                    return false;   
+            }
 
             // Show Google Play update dialog
             var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
-            await new GooglePlayTaskCompleteListener<Integer>(updateFlowPlayTask).Task.VhConfigureAwait();
+            await GooglePlayTaskCompleteListener<Integer>.Create(updateFlowPlayTask).VhConfigureAwait();
 
             return true;
         }

@@ -41,14 +41,14 @@ public class ServerFinder(
         if (!hostEndPoints.Any())
             throw new Exception("Could not find any server endpoint. Please check your access key.");
 
-        // for compatibility don't query server for single endpoint
-        // does not need on 535 or upper due to ServerStatusRequest
-        if (hostEndPoints.Length == 1)
-            return hostEndPoints.First();
-
         // exclude ip v6 if not supported
         if (!IncludeIpV6)
             hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+
+        // for compatibility don't query server for single endpoint
+        // todo: does not need on 535 or upper due to ServerStatusRequest
+        if (hostEndPoints.Count(x => x.Address.IsV4()) == 1)
+            return hostEndPoints.First(x=>x.Address.IsV4());
 
         // randomize endpoint 
         VhUtil.Shuffle(hostEndPoints);

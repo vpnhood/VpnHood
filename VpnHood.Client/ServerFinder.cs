@@ -9,6 +9,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 
@@ -56,7 +57,7 @@ public class ServerFinder(
         _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
-        _ = TrackEndPointsAvailability([], _hostEndPointStatuses);
+        _ = TrackEndPointsAvailability([], _hostEndPointStatuses).VhConfigureAwait();
         if (res != null)
             return res;
 
@@ -86,7 +87,7 @@ public class ServerFinder(
         var res = results.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         // track new endpoints availability 
-        _ = TrackEndPointsAvailability(_hostEndPointStatuses, results);
+        _ = TrackEndPointsAvailability(_hostEndPointStatuses, results).VhConfigureAwait();
         if (res != null)
             return res;
 
@@ -96,14 +97,11 @@ public class ServerFinder(
 
     private Task TrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
     {
-        if (tracker is null)
-            return Task.CompletedTask;
-
         // find new discovered statuses
         var changesStatus = newStatuses
             .Where(x =>
                 x.Available != null &&
-                !oldStatuses.Any(y => y.Available != x.Available && y.TcpEndPoint.Equals(x.TcpEndPoint)))
+                !oldStatuses.Any(y => y.Available == x.Available && y.TcpEndPoint.Equals(x.TcpEndPoint)))
             .ToArray();
 
         var trackEvents = changesStatus
@@ -111,7 +109,11 @@ public class ServerFinder(
             .Select(x => ClientTrackerBuilder.BuildEndPointStatus(x.TcpEndPoint, x.Available!.Value))
             .ToArray();
 
-        return tracker.Track(trackEvents);
+        // report endpoints
+        var endPointReport = string.Join(", ", changesStatus.Select(x => $"{VhLogger.Format(x.TcpEndPoint)} => {x.Available}"));
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "HostEndPoints: {EndPoints}", endPointReport);
+
+        return tracker?.Track(trackEvents) ?? Task.CompletedTask;
     }
 
     private async Task<HostStatus[]> VerifyServersStatus(IPEndPoint[] hostEndPoints, bool byOrder, CancellationToken cancellationToken)
@@ -192,13 +194,13 @@ public class ServerFinder(
         {
             throw;
         }
-        catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw; // query cancelled due to discovery cancellationToken
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, "Could not get server status. EndPoint: {EndPoint}",
+            VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
                 VhLogger.Format(connector.EndPointInfo.TcpEndPoint));
 
             return false;

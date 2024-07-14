@@ -450,7 +450,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogAnonymous = _logAnonymous ?? Settings.UserSettings.Logging.LogAnonymous,
                 LogToConsole = UserSettings.Logging.LogToConsole,
                 LogToFile = UserSettings.Logging.LogToFile | diagnose,
-                LogLevel = _logVerbose ? LogLevel.Trace : LogLevel.Information
+                LogLevel = _logVerbose || diagnose ? LogLevel.Trace : LogLevel.Information
             });
 
             // log general info

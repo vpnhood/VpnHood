@@ -186,21 +186,13 @@ public class ServerFinder(
 
             return true;
         }
-        catch (UnauthorizedAccessException)
-        {
-            throw;
-        }
-        catch (SessionException)
-        {
-            throw;
-        }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw; // query cancelled due to discovery cancellationToken
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
+            VhLogger.Instance.LogWarning(ex, "Could not get server status. EndPoint: {EndPoint}",
                 VhLogger.Format(connector.EndPointInfo.TcpEndPoint));
 
             return false;

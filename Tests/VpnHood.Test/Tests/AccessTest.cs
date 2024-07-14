@@ -16,8 +16,6 @@ public class AccessTest : TestBase
     [TestMethod]
     public async Task Foo()
     {
-        //todo: check update sni
-
         await Task.Delay(0);
     }
 

@@ -3,8 +3,6 @@ using Android.Content.PM;
 using Android.Service.QuickSettings;
 using Android.Views;
 using VpnHood.Client.App.Droid.Common.Activities;
-using VpnHood.Client.App.Droid.GooglePlay;
-using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -22,15 +20,10 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
+
+// ReSharper disable once UnusedMember.Global
 public class MainActivity : AndroidAppMainActivity
 {
-    protected override async void OnCreate(Bundle? savedInstanceState)
-    {
-        base.OnCreate(savedInstanceState);
-        var inAppReview = GooglePlayInAppReviewService.Create();
-        await inAppReview.InitializeReview(this, ActiveUiContext.RequiredContext);
-    }
-
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions

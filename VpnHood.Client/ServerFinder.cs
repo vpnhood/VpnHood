@@ -43,7 +43,7 @@ public class ServerFinder(
 
         // exclude ip v6 if not supported
         if (!IncludeIpV6)
-            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback)).ToArray();
 
         // for compatibility don't query server for single endpoint
         // todo: does not need on 535 or upper due to ServerStatusRequest
@@ -74,9 +74,9 @@ public class ServerFinder(
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
-        // exclude ip v6 if not supported
+        // exclude ip v6 if not supported (IPv6Loopback is for tests)
         if (!IncludeIpV6)
-            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+            hostEndPoints = hostEndPoints.Where(x =>!x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback)).ToArray();
 
         // merge old values
         foreach (var hostStatus in hostStatuses)

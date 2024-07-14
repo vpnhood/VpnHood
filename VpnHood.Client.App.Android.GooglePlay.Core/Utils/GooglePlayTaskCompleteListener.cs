@@ -1,10 +1,9 @@
-﻿
-namespace VpnHood.Client.App.Droid.GooglePlay;
+﻿namespace VpnHood.Client.App.Droid.GooglePlay.Utils;
 
 public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
     Xamarin.Google.Android.Play.Core.Tasks.IOnSuccessListener,
     Xamarin.Google.Android.Play.Core.Tasks.IOnFailureListener,
-    Xamarin.Google.Android.Play.Core.Tasks.IOnCompleteListener where T : class
+    Xamarin.Google.Android.Play.Core.Tasks.IOnCompleteListener
 {
     private readonly TaskCompletionSource<T?> _taskCompletionSource;
     public Task<T?> Task => _taskCompletionSource.Task;
@@ -17,19 +16,25 @@ public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
 
     public static Task<T?> Create(Xamarin.Google.Android.Play.Core.Tasks.Task googlePlayTask)
     {
-        var listener = new GooglePlayTaskCompleteListener<T>(googlePlayTask);
+        var listener = new GooglePlayTaskCompleteListener<T?>(googlePlayTask);
         return listener.Task;
     }
     public void OnSuccess(Java.Lang.Object? obj)
     {
-        if (obj is T result)
-            _taskCompletionSource.TrySetResult(result);
-        else
+        switch (obj)
         {
-            Console.WriteLine("ZZZ 5");
-            _taskCompletionSource.SetException(new System.Exception("test"));
-            //_taskCompletionSource.TrySetException(new System.Exception($"Unexpected type: {obj?.GetType()}."));
-            Console.WriteLine($"ZZZ {_taskCompletionSource.Task.Exception}");
+            case null:
+                _taskCompletionSource.TrySetResult(default);
+                break;
+
+            case T result:
+                _taskCompletionSource.TrySetResult(result);
+                break;
+
+            default:
+                _taskCompletionSource.TrySetException(new Exception(
+                    $"Unexpected type in GooglePlayTaskCompleteListener. Expected: {typeof(T)}, Actual: {obj.GetType()}."));
+                break;
         }
     }
 
@@ -40,6 +45,6 @@ public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
 
     public void OnComplete(Xamarin.Google.Android.Play.Core.Tasks.Task p0)
     {
-        
+
     }
 }

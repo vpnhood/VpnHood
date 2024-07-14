@@ -1,13 +1,12 @@
-﻿using Java.Lang;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.Abstractions;
+using VpnHood.Client.App.Droid.GooglePlay.Utils;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Droid;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.Install.Model;
-using Exception = System.Exception;
 
 namespace VpnHood.Client.App.Droid.GooglePlay;
 
@@ -19,22 +18,18 @@ public class GooglePlayAppUpdaterService : IAppUpdaterService
         {
             var appUiContext = (AndroidUiContext)uiContext;
             using var appUpdateManager = AppUpdateManagerFactory.Create(appUiContext.Activity);
-            var appUpdateInfo = await GooglePlayTaskCompleteListener<AppUpdateInfo>.Create(appUpdateManager.AppUpdateInfo).VhConfigureAwait();
+            using var appUpdateInfo = await appUpdateManager.AppUpdateInfo.AsTask<AppUpdateInfo>().VhConfigureAwait() ?? throw new Exception("Could not retrieve AppUpdateInfo");
 
             // play set UpdateAvailability.UpdateNotAvailable even when there is no connection to google
             // So we return false if there is UpdateNotAvailable to let the alternative way works
-            // TODO Trudy check
-            if (appUpdateInfo != null)
-            {
-                var updateAvailability = appUpdateInfo.UpdateAvailability();
-                if (updateAvailability != UpdateAvailability.UpdateAvailable || 
-                    !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate))
-                    return false;   
-            }
+            var updateAvailability = appUpdateInfo.UpdateAvailability();
+            if (updateAvailability != UpdateAvailability.UpdateAvailable ||
+                !appUpdateInfo.IsUpdateTypeAllowed(AppUpdateType.Immediate))
+                return false;
 
             // Show Google Play update dialog
-            var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
-            await GooglePlayTaskCompleteListener<Integer>.Create(updateFlowPlayTask).VhConfigureAwait();
+            using var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity, AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
+            await updateFlowPlayTask.AsTask().VhConfigureAwait();
 
             return true;
         }

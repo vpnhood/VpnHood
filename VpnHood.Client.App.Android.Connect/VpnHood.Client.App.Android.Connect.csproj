@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid.Connect</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>534</ApplicationVersion>
-		<ApplicationDisplayVersion>4.5.534</ApplicationDisplayVersion>
+		<ApplicationVersion>539</ApplicationVersion>
+		<ApplicationDisplayVersion>4.6.539</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.5.534</Version>
+		<Version>4.6.539</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -50,11 +50,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Remove="xml\network_security_config.xml" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<AndroidResource Include="xml\network_security_config.xml" />
+		<AndroidResource Update="Resources\xml\locales_config.xml">
+		  <SubType>Designer</SubType>
+		  <Generator>MSBuild:UpdateGeneratedFiles</Generator>
+		</AndroidResource>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -68,7 +67,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="119.0.0" />
+		<PackageReference Include="VpnHood.Client.App.Android.Ads.Chartboost" Version="4.5.543" />
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="121.3.0.7" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="118.6.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <GoogleServicesJson Include="Properties\google-services.json" />
 	</ItemGroup>
 
 </Project>

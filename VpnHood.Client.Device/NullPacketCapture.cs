@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Common.Net;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client.Device;
 
@@ -10,7 +11,7 @@ public class NullPacketCapture : IPacketCapture
     public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
     public event EventHandler? Stopped;
     public virtual bool Started { get; set; }
-    public virtual bool IsDnsServersSupported { get; set; }
+    public virtual bool IsDnsServersSupported { get; set; } = true;
     public virtual IPAddress[]? DnsServers { get; set; }
     public virtual bool CanExcludeApps { get; set; } = true;
     public virtual bool CanIncludeApps { get; set; } = true;
@@ -59,6 +60,11 @@ public class NullPacketCapture : IPacketCapture
     public virtual void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         // nothing
+    }
+
+    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        return null;
     }
 
     public virtual void Dispose()

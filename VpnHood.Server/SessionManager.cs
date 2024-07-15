@@ -1,11 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.Json;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.Access.Managers;
@@ -32,7 +33,7 @@ public class SessionManager : IAsyncDisposable, IJob
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
     public SessionOptions SessionOptions { get; set; } = new();
-    public Ga4Tracker? GaTracker { get; }
+    public ITracker? Tracker { get; }
 
     public byte[] ServerSecret
     {
@@ -47,14 +48,14 @@ public class SessionManager : IAsyncDisposable, IJob
     internal SessionManager(IAccessManager accessManager,
         INetFilter netFilter,
         SocketFactory socketFactory,
-        Ga4Tracker? gaTracker,
+        ITracker? tracker,
         Version serverVersion,
         SessionManagerOptions options)
     {
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _serverSecret = VhUtil.GenerateKey(128);
-        GaTracker = gaTracker;
+        Tracker = tracker;
         ApiKey = HttpUtil.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
@@ -122,7 +123,8 @@ public class SessionManager : IAsyncDisposable, IJob
             EncryptedClientId = helloRequest.EncryptedClientId,
             TokenId = helloRequest.TokenId,
             ServerLocation = helloRequest.ServerLocation,
-            AllowRedirect = helloRequest.AllowRedirect
+            AllowRedirect = helloRequest.AllowRedirect,
+            IsIpV6Supported = helloRequest.IsIpV6Supported
         }).VhConfigureAwait();
 
         // Access Error should not pass to the client in create session
@@ -146,22 +148,22 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private Task GaTrackNewSession(ClientInfo clientInfo)
     {
-        if (GaTracker == null)
+        if (Tracker == null)
             return Task.CompletedTask;
 
         // track new session
         var serverVersion = ServerVersion.ToString(3);
-        return GaTracker.Track(new Ga4TagEvent
+        return Tracker.Track([new TrackEvent
         {
-            EventName = Ga4TagEvents.PageView,
-            Properties = new Dictionary<string, object>
+            EventName = TrackEventNames.PageView,
+            Parameters = new Dictionary<string, object>
             {
                 { "client_version", clientInfo.ClientVersion },
                 { "server_version", serverVersion },
-                { Ga4TagProperties.PageTitle, $"server_version/{serverVersion}" },
-                { Ga4TagProperties.PageLocation, $"server_version/{serverVersion}" }
+                { TrackParameterNames.PageTitle, $"server_version/{serverVersion}" },
+                { TrackParameterNames.PageLocation, $"server_version/{serverVersion}" }
             }
-        });
+        }]);
     }
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
@@ -265,13 +267,13 @@ public class SessionManager : IAsyncDisposable, IJob
 
     private Task SendHeartbeat()
     {
-        if (GaTracker == null)
+        if (Tracker == null)
             return Task.CompletedTask;
 
-        return GaTracker.Track(new Ga4TagEvent
+        return Tracker.Track(new TrackEvent
         {
             EventName = "heartbeat",
-            Properties = new Dictionary<string, object>
+            Parameters = new Dictionary<string, object>
             {
                 { "session_count", Sessions.Count(x => !x.Value.IsDisposed) }
             }

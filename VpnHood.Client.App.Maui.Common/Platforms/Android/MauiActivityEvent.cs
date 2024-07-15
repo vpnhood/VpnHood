@@ -17,6 +17,8 @@ public class MauiActivityEvent : MauiAppCompatActivity, IActivityEvent
     public event EventHandler<NewIntentEventArgs>? NewIntentEvent;
     public event EventHandler<RequestPermissionsResultArgs>? RequestPermissionsResultEvent;
     public event EventHandler<KeyDownArgs>? KeyDownEvent;
+    public event EventHandler? PauseEvent;
+    public event EventHandler? ResumeEvent;
     public event EventHandler? DestroyEvent;
     public event EventHandler<Configuration>? ConfigurationChangedEvent;
     public Activity Activity => this;
@@ -72,6 +74,18 @@ public class MauiActivityEvent : MauiAppCompatActivity, IActivityEvent
         });
 
         base.OnActivityResult(requestCode, resultCode, data);
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        ResumeEvent?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override void OnPause()
+    {
+        PauseEvent?.Invoke(this, EventArgs.Empty);
+        base.OnPause();
     }
 
     protected override void OnDestroy()

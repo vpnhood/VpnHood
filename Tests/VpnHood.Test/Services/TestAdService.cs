@@ -13,6 +13,7 @@ public class TestAdService(TestAccessManager accessManager) : IAppAdService
     public AppAdType AdType => AppAdType.InterstitialAd;
     public bool IsCountrySupported(string countryCode) => true;
     public DateTime? AdLoadedTime { get; private set; }
+    public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
 
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {

@@ -13,15 +13,12 @@ namespace VpnHood.Client.Device.Droid;
 public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 {
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
-    private TaskCompletionSource<bool> _startServiceTaskSource = new();
-    private IPacketCapture? _packetCapture;
     private const int RequestVpnPermissionId = 20100;
     private AndroidDeviceNotification? _deviceNotification;
 
     public event EventHandler? StartedAsService;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
-    public bool IsLogToConsoleSupported => false;
     public bool IsAlwaysOnSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
     public string OsInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
 
@@ -122,37 +119,37 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
     private async Task PrepareVpnService(IActivityEvent? activityEvent)
     {
         // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
+        VhLogger.Instance.LogTrace("Preparing VpnService...");
         using var prepareIntent = VpnService.Prepare(activityEvent?.Activity ?? Application.Context);
-        if (prepareIntent != null)
+        if (prepareIntent == null)
+            return; // already prepared
+
+        if (activityEvent == null)
+            throw new Exception("Please open the app and grant VPN permission to proceed.");
+
+        _grantPermissionTaskSource = new TaskCompletionSource<bool>();
+        activityEvent.ActivityResultEvent += Activity_OnActivityResult;
+        try
         {
-            if (activityEvent == null)
-                throw new Exception("Please open the app and grant VPN permission to proceed.");
+            VhLogger.Instance.LogTrace("Requesting user consent...");
+            activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
+            await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2)))
+                .VhConfigureAwait();
 
-            _grantPermissionTaskSource = new TaskCompletionSource<bool>();
-            activityEvent.ActivityResultEvent += Activity_OnActivityResult;
-            try
-            {
-                activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
-                await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2))).VhConfigureAwait();
-                if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
-                    throw new Exception("Could not grant VPN permission in the given time.");
+            if (!_grantPermissionTaskSource.Task.IsCompletedSuccessfully)
+                throw new Exception("Could not grant VPN permission in the given time.");
 
-                if (!_grantPermissionTaskSource.Task.Result)
-                    throw new Exception("VPN permission has been rejected.");
-            }
-            finally
-            {
-                activityEvent.ActivityResultEvent -= Activity_OnActivityResult;
-            }
+            if (!_grantPermissionTaskSource.Task.Result)
+                throw new Exception("VPN permission has been rejected.");
+        }
+        finally
+        {
+            activityEvent.ActivityResultEvent -= Activity_OnActivityResult;
         }
     }
 
     public async Task<IPacketCapture> CreatePacketCapture(IUiContext? uiContext)
     {
-        // remove current if still exists
-        _packetCapture?.Dispose();
-        _packetCapture = null;
-
         // prepare vpn service
         var androidUiContext = (AndroidUiContext?)uiContext;
         await PrepareVpnService(androidUiContext?.ActivityEvent);
@@ -160,6 +157,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         // start service
         var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
         intent.PutExtra("manual", true);
+        AndroidPacketCapture.StartServiceTaskCompletionSource = new TaskCompletionSource<AndroidPacketCapture>();
         if (OperatingSystem.IsAndroidVersionAtLeast(26))
         {
             Application.Context.StartForegroundService(intent.SetAction("connect"));
@@ -170,21 +168,21 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         }
 
         // check is service started
-        _startServiceTaskSource = new TaskCompletionSource<bool>();
-        await Task.WhenAny(_startServiceTaskSource.Task, Task.Delay(TimeSpan.FromSeconds(10))).VhConfigureAwait();
-        if (_packetCapture == null)
-            throw new Exception("Could not start VpnService in the given time.");
-
-        return _packetCapture;
+        try
+        {
+            var packetCapture = await AndroidPacketCapture.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            return packetCapture;
+        }
+        catch (Exception ex)
+        {
+            AndroidPacketCapture.StartServiceTaskCompletionSource.TrySetCanceled();
+            throw new Exception("Could not create VpnService in given time.", ex);
+        }
     }
 
 
     internal void OnServiceStartCommand(AndroidPacketCapture packetCapture, Intent? intent)
     {
-        _packetCapture = packetCapture;
-        _packetCapture.Stopped += PacketCapture_Stopped;
-        _startServiceTaskSource.TrySetResult(true);
-
         // set foreground
         _deviceNotification ??= CreateDefaultNotification();
         packetCapture.StartForeground(_deviceNotification.NotificationId, _deviceNotification.Notification);
@@ -202,11 +200,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
                 VhLogger.Instance.LogError(ex, "Could not start service.");
             }
         }
-    }
-
-    private void PacketCapture_Stopped(object? sender, EventArgs e)
-    {
-        _packetCapture = null;
     }
 
     private static string EncodeToBase64(Drawable drawable, int quality)

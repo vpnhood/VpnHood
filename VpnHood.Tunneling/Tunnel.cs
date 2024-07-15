@@ -6,6 +6,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.DatagramMessaging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 

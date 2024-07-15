@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.App;
 using VpnHood.Client.App.Exceptions;
+using VpnHood.Client.Device;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Test.Services;
@@ -22,7 +23,7 @@ public class AdTest : TestBase
         accessItem.Token.ToAccessKey();
 
         // create client app
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         var adService = new TestAdService(accessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
@@ -46,11 +47,11 @@ public class AdTest : TestBase
         accessItem.Token.ToAccessKey();
 
         // create client app
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         var adService = new TestAdService(accessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        app.UiContext = null;
+        ActiveUiContext.Context = null;
         //adService.FailShow = true;
 
         // connect
@@ -71,11 +72,11 @@ public class AdTest : TestBase
         accessItem.Token.ToAccessKey();
 
         // create client app
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         var adService = new TestAdService(accessManager);
         appOptions.AdServices = [adService];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
-        app.UiContext = null;
+        ActiveUiContext.Context = null;
         //adService.FailShow = true;
 
         // connect
@@ -96,7 +97,7 @@ public class AdTest : TestBase
         accessItem.Token.ToAccessKey();
 
         // create client app
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         appOptions.AdServices = [new TestAdService(accessManager)];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 
@@ -121,7 +122,7 @@ public class AdTest : TestBase
         testManager.RejectAllAds = true; // server will reject all ads
 
         // create client app
-        var appOptions = TestHelper.CreateClientAppOptions();
+        var appOptions = TestHelper.CreateAppOptions();
         appOptions.AdServices = [new TestAdService(testManager)];
         await using var app = TestHelper.CreateClientApp(appOptions: appOptions);
 

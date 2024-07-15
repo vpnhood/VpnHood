@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers;
+using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Client.Abstractions;
@@ -13,11 +14,14 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.ClientStreams;
+using VpnHood.Tunneling.DomainFiltering;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Tunneling.Utils;
 using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -40,7 +44,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly TimeSpan _minTcpDatagramLifespan;
     private readonly TimeSpan _maxTcpDatagramLifespan;
     private readonly bool _allowAnonymousTracker;
-    private readonly string? _appGa4MeasurementId;
+    private readonly ITracker? _usageTracker;
     private IPAddress[] _dnsServersIpV4 = [];
     private IPAddress[] _dnsServersIpV6 = [];
     private IPAddress[] _dnsServers = [];
@@ -55,10 +59,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ConnectorService? _connectorService;
     private readonly TimeSpan _tcpConnectTimeout;
     private DateTime? _autoWaitTime;
-    private readonly string? _serverLocation;
+    private readonly ServerFinder _serverFinder;
     private ConnectorService ConnectorService => VhUtil.GetRequiredInstance(_connectorService);
     private int ProtocolVersion { get; }
-
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal ClientSocketFactory SocketFactory { get; }
@@ -66,7 +69,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public Version? ServerVersion { get; private set; }
     public IPAddress? PublicAddress { get; private set; }
-    public bool IsIpV6Supported { get; private set; }
+    public bool IsIpV6SupportedByServer { get; private set; }
+    public bool IsIpV6SupportedByClient { get; internal set; }
     public TimeSpan SessionTimeout { get; set; }
     public TimeSpan AutoWaitTimeout { get; set; }
     public TimeSpan ReconnectTimeout { get; set; }
@@ -86,7 +90,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public string? ResponseAccessKey { get; private set; }
-
+    public DomainFilterService DomainFilterService { get; }
 
     public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
     {
@@ -109,10 +113,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _proxyManager = new ClientProxyManager(packetCapture, SocketFactory, new ProxyManagerOptions());
         _ipRangeProvider = options.IpRangeProvider;
-        _appGa4MeasurementId = options.AppGa4MeasurementId;
+        _usageTracker = options.Tracker;
         _tcpConnectTimeout = options.ConnectTimeout;
         _useUdpChannel = options.UseUdpChannel;
         _adProvider = options.AdProvider;
+        _serverFinder = new ServerFinder(options.SocketFactory, token.ServerToken,
+            serverLocation:  options.ServerLocation,
+            serverQueryTimeout: options.ServerQueryTimeout,
+            tracker: options.AllowEndPointTracker ? options.Tracker : null);
 
         ReconnectTimeout = options.ReconnectTimeout;
         AutoWaitTimeout = options.AutoWaitTimeout;
@@ -125,7 +133,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IncludeLocalNetwork = options.IncludeLocalNetwork;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
         DropUdpPackets = options.DropUdpPackets;
-        _serverLocation = options.ServerLocation;
+        DomainFilterService = new DomainFilterService(options.DomainFilter, options.ForceLogSni);
 
         // NAT
         Nat = new Nat(true);
@@ -190,8 +198,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync(false);
     }
 
-    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint, string channelId,
-        CancellationToken cancellationToken)
+    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
+        string channelId, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
         using var cancellationTokenSource = new CancellationTokenSource(ConnectorService.RequestTimeout);
@@ -206,6 +214,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         var bypassChannel = new StreamProxyChannel(channelId, orgTcpClientStream,
             new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"));
 
+        // flush initBuffer
+        await tcpClient.GetStream().WriteAsync(initBuffer, linkedCancellationTokenSource.Token);
+
         try { _proxyManager.AddChannel(bypassChannel); }
         catch { await bypassChannel.DisposeAsync().VhConfigureAwait(); throw; }
     }
@@ -219,12 +230,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (State != ClientState.None)
             throw new Exception("Connection is already in progress.");
 
+
         // report config
+        IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
+        _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         VhLogger.Instance.LogInformation(
             "UseUdpChannel: {UseUdpChannel}, DropUdpPackets: {DropUdpPackets}, IncludeLocalNetwork: {IncludeLocalNetwork}, " +
-            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}",
-            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads);
+            "MinWorkerThreads: {WorkerThreads}, CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}",
+            UseUdpChannel, DropUdpPackets, IncludeLocalNetwork, workerThreads, completionPortThreads, IsIpV6SupportedByClient);
 
         // report version
         VhLogger.Instance.LogInformation("ClientVersion: {ClientVersion}, ClientProtocolVersion: {ClientProtocolVersion}, ClientId: {ClientId}",
@@ -241,7 +255,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var endPointInfo = new ConnectorEndPointInfo
             {
                 HostName = Token.ServerToken.HostName,
-                TcpEndPoint = await ServerTokenHelper.ResolveHostEndPoint(Token.ServerToken).VhConfigureAwait(),
+                TcpEndPoint = await _serverFinder.FindBestServerAsync(cancellationToken).VhConfigureAwait(),
                 CertificateHash = Token.ServerToken.CertificateHash
             };
             _connectorService = new ConnectorService(endPointInfo, SocketFactory, _tcpConnectTimeout);
@@ -341,7 +355,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 var passthruPackets = _sendingPackets.PassthruPackets;
                 var proxyPackets = _sendingPackets.ProxyPackets;
                 var droppedPackets = _sendingPackets.DroppedPackets;
-                
+
                 // ReSharper disable once ForCanBeConvertedToForeach
                 for (var i = 0; i < e.IpPackets.Count; i++)
                 {
@@ -355,7 +369,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     if (isDnsPacket)
                     {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6Supported)
+                        if (isIpV6 && !IsIpV6SupportedByServer)
                         {
                             droppedPackets.Add(ipPacket);
                         }
@@ -374,7 +388,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             passthruPackets.Add(ipPacket);
 
                         // Drop IPv6 if not support
-                        else if (isIpV6 && !IsIpV6Supported)
+                        else if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
                         // Check IPv6 control message such as Solicitations
@@ -396,7 +410,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     else
                     {
                         // Drop IPv6 if not support
-                        if (isIpV6 && !IsIpV6Supported)
+                        if (isIpV6 && !IsIpV6SupportedByServer)
                             droppedPackets.Add(ipPacket);
 
                         // Check IPv6 control message such as Solicitations
@@ -413,7 +427,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         // Udp
                         else if (ipPacket.Protocol == ProtocolType.Udp && !DropUdpPackets)
                         {
-                            if (IsInIpRange(ipPacket.DestinationAddress))
+                            if (IsInIpRange(ipPacket.DestinationAddress)) //todo add InInProcess
                                 tunnelPackets.Add(ipPacket);
                             else
                                 proxyPackets.Add(ipPacket);
@@ -502,7 +516,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         isInRange = IncludeIpRanges.IsInRange(ipAddress);
 
         // cache the result
-        // we really don't need to keep that much ips in the cache
+        // we don't need to keep that much ips in the cache
         if (_includeIps.Count > 0xFFFF)
         {
             VhLogger.Instance.LogInformation("Clearing IP filter cache!");
@@ -641,8 +655,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 EncryptedClientId = VhUtil.EncryptClientId(clientInfo.ClientId, Token.Secret),
                 ClientInfo = clientInfo,
                 TokenId = Token.TokenId,
-                ServerLocation = _serverLocation,
-                AllowRedirect = allowRedirect
+                ServerLocation = _serverFinder.ServerLocation,
+                AllowRedirect = allowRedirect,
+                IsIpV6Supported = IsIpV6SupportedByClient
             };
 
             await using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).VhConfigureAwait();
@@ -671,31 +686,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 // Anonymous server usage tracker
                 if (!string.IsNullOrEmpty(sessionResponse.GaMeasurementId))
                 {
-                    var ga4Tracking = new Ga4Tracker
+                    var ga4Tracking = new Ga4TagTracker()
                     {
                         SessionCount = 1,
                         MeasurementId = sessionResponse.GaMeasurementId,
-                        ApiSecret = string.Empty,
                         ClientId = ClientId.ToString(),
                         SessionId = SessionId.ToString(),
-                        UserAgent = UserAgent
+                        UserAgent = UserAgent,
+                        UserProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } }
                     };
 
-                    var useProperties = new Dictionary<string, object> { { "client_version", Version.ToString(3) } };
-                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = Ga4TagEvents.SessionStart }, useProperties);
+                    _ = ga4Tracking.Track(new Ga4TagEvent { EventName = TrackEventNames.SessionStart });
                 }
 
                 // Anonymous app usage tracker
-                if (!string.IsNullOrEmpty(_appGa4MeasurementId))
-                    _clientUsageTracker = new ClientUsageTracker(Stat, Version, new Ga4Tracker
-                    {
-                        MeasurementId = _appGa4MeasurementId,
-                        SessionCount = 1,
-                        ApiSecret = string.Empty,
-                        ClientId = ClientId.ToString(),
-                        SessionId = SessionId.ToString(),
-                        UserAgent = UserAgent
-                    });
+                if (_usageTracker != null)
+                {
+                    _ = _usageTracker.Track(ClientTrackerBuilder.BuildConnectionAttempt(connected: true, _serverFinder.ServerLocation, isIpV6Supported: IsIpV6SupportedByClient));
+                    _clientUsageTracker = new ClientUsageTracker(Stat, _usageTracker);
+                }
             }
 
             // get session id
@@ -707,7 +716,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
             PublicAddress = sessionResponse.ClientPublicAddress;
             ServerVersion = Version.Parse(sessionResponse.ServerVersion);
-            IsIpV6Supported = sessionResponse.IsIpV6Supported;
+            IsIpV6SupportedByServer = sessionResponse.IsIpV6Supported;
             Stat.ServerLocationInfo = sessionResponse.ServerLocation != null ? ServerLocationInfo.Parse(sessionResponse.ServerLocation) : null;
             if (sessionResponse.UdpPort > 0)
                 HostUdpEndPoint = new IPEndPoint(ConnectorService.EndPointInfo.TcpEndPoint.Address, sessionResponse.UdpPort.Value);
@@ -721,11 +730,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 IncludeIpRanges = IncludeIpRanges.Intersect(sessionResponse.IncludeIpRanges);
 
             // Get IncludeIpRange for clientIp
-            var filterIpRanges = _ipRangeProvider != null ? await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress).VhConfigureAwait() : null;
-            if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+            if (_ipRangeProvider != null)
             {
-                filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
-                IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
+                var filterIpRanges = await _ipRangeProvider.GetIncludeIpRanges(sessionResponse.ClientPublicAddress, cancellationToken).VhConfigureAwait();
+                if (!VhUtil.IsNullOrEmpty(filterIpRanges))
+                {
+                    filterIpRanges = filterIpRanges.Union(DnsServers.Select((x => new IpRange(x))));
+                    IncludeIpRanges = IncludeIpRanges.Intersect(filterIpRanges);
+                }
             }
 
             // set DNS after setting IpFilters
@@ -767,8 +779,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
         catch (RedirectHostException ex) when (allowRedirect)
         {
-            // todo; init new connector
-            ConnectorService.EndPointInfo.TcpEndPoint = ex.RedirectHostEndPoint;
+            // todo: init new connector
+            ConnectorService.EndPointInfo.TcpEndPoint = await _serverFinder.FindBestServerAsync(ex.RedirectHostEndPoints, cancellationToken);
             await ConnectInternal(cancellationToken, false).VhConfigureAwait();
         }
     }
@@ -1002,13 +1014,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _ = DisposeAsync();
     }
 
-
     public ValueTask DisposeAsync()
     {
         return DisposeAsync(false);
     }
 
     private readonly AsyncLock _disposeLock = new();
+
     public async ValueTask DisposeAsync(bool waitForBye)
     {
         using var lockResult = await _disposeLock.LockAsync().VhConfigureAwait();

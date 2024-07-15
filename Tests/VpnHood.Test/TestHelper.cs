@@ -269,26 +269,26 @@ internal static class TestHelper
     }
 
     public static Task<VpnHoodServer> CreateServer(
-        IAccessManager? accessManager = null, 
+        IAccessManager? accessManager = null,
         bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
-        return CreateServer(accessManager, null, 
-            autoStart: autoStart, 
-            configureInterval: configureInterval, 
+        return CreateServer(accessManager, null,
+            autoStart: autoStart,
+            configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager);
     }
 
-    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true, 
+    public static Task<VpnHoodServer> CreateServer(FileAccessManagerOptions? options, bool autoStart = true,
         TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
-        return CreateServer(null, options, 
-            autoStart: autoStart, 
-            configureInterval: configureInterval, 
+        return CreateServer(null, options,
+            autoStart: autoStart,
+            configureInterval: configureInterval,
             useHttpAccessManager: useHttpAccessManager);
     }
 
-    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions, 
-        bool autoStart,  TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
+    private static async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager, FileAccessManagerOptions? fileAccessManagerOptions,
+        bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException($"Could not set both {nameof(accessManager)} and {nameof(fileAccessManagerOptions)}.");
@@ -329,10 +329,22 @@ internal static class TestHelper
         return server;
     }
 
+    public static TestDeviceOptions CreateDeviceOptions()
+    {
+        return new TestDeviceOptions();
+    }
+
     public static IDevice CreateDevice(TestDeviceOptions? options = default)
     {
-        return new TestDevice(options);
+        options ??= new TestDeviceOptions();
+        return new TestDevice(options, false);
     }
+
+    public static IDevice CreateNullDevice()
+    {
+        return new TestDevice(new TestDeviceOptions(), true);
+    }
+
 
     public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
     {
@@ -343,8 +355,11 @@ internal static class TestHelper
     {
         return new ClientOptions
         {
+            AllowAnonymousTracker = true,
+            AllowEndPointTracker = true,
             MaxDatagramChannelCount = 1,
-            UseUdpChannel = useUdp
+            UseUdpChannel = useUdp,
+            Tracker = new TestTracker()
         };
     }
 
@@ -384,15 +399,27 @@ internal static class TestHelper
         return client;
     }
 
-    public static AppOptions CreateClientAppOptions()
+    public static AppOptions CreateAppOptions()
     {
+        var tracker = new TestTracker();
         var appOptions = new AppOptions
         {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             SessionTimeout = TimeSpan.FromSeconds(2),
+            AppGa4MeasurementId = null,
+            Tracker = tracker,
             UseInternalLocationService = false,
             UseExternalLocationService = false,
-            LogVerbose = LogVerbose
+            AllowEndPointTracker = true,
+            LogVerbose = LogVerbose,
+            ServerQueryTimeout = TimeSpan.FromSeconds(2),
+            AutoDiagnose = false,
+            SingleLineConsoleLog = false,
+            AdOptions = new AppAdOptions
+            {
+                ShowAdPostDelay = TimeSpan.Zero,
+                LoadAdPostDelay = TimeSpan.Zero
+            }
         };
         return appOptions;
     }
@@ -400,16 +427,16 @@ internal static class TestHelper
     public static VpnHoodApp CreateClientApp(TestDeviceOptions? deviceOptions = default, AppOptions? appOptions = default)
     {
         //create app
-        appOptions ??= CreateClientAppOptions();
+        appOptions ??= CreateAppOptions();
 
-        var device = CreateDevice(deviceOptions);
+        var device = deviceOptions != null ? CreateDevice(deviceOptions) : CreateNullDevice();
         var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
         clientApp.UserSettings.Logging.LogAnonymous = false;
         clientApp.TcpTimeout = TimeSpan.FromSeconds(2);
-        clientApp.UiContext = new TestAppUiContext();
+        ActiveUiContext.Context = new TestAppUiContext();
 
         return clientApp;
     }

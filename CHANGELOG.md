@@ -12,7 +12,7 @@
 * Feature: Try to find a reachable server among endpoints
 * Feature: Implement ChartBoost ads
 * Update: Improve performance and memory usage
-* 
+ 
 ### Server
 * Feature: Support multiple redirect endpoints
 * Update: Use Cloudflare for detecting the server's public IP

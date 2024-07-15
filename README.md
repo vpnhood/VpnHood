@@ -1,18 +1,19 @@
 
-# VpnHood <img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="32">
+# <img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="32"> VpnHood
 An alternative way for circumvention and privacy!
 
 Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewalls and circumvent deep packet inspection. VpnHood has been created entirely from scratch in C#.
 
-## Client Download
-It is available for Windows and Android. the iOS client still needs to be ready!
+## Get VpnHood!
+It is available for Windows and Android. The iOS client still needs to be ready!
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-Win.exe"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
-<a href="https://github.com/vpnhood/VpnHood/wiki/Get-VpnHood-Client-from-third-party-app-stores"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" width="200"></a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
+
+<a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client">Use Alternative Download links.</a>
 
 ## Client Features
-* Easy Installation; Just install and press connect
+* Easy Installation: Just install and press connect
 * Undetectable on private IPs
 * Fast
 * Split Tunneling by Apps & Countries
@@ -25,13 +26,17 @@ It is available for Windows and Android. the iOS client still needs to be ready!
 * No Admin privilege is required
 * Hot Restart (User sessions' will not close on restart)
 * Built-In User Management 
-* Built-In NAT with zero configuration
+* Built-in NAT with zero configuration
+* NetScan Protector
 * Windows (x64) 10, 11, or Windows Server
 * Linux
 
 ## Developer Features
 * Open source (LGPL License)
 * Completely in .NET
+* MAUI Support 
+* Ads interface. AdMob and Chartboost have been integrated
+* Billing Interface
 * Highly Customizable
 * Easily Embed into your .NET app
 * Extendable User Management via REST API
@@ -39,12 +44,15 @@ It is available for Windows and Android. the iOS client still needs to be ready!
 * Open the solution with Visual Studio and build
 
 ### IPv6 Support
-VpnHood supports IPv6, but in Windows, you need to be already on the IPv6 network, so all your network traffic will be tunneled through VpnHood.
-In Windows, you will not have access to IPv6 sites if your network is not already configured to use IPv6.
-In Android, however, you will get an Ipv6 address and access to all IPv6 sites regardless of your network configuration.
+VpnHood supports IPv6, but in Windows, you must already be on the IPv6 network, so all your network traffic will be tunneled through VpnHood.
+In Windows, you cannot access IPv6 sites if your network is not already configured to use IPv6.
+In Android, however, you will get an IPV6 address and access to all IPv6 sites regardless of your network configuration.
+
+### Security Audit
+We are excited to announce that VpnHood has undergone a comprehensive security audit by the Open Tech Fund. The audit results are now available for public review. This audit reaffirms our commitment to providing a secure and reliable VPN service for our users. You can read the full report [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
 
 ## FAQ & Documents
-Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see the VpnHood documents.
+Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) for the VpnHood documents.
 
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
 * [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)

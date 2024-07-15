@@ -1,3 +1,23 @@
+# v4.6.544
+### Client
+* Fix: App Filter does not work when no app is selected
+* Fix: Exclude the ad tracker from the tunnel
+* Fix: Exclude My Country
+* Fix: Could not set MTU error
+* Fix: Android: InApp Update 
+* Fix: Android: VPN Service remains in memory after disconnect
+* Feature: Report unreachable servers
+* Feature: Add domain filtering to engine
+* Feature: Add log to Android logcat
+* Feature: Try to find a reachable server among endpoints
+* Feature: Implement ChartBoost ads
+* Update: Improve performance and memory usage
+* 
+### Server
+* Feature: Support multiple redirect endpoints
+* Update: Use Cloudflare for detecting the server's public IP
+* Update: Improve performance and memory usage
+
 # v4.5.535
 ### Client
 * Improve: App Filter page

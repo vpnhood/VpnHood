@@ -1,4 +1,4 @@
-﻿using Ga4.Ga4Tracking;
+﻿using Ga4.Trackers;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling.Factory;
@@ -8,7 +8,7 @@ namespace VpnHood.Server;
 public class ServerOptions
 {
     public SocketFactory SocketFactory { get; init; } = new();
-    public Ga4Tracker? GaTracker { get; init; }
+    public ITracker? Tracker { get; init; }
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
     public INetFilter NetFilter { get; init; } = new NetFilter();
     public bool AutoDisposeAccessManager { get; init; } = true;

@@ -1,5 +1,6 @@
 using VpnHood.Common.Utils;
 // ReSharper disable StringLiteralTypo
+// ReSharper disable CommentTypo
 
 namespace VpnHood.Client.App.Droid.Connect;
 
@@ -7,6 +8,7 @@ internal class AppSettings : Singleton<AppSettings>
 {
     public Uri? UpdateInfoUrl { get; init; }
     public bool ListenToAllIps { get; init; } = IsDebugMode;
+    public bool AllowEndPointTracker { get; init; } 
     public int? DefaultSpaPort { get; init; } = IsDebugMode ? 9571 : 9570;
     
     // This is a test access key, you should replace it with your own access key.
@@ -15,11 +17,6 @@ internal class AppSettings : Singleton<AppSettings>
     
     // Google sign-in (It is created through Firebase)
     public string GoogleSignInClientId { get; init; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
-
-    // Firebase Crashlytics
-    public string? FirebaseProjectId { get; init; } //YOUR_FIREBASE_PROJECT_ID "client-xxxxx"
-    public string? FirebaseApplicationId { get; init; } //YOUR_FIREBASE_APPLICATION_ID "0:000000000000:android:0000000000000000000000"
-    public string? FirebaseApiKey { get; init; } //YOUR_FIREBASE_API_KEY "xxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxx"
 
     // VpnHood Store server
     public Uri StoreBaseUri { get; init; } = new ("https://store-api.vpnhood.com");
@@ -32,13 +29,12 @@ internal class AppSettings : Singleton<AppSettings>
     public const string AdMobApplicationId = "ca-app-pub-8662231806304184~1740102860"; //YOUR_ADMOB_APP_ID
     public string AdMobInterstitialAdUnitId { get; init; } = "ca-app-pub-3940256099942544/8691691433";
     public string AdMobInterstitialNoVideoAdUnitId { get; init; } = "ca-app-pub-3940256099942544/1033173712";
-    public string AdMobRewardedAdUnitId { get; init; } = "ca-app-pub-3940256099942544/5224354917";
-    public string AdMobAppOpenAdUnitId { get; init; } = "ca-app-pub-3940256099942544/9257395921";
     
-    // UnityAd
-    public string UnityAdGameId { get; init; } = "YOUR_UNITY_AD_UNIT_GAME_ID";
-    public string UnityAdInterstitialPlacementId { get; init; } = "YOUR_UNITY_INTERSTITIAL_AD_UNIT_PLACEMENT_ID";
-
+    // Chartboost
+    public string ChartboostAppId { get; init; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
+    public string ChartboostAppSignature { get; init; } = "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+    public string ChartboostAdLocation { get; init; } = "YOUR_CHARTBOOST_AD_LOCATION";
+    
     public static AppSettings Create()
     {
         var appSettingsJson = VhUtil.GetAssemblyMetadata(typeof(AppSettings).Assembly, "AppSettings", "");

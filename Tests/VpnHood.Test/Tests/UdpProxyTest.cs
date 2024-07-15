@@ -5,6 +5,7 @@ using PacketDotNet;
 using VpnHood.Client;
 using VpnHood.Test.Services;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 
@@ -157,7 +158,7 @@ public class UdpProxyTest : TestBase
     [TestMethod]
     public async Task Max_UdpClients()
     {
-        var maxUdpCount = 3;
+        const int maxUdpCount = 3;
 
         // Create Server
         var accessManagerOptions = TestHelper.CreateFileAccessManagerOptions();

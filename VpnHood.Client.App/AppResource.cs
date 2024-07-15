@@ -22,7 +22,6 @@ public class AppResource
         public string MsgAccessKeyUpdated { get; set; } = Resource.MsgAccessKeyUpdated;
         public string MsgCantReadAccessKey { get; set; } = Resource.MsgCantReadAccessKey;
         public string MsgUnsupportedContent { get; set; } = Resource.MsgUnsupportedContent;
-        public string MsgCantShowAd { get; set; } = Resource.MsgCantShowAd;
         public string Open { get; set; } = Resource.Open;
         public string OpenInBrowser { get; set; } = Resource.OpenInBrowser;
     }
@@ -31,6 +30,7 @@ public class AppResource
     {
         public Color? NavigationBarColor { get; set; }
         public Color? WindowBackgroundColor { get; set; }
+        public Color? ProgressBarColor { get; set; }
     }
 
     public class AppIcons

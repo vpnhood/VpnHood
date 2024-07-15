@@ -20,6 +20,8 @@ namespace VpnHood.Client.App.Droid.Connect;
 
 [IntentFilter([Intent.ActionMain], Categories = [Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher])]
 [IntentFilter([TileService.ActionQsTilePreferences])]
+
+// ReSharper disable once UnusedMember.Global
 public class MainActivity : AndroidAppMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
@@ -27,7 +29,7 @@ public class MainActivity : AndroidAppMainActivity
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions
         {
             DefaultSpaPort = AppSettings.Instance.DefaultSpaPort,
-            ListenToAllIps = AppSettings.Instance.ListenToAllIps
+            ListenToAllIps = AppSettings.Instance.ListenToAllIps // if true it will cause crash in network change
         });
     }
 }

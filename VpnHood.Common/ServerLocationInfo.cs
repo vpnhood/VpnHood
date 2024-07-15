@@ -45,6 +45,18 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         return ret;
     }
 
+    public static ServerLocationInfo? TryParse(string value)
+    {
+        try
+        {
+            return Parse(value);
+        }
+        catch 
+        {
+            return null;
+        }
+    }
+
     public bool IsMatch(ServerLocationInfo serverLocationInfo)
     {
         return
@@ -76,4 +88,10 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
         }
     }
 
+    public static bool IsAuto(string? serverLocation)
+    {
+        return 
+            string.IsNullOrEmpty(serverLocation) ||
+            TryParse(serverLocation)?.Equals(Auto) == true;
+    }
 }

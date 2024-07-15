@@ -21,7 +21,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.5.535</Version>
+		<Version>4.6.544</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -33,13 +33,17 @@
 		</None>
 	</ItemGroup>
 
+
+	<!--Xamarin.GooglePlayServices.Auth 121.0.0.1 so uspport GoogleSignIn-->
+	<!--Xamarin.GooglePlayServices.Auth 6.1.0.2 so uspport GoogleSignIn-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="121.1.1" />
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.2.1" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="121.0.0.1" /> 
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="6.1.0.2" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Client.App.Android.Common\VpnHood.Client.App.Android.Common.csproj" />
+	  <ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>
 
 </Project>

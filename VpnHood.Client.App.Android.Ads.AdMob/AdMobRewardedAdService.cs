@@ -14,6 +14,7 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.RewardedAd;
     public DateTime? AdLoadedTime { get; private set; }
+    public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
     public static AdMobRewardedAdService Create(string adUnitId)
     {
@@ -36,6 +37,9 @@ public class AdMobRewardedAdService(string adUnitId) : IAppAdService
         var activity = appUiContext.Activity;
         if (activity.IsDestroyed)
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
+
+        // initialize
+        await AdMobUtil.Initialize(activity, cancellationToken);
 
         // reset the last loaded ad
         AdLoadedTime = null;

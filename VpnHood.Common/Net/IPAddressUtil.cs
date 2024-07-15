@@ -97,8 +97,15 @@ public static class IPAddressUtil
 
     public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
     {
-        using var udpClient = new UdpClient(addressFamily);
-        return GetPrivateIpAddress(udpClient);
+        try
+        {
+            using var udpClient = new UdpClient(addressFamily); // it may throw exception
+            return GetPrivateIpAddress(udpClient);
+        }
+        catch
+        {
+            return Task.FromResult<IPAddress?>(null);
+        }
     }
 
     public static Task<IPAddress?> GetPrivateIpAddress(UdpClient udpClient)

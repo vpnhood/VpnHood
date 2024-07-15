@@ -103,7 +103,7 @@ public class ClientAppTest : TestBase
         // update current ipLocation in app project after a week
         var solutionFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 5);
         var ipLocationFile = Path.Combine(solutionFolder, "VpnHood.Client.App", "Resources", "IpLocations.zip");
-        if (File.GetCreationTime(ipLocationFile) <= DateTime.Now - TimeSpan.FromDays(7))
+        if (File.GetCreationTime(ipLocationFile) > DateTime.Now - TimeSpan.FromDays(7))
             return;
 
         // find token
@@ -114,8 +114,8 @@ public class ClientAppTest : TestBase
         // copy zip to memory
         var httpClient = new HttpClient();
         // ReSharper disable once StringLiteralTypo
-        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(
-            $"https://www.ip2location.com/download/?token={ip2LocationToken}&file=DB1LITECSVIPV6");
+        var url = $"https://www.ip2location.com/download/?token={ip2LocationToken}&file=DB1LITECSVIPV6";
+        await using var ipLocationZipNetStream = await httpClient.GetStreamAsync(url);
         using var ipLocationZipStream = new MemoryStream();
         await ipLocationZipNetStream.CopyToAsync(ipLocationZipStream);
         ipLocationZipStream.Position = 0;

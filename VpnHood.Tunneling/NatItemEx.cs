@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -53,6 +54,8 @@ public class NatItemEx : NatItem
     public override string ToString()
     {
         return
-            $"{Protocol}:{NatId}, LocalEp: {VhLogger.Format(SourceAddress)}:{SourcePort}, RemoteEp: {VhLogger.Format(DestinationAddress)}:{DestinationPort}";
+            $"{Protocol}:{NatId}, " +
+            $"LocalEp: {VhLogger.Format(SourceAddress)}:{SourcePort}, " +
+            $"RemoteEp: {VhLogger.Format(DestinationAddress)}:{DestinationPort}";
     }
 }

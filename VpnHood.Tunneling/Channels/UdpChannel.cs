@@ -5,6 +5,7 @@ using PacketDotNet;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling.Channels;
 

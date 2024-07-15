@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.Client.App.Droid</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web</ApplicationId>
-		<ApplicationVersion>535</ApplicationVersion>
-		<ApplicationDisplayVersion>4.5.535</ApplicationDisplayVersion>
+		<ApplicationVersion>544</ApplicationVersion>
+		<ApplicationDisplayVersion>4.6.544</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>23.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -30,7 +30,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>4.5.535</Version>
+		<Version>4.6.544</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -39,6 +39,13 @@
 		<DefineConstants>$(DefineConstants);GOOGLE_PLAY</DefineConstants>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<AndroidResource Update="Resources\xml\locales_config.xml">
+			<SubType>Designer</SubType>
+			<Generator>MSBuild:UpdateGeneratedFiles</Generator>
+		</AndroidResource>
+	</ItemGroup>
+	
 	<ItemGroup Condition="$(DefineConstants.Contains('GOOGLE_PLAY'))">
 		<ProjectReference Include="..\VpnHood.Client.App.Android.GooglePlay.Core\VpnHood.Client.App.Android.GooglePlay.Core.csproj" />
 	</ItemGroup>

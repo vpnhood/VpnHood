@@ -22,6 +22,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         IsAddAccessKeySupported = true,
         UpdaterService = AssemblyInfo.CreateUpdaterService(),
         CultureService = AndroidAppAppCultureService.CreateIfSupported(),
-        UiService = new AndroidAppUiService()
+        UiService = new AndroidAppUiService(),
+        LogAnonymous = !AssemblyInfo.IsDebugMode
     };
 }

@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Net;
+using VpnHood.Tunneling.DomainFiltering;
 
 namespace VpnHood.Client.App.Settings;
 
@@ -35,6 +36,7 @@ public class UserSettings
     public IpRange[] PacketCaptureExcludeIpRanges { get; set; } = IpNetwork.None.ToIpRanges().ToArray();
     public bool AllowAnonymousTracker { get; set; } = DefaultClientOptions.AllowAnonymousTracker;
     public IPAddress[]? DnsServers { get; set; }
+    public DomainFilter DomainFilter { get; set; } = new();
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
 }

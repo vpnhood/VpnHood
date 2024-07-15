@@ -3,6 +3,7 @@ using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Utils;
+using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 

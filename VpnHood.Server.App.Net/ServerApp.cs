@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers;
+using Ga4.Trackers.Ga4Tags;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -26,7 +27,7 @@ public class ServerApp : IDisposable
     private const string FileNameAppCommand = "appcommand";
     private const string FolderNameStorage = "storage";
     private const string FolderNameInternal = "internal";
-    private readonly Ga4Tracker _gaTracker;
+    private readonly ITracker _tracker;
     private readonly CommandListener _commandListener;
     private VpnHoodServer? _vpnHoodServer;
     private FileStream? _lockStream;
@@ -73,23 +74,26 @@ public class ServerApp : IDisposable
         _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
 
-        // tracker
-        var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
-        _gaTracker = new Ga4Tracker
-        {
-            // ReSharper disable once StringLiteralTypo
-            MeasurementId = "G-9SWLGEX6BT",
-            SessionCount = 1,
-            ApiSecret = string.Empty,
-            ClientId = anonyClientId,
-            SessionId = Guid.NewGuid().ToString(),
-            IsEnabled = AppSettings.AllowAnonymousTracker
-        };
-
         // create access server
         AccessManager = AppSettings.HttpAccessManager != null
             ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
             : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
+
+        // tracker
+        var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
+        _tracker = new Ga4TagTracker
+        {
+            // ReSharper disable once StringLiteralTypo
+            MeasurementId = "G-9SWLGEX6BT",
+            SessionCount = 1,
+            ClientId = anonyClientId,
+            SessionId = Guid.NewGuid().ToString(),
+            IsEnabled = AppSettings.AllowAnonymousTracker,
+            UserProperties = new Dictionary<string, object>
+            {
+                { "server_version", VpnHoodServer.ServerVersion },
+                { "access_manager", AccessManager.GetType().Name } }
+        };
     }
 
     private void InitFileLogger(string storagePath)
@@ -122,7 +126,6 @@ public class ServerApp : IDisposable
             _vpnHoodServer.Dispose();
         }
     }
-
     public static Guid GetServerId(string serverIdFile)
     {
         if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
@@ -236,7 +239,7 @@ public class ServerApp : IDisposable
             // run server
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions
             {
-                GaTracker = _gaTracker,
+                Tracker = _tracker,
                 SystemInfoProvider = systemInfoProvider,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig

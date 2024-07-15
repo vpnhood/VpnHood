@@ -51,7 +51,7 @@ public class IpGroupManager
 
         try
         {
-            await using var stream = _zipArchive.GetEntry($"{ipGroupId}.ips")?.Open() ?? throw new NotExistsException();
+            await using var stream = _zipArchive.GetEntry($"{ipGroupId.ToLower()}.ips")?.Open() ?? throw new NotExistsException();
             return IpRangeOrderedList.Deserialize(stream);
         }
         catch (Exception ex)

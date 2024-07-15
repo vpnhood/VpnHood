@@ -1,17 +1,22 @@
 ﻿using System.Net;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Exceptions;
 
-public class RedirectHostException : SessionException
+public class RedirectHostException(SessionResponse sessionResponse) : SessionException(sessionResponse)
 {
-    public RedirectHostException(SessionResponse sessionResponse)
-        : base(sessionResponse)
+    public IPEndPoint[] RedirectHostEndPoints
     {
-        if (sessionResponse.RedirectHostEndPoint == null)
-            throw new ArgumentNullException(nameof(sessionResponse.RedirectHostEndPoint));
-    }
+        get
+        {
+            if (!VhUtil.IsNullOrEmpty(SessionResponse.RedirectHostEndPoints))
+                return SessionResponse.RedirectHostEndPoints;
 
-    public IPEndPoint RedirectHostEndPoint => SessionResponse.RedirectHostEndPoint!;
+            return SessionResponse.RedirectHostEndPoint != null
+                ? [SessionResponse.RedirectHostEndPoint]
+                : [];
+        }
+    }
 }

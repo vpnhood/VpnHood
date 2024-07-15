@@ -9,7 +9,9 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
+using VpnHood.Test.Device;
 using VpnHood.Tunneling;
+// ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
 
@@ -146,7 +148,7 @@ public class ServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token);
+        await using var client = await TestHelper.CreateClient(token, packetCapture: new TestNullPacketCapture());
         Assert.IsTrue(accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 

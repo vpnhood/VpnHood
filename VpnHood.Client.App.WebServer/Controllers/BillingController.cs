@@ -3,6 +3,7 @@ using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using VpnHood.Client.App.Abstractions;
 using VpnHood.Client.App.WebServer.Api;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App.WebServer.Controllers;
 
@@ -20,7 +21,7 @@ internal class BillingController : WebApiController, IBillingController
     [Route(HttpVerbs.Post, "/purchase")]
     public Task<string> Purchase([QueryField] string planId)
     {
-        return BillingService.Purchase(VpnHoodApp.Instance.RequiredUiContext, planId);
+        return BillingService.Purchase(ActiveUiContext.RequiredContext, planId);
     }
 
 }

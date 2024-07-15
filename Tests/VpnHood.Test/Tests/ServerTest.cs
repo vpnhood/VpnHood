@@ -11,6 +11,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Server.Access.Configurations;
 using VpnHood.Test.Device;
 using VpnHood.Tunneling;
+// ReSharper disable DisposeOnUsingVariable
 
 namespace VpnHood.Test.Tests;
 

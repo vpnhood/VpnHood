@@ -119,20 +119,26 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     {
         try
         {
+            VhLogger.Instance.LogInformation("Configuring by the Access Manager...");
             State = ServerState.Configuring;
 
             // get server info
-            VhLogger.Instance.LogInformation("Configuring by the Access Manager...");
-            var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
+            VhLogger.Instance.LogTrace("Finding free EndPoints...");
             var freeUdpPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, null);
             var freeUdpPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
 
-            var serverInfo = new ServerInfo
-            {
+            VhLogger.Instance.LogTrace("Finding public addresses...");
+            var privateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().VhConfigureAwait();
+            
+            VhLogger.Instance.LogTrace("Finding public addresses..., PublicIpDiscovery: {PublicIpDiscovery}", _publicIpDiscovery);
+            var publicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses().VhConfigureAwait() : [];
+
+            var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
+            var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
                 Version = ServerVersion,
-                PrivateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().VhConfigureAwait(),
-                PublicIpAddresses = _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses().VhConfigureAwait() : [],
+                PrivateIpAddresses = privateIpAddresses,
+                PublicIpAddresses = publicIpAddresses,
                 Status = GetStatus(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
@@ -142,9 +148,9 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6
             };
-
- var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-            var publicIpV6 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+            
+            var publicIpV4 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+            var publicIpV6 = serverInfo.PublicIpAddresses.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
             var isIpV6Supported = publicIpV6 != null || await IPAddressUtil.IsIpv6Supported().VhConfigureAwait();
             VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}, IsV6Supported: {IsV6Supported}",
                 VhLogger.Format(publicIpV4), VhLogger.Format(publicIpV6), isIpV6Supported);

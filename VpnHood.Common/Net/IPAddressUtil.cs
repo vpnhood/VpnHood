@@ -129,33 +129,13 @@ public static class IPAddressUtil
         return null;
     }
 
-    private class CustomHttpClientHandler(AddressFamily addressFamily) : HttpClientHandler
-    {
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            var uri = request.RequestUri;
-            var addresses = await Dns.GetHostAddressesAsync(uri.Host);
-            foreach (var address in addresses.Where(x => x.AddressFamily == addressFamily))
-            {
-                var endpoint = new IPEndPoint(address, uri.Port);
-                using var socket = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                await socket.ConnectAsync(endpoint);
-                await using var networkStream = new NetworkStream(socket, ownsSocket: false);
-                var response = await base.SendAsync(request, cancellationToken);
-                return response;
-            }
-
-            throw new Exception($"Could not find any ip for the AddressFamily: {addressFamily}");
-        }
-    }
-
     private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily, TimeSpan? timeout = null)
     {
-        const string url = "https://cloudflare.com/cdn-cgi/trace";
+        var url = addressFamily == AddressFamily.InterNetwork
+            ? "https://1.1.1.1/cdn-cgi/trace"
+            : "https://[2606:4700:4700::1111]/cdn-cgi/trace";
 
-        var handler = new CustomHttpClientHandler(addressFamily) { AllowAutoRedirect = true };
-        using var httpClient = new HttpClient(handler);
+        using var httpClient = new HttpClient();
         httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
         var content = await httpClient.GetStringAsync(url).VhConfigureAwait();
 

@@ -10,6 +10,7 @@ using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Channels;
 using VpnHood.Tunneling.Channels.Streams;
+using VpnHood.Tunneling.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Test.Tests;

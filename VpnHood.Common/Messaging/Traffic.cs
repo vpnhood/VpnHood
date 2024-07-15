@@ -4,9 +4,6 @@ namespace VpnHood.Common.Messaging;
 
 public class Traffic : IEquatable<Traffic>, ICloneable
 {
-    [Obsolete("Version 2.7.360 or upper")] 
-    public long SentTraffic { set => Sent = value; } 
-    [Obsolete("Version 2.7.360 or upper")]
     public long ReceivedTraffic { set => Received = value; } 
 
     public long Sent { get; set; }

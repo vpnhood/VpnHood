@@ -36,7 +36,7 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         {
             var (builder, length) = state;
             var first = length == builder.Length;
-            builder.Append(first ? "=> " : " => ").Append(scope);
+            builder.Append(first ? "" : " => ").Append(scope);
         }, (stringBuilder, initialLength));
     }
 
@@ -44,16 +44,28 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         Func<TState, Exception?, string> formatter)
     {
         var logBuilder = new StringBuilder();
+        var time = DateTime.Now.ToString("HH:mm:ss.ffff");
 
         if (includeScopes)
         {
             logBuilder.AppendLine();
-            logBuilder.Append($"{logLevel.ToString()[..4]} ");
+            logBuilder.Append($"{time} | ");
+            logBuilder.Append(logLevel.ToString()[..4] + " | ");
             GetScopeInformation(logBuilder);
             logBuilder.AppendLine();
         }
+        else
+            logBuilder.Append($"{time} | ");
 
-        var message = $"| {DateTime.Now:HH:mm:ss.ffff} | {eventId.Name} | {formatter(state, exception)}";
+        // event
+        if (!string.IsNullOrEmpty(eventId.Name))
+        {
+            logBuilder.Append(eventId.Name);
+            logBuilder.Append(" | ");
+        }
+
+        // message
+        var message = formatter(state, exception);
         if (exception != null)
             message += "\r\nException: " + exception;
 

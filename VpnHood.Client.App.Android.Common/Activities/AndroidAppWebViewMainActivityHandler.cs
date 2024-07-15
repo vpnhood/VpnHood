@@ -1,4 +1,5 @@
-﻿using Android.Runtime;
+﻿using Android.Content.Res;
+using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using VpnHood.Client.App.WebServer;
@@ -11,17 +12,15 @@ public class AndroidAppWebViewMainActivityHandler(
     AndroidMainActivityWebViewOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
-    private readonly bool _checkForUpdateOnCreate = options.CheckForUpdateOnCreate;
     private bool _isWeViewVisible;
-    public WebView? WebView { get; private set; }
-    protected override bool CheckForUpdateOnCreate => false; // parent should not do this
+    private WebView? WebView { get; set; }
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
 
         // initialize web view
-        InitSplashScreen();
+        InitLoadingPage();
 
         // Initialize UI
         if (!VpnHoodAppWebServer.IsInit)
@@ -34,28 +33,33 @@ public class AndroidAppWebViewMainActivityHandler(
         InitWebUi();
     }
 
-    private void InitSplashScreen()
+    private void InitLoadingPage()
     {
-        var imageView = new ImageView(ActivityEvent.Activity);
-        var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
-        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
-
-        // set splash screen background color
-        var icon = appInfo.LoadIcon(Application.Context.PackageManager);
-        imageView.SetImageDrawable(icon);
-        imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
-        imageView.SetScaleType(ImageView.ScaleType.CenterInside);
-        if (backgroundColor != null) imageView.SetBackgroundColor(backgroundColor.Value);
-        ActivityEvent.Activity.SetContentView(imageView);
-
+        ActivityEvent.Activity.SetContentView(_Microsoft.Android.Resource.Designer.Resource.Layout.progressbar);
+            
         // set window background color
-        if (backgroundColor != null)
+        var linearLayout = ActivityEvent.Activity.FindViewById<LinearLayout>(_Microsoft.Android.Resource.Designer.Resource.Id.myLayout);
+        var backgroundColor = VpnHoodApp.Instance.Resource.Colors.WindowBackgroundColor?.ToAndroidColor();
+        if (linearLayout != null && backgroundColor != null)
         {
+            try { linearLayout.SetBackgroundColor(backgroundColor.Value); }
+            catch { /* ignore */ }
+
             try { ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value); }
             catch { /* ignore */ }
-
+            
             try { ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value); }
             catch { /* ignore */ }
+        }
+        
+        // set progressbar color
+        var progressBarColor = VpnHoodApp.Instance.Resource.Colors.ProgressBarColor?.ToAndroidColor();
+        var progressBar = ActivityEvent.Activity.FindViewById<ProgressBar>(_Microsoft.Android.Resource.Designer.Resource.Id.progressBar);
+        if (progressBar != null && progressBarColor != null)
+        {
+            try 
+            { progressBar.IndeterminateTintList = ColorStateList.ValueOf(progressBarColor.Value); }
+            catch { /* ignore */ }   
         }
     }
 
@@ -90,10 +94,6 @@ public class AndroidAppWebViewMainActivityHandler(
 
         if (VpnHoodApp.Instance.Resource.Colors.NavigationBarColor != null)
             ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resource.Colors.NavigationBarColor.Value.ToAndroidColor());
-
-        // request features after loading the webview, so SPA can update the localize the resources
-        if (_checkForUpdateOnCreate)
-            _ = VpnHoodApp.Instance.VersionCheck();
     }
 
     protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

@@ -4,9 +4,5 @@
 // and how to customise this process see: https://aka.ms/assembly-info-properties
 
 // ReSharper disable StringLiteralTypo
-
-using VpnHood.Common.Utils;
-
 [assembly: UsesFeature("android.software.leanback", Required = false)]
 [assembly: UsesFeature("android.hardware.touchscreen", Required = false)]
-

@@ -1,4 +1,5 @@
-﻿using VpnHood.Client.App.Abstractions;
+﻿using Ga4.Trackers;
+using VpnHood.Client.App.Abstractions;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
@@ -23,9 +24,14 @@ public class AppOptions
     public IAppUpdaterService? UpdaterService { get; set; }
     public IAppAccountService? AccountService { get; set; }
     public IAppAdService[] AdServices { get; set; } = [];
+    public ITracker? Tracker { get; set; }
     public TimeSpan ReconnectTimeout { get; set; } = ClientOptions.Default.ReconnectTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
-    public TimeSpan AdLoadTimeout { get; set; } = TimeSpan.FromSeconds(20);
-    public bool? LogVerbose { get; set; }
+    public bool LogVerbose { get; set; }
     public bool? LogAnonymous { get; set; }
+    public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
+    public bool SingleLineConsoleLog { get; set; } = true;
+    public bool AutoDiagnose { get; set; } = true;
+    public AppAdOptions AdOptions { get; set; } = new ();
+    public bool AllowEndPointTracker { get; set; }
 }

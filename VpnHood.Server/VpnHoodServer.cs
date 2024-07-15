@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
-using Ga4.Ga4Tracking;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.ApiClients;
 using VpnHood.Common.Exceptions;
@@ -11,6 +11,7 @@ using VpnHood.Common.Jobs;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Access;
 using VpnHood.Server.Access.Configurations;
@@ -24,7 +25,6 @@ namespace VpnHood.Server;
 public class VpnHoodServer : IAsyncDisposable, IJob
 {
     private readonly bool _autoDisposeAccessManager;
-    private readonly ServerHost _serverHost;
     private readonly string _lastConfigFilePath;
     private bool _disposed;
     private ApiError? _lastConfigError;
@@ -35,6 +35,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
     private Task _sendStatusTask = Task.CompletedTask;
     private Http01ChallengeService? _http01ChallengeService;
 
+    public ServerHost ServerHost { get; }
     public JobSection JobSection { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version;
     public SessionManager SessionManager { get; }
@@ -53,15 +54,15 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         SessionManager = new SessionManager(accessManager,
             options.NetFilter,
             options.SocketFactory,
-            options.GaTracker,
+            options.Tracker,
             ServerVersion,
-            new SessionManagerOptions{ CleanupInterval = options.CleanupInterval });
+            new SessionManagerOptions { CleanupInterval = options.CleanupInterval });
 
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _serverHost = new ServerHost(SessionManager);
+        ServerHost = new ServerHost(SessionManager);
 
         VhLogger.TcpCloseEventId = GeneralEventId.TcpLife;
         JobRunner.Default.Add(this);
@@ -99,6 +100,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         // Report current OS Version
         VhLogger.Instance.LogInformation("Module: {Module}", GetType().Assembly.GetName().FullName);
         VhLogger.Instance.LogInformation("OS: {OS}", SystemInfoProvider.GetSystemInfo());
+        VhLogger.Instance.LogInformation("IsDiagnoseMode: {IsDiagnoseMode}", VhLogger.IsDiagnoseMode);
 
         // Report TcpBuffers
         var tcpClient = new TcpClient();
@@ -141,7 +143,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 FreeUdpPortV6 = freeUdpPortV6
             };
 
-            var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+ var publicIpV4 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
             var publicIpV6 = serverInfo.PublicIpAddresses.SingleOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
             var isIpV6Supported = publicIpV6 != null || await IPAddressUtil.IsIpv6Supported().VhConfigureAwait();
             VhLogger.Instance.LogInformation("Public IPv4: {IPv4}, Public IPv6: {IpV6}, IsV6Supported: {IsV6Supported}",
@@ -161,11 +163,11 @@ public class VpnHoodServer : IAsyncDisposable, IJob
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? Array.Empty<IPAddress>());
 
-            ConfigNetFilter(SessionManager.NetFilter, _serverHost, serverConfig.NetFilterOptions,
+            ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps, isIpV6Supported, dnsServers: serverConfig.DnsServersValue);
 
             // Reconfigure server host
-            await _serverHost.Configure(
+            await ServerHost.Configure(
                     serverConfig.TcpEndPointsValue, serverConfig.UdpEndPointsValue,
                     serverConfig.DnsServersValue, serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData))
                     .ToArray()).VhConfigureAwait();
@@ -190,7 +192,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
             if (ex is SocketException socketException)
                 _lastConfigError.Data.Add("SocketErrorCode", socketException.SocketErrorCode.ToString());
 
-            _ = SessionManager.GaTracker?.TrackErrorByTag("configure", ex.Message);
+            SessionManager.Tracker?.VhTrackErrorAsync(ex, "Could not configure server!", "Configure");
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.", JobSection.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).VhConfigureAwait();
         }
@@ -353,24 +355,18 @@ public class VpnHoodServer : IAsyncDisposable, IJob
 
     private Task GaTrackStart()
     {
-        if (SessionManager.GaTracker == null)
+        if (SessionManager.Tracker == null)
             return Task.CompletedTask;
 
         // track
-        var useProperties = new Dictionary<string, object>
+        return SessionManager.Tracker.Track(new TrackEvent
         {
-            { "server_version", ServerVersion },
-            { "access_manager", AccessManager.GetType().Name }
-        };
-
-        return SessionManager.GaTracker.Track(new Ga4TagEvent
-        {
-            EventName = Ga4TagEvents.SessionStart,
-            Properties = new Dictionary<string, object>
+            EventName = TrackEventNames.SessionStart,
+            Parameters = new Dictionary<string, object>
             {
                 { "access_manager", AccessManager.GetType().Name }
             }
-        }, useProperties);
+        });
     }
 
     public void Dispose()
@@ -394,7 +390,7 @@ public class VpnHoodServer : IAsyncDisposable, IJob
         // wait for configuration
         try { await _configureTask.VhConfigureAwait(); } catch {/* no error */ }
         try { await _sendStatusTask.VhConfigureAwait(); } catch {/* no error*/ }
-        await _serverHost.DisposeAsync().VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
+        await ServerHost.DisposeAsync().VhConfigureAwait(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync().VhConfigureAwait();
         _http01ChallengeService?.Dispose();
 

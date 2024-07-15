@@ -8,6 +8,7 @@ using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client.Device.WinDivert;
 
@@ -20,6 +21,20 @@ public class WinDivertPacketCapture : IPacketCapture
     private bool _disposed;
     private IpNetwork[]? _includeNetworks;
     private WinDivertHeader? _lastCaptureHeader;
+    
+    public const short ProtectedTtl = 111;
+    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
+    public event EventHandler? Stopped;
+    public bool Started => _device.Started;
+    public virtual bool CanSendPacketToOutbound => true;
+
+    public virtual bool IsDnsServersSupported => false;
+
+    public virtual IPAddress[]? DnsServers
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
 
     public WinDivertPacketCapture()
     {
@@ -32,26 +47,11 @@ public class WinDivertPacketCapture : IPacketCapture
 
     }
 
-    public event EventHandler<PacketReceivedEventArgs>? PacketReceivedFromInbound;
-    public event EventHandler? Stopped;
-
-    public bool Started => _device.Started;
-    public virtual bool CanSendPacketToOutbound => true;
-
-    public virtual bool IsDnsServersSupported => false;
-
-    public virtual IPAddress[]? DnsServers
-    {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
-    public virtual bool CanProtectSocket => false;
+    public virtual bool CanProtectSocket => true;
 
     public virtual void ProtectSocket(Socket socket)
     {
-        throw new NotSupportedException(
-            $"{nameof(ProtectSocket)} is not supported by {GetType().Name}");
+        socket.Ttl = ProtectedTtl;
     }
 
     public void SendPacketToInbound(IList<IPPacket> ipPackets)
@@ -122,7 +122,7 @@ public class WinDivertPacketCapture : IPacketCapture
         }
 
         // add outbound; filter loopback
-        var filter = $"(ip or ipv6) and outbound and !loopback and (udp.DstPort==53 or ({phraseX}))";
+        var filter = $"(ip or ipv6) and outbound and !loopback and ip.TTL!={ProtectedTtl} and (udp.DstPort==53 or ({phraseX}))";
         // filter = $"(ip or ipv6) and outbound and !loopback and (protocol!=6 or tcp.DstPort!=3389) and (protocol!=6 or tcp.SrcPort!=3389) and (udp.DstPort==53 or ({phraseX}))";
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try
@@ -214,8 +214,6 @@ public class WinDivertPacketCapture : IPacketCapture
         LoadLibrary(Path.Combine(destinationFolder, "WinDivert.dll"));
     }
 
-    #region Applications Filter
-
     public bool CanExcludeApps => false;
     public bool CanIncludeApps => false;
 
@@ -246,5 +244,8 @@ public class WinDivertPacketCapture : IPacketCapture
         set => throw new NotSupportedException();
     }
 
-    #endregion
+    public bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+    {
+        return null;
+    }
 }

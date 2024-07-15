@@ -15,6 +15,7 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
     public string NetworkName => "AdMob";
     public AppAdType AdType => AppAdType.InterstitialAd;
     public DateTime? AdLoadedTime {get; private set; }
+    public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
 
     public static AdMobInterstitialAdService Create(string adUnitId, bool hasVideo)
     {
@@ -46,12 +47,16 @@ public class AdMobInterstitialAdService(string adUnitId, bool hasVideo) : IAppAd
         if (activity.IsDestroyed)
             throw new LoadAdException("MainActivity has been destroyed before loading the ad.");
 
+        // initialize
+        await AdMobUtil.Initialize(activity, cancellationToken);
+
         // reset the last loaded ad
         AdLoadedTime = null;
         _loadedAd = null;
 
         var adLoadCallback = new MyInterstitialAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
+        // AdMob load ad must call from main thread
         activity.RunOnUiThread(() => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback));
 
         var cancellationTask = new TaskCompletionSource();

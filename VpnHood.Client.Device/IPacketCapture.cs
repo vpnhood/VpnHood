@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Common.Net;
 
@@ -25,9 +24,10 @@ public interface IPacketCapture : IDisposable
     bool CanSendPacketToOutbound { get; }
     void StartCapture();
     void StopCapture();
-    void ProtectSocket(Socket socket);
+    void ProtectSocket(System.Net.Sockets.Socket socket);
     void SendPacketToInbound(IPPacket ipPacket);
     void SendPacketToInbound(IList<IPPacket> packets);
     void SendPacketToOutbound(IPPacket ipPacket);
     void SendPacketToOutbound(IList<IPPacket> ipPackets);
+    bool? IsInProcessPacket(ProtocolType protocol, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint);
 }

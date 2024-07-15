@@ -10,4 +10,5 @@ public class HelloRequest()
     public required byte[] EncryptedClientId { get; init; }
     public string? ServerLocation { get; init; } // format: countryCode/region/city
     public bool AllowRedirect { get; init; } = true;
+    public bool? IsIpV6Supported { get; init; }
 }

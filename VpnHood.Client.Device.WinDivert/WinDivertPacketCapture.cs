@@ -12,9 +12,11 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client.Device.WinDivert;
 
-public class WinDivertPacketCapture : IPacketCapture {
+public class WinDivertPacketCapture : IPacketCapture
+{
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
+
     private readonly SharpPcap.WinDivert.WinDivertDevice _device;
     private bool _disposed;
     private IpNetwork[]? _includeNetworks;
@@ -99,6 +101,7 @@ public class WinDivertPacketCapture : IPacketCapture {
     {
         SendPacket(ipPacket, true);
     }
+
     public void SendPacketToOutbound(IList<IPPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
@@ -143,7 +146,8 @@ public class WinDivertPacketCapture : IPacketCapture {
         }
 
         // add outbound; filter loopback
-        var filter = $"(ip or ipv6) and outbound and !loopback and ip.TTL!={ProtectedTtl} and (udp.DstPort==53 or ({phraseX}))";
+        var filter =
+            $"(ip or ipv6) and outbound and !loopback and ip.TTL!={ProtectedTtl} and (udp.DstPort==53 or ({phraseX}))";
         // filter = $"(ip or ipv6) and outbound and !loopback and (protocol!=6 or tcp.DstPort!=3389) and (protocol!=6 or tcp.SrcPort!=3389) and (udp.DstPort==53 or ({phraseX}))";
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try {
@@ -154,7 +158,8 @@ public class WinDivertPacketCapture : IPacketCapture {
         catch (Exception ex) {
             if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
                 throw new Exception(
-                    "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.", ex);
+                    "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.",
+                    ex);
             throw;
         }
     }

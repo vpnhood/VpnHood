@@ -8,12 +8,13 @@ namespace VpnHood.Tunneling.DomainFiltering;
 
 public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
 {
-    public async Task<DomainFilterResult> Process(Stream tlsStream, IPAddress remoteAddress, CancellationToken cancellationToken)
+    public async Task<DomainFilterResult> Process(Stream tlsStream, IPAddress remoteAddress,
+        CancellationToken cancellationToken)
     {
         // none if domain filter is empty
-        if (!forceLogSni && domainFilter.Includes.Length == 0 && domainFilter.Excludes.Length == 0 && domainFilter.Blocks.Length == 0)
-            return new DomainFilterResult
-            {
+        if (!forceLogSni && domainFilter.Includes.Length == 0 && domainFilter.Excludes.Length == 0 &&
+            domainFilter.Blocks.Length == 0)
+            return new DomainFilterResult {
                 Action = DomainFilterAction.None
             };
 
@@ -24,8 +25,7 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
             VhLogger.FormatHostName(sniData.Sni), VhLogger.Format(remoteAddress));
 
         // no SNI
-        var res = new DomainFilterResult
-        {
+        var res = new DomainFilterResult {
             DomainName = sniData.Sni,
             ReadData = sniData.ReadData,
             Action = Process(sniData.Sni)
@@ -37,8 +37,7 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
     private DomainFilterAction Process(string? domain)
     {
         var topDomains = ExtractTopDomains(domain);
-        foreach (var topDomain in topDomains)
-        {
+        foreach (var topDomain in topDomains) {
             var res = ProcessInternal(topDomain, domainFilter);
             if (res != DomainFilterAction.None)
                 return res;
@@ -52,8 +51,7 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
     public static DomainFilterAction ProcessInternal(string domain, DomainFilter domainFilter)
     {
         var topDomains = ExtractTopDomains(domain);
-        foreach (var topDomain in topDomains)
-        {
+        foreach (var topDomain in topDomains) {
             if (IsMatch(topDomain, domainFilter.Blocks))
                 return DomainFilterAction.Block;
 
@@ -79,8 +77,7 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
 
         var topDomains = new List<string>();
         var parts = domain.Split('.');
-        for (var i = 0; i < parts.Length; i++)
-        {
+        for (var i = 0; i < parts.Length; i++) {
             var topDomain = string.Join('.', parts.Skip(i));
             topDomains.Add(topDomain);
         }

@@ -9,7 +9,6 @@ using VpnHood.Tunneling.Utils;
 
 namespace VpnHood.Tunneling;
 
-
 public class UdpProxyPoolEx : IPacketProxyPool, IJob
 {
     private readonly IPacketProxyReceiver _packetProxyReceiver;
@@ -23,10 +22,16 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
     private bool _disposed;
 
     public int RemoteEndPointCount => _remoteEndPoints.Count;
-    public int ClientCount { get { lock (_udpProxies) return _udpProxies.Count; } }
+
+    public int ClientCount {
+        get {
+            lock (_udpProxies) return _udpProxies.Count;
+        }
+    }
+
     public JobSection JobSection { get; } = new();
 
-    public UdpProxyPoolEx(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory, 
+    public UdpProxyPoolEx(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory,
         TimeSpan? udpTimeout, int? maxLocalEndPointCount, LogScope? logScope = null)
     {
         udpTimeout ??= TimeSpan.FromSeconds(120);
@@ -36,7 +41,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
         _connectionMap = new TimeoutDictionary<string, UdpProxyEx>(udpTimeout);
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
         _udpTimeout = udpTimeout.Value;
-        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance, 
+        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
             "Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: logScope);
 
         JobSection.Interval = udpTimeout.Value;
@@ -59,11 +64,9 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
 
         // find the proxy for the connection (source-destination)
         var connectionKey = $"{sourceEndPoint}:{destinationEndPoint}";
-        var udpProxy = _connectionMap.GetOrAdd(connectionKey, _ =>
-        {
+        var udpProxy = _connectionMap.GetOrAdd(connectionKey, _ => {
             // add the remote endpoint
-            _remoteEndPoints.GetOrAdd(destinationEndPoint, _ =>
-            {
+            _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
                 isNewRemoteEndPoint = true;
                 return new TimeoutItem<bool>(true);
             });
@@ -71,28 +74,27 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
                 _packetProxyReceiver.OnNewRemoteEndPoint(ProtocolType.Udp, destinationEndPoint);
 
             // Find or create a worker that does not use the RemoteEndPoint
-            lock (_udpProxies)
-            {
+            lock (_udpProxies) {
                 var newUdpProxy = _udpProxies.FirstOrDefault(x =>
                     x.AddressFamily == addressFamily &&
                     !x.DestinationEndPointMap.TryGetValue(destinationEndPoint, out var _));
 
-                if (newUdpProxy == null)
-                {
+                if (newUdpProxy == null) {
                     // check WorkerMaxCount
-                    if (_udpProxies.Count >= _maxLocalEndPointCount)
-                    {
+                    if (_udpProxies.Count >= _maxLocalEndPointCount) {
                         _maxWorkerEventReporter.Raise();
                         throw new UdpClientQuotaException(_udpProxies.Count);
                     }
 
-                    newUdpProxy = new UdpProxyEx(_packetProxyReceiver, _socketFactory.CreateUdpClient(addressFamily), addressFamily, _udpTimeout);
+                    newUdpProxy = new UdpProxyEx(_packetProxyReceiver, _socketFactory.CreateUdpClient(addressFamily),
+                        addressFamily, _udpTimeout);
                     _udpProxies.Add(newUdpProxy);
                     isNewLocalEndPoint = true;
                 }
 
                 // Add destinationEndPoint; a newUdpWorker can not map a destinationEndPoint to more than one source port
-                newUdpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint, new TimeoutItem<IPEndPoint>(sourceEndPoint));
+                newUdpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint,
+                    new TimeoutItem<IPEndPoint>(sourceEndPoint));
                 return newUdpProxy;
             }
         });
@@ -121,7 +123,7 @@ public class UdpProxyPoolEx : IPacketProxyPool, IJob
             return;
         _disposed = true;
 
-        lock(_udpProxies)
+        lock (_udpProxies)
             _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
 
         _connectionMap.Dispose();

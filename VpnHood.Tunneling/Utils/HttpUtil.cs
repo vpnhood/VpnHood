@@ -13,12 +13,10 @@ public static class HttpUtil
     {
         // read header
         var memStream = new MemoryStream(1024);
-        try
-        {
+        try {
             var readBuffer = new byte[1];
             var lfCounter = 0;
-            while (lfCounter < 4)
-            {
+            while (lfCounter < 4) {
                 var bytesRead = await stream.ReadAsync(readBuffer, 0, 1, cancellationToken).VhConfigureAwait();
                 if (bytesRead == 0)
                     return memStream.Length == 0
@@ -39,8 +37,7 @@ public static class HttpUtil
             memStream.Position = 0;
             return memStream;
         }
-        catch
-        {
+        catch {
             await memStream.DisposeAsync().VhConfigureAwait();
             throw;
         }
@@ -50,7 +47,6 @@ public static class HttpUtil
     public static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
         CancellationToken cancellationToken, int maxLength = 8192)
     {
-
         using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
         if (memStream.Length == 0)
             return null; // connection has been closed gracefully
@@ -59,8 +55,7 @@ public static class HttpUtil
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         // Read the header lines until an empty line is encountered
-        while (true)
-        {
+        while (true) {
             // ReSharper disable once MethodHasAsyncOverload
             var line = reader.ReadLine();
             if (string.IsNullOrEmpty(line))
@@ -71,8 +66,7 @@ public static class HttpUtil
 
             // Split the header line into header field and value
             var separatorIndex = line.IndexOf(':');
-            if (separatorIndex > 0)
-            {
+            if (separatorIndex > 0) {
                 var headerField = line[..separatorIndex].Trim();
                 var headerValue = line[(separatorIndex + 1)..].Trim();
                 headers[headerField] = headerValue;

@@ -1,4 +1,4 @@
 ﻿namespace VpnHood.Server.Exceptions;
 
-internal class TlsAuthenticateException(string message, Exception innerException) 
+internal class TlsAuthenticateException(string message, Exception innerException)
     : Exception(message, innerException);

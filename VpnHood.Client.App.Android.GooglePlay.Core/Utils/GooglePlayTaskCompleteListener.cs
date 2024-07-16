@@ -7,6 +7,7 @@ public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
 {
     private readonly TaskCompletionSource<T?> _taskCompletionSource;
     public Task<T?> Task => _taskCompletionSource.Task;
+
     private GooglePlayTaskCompleteListener(Xamarin.Google.Android.Play.Core.Tasks.Task googlePlayTask)
     {
         _taskCompletionSource = new TaskCompletionSource<T?>();
@@ -19,10 +20,10 @@ public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
         var listener = new GooglePlayTaskCompleteListener<T?>(googlePlayTask);
         return listener.Task;
     }
+
     public void OnSuccess(Java.Lang.Object? obj)
     {
-        switch (obj)
-        {
+        switch (obj) {
             case null:
                 _taskCompletionSource.TrySetResult(default);
                 break;
@@ -45,6 +46,5 @@ public class GooglePlayTaskCompleteListener<T> : Java.Lang.Object,
 
     public void OnComplete(Xamarin.Google.Android.Play.Core.Tasks.Task p0)
     {
-
     }
 }

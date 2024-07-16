@@ -9,6 +9,6 @@ public class AppServices
     public required IAppUpdaterService? UpdaterService { get; init; }
     public required IAppAdService[] AdServices { get; init; } = [];
     public required IAppUiService UiService { get; init; }
-    public required IAppCultureService AppCultureService { get; init;}
-    public required ITracker? Tracker { get; set;}
+    public required IAppCultureService AppCultureService { get; init; }
+    public required ITracker? Tracker { get; set; }
 }

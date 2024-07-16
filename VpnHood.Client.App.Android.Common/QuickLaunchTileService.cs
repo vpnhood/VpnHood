@@ -13,7 +13,8 @@ using Object = Java.Lang.Object;
 
 namespace VpnHood.Client.App.Droid.Common;
 
-[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true, Exported = true)]
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true,
+    Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter([ActionQsTile])]
@@ -35,30 +36,25 @@ public class QuickLaunchTileService : TileService
         Refresh();
 
         // toast last error
-        if (_isConnectByClick && VpnHoodApp.Instance.ConnectionState == AppConnectionState.None)
-        {
+        if (_isConnectByClick && VpnHoodApp.Instance.ConnectionState == AppConnectionState.None) {
             _isConnectByClick = false;
-            if (VpnHoodApp.Instance.State.LastError!=null)
+            if (VpnHoodApp.Instance.State.LastError != null)
                 Toast.MakeText(this, VpnHoodApp.Instance.State.LastError?.Message, ToastLength.Long)?.Show();
         }
     }
 
     public override void OnClick()
     {
-        try
-        {
-            if (VpnHoodApp.Instance.ConnectionState == AppConnectionState.None)
-            {
+        try {
+            if (VpnHoodApp.Instance.ConnectionState == AppConnectionState.None) {
                 _isConnectByClick = true;
                 _ = VpnHoodApp.Instance.Connect();
             }
-            else
-            {
+            else {
                 _ = VpnHoodApp.Instance.Disconnect(true);
             }
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Toast.MakeText(this, ex.Message, ToastLength.Long)?.Show();
         }
 
@@ -84,8 +80,7 @@ public class QuickLaunchTileService : TileService
     public override void OnStartListening()
     {
         base.OnStartListening();
-        if (VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled == false)
-        {
+        if (VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled == false) {
             VpnHoodApp.Instance.Settings.IsQuickLaunchEnabled = true;
             VpnHoodApp.Instance.Settings.Save();
         }
@@ -102,19 +97,18 @@ public class QuickLaunchTileService : TileService
             QsTile.StateDescription = VpnHoodApp.Instance.ConnectionState.ToString();
 
         var currentProfileInfo = VpnHoodApp.Instance.CurrentClientProfile?.ToInfo();
-        if (currentProfileInfo != null && !VpnHoodApp.Instance.IsIdle)
-        {
+        if (currentProfileInfo != null && !VpnHoodApp.Instance.IsIdle) {
             QsTile.Label = currentProfileInfo.ClientProfileName;
             QsTile.State = VpnHoodApp.Instance.ConnectionState ==
-                AppConnectionState.Connected ? TileState.Active : TileState.Unavailable;
+                           AppConnectionState.Connected
+                ? TileState.Active
+                : TileState.Unavailable;
         }
-        else if (currentProfileInfo != null)
-        {
+        else if (currentProfileInfo != null) {
             QsTile.Label = currentProfileInfo.ClientProfileName;
             QsTile.State = TileState.Inactive;
         }
-        else
-        {
+        else {
             QsTile.Label = AndroidUtil.GetAppName(Application.Context);
             QsTile.State = TileState.Unavailable;
         }
@@ -122,7 +116,7 @@ public class QuickLaunchTileService : TileService
         QsTile.UpdateTile();
     }
 
-    private class AddTileServiceHandler(TaskCompletionSource<int> taskCompletionSource) 
+    private class AddTileServiceHandler(TaskCompletionSource<int> taskCompletionSource)
         : Object, IConsumer
     {
         public void Accept(Object? obj)
@@ -137,14 +131,12 @@ public class QuickLaunchTileService : TileService
         var taskCompletionSource = new TaskCompletionSource<int>();
 
         // get statusBarManager
-        if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager)
-        {
+        if (context.GetSystemService(StatusBarService) is not StatusBarManager statusBarManager) {
             VhLogger.Instance.LogError("Could not retrieve the StatusBarManager.");
             return Task.FromResult(0);
         }
 
-        if (context.MainExecutor == null)
-        {
+        if (context.MainExecutor == null) {
             VhLogger.Instance.LogError("Could not retrieve the MainExecutor.");
             return Task.FromResult(0);
         }
@@ -152,7 +144,9 @@ public class QuickLaunchTileService : TileService
         ArgumentNullException.ThrowIfNull(context.PackageManager);
         ArgumentNullException.ThrowIfNull(context.PackageName);
         ArgumentNullException.ThrowIfNull(context.Resources);
-        var appName = context.PackageManager.GetApplicationLabel(context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
+        var appName =
+            context.PackageManager.GetApplicationLabel(
+                context.PackageManager.GetApplicationInfo(context.PackageName, PackageInfoFlags.MetaData));
         var iconId = context.Resources.GetIdentifier(IconResourceName, "drawable", context.PackageName);
         var icon = Icon.CreateWithResource(context, iconId);
 

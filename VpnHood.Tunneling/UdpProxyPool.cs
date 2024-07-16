@@ -31,7 +31,9 @@ public class UdpProxyPool : IPacketProxyPool, IJob
 
         _packetProxyReceiver = packetProxyReceiver;
         _socketFactory = socketFactory;
-        _maxClientCount = maxClientCount > 0 ? maxClientCount.Value : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
+        _maxClientCount = maxClientCount > 0
+            ? maxClientCount.Value
+            : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
         _udpProxies = new TimeoutDictionary<IPEndPoint, UdpProxy>(udpTimeout);
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
         _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
@@ -56,8 +58,7 @@ public class UdpProxyPool : IPacketProxyPool, IJob
         var isNewLocalEndPoint = false;
 
         // add the remote endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ =>
-        {
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
             isNewRemoteEndPoint = true;
             return new TimeoutItem<bool>(true);
         });
@@ -65,11 +66,9 @@ public class UdpProxyPool : IPacketProxyPool, IJob
             _packetProxyReceiver.OnNewRemoteEndPoint(ProtocolType.Udp, destinationEndPoint);
 
         // find the proxy for the sourceEndPoint
-        var udpProxy = _udpProxies.GetOrAdd(sourceEndPoint, key =>
-        {
+        var udpProxy = _udpProxies.GetOrAdd(sourceEndPoint, key => {
             // check WorkerMaxCount
-            if (_udpProxies.Count >= _maxClientCount)
-            {
+            if (_udpProxies.Count >= _maxClientCount) {
                 _maxWorkerEventReporter.Raise();
                 throw new UdpClientQuotaException(_udpProxies.Count);
             }

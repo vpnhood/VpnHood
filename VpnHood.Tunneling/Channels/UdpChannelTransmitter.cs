@@ -9,7 +9,9 @@ namespace VpnHood.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
-    private readonly EventReporter _udpSignReporter = new(VhLogger.Instance, "Invalid udp signature.", GeneralEventId.UdpSign);
+    private readonly EventReporter _udpSignReporter =
+        new(VhLogger.Instance, "Invalid udp signature.", GeneralEventId.UdpSign);
+
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BufferCryptor _serverEncryptor;
@@ -33,8 +35,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition,
         byte[] buffer, int bufferLength, int protocolVersion)
     {
-        try
-        {
+        try {
             await _semaphore.WaitAsync().VhConfigureAwait();
 
             // add random packet iv
@@ -64,8 +65,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
             return ret;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             if (IsInvalidState(ex))
                 Dispose();
 
@@ -74,8 +74,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 buffer.Length, VhLogger.Format(ipEndPoint));
             throw;
         }
-        finally
-        {
+        finally {
             _semaphore.Release();
         }
     }
@@ -85,11 +84,9 @@ public abstract class UdpChannelTransmitter : IDisposable
         var headKeyBuffer = new byte[_sendHeadKeyBuffer.Length];
 
         // wait for all incoming UDP packets
-        while (!_disposed)
-        {
+        while (!_disposed) {
             IPEndPoint? remoteEndPoint = null;
-            try
-            {
+            try {
                 remoteEndPoint = null;
                 var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
                 remoteEndPoint = udpResult.RemoteEndPoint;
@@ -109,8 +106,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                     buffer[bufferIndex + i] ^= headKeyBuffer[i]; //simple XOR with the generated unique key
 
                 // check packet signature OK
-                if (buffer[8] != 'O' || buffer[9] != 'K')
-                {
+                if (buffer[8] != 'O' || buffer[9] != 'K') {
                     _udpSignReporter.Raise();
                     throw new Exception("Packet signature does not match.");
                 }
@@ -125,18 +121,16 @@ public abstract class UdpChannelTransmitter : IDisposable
                 OnReceiveData(sessionId, udpResult.RemoteEndPoint, channelCryptorPosition, udpResult.Buffer,
                     bufferIndex);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 // finish if disposed
-                if (_disposed)
-                {
-                    VhLogger.Instance.LogInformation(GeneralEventId.Essential, "UdpChannelTransmitter has been stopped.");
+                if (_disposed) {
+                    VhLogger.Instance.LogInformation(GeneralEventId.Essential,
+                        "UdpChannelTransmitter has been stopped.");
                     break;
                 }
 
                 // break only for the first call and means that the local endpoint can not bind
-                if (remoteEndPoint == null)
-                {
+                if (remoteEndPoint == null) {
                     VhLogger.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter has stopped reading.");
                     break;
                 }

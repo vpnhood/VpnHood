@@ -21,14 +21,11 @@ public class SyncLogger(ILogger logger) : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
-        lock (_lock)
-        {
-            try
-            {
+        lock (_lock) {
+            try {
                 logger.Log(logLevel, eventId, state, exception, formatter);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 Console.WriteLine($"Logger error! Could not write into logger. Error: {ex.Message}");
             }
         }

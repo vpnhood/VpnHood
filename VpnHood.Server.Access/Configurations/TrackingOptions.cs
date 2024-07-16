@@ -13,7 +13,10 @@ public class TrackingOptions
     public bool? TrackIcmp { get; set; }
 
     // Calculate
-    [JsonIgnore] public bool IsEnabled => TrackClientIpValue || TrackLocalPortValue || TrackDestinationIpValue || TrackDestinationPortValue;
+    [JsonIgnore]
+    public bool IsEnabled =>
+        TrackClientIpValue || TrackLocalPortValue || TrackDestinationIpValue || TrackDestinationPortValue;
+
     [JsonIgnore] public bool TrackClientIpValue => TrackClientIp ?? false;
     [JsonIgnore] public bool TrackLocalPortValue => TrackLocalPort ?? false;
     [JsonIgnore] public bool TrackDestinationIpValue => TrackDestinationIp ?? false;
@@ -43,5 +46,4 @@ public class TrackingOptions
         TrackTcp = TrackTcpValue;
         TrackIcmp = TrackIcmpValue;
     }
-
 }

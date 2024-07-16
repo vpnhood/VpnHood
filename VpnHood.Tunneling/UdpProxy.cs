@@ -45,8 +45,7 @@ internal class UdpProxy : ITimeoutItem
     {
         LastUsedTime = FastDateTime.Now;
 
-        try
-        {
+        try {
             await _sendSemaphore.WaitAsync().VhConfigureAwait();
 
             if (VhLogger.IsDiagnoseMode)
@@ -55,32 +54,30 @@ internal class UdpProxy : ITimeoutItem
 
             // IpV4 fragmentation
             if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
-                _udpClient.DontFragment = noFragment.Value; // Never call this for IPv6, it will throw exception for any value
+                _udpClient.DontFragment =
+                    noFragment.Value; // Never call this for IPv6, it will throw exception for any value
 
             var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint).VhConfigureAwait();
             if (sentBytes != datagram.Length)
                 VhLogger.Instance.LogWarning(
                     $"Couldn't send all udp bytes. Requested: {datagram.Length}, Sent: {sentBytes}");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogWarning(GeneralEventId.Udp,
-                "Couldn't send a udp packet. RemoteEp: {RemoteEp}, Exception: {Message}", 
+                "Couldn't send a udp packet. RemoteEp: {RemoteEp}, Exception: {Message}",
                 VhLogger.Format(ipEndPoint), ex.Message);
 
             if (IsInvalidState(ex))
                 Dispose();
         }
-        finally
-        {
+        finally {
             _sendSemaphore.Release();
         }
     }
 
     public async Task Listen()
     {
-        while (!Disposed)
-        {
+        while (!Disposed) {
             var udpResult = await _udpClient.ReceiveAsync().VhConfigureAwait();
             LastUsedTime = FastDateTime.Now;
 

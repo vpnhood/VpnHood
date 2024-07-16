@@ -6,6 +6,7 @@ namespace VpnHood.Common.Converters;
 public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter : JsonConverter<T>
 {
     private readonly TConverter _typeConverter = (TConverter)Activator.CreateInstance(typeof(TConverter));
+
     public override T[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.StartArray)
@@ -14,8 +15,7 @@ public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter
         reader.Read();
 
         var elements = new List<T>();
-        while (reader.TokenType != JsonTokenType.EndArray)
-        {
+        while (reader.TokenType != JsonTokenType.EndArray) {
             elements.Add(_typeConverter.Read(ref reader, typeof(T), options)!);
             reader.Read();
         }

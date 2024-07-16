@@ -26,5 +26,4 @@ public abstract class ChunkStream : AsyncStreamDecorator
         StreamId = streamId;
         ReusedCount = reusedCount;
     }
-
 }

@@ -18,9 +18,11 @@ public class TestHttpAccessManager : HttpAccessManager
     }
 
 
-    public static TestHttpAccessManager Create(IAccessManager baseAccessManager, bool autoDisposeBaseAccessManager = true)
+    public static TestHttpAccessManager Create(IAccessManager baseAccessManager,
+        bool autoDisposeBaseAccessManager = true)
     {
-        var embedIoAccessManager = new TestEmbedIoAccessManager(baseAccessManager, autoDisposeBaseAccessManager: autoDisposeBaseAccessManager);
+        var embedIoAccessManager = new TestEmbedIoAccessManager(baseAccessManager,
+            autoDisposeBaseAccessManager: autoDisposeBaseAccessManager);
         var accessManagerOptions = new HttpAccessManagerOptions(embedIoAccessManager.BaseUri, "Bearer");
         var httpAccessManager = new TestHttpAccessManager(accessManagerOptions, embedIoAccessManager);
         return httpAccessManager;

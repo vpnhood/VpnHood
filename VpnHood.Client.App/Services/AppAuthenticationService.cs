@@ -14,7 +14,7 @@ internal class AppAuthenticationService(VpnHoodApp vpnHoodApp, IAppAuthenticatio
     public async Task SignInWithGoogle(IUiContext uiContext)
     {
         await accountService.SignInWithGoogle(uiContext).VhConfigureAwait();
-        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile:true).VhConfigureAwait();
+        await vpnHoodApp.RefreshAccount(updateCurrentClientProfile: true).VhConfigureAwait();
     }
 
     public async Task SignOut(IUiContext uiContext)

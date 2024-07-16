@@ -6,28 +6,38 @@ using VpnHood.Server.Access.Managers.Http;
 
 namespace VpnHood.Server.App;
 
-
 public class AppSettings
 {
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [Obsolete("Use HttpAccessManager")]
-    public HttpAccessManagerOptions? RestAccessServer { set => HttpAccessManager = value; }
+    public HttpAccessManagerOptions? RestAccessServer {
+        set => HttpAccessManager = value;
+    }
+
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
     [Obsolete("Use HttpAccessManager")]
-    public HttpAccessManagerOptions? HttpAccessServer { set => HttpAccessManager = value; }
+    public HttpAccessManagerOptions? HttpAccessServer {
+        set => HttpAccessManager = value;
+    }
+
     [Obsolete("Use FileAccessManager")]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public FileAccessManagerOptions? FileAccessServer { set => FileAccessManager = value; }
+    public FileAccessManagerOptions? FileAccessServer {
+        set => FileAccessManager = value;
+    }
+
     [Obsolete("Use ManagementSecret")]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public string? Secret { set => ManagementSecret = value; }
+    public string? Secret {
+        set => ManagementSecret = value;
+    }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public HttpAccessManagerOptions? HttpAccessManager { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public FileAccessManagerOptions? FileAccessManager { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public ServerConfig? ServerConfig { get; set; }
 

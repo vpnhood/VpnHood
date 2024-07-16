@@ -17,7 +17,12 @@ public class PingProxyPool : IPacketProxyPool, IJob
     private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
     private readonly int _workerMaxCount;
 
-    public int ClientCount { get { lock (_pingProxies) return _pingProxies.Count; } }
+    public int ClientCount {
+        get {
+            lock (_pingProxies) return _pingProxies.Count;
+        }
+    }
+
     public int RemoteEndPointCount => _remoteEndPoints.Count;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
 
@@ -27,26 +32,27 @@ public class PingProxyPool : IPacketProxyPool, IJob
         icmpTimeout ??= TimeSpan.FromSeconds(120);
         maxClientCount ??= int.MaxValue;
 
-        _workerMaxCount = (maxClientCount > 0) ? maxClientCount.Value : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
+        _workerMaxCount = (maxClientCount > 0)
+            ? maxClientCount.Value
+            : throw new ArgumentException($"{nameof(maxClientCount)} must be greater than 0", nameof(maxClientCount));
         _packetProxyReceiver = packetProxyReceiver;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(icmpTimeout);
-        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to the maximum ping workers.", logScope: logScope);
+        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance,
+            "Session has reached to the maximum ping workers.", logScope: logScope);
 
         JobRunner.Default.Add(this);
     }
 
     private PingProxy GetFreePingProxy(out bool isNew)
     {
-        lock (_pingProxies)
-        {
+        lock (_pingProxies) {
             isNew = false;
 
             var pingProxy = _pingProxies.FirstOrDefault(x => !x.IsBusy);
             if (pingProxy != null)
                 return pingProxy;
 
-            if (_pingProxies.Count < _workerMaxCount)
-            {
+            if (_pingProxies.Count < _workerMaxCount) {
                 pingProxy = new PingProxy();
                 _pingProxies.Add(pingProxy);
                 isNew = true;
@@ -63,7 +69,8 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
     public async Task SendPacket(IPPacket ipPacket)
     {
-        if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
+        if ((ipPacket.Version != IPVersion.IPv4 ||
+             ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
             (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
 
@@ -72,8 +79,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
         var isNewRemoteEndPoint = false;
 
         // add the endpoint
-        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ =>
-        {
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
             isNewRemoteEndPoint = true;
             return new TimeoutItem<bool>(true);
         });
@@ -82,8 +88,7 @@ public class PingProxyPool : IPacketProxyPool, IJob
 
         // we know lock doesn't wait for async task, but wait till Send method to set its busy state before goes into its await
         Task<IPPacket> sendTask;
-        lock (_pingProxies)
-        {
+        lock (_pingProxies) {
             var pingProxy = GetFreePingProxy(out isNewLocalEndPoint);
             sendTask = pingProxy.Send(ipPacket);
         }

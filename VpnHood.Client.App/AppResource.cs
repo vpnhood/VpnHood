@@ -37,7 +37,7 @@ public class AppResource
     {
         public IconData? BadgeConnectedIcon { get; set; } = new(Resource.BadgeConnectedIcon);
         public IconData? BadgeConnectingIcon { get; set; } = new(Resource.BadgeConnectingIcon);
-        public IconData? SystemTrayConnectedIcon { get; set; } 
+        public IconData? SystemTrayConnectedIcon { get; set; }
         public IconData? SystemTrayConnectingIcon { get; set; }
         public IconData? SystemTrayDisconnectedIcon { get; set; }
     }
@@ -51,5 +51,4 @@ public class AppResource
     {
         public byte[] Data { get; } = data;
     }
-
 }

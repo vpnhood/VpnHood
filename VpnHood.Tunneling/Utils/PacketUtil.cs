@@ -16,43 +16,35 @@ public static class PacketUtil
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-        if (ipPacket.Protocol == ProtocolType.Tcp)
-        {
+        if (ipPacket.Protocol == ProtocolType.Tcp) {
             var tcpPacket = ExtractTcp(ipPacket);
             tcpPacket.UpdateTcpChecksum();
         }
-        else if (ipPacket.Protocol == ProtocolType.Udp)
-        {
+        else if (ipPacket.Protocol == ProtocolType.Udp) {
             var udpPacket = ExtractUdp(ipPacket);
             udpPacket.UpdateUdpChecksum();
         }
-        else if (ipPacket.Protocol == ProtocolType.Icmp)
-        {
+        else if (ipPacket.Protocol == ProtocolType.Icmp) {
             var icmpPacket = ExtractIcmp(ipPacket);
             UpdateIcmpChecksum(icmpPacket);
         }
-        else if (ipPacket.Protocol == ProtocolType.IcmpV6)
-        {
+        else if (ipPacket.Protocol == ProtocolType.IcmpV6) {
             // nothing need to do due to packet.UpdateCalculatedValues
         }
-        else
-        {
+        else {
             if (throwIfNotSupported)
                 throw new NotSupportedException("Does not support this packet!");
         }
 
         // update IP
-        if (ipPacket is IPv4Packet ipV4Packet)
-        {
+        if (ipPacket is IPv4Packet ipV4Packet) {
             ipV4Packet.UpdateIPChecksum();
             ipPacket.UpdateCalculatedValues();
         }
-        else if (ipPacket is IPv6Packet)
-        {
+        else if (ipPacket is IPv6Packet) {
             ipPacket.UpdateCalculatedValues();
         }
-        else
-        {
+        else {
             if (throwIfNotSupported)
                 throw new NotSupportedException("Does not support this packet!");
         }
@@ -70,20 +62,17 @@ public static class PacketUtil
             throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
 
         var tcpPacketOrg = ExtractTcp(ipPacket);
-        TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort)
-        {
+        TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort) {
             Reset = true,
             WindowSize = 0
         };
 
-        if (tcpPacketOrg is { Synchronize: true, Acknowledgment: false })
-        {
+        if (tcpPacketOrg is { Synchronize: true, Acknowledgment: false }) {
             resetTcpPacket.Acknowledgment = true;
             resetTcpPacket.SequenceNumber = 0;
             resetTcpPacket.AcknowledgmentNumber = tcpPacketOrg.SequenceNumber + 1;
         }
-        else
-        {
+        else {
             resetTcpPacket.Acknowledgment = false;
             resetTcpPacket.AcknowledgmentNumber = tcpPacketOrg.AcknowledgmentNumber;
             resetTcpPacket.SequenceNumber = tcpPacketOrg.AcknowledgmentNumber;
@@ -101,10 +90,10 @@ public static class PacketUtil
     public static IPPacket CreateIpPacket(IPAddress sourceAddress, IPAddress destinationAddress)
     {
         if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
-            throw new InvalidOperationException($"{nameof(sourceAddress)} and {nameof(destinationAddress)}  address family must be same!");
+            throw new InvalidOperationException(
+                $"{nameof(sourceAddress)} and {nameof(destinationAddress)}  address family must be same!");
 
-        return sourceAddress.AddressFamily switch
-        {
+        return sourceAddress.AddressFamily switch {
             AddressFamily.InterNetwork => new IPv4Packet(sourceAddress, destinationAddress),
             AddressFamily.InterNetworkV6 => new IPv6Packet(sourceAddress, destinationAddress),
             _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} is not supported!")
@@ -117,8 +106,7 @@ public static class PacketUtil
     {
         // create packet for audience
         var ipPacket = CreateIpPacket(sourceEndPoint.Address, destinationEndPoint.Address);
-        var udpPacket = new UdpPacket((ushort)sourceEndPoint.Port, (ushort)destinationEndPoint.Port)
-        {
+        var udpPacket = new UdpPacket((ushort)sourceEndPoint.Port, (ushort)destinationEndPoint.Port) {
             PayloadData = payloadData
         };
 
@@ -127,7 +115,6 @@ public static class PacketUtil
             UpdateIpPacket(ipPacket);
         return ipPacket;
     }
-
 
 
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
@@ -187,15 +174,13 @@ public static class PacketUtil
         Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
 
         // PacketDotNet doesn't support IcmpV6Packet properly
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize]))
-        {
+        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) {
             Type = icmpV6Type,
             Code = code,
             PayloadData = buffer[headerSize..]
         };
 
-        var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-        {
+        var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress) {
             PayloadPacket = icmpPacket,
             PayloadLength = (ushort)icmpPacket.TotalPacketLength
         };
@@ -215,15 +200,13 @@ public static class PacketUtil
         var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
         var buffer = new byte[headerSize + icmpDataLen];
         Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
-        var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer))
-        {
+        var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer)) {
             TypeCode = typeCode,
             Sequence = sequence
         };
         icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(icmpPacket.Bytes, 0, icmpPacket.Bytes.Length);
 
-        var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-        {
+        var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress) {
             PayloadPacket = icmpPacket,
             FragmentFlags = 0
         };
@@ -248,8 +231,7 @@ public static class PacketUtil
         var version = buffer[bufferIndex] >> 4;
 
         // v4
-        if (version == 4)
-        {
+        if (version == 4) {
             var packetLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
             if (packetLength < 20)
                 throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
@@ -257,8 +239,7 @@ public static class PacketUtil
         }
 
         // v6
-        if (version == 6)
-        {
+        if (version == 6) {
             var payload = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 4));
             return (ushort)(40 + payload); //header + payload
         }
@@ -272,7 +253,8 @@ public static class PacketUtil
         if (buffer is null) throw new ArgumentNullException(nameof(buffer));
 
         var packetLength = ReadPacketLength(buffer, bufferIndex);
-        var packet = Packet.ParsePacket(LinkLayers.Raw, buffer[bufferIndex..(bufferIndex + packetLength)]).Extract<IPPacket>();
+        var packet = Packet.ParsePacket(LinkLayers.Raw, buffer[bufferIndex..(bufferIndex + packetLength)])
+            .Extract<IPPacket>();
         bufferIndex += packetLength;
         return packet;
     }
@@ -280,63 +262,56 @@ public static class PacketUtil
     public static void LogPackets(IList<IPPacket> ipPackets, string operation)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < ipPackets.Count; i++)
-        {
+        for (var i = 0; i < ipPackets.Count; i++) {
             var ipPacket = ipPackets[i];
             LogPacket(ipPacket, operation);
         }
     }
 
-    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information, Exception? exception = null)
+    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information,
+        Exception? exception = null)
     {
-        try
-        {
+        try {
             if (!VhLogger.IsDiagnoseMode) return;
             var eventId = GeneralEventId.Packet;
             var packetPayload = Array.Empty<byte>();
 
-            switch (ipPacket.Protocol)
-            {
-                case ProtocolType.Icmp:
-                    {
-                        eventId = GeneralEventId.Ping;
-                        var icmpPacket = ExtractIcmp(ipPacket);
-                        packetPayload = icmpPacket.PayloadData ?? [];
-                        break;
-                    }
+            switch (ipPacket.Protocol) {
+                case ProtocolType.Icmp: {
+                    eventId = GeneralEventId.Ping;
+                    var icmpPacket = ExtractIcmp(ipPacket);
+                    packetPayload = icmpPacket.PayloadData ?? [];
+                    break;
+                }
 
-                case ProtocolType.IcmpV6:
-                    {
-                        eventId = GeneralEventId.Ping;
-                        var icmpPacket = ExtractIcmpV6(ipPacket);
-                        packetPayload = icmpPacket.PayloadData ?? [];
-                        break;
-                    }
+                case ProtocolType.IcmpV6: {
+                    eventId = GeneralEventId.Ping;
+                    var icmpPacket = ExtractIcmpV6(ipPacket);
+                    packetPayload = icmpPacket.PayloadData ?? [];
+                    break;
+                }
 
-                case ProtocolType.Udp:
-                    {
-                        eventId = GeneralEventId.Udp;
-                        var udpPacket = ExtractUdp(ipPacket);
-                        packetPayload = udpPacket.PayloadData ?? [];
-                        break;
-                    }
+                case ProtocolType.Udp: {
+                    eventId = GeneralEventId.Udp;
+                    var udpPacket = ExtractUdp(ipPacket);
+                    packetPayload = udpPacket.PayloadData ?? [];
+                    break;
+                }
 
-                case ProtocolType.Tcp:
-                    {
-                        eventId = GeneralEventId.Tcp;
-                        var tcpPacket = ExtractTcp(ipPacket);
-                        packetPayload = tcpPacket.PayloadData ?? [];
-                        break;
-                    }
+                case ProtocolType.Tcp: {
+                    eventId = GeneralEventId.Tcp;
+                    var tcpPacket = ExtractTcp(ipPacket);
+                    packetPayload = tcpPacket.PayloadData ?? [];
+                    break;
+                }
             }
 
             VhLogger.Instance.Log(logLevel, eventId, exception,
                 message + " Packet: {Packet}, PayloadLength: {PayloadLength}, Payload: {Payload}",
-                Format(ipPacket), packetPayload.Length, BitConverter.ToString(packetPayload, 0, Math.Min(10, packetPayload.Length)));
-
+                Format(ipPacket), packetPayload.Length,
+                BitConverter.ToString(packetPayload, 0, Math.Min(10, packetPayload.Length)));
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Packet,
                 ex, "Could not extract packet for log. Packet: {Packet}, Message: {Message}, Exception: {Exception}",
                 Format(ipPacket), message, exception);
@@ -349,8 +324,7 @@ public static class PacketUtil
         buffer[4] = 0xE0;
         var target = ipPacket.DestinationAddress.GetAddressBytes();
         Array.Copy(target, 0, buffer, 8, 16);
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
-        {
+        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer)) {
             Type = IcmpV6Type.NeighborAdvertisement,
             Code = 0
         };
@@ -378,8 +352,7 @@ public static class PacketUtil
 
         var target = ipPacket.SourceAddress.GetAddressBytes();
         Array.Copy(target, 0, buffer, 8, 16);
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
-        {
+        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer)) {
             Type = IcmpV6Type.NeighborAdvertisement,
             Code = 0
         };
@@ -398,8 +371,7 @@ public static class PacketUtil
         buffer[6] = 0x00; // Router Lifetime 0. 0 is unspecified
         buffer[7] = 0x00; // Router Lifetime 0
 
-        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
-        {
+        var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer)) {
             Type = IcmpV6Type.RouterAdvertisement,
             Code = 0
         };
@@ -419,16 +391,14 @@ public static class PacketUtil
 
     public static IPEndPointPair GetPacketEndPoints(IPPacket ipPacket)
     {
-        if (ipPacket.Protocol == ProtocolType.Tcp)
-        {
+        if (ipPacket.Protocol == ProtocolType.Tcp) {
             var tcpPacket = ExtractTcp(ipPacket);
             return new IPEndPointPair(
                 new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
                 new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
         }
 
-        if (ipPacket.Protocol == ProtocolType.Udp)
-        {
+        if (ipPacket.Protocol == ProtocolType.Udp) {
             var udpPacket = ExtractUdp(ipPacket);
             return new IPEndPointPair(
                 new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort),

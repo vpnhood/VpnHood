@@ -11,5 +11,4 @@ public static class GooglePlayExtensions
     {
         return GooglePlayTaskCompleteListener<object>.Create(googlePlayTask);
     }
-
 }

@@ -13,10 +13,8 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     public bool AutoCleanup { get; set; } = true;
     public TimeSpan? Timeout { get; set; } = timeout;
 
-    public int Count
-    {
-        get
-        {
+    public int Count {
+        get {
             AutoCleanupInternal();
             return _items.Count;
         }
@@ -28,11 +26,9 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         AutoCleanupInternal();
 
         // update old item if expired or return the old item
-        lock (_items)
-        {
+        lock (_items) {
             var res = _items.AddOrUpdate(key, valueFactory,
-                (k, oldValue) =>
-                {
+                (k, oldValue) => {
                     if (!IsExpired(oldValue))
                         return oldValue;
 
@@ -54,8 +50,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             return false;
 
         // return false if expired
-        if (IsExpired(value))
-        {
+        if (IsExpired(value)) {
             value = default!;
             TryRemove(key, out _);
             return false;
@@ -70,10 +65,8 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     {
         AutoCleanupInternal();
 
-        lock (_items)
-        {
-            var res = _items.AddOrUpdate(key, value, (_, oldValue) =>
-            {
+        lock (_items) {
+            var res = _items.AddOrUpdate(key, value, (_, oldValue) => {
                 oldValue.Dispose();
                 return value;
             });
@@ -93,7 +86,6 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
 
         value.LastUsedTime = FastDateTime.Now;
         return true;
-
     }
 
     public bool TryRemove(TKey key, out TValue value)
@@ -118,6 +110,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     }
 
     private readonly object _cleanupLock = new();
+
     public void Cleanup(bool force = false)
     {
         // do nothing if there is no timeout
@@ -125,8 +118,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             return;
 
         // return if already checked
-        lock (_cleanupLock)
-        {
+        lock (_cleanupLock) {
             if (!force && FastDateTime.Now - _lastCleanupTime < Timeout / 3)
                 return;
             _lastCleanupTime = FastDateTime.Now;
@@ -152,10 +144,8 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     {
         var oldestAccessedTime = DateTime.MaxValue;
         var oldestKey = default(TKey?);
-        foreach (var item in _items)
-        {
-            if (oldestAccessedTime < item.Value.LastUsedTime)
-            {
+        foreach (var item in _items) {
+            if (oldestAccessedTime < item.Value.LastUsedTime) {
                 oldestAccessedTime = item.Value.LastUsedTime;
                 oldestKey = item.Key;
             }

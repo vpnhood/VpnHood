@@ -12,7 +12,7 @@ public static class DatagramMessageHandler
         throw new ArgumentException("Could not detect version code for this datagram message.");
     }
 
-    public static IPPacket CreateMessage(DatagramBaseMessage requestMessage) 
+    public static IPPacket CreateMessage(DatagramBaseMessage requestMessage)
     {
         // building request
         using var mem = new MemoryStream();
@@ -49,8 +49,7 @@ public static class DatagramMessageHandler
 
         // check message code
         var messageCode = (DatagramMessageCode)buffer[1];
-        return messageCode switch
-        {
+        return messageCode switch {
             DatagramMessageCode.CloseDatagramChannel => StreamUtil.ReadJson<CloseDatagramMessage>(stream),
             _ => throw new NotSupportedException($"Unknown Datagram Message messageCode. MessageCode: {messageCode}")
         };

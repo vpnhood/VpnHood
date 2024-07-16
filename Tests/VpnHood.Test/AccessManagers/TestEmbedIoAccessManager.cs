@@ -28,18 +28,24 @@ public class TestEmbedIoAccessManager : IDisposable
     public Uri BaseUri { get; }
     public HttpException? HttpException { get; set; }
 
-    public TestEmbedIoAccessManager(IAccessManager baseAccessManager, bool autoStart = true, bool autoDisposeBaseAccessManager = true)
+    public TestEmbedIoAccessManager(IAccessManager baseAccessManager, bool autoStart = true,
+        bool autoDisposeBaseAccessManager = true)
     {
         _autoDisposeBaseAccessManager = autoDisposeBaseAccessManager;
-        try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
+        try {
+            Logger.UnregisterLogger<ConsoleLogger>();
+        }
+        catch {
+            /* ignored */
+        }
 
         BaseAccessManager = baseAccessManager;
         BaseUri = new Uri($"http://{VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
-        if (autoStart)
-        {
+        if (autoStart) {
             _webServer.Start();
-            VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} is listening to {BaseUri}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Test,
+                $"{VhLogger.FormatType(this)} is listening to {BaseUri}");
         }
     }
 
@@ -58,7 +64,8 @@ public class TestEmbedIoAccessManager : IDisposable
 
     public void Stop()
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, $"{VhLogger.FormatType(this)} has stopped listening to {BaseUri}");
+        VhLogger.Instance.LogInformation(GeneralEventId.Test,
+            $"{VhLogger.FormatType(this)} has stopped listening to {BaseUri}");
         _webServer.Dispose();
     }
 
@@ -131,7 +138,6 @@ public class TestEmbedIoAccessManager : IDisposable
                 ? await AccessManager.Session_Close(sessionId, traffic)
                 : await AccessManager.Session_AddUsage(sessionId, traffic, adData);
             return res;
-
         }
 
         [Route(HttpVerbs.Post, "/status")]

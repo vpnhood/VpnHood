@@ -1,4 +1,5 @@
 ﻿// ReSharper disable once CheckNamespace
+
 namespace Ga4.Trackers;
 
 public interface ITracker

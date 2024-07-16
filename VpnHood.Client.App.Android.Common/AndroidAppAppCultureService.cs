@@ -29,26 +29,21 @@ public class AndroidAppAppCultureService : IAppCultureService
                ?? throw new Exception("Could not acquire LocaleManager.");
     }
 
-    public string[] SystemCultures
-    {
-        get
-        {
+    public string[] SystemCultures {
+        get {
             var localeManager = GetLocalManager();
             var languageTags = localeManager.SystemLocales.ToLanguageTags();
             return string.IsNullOrEmpty(languageTags) ? ["en"] : languageTags.Split(',');
         }
     }
 
-    public string[] AvailableCultures
-    {
-        get
-        {
+    public string[] AvailableCultures {
+        get {
             var localeManager = GetLocalManager();
             var languageTags = localeManager.OverrideLocaleConfig?.SupportedLocales?.ToLanguageTags() ?? string.Empty;
             return string.IsNullOrEmpty(languageTags) ? [] : languageTags.Split(',');
         }
-        set
-        {
+        set {
             var localeManager = GetLocalManager();
             localeManager.OverrideLocaleConfig = value.Length > 0
                 ? new LocaleConfig(LocaleList.ForLanguageTags(string.Join(",", value)))
@@ -56,16 +51,13 @@ public class AndroidAppAppCultureService : IAppCultureService
         }
     }
 
-    public string[] SelectedCultures
-    {
-        get
-        {
+    public string[] SelectedCultures {
+        get {
             var localeManager = GetLocalManager();
             var languageTags = localeManager.ApplicationLocales.ToLanguageTags();
             return string.IsNullOrEmpty(languageTags) ? [] : languageTags.Split(',');
         }
-        set
-        {
+        set {
             var localeManager = GetLocalManager();
             localeManager.ApplicationLocales = new LocaleList(value.Select(x => new Locale(x)).ToArray());
         }

@@ -34,11 +34,9 @@ public class BufferCryptor : IDisposable
         var nonce = new byte[blockSizeInByte];
         var init = false;
 
-        for (var i = offset; i < offset + count; i++)
-        {
+        for (var i = offset; i < offset + count; i++) {
             //encrypt the nonce to form next xor buffer (unique key)
-            if (!init || keyPos % blockSizeInByte == 0)
-            {
+            if (!init || keyPos % blockSizeInByte == 0) {
                 BitConverter.GetBytes(blockNumber).CopyTo(nonce, 0);
                 _cryptor.TransformBlock(nonce, 0, nonce.Length, outputBuffer, 0);
                 if (init) keyPos = 0;

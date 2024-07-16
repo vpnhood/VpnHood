@@ -10,16 +10,13 @@ internal static class ExceptionHandler
 {
     public static Task DataResponseForException(IHttpContext context, Exception ex)
     {
-        if (ex is ApiException apiException)
-        {
-            var apiError = new ApiError(apiException.ExceptionTypeName ?? nameof(ApiException), ex.Message)
-            {
+        if (ex is ApiException apiException) {
+            var apiError = new ApiError(apiException.ExceptionTypeName ?? nameof(ApiException), ex.Message) {
                 TypeFullName = apiException.ExceptionTypeFullName,
                 InnerMessage = apiException.InnerException?.Message
             };
 
-            foreach (var key in apiException.Data)
-            {
+            foreach (var key in apiException.Data) {
                 if (key is string keyStr)
                     apiError.Data.TryAdd(keyStr, ex.Data[keyStr]?.ToString());
                 apiError.Data.TryAdd("InnerStatusCode", apiException.StatusCode.ToString());
@@ -29,9 +26,7 @@ internal static class ExceptionHandler
             context.Response.StatusCode = apiException.StatusCode;
             throw new HttpException(apiException.StatusCode, apiError.Message, apiError);
         }
-        else
-        {
-
+        else {
             // set correct https status code depends on exception
             if (NotExistsException.Is(ex)) context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             else if (AlreadyExistsException.Is(ex)) context.Response.StatusCode = (int)HttpStatusCode.Conflict;

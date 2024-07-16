@@ -17,8 +17,7 @@ public class TestNetFilter : NetFilter
         NetMap.Clear();
         NetMapR.Clear();
 
-        foreach (var tuple in items)
-        {
+        foreach (var tuple in items) {
             Assert.IsTrue(NetMap.TryAdd(Tuple.Create(tuple.Item1, tuple.Item2), tuple.Item3));
             Assert.IsTrue(NetMapR.TryAdd(Tuple.Create(tuple.Item1, tuple.Item3), tuple.Item2));
         }
@@ -40,81 +39,76 @@ public class TestNetFilter : NetFilter
         if (result == null) return null;
         ipPacket = result;
 
-        switch (ipPacket.Protocol)
-        {
-            case ProtocolType.Udp:
-                {
-                    var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                    var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
-                    if (newEndPoint == null) return null;
-                    ipPacket.DestinationAddress = newEndPoint.Address;
-                    udpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                    PacketUtil.UpdateIpPacket(ipPacket);
-                    return ipPacket;
-                }
-            case ProtocolType.Tcp:
-                {
-                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                    var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
-                    if (newEndPoint == null) return null;
-                    ipPacket.DestinationAddress = newEndPoint.Address;
-                    tcpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                    PacketUtil.UpdateIpPacket(ipPacket);
-                    return ipPacket;
-                }
-            case ProtocolType.Icmp or ProtocolType.IcmpV6:
-                {
-                    var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, 0));
-                    if (newEndPoint == null) return null;
-                    ipPacket.DestinationAddress = newEndPoint.Address;
-                    PacketUtil.UpdateIpPacket(ipPacket);
-                    return ipPacket;
-                }
+        switch (ipPacket.Protocol) {
+            case ProtocolType.Udp: {
+                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                var newEndPoint = ProcessRequest(ipPacket.Protocol,
+                    new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
+                if (newEndPoint == null) return null;
+                ipPacket.DestinationAddress = newEndPoint.Address;
+                udpPacket.DestinationPort = (ushort)newEndPoint.Port;
+                PacketUtil.UpdateIpPacket(ipPacket);
+                return ipPacket;
+            }
+            case ProtocolType.Tcp: {
+                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                var newEndPoint = ProcessRequest(ipPacket.Protocol,
+                    new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
+                if (newEndPoint == null) return null;
+                ipPacket.DestinationAddress = newEndPoint.Address;
+                tcpPacket.DestinationPort = (ushort)newEndPoint.Port;
+                PacketUtil.UpdateIpPacket(ipPacket);
+                return ipPacket;
+            }
+            case ProtocolType.Icmp or ProtocolType.IcmpV6: {
+                var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, 0));
+                if (newEndPoint == null) return null;
+                ipPacket.DestinationAddress = newEndPoint.Address;
+                PacketUtil.UpdateIpPacket(ipPacket);
+                return ipPacket;
+            }
             default:
                 return ipPacket;
         }
-
     }
 
     public override IPPacket ProcessReply(IPPacket ipPacket)
     {
-        switch (ipPacket.Protocol)
-        {
-            case ProtocolType.Udp:
-                {
-                    var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                    if (NetMapR.TryGetValue(
-                            Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)),
-                            out var newEndPoint1))
-                    {
-                        ipPacket.SourceAddress = newEndPoint1.Address;
-                        udpPacket.SourcePort = (ushort)newEndPoint1.Port;
-                        PacketUtil.UpdateIpPacket(ipPacket);
-                    }
-                    break;
+        switch (ipPacket.Protocol) {
+            case ProtocolType.Udp: {
+                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                if (NetMapR.TryGetValue(
+                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)),
+                        out var newEndPoint1)) {
+                    ipPacket.SourceAddress = newEndPoint1.Address;
+                    udpPacket.SourcePort = (ushort)newEndPoint1.Port;
+                    PacketUtil.UpdateIpPacket(ipPacket);
                 }
 
-            case ProtocolType.Tcp:
-                {
-                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                    if (NetMapR.TryGetValue(
-                            Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort)),
-                            out var tcpEndPoint))
-                    {
-                        ipPacket.SourceAddress = tcpEndPoint.Address;
-                        tcpPacket.SourcePort = (ushort)tcpEndPoint.Port;
-                        PacketUtil.UpdateIpPacket(ipPacket);
-                    }
-                    break;
+                break;
+            }
+
+            case ProtocolType.Tcp: {
+                var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                if (NetMapR.TryGetValue(
+                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort)),
+                        out var tcpEndPoint)) {
+                    ipPacket.SourceAddress = tcpEndPoint.Address;
+                    tcpPacket.SourcePort = (ushort)tcpEndPoint.Port;
+                    PacketUtil.UpdateIpPacket(ipPacket);
                 }
+
+                break;
+            }
 
             case ProtocolType.Icmp or ProtocolType.IcmpV6:
                 if (NetMapR.TryGetValue(
-                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, 0)), out var icmpEndPoint))
-                {
+                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, 0)),
+                        out var icmpEndPoint)) {
                     ipPacket.SourceAddress = icmpEndPoint.Address;
                     PacketUtil.UpdateIpPacket(ipPacket);
                 }
+
                 break;
         }
 

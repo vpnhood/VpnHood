@@ -37,7 +37,8 @@ public class DnsConfigurationTest
         var token = TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.DnsServers = [IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2")];
-        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token, clientOptions: clientOptions,
+            packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(clientOptions.DnsServers, client.DnsServers);
         Assert.IsTrue(client.Stat.IsDnsServersAccepted);
@@ -46,13 +47,12 @@ public class DnsConfigurationTest
     [TestMethod]
     public async Task Server_override_dns_servers()
     {
-        var clientDnsServers = new[] {IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2")};
+        var clientDnsServers = new[] { IPAddress.Parse("200.0.0.1"), IPAddress.Parse("200.0.0.2") };
 
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = [IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.2")];
-        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions
-        {
+        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions {
             ExcludeIpRanges = clientDnsServers.Select(x => new IpRange(x)).ToArray()
         };
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
@@ -61,8 +61,8 @@ public class DnsConfigurationTest
         var token = TestHelper.CreateAccessToken(server);
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.DnsServers = clientDnsServers;
-        await using var client = await TestHelper.CreateClient(token, 
-            clientOptions: clientOptions, 
+        await using var client = await TestHelper.CreateClient(token,
+            clientOptions: clientOptions,
             packetCapture: new TestNullPacketCapture());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.DnsServers);
@@ -77,8 +77,7 @@ public class DnsConfigurationTest
         // create server
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = serverDnsServers;
-        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions
-        {
+        fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions {
             IncludeIpRanges = [IpRange.Parse("10.10.10.10-10.10.10.11")]
         };
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);

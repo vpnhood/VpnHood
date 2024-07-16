@@ -10,7 +10,8 @@ namespace VpnHood.Client.App.WebServer.Controllers;
 internal class BillingController : WebApiController, IBillingController
 {
     public IAppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.Billing
-        ?? throw new Exception("Billing service is not available at this moment.");
+                                                ?? throw new Exception(
+                                                    "Billing service is not available at this moment.");
 
     [Route(HttpVerbs.Get, "/subscription-plans")]
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
@@ -23,5 +24,4 @@ internal class BillingController : WebApiController, IBillingController
     {
         return BillingService.Purchase(ActiveUiContext.RequiredContext, planId);
     }
-
 }

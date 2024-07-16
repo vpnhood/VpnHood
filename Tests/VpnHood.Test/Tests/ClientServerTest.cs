@@ -33,7 +33,8 @@ public class ClientServerTest : TestBase
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
-        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
+        using var accessManager2 =
+            TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
         await using var server2 = await TestHelper.CreateServer(accessManager2);
 
         // redirect server1 to server2
@@ -53,13 +54,15 @@ public class ClientServerTest : TestBase
         // Create Server 1
         var serverEndPoint1 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint1]);
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "us/california");
+        using var accessManager1 =
+            TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "us/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // Create Server 2
         var serverEndPoint2 = VhUtil.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint2]);
-        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath, serverLocation: "uk/london");
+        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath,
+            serverLocation: "uk/london");
         await using var server2 = await TestHelper.CreateServer(accessManager2);
 
         // redirect server1 to server2
@@ -70,7 +73,8 @@ public class ClientServerTest : TestBase
         var token1 = TestHelper.CreateAccessToken(accessManager1);
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.ServerLocation = "uk/london";
-        await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions, packetCapture: new TestNullPacketCapture());
+        await using var client = await TestHelper.CreateClient(token1, clientOptions: clientOptions,
+            packetCapture: new TestNullPacketCapture());
 
         Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
         Assert.AreEqual("uk/london", client.Stat.ServerLocationInfo?.ServerLocation);
@@ -81,7 +85,8 @@ public class ClientServerTest : TestBase
     {
         // Create Server
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
-        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "us/california");
+        using var accessManager1 =
+            TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "us/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
 
         // create client
@@ -104,7 +109,8 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = false });
+        await using var client =
+            await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = false });
 
         await TestTunnel(server, client);
 
@@ -126,22 +132,18 @@ public class ClientServerTest : TestBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
-        {
+        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions {
             DropUdpPackets = true,
             MaxDatagramChannelCount = 6
         });
 
-        try
-        {
+        try {
             await TestHelper.Test_Udp(3000);
             Assert.Fail("UDP must be failed.");
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             Assert.AreEqual(nameof(OperationCanceledException), ex.GetType().Name);
         }
-
     }
 
 
@@ -160,15 +162,13 @@ public class ClientServerTest : TestBase
         // --------
         await using var client = await TestHelper.CreateClient(token,
             deviceOptions: TestHelper.CreateDeviceOptions(),
-            clientOptions: new ClientOptions
-            {
+            clientOptions: new ClientOptions {
                 UseUdpChannel = false,
                 MaxDatagramChannelCount = 6
             });
 
         // let channel be created gradually
-        for (var i = 0; i < 6; i++)
-        {
+        for (var i = 0; i < 6; i++) {
             await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
             await Task.Delay(50);
         }
@@ -180,15 +180,13 @@ public class ClientServerTest : TestBase
         // --------
         // Check: Client MaxDatagramChannelCount smaller than server
         // --------
-        await using var client2 = await TestHelper.CreateClient(token, clientOptions: new ClientOptions
-        {
+        await using var client2 = await TestHelper.CreateClient(token, clientOptions: new ClientOptions {
             UseUdpChannel = false,
             MaxDatagramChannelCount = 1
         });
 
         // let channel be removed gradually
-        for (var i = 0; i < 6; i++)
-        {
+        for (var i = 0; i < 6; i++) {
             await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
             await Task.Delay(50);
         }
@@ -206,7 +204,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, 
+        await using var client = await TestHelper.CreateClient(token,
             packetCapture: new TestNullPacketCapture(),
             clientOptions: new ClientOptions { UseUdpChannel = true });
     }
@@ -219,13 +217,11 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, 
+        await using var client = await TestHelper.CreateClient(token,
             deviceOptions: TestHelper.CreateDeviceOptions(),
-            clientOptions: new ClientOptions
-            {
+            clientOptions: new ClientOptions {
                 UseUdpChannel = false,
                 MaxDatagramChannelCount = 4
-
             });
 
         var tasks = new List<Task>();
@@ -247,8 +243,7 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = await TestHelper.CreateClient(token,
             deviceOptions: TestHelper.CreateDeviceOptions(),
-            clientOptions: new ClientOptions
-            {
+            clientOptions: new ClientOptions {
                 UseUdpChannel = true
             });
 
@@ -270,7 +265,8 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
+        await using var client =
+            await TestHelper.CreateClient(token, clientOptions: new ClientOptions { UseUdpChannel = true });
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Testing by UdpChannel.");
         Assert.IsTrue(client.UseUdpChannel);
         await TestTunnel(server, client);
@@ -302,7 +298,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, 
+        await using var client = await TestHelper.CreateClient(token,
             packetCapture: new TestNullPacketCapture(),
             clientOptions: new ClientOptions { UseUdpChannel = true });
 
@@ -326,14 +322,12 @@ public class ClientServerTest : TestBase
         var oldServerReceivedByteCount = serverSession.Tunnel.Traffic.Received;
 
         using var httpClient = new HttpClient();
-        try
-        {
+        try {
             await httpClient.GetStringAsync($"http://{TestConstants.NsEndPoint1}",
                 new CancellationTokenSource(2000).Token);
             Assert.Fail("Exception expected!");
         }
-        catch
-        {
+        catch {
             // ignored
         }
 
@@ -417,22 +411,18 @@ public class ClientServerTest : TestBase
         await TestHelper.Test_Https();
 
         await server.DisposeAsync();
-        try
-        {
+        try {
             await TestHelper.Test_Https(timeout: 3000);
         }
-        catch
-        {
+        catch {
             /* ignored */
         }
 
         Thread.Sleep(1000);
-        try
-        {
+        try {
             await TestHelper.Test_Https(timeout: 3000);
         }
-        catch
-        {
+        catch {
             /* ignored */
         }
 
@@ -453,16 +443,14 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        await using (await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions()))
-        {
+        await using (await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
             await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
         }
 
         // create client
-        await using (await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions()))
-        {
+        await using (await TestHelper.CreateClient(token, deviceOptions: TestHelper.CreateDeviceOptions())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
             await TestHelper.Test_Udp(udpClient, TestConstants.UdpV4EndPoint1);
@@ -482,15 +470,13 @@ public class ClientServerTest : TestBase
         // create client
         await using var client1 = await TestHelper.CreateClient(token);
 
-        try
-        {
+        try {
             stream.WriteByte(1);
             stream.ReadByte();
             Assert.Fail("Exception expected!");
         }
         catch (Exception ex)
-            when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset })
-        {
+            when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset }) {
             // OK
         }
     }
@@ -513,15 +499,14 @@ public class ClientServerTest : TestBase
 
         // wait for disposing session in access server
         await VhTestUtil.AssertEqualsWait(false,
-            () => accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session) && session.IsAlive,
+            () => accessManager.SessionController.Sessions.TryGetValue(client.SessionId, out var session) &&
+                  session.IsAlive,
             "Session has not been closed in the access server.");
 
-        try
-        {
+        try {
             await TestHelper.Test_Https();
         }
-        catch
-        {
+        catch {
             // ignored
         }
 
@@ -551,7 +536,8 @@ public class ClientServerTest : TestBase
         // Check: MaintenanceMode is expected
         // ----------
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+        await using var client =
+            await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client.Connect());
 
         Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
@@ -568,7 +554,8 @@ public class ClientServerTest : TestBase
         // Check: Go Maintenance mode after server started by stopping the server
         // ----------
         accessManager.EmbedIoAccessManager.Stop();
-        await using var client3 = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+        await using var client3 =
+            await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client3.Connect());
 
         await TestHelper.WaitForClientState(client3, ClientState.Disposed);
@@ -585,7 +572,8 @@ public class ClientServerTest : TestBase
         // Check: Go Maintenance mode by replying 404 from access-server
         // ----------
         accessManager.EmbedIoAccessManager.HttpException = HttpException.Forbidden();
-        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
+        await using var client5 =
+            await TestHelper.CreateClient(token, autoConnect: false, packetCapture: new TestNullPacketCapture());
         await Assert.ThrowsExceptionAsync<MaintenanceException>(() => client5.Connect());
 
         await TestHelper.WaitForClientState(client5, ClientState.Disposed);
@@ -677,7 +665,8 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
+        await using var client =
+            await TestHelper.CreateClient(token, clientOptions: TestHelper.CreateClientOptions(useUdp: true));
         var lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         var lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
 
@@ -692,7 +681,8 @@ public class ClientServerTest : TestBase
         // this connection must reuse the old one
         await TestHelper.Test_Https();
         Assert.AreEqual(lasCreatedConnectionCount, client.Stat.ConnectorStat.CreatedConnectionCount);
-        Assert.AreEqual(lasReusedConnectionSucceededCount + 1, client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount + 1,
+            client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
         lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
@@ -700,7 +690,8 @@ public class ClientServerTest : TestBase
         // this connection must reuse the old one again
         await TestHelper.Test_Https();
         Assert.AreEqual(lasCreatedConnectionCount, client.Stat.ConnectorStat.CreatedConnectionCount);
-        Assert.AreEqual(lasReusedConnectionSucceededCount + 1, client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+        Assert.AreEqual(lasReusedConnectionSucceededCount + 1,
+            client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
         lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
         lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         await VhTestUtil.AssertEqualsWait(1, () => client.Stat.ConnectorStat.FreeConnectionCount);
@@ -709,28 +700,31 @@ public class ClientServerTest : TestBase
         VhLogger.Instance.LogTrace("Test: Open 3 connections simultaneously.");
         using (var tcpClient1 = new TcpClient())
         using (var tcpClient2 = new TcpClient())
-        using (var tcpClient3 = new TcpClient())
-        {
+        using (var tcpClient3 = new TcpClient()) {
             await tcpClient1.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient2.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient3.ConnectAsync(TestConstants.HttpsEndPoint1);
 
-            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2, () => client.Stat.ConnectorStat.CreatedConnectionCount);
-            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1, () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount + 2,
+                () => client.Stat.ConnectorStat.CreatedConnectionCount);
+            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 1,
+                () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
             lasCreatedConnectionCount = client.Stat.ConnectorStat.CreatedConnectionCount;
             lasReusedConnectionSucceededCount = client.Stat.ConnectorStat.ReusedConnectionSucceededCount;
         }
+
         VhLogger.Instance.LogTrace(GeneralEventId.Test, "Test: Waiting for free connections...");
         await VhTestUtil.AssertEqualsWait(3, () => client.Stat.ConnectorStat.FreeConnectionCount);
 
         // net two connection should use shared connection
         using (var tcpClient4 = new TcpClient())
-        using (var tcpClient5 = new TcpClient())
-        {
+        using (var tcpClient5 = new TcpClient()) {
             await tcpClient4.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient5.ConnectAsync(TestConstants.HttpsEndPoint2);
-            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount, () => client.Stat.ConnectorStat.CreatedConnectionCount);
-            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 2, () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
+            await VhTestUtil.AssertEqualsWait(lasCreatedConnectionCount,
+                () => client.Stat.ConnectorStat.CreatedConnectionCount);
+            await VhTestUtil.AssertEqualsWait(lasReusedConnectionSucceededCount + 2,
+                () => client.Stat.ConnectorStat.ReusedConnectionSucceededCount);
         }
 
         // wait for free the used connections 
@@ -747,10 +741,10 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(token, 
+        await using var client = await TestHelper.CreateClient(token,
             packetCapture: new TestNullPacketCapture(),
             clientOptions: TestHelper.CreateClientOptions(useUdp: true));
-        
+
         Assert.IsFalse(client.Stat.IsUdpChannelSupported);
     }
 }

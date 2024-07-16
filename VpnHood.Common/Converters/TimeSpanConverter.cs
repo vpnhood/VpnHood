@@ -8,7 +8,7 @@ public class TimeSpanConverter : JsonConverter<TimeSpan>
     public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return reader.TokenType == JsonTokenType.Number
-            ? TimeSpan.FromSeconds(reader.GetDouble()) 
+            ? TimeSpan.FromSeconds(reader.GetDouble())
             : TimeSpan.Parse(reader.GetString()!);
     }
 

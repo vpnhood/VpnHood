@@ -4,6 +4,5 @@ namespace VpnHood.Server;
 
 public class SessionExtraData
 {
-    [JsonPropertyName("pv")]
-    public required int ProtocolVersion { get; init; }
+    [JsonPropertyName("pv")] public required int ProtocolVersion { get; init; }
 }

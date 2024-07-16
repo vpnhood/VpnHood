@@ -26,8 +26,7 @@ public static class VhUtil
 
     public static IPEndPoint GetFreeTcpEndPoint(IPAddress ipAddress, int defaultPort = 0)
     {
-        try
-        {
+        try {
             // check recommended port
             var listener = new TcpListener(ipAddress, defaultPort);
             listener.Start();
@@ -35,23 +34,20 @@ public static class VhUtil
             listener.Stop();
             return new IPEndPoint(ipAddress, port);
         }
-        catch when (defaultPort != 0)
-        {
+        catch when (defaultPort != 0) {
             return GetFreeTcpEndPoint(ipAddress);
         }
     }
 
     public static IPEndPoint GetFreeUdpEndPoint(IPAddress ipAddress, int defaultPort = 0)
     {
-        try
-        {
+        try {
             // check recommended port
             using var udpClient = new UdpClient(new IPEndPoint(ipAddress, defaultPort));
             var port = ((IPEndPoint)udpClient.Client.LocalEndPoint).Port;
             return new IPEndPoint(ipAddress, port);
         }
-        catch when (defaultPort != 0)
-        {
+        catch when (defaultPort != 0) {
             return GetFreeUdpEndPoint(ipAddress);
         }
     }
@@ -67,12 +63,10 @@ public static class VhUtil
 
     public static byte[] ConvertFromBase64AndFixPadding(string base64)
     {
-        try
-        {
+        try {
             return Convert.FromBase64String(base64);
         }
-        catch (FormatException)
-        {
+        catch (FormatException) {
             return Convert.FromBase64String(FixBase64String(base64));
         }
     }
@@ -94,16 +88,14 @@ public static class VhUtil
 
         // Get the files in the directory and copy them to the new location.
         var files = dir.GetFiles();
-        foreach (var file in files)
-        {
+        foreach (var file in files) {
             var tempPath = Path.Combine(destinationPath, file.Name);
             file.CopyTo(tempPath, false);
         }
 
         // If copying subdirectories, copy them and their contents to new location.
         if (recursive)
-            foreach (var item in dirs)
-            {
+            foreach (var item in dirs) {
                 var tempPath = Path.Combine(destinationPath, item.Name);
                 DirectoryCopy(item.FullName, tempPath, recursive);
             }
@@ -115,13 +107,15 @@ public static class VhUtil
             return collection.ToArray();
     }
 
-    public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default,
+        CancellationToken cancellationToken = default)
     {
         await RunTask((Task)task, timeout, cancellationToken).VhConfigureAwait();
         return await task.VhConfigureAwait();
     }
 
-    public static async Task RunTask(Task task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public static async Task RunTask(Task task, TimeSpan timeout = default,
+        CancellationToken cancellationToken = default)
     {
         if (timeout == TimeSpan.Zero)
             timeout = Timeout.InfiniteTimeSpan;
@@ -154,22 +148,18 @@ public static class VhUtil
 
         var sb = new StringBuilder();
         var inQuote = false;
-        foreach (var c in commandLine)
-        {
-            if (c == '"' && !inQuote)
-            {
+        foreach (var c in commandLine) {
+            if (c == '"' && !inQuote) {
                 inQuote = true;
                 continue;
             }
 
-            if (c != '"' && !(char.IsWhiteSpace(c) && !inQuote))
-            {
+            if (c != '"' && !(char.IsWhiteSpace(c) && !inQuote)) {
                 sb.Append(c);
                 continue;
             }
 
-            if (sb.Length > 0)
-            {
+            if (sb.Length > 0) {
                 var result = sb.ToString();
                 sb.Clear();
                 inQuote = false;
@@ -200,10 +190,10 @@ public static class VhUtil
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
     }
 
-    public static T? JsonDeserializeFile<T>(string filePath, JsonSerializerOptions? options = null, ILogger? logger = null)
+    public static T? JsonDeserializeFile<T>(string filePath, JsonSerializerOptions? options = null,
+        ILogger? logger = null)
     {
-        try
-        {
+        try {
             if (!File.Exists(filePath))
                 return default;
 
@@ -211,8 +201,7 @@ public static class VhUtil
             var obj = JsonDeserialize<T>(json, options);
             return obj;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             logger?.LogError(ex, "Could not read json file. FilePath: {FilePath}", filePath);
             return default;
         }
@@ -340,18 +329,20 @@ public static class VhUtil
         return channel?.DisposeAsync() ?? default;
     }
 
-    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize, bool? reuseAddress = null)
+    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize,
+        bool? reuseAddress = null)
     {
         tcpClient.NoDelay = true;
         if (sendBufferSize != null) tcpClient.SendBufferSize = sendBufferSize.Value;
         if (receiveBufferSize != null) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
-        if (reuseAddress != null) tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, reuseAddress.Value);
+        if (reuseAddress != null)
+            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress,
+                reuseAddress.Value);
     }
 
     public static bool IsTcpClientHealthy(TcpClient tcpClient)
     {
-        try
-        {
+        try {
             // Check if the TcpClient is connected
             if (!tcpClient.Connected)
                 return false;
@@ -362,8 +353,7 @@ public static class VhUtil
 
             return healthy;
         }
-        catch (Exception)
-        {
+        catch (Exception) {
             // An error occurred while checking the TcpClient
             return false;
         }
@@ -371,8 +361,7 @@ public static class VhUtil
 
     public static string RedactJsonValue(string json, string[] keys)
     {
-        foreach (var key in keys)
-        {
+        foreach (var key in keys) {
             // array
             var jsonLength = json.Length;
             var pattern = @"""key""\s*:\s*\[[^\]]*\]".Replace("key", key);
@@ -395,7 +384,8 @@ public static class VhUtil
 
     public static DateTime RemoveMilliseconds(DateTime dateTime)
     {
-        return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute, dateTime.Second, dateTime.Kind);
+        return new DateTime(dateTime.Year, dateTime.Month, dateTime.Day, dateTime.Hour, dateTime.Minute,
+            dateTime.Second, dateTime.Kind);
     }
 
     public static string GetAssemblyMetadata(Assembly assembly, string key, string defaultValue)
@@ -406,36 +396,34 @@ public static class VhUtil
         return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
     }
 
-    public static async Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> body, int maxDegreeOfParallelism,
+    public static async Task ParallelForEachAsync<T>(IEnumerable<T> source, Func<T, Task> body,
+        int maxDegreeOfParallelism,
         CancellationToken cancellationToken)
     {
         var tasks = new List<Task>();
-        foreach (var t in source)
-        {
+        foreach (var t in source) {
             cancellationToken.ThrowIfCancellationRequested();
 
             tasks.Add(body(t));
-            if (tasks.Count == maxDegreeOfParallelism)
-            {
+            if (tasks.Count == maxDegreeOfParallelism) {
                 await Task.WhenAny(tasks).VhConfigureAwait();
                 foreach (var completedTask in tasks.Where(x => x.IsCompleted).ToArray())
                     tasks.Remove(completedTask);
             }
         }
+
         await Task.WhenAll(tasks).VhConfigureAwait();
     }
 
     public static bool TryDeleteFile(string filePath)
     {
-        try
-        {
+        try {
             if (File.Exists(filePath))
                 File.Delete(filePath);
 
             return true;
         }
-        catch
-        {
+        catch {
             return false;
         }
     }
@@ -444,8 +432,7 @@ public static class VhUtil
     {
         var rng = new Random();
         var n = array.Length;
-        for (var i = n - 1; i > 0; i--)
-        {
+        for (var i = n - 1; i > 0; i--) {
             var j = rng.Next(i + 1);
             (array[i], array[j]) = (array[j], array[i]);
         }

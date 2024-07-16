@@ -20,7 +20,7 @@ csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 csharp_space_around_binary_operators = before_and_after
 csharp_style_allow_blank_lines_between_consecutive_braces_experimental = true:silent
-csharp_new_line_before_open_brace = methods
+csharp_new_line_before_open_brace = types,methods
 
 [*.{cs,vb}]
 #### Naming styles ####

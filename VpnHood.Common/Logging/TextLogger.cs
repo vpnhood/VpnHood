@@ -32,8 +32,7 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
     protected void GetScopeInformation(StringBuilder stringBuilder)
     {
         var initialLength = stringBuilder.Length;
-        _scopeProvider.ForEachScope((scope, state) =>
-        {
+        _scopeProvider.ForEachScope((scope, state) => {
             var (builder, length) = state;
             var first = length == builder.Length;
             builder.Append(first ? "" : " => ").Append(scope);
@@ -46,8 +45,7 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
         var logBuilder = new StringBuilder();
         var time = DateTime.Now.ToString("HH:mm:ss.ffff");
 
-        if (includeScopes)
-        {
+        if (includeScopes) {
             logBuilder.AppendLine();
             logBuilder.Append($"{time} | ");
             logBuilder.Append(logLevel.ToString()[..4] + " | ");
@@ -58,8 +56,7 @@ public abstract class TextLogger(bool includeScopes) : ILogger, ILoggerProvider
             logBuilder.Append($"{time} | ");
 
         // event
-        if (!string.IsNullOrEmpty(eventId.Name))
-        {
+        if (!string.IsNullOrEmpty(eventId.Name)) {
             logBuilder.Append(eventId.Name);
             logBuilder.Append(" | ");
         }

@@ -23,19 +23,24 @@ public partial class MainWindow : Window
 
         // initialize main window
         Title = VpnHoodApp.Instance.Resource.Strings.AppName;
-        if (backgroundColor != null) Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R, backgroundColor.Value.G, backgroundColor.Value.B));
+        if (backgroundColor != null)
+            Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
+                backgroundColor.Value.G, backgroundColor.Value.B));
         Visibility = VpnHoodWinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
         Width = VpnHoodApp.Instance.Resource.WindowSize.Width;
         Height = VpnHoodApp.Instance.Resource.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
-        StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) Hide(); };
+        StateChanged += (_, _) => {
+            if (WindowState == WindowState.Minimized) Hide();
+        };
 
         // set window title bar color
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
         if (backgroundColor != null) VpnHoodWinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
-        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
+        MainWebView.CreationProperties = new CoreWebView2CreationProperties
+            { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
         if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;
@@ -53,20 +58,18 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void MainWebView_CoreWebView2InitializationCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
+    private void MainWebView_CoreWebView2InitializationCompleted(object? sender,
+        CoreWebView2InitializationCompletedEventArgs e)
     {
-        if (e.IsSuccess)
-        {
+        if (e.IsSuccess) {
             MainWebView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
             return;
         }
 
         // hide window if edge is not installed and open browser instead
-        lock (MainWebView)
-        {
+        lock (MainWebView) {
             // MainWebView_CoreWebView2InitializationCompleted is called many times
-            if (VpnHoodWinApp.Instance.EnableOpenMainWindow)
-            {
+            if (VpnHoodWinApp.Instance.EnableOpenMainWindow) {
                 Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
                 VpnHoodWinApp.Instance.EnableOpenMainWindow = false;
                 if (VpnHoodWinApp.Instance.ShowWindowAfterStart)
@@ -78,16 +81,14 @@ public partial class MainWindow : Window
     private void UpdateIcon()
     {
         // update icon and text
-        var icon = VpnHoodApp.Instance.State.ConnectionState switch
-        {
+        var icon = VpnHoodApp.Instance.State.ConnectionState switch {
             AppConnectionState.Connected => VpnHoodApp.Instance.Resource.Icons.BadgeConnectedIcon,
             AppConnectionState.None => null,
             _ => VpnHoodApp.Instance.Resource.Icons.BadgeConnectingIcon
         };
 
         // remove overlay
-        if (icon == null)
-        {
+        if (icon == null) {
             TaskbarItemInfo.Overlay = null;
             return;
         }

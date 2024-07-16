@@ -24,7 +24,6 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
     private AndroidDevice()
     {
-
     }
 
     public static AndroidDevice Create()
@@ -42,11 +41,10 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         const string channelId = "1000";
         var context = Application.Context;
         var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager
-            ?? throw new Exception("Could not resolve NotificationManager.");
+                                  ?? throw new Exception("Could not resolve NotificationManager.");
 
         Notification.Builder notificationBuilder;
-        if (OperatingSystem.IsAndroidVersionAtLeast(26))
-        {
+        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             var channel = new NotificationChannel(channelId, "VPN", NotificationImportance.Low);
             channel.EnableVibration(false);
             channel.EnableLights(false);
@@ -55,8 +53,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             notificationManager.CreateNotificationChannel(channel);
             notificationBuilder = new Notification.Builder(context, channelId);
         }
-        else
-        {
+        else {
             notificationBuilder = new Notification.Builder(context);
         }
 
@@ -64,8 +61,10 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         var appInfo = Application.Context.ApplicationInfo ?? throw new Exception("Could not retrieve app info");
         if (context.Resources == null) throw new Exception("Could not retrieve context.Resources.");
         var iconId = appInfo.Icon;
-        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/notification", "drawable", context.PackageName);
-        if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/ic_launcher", "drawable", context.PackageName);
+        if (iconId == 0)
+            iconId = context.Resources.GetIdentifier("@mipmap/notification", "drawable", context.PackageName);
+        if (iconId == 0)
+            iconId = context.Resources.GetIdentifier("@mipmap/ic_launcher", "drawable", context.PackageName);
         if (iconId == 0) iconId = context.Resources.GetIdentifier("@mipmap/appicon", "drawable", context.PackageName);
         if (iconId == 0) throw new Exception("Could not retrieve default icon.");
 
@@ -74,26 +73,23 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             .SetOngoing(true)
             .Build();
 
-        return new AndroidDeviceNotification
-        {
+        return new AndroidDeviceNotification {
             Notification = notification,
             NotificationId = 3500
         };
     }
 
-    public DeviceAppInfo[] InstalledApps
-    {
-        get
-        {
+    public DeviceAppInfo[] InstalledApps {
+        get {
             var deviceAppInfos = new List<DeviceAppInfo>();
-            var packageManager = Application.Context.PackageManager ?? throw new Exception("Could not acquire PackageManager!");
+            var packageManager = Application.Context.PackageManager ??
+                                 throw new Exception("Could not acquire PackageManager!");
             var intent = new Intent(Intent.ActionMain);
             intent.AddCategory(Intent.CategoryLauncher);
             var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
 
             var currentAppId = Application.Context.PackageName;
-            foreach (var resolveInfo in resolveInfoList)
-            {
+            foreach (var resolveInfo in resolveInfoList) {
                 if (resolveInfo.ActivityInfo == null)
                     continue;
 
@@ -103,8 +99,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
                 if (appName is "" or null || appId is "" or null || icon == null || appId == currentAppId)
                     continue;
 
-                var deviceAppInfo = new DeviceAppInfo
-                {
+                var deviceAppInfo = new DeviceAppInfo {
                     AppId = appId,
                     AppName = appName,
                     IconPng = EncodeToBase64(icon, 100)
@@ -129,8 +124,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         _grantPermissionTaskSource = new TaskCompletionSource<bool>();
         activityEvent.ActivityResultEvent += Activity_OnActivityResult;
-        try
-        {
+        try {
             VhLogger.Instance.LogTrace("Requesting user consent...");
             activityEvent.Activity.StartActivityForResult(prepareIntent, RequestVpnPermissionId);
             await Task.WhenAny(_grantPermissionTaskSource.Task, Task.Delay(TimeSpan.FromMinutes(2)))
@@ -142,8 +136,7 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
             if (!_grantPermissionTaskSource.Task.Result)
                 throw new Exception("VPN permission has been rejected.");
         }
-        finally
-        {
+        finally {
             activityEvent.ActivityResultEvent -= Activity_OnActivityResult;
         }
     }
@@ -158,23 +151,20 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
         var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
         intent.PutExtra("manual", true);
         AndroidPacketCapture.StartServiceTaskCompletionSource = new TaskCompletionSource<AndroidPacketCapture>();
-        if (OperatingSystem.IsAndroidVersionAtLeast(26))
-        {
+        if (OperatingSystem.IsAndroidVersionAtLeast(26)) {
             Application.Context.StartForegroundService(intent.SetAction("connect"));
         }
-        else
-        {
+        else {
             Application.Context.StartService(intent.SetAction("connect"));
         }
 
         // check is service started
-        try
-        {
-            var packetCapture = await AndroidPacketCapture.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try {
+            var packetCapture =
+                await AndroidPacketCapture.StartServiceTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
             return packetCapture;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             AndroidPacketCapture.StartServiceTaskCompletionSource.TrySetCanceled();
             throw new Exception("Could not create VpnService in given time.", ex);
         }
@@ -189,14 +179,11 @@ public class AndroidDevice : Singleton<AndroidDevice>, IDevice
 
         // fire AutoCreate for always on
         var manual = intent?.GetBooleanExtra("manual", false) ?? false;
-        if (!manual)
-        {
-            try
-            {
+        if (!manual) {
+            try {
                 StartedAsService?.Invoke(this, EventArgs.Empty);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not start service.");
             }
         }

@@ -17,7 +17,7 @@ public class NatItem
     public ushort SourcePort { get; }
     public ushort IcmpId { get; }
     public DateTime AccessTime { get; internal set; }
-    public bool? IsInProcess { get; set; } 
+    public bool? IsInProcess { get; set; }
 
     public NatItem(IPPacket ipPacket)
     {
@@ -28,30 +28,25 @@ public class NatItem
         SourceAddress = ipPacket.SourceAddress;
         AccessTime = FastDateTime.Now;
 
-        switch (ipPacket.Protocol)
-        {
-            case ProtocolType.Tcp:
-            {
+        switch (ipPacket.Protocol) {
+            case ProtocolType.Tcp: {
                 var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
                 SourcePort = tcpPacket.SourcePort;
                 break;
             }
 
-            case ProtocolType.Udp:
-            {
+            case ProtocolType.Udp: {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 SourcePort = udpPacket.SourcePort;
                 break;
             }
 
-            case ProtocolType.Icmp:
-            {
+            case ProtocolType.Icmp: {
                 IcmpId = GetIcmpId(ipPacket);
                 break;
             }
 
-            case ProtocolType.IcmpV6:
-            {
+            case ProtocolType.IcmpV6: {
                 IcmpId = GetIcmpV6Id(ipPacket);
                 break;
             }
@@ -67,8 +62,7 @@ public class NatItem
     {
         var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
         var type = (int)icmpPacket.TypeCode >> 8;
-        switch (type)
-        {
+        switch (type) {
             // Identifier
             case 08: // for echo message
             case 13: // for timestamp message
@@ -98,8 +92,7 @@ public class NatItem
         var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
         var type = (int)icmpPacket.Type;
 
-        switch (icmpPacket.Type)
-        {
+        switch (icmpPacket.Type) {
             // Identifier
             case IcmpV6Type.EchoRequest: // for echo message
             case IcmpV6Type.EchoReply: // for echo message

@@ -13,11 +13,9 @@ public static class VhLogger
     private static bool _isDiagnoseMode;
     private static ILogger _instance = NullLogger.Instance;
 
-    public static ILogger Instance
-    {
+    public static ILogger Instance {
         get => _instance;
-        set
-        {
+        set {
             _instance = value;
             JobRunner.Default.Logger = value;
         }
@@ -25,18 +23,19 @@ public static class VhLogger
 
     public static EventId TcpCloseEventId { get; set; } = new();
     public static bool IsAnonymousMode { get; set; } = true;
-    public static bool IsDiagnoseMode
-    {
+
+    public static bool IsDiagnoseMode {
         get => _isDiagnoseMode;
-        set { _isDiagnoseMode = value; EventReporter.IsDiagnosticMode = value; }
+        set {
+            _isDiagnoseMode = value;
+            EventReporter.IsDiagnosticMode = value;
+        }
     }
 
     public static ILogger CreateConsoleLogger(bool verbose = false, bool singleLine = false)
     {
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddSimpleConsole(configure =>
-            {
+        using var loggerFactory = LoggerFactory.Create(builder => {
+            builder.AddSimpleConsole(configure => {
                 configure.TimestampFormat = "[HH:mm:ss.ffff] ";
                 configure.IncludeScopes = true;
                 configure.SingleLine = singleLine;
@@ -113,8 +112,7 @@ public static class VhLogger
 
     private static string RedactIpAddress(string text, string keyText)
     {
-        try
-        {
+        try {
             var start = text.IndexOf($"{keyText}=", StringComparison.Ordinal) + 1;
             if (start == -1)
                 return text;
@@ -126,10 +124,8 @@ public static class VhLogger
 
             text = text[..start] + Format(ipAddress) + text[end..];
             return text;
-
         }
-        catch
-        {
+        catch {
             return "*";
         }
     }
@@ -138,29 +134,26 @@ public static class VhLogger
     public static bool IsSocketCloseException(Exception ex)
     {
         return (ex.InnerException != null && IsSocketCloseException(ex.InnerException)) ||
-            ex is
-            ObjectDisposedException or
-            OperationCanceledException or
-            TaskCanceledException or
-            SocketException
-            {
-                SocketErrorCode: SocketError.ConnectionAborted or 
-                SocketError.OperationAborted or
-                SocketError.ConnectionReset or
-                SocketError.ConnectionRefused or
-                SocketError.NetworkReset
-            };
+               ex is
+                   ObjectDisposedException or
+                   OperationCanceledException or
+                   TaskCanceledException or
+                   SocketException {
+                       SocketErrorCode: SocketError.ConnectionAborted or
+                       SocketError.OperationAborted or
+                       SocketError.ConnectionReset or
+                       SocketError.ConnectionRefused or
+                       SocketError.NetworkReset
+                   };
     }
 
     public static void LogError(EventId eventId, Exception ex, string message, params object?[] args)
     {
-        if (IsSocketCloseException(ex))
-        {
+        if (IsSocketCloseException(ex)) {
             Instance.LogTrace(TcpCloseEventId, message + $" Message: {ex.Message}", args);
             return;
         }
 
         Instance.LogError(eventId, ex, message, args);
     }
-
 }

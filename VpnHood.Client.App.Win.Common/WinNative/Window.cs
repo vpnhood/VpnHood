@@ -13,12 +13,9 @@ public class Window : IDisposable
     [StructLayout(LayoutKind.Sequential)]
     private struct WndClassEx
     {
-        [MarshalAs(UnmanagedType.U4)]
-        public uint cbSize;
-        [MarshalAs(UnmanagedType.U4)]
-        public uint style;
-        [MarshalAs(UnmanagedType.FunctionPtr)]
-        public WndProc lpfnWndProc;
+        [MarshalAs(UnmanagedType.U4)] public uint cbSize;
+        [MarshalAs(UnmanagedType.U4)] public uint style;
+        [MarshalAs(UnmanagedType.FunctionPtr)] public WndProc lpfnWndProc;
         public int cbClsExtra;
         public int cbWndExtra;
         public IntPtr hInstance;
@@ -33,14 +30,21 @@ public class Window : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.U2)]
     private static extern short RegisterClassEx([In] ref WndClassEx wndClassEx);
+
     [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr CreateWindowEx(uint dwExStyle, [MarshalAs(UnmanagedType.LPStr)] string lpClassName, [MarshalAs(UnmanagedType.LPStr)] string lpWindowName, uint dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
+    private static extern IntPtr CreateWindowEx(uint dwExStyle, [MarshalAs(UnmanagedType.LPStr)] string lpClassName,
+        [MarshalAs(UnmanagedType.LPStr)] string lpWindowName, uint dwStyle, int x, int y, int nWidth, int nHeight,
+        IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
+
     [DllImport("user32.dll")]
     private static extern bool UnregisterClass(string lpClassName, IntPtr hInstance);
+
     [DllImport("user32.dll")]
     private static extern bool DestroyWindow(IntPtr hWnd);
+
     [DllImport("user32.dll")]
     public static extern IntPtr DefWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+
     public delegate IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
 
     private readonly WndClassEx _windowClass;
@@ -53,8 +57,7 @@ public class Window : IDisposable
         var className = Guid.NewGuid().ToString();
 
         //must keep reference to it and prevent it from release. Otherwise, exception will occur in message pump
-        _windowClass = new WndClassEx
-        {
+        _windowClass = new WndClassEx {
             lpfnWndProc = wndProc,
             cbClsExtra = 0,
             cbWndExtra = 0,
@@ -89,8 +92,7 @@ public class Window : IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_disposedValue) return;
-        if (disposing)
-        {
+        if (disposing) {
             // dispose managed state (managed objects).
         }
 

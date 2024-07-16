@@ -6,23 +6,18 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true) 
 {
     private static bool? _isColorSupported;
 
-    private static bool IsColorSupported
-    {
-        get
-        {
-            if (_isColorSupported == null)
-            {
-                try
-                {
+    private static bool IsColorSupported {
+        get {
+            if (_isColorSupported == null) {
+                try {
                     _ = Console.ForegroundColor;
                     _isColorSupported = true;
                 }
-                catch
-                {
+                catch {
                     _isColorSupported = false;
                 }
             }
-            
+
             return _isColorSupported.Value;
         }
     }
@@ -34,24 +29,20 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true) 
         if (singleLine)
             text = text.Replace("\n", " ").Replace("\r", "").Trim();
 
-        if (IsColorSupported)
-        {
+        if (IsColorSupported) {
             var prevColor = Console.ForegroundColor;
             Console.ForegroundColor = GetColor(logLevel);
             Console.WriteLine(text);
             Console.ForegroundColor = prevColor;
         }
-        else
-        {
+        else {
             Console.WriteLine(text);
         }
-
     }
 
     public ConsoleColor GetColor(LogLevel logLevel)
     {
-        return logLevel switch
-        {
+        return logLevel switch {
             LogLevel.Trace => ConsoleColor.Gray,
             LogLevel.Debug => ConsoleColor.Gray,
             LogLevel.Information => ConsoleColor.White,

@@ -581,6 +581,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _ = VersionCheck();
         }
         catch (Exception) when (client is not null) {
+            client.StateChanged -= Client_StateChanged;
             await client.DisposeAsync().VhConfigureAwait();
             _client = null;
 
@@ -769,8 +770,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // close client
             // do not wait for bye if user request disconnection
-            if (_client != null)
+            if (_client != null) {
+                _client.StateChanged -= Client_StateChanged;
                 await _client.DisposeAsync(waitForBye: !byUser).VhConfigureAwait();
+            }
 
             LogService.Stop();
         }
